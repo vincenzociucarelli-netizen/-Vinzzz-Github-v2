@@ -207,6 +207,10 @@ class AthleteCreate(BaseModel):
     team_id: str
     
 class AthleteUpdate(BaseModel):
+    # Tesseramento (gestito da Admin)
+    federal_code: Optional[str] = None
+    is_registered: Optional[bool] = None
+    # Anagrafica
     full_name: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
