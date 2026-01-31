@@ -285,6 +285,42 @@ export default function AthleteDetail() {
     }
   };
 
+  const shareQRCode = async () => {
+    if (!athlete) return;
+    
+    try {
+      // Check if sharing is available
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Errore', 'La condivisione non è disponibile su questo dispositivo');
+        return;
+      }
+      
+      // Capture the QR code view as an image
+      if (qrCodeRef.current) {
+        const uri = await captureRef(qrCodeRef.current, {
+          format: 'png',
+          quality: 1,
+        });
+        
+        // Share the captured image
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: `QR Code - ${athlete.full_name}`,
+        });
+      }
+    } catch (error) {
+      console.error('Errore condivisione:', error);
+      Alert.alert('Errore', 'Impossibile condividere il QR code');
+    }
+  };
+
+  // Helper function to get team name by id
+  const getTeamName = (teamId: string) => {
+    const team = teams.find(t => t.id === teamId);
+    return team ? team.name : 'Squadra non trovata';
+  };
+
   const convertToISODate = (dateStr: string) => {
     // Converti da GG/MM/AAAA a YYYY-MM-DD
     const parts = dateStr.split('/');
