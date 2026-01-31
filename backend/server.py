@@ -353,7 +353,11 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
         installment_3_amount=team_data.installment_3_amount,
         installment_3_due_date=datetime.fromisoformat(team_data.installment_3_due_date),
         bank_info=team_data.bank_info,
-        paypal_email=team_data.paypal_email
+        paypal_email=team_data.paypal_email,
+        training_days=team_data.training_days,
+        training_time=team_data.training_time,
+        championships=team_data.championships,
+        calendar_link=team_data.calendar_link
     )
     
     await db.teams.insert_one(team.dict())
@@ -364,6 +368,38 @@ async def get_teams(current_user = Depends(get_current_user)):
     teams = await db.teams.find().to_list(1000)
     clean_mongo_docs(teams)
     return [Team(**team) for team in teams]
+
+@api_router.get("/teams/{team_id}", response_model=Team)
+async def get_team(team_id: str, current_user = Depends(get_current_user)):
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    clean_mongo_doc(team)
+    return Team(**team)
+
+@api_router.patch("/teams/{team_id}", response_model=Team)
+async def update_team(team_id: str, team_data: TeamUpdate, current_user = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare squadre")
+    
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    update_dict = {}
+    for key, value in team_data.dict(exclude_unset=True).items():
+        if value is not None:
+            if "due_date" in key and isinstance(value, str):
+                update_dict[key] = datetime.fromisoformat(value)
+            else:
+                update_dict[key] = value
+    
+    if update_dict:
+        await db.teams.update_one({"id": team_id}, {"$set": update_dict})
+        team.update(update_dict)
+    
+    clean_mongo_doc(team)
+    return Team(**team)
 
 @api_router.get("/teams/{team_id}/payment-info")
 async def get_team_payment_info(team_id: str, current_user = Depends(get_current_user)):
