@@ -374,9 +374,8 @@ async def register(user_data: UserCreate):
     if existing:
         raise HTTPException(status_code=400, detail="Email già registrata")
     
-    # Determine initial status based on role
-    # Parents are auto-approved, Dirigenti and Coach need approval
-    initial_status = UserStatus.APPROVED if user_data.role == UserRole.PARENT else UserStatus.PENDING
+    # All users start as PENDING and need Admin approval
+    initial_status = UserStatus.PENDING
     
     # Create user
     user = User(
