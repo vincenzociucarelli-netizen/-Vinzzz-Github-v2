@@ -43,20 +43,31 @@ export interface Team {
 export interface Athlete {
   id: string;
   parent_id: string;
+  // Tesseramento (Admin)
+  federal_code?: string;
+  is_registered?: boolean;
+  // Anagrafica
   full_name: string;
+  first_name?: string;
+  last_name?: string;
   date_of_birth: string;
+  birth_place?: string;
+  birth_province?: string;
   is_minor: boolean;
   fiscal_code: string;
-  address?: string;
-  city?: string;
-  postal_code?: string;
-  province?: string;
+  email?: string;
   phone_athlete?: string;
   phone_father?: string;
   phone_mother?: string;
-  email?: string;
+  // Residenza
+  address?: string;
+  postal_code?: string;
+  city?: string;
+  province?: string;
+  // Genitore detrazione
   tax_payer_name?: string;
   tax_payer_fiscal_code?: string;
+  // Squadra e stato
   team_id: string;
   qr_code: string;
   registration_date: string;
@@ -65,6 +76,9 @@ export interface Athlete {
   privacy_accepted_date?: string;
   image_consent: boolean;
   status: string;
+  // Sconto
+  discount_amount?: number;
+  discount_note?: string;
 }
 
 export interface Certificate {
