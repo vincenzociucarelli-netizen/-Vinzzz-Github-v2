@@ -481,16 +481,18 @@ async def get_me(current_user = Depends(get_current_user)):
 class SocietySettingsUpdate(BaseModel):
     name: Optional[str] = None
     logo: Optional[str] = None  # Base64 encoded image
+    logo_size: Optional[int] = None  # Logo size in pixels
 
 @api_router.get("/settings/society")
 async def get_society_settings():
     """Get society settings (public endpoint - no auth required for logo display)"""
     settings = await db.settings.find_one({"type": "society"})
     if not settings:
-        return {"name": "Società Sportiva", "logo": None}
+        return {"name": "Società Sportiva", "logo": None, "logo_size": 50}
     return {
         "name": settings.get("name", "Società Sportiva"),
-        "logo": settings.get("logo")
+        "logo": settings.get("logo"),
+        "logo_size": settings.get("logo_size", 50)
     }
 
 @api_router.patch("/settings/society")
@@ -504,6 +506,8 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
         update_dict["name"] = data.name
     if data.logo is not None:
         update_dict["logo"] = data.logo
+    if data.logo_size is not None:
+        update_dict["logo_size"] = data.logo_size
     
     if update_dict:
         await db.settings.update_one(
