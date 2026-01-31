@@ -197,13 +197,32 @@ export default function AthleteDetail() {
 
     setUploadingCert(true);
     try {
+      console.log('Selected file URI:', selectedFile.uri);
+      
       // Read the file as base64 using expo-file-system
-      const base64Content = await FileSystem.readAsStringAsync(selectedFile.uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      let base64Content: string;
+      
+      try {
+        base64Content = await FileSystem.readAsStringAsync(selectedFile.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        console.log('Base64 content length:', base64Content?.length);
+      } catch (readError) {
+        console.error('Error reading file:', readError);
+        Alert.alert('Errore', 'Impossibile leggere il file selezionato');
+        setUploadingCert(false);
+        return;
+      }
+
+      if (!base64Content) {
+        Alert.alert('Errore', 'Il file è vuoto o non leggibile');
+        setUploadingCert(false);
+        return;
+      }
 
       // Convert date to ISO format
       const isoDate = convertToISODate(certIssueDate);
+      console.log('ISO Date:', isoDate);
 
       // Send to backend using the base64 endpoint with JSON body
       const response = await api.post('/certificates/upload-base64', {
