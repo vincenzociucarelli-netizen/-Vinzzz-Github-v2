@@ -103,8 +103,8 @@ export default function TeamsScreen() {
         installment_3_due_date: installment3Date,
         bank_info: bankInfo,
         paypal_email: paypalEmail,
-        training_days: trainingDays || null,
-        training_time: trainingTime || null,
+        venue: venue || null,
+        training_schedule: trainingSchedule || null,
         championships: championships || null,
         calendar_link: calendarLink || null,
       });
