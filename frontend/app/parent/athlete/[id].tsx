@@ -725,21 +725,32 @@ export default function AthleteDetail() {
         <View style={styles.modalOverlay}>
           <View style={styles.qrModalContent}>
             <Text style={styles.modalTitle}>{athlete.full_name}</Text>
-            <Image
-              source={{ uri: athlete.qr_code }}
-              style={styles.qrImage}
-              resizeMode="contain"
-            />
+            <View ref={qrCodeRef} collapsable={false} style={styles.qrCodeContainer}>
+              <Image
+                source={{ uri: athlete.qr_code }}
+                style={styles.qrImage}
+                resizeMode="contain"
+              />
+            </View>
             <Text style={styles.qrInstructions}>
               Mostra questo QR code al coach per registrare la presenza
             </Text>
-            <TouchableOpacity
-              style={styles.printButton}
-              onPress={printQRCode}
-            >
-              <Ionicons name="print" size={20} color="#fff" />
-              <Text style={styles.printButtonText}>Stampa QR Code</Text>
-            </TouchableOpacity>
+            <View style={styles.qrButtonsRow}>
+              <TouchableOpacity
+                style={[styles.qrActionButton, styles.printButton]}
+                onPress={printQRCode}
+              >
+                <Ionicons name="print" size={20} color="#fff" />
+                <Text style={styles.qrActionButtonText}>Stampa</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.qrActionButton, styles.shareButton]}
+                onPress={shareQRCode}
+              >
+                <Ionicons name="share-outline" size={20} color="#fff" />
+                <Text style={styles.qrActionButtonText}>Condividi</Text>
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setQrModalVisible(false)}
