@@ -830,16 +830,21 @@ export default function AdminAthleteDetail() {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Add Payment Modal */}
+      {/* Add/Edit Payment Modal */}
       <Modal
         visible={paymentModalVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setPaymentModalVisible(false)}
+        onRequestClose={() => {
+          setPaymentModalVisible(false);
+          setEditingPaymentId(null);
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Nuovo Pagamento</Text>
+            <Text style={styles.modalTitle}>
+              {editingPaymentId ? 'Modifica Pagamento' : 'Nuovo Pagamento'}
+            </Text>
             
             <Text style={styles.inputLabel}>Importo (€) *</Text>
             <TextInput
