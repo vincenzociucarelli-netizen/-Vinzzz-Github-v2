@@ -80,8 +80,8 @@ class Team(BaseModel):
     bank_info: Optional[str] = None
     paypal_email: Optional[str] = None
     # Training schedule
-    training_days: Optional[str] = None  # es: "Lunedì, Mercoledì, Venerdì"
-    training_time: Optional[str] = None  # es: "18:00 - 20:00"
+    venue: Optional[str] = None  # Palestra/Campo es: "Palestra Liceo Alessi"
+    training_schedule: Optional[str] = None  # es: "Lunedì 18:00-20:00, Mercoledì 19:00-21:00"
     # Championships
     championships: Optional[str] = None  # es: "Serie C, Coppa Italia"
     calendar_link: Optional[str] = None  # Link al calendario federazione
@@ -97,8 +97,8 @@ class TeamCreate(BaseModel):
     installment_3_due_date: str
     bank_info: str
     paypal_email: str
-    training_days: Optional[str] = None
-    training_time: Optional[str] = None
+    venue: Optional[str] = None
+    training_schedule: Optional[str] = None
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
 
@@ -113,8 +113,8 @@ class TeamUpdate(BaseModel):
     installment_3_due_date: Optional[str] = None
     bank_info: Optional[str] = None
     paypal_email: Optional[str] = None
-    training_days: Optional[str] = None
-    training_time: Optional[str] = None
+    venue: Optional[str] = None
+    training_schedule: Optional[str] = None
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
 
