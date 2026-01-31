@@ -198,6 +198,21 @@ export default function AthleteDetail() {
     setCertIssueDate(formatted);
   };
 
+  const calculateExpiryDate = (dateStr: string) => {
+    // Calcola la data di scadenza (365 giorni dopo)
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0]);
+      const month = parseInt(parts[1]) - 1;
+      const year = parseInt(parts[2]);
+      const issueDate = new Date(year, month, day);
+      const expiryDate = new Date(issueDate);
+      expiryDate.setDate(expiryDate.getDate() + 365);
+      return format(expiryDate, 'dd/MM/yyyy', { locale: it });
+    }
+    return '';
+  };
+
   const convertToISODate = (dateStr: string) => {
     // Converti da GG/MM/AAAA a YYYY-MM-DD
     const parts = dateStr.split('/');
@@ -218,14 +233,8 @@ export default function AthleteDetail() {
       return;
     }
 
-    if (!certIssueDate) {
-      Alert.alert('Errore', 'Inserisci la data di emissione');
-      return;
-    }
-
-    const validityNum = parseInt(certValidityMonths);
-    if (isNaN(validityNum) || validityNum <= 0) {
-      Alert.alert('Errore', 'Inserisci una validità valida in mesi');
+    if (certIssueDate.length !== 10) {
+      Alert.alert('Errore', 'Inserisci una data di emissione valida');
       return;
     }
 
