@@ -578,6 +578,39 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
         raise HTTPException(status_code=403, detail="Accesso negato")
     
     update_dict = {}
+    
+    # Campi testuali
+    if update_data.full_name is not None:
+        update_dict["full_name"] = update_data.full_name
+    if update_data.date_of_birth is not None:
+        try:
+            update_dict["date_of_birth"] = datetime.fromisoformat(update_data.date_of_birth)
+        except:
+            pass
+    if update_data.fiscal_code is not None:
+        update_dict["fiscal_code"] = update_data.fiscal_code
+    if update_data.address is not None:
+        update_dict["address"] = update_data.address
+    if update_data.city is not None:
+        update_dict["city"] = update_data.city
+    if update_data.postal_code is not None:
+        update_dict["postal_code"] = update_data.postal_code
+    if update_data.province is not None:
+        update_dict["province"] = update_data.province
+    if update_data.phone_athlete is not None:
+        update_dict["phone_athlete"] = update_data.phone_athlete
+    if update_data.phone_father is not None:
+        update_dict["phone_father"] = update_data.phone_father
+    if update_data.phone_mother is not None:
+        update_dict["phone_mother"] = update_data.phone_mother
+    if update_data.email is not None:
+        update_dict["email"] = update_data.email
+    if update_data.tax_payer_name is not None:
+        update_dict["tax_payer_name"] = update_data.tax_payer_name
+    if update_data.tax_payer_fiscal_code is not None:
+        update_dict["tax_payer_fiscal_code"] = update_data.tax_payer_fiscal_code
+    
+    # Campi booleani
     if update_data.privacy_accepted is not None:
         update_dict["privacy_accepted"] = update_data.privacy_accepted
         if update_data.privacy_accepted:
