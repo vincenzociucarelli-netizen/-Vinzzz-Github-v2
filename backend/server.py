@@ -417,6 +417,180 @@ async def login(credentials: UserLogin):
 async def get_me(current_user = Depends(get_current_user)):
     return current_user
 
+# ==================== USER MANAGEMENT ENDPOINTS (ADMIN) ====================
+
+class UserUpdateRole(BaseModel):
+    role: str  # admin, viewer, coach
+    
+class UserUpdateStatus(BaseModel):
+    status: str  # approved, rejected, suspended
+
+class CoachAssignTeams(BaseModel):
+    team_ids: List[str]
+
+@api_router.get("/users/dirigenti")
+async def get_dirigenti(current_user = Depends(get_current_user)):
+    """Get all dirigenti (admin and viewer roles)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i dirigenti")
+    
+    dirigenti = await db.users.find({
+        "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]}
+    }).to_list(1000)
+    
+    result = []
+    for d in dirigenti:
+        result.append({
+            "id": d["id"],
+            "email": d["email"],
+            "full_name": d["full_name"],
+            "role": d["role"],
+            "status": d.get("status", UserStatus.APPROVED),
+            "created_at": d.get("created_at"),
+            "approved_at": d.get("approved_at"),
+        })
+    
+    return result
+
+@api_router.get("/users/coaches")
+async def get_coaches(current_user = Depends(get_current_user)):
+    """Get all coaches"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i coach")
+    
+    coaches = await db.users.find({"role": UserRole.COACH}).to_list(1000)
+    
+    result = []
+    for c in coaches:
+        result.append({
+            "id": c["id"],
+            "email": c["email"],
+            "full_name": c["full_name"],
+            "role": c["role"],
+            "status": c.get("status", UserStatus.APPROVED),
+            "assigned_teams": c.get("assigned_teams", []),
+            "created_at": c.get("created_at"),
+            "approved_at": c.get("approved_at"),
+        })
+    
+    return result
+
+@api_router.get("/users/pending")
+async def get_pending_users(current_user = Depends(get_current_user)):
+    """Get all users pending approval"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere gli utenti in attesa")
+    
+    pending = await db.users.find({"status": UserStatus.PENDING}).to_list(1000)
+    
+    result = []
+    for u in pending:
+        result.append({
+            "id": u["id"],
+            "email": u["email"],
+            "full_name": u["full_name"],
+            "role": u["role"],
+            "status": u.get("status", UserStatus.PENDING),
+            "created_at": u.get("created_at"),
+        })
+    
+    return result
+
+@api_router.patch("/users/{user_id}/role")
+async def update_user_role(user_id: str, data: UserUpdateRole, current_user = Depends(get_current_user)):
+    """Update user role (only for dirigenti: admin/viewer)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare i ruoli")
+    
+    # Validate role
+    if data.role not in [UserRole.ADMIN, UserRole.VIEWER]:
+        raise HTTPException(status_code=400, detail="Ruolo non valido per dirigenti")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    # Only allow role change for admin/viewer users
+    if user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+        raise HTTPException(status_code=400, detail="Questo utente non è un dirigente")
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"role": data.role}}
+    )
+    
+    return {"message": "Ruolo aggiornato con successo"}
+
+@api_router.patch("/users/{user_id}/status")
+async def update_user_status(user_id: str, data: UserUpdateStatus, current_user = Depends(get_current_user)):
+    """Approve, reject or suspend a user"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può gestire gli utenti")
+    
+    # Validate status
+    if data.status not in [UserStatus.APPROVED, UserStatus.REJECTED, UserStatus.SUSPENDED]:
+        raise HTTPException(status_code=400, detail="Stato non valido")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    update_data = {"status": data.status}
+    if data.status == UserStatus.APPROVED:
+        update_data["approved_at"] = datetime.utcnow()
+        update_data["approved_by"] = current_user["id"]
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": f"Utente {data.status} con successo"}
+
+@api_router.patch("/users/{user_id}/teams")
+async def assign_teams_to_coach(user_id: str, data: CoachAssignTeams, current_user = Depends(get_current_user)):
+    """Assign teams to a coach"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può assegnare squadre")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    if user["role"] != UserRole.COACH:
+        raise HTTPException(status_code=400, detail="Questo utente non è un coach")
+    
+    # Verify all teams exist
+    for team_id in data.team_ids:
+        team = await db.teams.find_one({"id": team_id})
+        if not team:
+            raise HTTPException(status_code=404, detail=f"Squadra {team_id} non trovata")
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"assigned_teams": data.team_ids}}
+    )
+    
+    return {"message": "Squadre assegnate con successo"}
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(user_id: str, current_user = Depends(get_current_user)):
+    """Delete a user (only admin can delete)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare utenti")
+    
+    # Prevent self-deletion
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Non puoi eliminare il tuo account")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    await db.users.delete_one({"id": user_id})
+    
+    return {"message": "Utente eliminato con successo"}
+
 # ==================== TEAM ENDPOINTS (ADMIN) ====================
 
 @api_router.post("/teams", response_model=Team)
