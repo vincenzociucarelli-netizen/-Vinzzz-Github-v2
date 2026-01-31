@@ -473,6 +473,18 @@ const styles = StyleSheet.create({
   picker: {
     height: 50,
   },
+  hint: {
+    fontSize: 13,
+    color: '#999',
+    fontStyle: 'italic',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+    marginTop: 8,
+  },
+  picker: {
+    height: 50,
+  },
   submitButton: {
     backgroundColor: '#34C759',
     flexDirection: 'row',
