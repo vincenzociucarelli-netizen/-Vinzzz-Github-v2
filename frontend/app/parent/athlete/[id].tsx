@@ -153,14 +153,12 @@ export default function AthleteDetail() {
       // Convert date to ISO format
       const isoDate = convertToISODate(certIssueDate);
 
-      // Send to backend using the base64 endpoint
-      const response = await api.post('/certificates/upload-base64', null, {
-        params: {
-          athlete_id: id as string,
-          issue_date: isoDate,
-          validity_months: validityNum,
-          pdf_base64: base64Content,
-        },
+      // Send to backend using the base64 endpoint with JSON body
+      const response = await api.post('/certificates/upload-base64', {
+        athlete_id: id as string,
+        issue_date: isoDate,
+        validity_months: validityNum,
+        pdf_base64: base64Content,
       });
 
       Alert.alert('Successo', 'Certificato caricato con successo');
