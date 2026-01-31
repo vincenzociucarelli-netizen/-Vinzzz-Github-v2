@@ -859,14 +859,14 @@ const styles = StyleSheet.create({
   trainingFormRow: {
     backgroundColor: '#f9f9f9',
     borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    padding: 14,
+    marginBottom: 14,
   },
   trainingFormHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   trainingFormLabel: {
     fontSize: 14,
@@ -875,8 +875,8 @@ const styles = StyleSheet.create({
   },
   trainingInputRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
+    gap: 10,
+    marginBottom: 10,
   },
   pickerWrapper: {
     flex: 1,
@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
   miniLabel: {
     fontSize: 12,
     color: '#666',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   pickerContainer: {
     backgroundColor: '#fff',
