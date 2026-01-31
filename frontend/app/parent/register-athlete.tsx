@@ -281,13 +281,13 @@ export default function RegisterAthlete() {
 
           <Text style={styles.sectionTitle}>💳 Dati Fiscali (per Detrazione)</Text>
 
-          <Text style={styles.label}>Nome e Cognome Genitore</Text>
+          <Text style={styles.label}>Cognome e Nome Genitore</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: Mario Rossi"
+            placeholder="Es: ROSSI MARIO"
             value={taxPayerName}
-            onChangeText={setTaxPayerName}
-            autoCapitalize="words"
+            onChangeText={(text) => setTaxPayerName(text.toUpperCase())}
+            autoCapitalize="characters"
           />
 
           <Text style={styles.label}>Codice Fiscale Genitore</Text>
