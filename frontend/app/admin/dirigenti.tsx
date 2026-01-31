@@ -250,7 +250,7 @@ export default function DirigentiScreen() {
 
       <FlatList
         data={[...pendingUsers, ...dirigenti]}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => `${index < pendingUsers.length ? 'pending' : 'approved'}-${item.id}`}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
