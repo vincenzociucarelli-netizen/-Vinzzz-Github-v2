@@ -179,6 +179,7 @@ class AthleteUpdate(BaseModel):
     tax_payer_fiscal_code: Optional[str] = None
     privacy_accepted: Optional[bool] = None
     image_consent: Optional[bool] = None
+    team_id: Optional[str] = None
 
 class Certificate(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
