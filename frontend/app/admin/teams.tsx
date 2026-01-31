@@ -206,28 +206,22 @@ export default function TeamsScreen() {
 
               <Text style={styles.sectionTitle}>🏟️ Sede Allenamenti</Text>
 
-              <Text style={styles.label}>Palestra/Campo</Text>
+              <Text style={styles.label}>Palestra/Campo *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Es: Palazzetto dello Sport"
+                placeholder="Es: Palestra Liceo Alessi"
                 value={venue}
                 onChangeText={setVenue}
               />
 
-              <Text style={styles.label}>Giorni Allenamento</Text>
+              <Text style={styles.label}>Orari Allenamenti</Text>
               <TextInput
-                style={styles.input}
-                placeholder="Es: Lunedì, Mercoledì, Venerdì"
-                value={trainingDays}
-                onChangeText={setTrainingDays}
-              />
-
-              <Text style={styles.label}>Orari Allenamento</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Es: 18:00 - 20:00"
-                value={trainingTime}
-                onChangeText={setTrainingTime}
+                style={[styles.input, styles.textArea]}
+                placeholder="Es: Lunedì 18:00-20:00, Mercoledì 19:00-21:00, Venerdì 18:00-20:00"
+                value={trainingSchedule}
+                onChangeText={setTrainingSchedule}
+                multiline
+                numberOfLines={3}
               />
 
               <Text style={styles.sectionTitle}>🏆 Campionati</Text>
