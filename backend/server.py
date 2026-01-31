@@ -466,6 +466,52 @@ async def get_team_payment_info(team_id: str, current_user = Depends(get_current
         "paypal_email": team.get("paypal_email", "")
     }
 
+@api_router.get("/teams/{team_id}/athletes-count")
+async def get_team_athletes_count(team_id: str, current_user = Depends(get_current_user)):
+    """Get the count of athletes in a team"""
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    count = await db.athletes.count_documents({"team_id": team_id})
+    return {"count": count}
+
+@api_router.get("/teams/athletes-count/all")
+async def get_all_teams_athletes_count(current_user = Depends(get_current_user)):
+    """Get the count of athletes for all teams"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere queste statistiche")
+    
+    teams = await db.teams.find().to_list(1000)
+    result = {}
+    for team in teams:
+        count = await db.athletes.count_documents({"team_id": team["id"]})
+        result[team["id"]] = count
+    return result
+
+@api_router.delete("/teams/{team_id}")
+async def delete_team(team_id: str, current_user = Depends(get_current_user)):
+    """Delete a team (only if empty)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare squadre")
+    
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    # Check if team has athletes
+    athletes_count = await db.athletes.count_documents({"team_id": team_id})
+    if athletes_count > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Impossibile eliminare la squadra: ci sono {athletes_count} atleti iscritti. Trasferire o eliminare gli atleti prima."
+        )
+    
+    # Delete the team
+    await db.teams.delete_one({"id": team_id})
+    
+    return {"message": "Squadra eliminata con successo"}
+
 # ==================== ATHLETE ENDPOINTS ====================
 
 @api_router.post("/athletes", response_model=Athlete)
