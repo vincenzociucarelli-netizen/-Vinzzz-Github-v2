@@ -162,6 +162,18 @@ class AttendanceCreate(BaseModel):
 
 # ==================== HELPER FUNCTIONS ====================
 
+def convert_objectid(doc):
+    """Convert MongoDB ObjectId to string in documents"""
+    if doc is None:
+        return None
+    if isinstance(doc, list):
+        return [convert_objectid(item) for item in doc]
+    if isinstance(doc, dict):
+        if '_id' in doc:
+            doc['_id'] = str(doc['_id'])
+        return {k: convert_objectid(v) if isinstance(v, (dict, list)) else v for k, v in doc.items()}
+    return doc
+
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
