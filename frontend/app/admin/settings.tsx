@@ -15,11 +15,13 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const [societyName, setSocietyName] = useState('');
   const [logo, setLogo] = useState<string | null>(null);
+  const [logoSize, setLogoSize] = useState(50); // Default size in pixels (header display)
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -28,6 +30,7 @@ export default function SettingsScreen() {
       const response = await api.get('/settings/society');
       setSocietyName(response.data.name || '');
       setLogo(response.data.logo || null);
+      setLogoSize(response.data.logo_size || 50);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -83,6 +86,7 @@ export default function SettingsScreen() {
       await api.patch('/settings/society', {
         name: societyName,
         logo: logo,
+        logo_size: logoSize,
       });
       showAlert('Successo', 'Impostazioni salvate con successo');
     } catch (error: any) {
