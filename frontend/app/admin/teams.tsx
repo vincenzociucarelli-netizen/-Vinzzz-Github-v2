@@ -62,7 +62,6 @@ export default function TeamsScreen() {
     setInstallment3Date('');
     setBankInfo('');
     setPaypalEmail('');
-    setVenue('');
     setTrainingSchedule('');
     setChampionships('');
     setCalendarLink('');
