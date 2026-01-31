@@ -421,6 +421,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '500',
   },
+  teamVenue: {
+    fontSize: 10,
+    color: '#FF9500',
+    marginTop: 2,
+  },
   teamTraining: {
     fontSize: 10,
     color: '#999',
