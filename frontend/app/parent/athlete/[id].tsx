@@ -239,6 +239,12 @@ export default function AthleteDetail() {
       return;
     }
 
+    const validityNum = parseInt(certValidityMonths);
+    if (isNaN(validityNum) || validityNum <= 0) {
+      Alert.alert('Errore', 'Inserisci una validità valida in mesi');
+      return;
+    }
+
     setUploadingCert(true);
     try {
       // Use the base64 directly from ImagePicker
