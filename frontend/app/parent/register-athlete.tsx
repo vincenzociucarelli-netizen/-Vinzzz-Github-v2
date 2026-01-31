@@ -15,9 +15,11 @@ import { Picker } from '@react-native-picker/picker';
 import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { Team } from '../../src/types';
+import { useAuthStore } from '../../src/store/authStore';
 
 export default function RegisterAthlete() {
   const router = useRouter();
+  const { logout } = useAuthStore();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
   
@@ -60,6 +62,39 @@ export default function RegisterAthlete() {
     }
   };
 
+  const showAlert = (title: string, message: string, onOk?: () => void) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+      if (onOk) onOk();
+    } else {
+      Alert.alert(title, message, onOk ? [{ text: 'OK', onPress: onOk }] : undefined);
+    }
+  };
+
+  const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Sei sicuro di voler uscire?')) {
+        logout();
+        router.replace('/login');
+      }
+    } else {
+      Alert.alert(
+        'Logout',
+        'Sei sicuro di voler uscire?',
+        [
+          { text: 'Annulla', style: 'cancel' },
+          {
+            text: 'Esci',
+            onPress: async () => {
+              await logout();
+              router.replace('/login');
+            },
+          },
+        ]
+      );
+    }
+  };
+
   const convertToISODate = (dateStr: string) => {
     // Converti da GG/MM/AAAA a YYYY-MM-DD
     const parts = dateStr.split('/');
@@ -69,42 +104,63 @@ export default function RegisterAthlete() {
     return dateStr;
   };
 
+  const formatDateInput = (text: string) => {
+    // Remove non-numeric characters except /
+    let cleaned = text.replace(/[^0-9/]/g, '');
+    
+    // Auto-add slashes
+    if (cleaned.length === 2 && !cleaned.includes('/')) {
+      cleaned += '/';
+    } else if (cleaned.length === 5 && cleaned.split('/').length === 2) {
+      cleaned += '/';
+    }
+    
+    // Limit to dd/mm/yyyy format
+    if (cleaned.length > 10) {
+      cleaned = cleaned.substring(0, 10);
+    }
+    
+    return cleaned;
+  };
+
   const handleRegister = async () => {
     // Validazioni
     if (!firstName || !lastName) {
-      Alert.alert('Errore', 'Inserisci nome e cognome');
+      showAlert('Errore', 'Inserisci nome e cognome');
       return;
     }
     
     if (!dateOfBirth) {
-      Alert.alert('Errore', 'Inserisci la data di nascita (GG/MM/AAAA)');
+      showAlert('Errore', 'Inserisci la data di nascita (GG/MM/AAAA)');
       return;
     }
     
     if (!fiscalCode) {
-      Alert.alert('Errore', 'Inserisci il codice fiscale');
+      showAlert('Errore', 'Inserisci il codice fiscale');
       return;
     }
     
     if (!teamId) {
-      Alert.alert('Errore', 'Seleziona una squadra');
+      showAlert('Errore', 'Seleziona una squadra');
       return;
     }
 
     // Valida formato data GG/MM/AAAA
     const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
     if (!dateRegex.test(dateOfBirth)) {
-      Alert.alert('Errore', 'Formato data non valido. Usa GG/MM/AAAA (es: 15/05/2010)');
+      showAlert('Errore', 'Formato data non valido. Usa GG/MM/AAAA (es: 15/05/2010)');
       return;
     }
 
     setLoading(true);
     try {
-      const fullName = `${firstName} ${lastName}`;
+      const fullName = `${lastName} ${firstName}`;
       const isoDate = convertToISODate(dateOfBirth);
       
       await api.post('/athletes', {
         full_name: fullName,
+        first_name: firstName,
+        last_name: lastName,
         date_of_birth: isoDate,
         fiscal_code: fiscalCode,
         address: address || null,
@@ -120,18 +176,13 @@ export default function RegisterAthlete() {
         team_id: teamId,
       });
       
-      Alert.alert(
+      showAlert(
         'Successo',
         'Atleta registrato con successo! Periodo di prova: 7 giorni',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
+        () => router.back()
       );
     } catch (error: any) {
-      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la registrazione');
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la registrazione');
     } finally {
       setLoading(false);
     }
@@ -144,7 +195,9 @@ export default function RegisterAthlete() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Registra Atleta</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
@@ -177,8 +230,9 @@ export default function RegisterAthlete() {
             style={styles.input}
             placeholder="Es: 15/05/2010"
             value={dateOfBirth}
-            onChangeText={setDateOfBirth}
-            keyboardType="numbers-and-punctuation"
+            onChangeText={(text) => setDateOfBirth(formatDateInput(text))}
+            keyboardType="number-pad"
+            maxLength={10}
           />
 
           <Text style={styles.label}>Codice Fiscale *</Text>
@@ -201,63 +255,64 @@ export default function RegisterAthlete() {
           />
 
           <View style={styles.row}>
-            <View style={styles.halfInput}>
+            <View style={styles.flex1}>
               <Text style={styles.label}>CAP</Text>
               <TextInput
                 style={styles.input}
-                placeholder="06100"
+                placeholder="00100"
                 value={postalCode}
                 onChangeText={setPostalCode}
                 keyboardType="number-pad"
                 maxLength={5}
               />
             </View>
-            <View style={styles.halfInput}>
-              <Text style={styles.label}>Provincia</Text>
+            <View style={styles.flex2}>
+              <Text style={styles.label}>Città</Text>
               <TextInput
                 style={styles.input}
-                placeholder="PG"
+                placeholder="ROMA"
+                value={city}
+                onChangeText={(text) => setCity(text.toUpperCase())}
+                autoCapitalize="characters"
+              />
+            </View>
+            <View style={styles.flex1}>
+              <Text style={styles.label}>Prov.</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="RM"
                 value={province}
                 onChangeText={(text) => setProvince(text.toUpperCase())}
-                autoCapitalize="characters"
                 maxLength={2}
+                autoCapitalize="characters"
               />
             </View>
           </View>
 
-          <Text style={styles.label}>Città</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Es: PERUGIA"
-            value={city}
-            onChangeText={(text) => setCity(text.toUpperCase())}
-            autoCapitalize="characters"
-          />
-
           <Text style={styles.sectionTitle}>📞 Contatti</Text>
 
-          <Text style={styles.label}>Telefono Atleta</Text>
+          <Text style={styles.label}>Tel. Atleta</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: 3331234567"
+            placeholder="333 1234567"
             value={phoneAthlete}
             onChangeText={setPhoneAthlete}
             keyboardType="phone-pad"
           />
 
-          <Text style={styles.label}>Telefono Padre</Text>
+          <Text style={styles.label}>Tel. Padre</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: 3337654321"
+            placeholder="333 1234567"
             value={phoneFather}
             onChangeText={setPhoneFather}
             keyboardType="phone-pad"
           />
 
-          <Text style={styles.label}>Telefono Madre</Text>
+          <Text style={styles.label}>Tel. Madre</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: 3339876543"
+            placeholder="333 1234567"
             value={phoneMother}
             onChangeText={setPhoneMother}
             keyboardType="phone-pad"
@@ -266,69 +321,59 @@ export default function RegisterAthlete() {
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: nome@email.it"
+            placeholder="email@esempio.com"
             value={email}
-            onChangeText={(text) => setEmail(text.toLowerCase())}
+            onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
           />
 
-          <Text style={styles.sectionTitle}>🏐 Squadra</Text>
+          <Text style={styles.sectionTitle}>💳 Dati per Fatturazione</Text>
 
-          <Text style={styles.label}>Squadra di Appartenenza *</Text>
-          {teams.length > 0 ? (
-            <View style={styles.picker}>
-              <Picker
-                selectedValue={teamId}
-                onValueChange={(value) => setTeamId(value)}
-              >
-                {teams.map((team) => (
-                  <Picker.Item key={team.id} label={team.name} value={team.id} />
-                ))}
-              </Picker>
-            </View>
-          ) : (
-            <Text style={styles.noTeamsText}>Nessuna squadra disponibile</Text>
-          )}
-
-          <Text style={styles.sectionTitle}>💳 Dati Fiscali (per Detrazione)</Text>
-
-          <Text style={styles.label}>Cognome e Nome Genitore</Text>
+          <Text style={styles.label}>Nome Contribuente</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: ROSSI MARIO"
+            placeholder="Nome e Cognome o Ragione Sociale"
             value={taxPayerName}
             onChangeText={(text) => setTaxPayerName(text.toUpperCase())}
             autoCapitalize="characters"
           />
 
-          <Text style={styles.label}>Codice Fiscale Genitore</Text>
+          <Text style={styles.label}>Codice Fiscale Contribuente</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: RSSMRA70A01H501Z"
+            placeholder="Codice Fiscale o P.IVA"
             value={taxPayerFiscalCode}
             onChangeText={(text) => setTaxPayerFiscalCode(text.toUpperCase())}
             autoCapitalize="characters"
-            maxLength={16}
           />
 
-          <View style={styles.infoBox}>
-            <Ionicons name="information-circle" size={20} color="#007AFF" />
-            <Text style={styles.infoText}>
-              Periodo di prova di 7 giorni. Dopo questo periodo, dovrai confermare
-              la privacy e completare il pagamento della prima rata.
-            </Text>
+          <Text style={styles.sectionTitle}>🏐 Squadra</Text>
+
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={teamId}
+              onValueChange={(value) => setTeamId(value)}
+              style={styles.picker}
+            >
+              {teams.map((team) => (
+                <Picker.Item key={team.id} label={team.name} value={team.id} />
+              ))}
+            </Picker>
           </View>
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
             onPress={handleRegister}
-            disabled={loading || teams.length === 0}
+            disabled={loading}
           >
-            <Text style={styles.buttonText}>
+            <Ionicons name="checkmark-circle" size={24} color="#fff" />
+            <Text style={styles.submitButtonText}>
               {loading ? 'Registrazione...' : 'Registra Atleta'}
             </Text>
           </TouchableOpacity>
+
+          <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -359,75 +404,72 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 100,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#333',
     marginTop: 20,
-    marginBottom: 12,
+    marginBottom: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    color: '#666',
     marginBottom: 6,
-    marginTop: 8,
+    marginTop: 12,
   },
   input: {
     backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     borderRadius: 8,
+    padding: 14,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#e0e0e0',
   },
   row: {
     flexDirection: 'row',
     gap: 12,
   },
-  halfInput: {
+  flex1: {
     flex: 1,
   },
-  picker: {
+  flex2: {
+    flex: 2,
+  },
+  pickerContainer: {
     backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#e0e0e0',
+    marginTop: 8,
   },
-  noTeamsText: {
-    fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
+  picker: {
+    height: 50,
   },
-  infoBox: {
-    backgroundColor: '#E3F2FF',
-    padding: 16,
-    borderRadius: 8,
+  submitButton: {
+    backgroundColor: '#34C759',
     flexDirection: 'row',
-    marginTop: 24,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#007AFF',
-    marginLeft: 12,
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 14,
-    borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
     marginTop: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  buttonDisabled: {
-    opacity: 0.6,
+  submitButtonDisabled: {
+    backgroundColor: '#A5D6A7',
   },
-  buttonText: {
+  submitButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });
