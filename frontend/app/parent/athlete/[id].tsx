@@ -102,40 +102,15 @@ export default function AthleteDetail() {
       }
 
       const file = result.assets[0];
-
-      // Ask for certificate details with proper iOS handling
-      Alert.prompt(
-        'Data di emissione',
-        'Inserisci la data di emissione (GG/MM/AAAA)',
-        [
-          { text: 'Annulla', style: 'cancel' },
-          {
-            text: 'Avanti',
-            onPress: async (issueDate) => {
-              if (!issueDate) return;
-
-              Alert.prompt(
-                'Validità',
-                'Inserisci la validità in mesi',
-                [
-                  { text: 'Annulla', style: 'cancel' },
-                  {
-                    text: 'Carica',
-                    onPress: async (validityMonths) => {
-                      if (!validityMonths) return;
-                      await uploadCertificateFile(file, issueDate, parseInt(validityMonths));
-                    },
-                  },
-                ],
-                'plain-text',
-                '12'
-              );
-            },
-          },
-        ],
-        'plain-text',
-        new Date().toLocaleDateString('it-IT').replace(/\//g, '/')
-      );
+      
+      // Set default issue date to today
+      const today = new Date();
+      const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+      
+      setSelectedFile(file);
+      setCertIssueDate(formattedDate);
+      setCertValidityMonths('12');
+      setCertModalVisible(true);
     } catch (error) {
       console.error('Error picking document:', error);
       Alert.alert('Errore', 'Impossibile selezionare il file');
@@ -151,52 +126,51 @@ export default function AthleteDetail() {
     return dateStr;
   };
 
-  const uploadCertificateFile = async (file: any, issueDate: string, validityMonths: number) => {
+  const submitCertificate = async () => {
+    if (!selectedFile) {
+      Alert.alert('Errore', 'Nessun file selezionato');
+      return;
+    }
+
+    if (!certIssueDate) {
+      Alert.alert('Errore', 'Inserisci la data di emissione');
+      return;
+    }
+
+    const validityNum = parseInt(certValidityMonths);
+    if (isNaN(validityNum) || validityNum <= 0) {
+      Alert.alert('Errore', 'Inserisci una validità valida in mesi');
+      return;
+    }
+
     setUploadingCert(true);
     try {
-      // Converti data da GG/MM/AAAA a YYYY-MM-DD
-      const isoDate = convertToISODate(issueDate);
-      
-      // Leggi il file come base64
-      const response = await fetch(file.uri);
-      const blob = await response.blob();
-      
-      // Converti blob in base64
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      
-      reader.onloadend = async () => {
-        const base64data = reader.result as string;
-        // Rimuovi il prefix "data:application/pdf;base64,"
-        const pdfBase64 = base64data.split(',')[1];
-        
-        try {
-          // Invia come JSON invece di FormData
-          await api.post('/certificates/upload', {
-            athlete_id: id as string,
-            issue_date: isoDate,
-            validity_months: validityMonths,
-            pdf_base64: pdfBase64,
-          });
+      // Read the file as base64 using expo-file-system
+      const base64Content = await FileSystem.readAsStringAsync(selectedFile.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
-          Alert.alert('Successo', 'Certificato caricato con successo');
-          await loadData();
-        } catch (error: any) {
-          console.error('Upload error:', error);
-          Alert.alert('Errore', error.response?.data?.detail || 'Errore durante il caricamento del certificato');
-        } finally {
-          setUploadingCert(false);
-        }
-      };
-      
-      reader.onerror = () => {
-        setUploadingCert(false);
-        Alert.alert('Errore', 'Impossibile leggere il file PDF');
-      };
-      
+      // Convert date to ISO format
+      const isoDate = convertToISODate(certIssueDate);
+
+      // Send to backend using the base64 endpoint
+      const response = await api.post('/certificates/upload-base64', null, {
+        params: {
+          athlete_id: id as string,
+          issue_date: isoDate,
+          validity_months: validityNum,
+          pdf_base64: base64Content,
+        },
+      });
+
+      Alert.alert('Successo', 'Certificato caricato con successo');
+      setCertModalVisible(false);
+      setSelectedFile(null);
+      await loadData();
     } catch (error: any) {
       console.error('Upload error:', error);
-      Alert.alert('Errore', 'Errore durante la lettura del file');
+      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante il caricamento del certificato');
+    } finally {
       setUploadingCert(false);
     }
   };
