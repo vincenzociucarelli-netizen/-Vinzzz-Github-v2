@@ -48,7 +48,10 @@ export default function AdminAthletes() {
   };
 
   const renderAthleteItem = ({ item }: { item: Athlete }) => (
-    <View style={styles.athleteCard}>
+    <TouchableOpacity 
+      style={styles.athleteCard}
+      onPress={() => router.push(`/admin/athlete/${item.id}`)}
+    >
       <View style={styles.athleteIcon}>
         <Ionicons name="person" size={32} color="#007AFF" />
       </View>
@@ -62,14 +65,8 @@ export default function AdminAthletes() {
           {!item.privacy_accepted && ' - Privacy non accettata'}
         </Text>
       </View>
-      <View style={styles.statusIcon}>
-        {item.privacy_accepted ? (
-          <Ionicons name="checkmark-circle" size={24} color="#34C759" />
-        ) : (
-          <Ionicons name="alert-circle" size={24} color="#FF9500" />
-        )}
-      </View>
-    </View>
+      <Ionicons name="chevron-forward" size={24} color="#999" />
+    </TouchableOpacity>
   );
 
   return (
