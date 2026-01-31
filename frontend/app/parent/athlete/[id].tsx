@@ -1678,9 +1678,10 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
     marginBottom: 16,
     overflow: 'hidden',
+    minHeight: 56,
   },
   picker: {
-    height: 50,
+    height: 56,
     width: '100%',
   },
   // Delete athlete styles
