@@ -1064,6 +1064,11 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
     if update_data.image_consent is not None:
         update_dict["image_consent"] = update_data.image_consent
     
+    # Status
+    if update_data.status is not None:
+        if update_data.status in ["trial", "active", "blocked"]:
+            update_dict["status"] = update_data.status
+    
     if update_dict:
         await db.athletes.update_one({"id": athlete_id}, {"$set": update_dict})
         athlete.update(update_dict)
