@@ -629,6 +629,8 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
         paypal_email=team_data.paypal_email,
         venue=team_data.venue if team_data.venue else None,
         training_schedule=team_data.training_schedule if team_data.training_schedule else None,
+        training_sessions=team_data.training_sessions if team_data.training_sessions else [],
+        match_day=team_data.match_day if team_data.match_day else None,
         championships=team_data.championships if team_data.championships else None,
         calendar_link=team_data.calendar_link if team_data.calendar_link else None
     )
