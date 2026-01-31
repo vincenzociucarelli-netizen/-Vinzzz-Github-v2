@@ -149,32 +149,46 @@ export default function AthleteDetail() {
       // Converti data da GG/MM/AAAA a YYYY-MM-DD
       const isoDate = convertToISODate(issueDate);
       
-      const formData = new FormData();
+      // Leggi il file come base64
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
       
-      // Create file object for FormData
-      const fileToUpload = {
-        uri: file.uri,
-        name: file.name || 'certificato.pdf',
-        type: file.mimeType || 'application/pdf',
+      // Converti blob in base64
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      
+      reader.onloadend = async () => {
+        const base64data = reader.result as string;
+        // Rimuovi il prefix "data:application/pdf;base64,"
+        const pdfBase64 = base64data.split(',')[1];
+        
+        try {
+          // Invia come JSON invece di FormData
+          await api.post('/certificates/upload', {
+            athlete_id: id as string,
+            issue_date: isoDate,
+            validity_months: validityMonths,
+            pdf_base64: pdfBase64,
+          });
+
+          Alert.alert('Successo', 'Certificato caricato con successo');
+          await loadData();
+        } catch (error: any) {
+          console.error('Upload error:', error);
+          Alert.alert('Errore', error.response?.data?.detail || 'Errore durante il caricamento del certificato');
+        } finally {
+          setUploadingCert(false);
+        }
       };
       
-      formData.append('file', fileToUpload as any);
-      formData.append('athlete_id', id as string);
-      formData.append('issue_date', isoDate);
-      formData.append('validity_months', validityMonths.toString());
-
-      await api.post('/certificates', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      Alert.alert('Successo', 'Certificato caricato con successo');
-      await loadData();
+      reader.onerror = () => {
+        setUploadingCert(false);
+        Alert.alert('Errore', 'Impossibile leggere il file PDF');
+      };
+      
     } catch (error: any) {
       console.error('Upload error:', error);
-      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante il caricamento del certificato');
-    } finally {
+      Alert.alert('Errore', 'Errore durante la lettura del file');
       setUploadingCert(false);
     }
   };
