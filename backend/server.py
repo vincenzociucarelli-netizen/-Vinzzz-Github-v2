@@ -397,6 +397,7 @@ async def get_my_athletes(current_user = Depends(get_current_user)):
     else:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
+    clean_mongo_docs(athletes)
     return [Athlete(**athlete) for athlete in athletes]
 
 @api_router.get("/athletes/{athlete_id}", response_model=Athlete)
