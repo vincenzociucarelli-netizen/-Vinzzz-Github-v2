@@ -260,7 +260,13 @@ export default function CoachesScreen() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Coach</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity onPress={handleExport} disabled={exporting}>
+          {exporting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="download-outline" size={24} color="#fff" />
+          )}
+        </TouchableOpacity>
       </View>
 
       <FlatList
