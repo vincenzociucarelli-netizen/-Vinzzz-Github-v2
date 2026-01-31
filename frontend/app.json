@@ -43,7 +43,7 @@
         }
       ],
       [
-        "expo-barcode-scanner",
+        "expo-camera",
         {
           "cameraPermission": "Allow app to access camera for QR code scanning"
         }
