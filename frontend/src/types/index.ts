@@ -11,6 +11,14 @@ export interface Team {
   description?: string;
   created_by_admin_id: string;
   created_at: string;
+  total_amount: number;
+  installment_1_amount: number;
+  installment_2_amount: number;
+  installment_2_due_date: string;
+  installment_3_amount: number;
+  installment_3_due_date: string;
+  bank_info: string;
+  paypal_email: string;
 }
 
 export interface Athlete {
