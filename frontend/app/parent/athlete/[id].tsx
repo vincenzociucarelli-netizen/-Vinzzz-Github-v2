@@ -850,6 +850,18 @@ const styles = StyleSheet.create({
     width: '90%',
     maxWidth: 400,
   },
+  imagePreviewContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 8,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+  },
   selectedFileBox: {
     flexDirection: 'row',
     alignItems: 'center',
