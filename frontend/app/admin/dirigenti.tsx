@@ -24,6 +24,7 @@ interface Dirigente {
   status: string;
   created_at: string;
   approved_at?: string;
+  is_scorekeeper?: boolean;  // Segnapunti
 }
 
 export default function DirigentiScreen() {
