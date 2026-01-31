@@ -425,6 +425,55 @@ export default function AthleteDetail() {
     }
   };
 
+  const handleToggleStatus = async () => {
+    if (!athlete) return;
+    
+    // Se è in prova e vuole attivare, deve prima accettare la privacy
+    if (athlete.status === 'trial') {
+      if (Platform.OS === 'web') {
+        if (!window.confirm('Vuoi terminare il periodo di prova e attivare l\'atleta? Dovrai accettare la privacy.')) {
+          return;
+        }
+      } else {
+        // Show confirmation on mobile
+        Alert.alert(
+          'Termina periodo di prova',
+          'Vuoi terminare il periodo di prova e attivare l\'atleta? Dovrai accettare la privacy.',
+          [
+            { text: 'Annulla', style: 'cancel' },
+            { text: 'Conferma', onPress: () => executeStatusToggle() }
+          ]
+        );
+        return;
+      }
+    }
+    
+    await executeStatusToggle();
+  };
+
+  const executeStatusToggle = async () => {
+    if (!athlete) return;
+    
+    setTogglingStatus(true);
+    try {
+      const newStatus = athlete.status === 'trial' ? 'active' : 'trial';
+      await api.patch(`/athletes/${id}`, {
+        status: newStatus,
+        privacy_accepted: newStatus === 'active',
+        privacy_accepted_date: newStatus === 'active' ? new Date().toISOString() : null,
+      });
+      
+      showAlert('Successo', newStatus === 'active' 
+        ? 'Atleta attivato! Periodo di prova terminato.'
+        : 'Atleta rimesso in periodo di prova.');
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'aggiornamento');
+    } finally {
+      setTogglingStatus(false);
+    }
+  };
+
   const openEditModal = () => {
     if (!athlete) return;
     
