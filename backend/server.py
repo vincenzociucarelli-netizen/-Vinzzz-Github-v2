@@ -799,6 +799,84 @@ async def get_certificate(athlete_id: str, current_user = Depends(get_current_us
     
     return Certificate(**certificate)
 
+@api_router.get("/teams/{team_id}/attendance-stats")
+async def get_team_attendance_stats(team_id: str, current_user = Depends(get_current_user)):
+    """Get attendance statistics for all athletes in a team"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH]:
+        raise HTTPException(status_code=403, detail="Solo admin o coach possono vedere le statistiche")
+    
+    # Check team exists
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    # Get all athletes in the team
+    athletes = await db.athletes.find({"team_id": team_id}).to_list(1000)
+    
+    # Get current date info
+    now = datetime.now()
+    week_start = now - timedelta(days=now.weekday())  # Monday
+    month_start = now.replace(day=1)
+    
+    # Calculate stats for each athlete
+    stats = []
+    for athlete in athletes:
+        athlete_id = athlete["id"]
+        
+        # Get all attendances for this athlete
+        all_attendances = await db.attendances.count_documents({"athlete_id": athlete_id})
+        
+        # Get weekly attendances
+        week_attendances = await db.attendances.count_documents({
+            "athlete_id": athlete_id,
+            "check_in_time": {"$gte": week_start.isoformat()}
+        })
+        
+        # Get monthly attendances
+        month_attendances = await db.attendances.count_documents({
+            "athlete_id": athlete_id,
+            "check_in_time": {"$gte": month_start.isoformat()}
+        })
+        
+        # Estimate expected trainings based on team training days
+        # Assuming 3 trainings per week (typical)
+        weeks_active = max(1, (now - datetime.fromisoformat(athlete["registration_date"])).days // 7)
+        expected_total = weeks_active * 3  # 3 trainings per week estimate
+        expected_monthly = 12  # ~3 trainings per week * 4 weeks
+        expected_weekly = 3
+        
+        # Calculate percentages
+        total_percentage = round((all_attendances / max(expected_total, 1)) * 100, 1)
+        monthly_percentage = round((month_attendances / max(expected_monthly, 1)) * 100, 1)
+        weekly_percentage = round((week_attendances / max(expected_weekly, 1)) * 100, 1)
+        
+        # Cap at 100%
+        total_percentage = min(total_percentage, 100)
+        monthly_percentage = min(monthly_percentage, 100)
+        weekly_percentage = min(weekly_percentage, 100)
+        
+        stats.append({
+            "athlete_id": athlete_id,
+            "athlete_name": athlete["full_name"],
+            "total_attendances": all_attendances,
+            "weekly_attendances": week_attendances,
+            "monthly_attendances": month_attendances,
+            "total_percentage": total_percentage,
+            "monthly_percentage": monthly_percentage,
+            "weekly_percentage": weekly_percentage,
+        })
+    
+    # Sort by name
+    stats.sort(key=lambda x: x["athlete_name"])
+    
+    return {
+        "team_name": team["name"],
+        "total_athletes": len(athletes),
+        "week_start": week_start.strftime("%d/%m/%Y"),
+        "month_name": now.strftime("%B %Y"),
+        "athletes": stats
+    }
+
 # ==================== PAYMENT ENDPOINTS ====================
 
 @api_router.post("/payment-settings", response_model=PaymentSettings)
