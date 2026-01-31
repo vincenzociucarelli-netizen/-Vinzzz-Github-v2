@@ -391,6 +391,25 @@ export default function RegisterAthlete() {
             💡 I dati economici (pagamenti) sono relativi solo alla squadra principale
           </Text>
 
+          <Text style={styles.sectionTitle}>📝 Tipo Iscrizione</Text>
+          
+          <TouchableOpacity 
+            style={styles.checkboxRow}
+            onPress={() => setIsTrialPeriod(!isTrialPeriod)}
+          >
+            <View style={[styles.checkbox, isTrialPeriod && styles.checkboxChecked]}>
+              {isTrialPeriod && <Ionicons name="checkmark" size={16} color="#fff" />}
+            </View>
+            <View style={styles.checkboxTextContainer}>
+              <Text style={styles.checkboxLabel}>Richiedo periodo di prova (7 giorni)</Text>
+              <Text style={styles.checkboxSubtext}>
+                {isTrialPeriod 
+                  ? 'Non è richiesta la firma sulla privacy durante la prova'
+                  : 'Accetto la privacy e la liberatoria (atleta che si riconferma)'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.submitButton, loading && styles.submitButtonDisabled]}
             onPress={handleRegister}
