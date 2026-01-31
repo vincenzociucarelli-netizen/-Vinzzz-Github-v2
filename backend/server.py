@@ -319,7 +319,15 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
     team = Team(
         name=team_data.name,
         description=team_data.description,
-        created_by_admin_id=current_user["id"]
+        created_by_admin_id=current_user["id"],
+        total_amount=team_data.total_amount,
+        installment_1_amount=team_data.installment_1_amount,
+        installment_2_amount=team_data.installment_2_amount,
+        installment_2_due_date=datetime.fromisoformat(team_data.installment_2_due_date),
+        installment_3_amount=team_data.installment_3_amount,
+        installment_3_due_date=datetime.fromisoformat(team_data.installment_3_due_date),
+        bank_info=team_data.bank_info,
+        paypal_email=team_data.paypal_email
     )
     
     await db.teams.insert_one(team.dict())
