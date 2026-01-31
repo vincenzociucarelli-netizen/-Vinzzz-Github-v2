@@ -8,23 +8,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function CoachScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
-
-  const requestPermission = async () => {
-    const { status } = await BarCodeScanner.requestPermissionsAsync();
-    setHasPermission(status === 'granted');
-    if (status === 'granted') {
-      setScanning(true);
-    }
-  };
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     setScanning(false);
