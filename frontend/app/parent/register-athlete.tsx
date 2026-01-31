@@ -192,9 +192,10 @@ export default function RegisterAthlete() {
           <Text style={styles.label}>Indirizzo</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: Via Roma 123"
+            placeholder="Es: VIA ROMA 123"
             value={address}
-            onChangeText={setAddress}
+            onChangeText={(text) => setAddress(text.toUpperCase())}
+            autoCapitalize="characters"
           />
 
           <View style={styles.row}>
@@ -225,10 +226,10 @@ export default function RegisterAthlete() {
           <Text style={styles.label}>Città</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: Perugia"
+            placeholder="Es: PERUGIA"
             value={city}
-            onChangeText={setCity}
-            autoCapitalize="words"
+            onChangeText={(text) => setCity(text.toUpperCase())}
+            autoCapitalize="characters"
           />
 
           <Text style={styles.sectionTitle}>📞 Contatti</Text>
