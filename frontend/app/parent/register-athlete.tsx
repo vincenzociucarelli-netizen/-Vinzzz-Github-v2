@@ -353,8 +353,9 @@ export default function RegisterAthlete() {
             autoCapitalize="characters"
           />
 
-          <Text style={styles.sectionTitle}>🏐 Squadra</Text>
+          <Text style={styles.sectionTitle}>🏐 Squadre</Text>
 
+          <Text style={styles.label}>Squadra Principale *</Text>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={teamId}
@@ -366,6 +367,24 @@ export default function RegisterAthlete() {
               ))}
             </Picker>
           </View>
+
+          <Text style={styles.label}>Seconda Squadra (opzionale)</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={teamId2}
+              onValueChange={(value) => setTeamId2(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="-- Nessuna --" value="" />
+              {teams.filter(t => t.id !== teamId).map((team) => (
+                <Picker.Item key={team.id} label={team.name} value={team.id} />
+              ))}
+            </Picker>
+          </View>
+          
+          <Text style={styles.hint}>
+            💡 I dati economici (pagamenti) sono relativi solo alla squadra principale
+          </Text>
 
           <TouchableOpacity
             style={[styles.submitButton, loading && styles.submitButtonDisabled]}
