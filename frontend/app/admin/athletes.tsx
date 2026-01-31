@@ -6,17 +6,43 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
+  ActivityIndicator,
+  Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { Athlete, Team } from '../../src/types';
+import { exportToExcel } from '../../src/utils/excelExport';
 
 export default function AdminAthletes() {
   const router = useRouter();
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [teams, setTeams] = useState<{[key: string]: Team}>({});
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const response = await api.get('/export/athletes');
+      await exportToExcel(response.data, 'Atleti');
+      showAlert('Successo', 'File Excel esportato con successo');
+    } catch (error: any) {
+      showAlert('Errore', error.message || 'Errore durante l\'esportazione');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const loadData = async () => {
     try {
