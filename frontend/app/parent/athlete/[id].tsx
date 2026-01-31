@@ -393,22 +393,32 @@ export default function AthleteDetail() {
 
   const handleAcceptPrivacy = async () => {
     if (!privacyConfirmed) {
-      Alert.alert('Attenzione', 'Devi confermare due volte per procedere');
-      setPrivacyConfirmed(true);
-      return;
+      if (Platform.OS === 'web') {
+        // Su web non mostriamo doppia conferma, procediamo direttamente
+        setPrivacyConfirmed(true);
+      } else {
+        Alert.alert('Attenzione', 'Devi confermare due volte per procedere');
+        setPrivacyConfirmed(true);
+        return;
+      }
     }
 
     try {
-      await api.patch(`/athletes/${id}`, {
+      // Accetta privacy E attiva l'atleta in un'unica chiamata
+      const response = await api.patch(`/athletes/${id}`, {
         privacy_accepted: true,
         image_consent: true,
+        status: 'active',
       });
 
-      Alert.alert('Successo', 'Privacy accettata con successo');
+      // Aggiorna lo stato locale immediatamente
+      setAthlete(response.data);
+      
+      showAlert('Successo', 'Privacy accettata e atleta attivato!');
       setPrivacyModalVisible(false);
-      await loadData();
+      setPrivacyConfirmed(false);
     } catch (error: any) {
-      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante l\'accettazione');
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'accettazione');
     }
   };
 
