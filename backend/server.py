@@ -955,6 +955,12 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
     update_dict = {}
     
     # Campi testuali
+    # Tesseramento (solo admin)
+    if update_data.federal_code is not None:
+        update_dict["federal_code"] = update_data.federal_code
+    if update_data.is_registered is not None:
+        update_dict["is_registered"] = update_data.is_registered
+    # Anagrafica
     if update_data.full_name is not None:
         update_dict["full_name"] = update_data.full_name
     if update_data.first_name is not None:
