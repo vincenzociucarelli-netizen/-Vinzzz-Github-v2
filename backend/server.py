@@ -179,6 +179,12 @@ class CertificateCreate(BaseModel):
     issue_date: str
     validity_months: int
 
+class CertificateUploadBase64(BaseModel):
+    athlete_id: str
+    issue_date: str
+    validity_months: int
+    pdf_base64: str
+
 class Payment(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     athlete_id: str
