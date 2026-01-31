@@ -5,8 +5,8 @@ export default function AdminLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="teams" />
+      <Stack.Screen name="team/[id]" />
       <Stack.Screen name="athletes" />
-      <Stack.Screen name="payments" />
       <Stack.Screen name="attendances" />
     </Stack>
   );
