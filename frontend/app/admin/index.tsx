@@ -99,7 +99,16 @@ export default function AdminDashboard() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Dashboard Admin</Text>
+        <View style={styles.headerLeft}>
+          {society.logo && (
+            <Image
+              source={{ uri: `data:image/jpeg;base64,${society.logo}` }}
+              style={styles.headerLogo}
+              resizeMode="cover"
+            />
+          )}
+          <Text style={styles.headerTitle}>{society.name}</Text>
+        </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerBtn}>
             <Ionicons name="settings-outline" size={24} color="#fff" />
