@@ -149,23 +149,28 @@ class TeamUpdate(BaseModel):
 class Athlete(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     parent_id: str  # User ID of parent/guardian
-    full_name: str
+    # Anagrafica base
+    full_name: str  # Manteniamo per retrocompatibilità
+    first_name: Optional[str] = None  # Nome
+    last_name: Optional[str] = None  # Cognome
     date_of_birth: datetime
+    birth_place: Optional[str] = None  # Luogo di nascita
+    birth_province: Optional[str] = None  # Provincia di nascita
     is_minor: bool
-    # New fields - anagrafica completa (opzionali per retrocompatibilità)
     fiscal_code: Optional[str] = None  # Codice fiscale atleta
-    address: Optional[str] = None  # Via, numero civico
-    city: Optional[str] = None  # Città
-    postal_code: Optional[str] = None  # CAP
-    province: Optional[str] = None  # Provincia
+    email: Optional[str] = None  # Email di contatto
     phone_athlete: Optional[str] = None  # Telefono atleta
     phone_father: Optional[str] = None  # Telefono padre
     phone_mother: Optional[str] = None  # Telefono madre
-    email: Optional[str] = None  # Email di contatto
+    # Residenza
+    address: Optional[str] = None  # Via, numero civico
+    postal_code: Optional[str] = None  # CAP
+    city: Optional[str] = None  # Città
+    province: Optional[str] = None  # Provincia
     # Dati genitore per detrazione
     tax_payer_name: Optional[str] = None  # Nome cognome genitore detrazione
     tax_payer_fiscal_code: Optional[str] = None  # CF genitore detrazione
-    # Existing fields
+    # Squadra e stato
     team_id: str
     qr_code: str  # Base64 encoded QR code
     registration_date: datetime = Field(default_factory=datetime.utcnow)
@@ -174,40 +179,53 @@ class Athlete(BaseModel):
     privacy_accepted_date: Optional[datetime] = None
     image_consent: bool = False
     status: str = "trial"  # trial, active, blocked
+    # Sconto personalizzato dall'admin
+    discount_amount: float = 0.0  # Sconto in euro da detrarre dall'ultima rata
+    discount_note: Optional[str] = None  # Nota sullo sconto
 
 class AthleteCreate(BaseModel):
     full_name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     date_of_birth: str
-    fiscal_code: str  # Obbligatorio per nuove iscrizioni
-    address: Optional[str] = None
-    city: Optional[str] = None
-    postal_code: Optional[str] = None
-    province: Optional[str] = None
+    birth_place: Optional[str] = None
+    birth_province: Optional[str] = None
+    fiscal_code: str
+    email: Optional[str] = None
     phone_athlete: Optional[str] = None
     phone_father: Optional[str] = None
     phone_mother: Optional[str] = None
-    email: Optional[str] = None
+    address: Optional[str] = None
+    postal_code: Optional[str] = None
+    city: Optional[str] = None
+    province: Optional[str] = None
     tax_payer_name: Optional[str] = None
     tax_payer_fiscal_code: Optional[str] = None
     team_id: str
     
 class AthleteUpdate(BaseModel):
     full_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     date_of_birth: Optional[str] = None
+    birth_place: Optional[str] = None
+    birth_province: Optional[str] = None
     fiscal_code: Optional[str] = None
-    address: Optional[str] = None
-    city: Optional[str] = None
-    postal_code: Optional[str] = None
-    province: Optional[str] = None
+    email: Optional[str] = None
     phone_athlete: Optional[str] = None
     phone_father: Optional[str] = None
     phone_mother: Optional[str] = None
-    email: Optional[str] = None
+    address: Optional[str] = None
+    postal_code: Optional[str] = None
+    city: Optional[str] = None
+    province: Optional[str] = None
     tax_payer_name: Optional[str] = None
     tax_payer_fiscal_code: Optional[str] = None
     privacy_accepted: Optional[bool] = None
     image_consent: Optional[bool] = None
     team_id: Optional[str] = None
+    discount_amount: Optional[float] = None
+    discount_note: Optional[str] = None
 
 class Certificate(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
