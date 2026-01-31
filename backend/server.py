@@ -613,6 +613,42 @@ async def upload_certificate(
     
     return {"message": "Certificato caricato con successo", "expiry_date": expiry_dt.isoformat()}
 
+@api_router.post("/certificates/upload-base64")
+async def upload_certificate_base64(
+    athlete_id: str,
+    issue_date: str,
+    validity_months: int,
+    pdf_base64: str,
+    current_user = Depends(get_current_user)
+):
+    # Check athlete exists and permissions
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    # Calculate expiry date
+    issue_dt = datetime.fromisoformat(issue_date)
+    expiry_dt = issue_dt + timedelta(days=validity_months * 30)
+    
+    # Delete old certificate if exists
+    await db.certificates.delete_many({"athlete_id": athlete_id})
+    
+    # Create certificate
+    certificate = Certificate(
+        athlete_id=athlete_id,
+        pdf_data=pdf_base64,
+        issue_date=issue_dt,
+        validity_months=validity_months,
+        expiry_date=expiry_dt
+    )
+    
+    await db.certificates.insert_one(certificate.dict())
+    
+    return {"message": "Certificato caricato con successo", "expiry_date": expiry_dt.isoformat()}
+
 @api_router.get("/certificates/{athlete_id}")
 async def get_certificate(athlete_id: str, current_user = Depends(get_current_user)):
     certificate = await db.certificates.find_one({"athlete_id": athlete_id})
