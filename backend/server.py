@@ -521,6 +521,7 @@ async def get_payment_settings(current_user = Depends(get_current_user)):
     settings = await db.payment_settings.find_one()
     if not settings:
         raise HTTPException(status_code=404, detail="Impostazioni pagamento non trovate")
+    clean_mongo_doc(settings)
     return PaymentSettings(**settings)
 
 @api_router.get("/payments/{athlete_id}", response_model=List[Payment])
