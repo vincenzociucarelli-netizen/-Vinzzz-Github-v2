@@ -433,6 +433,44 @@ async def login(credentials: UserLogin):
 async def get_me(current_user = Depends(get_current_user)):
     return current_user
 
+# ==================== SOCIETY SETTINGS ENDPOINTS ====================
+
+class SocietySettingsUpdate(BaseModel):
+    name: Optional[str] = None
+    logo: Optional[str] = None  # Base64 encoded image
+
+@api_router.get("/settings/society")
+async def get_society_settings():
+    """Get society settings (public endpoint - no auth required for logo display)"""
+    settings = await db.settings.find_one({"type": "society"})
+    if not settings:
+        return {"name": "Società Sportiva", "logo": None}
+    return {
+        "name": settings.get("name", "Società Sportiva"),
+        "logo": settings.get("logo")
+    }
+
+@api_router.patch("/settings/society")
+async def update_society_settings(data: SocietySettingsUpdate, current_user = Depends(get_current_user)):
+    """Update society settings (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare le impostazioni")
+    
+    update_dict = {}
+    if data.name is not None:
+        update_dict["name"] = data.name
+    if data.logo is not None:
+        update_dict["logo"] = data.logo
+    
+    if update_dict:
+        await db.settings.update_one(
+            {"type": "society"},
+            {"$set": update_dict},
+            upsert=True
+        )
+    
+    return {"message": "Impostazioni aggiornate con successo"}
+
 # ==================== USER MANAGEMENT ENDPOINTS (ADMIN) ====================
 
 class UserUpdateRole(BaseModel):
