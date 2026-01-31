@@ -856,6 +856,58 @@ export default function AthleteDetail() {
         </View>
       </Modal>
 
+      {/* View Certificate Modal */}
+      <Modal
+        visible={viewCertModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setViewCertModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.viewCertModalContent}>
+            <Text style={styles.modalTitle}>Certificato Medico</Text>
+            {certificate && (
+              <View style={styles.certImageContainer}>
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${certificate.pdf_data}` }}
+                  style={styles.certImage}
+                  resizeMode="contain"
+                />
+                <View style={styles.certInfoRow}>
+                  <Ionicons name="calendar-outline" size={16} color="#666" />
+                  <Text style={styles.certInfoText}>
+                    Emissione: {format(new Date(certificate.issue_date), 'dd/MM/yyyy', { locale: it })}
+                  </Text>
+                </View>
+                <View style={styles.certInfoRow}>
+                  <Ionicons name="time-outline" size={16} color="#666" />
+                  <Text style={styles.certInfoText}>
+                    Validità: {certificate.validity_months} mesi
+                  </Text>
+                </View>
+                <View style={styles.certInfoRow}>
+                  <Ionicons 
+                    name={isCertificateExpired ? "close-circle" : "checkmark-circle"} 
+                    size={16} 
+                    color={isCertificateExpired ? "#FF3B30" : "#34C759"} 
+                  />
+                  <Text style={[styles.certInfoText, isCertificateExpired && styles.certExpiredText]}>
+                    Scadenza: {format(new Date(certificate.expiry_date), 'dd/MM/yyyy', { locale: it })}
+                    {isCertificateExpired && ' (SCADUTO)'}
+                  </Text>
+                </View>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setViewCertModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Chiudi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Privacy Modal */}
       <Modal
         visible={privacyModalVisible}
