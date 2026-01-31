@@ -266,6 +266,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  headerBtn: {
+    padding: 4,
+  },
   content: {
     flex: 1,
   },
