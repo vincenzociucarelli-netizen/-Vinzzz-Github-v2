@@ -578,15 +578,24 @@ export default function AthleteDetail() {
                   )}
                 </View>
               </View>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonSecondary]}
-                onPress={handleUploadCertificate}
-                disabled={uploadingCert}
-              >
-                <Text style={styles.buttonSecondaryText}>
-                  {uploadingCert ? 'Caricamento...' : 'Carica Nuovo Certificato'}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.certButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.button, styles.buttonView]}
+                  onPress={() => setViewCertModalVisible(true)}
+                >
+                  <Ionicons name="eye" size={18} color="#007AFF" />
+                  <Text style={styles.buttonViewText}>Visualizza</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.buttonSecondary, { flex: 1 }]}
+                  onPress={handleUploadCertificate}
+                  disabled={uploadingCert}
+                >
+                  <Text style={styles.buttonSecondaryText}>
+                    {uploadingCert ? 'Caricamento...' : 'Carica Nuovo'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : (
             <View>
