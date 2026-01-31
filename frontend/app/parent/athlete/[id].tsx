@@ -11,9 +11,10 @@ import {
   RefreshControl,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import api from '../../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
