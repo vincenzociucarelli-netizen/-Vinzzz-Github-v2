@@ -968,6 +968,8 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, color: '#999', marginTop: 8 },
   paymentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   paymentInfo: { flex: 1 },
+  paymentActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  editPaymentBtn: { padding: 4 },
   paymentAmount: { fontSize: 18, fontWeight: 'bold', color: '#333' },
   paymentDate: { fontSize: 13, color: '#666', marginTop: 2 },
   paymentNotes: { fontSize: 12, color: '#999', marginTop: 4, fontStyle: 'italic' },
