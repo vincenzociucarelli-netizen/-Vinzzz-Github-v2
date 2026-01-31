@@ -461,6 +461,7 @@ export default function AthleteDetail() {
         email: editData.email || null,
         tax_payer_name: editData.tax_payer_name || null,
         tax_payer_fiscal_code: editData.tax_payer_fiscal_code || null,
+        team_id: editData.team_id || null,
       });
 
       Alert.alert('Successo', 'Dati aggiornati con successo');
