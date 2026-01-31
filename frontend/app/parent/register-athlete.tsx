@@ -18,11 +18,30 @@ import { Team } from '../../src/types';
 
 export default function RegisterAthlete() {
   const router = useRouter();
-  const [fullName, setFullName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [teamId, setTeamId] = useState('');
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Dati Anagrafici
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [fiscalCode, setFiscalCode] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [province, setProvince] = useState('');
+  
+  // Contatti
+  const [phoneAthlete, setPhoneAthlete] = useState('');
+  const [phoneFather, setPhoneFather] = useState('');
+  const [phoneMother, setPhoneMother] = useState('');
+  
+  // Dati Fiscali
+  const [taxPayerName, setTaxPayerName] = useState('');
+  const [taxPayerFiscalCode, setTaxPayerFiscalCode] = useState('');
+  
+  // Squadra
+  const [teamId, setTeamId] = useState('');
 
   useEffect(() => {
     loadTeams();
@@ -40,24 +59,62 @@ export default function RegisterAthlete() {
     }
   };
 
+  const convertToISODate = (dateStr: string) => {
+    // Converti da GG/MM/AAAA a YYYY-MM-DD
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
+  };
+
   const handleRegister = async () => {
-    if (!fullName || !dateOfBirth || !teamId) {
-      Alert.alert('Errore', 'Compila tutti i campi');
+    // Validazioni
+    if (!firstName || !lastName) {
+      Alert.alert('Errore', 'Inserisci nome e cognome');
+      return;
+    }
+    
+    if (!dateOfBirth) {
+      Alert.alert('Errore', 'Inserisci la data di nascita (GG/MM/AAAA)');
+      return;
+    }
+    
+    if (!fiscalCode) {
+      Alert.alert('Errore', 'Inserisci il codice fiscale');
+      return;
+    }
+    
+    if (!teamId) {
+      Alert.alert('Errore', 'Seleziona una squadra');
       return;
     }
 
-    // Validate date format (YYYY-MM-DD)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    // Valida formato data GG/MM/AAAA
+    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
     if (!dateRegex.test(dateOfBirth)) {
-      Alert.alert('Errore', 'Formato data non valido. Usa YYYY-MM-DD (es: 2010-05-15)');
+      Alert.alert('Errore', 'Formato data non valido. Usa GG/MM/AAAA (es: 15/05/2010)');
       return;
     }
 
     setLoading(true);
     try {
+      const fullName = `${firstName} ${lastName}`;
+      const isoDate = convertToISODate(dateOfBirth);
+      
       await api.post('/athletes', {
         full_name: fullName,
-        date_of_birth: dateOfBirth,
+        date_of_birth: isoDate,
+        fiscal_code: fiscalCode,
+        address: address || null,
+        city: city || null,
+        postal_code: postalCode || null,
+        province: province || null,
+        phone_athlete: phoneAthlete || null,
+        phone_father: phoneFather || null,
+        phone_mother: phoneMother || null,
+        tax_payer_name: taxPayerName || null,
+        tax_payer_fiscal_code: taxPayerFiscalCode || null,
         team_id: teamId,
       });
       
@@ -93,25 +150,119 @@ export default function RegisterAthlete() {
         style={styles.form}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.label}>Nome completo</Text>
+          <Text style={styles.sectionTitle}>📋 Dati Anagrafici</Text>
+
+          <Text style={styles.label}>Nome *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: Mario Rossi"
-            value={fullName}
-            onChangeText={setFullName}
+            placeholder="Es: Mario"
+            value={firstName}
+            onChangeText={setFirstName}
             autoCapitalize="words"
           />
 
-          <Text style={styles.label}>Data di nascita (YYYY-MM-DD)</Text>
+          <Text style={styles.label}>Cognome *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: 2010-05-15"
+            placeholder="Es: Rossi"
+            value={lastName}
+            onChangeText={setLastName}
+            autoCapitalize="words"
+          />
+
+          <Text style={styles.label}>Data di Nascita (GG/MM/AAAA) *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Es: 15/05/2010"
             value={dateOfBirth}
             onChangeText={setDateOfBirth}
             keyboardType="numbers-and-punctuation"
           />
 
-          <Text style={styles.label}>Squadra</Text>
+          <Text style={styles.label}>Codice Fiscale *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Es: RSSMRA10E15H501Z"
+            value={fiscalCode}
+            onChangeText={(text) => setFiscalCode(text.toUpperCase())}
+            autoCapitalize="characters"
+            maxLength={16}
+          />
+
+          <Text style={styles.label}>Indirizzo</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Es: Via Roma 123"
+            value={address}
+            onChangeText={setAddress}
+          />
+
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>CAP</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="06100"
+                value={postalCode}
+                onChangeText={setPostalCode}
+                keyboardType="number-pad"
+                maxLength={5}
+              />
+            </View>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Provincia</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="PG"
+                value={province}
+                onChangeText={(text) => setProvince(text.toUpperCase())}
+                autoCapitalize="characters"
+                maxLength={2}
+              />
+            </View>
+          </View>
+
+          <Text style={styles.label}>Città</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Es: Perugia"
+            value={city}
+            onChangeText={setCity}
+            autoCapitalize="words"
+          />
+
+          <Text style={styles.sectionTitle}>📞 Contatti</Text>
+
+          <Text style={styles.label}>Telefono Atleta</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Es: 3331234567"
+            value={phoneAthlete}
+            onChangeText={setPhoneAthlete}
+            keyboardType="phone-pad"
+          />
+
+          <Text style={styles.label}>Telefono Padre</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Es: 3337654321"
+            value={phoneFather}
+            onChangeText={setPhoneFather}
+            keyboardType="phone-pad"
+          />
+
+          <Text style={styles.label}>Telefono Madre</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Es: 3339876543"
+            value={phoneMother}
+            onChangeText={setPhoneMother}
+            keyboardType="phone-pad"
+          />
+
+          <Text style={styles.sectionTitle}>🏀 Squadra</Text>
+
+          <Text style={styles.label}>Squadra di Appartenenza *</Text>
           {teams.length > 0 ? (
             <View style={styles.picker}>
               <Picker
@@ -126,6 +277,27 @@ export default function RegisterAthlete() {
           ) : (
             <Text style={styles.noTeamsText}>Nessuna squadra disponibile</Text>
           )}
+
+          <Text style={styles.sectionTitle}>💳 Dati Fiscali (per Detrazione)</Text>
+
+          <Text style={styles.label}>Nome e Cognome Genitore</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Es: Mario Rossi"
+            value={taxPayerName}
+            onChangeText={setTaxPayerName}
+            autoCapitalize="words"
+          />
+
+          <Text style={styles.label}>Codice Fiscale Genitore</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Es: RSSMRA70A01H501Z"
+            value={taxPayerFiscalCode}
+            onChangeText={(text) => setTaxPayerFiscalCode(text.toUpperCase())}
+            autoCapitalize="characters"
+            maxLength={16}
+          />
 
           <View style={styles.infoBox}>
             <Ionicons name="information-circle" size={20} color="#007AFF" />
@@ -174,13 +346,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
+    paddingBottom: 100,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginTop: 20,
+    marginBottom: 12,
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
-    marginTop: 16,
+    marginBottom: 6,
+    marginTop: 8,
   },
   input: {
     backgroundColor: '#fff',
@@ -190,6 +370,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: '#ddd',
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  halfInput: {
+    flex: 1,
   },
   picker: {
     backgroundColor: '#fff',
