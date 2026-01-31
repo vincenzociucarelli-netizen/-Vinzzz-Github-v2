@@ -1483,6 +1483,164 @@ async def get_today_attendances(current_user = Depends(get_current_user)):
     
     return result
 
+# ==================== COACH ENDPOINTS ====================
+
+@api_router.get("/coach/my-teams")
+async def get_coach_teams(current_user = Depends(get_current_user)):
+    """Get teams assigned to the current coach"""
+    if current_user["role"] != UserRole.COACH:
+        raise HTTPException(status_code=403, detail="Solo coach può accedere")
+    
+    # Get teams assigned to this coach
+    assigned_team_ids = current_user.get("assigned_teams", [])
+    
+    if not assigned_team_ids:
+        return []
+    
+    teams = await db.teams.find({"id": {"$in": assigned_team_ids}}).to_list(100)
+    clean_mongo_docs(teams)
+    return [Team(**team) for team in teams]
+
+@api_router.get("/coach/team/{team_id}/athletes")
+async def get_coach_team_athletes(team_id: str, current_user = Depends(get_current_user)):
+    """Get athletes for a team (coach view - limited info)"""
+    if current_user["role"] != UserRole.COACH:
+        raise HTTPException(status_code=403, detail="Solo coach può accedere")
+    
+    # Check if coach is assigned to this team
+    assigned_team_ids = current_user.get("assigned_teams", [])
+    if team_id not in assigned_team_ids:
+        raise HTTPException(status_code=403, detail="Non sei assegnato a questa squadra")
+    
+    # Get athletes
+    athletes = await db.athletes.find({"team_id": team_id}).to_list(1000)
+    clean_mongo_docs(athletes)
+    
+    # Get certificate info and return limited data
+    result = []
+    for athlete in athletes:
+        cert = await db.certificates.find_one({"athlete_id": athlete["id"]})
+        
+        athlete_data = {
+            "id": athlete["id"],
+            "full_name": athlete.get("full_name", ""),
+            "first_name": athlete.get("first_name", ""),
+            "last_name": athlete.get("last_name", ""),
+            "certificate_expiry": cert["expiry_date"].isoformat() if cert and cert.get("expiry_date") else None,
+            "is_expired": cert["expiry_date"] < datetime.now() if cert and cert.get("expiry_date") else True
+        }
+        result.append(athlete_data)
+    
+    return result
+
+# ==================== EXPORT ENDPOINTS ====================
+
+@api_router.get("/export/dirigenti")
+async def export_dirigenti(current_user = Depends(get_current_user)):
+    """Export all dirigenti (admin/viewer) to JSON for Excel conversion"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può esportare")
+    
+    users = await db.users.find({
+        "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]}
+    }).to_list(1000)
+    clean_mongo_docs(users)
+    
+    export_data = []
+    for user in users:
+        export_data.append({
+            "Nome Completo": user.get("full_name", ""),
+            "Email": user.get("email", ""),
+            "Ruolo": "Admin" if user.get("role") == "admin" else "Visualizzatore",
+            "Stato": "Approvato" if user.get("status") == "approved" else "In attesa",
+            "Data Registrazione": user.get("created_at", "")
+        })
+    
+    return export_data
+
+@api_router.get("/export/coaches")
+async def export_coaches(current_user = Depends(get_current_user)):
+    """Export all coaches to JSON for Excel conversion"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può esportare")
+    
+    users = await db.users.find({"role": UserRole.COACH}).to_list(1000)
+    clean_mongo_docs(users)
+    
+    # Get team names for assigned teams
+    export_data = []
+    for user in users:
+        assigned_teams = user.get("assigned_teams", [])
+        team_names = []
+        for team_id in assigned_teams:
+            team = await db.teams.find_one({"id": team_id})
+            if team:
+                team_names.append(team.get("name", ""))
+        
+        export_data.append({
+            "Nome Completo": user.get("full_name", ""),
+            "Email": user.get("email", ""),
+            "Stato": "Approvato" if user.get("status") == "approved" else "In attesa",
+            "Squadre Assegnate": ", ".join(team_names),
+            "Data Registrazione": user.get("created_at", "")
+        })
+    
+    return export_data
+
+@api_router.get("/export/athletes")
+async def export_athletes(current_user = Depends(get_current_user)):
+    """Export all athletes to JSON for Excel conversion"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può esportare")
+    
+    athletes = await db.athletes.find({}).to_list(5000)
+    clean_mongo_docs(athletes)
+    
+    export_data = []
+    for athlete in athletes:
+        # Get team name
+        team = await db.teams.find_one({"id": athlete.get("team_id", "")})
+        team_name = team.get("name", "") if team else ""
+        
+        # Get certificate info
+        cert = await db.certificates.find_one({"athlete_id": athlete["id"]})
+        cert_expiry = ""
+        cert_status = "Mancante"
+        if cert and cert.get("expiry_date"):
+            cert_expiry = cert["expiry_date"].strftime("%d/%m/%Y") if isinstance(cert["expiry_date"], datetime) else cert["expiry_date"]
+            cert_status = "Scaduto" if cert["expiry_date"] < datetime.now() else "Valido"
+        
+        # Get payment summary
+        payments = await db.payments.find({"athlete_id": athlete["id"]}).to_list(100)
+        total_paid = sum(p.get("amount", 0) for p in payments if p.get("paid"))
+        
+        export_data.append({
+            "Cognome": athlete.get("last_name", ""),
+            "Nome": athlete.get("first_name", ""),
+            "Nome Completo": athlete.get("full_name", ""),
+            "Data Nascita": athlete.get("date_of_birth", ""),
+            "Luogo Nascita": athlete.get("birth_place", ""),
+            "Codice Fiscale": athlete.get("fiscal_code", ""),
+            "Codice Federale": athlete.get("federal_code", ""),
+            "Tesserato": "Sì" if athlete.get("is_registered") else "No",
+            "Squadra": team_name,
+            "Email": athlete.get("email", ""),
+            "Tel. Atleta": athlete.get("phone_athlete", ""),
+            "Tel. Madre": athlete.get("phone_mother", ""),
+            "Tel. Padre": athlete.get("phone_father", ""),
+            "Indirizzo": athlete.get("address", ""),
+            "CAP": athlete.get("postal_code", ""),
+            "Città": athlete.get("city", ""),
+            "Provincia": athlete.get("province", ""),
+            "Scadenza Certificato": cert_expiry,
+            "Stato Certificato": cert_status,
+            "Totale Pagato": total_paid,
+            "Sconto": athlete.get("discount_amount", 0),
+            "Nota Sconto": athlete.get("discount_note", ""),
+        })
+    
+    return export_data
+
 # ==================== STATS ENDPOINTS (ADMIN) ====================
 
 @api_router.get("/stats/overview")
