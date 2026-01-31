@@ -46,6 +46,9 @@ export default function RegisterAthlete() {
   // Squadre
   const [teamId, setTeamId] = useState('');
   const [teamId2, setTeamId2] = useState('');  // Seconda squadra (opzionale)
+  
+  // Periodo di prova
+  const [isTrialPeriod, setIsTrialPeriod] = useState(true);  // Default: periodo di prova
 
   useEffect(() => {
     loadTeams();
