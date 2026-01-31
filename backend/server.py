@@ -1,15 +1,20 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field
-from typing import List
-import uuid
-from datetime import datetime
-
+from pydantic import BaseModel, Field, EmailStr
+from typing import List, Optional
+from datetime import datetime, timedelta
+from passlib.context import CryptContext
+import jwt
+import base64
+import io
+import qrcode
+from bson import ObjectId
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -19,38 +24,618 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
-app = FastAPI()
+# Security
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
+ALGORITHM = "HS256"
 
-# Create a router with the /api prefix
+# Create the main app
+app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# ==================== MODELS ====================
 
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+class UserRole:
+    ADMIN = "admin"
+    COACH = "coach"
+    PARENT = "parent"
+    ATHLETE = "athlete"
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class User(BaseModel):
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    email: EmailStr
+    password_hash: str
+    role: str  # admin, coach, parent, athlete
+    full_name: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
-# Add your routes to the router instead of directly to app
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    role: str
+    full_name: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class TokenResponse(BaseModel):
+    token: str
+    user: dict
+
+class Team(BaseModel):
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    name: str
+    description: Optional[str] = None
+    created_by_admin_id: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class TeamCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class Athlete(BaseModel):
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    parent_id: str  # User ID of parent/guardian
+    full_name: str
+    date_of_birth: datetime
+    is_minor: bool
+    team_id: str
+    qr_code: str  # Base64 encoded QR code
+    registration_date: datetime = Field(default_factory=datetime.utcnow)
+    trial_end_date: datetime  # 7 days after registration
+    privacy_accepted: bool = False
+    privacy_accepted_date: Optional[datetime] = None
+    image_consent: bool = False
+    status: str = "trial"  # trial, active, blocked
+
+class AthleteCreate(BaseModel):
+    full_name: str
+    date_of_birth: str
+    team_id: str
+    
+class AthleteUpdate(BaseModel):
+    privacy_accepted: Optional[bool] = None
+    image_consent: Optional[bool] = None
+
+class Certificate(BaseModel):
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    athlete_id: str
+    pdf_data: str  # Base64 encoded PDF
+    issue_date: datetime
+    validity_months: int
+    expiry_date: datetime
+    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+
+class CertificateCreate(BaseModel):
+    athlete_id: str
+    issue_date: str
+    validity_months: int
+
+class Payment(BaseModel):
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    athlete_id: str
+    installment_number: int  # 1, 2, or 3
+    amount: float
+    due_date: datetime
+    paid: bool = False
+    paid_date: Optional[datetime] = None
+    payment_method: Optional[str] = None  # 'bonifico' or 'paypal'
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PaymentSettings(BaseModel):
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    season: str  # e.g., "2024-2025"
+    installment_1_amount: float
+    installment_2_amount: float
+    installment_2_due_date: datetime
+    installment_3_amount: float
+    installment_3_due_date: datetime
+    bank_info: str  # IBAN and bank details
+    paypal_email: str
+
+class PaymentSettingsCreate(BaseModel):
+    season: str
+    installment_1_amount: float
+    installment_2_amount: float
+    installment_2_due_date: str
+    installment_3_amount: float
+    installment_3_due_date: str
+    bank_info: str
+    paypal_email: str
+
+class PaymentUpdate(BaseModel):
+    paid: bool
+    payment_method: Optional[str] = None
+
+class Attendance(BaseModel):
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    athlete_id: str
+    coach_id: str
+    check_in_time: datetime = Field(default_factory=datetime.utcnow)
+    status: str  # 'allowed' or 'blocked'
+    block_reason: Optional[str] = None
+
+class AttendanceCreate(BaseModel):
+    qr_code: str
+
+# ==================== HELPER FUNCTIONS ====================
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+def create_token(user_id: str, role: str) -> str:
+    payload = {
+        "user_id": user_id,
+        "role": role,
+        "exp": datetime.utcnow() + timedelta(days=30)
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        role = payload.get("role")
+        
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        return {"id": user_id, "role": role, "email": user["email"], "full_name": user["full_name"]}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+def generate_qr_code(athlete_id: str) -> str:
+    """Generate QR code and return as base64 string"""
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(athlete_id)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Convert to base64
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    
+    return f"data:image/png;base64,{img_str}"
+
+async def check_athlete_status(athlete_id: str):
+    """Check if athlete can attend (certificate valid, payments up to date, privacy accepted)"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        return {"allowed": False, "reason": "Atleta non trovato"}
+    
+    # Check if trial period ended and privacy not accepted
+    if datetime.utcnow() > athlete["trial_end_date"] and not athlete.get("privacy_accepted"):
+        return {"allowed": False, "reason": "Privacy non accettata - periodo di prova terminato"}
+    
+    # Check certificate
+    certificate = await db.certificates.find_one({"athlete_id": athlete_id})
+    if not certificate:
+        return {"allowed": False, "reason": "Certificato medico mancante"}
+    
+    if datetime.utcnow() > certificate["expiry_date"]:
+        return {"allowed": False, "reason": "Certificato medico scaduto"}
+    
+    # Check payments
+    unpaid_payments = await db.payments.find({
+        "athlete_id": athlete_id,
+        "paid": False,
+        "due_date": {"$lt": datetime.utcnow()}
+    }).to_list(100)
+    
+    if unpaid_payments:
+        installments = [p["installment_number"] for p in unpaid_payments]
+        return {"allowed": False, "reason": f"Rate non pagate: {', '.join(map(str, installments))}"}
+    
+    return {"allowed": True, "reason": None}
+
+# ==================== AUTH ENDPOINTS ====================
+
+@api_router.post("/auth/register", response_model=TokenResponse)
+async def register(user_data: UserCreate):
+    # Check if user exists
+    existing = await db.users.find_one({"email": user_data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email già registrata")
+    
+    # Create user
+    user = User(
+        email=user_data.email,
+        password_hash=hash_password(user_data.password),
+        role=user_data.role,
+        full_name=user_data.full_name
+    )
+    
+    await db.users.insert_one(user.dict())
+    
+    token = create_token(user.id, user.role)
+    
+    return TokenResponse(
+        token=token,
+        user={"id": user.id, "email": user.email, "role": user.role, "full_name": user.full_name}
+    )
+
+@api_router.post("/auth/login", response_model=TokenResponse)
+async def login(credentials: UserLogin):
+    user = await db.users.find_one({"email": credentials.email})
+    if not user or not verify_password(credentials.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Email o password non corretti")
+    
+    token = create_token(user["id"], user["role"])
+    
+    return TokenResponse(
+        token=token,
+        user={"id": user["id"], "email": user["email"], "role": user["role"], "full_name": user["full_name"]}
+    )
+
+@api_router.get("/auth/me")
+async def get_me(current_user = Depends(get_current_user)):
+    return current_user
+
+# ==================== TEAM ENDPOINTS (ADMIN) ====================
+
+@api_router.post("/teams", response_model=Team)
+async def create_team(team_data: TeamCreate, current_user = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può creare squadre")
+    
+    team = Team(
+        name=team_data.name,
+        description=team_data.description,
+        created_by_admin_id=current_user["id"]
+    )
+    
+    await db.teams.insert_one(team.dict())
+    return team
+
+@api_router.get("/teams", response_model=List[Team])
+async def get_teams(current_user = Depends(get_current_user)):
+    teams = await db.teams.find().to_list(1000)
+    return [Team(**team) for team in teams]
+
+@api_router.get("/teams/{team_id}", response_model=Team)
+async def get_team(team_id: str, current_user = Depends(get_current_user)):
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    return Team(**team)
+
+# ==================== ATHLETE ENDPOINTS ====================
+
+@api_router.post("/athletes", response_model=Athlete)
+async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get_current_user)):
+    # Only parents can create athletes
+    if current_user["role"] != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo genitori possono registrare atleti")
+    
+    # Check if team exists
+    team = await db.teams.find_one({"id": athlete_data.team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    # Calculate if minor
+    dob = datetime.fromisoformat(athlete_data.date_of_birth)
+    age = (datetime.utcnow() - dob).days // 365
+    is_minor = age < 18
+    
+    # Create athlete
+    athlete_id = str(ObjectId())
+    qr_code = generate_qr_code(athlete_id)
+    
+    athlete = Athlete(
+        id=athlete_id,
+        parent_id=current_user["id"],
+        full_name=athlete_data.full_name,
+        date_of_birth=dob,
+        is_minor=is_minor,
+        team_id=athlete_data.team_id,
+        qr_code=qr_code,
+        trial_end_date=datetime.utcnow() + timedelta(days=7)
+    )
+    
+    await db.athletes.insert_one(athlete.dict())
+    
+    # Create payment records
+    payment_settings = await db.payment_settings.find_one()
+    if payment_settings:
+        # Installment 1 - due after trial period
+        payment1 = Payment(
+            athlete_id=athlete.id,
+            installment_number=1,
+            amount=payment_settings["installment_1_amount"],
+            due_date=athlete.trial_end_date
+        )
+        await db.payments.insert_one(payment1.dict())
+        
+        # Installment 2
+        payment2 = Payment(
+            athlete_id=athlete.id,
+            installment_number=2,
+            amount=payment_settings["installment_2_amount"],
+            due_date=payment_settings["installment_2_due_date"]
+        )
+        await db.payments.insert_one(payment2.dict())
+        
+        # Installment 3
+        payment3 = Payment(
+            athlete_id=athlete.id,
+            installment_number=3,
+            amount=payment_settings["installment_3_amount"],
+            due_date=payment_settings["installment_3_due_date"]
+        )
+        await db.payments.insert_one(payment3.dict())
+    
+    return athlete
+
+@api_router.get("/athletes/my", response_model=List[Athlete])
+async def get_my_athletes(current_user = Depends(get_current_user)):
+    if current_user["role"] == UserRole.PARENT:
+        athletes = await db.athletes.find({"parent_id": current_user["id"]}).to_list(1000)
+    elif current_user["role"] in [UserRole.ADMIN, UserRole.COACH]:
+        athletes = await db.athletes.find().to_list(1000)
+    else:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    return [Athlete(**athlete) for athlete in athletes]
+
+@api_router.get("/athletes/{athlete_id}", response_model=Athlete)
+async def get_athlete(athlete_id: str, current_user = Depends(get_current_user)):
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Check permissions
+    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    return Athlete(**athlete)
+
+@api_router.patch("/athletes/{athlete_id}", response_model=Athlete)
+async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_user = Depends(get_current_user)):
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Check permissions
+    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    update_dict = {}
+    if update_data.privacy_accepted is not None:
+        update_dict["privacy_accepted"] = update_data.privacy_accepted
+        if update_data.privacy_accepted:
+            update_dict["privacy_accepted_date"] = datetime.utcnow()
+    
+    if update_data.image_consent is not None:
+        update_dict["image_consent"] = update_data.image_consent
+    
+    if update_dict:
+        await db.athletes.update_one({"id": athlete_id}, {"$set": update_dict})
+        athlete.update(update_dict)
+    
+    return Athlete(**athlete)
+
+# ==================== CERTIFICATE ENDPOINTS ====================
+
+@api_router.post("/certificates")
+async def upload_certificate(
+    athlete_id: str,
+    issue_date: str,
+    validity_months: int,
+    file: UploadFile = File(...),
+    current_user = Depends(get_current_user)
+):
+    # Check athlete exists and permissions
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    # Read PDF and encode to base64
+    pdf_data = await file.read()
+    pdf_base64 = base64.b64encode(pdf_data).decode()
+    
+    # Calculate expiry date
+    issue_dt = datetime.fromisoformat(issue_date)
+    expiry_dt = issue_dt + timedelta(days=validity_months * 30)
+    
+    # Delete old certificate if exists
+    await db.certificates.delete_many({"athlete_id": athlete_id})
+    
+    # Create certificate
+    certificate = Certificate(
+        athlete_id=athlete_id,
+        pdf_data=pdf_base64,
+        issue_date=issue_dt,
+        validity_months=validity_months,
+        expiry_date=expiry_dt
+    )
+    
+    await db.certificates.insert_one(certificate.dict())
+    
+    return {"message": "Certificato caricato con successo", "expiry_date": expiry_dt.isoformat()}
+
+@api_router.get("/certificates/{athlete_id}")
+async def get_certificate(athlete_id: str, current_user = Depends(get_current_user)):
+    certificate = await db.certificates.find_one({"athlete_id": athlete_id})
+    if not certificate:
+        raise HTTPException(status_code=404, detail="Certificato non trovato")
+    
+    # Check permissions
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    return Certificate(**certificate)
+
+# ==================== PAYMENT ENDPOINTS ====================
+
+@api_router.post("/payment-settings", response_model=PaymentSettings)
+async def create_payment_settings(settings_data: PaymentSettingsCreate, current_user = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può impostare i pagamenti")
+    
+    settings = PaymentSettings(
+        season=settings_data.season,
+        installment_1_amount=settings_data.installment_1_amount,
+        installment_2_amount=settings_data.installment_2_amount,
+        installment_2_due_date=datetime.fromisoformat(settings_data.installment_2_due_date),
+        installment_3_amount=settings_data.installment_3_amount,
+        installment_3_due_date=datetime.fromisoformat(settings_data.installment_3_due_date),
+        bank_info=settings_data.bank_info,
+        paypal_email=settings_data.paypal_email
+    )
+    
+    # Delete old settings and insert new
+    await db.payment_settings.delete_many({})
+    await db.payment_settings.insert_one(settings.dict())
+    
+    return settings
+
+@api_router.get("/payment-settings")
+async def get_payment_settings(current_user = Depends(get_current_user)):
+    settings = await db.payment_settings.find_one()
+    if not settings:
+        raise HTTPException(status_code=404, detail="Impostazioni pagamento non trovate")
+    return PaymentSettings(**settings)
+
+@api_router.get("/payments/{athlete_id}", response_model=List[Payment])
+async def get_athlete_payments(athlete_id: str, current_user = Depends(get_current_user)):
+    # Check permissions
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    payments = await db.payments.find({"athlete_id": athlete_id}).sort("installment_number", 1).to_list(100)
+    return [Payment(**payment) for payment in payments]
+
+@api_router.patch("/payments/{payment_id}", response_model=Payment)
+async def update_payment(payment_id: str, update_data: PaymentUpdate, current_user = Depends(get_current_user)):
+    payment = await db.payments.find_one({"id": payment_id})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pagamento non trovato")
+    
+    # Check permissions
+    athlete = await db.athletes.find_one({"id": payment["athlete_id"]})
+    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    update_dict = {}
+    if update_data.paid is not None:
+        update_dict["paid"] = update_data.paid
+        if update_data.paid:
+            update_dict["paid_date"] = datetime.utcnow()
+            if update_data.payment_method:
+                update_dict["payment_method"] = update_data.payment_method
+    
+    if update_dict:
+        await db.payments.update_one({"id": payment_id}, {"$set": update_dict})
+        payment.update(update_dict)
+    
+    return Payment(**payment)
+
+# ==================== ATTENDANCE ENDPOINTS (COACH) ====================
+
+@api_router.post("/attendance/check", response_model=Attendance)
+async def check_attendance(attendance_data: AttendanceCreate, current_user = Depends(get_current_user)):
+    if current_user["role"] != UserRole.COACH:
+        raise HTTPException(status_code=403, detail="Solo coach può registrare presenze")
+    
+    # Extract athlete_id from QR code
+    athlete_id = attendance_data.qr_code
+    
+    # Find athlete
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Check status
+    status_check = await check_athlete_status(athlete_id)
+    
+    attendance = Attendance(
+        athlete_id=athlete_id,
+        coach_id=current_user["id"],
+        status="allowed" if status_check["allowed"] else "blocked",
+        block_reason=status_check["reason"]
+    )
+    
+    await db.attendances.insert_one(attendance.dict())
+    
+    return attendance
+
+@api_router.get("/attendance/athlete/{athlete_id}", response_model=List[Attendance])
+async def get_athlete_attendances(athlete_id: str, current_user = Depends(get_current_user)):
+    attendances = await db.attendances.find({"athlete_id": athlete_id}).sort("check_in_time", -1).to_list(1000)
+    return [Attendance(**att) for att in attendances]
+
+@api_router.get("/attendance/today", response_model=List[dict])
+async def get_today_attendances(current_user = Depends(get_current_user)):
+    if current_user["role"] not in [UserRole.COACH, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    # Get today's attendances
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    attendances = await db.attendances.find({
+        "check_in_time": {"$gte": today_start}
+    }).sort("check_in_time", -1).to_list(1000)
+    
+    # Enrich with athlete info
+    result = []
+    for att in attendances:
+        athlete = await db.athletes.find_one({"id": att["athlete_id"]})
+        if athlete:
+            result.append({
+                **att,
+                "athlete_name": athlete["full_name"],
+                "team_id": athlete["team_id"]
+            })
+    
+    return result
+
+# ==================== STATS ENDPOINTS (ADMIN) ====================
+
+@api_router.get("/stats/overview")
+async def get_stats_overview(current_user = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere statistiche")
+    
+    total_teams = await db.teams.count_documents({})
+    total_athletes = await db.athletes.count_documents({})
+    active_athletes = await db.athletes.count_documents({"status": "active"})
+    
+    # Today's attendances
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_attendances = await db.attendances.count_documents({
+        "check_in_time": {"$gte": today_start}
+    })
+    
+    return {
+        "total_teams": total_teams,
+        "total_athletes": total_athletes,
+        "active_athletes": active_athletes,
+        "today_attendances": today_attendances
+    }
+
+# ==================== ROOT ====================
+
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+    return {"message": "Athlete Attendance API"}
 
 # Include the router in the main app
 app.include_router(api_router)
