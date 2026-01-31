@@ -262,6 +262,16 @@ export default function RegisterAthlete() {
             keyboardType="phone-pad"
           />
 
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Es: nome@email.it"
+            value={email}
+            onChangeText={(text) => setEmail(text.toLowerCase())}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+
           <Text style={styles.sectionTitle}>🏀 Squadra</Text>
 
           <Text style={styles.label}>Squadra di Appartenenza *</Text>
