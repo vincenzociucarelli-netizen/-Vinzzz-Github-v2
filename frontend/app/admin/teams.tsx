@@ -125,6 +125,7 @@ export default function TeamsScreen() {
 
   const handleDeleteTeam = (team: Team) => {
     const athletesCount = athletesCounts[team.id] || 0;
+    console.log('Delete team:', team.name, 'Athletes:', athletesCount);
     
     if (athletesCount > 0) {
       Alert.alert(
@@ -150,11 +151,13 @@ export default function TeamsScreen() {
   };
 
   const confirmDeleteTeam = async (teamId: string) => {
+    console.log('Confirming delete for team:', teamId);
     try {
       await api.delete(`/teams/${teamId}`);
       Alert.alert('Successo', 'Squadra eliminata con successo');
       await loadTeams();
     } catch (error: any) {
+      console.error('Delete error:', error);
       Alert.alert('Errore', error.response?.data?.detail || 'Errore durante l\'eliminazione');
     }
   };
