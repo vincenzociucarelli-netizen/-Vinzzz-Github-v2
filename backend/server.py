@@ -892,13 +892,22 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
     athlete_id = str(ObjectId())
     qr_code = generate_qr_code(athlete_id)
     
+    # Determine status based on trial period
+    # If is_trial=True -> status="trial", trial period 7 days
+    # If is_trial=False -> status="active", privacy accepted, no trial
+    is_trial = getattr(athlete_data, 'is_trial', True)
+    privacy_accepted = getattr(athlete_data, 'privacy_accepted', False)
+    
     athlete = Athlete(
         id=athlete_id,
         parent_id=current_user["id"],
         full_name=athlete_data.full_name,
+        first_name=athlete_data.first_name,
+        last_name=athlete_data.last_name,
         date_of_birth=dob,
         is_minor=is_minor,
         fiscal_code=athlete_data.fiscal_code,
+        email=athlete_data.email,
         address=athlete_data.address,
         city=athlete_data.city,
         postal_code=athlete_data.postal_code,
@@ -909,8 +918,12 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
         tax_payer_name=athlete_data.tax_payer_name,
         tax_payer_fiscal_code=athlete_data.tax_payer_fiscal_code,
         team_id=athlete_data.team_id,
+        team_id_2=athlete_data.team_id_2,
         qr_code=qr_code,
-        trial_end_date=datetime.utcnow() + timedelta(days=7)
+        trial_end_date=datetime.utcnow() + timedelta(days=7) if is_trial else datetime.utcnow(),
+        status="trial" if is_trial else "active",
+        privacy_accepted=privacy_accepted,
+        privacy_accepted_date=datetime.utcnow() if privacy_accepted else None,
     )
     
     await db.athletes.insert_one(athlete.dict())
