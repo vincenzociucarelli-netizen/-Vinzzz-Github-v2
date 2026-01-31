@@ -33,6 +33,20 @@ export default function DirigentiScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Dirigente | null>(null);
   const [actionModalVisible, setActionModalVisible] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const response = await api.get('/export/dirigenti');
+      await exportToExcel(response.data, 'Dirigenti');
+      showAlert('Successo', 'File Excel esportato con successo');
+    } catch (error: any) {
+      showAlert('Errore', error.message || 'Errore durante l\'esportazione');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const loadData = async () => {
     try {
