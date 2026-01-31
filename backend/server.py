@@ -79,6 +79,12 @@ class Team(BaseModel):
     installment_3_due_date: Optional[datetime] = None
     bank_info: Optional[str] = None
     paypal_email: Optional[str] = None
+    # Training schedule
+    training_days: Optional[str] = None  # es: "Lunedì, Mercoledì, Venerdì"
+    training_time: Optional[str] = None  # es: "18:00 - 20:00"
+    # Championships
+    championships: Optional[str] = None  # es: "Serie C, Coppa Italia"
+    calendar_link: Optional[str] = None  # Link al calendario federazione
 
 class TeamCreate(BaseModel):
     name: str
@@ -91,6 +97,26 @@ class TeamCreate(BaseModel):
     installment_3_due_date: str
     bank_info: str
     paypal_email: str
+    training_days: Optional[str] = None
+    training_time: Optional[str] = None
+    championships: Optional[str] = None
+    calendar_link: Optional[str] = None
+
+class TeamUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    total_amount: Optional[float] = None
+    installment_1_amount: Optional[float] = None
+    installment_2_amount: Optional[float] = None
+    installment_2_due_date: Optional[str] = None
+    installment_3_amount: Optional[float] = None
+    installment_3_due_date: Optional[str] = None
+    bank_info: Optional[str] = None
+    paypal_email: Optional[str] = None
+    training_days: Optional[str] = None
+    training_time: Optional[str] = None
+    championships: Optional[str] = None
+    calendar_link: Optional[str] = None
 
 class Athlete(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
