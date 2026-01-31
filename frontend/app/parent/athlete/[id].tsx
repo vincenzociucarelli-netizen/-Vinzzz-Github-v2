@@ -49,10 +49,20 @@ export default function AthleteDetail() {
         setCertificate(null);
       }
 
-      // Try to load payment settings
+      // Load payment info from team instead of global settings
       try {
-        const settingsRes = await api.get('/payment-settings');
-        setPaymentSettings(settingsRes.data);
+        const paymentInfoRes = await api.get(`/teams/${athleteRes.data.team_id}/payment-info`);
+        setPaymentSettings({
+          id: '',
+          season: '',
+          installment_1_amount: paymentInfoRes.data.installment_1_amount,
+          installment_2_amount: paymentInfoRes.data.installment_2_amount,
+          installment_2_due_date: paymentInfoRes.data.installment_2_due_date,
+          installment_3_amount: paymentInfoRes.data.installment_3_amount,
+          installment_3_due_date: paymentInfoRes.data.installment_3_due_date,
+          bank_info: paymentInfoRes.data.bank_info,
+          paypal_email: paymentInfoRes.data.paypal_email,
+        });
       } catch (error) {
         setPaymentSettings(null);
       }
