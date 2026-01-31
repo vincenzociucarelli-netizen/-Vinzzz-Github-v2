@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
@@ -22,6 +23,7 @@ export default function RegisterAthlete() {
   const { logout } = useAuthStore();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
+  const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
   
   // Dati Anagrafici
   const [firstName, setFirstName] = useState('');
