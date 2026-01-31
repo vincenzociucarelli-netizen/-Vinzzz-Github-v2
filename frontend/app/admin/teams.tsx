@@ -123,31 +123,77 @@ export default function TeamsScreen() {
     }
   };
 
-  const renderTeamItem = ({ item }: { item: Team }) => (
-    <TouchableOpacity 
-      style={styles.teamCard}
-      onPress={() => router.push(`/admin/team/${item.id}`)}
-    >
-      <View style={styles.teamIcon}>
-        <Ionicons name="basketball" size={24} color="#007AFF" />
+  const handleDeleteTeam = (team: Team) => {
+    const athletesCount = athletesCounts[team.id] || 0;
+    
+    if (athletesCount > 0) {
+      Alert.alert(
+        'Impossibile Eliminare',
+        `La squadra "${team.name}" ha ${athletesCount} atleti iscritti.\n\nTrasferire o eliminare gli atleti prima di poter eliminare la squadra.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Elimina Squadra',
+      `Sei sicuro di voler eliminare la squadra "${team.name}"?\n\nQuesta azione è irreversibile.`,
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Elimina',
+          style: 'destructive',
+          onPress: () => confirmDeleteTeam(team.id),
+        },
+      ]
+    );
+  };
+
+  const confirmDeleteTeam = async (teamId: string) => {
+    try {
+      await api.delete(`/teams/${teamId}`);
+      Alert.alert('Successo', 'Squadra eliminata con successo');
+      await loadTeams();
+    } catch (error: any) {
+      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante l\'eliminazione');
+    }
+  };
+
+  const renderTeamItem = ({ item }: { item: Team }) => {
+    const athletesCount = athletesCounts[item.id] || 0;
+    
+    return (
+      <View style={styles.teamCardContainer}>
+        <TouchableOpacity 
+          style={styles.teamCard}
+          onPress={() => router.push(`/admin/team/${item.id}`)}
+        >
+          <View style={styles.teamIcon}>
+            <Ionicons name="people" size={24} color="#007AFF" />
+          </View>
+          <View style={styles.teamInfo}>
+            <Text style={styles.teamName}>{item.name}</Text>
+            <View style={styles.teamStats}>
+              <View style={styles.statBadge}>
+                <Ionicons name="person" size={12} color="#666" />
+                <Text style={styles.statText}>{athletesCount} atleti</Text>
+              </View>
+            </View>
+            <Text style={styles.teamAmount}>
+              Quota: €{item.total_amount} (€{item.installment_1_amount}/€{item.installment_2_amount}/€{item.installment_3_amount})
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteTeamButton}
+          onPress={() => handleDeleteTeam(item)}
+        >
+          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+        </TouchableOpacity>
       </View>
-      <View style={styles.teamInfo}>
-        <Text style={styles.teamName}>{item.name}</Text>
-        {item.description && (
-          <Text style={styles.teamDesc}>{item.description}</Text>
-        )}
-        <Text style={styles.teamAmount}>
-          Quota: €{item.total_amount} (€{item.installment_1_amount}/€{item.installment_2_amount}/€{item.installment_3_amount})
-        </Text>
-        {item.training_schedule && (
-          <Text style={styles.teamTraining} numberOfLines={2}>
-            <Ionicons name="calendar" size={10} /> {item.training_schedule}
-          </Text>
-        )}
-      </View>
-      <Ionicons name="chevron-forward" size={20} color="#999" />
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
