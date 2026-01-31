@@ -1048,19 +1048,46 @@ export default function AthleteDetail() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.privacyModalContent}>
-            <Text style={styles.modalTitle}>Conferma Privacy</Text>
+            <Text style={styles.modalTitle}>Conferma Privacy e Liberatoria</Text>
             
             <ScrollView style={styles.privacyScroll}>
-              <Text style={styles.privacyText}>
-                Confermo di aver letto e accettato l'informativa sulla privacy
-                e autorizzo il trattamento dei dati personali dell'atleta per
-                le finalità legate all'attività sportiva.
-              </Text>
+              <Text style={styles.privacyTitle}>LIBERATORIA</Text>
               
               <Text style={styles.privacyText}>
-                Autorizzo inoltre l'utilizzo delle immagini dell'atleta derivanti
-                da allenamenti, gare e manifestazioni sportive per scopi di
-                promozione dell'attività sportiva.
+                Il/La sottoscritto/a, in qualità di esercente la responsabilità genitoriale 
+                sull'atleta iscritto/a alla società sportiva:
+              </Text>
+              
+              <Text style={styles.privacyTitle}>DICHIARA</Text>
+              
+              <Text style={styles.privacyText}>
+                di essere stato informato e di aver preso visione dell'informativa ai sensi 
+                degli artt. 13 e 14 del Regolamento (UE) 2016/679 sulla protezione dei dati (GDPR), 
+                disponibile anche sul sito web della società, riguardo il trattamento dei dati 
+                personali propri e dell'atleta.
+              </Text>
+              
+              <Text style={styles.privacyTitle}>PRESTA IL PROPRIO CONSENSO</Text>
+              
+              <Text style={styles.privacyText}>
+                ☑ al trattamento dei dati personali propri e dell'atleta per le finalità 
+                strettamente connesse e necessarie alla pratica sportiva dilettantistica 
+                (iscrizione, tesseramento, partecipazione a manifestazioni sportive, 
+                gestione amministrativa);{'\n\n'}
+                
+                ☑ all'utilizzo di immagini e/o video dell'atleta per finalità promozionali 
+                e comunicative della società, sia su supporti tradizionali che digitali 
+                (sito web, social network, materiale promozionale), con l'impegno che tali 
+                immagini non saranno utilizzate per fini commerciali o cedute a terzi;{'\n\n'}
+                
+                ☑ alla comunicazione dei dati a federazioni, enti di promozione sportiva, 
+                assicurazioni e altri soggetti necessari per lo svolgimento dell'attività sportiva.
+              </Text>
+              
+              <Text style={styles.privacyNote}>
+                Il consenso è revocabile in qualsiasi momento mediante comunicazione scritta 
+                alla società. Il rifiuto del consenso ai trattamenti necessari comporterà 
+                l'impossibilità di partecipare all'attività sportiva.
               </Text>
             </ScrollView>
 
@@ -1076,23 +1103,12 @@ export default function AthleteDetail() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[
-                  styles.button,
-                  privacyConfirmed ? styles.buttonSuccess : styles.buttonPrimary,
-                ]}
+                style={[styles.button, styles.buttonSuccess]}
                 onPress={handleAcceptPrivacy}
               >
-                <Text style={styles.buttonText}>
-                  {privacyConfirmed ? 'Conferma Definitivamente' : 'Accetto'}
-                </Text>
+                <Text style={styles.buttonText}>Accetto e Confermo</Text>
               </TouchableOpacity>
             </View>
-
-            {!privacyConfirmed && (
-              <Text style={styles.doubleConfirmText}>
-                Dovrai confermare due volte per procedere
-              </Text>
-            )}
           </View>
         </View>
       </Modal>
