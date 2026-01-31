@@ -250,13 +250,24 @@ class CertificateUploadBase64(BaseModel):
 class Payment(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     athlete_id: str
-    installment_number: int  # 1, 2, or 3
+    installment_number: Optional[int] = None  # 1, 2, or 3 (null for manual payments)
+    description: Optional[str] = None  # Descrizione pagamento
     amount: float
-    due_date: datetime
+    due_date: Optional[datetime] = None
     paid: bool = False
     paid_date: Optional[datetime] = None
-    payment_method: Optional[str] = None  # 'bonifico' or 'paypal'
+    payment_method: Optional[str] = None  # 'bonifico', 'paypal', 'contanti'
+    is_cash: bool = False  # True se pagamento in contanti
+    notes: Optional[str] = None  # Note aggiuntive
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_by: Optional[str] = None  # Admin ID who created the payment
+
+class PaymentCreate(BaseModel):
+    athlete_id: str
+    amount: float
+    paid_date: str  # formato gg/mm/aaaa
+    is_cash: bool = False
+    notes: Optional[str] = None
 
 class PaymentSettings(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
