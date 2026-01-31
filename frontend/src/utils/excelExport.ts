@@ -1,7 +1,5 @@
 import * as XLSX from 'xlsx';
-import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import { Platform, Alert } from 'react-native';
 
 export const exportToExcel = async (data: any[], filename: string) => {
   if (!data || data.length === 0) {
@@ -23,13 +21,8 @@ export const exportToExcel = async (data: any[], filename: string) => {
   worksheet['!cols'] = colWidths;
 
   if (Platform.OS === 'web') {
-    // Web export - direct download
+    // Web export - direct download using blob
     try {
-      XLSX.writeFile(workbook, `${filename}.xlsx`);
-      return true;
-    } catch (error) {
-      console.error('Web export error:', error);
-      // Fallback: use blob download
       const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -41,31 +34,46 @@ export const exportToExcel = async (data: any[], filename: string) => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       return true;
+    } catch (error) {
+      console.error('Web export error:', error);
+      throw new Error('Errore durante l\'esportazione');
     }
   } else {
-    // Mobile export using file system
+    // Mobile export - dynamically import modules
     try {
-      const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
-      const uri = `${FileSystem.documentDirectory}${filename}.xlsx`;
+      // Dynamic imports to avoid bundling issues
+      const FileSystem = await import('expo-file-system');
+      const Sharing = await import('expo-sharing');
       
-      await FileSystem.writeAsStringAsync(uri, wbout, {
-        encoding: 'base64'
+      const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+      const fileUri = FileSystem.documentDirectory + `${filename}.xlsx`;
+      
+      // Write file with base64 encoding
+      await FileSystem.writeAsStringAsync(fileUri, wbout, {
+        encoding: FileSystem.EncodingType?.Base64 || 'base64'
       });
       
       // Share the file
       const sharingAvailable = await Sharing.isAvailableAsync();
       if (sharingAvailable) {
-        await Sharing.shareAsync(uri, {
+        await Sharing.shareAsync(fileUri, {
           mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           dialogTitle: `Esporta ${filename}`,
-          UTI: 'com.microsoft.excel.xlsx'
         });
+      } else {
+        Alert.alert('Attenzione', 'File salvato ma condivisione non disponibile');
       }
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Mobile export error:', error);
-      throw new Error('Errore durante l\'esportazione su mobile');
+      // Fallback: show message to use web version
+      Alert.alert(
+        'Esportazione non disponibile', 
+        'Per esportare i dati in Excel, utilizza la versione web dell\'app.',
+        [{ text: 'OK' }]
+      );
+      throw new Error('Esportazione mobile non supportata. Usa la versione web.');
     }
   }
 };
