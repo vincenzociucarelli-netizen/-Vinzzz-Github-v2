@@ -1284,4 +1284,68 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 4,
   },
+  // Data display styles
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F4FD',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
+  editButtonText: {
+    fontSize: 14,
+    color: '#007AFF',
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  dataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  dataLabel: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+  },
+  dataValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+    flex: 1.5,
+    textAlign: 'right',
+  },
+  // Edit Modal styles
+  editModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '95%',
+    maxHeight: '90%',
+  },
+  editScroll: {
+    maxHeight: 450,
+    marginBottom: 16,
+  },
+  rowInputs: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  halfInputContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  editModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
 });
