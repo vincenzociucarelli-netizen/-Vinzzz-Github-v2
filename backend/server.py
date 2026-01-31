@@ -1277,7 +1277,11 @@ async def get_athlete_payments(athlete_id: str, current_user = Depends(get_curre
     if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
-    payments = await db.payments.find({"athlete_id": athlete_id}).sort("created_at", -1).to_list(100)
+    # Return only PAID payments (manual payments registered by admin)
+    payments = await db.payments.find({
+        "athlete_id": athlete_id, 
+        "paid": True
+    }).sort("paid_date", -1).to_list(100)
     clean_mongo_docs(payments)
     return [Payment(**payment) for payment in payments]
 
