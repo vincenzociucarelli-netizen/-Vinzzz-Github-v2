@@ -682,6 +682,13 @@ export default function AthleteDetail() {
               Mostra questo QR code al coach per registrare la presenza
             </Text>
             <TouchableOpacity
+              style={styles.printButton}
+              onPress={printQRCode}
+            >
+              <Ionicons name="print" size={20} color="#fff" />
+              <Text style={styles.printButtonText}>Stampa QR Code</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setQrModalVisible(false)}
             >
