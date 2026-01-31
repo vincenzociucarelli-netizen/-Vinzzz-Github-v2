@@ -133,6 +133,7 @@ class Athlete(BaseModel):
     phone_athlete: Optional[str] = None  # Telefono atleta
     phone_father: Optional[str] = None  # Telefono padre
     phone_mother: Optional[str] = None  # Telefono madre
+    email: Optional[str] = None  # Email di contatto
     # Dati genitore per detrazione
     tax_payer_name: Optional[str] = None  # Nome cognome genitore detrazione
     tax_payer_fiscal_code: Optional[str] = None  # CF genitore detrazione
@@ -157,6 +158,7 @@ class AthleteCreate(BaseModel):
     phone_athlete: Optional[str] = None
     phone_father: Optional[str] = None
     phone_mother: Optional[str] = None
+    email: Optional[str] = None
     tax_payer_name: Optional[str] = None
     tax_payer_fiscal_code: Optional[str] = None
     team_id: str
@@ -172,6 +174,7 @@ class AthleteUpdate(BaseModel):
     phone_athlete: Optional[str] = None
     phone_father: Optional[str] = None
     phone_mother: Optional[str] = None
+    email: Optional[str] = None
     tax_payer_name: Optional[str] = None
     tax_payer_fiscal_code: Optional[str] = None
     privacy_accepted: Optional[bool] = None
