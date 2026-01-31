@@ -1536,4 +1536,102 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  // QR Code sharing styles
+  qrCodeContainer: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+  },
+  qrButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    gap: 12,
+  },
+  qrActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  printButton: {
+    backgroundColor: '#007AFF',
+  },
+  shareButton: {
+    backgroundColor: '#34C759',
+  },
+  qrActionButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  // Certificate buttons row
+  certButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  buttonView: {
+    backgroundColor: '#E8F4FD',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  buttonViewText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  // View Certificate Modal
+  viewCertModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '90%',
+    maxHeight: '85%',
+    alignItems: 'center',
+  },
+  certImageContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  certImage: {
+    width: '100%',
+    height: 350,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  certInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingHorizontal: 8,
+  },
+  certInfoText: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 8,
+  },
+  certExpiredText: {
+    color: '#FF3B30',
+    fontWeight: '600',
+  },
+  // Team Picker styles
+  pickerContainer: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+  },
 });
