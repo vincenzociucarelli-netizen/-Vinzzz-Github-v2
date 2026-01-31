@@ -64,7 +64,7 @@ export default function CoachScreen() {
     );
   };
 
-  if (hasPermission === null) {
+  if (!permission) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -88,7 +88,7 @@ export default function CoachScreen() {
     );
   }
 
-  if (hasPermission === false) {
+  if (!permission.granted) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
