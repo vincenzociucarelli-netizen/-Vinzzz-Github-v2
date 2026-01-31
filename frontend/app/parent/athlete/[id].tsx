@@ -430,33 +430,26 @@ export default function AthleteDetail() {
     
     // Se è in prova e vuole attivare, deve prima accettare la privacy
     if (athlete.status === 'trial') {
-      if (Platform.OS === 'web') {
-        if (!window.confirm('Vuoi terminare il periodo di prova e attivare l\'atleta? Dovrai accettare la privacy.')) {
-          return;
-        }
-      } else {
-        // Show confirmation on mobile
-        Alert.alert(
-          'Termina periodo di prova',
-          'Vuoi terminare il periodo di prova e attivare l\'atleta? Dovrai accettare la privacy.',
-          [
-            { text: 'Annulla', style: 'cancel' },
-            { text: 'Conferma', onPress: () => executeStatusToggle() }
-          ]
-        );
-        return;
-      }
+      // Mostra il modal della privacy
+      setPrivacyModalVisible(true);
+      return;
     }
     
-    await executeStatusToggle();
+    // Se è già attivo e vuole tornare in prova (caso raro)
+    await executeStatusToggle('trial');
   };
 
-  const executeStatusToggle = async () => {
+  const handlePrivacyAccept = async () => {
+    setPrivacyModalVisible(false);
+    setPrivacyConfirmed(true);
+    await executeStatusToggle('active');
+  };
+
+  const executeStatusToggle = async (newStatus: string) => {
     if (!athlete) return;
     
     setTogglingStatus(true);
     try {
-      const newStatus = athlete.status === 'trial' ? 'active' : 'trial';
       const response = await api.patch(`/athletes/${id}`, {
         status: newStatus,
         privacy_accepted: newStatus === 'active',
@@ -465,9 +458,11 @@ export default function AthleteDetail() {
       // Update local state immediately with response data
       setAthlete(response.data);
       
-      showAlert('Successo', newStatus === 'active' 
-        ? 'Atleta attivato! Periodo di prova terminato.'
-        : 'Atleta rimesso in periodo di prova.');
+      if (newStatus === 'active') {
+        showAlert('Successo', 'Atleta attivato! Privacy accettata.');
+      } else {
+        showAlert('Successo', 'Atleta rimesso in periodo di prova.');
+      }
     } catch (error: any) {
       console.error('Toggle error:', error);
       showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'aggiornamento');
