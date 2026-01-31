@@ -504,6 +504,42 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
   },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: '#007AFF',
+  },
+  checkboxTextContainer: {
+    flex: 1,
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  checkboxSubtext: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 4,
+  },
   submitButton: {
     backgroundColor: '#34C759',
     flexDirection: 'row',
