@@ -1,8 +1,21 @@
 export interface User {
   id: string;
   email: string;
-  role: 'admin' | 'coach' | 'parent' | 'athlete';
+  role: 'admin' | 'viewer' | 'coach' | 'parent' | 'athlete';
   full_name: string;
+  status?: string;
+}
+
+export interface TrainingSession {
+  day: string;
+  time: string;
+  venue: string;
+}
+
+export interface MatchDay {
+  day: string;
+  time: string;
+  venue: string;
 }
 
 export interface Team {
@@ -21,6 +34,8 @@ export interface Team {
   paypal_email: string;
   venue?: string;
   training_schedule?: string;
+  training_sessions?: TrainingSession[];
+  match_day?: MatchDay;
   championships?: string;
   calendar_link?: string;
 }
