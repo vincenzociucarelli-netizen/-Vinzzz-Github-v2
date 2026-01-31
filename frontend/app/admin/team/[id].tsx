@@ -207,6 +207,23 @@ export default function TeamDetail() {
               )}
             </View>
 
+            {/* Link to Team Attendances */}
+            <TouchableOpacity 
+              style={styles.attendanceLink}
+              onPress={() => router.push(`/admin/team/${id}/attendances`)}
+            >
+              <View style={styles.attendanceLinkContent}>
+                <View style={styles.attendanceLinkIcon}>
+                  <Ionicons name="calendar-outline" size={28} color="#5856D6" />
+                </View>
+                <View style={styles.attendanceLinkText}>
+                  <Text style={styles.attendanceLinkTitle}>Registro Presenze</Text>
+                  <Text style={styles.attendanceLinkSubtitle}>Statistiche settimanali e mensili</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#999" />
+            </TouchableOpacity>
+
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>💶 Quote e Pagamenti</Text>
               <View style={styles.paymentCard}>
