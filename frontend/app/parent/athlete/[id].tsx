@@ -9,9 +9,12 @@ import {
   Image,
   Modal,
   RefreshControl,
+  TextInput,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import api from '../../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { Athlete, Certificate, Payment, PaymentSettings } from '../../../src/types';
