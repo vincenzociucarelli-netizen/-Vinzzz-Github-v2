@@ -182,13 +182,15 @@ export default function RegisterAthlete() {
         tax_payer_fiscal_code: taxPayerFiscalCode || null,
         team_id: teamId,
         team_id_2: teamId2 || null,
+        is_trial: isTrialPeriod,
+        privacy_accepted: !isTrialPeriod,  // Se non è prova, accetta privacy
       });
       
-      showAlert(
-        'Successo',
-        'Atleta registrato con successo! Periodo di prova: 7 giorni',
-        () => router.back()
-      );
+      const successMsg = isTrialPeriod 
+        ? 'Atleta registrato in periodo di prova (7 giorni)'
+        : 'Atleta registrato con privacy accettata';
+      
+      showAlert('Successo', successMsg, () => router.back());
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante la registrazione');
     } finally {
