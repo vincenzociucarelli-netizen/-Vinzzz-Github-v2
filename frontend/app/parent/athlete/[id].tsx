@@ -127,7 +127,14 @@ export default function AthleteDetail() {
   };
 
   const handleUploadCertificate = async () => {
-    // Show options: camera or gallery
+    // On web, use different approach
+    if (Platform.OS === 'web') {
+      // On web, go directly to gallery selection
+      pickImage('gallery');
+      return;
+    }
+    
+    // On mobile, show options: camera or gallery
     Alert.alert(
       'Carica Certificato',
       'Come vuoi caricare il certificato medico?',
