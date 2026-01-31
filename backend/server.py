@@ -70,10 +70,27 @@ class Team(BaseModel):
     description: Optional[str] = None
     created_by_admin_id: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    # Payment settings per team
+    total_amount: float = 0.0
+    installment_1_amount: float = 0.0
+    installment_2_amount: float = 0.0
+    installment_2_due_date: Optional[datetime] = None
+    installment_3_amount: float = 0.0
+    installment_3_due_date: Optional[datetime] = None
+    bank_info: Optional[str] = None
+    paypal_email: Optional[str] = None
 
 class TeamCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    total_amount: float
+    installment_1_amount: float
+    installment_2_amount: float
+    installment_2_due_date: str
+    installment_3_amount: float
+    installment_3_due_date: str
+    bank_info: str
+    paypal_email: str
 
 class Athlete(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
