@@ -1322,6 +1322,44 @@ async def delete_payment(payment_id: str, current_user = Depends(get_current_use
     
     return {"message": "Pagamento eliminato"}
 
+class PaymentUpdate(BaseModel):
+    amount: float
+    paid_date: str
+    is_cash: bool = False
+    notes: Optional[str] = None
+
+@api_router.put("/payments/manual/{payment_id}")
+async def update_manual_payment(payment_id: str, payment_data: PaymentUpdate, current_user = Depends(get_current_user)):
+    """Update a manual payment record (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare pagamenti")
+    
+    payment = await db.payments.find_one({"id": payment_id})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pagamento non trovato")
+    
+    # Parse date (format: gg/mm/aaaa)
+    try:
+        parts = payment_data.paid_date.split('/')
+        paid_date = datetime(int(parts[2]), int(parts[1]), int(parts[0]))
+    except:
+        raise HTTPException(status_code=400, detail="Formato data non valido. Usa gg/mm/aaaa")
+    
+    update_data = {
+        "amount": payment_data.amount,
+        "paid_date": paid_date,
+        "is_cash": payment_data.is_cash,
+        "payment_method": "contanti" if payment_data.is_cash else "bonifico",
+        "notes": payment_data.notes,
+        "description": f"Pagamento del {payment_data.paid_date}",
+    }
+    
+    await db.payments.update_one({"id": payment_id}, {"$set": update_data})
+    
+    updated_payment = await db.payments.find_one({"id": payment_id})
+    clean_mongo_docs([updated_payment])
+    return Payment(**updated_payment)
+
 @api_router.get("/payments/{athlete_id}/summary")
 async def get_payment_summary(athlete_id: str, current_user = Depends(get_current_user)):
     """Get payment summary for an athlete including total due, paid, and residual"""
