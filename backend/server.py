@@ -535,6 +535,7 @@ async def get_athlete_payments(athlete_id: str, current_user = Depends(get_curre
         raise HTTPException(status_code=403, detail="Accesso negato")
     
     payments = await db.payments.find({"athlete_id": athlete_id}).sort("installment_number", 1).to_list(100)
+    clean_mongo_docs(payments)
     return [Payment(**payment) for payment in payments]
 
 @api_router.patch("/payments/{payment_id}", response_model=Payment)
