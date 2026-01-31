@@ -135,7 +135,7 @@ export default function SettingsScreen() {
               <View style={styles.logoPreview}>
                 <Image
                   source={{ uri: `data:image/jpeg;base64,${logo}` }}
-                  style={styles.logoImage}
+                  style={[styles.logoImage, { width: logoSize * 2, height: logoSize * 2 }]}
                   resizeMode="contain"
                 />
                 <TouchableOpacity 
@@ -159,6 +159,28 @@ export default function SettingsScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+          
+          {logo && (
+            <View style={styles.sizeControl}>
+              <Text style={styles.sizeLabel}>Dimensione Logo nell'header: {logoSize}px</Text>
+              <View style={styles.sliderRow}>
+                <Text style={styles.sliderLabel}>Piccolo</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={30}
+                  maximumValue={80}
+                  step={5}
+                  value={logoSize}
+                  onValueChange={setLogoSize}
+                  minimumTrackTintColor="#007AFF"
+                  maximumTrackTintColor="#ddd"
+                  thumbTintColor="#007AFF"
+                />
+                <Text style={styles.sliderLabel}>Grande</Text>
+              </View>
+              <Text style={styles.sizeHint}>Anteprima nell'header: {logoSize}x{logoSize}px</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
