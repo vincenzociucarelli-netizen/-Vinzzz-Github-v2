@@ -27,7 +27,7 @@ db = client[os.environ['DB_NAME']]
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-secret-key-change-in-production")  # Set in .env
 ALGORITHM = "HS256"
 
 # Create the main app
