@@ -43,8 +43,9 @@ export default function RegisterAthlete() {
   const [taxPayerName, setTaxPayerName] = useState('');
   const [taxPayerFiscalCode, setTaxPayerFiscalCode] = useState('');
   
-  // Squadra
+  // Squadre
   const [teamId, setTeamId] = useState('');
+  const [teamId2, setTeamId2] = useState('');  // Seconda squadra (opzionale)
 
   useEffect(() => {
     loadTeams();
