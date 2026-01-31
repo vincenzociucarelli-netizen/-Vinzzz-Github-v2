@@ -212,16 +212,29 @@ export default function AdminAthleteDetail() {
 
     setSavingPayment(true);
     try {
-      await api.post('/payments/manual', {
-        athlete_id: id,
-        amount: parseFloat(newPayment.amount),
-        paid_date: newPayment.paid_date,
-        is_cash: newPayment.is_cash,
-        notes: newPayment.notes || null,
-      });
+      if (editingPaymentId) {
+        // Update existing payment
+        await api.put(`/payments/manual/${editingPaymentId}`, {
+          amount: parseFloat(newPayment.amount),
+          paid_date: newPayment.paid_date,
+          is_cash: newPayment.is_cash,
+          notes: newPayment.notes || null,
+        });
+        showAlert('Successo', 'Pagamento modificato');
+      } else {
+        // Create new payment
+        await api.post('/payments/manual', {
+          athlete_id: id,
+          amount: parseFloat(newPayment.amount),
+          paid_date: newPayment.paid_date,
+          is_cash: newPayment.is_cash,
+          notes: newPayment.notes || null,
+        });
+        showAlert('Successo', 'Pagamento registrato');
+      }
 
-      showAlert('Successo', 'Pagamento registrato');
       setPaymentModalVisible(false);
+      setEditingPaymentId(null);
       setNewPayment({ amount: '', paid_date: '', is_cash: false, notes: '' });
       await loadData();
     } catch (error: any) {
@@ -229,6 +242,37 @@ export default function AdminAthleteDetail() {
     } finally {
       setSavingPayment(false);
     }
+  };
+
+  const handleEditPayment = (payment: any) => {
+    // Convert date to dd/mm/yyyy format for input
+    let formattedDate = '';
+    if (payment.paid_date) {
+      try {
+        const date = new Date(payment.paid_date);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        formattedDate = `${day}/${month}/${year}`;
+      } catch {
+        formattedDate = payment.paid_date;
+      }
+    }
+
+    setEditingPaymentId(payment.id);
+    setNewPayment({
+      amount: payment.amount?.toString() || '',
+      paid_date: formattedDate,
+      is_cash: payment.is_cash || false,
+      notes: payment.notes || '',
+    });
+    setPaymentModalVisible(true);
+  };
+
+  const openNewPaymentModal = () => {
+    setEditingPaymentId(null);
+    setNewPayment({ amount: '', paid_date: '', is_cash: false, notes: '' });
+    setPaymentModalVisible(true);
   };
 
   const handleDeletePayment = async (paymentId: string) => {
