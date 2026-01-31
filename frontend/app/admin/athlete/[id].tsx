@@ -884,7 +884,10 @@ export default function AdminAthleteDetail() {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.cancelBtn}
-                onPress={() => setPaymentModalVisible(false)}
+                onPress={() => {
+                  setPaymentModalVisible(false);
+                  setEditingPaymentId(null);
+                }}
               >
                 <Text style={styles.cancelBtnText}>Annulla</Text>
               </TouchableOpacity>
