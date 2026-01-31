@@ -31,6 +31,16 @@ export interface Athlete {
   full_name: string;
   date_of_birth: string;
   is_minor: boolean;
+  fiscal_code: string;
+  address?: string;
+  city?: string;
+  postal_code?: string;
+  province?: string;
+  phone_athlete?: string;
+  phone_father?: string;
+  phone_mother?: string;
+  tax_payer_name?: string;
+  tax_payer_fiscal_code?: string;
   team_id: string;
   qr_code: string;
   registration_date: string;
