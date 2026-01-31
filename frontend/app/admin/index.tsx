@@ -24,13 +24,14 @@ interface Stats {
 interface PendingCount {
   dirigenti: number;
   coaches: number;
+  parents: number;
 }
 
 export default function AdminDashboard() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [stats, setStats] = useState<Stats | null>(null);
-  const [pendingCounts, setPendingCounts] = useState<PendingCount>({ dirigenti: 0, coaches: 0 });
+  const [pendingCounts, setPendingCounts] = useState<PendingCount>({ dirigenti: 0, coaches: 0, parents: 0 });
   const [refreshing, setRefreshing] = useState(false);
 
   const loadStats = async () => {
@@ -45,7 +46,8 @@ export default function AdminDashboard() {
       const pending = pendingRes.data;
       const dirigentiPending = pending.filter((u: any) => u.role === 'admin' || u.role === 'viewer').length;
       const coachesPending = pending.filter((u: any) => u.role === 'coach').length;
-      setPendingCounts({ dirigenti: dirigentiPending, coaches: coachesPending });
+      const parentsPending = pending.filter((u: any) => u.role === 'parent').length;
+      setPendingCounts({ dirigenti: dirigentiPending, coaches: coachesPending, parents: parentsPending });
     } catch (error) {
       console.error('Error loading stats:', error);
     }
