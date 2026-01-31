@@ -722,7 +722,7 @@ export default function AdminAthleteDetail() {
                 <Text style={styles.cardTitle}>📜 Storico Pagamenti</Text>
                 <TouchableOpacity 
                   style={styles.addPaymentBtn}
-                  onPress={() => setPaymentModalVisible(true)}
+                  onPress={openNewPaymentModal}
                 >
                   <Ionicons name="add" size={20} color="#fff" />
                   <Text style={styles.addPaymentBtnText}>Aggiungi</Text>
@@ -751,9 +751,17 @@ export default function AdminAthleteDetail() {
                         <Text style={styles.paymentNotes}>{payment.notes}</Text>
                       )}
                     </View>
-                    <TouchableOpacity onPress={() => handleDeletePayment(payment.id)}>
-                      <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                    </TouchableOpacity>
+                    <View style={styles.paymentActions}>
+                      <TouchableOpacity 
+                        style={styles.editPaymentBtn}
+                        onPress={() => handleEditPayment(payment)}
+                      >
+                        <Ionicons name="pencil" size={18} color="#007AFF" />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDeletePayment(payment.id)}>
+                        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ))
               )}
