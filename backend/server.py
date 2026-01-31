@@ -233,11 +233,13 @@ class AthleteUpdate(BaseModel):
     tax_payer_name: Optional[str] = None
     tax_payer_fiscal_code: Optional[str] = None
     privacy_accepted: Optional[bool] = None
+    privacy_accepted_date: Optional[str] = None
     image_consent: Optional[bool] = None
     team_id: Optional[str] = None
     team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
     discount_amount: Optional[float] = None
     discount_note: Optional[str] = None
+    status: Optional[str] = None  # trial, active, blocked
 
 class Certificate(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
