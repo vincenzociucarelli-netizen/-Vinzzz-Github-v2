@@ -611,6 +611,7 @@ async def get_today_attendances(current_user = Depends(get_current_user)):
     # Enrich with athlete info
     result = []
     for att in attendances:
+        clean_mongo_doc(att)
         athlete = await db.athletes.find_one({"id": att["athlete_id"]})
         if athlete:
             result.append({
