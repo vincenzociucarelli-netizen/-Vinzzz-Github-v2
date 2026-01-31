@@ -1523,14 +1523,31 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   privacyScroll: {
-    maxHeight: 300,
+    maxHeight: 350,
     marginBottom: 20,
+  },
+  privacyTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   privacyText: {
     fontSize: 14,
     color: '#333',
     lineHeight: 22,
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  privacyNote: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
   },
   privacyButtons: {
     flexDirection: 'row',
