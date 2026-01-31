@@ -20,6 +20,7 @@ import { Team } from '../../src/types';
 export default function TeamsScreen() {
   const router = useRouter();
   const [teams, setTeams] = useState<Team[]>([]);
+  const [athletesCounts, setAthletesCounts] = useState<{[key: string]: number}>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   
