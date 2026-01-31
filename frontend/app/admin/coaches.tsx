@@ -249,7 +249,7 @@ export default function CoachesScreen() {
 
       <FlatList
         data={[...pendingCoaches, ...coaches]}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => `${item.status}-${item.id}-${index}`}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
