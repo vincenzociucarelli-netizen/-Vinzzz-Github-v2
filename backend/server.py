@@ -491,6 +491,31 @@ async def get_coaches(current_user = Depends(get_current_user)):
     
     return result
 
+@api_router.get("/users/parents")
+async def get_parents(current_user = Depends(get_current_user)):
+    """Get all parents/athletes"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i genitori")
+    
+    parents = await db.users.find({"role": UserRole.PARENT}).to_list(1000)
+    
+    result = []
+    for p in parents:
+        # Count athletes for this parent
+        athletes_count = await db.athletes.count_documents({"parent_id": p["id"]})
+        result.append({
+            "id": p["id"],
+            "email": p["email"],
+            "full_name": p["full_name"],
+            "role": p["role"],
+            "status": p.get("status", UserStatus.APPROVED),
+            "athletes_count": athletes_count,
+            "created_at": p.get("created_at"),
+            "approved_at": p.get("approved_at"),
+        })
+    
+    return result
+
 @api_router.get("/users/pending")
 async def get_pending_users(current_user = Depends(get_current_user)):
     """Get all users pending approval"""
