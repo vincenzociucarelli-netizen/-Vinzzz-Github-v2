@@ -207,6 +207,8 @@ class AthleteCreate(BaseModel):
     tax_payer_fiscal_code: Optional[str] = None
     team_id: str
     team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
+    is_trial: bool = True  # Default: periodo di prova
+    privacy_accepted: bool = False
     
 class AthleteUpdate(BaseModel):
     # Tesseramento (gestito da Admin)
