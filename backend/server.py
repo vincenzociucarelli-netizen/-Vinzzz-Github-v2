@@ -1070,7 +1070,10 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
         
         # Estimate expected trainings based on team training days
         # Assuming 3 trainings per week (typical)
-        weeks_active = max(1, (now - datetime.fromisoformat(athlete["registration_date"])).days // 7)
+        reg_date = athlete["registration_date"]
+        if isinstance(reg_date, str):
+            reg_date = datetime.fromisoformat(reg_date)
+        weeks_active = max(1, (now - reg_date).days // 7)
         expected_total = weeks_active * 3  # 3 trainings per week estimate
         expected_monthly = 12  # ~3 trainings per week * 4 weeks
         expected_weekly = 3
