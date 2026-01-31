@@ -101,3 +101,64 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: >
+  App mobile per club sportivo con tre ruoli (Admin, Coach, Parent). 
+  Fix critico richiesto: Upload certificato medico PDF non funzionante.
+  Deve permettere upload PDF con data emissione e validità in mesi.
+
+backend:
+  - task: "Certificate Upload Base64 Endpoint"
+    implemented: true
+    working: "NA"
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Refactored endpoint to accept JSON body with CertificateUploadBase64 model instead of query params. Uses athlete_id, issue_date, validity_months, pdf_base64 fields."
+
+  - task: "Team Creation Endpoint"
+    implemented: true
+    working: "NA"
+    file: "server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Team create endpoint exists with optional venue field. Needs testing."
+
+frontend:
+  - task: "Certificate Upload UI"
+    implemented: true
+    working: "NA"
+    file: "app/parent/athlete/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Refactored to use expo-file-system for reading PDF as base64. Added modal with TextInput for issue_date (GG/MM/AAAA) and validity_months."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Certificate Upload Base64 Endpoint"
+    - "Team Creation Endpoint"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Fixed certificate upload: 1) Backend now accepts JSON body with CertificateUploadBase64 model. 2) Frontend uses expo-file-system to read PDF as base64. 3) Added modal UI for date and validity input. Please test the /api/certificates/upload-base64 endpoint with a POST request containing JSON body."
