@@ -397,6 +397,75 @@ export default function AthleteDetail() {
         </View>
       </Modal>
 
+      {/* Certificate Upload Modal */}
+      <Modal
+        visible={certModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setCertModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.certModalContent}>
+            <Text style={styles.modalTitle}>Carica Certificato Medico</Text>
+            
+            {selectedFile && (
+              <View style={styles.selectedFileBox}>
+                <Ionicons name="document" size={24} color="#007AFF" />
+                <Text style={styles.selectedFileName} numberOfLines={1}>
+                  {selectedFile.name}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Data di emissione (GG/MM/AAAA)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={certIssueDate}
+                onChangeText={setCertIssueDate}
+                placeholder="01/01/2025"
+                placeholderTextColor="#999"
+                keyboardType="numbers-and-punctuation"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Validità (in mesi)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={certValidityMonths}
+                onChangeText={setCertValidityMonths}
+                placeholder="12"
+                placeholderTextColor="#999"
+                keyboardType="number-pad"
+              />
+            </View>
+
+            <View style={styles.certModalButtons}>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonSecondary, styles.modalButton]}
+                onPress={() => {
+                  setCertModalVisible(false);
+                  setSelectedFile(null);
+                }}
+              >
+                <Text style={styles.buttonSecondaryText}>Annulla</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.buttonPrimary, styles.modalButton]}
+                onPress={submitCertificate}
+                disabled={uploadingCert}
+              >
+                <Text style={styles.buttonText}>
+                  {uploadingCert ? 'Caricamento...' : 'Carica'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Privacy Modal */}
       <Modal
         visible={privacyModalVisible}
