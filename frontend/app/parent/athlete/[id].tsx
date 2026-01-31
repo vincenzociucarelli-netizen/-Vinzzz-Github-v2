@@ -74,13 +74,15 @@ export default function AthleteDetail() {
 
   const loadData = async () => {
     try {
-      const [athleteRes, paymentsRes] = await Promise.all([
+      const [athleteRes, paymentsRes, teamsRes] = await Promise.all([
         api.get(`/athletes/${id}`),
         api.get(`/payments/${id}`),
+        api.get(`/teams`),
       ]);
 
       setAthlete(athleteRes.data);
       setPayments(paymentsRes.data);
+      setTeams(teamsRes.data);
 
       // Try to load certificate
       try {
