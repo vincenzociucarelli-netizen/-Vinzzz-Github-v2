@@ -3,11 +3,12 @@ import { View, Image, StyleSheet } from 'react-native';
 import api from '../services/api';
 
 interface SocietyLogoProps {
-  size?: number;
+  defaultSize?: number;
 }
 
-export default function SocietyLogo({ size = 40 }: SocietyLogoProps) {
+export default function SocietyLogo({ defaultSize = 40 }: SocietyLogoProps) {
   const [logo, setLogo] = useState<string | null>(null);
+  const [size, setSize] = useState<number>(defaultSize);
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -15,6 +16,9 @@ export default function SocietyLogo({ size = 40 }: SocietyLogoProps) {
         const response = await api.get('/settings/society');
         if (response.data.logo) {
           setLogo(response.data.logo);
+        }
+        if (response.data.logo_size) {
+          setSize(response.data.logo_size);
         }
       } catch (error) {
         // Silently fail - logo is optional
