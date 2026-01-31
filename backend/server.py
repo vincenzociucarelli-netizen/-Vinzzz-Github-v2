@@ -339,12 +339,25 @@ async def get_teams(current_user = Depends(get_current_user)):
     clean_mongo_docs(teams)
     return [Team(**team) for team in teams]
 
-@api_router.get("/teams/{team_id}", response_model=Team)
-async def get_team(team_id: str, current_user = Depends(get_current_user)):
+@api_router.get("/teams/{team_id}/payment-info")
+async def get_team_payment_info(team_id: str, current_user = Depends(get_current_user)):
+    """Get payment information for a specific team"""
     team = await db.teams.find_one({"id": team_id})
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
-    return Team(**team)
+    
+    clean_mongo_doc(team)
+    
+    return {
+        "total_amount": team.get("total_amount", 0),
+        "installment_1_amount": team.get("installment_1_amount", 0),
+        "installment_2_amount": team.get("installment_2_amount", 0),
+        "installment_2_due_date": team.get("installment_2_due_date"),
+        "installment_3_amount": team.get("installment_3_amount", 0),
+        "installment_3_due_date": team.get("installment_3_due_date"),
+        "bank_info": team.get("bank_info", ""),
+        "paypal_email": team.get("paypal_email", "")
+    }
 
 # ==================== ATHLETE ENDPOINTS ====================
 
