@@ -377,8 +377,8 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
         installment_3_due_date=datetime.fromisoformat(team_data.installment_3_due_date),
         bank_info=team_data.bank_info,
         paypal_email=team_data.paypal_email,
-        training_days=team_data.training_days,
-        training_time=team_data.training_time,
+        venue=team_data.venue,
+        training_schedule=team_data.training_schedule,
         championships=team_data.championships,
         calendar_link=team_data.calendar_link
     )
