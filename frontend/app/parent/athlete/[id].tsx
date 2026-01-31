@@ -60,6 +60,7 @@ export default function AthleteDetail() {
     email: '',
     tax_payer_name: '',
     tax_payer_fiscal_code: '',
+    team_id: '',
   });
   const [savingEdit, setSavingEdit] = useState(false);
   
