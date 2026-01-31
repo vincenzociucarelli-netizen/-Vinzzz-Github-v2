@@ -196,21 +196,25 @@ export default function AdminDashboard() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
-        </View>
 
-        {/* Secondary Section */}
-        <Text style={styles.sectionTitle}>Altro</Text>
-        
-        <View style={styles.menuContainer}>
+          {/* Storico Presenze */}
           <TouchableOpacity
-            style={styles.menuItemSmall}
+            style={styles.menuCard}
             onPress={() => router.push('/admin/attendances')}
           >
-            <Ionicons name="calendar-outline" size={22} color="#5856D6" />
-            <Text style={styles.menuItemSmallText}>Storico Presenze</Text>
-            <Ionicons name="chevron-forward" size={18} color="#999" />
+            <View style={[styles.menuIcon, { backgroundColor: '#F0EFFF' }]}>
+              <Ionicons name="calendar-outline" size={28} color="#5856D6" />
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Storico Presenze</Text>
+              <Text style={styles.menuCardSubtitle}>Presenze di oggi: {stats?.today_attendances || 0}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
         </View>
+
+        {/* Bottom padding for Android navigation */}
+        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
