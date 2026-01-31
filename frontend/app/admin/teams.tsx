@@ -34,6 +34,11 @@ export default function TeamsScreen() {
   const [installment3Date, setInstallment3Date] = useState('');
   const [bankInfo, setBankInfo] = useState('');
   const [paypalEmail, setPaypalEmail] = useState('');
+  const [venue, setVenue] = useState('');
+  const [trainingDays, setTrainingDays] = useState('');
+  const [trainingTime, setTrainingTime] = useState('');
+  const [championships, setChampionships] = useState('');
+  const [calendarLink, setCalendarLink] = useState('');
 
   const loadTeams = async () => {
     try {
@@ -59,6 +64,11 @@ export default function TeamsScreen() {
     setInstallment3Date('');
     setBankInfo('');
     setPaypalEmail('');
+    setVenue('');
+    setTrainingDays('');
+    setTrainingTime('');
+    setChampionships('');
+    setCalendarLink('');
   };
 
   const handleCreateTeam = async () => {
@@ -95,6 +105,10 @@ export default function TeamsScreen() {
         installment_3_due_date: installment3Date,
         bank_info: bankInfo,
         paypal_email: paypalEmail,
+        training_days: trainingDays || null,
+        training_time: trainingTime || null,
+        championships: championships || null,
+        calendar_link: calendarLink || null,
       });
       
       setModalVisible(false);
@@ -109,9 +123,12 @@ export default function TeamsScreen() {
   };
 
   const renderTeamItem = ({ item }: { item: Team }) => (
-    <View style={styles.teamCard}>
+    <TouchableOpacity 
+      style={styles.teamCard}
+      onPress={() => router.push(`/admin/team/${item.id}`)}
+    >
       <View style={styles.teamIcon}>
-        <Ionicons name="basketball" size={32} color="#007AFF" />
+        <Ionicons name="basketball" size={24} color="#007AFF" />
       </View>
       <View style={styles.teamInfo}>
         <Text style={styles.teamName}>{item.name}</Text>
@@ -119,10 +136,16 @@ export default function TeamsScreen() {
           <Text style={styles.teamDesc}>{item.description}</Text>
         )}
         <Text style={styles.teamAmount}>
-          Quota: €{item.total_amount} - Rate: €{item.installment_1_amount}/€{item.installment_2_amount}/€{item.installment_3_amount}
+          Quota: €{item.total_amount} (€{item.installment_1_amount}/€{item.installment_2_amount}/€{item.installment_3_amount})
         </Text>
+        {item.training_days && (
+          <Text style={styles.teamTraining}>
+            <Ionicons name="calendar" size={10} /> {item.training_days} - {item.training_time}
+          </Text>
+        )}
       </View>
-    </View>
+      <Ionicons name="chevron-forward" size={20} color="#999" />
+    </TouchableOpacity>
   );
 
   return (
@@ -181,6 +204,54 @@ export default function TeamsScreen() {
                 onChangeText={setDescription}
                 multiline
                 numberOfLines={2}
+              />
+
+              <Text style={styles.sectionTitle}>🏟️ Sede Allenamenti</Text>
+
+              <Text style={styles.label}>Palestra/Campo</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Es: Palazzetto dello Sport"
+                value={venue}
+                onChangeText={setVenue}
+              />
+
+              <Text style={styles.label}>Giorni Allenamento</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Es: Lunedì, Mercoledì, Venerdì"
+                value={trainingDays}
+                onChangeText={setTrainingDays}
+              />
+
+              <Text style={styles.label}>Orari Allenamento</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Es: 18:00 - 20:00"
+                value={trainingTime}
+                onChangeText={setTrainingTime}
+              />
+
+              <Text style={styles.sectionTitle}>🏆 Campionati</Text>
+
+              <Text style={styles.label}>Campionati Iscritti</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Es: Serie C, Coppa Regionale"
+                value={championships}
+                onChangeText={setChampionships}
+                multiline
+                numberOfLines={2}
+              />
+
+              <Text style={styles.label}>Link Calendario Federazione</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="https://federazione.it/calendario"
+                value={calendarLink}
+                onChangeText={setCalendarLink}
+                keyboardType="url"
+                autoCapitalize="none"
               />
 
               <Text style={styles.sectionTitle}>💶 Pagamenti</Text>
@@ -314,8 +385,8 @@ const styles = StyleSheet.create({
   },
   teamCard: {
     backgroundColor: '#fff',
-    padding: 16,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 10,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -326,32 +397,37 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   teamIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#E3F2FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   teamInfo: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 12,
   },
   teamName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
   },
   teamDesc: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
-    marginTop: 4,
+    marginTop: 2,
   },
   teamAmount: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#007AFF',
-    marginTop: 6,
+    marginTop: 4,
     fontWeight: '500',
+  },
+  teamTraining: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 2,
   },
   emptyContainer: {
     alignItems: 'center',
