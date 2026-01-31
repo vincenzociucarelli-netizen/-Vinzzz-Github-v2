@@ -16,6 +16,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import api from '../../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { Athlete, Certificate, Payment, PaymentSettings } from '../../../src/types';
