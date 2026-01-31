@@ -621,14 +621,11 @@ async def upload_certificate(
 
 @api_router.post("/certificates/upload-base64")
 async def upload_certificate_base64(
-    athlete_id: str,
-    issue_date: str,
-    validity_months: int,
-    pdf_base64: str,
+    data: CertificateUploadBase64,
     current_user = Depends(get_current_user)
 ):
     # Check athlete exists and permissions
-    athlete = await db.athletes.find_one({"id": athlete_id})
+    athlete = await db.athletes.find_one({"id": data.athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
@@ -636,18 +633,18 @@ async def upload_certificate_base64(
         raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Calculate expiry date
-    issue_dt = datetime.fromisoformat(issue_date)
-    expiry_dt = issue_dt + timedelta(days=validity_months * 30)
+    issue_dt = datetime.fromisoformat(data.issue_date)
+    expiry_dt = issue_dt + timedelta(days=data.validity_months * 30)
     
     # Delete old certificate if exists
-    await db.certificates.delete_many({"athlete_id": athlete_id})
+    await db.certificates.delete_many({"athlete_id": data.athlete_id})
     
     # Create certificate
     certificate = Certificate(
-        athlete_id=athlete_id,
-        pdf_data=pdf_base64,
+        athlete_id=data.athlete_id,
+        pdf_data=data.pdf_base64,
         issue_date=issue_dt,
-        validity_months=validity_months,
+        validity_months=data.validity_months,
         expiry_date=expiry_dt
     )
     
