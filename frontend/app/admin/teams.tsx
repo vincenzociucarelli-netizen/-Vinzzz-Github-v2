@@ -136,9 +136,14 @@ export default function TeamsScreen() {
         <Text style={styles.teamAmount}>
           Quota: €{item.total_amount} (€{item.installment_1_amount}/€{item.installment_2_amount}/€{item.installment_3_amount})
         </Text>
-        {item.training_days && (
+        {item.venue && (
+          <Text style={styles.teamVenue}>
+            <Ionicons name="location" size={10} /> {item.venue}
+          </Text>
+        )}
+        {item.training_schedule && (
           <Text style={styles.teamTraining}>
-            <Ionicons name="calendar" size={10} /> {item.training_days} - {item.training_time}
+            <Ionicons name="time" size={10} /> {item.training_schedule}
           </Text>
         )}
       </View>
