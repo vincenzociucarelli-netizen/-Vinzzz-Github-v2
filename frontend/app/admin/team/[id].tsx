@@ -487,7 +487,7 @@ export default function TeamDetail() {
                   </View>
                   
                   <View style={styles.trainingInputRow}>
-                    <View style={styles.halfInput}>
+                    <View style={styles.timeInputWrapper}>
                       <Text style={styles.miniLabel}>Orario</Text>
                       <TextInput
                         style={styles.input}
@@ -496,7 +496,7 @@ export default function TeamDetail() {
                         placeholder="Es: 18:00 / 20:00"
                       />
                     </View>
-                    <View style={styles.halfInput}>
+                    <View style={styles.venueInputWrapper}>
                       <Text style={styles.miniLabel}>Palestra</Text>
                       <TextInput
                         style={styles.input}
@@ -537,7 +537,7 @@ export default function TeamDetail() {
                 </View>
                 
                 <View style={styles.trainingInputRow}>
-                  <View style={styles.halfInput}>
+                  <View style={styles.timeInputWrapper}>
                     <Text style={styles.miniLabel}>Orario</Text>
                     <TextInput
                       style={styles.input}
@@ -546,7 +546,7 @@ export default function TeamDetail() {
                       placeholder="Es: 18:00"
                     />
                   </View>
-                  <View style={styles.halfInput}>
+                  <View style={styles.venueInputWrapper}>
                     <Text style={styles.miniLabel}>Palestra</Text>
                     <TextInput
                       style={styles.input}
@@ -875,8 +875,14 @@ const styles = StyleSheet.create({
   },
   trainingInputRow: {
     flexDirection: 'row',
-    gap: 10,
     marginBottom: 10,
+  },
+  timeInputWrapper: {
+    flex: 1,
+    marginRight: 16,
+  },
+  venueInputWrapper: {
+    flex: 1.5,
   },
   pickerWrapper: {
     flex: 1,
