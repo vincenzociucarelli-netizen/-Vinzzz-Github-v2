@@ -35,8 +35,7 @@ export default function TeamsScreen() {
   const [bankInfo, setBankInfo] = useState('');
   const [paypalEmail, setPaypalEmail] = useState('');
   const [venue, setVenue] = useState('');
-  const [trainingDays, setTrainingDays] = useState('');
-  const [trainingTime, setTrainingTime] = useState('');
+  const [trainingSchedule, setTrainingSchedule] = useState('');
   const [championships, setChampionships] = useState('');
   const [calendarLink, setCalendarLink] = useState('');
 
