@@ -152,22 +152,22 @@ export default function RegisterAthlete() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <Text style={styles.sectionTitle}>📋 Dati Anagrafici</Text>
 
-          <Text style={styles.label}>Nome *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Es: Mario"
-            value={firstName}
-            onChangeText={setFirstName}
-            autoCapitalize="words"
-          />
-
           <Text style={styles.label}>Cognome *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: Rossi"
+            placeholder="Es: ROSSI"
             value={lastName}
-            onChangeText={setLastName}
-            autoCapitalize="words"
+            onChangeText={(text) => setLastName(text.toUpperCase())}
+            autoCapitalize="characters"
+          />
+
+          <Text style={styles.label}>Nome *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Es: MARIO"
+            value={firstName}
+            onChangeText={(text) => setFirstName(text.toUpperCase())}
+            autoCapitalize="characters"
           />
 
           <Text style={styles.label}>Data di Nascita (GG/MM/AAAA) *</Text>
