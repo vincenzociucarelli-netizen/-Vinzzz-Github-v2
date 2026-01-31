@@ -923,6 +923,20 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 8,
   },
+  expiryDateBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F8E8',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  expiryDateText: {
+    fontSize: 14,
+    color: '#34C759',
+    marginLeft: 10,
+    fontWeight: '600',
+  },
   selectedFileBox: {
     flexDirection: 'row',
     alignItems: 'center',
