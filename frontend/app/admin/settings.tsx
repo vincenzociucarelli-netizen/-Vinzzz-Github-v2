@@ -1,0 +1,316 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Image,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import api from '../../src/services/api';
+import { Ionicons } from '@expo/vector-icons';
+
+export default function SettingsScreen() {
+  const router = useRouter();
+  const [societyName, setSocietyName] = useState('');
+  const [logo, setLogo] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const loadSettings = async () => {
+    try {
+      const response = await api.get('/settings/society');
+      setSocietyName(response.data.name || '');
+      setLogo(response.data.logo || null);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const handleSelectLogo = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        showAlert('Permesso negato', 'È necessario concedere il permesso per accedere alla galleria');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        setLogo(result.assets[0].base64);
+      }
+    } catch (error) {
+      console.error('Error selecting image:', error);
+      showAlert('Errore', 'Impossibile selezionare l\'immagine');
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogo(null);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.patch('/settings/society', {
+        name: societyName,
+        logo: logo,
+      });
+      showAlert('Successo', 'Impostazioni salvate con successo');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Impostazioni</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Impostazioni</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView style={styles.content}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Logo Società</Text>
+          <Text style={styles.sectionDesc}>
+            Il logo sarà visibile nell'header di tutte le schermate
+          </Text>
+          
+          <View style={styles.logoContainer}>
+            {logo ? (
+              <View style={styles.logoPreview}>
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${logo}` }}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
+                <TouchableOpacity 
+                  style={styles.removeLogoBtn}
+                  onPress={handleRemoveLogo}
+                >
+                  <Ionicons name="close-circle" size={28} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="image-outline" size={48} color="#ccc" />
+                <Text style={styles.logoPlaceholderText}>Nessun logo</Text>
+              </View>
+            )}
+            
+            <TouchableOpacity style={styles.selectLogoBtn} onPress={handleSelectLogo}>
+              <Ionicons name="cloud-upload" size={20} color="#007AFF" />
+              <Text style={styles.selectLogoBtnText}>
+                {logo ? 'Cambia Logo' : 'Seleziona Logo'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Nome Società</Text>
+          <TextInput
+            style={styles.input}
+            value={societyName}
+            onChangeText={setSocietyName}
+            placeholder="Es: ASD Volley Club"
+          />
+        </View>
+
+        <TouchableOpacity 
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="checkmark" size={24} color="#fff" />
+              <Text style={styles.saveButtonText}>Salva Impostazioni</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    backgroundColor: '#007AFF',
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  section: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  sectionDesc: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 16,
+  },
+  logoContainer: {
+    alignItems: 'center',
+  },
+  logoPreview: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  logoImage: {
+    width: 150,
+    height: 150,
+    borderRadius: 12,
+    backgroundColor: '#f5f5f5',
+  },
+  removeLogoBtn: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+  },
+  logoPlaceholder: {
+    width: 150,
+    height: 150,
+    borderRadius: 12,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    borderStyle: 'dashed',
+    marginBottom: 16,
+  },
+  logoPlaceholderText: {
+    fontSize: 13,
+    color: '#999',
+    marginTop: 8,
+  },
+  selectLogoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#E8F4FD',
+    borderRadius: 8,
+  },
+  selectLogoBtnText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  input: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  saveButton: {
+    backgroundColor: '#34C759',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 8,
+    marginBottom: 40,
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+});
