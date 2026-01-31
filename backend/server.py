@@ -162,17 +162,15 @@ class AttendanceCreate(BaseModel):
 
 # ==================== HELPER FUNCTIONS ====================
 
-def convert_objectid(doc):
-    """Convert MongoDB ObjectId to string in documents"""
-    if doc is None:
-        return None
-    if isinstance(doc, list):
-        return [convert_objectid(item) for item in doc]
-    if isinstance(doc, dict):
-        if '_id' in doc:
-            doc['_id'] = str(doc['_id'])
-        return {k: convert_objectid(v) if isinstance(v, (dict, list)) else v for k, v in doc.items()}
+def clean_mongo_doc(doc):
+    """Remove _id from MongoDB document for Pydantic serialization"""
+    if doc:
+        doc.pop('_id', None)
     return doc
+
+def clean_mongo_docs(docs):
+    """Remove _id from list of MongoDB documents"""
+    return [clean_mongo_doc(doc) for doc in docs]
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
