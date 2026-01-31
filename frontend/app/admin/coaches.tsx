@@ -39,6 +39,20 @@ export default function CoachesScreen() {
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [teamsModalVisible, setTeamsModalVisible] = useState(false);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const response = await api.get('/export/coaches');
+      await exportToExcel(response.data, 'Coaches');
+      showAlert('Successo', 'File Excel esportato con successo');
+    } catch (error: any) {
+      showAlert('Errore', error.message || 'Errore durante l\'esportazione');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const loadData = async () => {
     try {
