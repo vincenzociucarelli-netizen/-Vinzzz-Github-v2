@@ -76,7 +76,7 @@ export default function RegisterAthlete() {
     if (Platform.OS === 'web') {
       if (window.confirm('Sei sicuro di voler uscire?')) {
         await logout();
-        router.replace('/login');
+        window.location.href = '/login';
       }
     } else {
       Alert.alert(
