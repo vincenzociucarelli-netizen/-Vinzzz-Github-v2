@@ -1257,9 +1257,96 @@ async def get_athlete_payments(athlete_id: str, current_user = Depends(get_curre
     if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
-    payments = await db.payments.find({"athlete_id": athlete_id}).sort("installment_number", 1).to_list(100)
+    payments = await db.payments.find({"athlete_id": athlete_id}).sort("created_at", -1).to_list(100)
     clean_mongo_docs(payments)
     return [Payment(**payment) for payment in payments]
+
+@api_router.post("/payments/manual")
+async def create_manual_payment(payment_data: PaymentCreate, current_user = Depends(get_current_user)):
+    """Create a manual payment record (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può registrare pagamenti")
+    
+    # Check athlete exists
+    athlete = await db.athletes.find_one({"id": payment_data.athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Parse date (format: gg/mm/aaaa)
+    try:
+        parts = payment_data.paid_date.split('/')
+        paid_date = datetime(int(parts[2]), int(parts[1]), int(parts[0]))
+    except:
+        raise HTTPException(status_code=400, detail="Formato data non valido. Usa gg/mm/aaaa")
+    
+    payment = Payment(
+        athlete_id=payment_data.athlete_id,
+        amount=payment_data.amount,
+        paid=True,
+        paid_date=paid_date,
+        is_cash=payment_data.is_cash,
+        payment_method="contanti" if payment_data.is_cash else "bonifico",
+        notes=payment_data.notes,
+        description=f"Pagamento del {payment_data.paid_date}",
+        created_by=current_user["id"]
+    )
+    
+    await db.payments.insert_one(payment.dict())
+    
+    return payment
+
+@api_router.delete("/payments/{payment_id}")
+async def delete_payment(payment_id: str, current_user = Depends(get_current_user)):
+    """Delete a payment record (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare pagamenti")
+    
+    payment = await db.payments.find_one({"id": payment_id})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pagamento non trovato")
+    
+    await db.payments.delete_one({"id": payment_id})
+    
+    return {"message": "Pagamento eliminato"}
+
+@api_router.get("/payments/{athlete_id}/summary")
+async def get_payment_summary(athlete_id: str, current_user = Depends(get_current_user)):
+    """Get payment summary for an athlete including total due, paid, and residual"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    # Get team for quote amounts
+    team = await db.teams.find_one({"id": athlete["team_id"]})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    total_due = team.get("total_amount", 0)
+    discount = athlete.get("discount_amount", 0)
+    total_after_discount = total_due - discount
+    
+    # Get all payments
+    payments = await db.payments.find({"athlete_id": athlete_id, "paid": True}).to_list(100)
+    total_paid = sum(p.get("amount", 0) for p in payments)
+    
+    residual = max(0, total_after_discount - total_paid)
+    
+    return {
+        "total_due": total_due,
+        "discount": discount,
+        "discount_note": athlete.get("discount_note", ""),
+        "total_after_discount": total_after_discount,
+        "total_paid": total_paid,
+        "residual": residual,
+        "installments": {
+            "first": team.get("installment_1_amount", 0),
+            "second": team.get("installment_2_amount", 0),
+            "third": team.get("installment_3_amount", 0) - discount  # Sconto su ultima rata
+        }
+    }
 
 @api_router.patch("/payments/{payment_id}", response_model=Payment)
 async def update_payment(payment_id: str, update_data: PaymentUpdate, current_user = Depends(get_current_user)):
