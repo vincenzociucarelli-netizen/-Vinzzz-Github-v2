@@ -128,15 +128,6 @@ export default function AdminDashboard() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => router.push('/admin/payments')}
-          >
-            <Ionicons name="card" size={24} color="#007AFF" />
-            <Text style={styles.menuText}>Impostazioni Pagamenti</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
             onPress={() => router.push('/admin/attendances')}
           >
             <Ionicons name="list" size={24} color="#007AFF" />
