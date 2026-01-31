@@ -507,10 +507,11 @@ export default function AthleteDetail() {
               <TextInput
                 style={styles.textInput}
                 value={certIssueDate}
-                onChangeText={setCertIssueDate}
-                placeholder="01/01/2025"
+                onChangeText={handleDateChange}
+                placeholder="__/__/____"
                 placeholderTextColor="#999"
-                keyboardType="numbers-and-punctuation"
+                keyboardType="number-pad"
+                maxLength={10}
               />
             </View>
 
