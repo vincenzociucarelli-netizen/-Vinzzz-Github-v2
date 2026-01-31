@@ -1,7 +1,14 @@
 import * as XLSX from 'xlsx';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
+
+// Dynamic imports for mobile only
+let FileSystem: any = null;
+let Sharing: any = null;
+
+if (Platform.OS !== 'web') {
+  FileSystem = require('expo-file-system');
+  Sharing = require('expo-sharing');
+}
 
 export const exportToExcel = async (data: any[], filename: string) => {
   if (!data || data.length === 0) {
@@ -23,27 +30,32 @@ export const exportToExcel = async (data: any[], filename: string) => {
   worksheet['!cols'] = colWidths;
 
   if (Platform.OS === 'web') {
-    // Web export
+    // Web export - direct download
     XLSX.writeFile(workbook, `${filename}.xlsx`);
     return true;
   } else {
     // Mobile export using file system
-    const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
-    const uri = FileSystem.documentDirectory + `${filename}.xlsx`;
-    
-    await FileSystem.writeAsStringAsync(uri, wbout, {
-      encoding: FileSystem.EncodingType.Base64
-    });
-    
-    // Share the file
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, {
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        dialogTitle: `Esporta ${filename}`,
-        UTI: 'com.microsoft.excel.xlsx'
+    try {
+      const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+      const uri = FileSystem.documentDirectory + `${filename}.xlsx`;
+      
+      await FileSystem.writeAsStringAsync(uri, wbout, {
+        encoding: FileSystem.EncodingType.Base64
       });
+      
+      // Share the file
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          dialogTitle: `Esporta ${filename}`,
+          UTI: 'com.microsoft.excel.xlsx'
+        });
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Mobile export error:', error);
+      throw new Error('Errore durante l\'esportazione su mobile');
     }
-    
-    return true;
   }
 };
