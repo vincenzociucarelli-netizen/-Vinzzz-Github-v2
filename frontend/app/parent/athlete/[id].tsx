@@ -89,14 +89,16 @@ export default function AthleteDetail() {
         copyToCacheDirectory: true,
       });
 
-      if (result.canceled) {
+      if (result.canceled || !result.assets || result.assets.length === 0) {
         return;
       }
 
-      // Ask for certificate details
+      const file = result.assets[0];
+
+      // Ask for certificate details with proper iOS handling
       Alert.prompt(
         'Data di emissione',
-        'Inserisci la data di emissione (YYYY-MM-DD)',
+        'Inserisci la data di emissione (GG/MM/AAAA)',
         [
           { text: 'Annulla', style: 'cancel' },
           {
@@ -106,14 +108,14 @@ export default function AthleteDetail() {
 
               Alert.prompt(
                 'Validità',
-                'Inserisci la validit\u00e0 in mesi',
+                'Inserisci la validità in mesi',
                 [
                   { text: 'Annulla', style: 'cancel' },
                   {
                     text: 'Carica',
                     onPress: async (validityMonths) => {
                       if (!validityMonths) return;
-                      await uploadCertificate(result.assets[0], issueDate, parseInt(validityMonths));
+                      await uploadCertificateFile(file, issueDate, parseInt(validityMonths));
                     },
                   },
                 ],
@@ -124,7 +126,7 @@ export default function AthleteDetail() {
           },
         ],
         'plain-text',
-        new Date().toISOString().split('T')[0]
+        new Date().toLocaleDateString('it-IT').replace(/\//g, '/')
       );
     } catch (error) {
       console.error('Error picking document:', error);
@@ -132,17 +134,33 @@ export default function AthleteDetail() {
     }
   };
 
-  const uploadCertificate = async (file: any, issueDate: string, validityMonths: number) => {
+  const convertToISODate = (dateStr: string) => {
+    // Converti da GG/MM/AAAA a YYYY-MM-DD
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
+  };
+
+  const uploadCertificateFile = async (file: any, issueDate: string, validityMonths: number) => {
     setUploadingCert(true);
     try {
+      // Converti data da GG/MM/AAAA a YYYY-MM-DD
+      const isoDate = convertToISODate(issueDate);
+      
       const formData = new FormData();
-      formData.append('file', {
+      
+      // Create file object for FormData
+      const fileToUpload = {
         uri: file.uri,
-        name: file.name,
-        type: 'application/pdf',
-      } as any);
+        name: file.name || 'certificato.pdf',
+        type: file.mimeType || 'application/pdf',
+      };
+      
+      formData.append('file', fileToUpload as any);
       formData.append('athlete_id', id as string);
-      formData.append('issue_date', issueDate);
+      formData.append('issue_date', isoDate);
       formData.append('validity_months', validityMonths.toString());
 
       await api.post('/certificates', formData, {
@@ -154,7 +172,8 @@ export default function AthleteDetail() {
       Alert.alert('Successo', 'Certificato caricato con successo');
       await loadData();
     } catch (error: any) {
-      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante il caricamento');
+      console.error('Upload error:', error);
+      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante il caricamento del certificato');
     } finally {
       setUploadingCert(false);
     }
