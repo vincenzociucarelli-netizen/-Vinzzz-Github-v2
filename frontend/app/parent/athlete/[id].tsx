@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,10 +18,12 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
+import { Picker } from '@react-native-picker/picker';
 import api from '../../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
-import { Athlete, Certificate, Payment, PaymentSettings } from '../../../src/types';
-import { format, differenceInDays } from 'date-fns';
+import { Athlete, Certificate, Payment, PaymentSettings, Team } from '../../../src/types';
+import { format, differenceInDays, addMonths, subDays } from 'date-fns';
 import { it } from 'date-fns/locale';
 
 export default function AthleteDetail() {
