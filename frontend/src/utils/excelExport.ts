@@ -1,5 +1,7 @@
 import * as XLSX from 'xlsx';
 import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 export const exportToExcel = async (data: any[], filename: string) => {
   if (!data || data.length === 0) {
@@ -43,18 +45,16 @@ export const exportToExcel = async (data: any[], filename: string) => {
   } else {
     // Mobile export using file system
     try {
-      const FileSystem = require('expo-file-system');
-      const Sharing = require('expo-sharing');
-      
       const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
-      const uri = FileSystem.documentDirectory + `${filename}.xlsx`;
+      const uri = `${FileSystem.documentDirectory}${filename}.xlsx`;
       
       await FileSystem.writeAsStringAsync(uri, wbout, {
-        encoding: FileSystem.EncodingType.Base64
+        encoding: 'base64'
       });
       
       // Share the file
-      if (await Sharing.isAvailableAsync()) {
+      const sharingAvailable = await Sharing.isAvailableAsync();
+      if (sharingAvailable) {
         await Sharing.shareAsync(uri, {
           mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           dialogTitle: `Esporta ${filename}`,
