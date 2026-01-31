@@ -516,6 +516,74 @@ export default function AthleteDetail() {
           )}
         </View>
 
+        {/* Dati Iscrizione Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Dati Iscrizione</Text>
+            <TouchableOpacity onPress={openEditModal} style={styles.editButton}>
+              <Ionicons name="pencil" size={20} color="#007AFF" />
+              <Text style={styles.editButtonText}>Modifica</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Nome Completo</Text>
+            <Text style={styles.dataValue}>{athlete.full_name}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Data di Nascita</Text>
+            <Text style={styles.dataValue}>{formatDateForDisplay(athlete.date_of_birth)}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Codice Fiscale</Text>
+            <Text style={styles.dataValue}>{athlete.fiscal_code || '-'}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Indirizzo</Text>
+            <Text style={styles.dataValue}>{athlete.address || '-'}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Città</Text>
+            <Text style={styles.dataValue}>
+              {[athlete.city, athlete.province, athlete.postal_code].filter(Boolean).join(' - ') || '-'}
+            </Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Tel. Atleta</Text>
+            <Text style={styles.dataValue}>{athlete.phone_athlete || '-'}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Tel. Padre</Text>
+            <Text style={styles.dataValue}>{athlete.phone_father || '-'}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Tel. Madre</Text>
+            <Text style={styles.dataValue}>{athlete.phone_mother || '-'}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Email</Text>
+            <Text style={styles.dataValue}>{athlete.email || '-'}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Genitore Detrazione</Text>
+            <Text style={styles.dataValue}>{athlete.tax_payer_name || '-'}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>CF Genitore</Text>
+            <Text style={styles.dataValue}>{athlete.tax_payer_fiscal_code || '-'}</Text>
+          </View>
+        </View>
+
         {/* Payments Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Pagamenti</Text>
