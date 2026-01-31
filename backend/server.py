@@ -377,10 +377,10 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
         installment_3_due_date=datetime.fromisoformat(team_data.installment_3_due_date),
         bank_info=team_data.bank_info,
         paypal_email=team_data.paypal_email,
-        venue=team_data.venue,
-        training_schedule=team_data.training_schedule,
-        championships=team_data.championships,
-        calendar_link=team_data.calendar_link
+        venue=team_data.venue if team_data.venue else None,
+        training_schedule=team_data.training_schedule if team_data.training_schedule else None,
+        championships=team_data.championships if team_data.championships else None,
+        calendar_link=team_data.calendar_link if team_data.calendar_link else None
     )
     
     await db.teams.insert_one(team.dict())
