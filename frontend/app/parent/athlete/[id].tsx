@@ -188,6 +188,11 @@ export default function AthleteDetail() {
       return;
     }
 
+    if (!selectedFile.base64) {
+      Alert.alert('Errore', 'Impossibile leggere l\'immagine');
+      return;
+    }
+
     if (!certIssueDate) {
       Alert.alert('Errore', 'Inserisci la data di emissione');
       return;
@@ -201,28 +206,9 @@ export default function AthleteDetail() {
 
     setUploadingCert(true);
     try {
-      console.log('Selected file URI:', selectedFile.uri);
-      
-      // Read the file as base64 using expo-file-system
-      let base64Content: string;
-      
-      try {
-        base64Content = await FileSystem.readAsStringAsync(selectedFile.uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        console.log('Base64 content length:', base64Content?.length);
-      } catch (readError) {
-        console.error('Error reading file:', readError);
-        Alert.alert('Errore', 'Impossibile leggere il file selezionato');
-        setUploadingCert(false);
-        return;
-      }
-
-      if (!base64Content) {
-        Alert.alert('Errore', 'Il file è vuoto o non leggibile');
-        setUploadingCert(false);
-        return;
-      }
+      // Use the base64 directly from ImagePicker
+      const base64Content = selectedFile.base64;
+      console.log('Base64 content length:', base64Content?.length);
 
       // Convert date to ISO format
       const isoDate = convertToISODate(certIssueDate);
