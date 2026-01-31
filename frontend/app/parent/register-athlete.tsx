@@ -178,6 +178,7 @@ export default function RegisterAthlete() {
         tax_payer_name: taxPayerName || null,
         tax_payer_fiscal_code: taxPayerFiscalCode || null,
         team_id: teamId,
+        team_id_2: teamId2 || null,
       });
       
       showAlert(
