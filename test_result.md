@@ -110,27 +110,33 @@ user_problem_statement: >
 backend:
   - task: "Certificate Upload Base64 Endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Refactored endpoint to accept JSON body with CertificateUploadBase64 model instead of query params. Uses athlete_id, issue_date, validity_months, pdf_base64 fields."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: POST /api/certificates/upload-base64 endpoint working correctly. Full test flow completed: admin registration → parent registration → team creation → athlete creation → certificate upload via base64. Authentication, data validation, and certificate storage all functioning properly. Certificate retrieval also working. Expiry date calculation correct (12 months from issue date)."
 
   - task: "Team Creation Endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Team create endpoint exists with optional venue field. Needs testing."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: POST /api/teams endpoint working correctly. Admin authentication required and enforced. All required fields (name, total_amount, installment amounts, due dates, bank_info, paypal_email) accepted. Optional fields (venue, training_schedule, championships, calendar_link) working. Team creation generates proper team_id for athlete registration."
 
 frontend:
   - task: "Certificate Upload UI"
