@@ -41,8 +41,12 @@ export default function TeamsScreen() {
 
   const loadTeams = async () => {
     try {
-      const response = await api.get('/teams');
-      setTeams(response.data);
+      const [teamsRes, countsRes] = await Promise.all([
+        api.get('/teams'),
+        api.get('/teams/athletes-count/all'),
+      ]);
+      setTeams(teamsRes.data);
+      setAthletesCounts(countsRes.data);
     } catch (error) {
       console.error('Error loading teams:', error);
     }
