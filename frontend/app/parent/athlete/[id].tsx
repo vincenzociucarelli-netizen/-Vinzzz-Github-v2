@@ -233,7 +233,8 @@ export default function AthleteDetail() {
   };
 
   const calculateExpiryDate = (dateStr: string, months: string) => {
-    // Scadenza = data emissione - 1 giorno + mesi di validità
+    // Formula corretta: Scadenza = (Data emissione + mesi di validità) - 1 giorno
+    // Esempio: emissione 15/12/2025 + 12 mesi - 1 giorno = 14/12/2026
     const parts = dateStr.split('/');
     const monthsNum = parseInt(months) || 0;
     if (parts.length === 3 && monthsNum > 0) {
@@ -241,11 +242,10 @@ export default function AthleteDetail() {
       const month = parseInt(parts[1]) - 1;
       const year = parseInt(parts[2]);
       const issueDate = new Date(year, month, day);
-      // Sottrai 1 giorno
-      issueDate.setDate(issueDate.getDate() - 1);
-      // Aggiungi i mesi
-      issueDate.setMonth(issueDate.getMonth() + monthsNum);
-      return format(issueDate, 'dd/MM/yyyy', { locale: it });
+      
+      // Prima aggiungi i mesi, poi sottrai 1 giorno
+      const expiryDate = subDays(addMonths(issueDate, monthsNum), 1);
+      return format(expiryDate, 'dd/MM/yyyy', { locale: it });
     }
     return '';
   };
