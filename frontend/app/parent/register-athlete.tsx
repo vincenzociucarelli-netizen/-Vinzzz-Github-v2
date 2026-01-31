@@ -273,7 +273,7 @@ export default function RegisterAthlete() {
             autoCapitalize="none"
           />
 
-          <Text style={styles.sectionTitle}>🏀 Squadra</Text>
+          <Text style={styles.sectionTitle}>🏐 Squadra</Text>
 
           <Text style={styles.label}>Squadra di Appartenenza *</Text>
           {teams.length > 0 ? (
