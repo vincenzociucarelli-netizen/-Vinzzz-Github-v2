@@ -149,6 +149,9 @@ class TeamUpdate(BaseModel):
 class Athlete(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     parent_id: str  # User ID of parent/guardian
+    # Tesseramento (gestito da Admin)
+    federal_code: Optional[str] = None  # Codice Federale
+    is_registered: bool = False  # Tesserato sì/no
     # Anagrafica base
     full_name: str  # Manteniamo per retrocompatibilità
     first_name: Optional[str] = None  # Nome
