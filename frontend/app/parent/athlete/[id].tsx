@@ -62,6 +62,15 @@ export default function AthleteDetail() {
     tax_payer_fiscal_code: '',
   });
   const [savingEdit, setSavingEdit] = useState(false);
+  
+  // Teams list for team selection
+  const [teams, setTeams] = useState<Team[]>([]);
+  
+  // Certificate viewing modal
+  const [viewCertModalVisible, setViewCertModalVisible] = useState(false);
+  
+  // QR Code ref for sharing
+  const qrCodeRef = useRef<View>(null);
 
   const loadData = async () => {
     try {
