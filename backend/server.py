@@ -357,12 +357,17 @@ async def register(user_data: UserCreate):
     if existing:
         raise HTTPException(status_code=400, detail="Email già registrata")
     
+    # Determine initial status based on role
+    # Parents are auto-approved, Dirigenti and Coach need approval
+    initial_status = UserStatus.APPROVED if user_data.role == UserRole.PARENT else UserStatus.PENDING
+    
     # Create user
     user = User(
         email=user_data.email,
         password_hash=hash_password(user_data.password),
         role=user_data.role,
-        full_name=user_data.full_name
+        full_name=user_data.full_name,
+        status=initial_status
     )
     
     await db.users.insert_one(user.dict())
@@ -371,7 +376,13 @@ async def register(user_data: UserCreate):
     
     return TokenResponse(
         token=token,
-        user={"id": user.id, "email": user.email, "role": user.role, "full_name": user.full_name}
+        user={
+            "id": user.id, 
+            "email": user.email, 
+            "role": user.role, 
+            "full_name": user.full_name,
+            "status": user.status
+        }
     )
 
 @api_router.post("/auth/login", response_model=TokenResponse)
@@ -380,11 +391,26 @@ async def login(credentials: UserLogin):
     if not user or not verify_password(credentials.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Email o password non corretti")
     
+    # Check if user is approved (except parents who are auto-approved)
+    user_status = user.get("status", UserStatus.APPROVED)  # Default for old users
+    if user_status == UserStatus.PENDING:
+        raise HTTPException(status_code=403, detail="Account in attesa di approvazione dall'amministratore")
+    if user_status == UserStatus.REJECTED:
+        raise HTTPException(status_code=403, detail="Account non approvato")
+    if user_status == UserStatus.SUSPENDED:
+        raise HTTPException(status_code=403, detail="Account sospeso")
+    
     token = create_token(user["id"], user["role"])
     
     return TokenResponse(
         token=token,
-        user={"id": user["id"], "email": user["email"], "role": user["role"], "full_name": user["full_name"]}
+        user={
+            "id": user["id"], 
+            "email": user["email"], 
+            "role": user["role"], 
+            "full_name": user["full_name"],
+            "status": user_status
+        }
     )
 
 @api_router.get("/auth/me")
