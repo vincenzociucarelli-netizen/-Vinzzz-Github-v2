@@ -620,16 +620,40 @@ export default function AthleteDetail() {
         {/* Status Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Stato</Text>
-          {athlete.status === 'trial' && trialDaysRemaining > 0 && (
-            <View style={styles.statusBox}>
-              <Ionicons name="time" size={24} color="#FF9500" />
-              <Text style={styles.statusText}>
-                Periodo di prova: {trialDaysRemaining} giorni rimanenti
+          
+          {/* Toggle Status */}
+          <TouchableOpacity 
+            style={styles.statusToggleRow}
+            onPress={handleToggleStatus}
+            disabled={togglingStatus}
+          >
+            <View style={styles.statusToggleInfo}>
+              <Text style={styles.statusToggleLabel}>
+                {athlete.status === 'trial' ? '⏳ In Prova' : '✅ Attivo'}
+              </Text>
+              <Text style={styles.statusToggleSubtext}>
+                {athlete.status === 'trial' 
+                  ? `Tocca per terminare la prova (${trialDaysRemaining} giorni rimanenti)`
+                  : 'Atleta confermato con privacy accettata'}
               </Text>
             </View>
-          )}
+            <View style={[
+              styles.statusToggle,
+              athlete.status === 'active' && styles.statusToggleActive
+            ]}>
+              {togglingStatus ? (
+                <Text style={styles.statusToggleText}>...</Text>
+              ) : (
+                <View style={[
+                  styles.statusToggleKnob,
+                  athlete.status === 'active' && styles.statusToggleKnobActive
+                ]} />
+              )}
+            </View>
+          </TouchableOpacity>
+
           {athlete.status === 'trial' && trialDaysRemaining <= 0 && !athlete.privacy_accepted && (
-            <View style={styles.statusBox}>
+            <View style={[styles.statusBox, { marginTop: 12 }]}>
               <Ionicons name="alert-circle" size={24} color="#FF3B30" />
               <Text style={styles.statusTextDanger}>
                 Periodo di prova terminato - Conferma privacy richiesta
@@ -640,12 +664,6 @@ export default function AthleteDetail() {
               >
                 <Text style={styles.actionButtonText}>Conferma Privacy</Text>
               </TouchableOpacity>
-            </View>
-          )}
-          {athlete.privacy_accepted && (
-            <View style={styles.statusBox}>
-              <Ionicons name="checkmark-circle" size={24} color="#34C759" />
-              <Text style={styles.statusTextSuccess}>Privacy accettata</Text>
             </View>
           )}
         </View>
