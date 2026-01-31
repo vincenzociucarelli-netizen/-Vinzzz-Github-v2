@@ -525,11 +525,24 @@ export default function AthleteDetail() {
               />
             </View>
 
-            {certIssueDate.length === 10 && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Validità (mesi)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={certValidityMonths}
+                onChangeText={setCertValidityMonths}
+                placeholder="12"
+                placeholderTextColor="#999"
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+            </View>
+
+            {certIssueDate.length === 10 && parseInt(certValidityMonths) > 0 && (
               <View style={styles.expiryDateBox}>
                 <Ionicons name="calendar" size={20} color="#34C759" />
                 <Text style={styles.expiryDateText}>
-                  Scadenza: {calculateExpiryDate(certIssueDate)}
+                  Scadenza: {calculateExpiryDate(certIssueDate, certValidityMonths)}
                 </Text>
               </View>
             )}
