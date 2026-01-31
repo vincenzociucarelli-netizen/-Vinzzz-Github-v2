@@ -124,8 +124,8 @@ class Athlete(BaseModel):
     full_name: str
     date_of_birth: datetime
     is_minor: bool
-    # New fields - anagrafica completa
-    fiscal_code: str  # Codice fiscale atleta
+    # New fields - anagrafica completa (opzionali per retrocompatibilità)
+    fiscal_code: Optional[str] = None  # Codice fiscale atleta
     address: Optional[str] = None  # Via, numero civico
     city: Optional[str] = None  # Città
     postal_code: Optional[str] = None  # CAP
@@ -149,7 +149,7 @@ class Athlete(BaseModel):
 class AthleteCreate(BaseModel):
     full_name: str
     date_of_birth: str
-    fiscal_code: str
+    fiscal_code: str  # Obbligatorio per nuove iscrizioni
     address: Optional[str] = None
     city: Optional[str] = None
     postal_code: Optional[str] = None
