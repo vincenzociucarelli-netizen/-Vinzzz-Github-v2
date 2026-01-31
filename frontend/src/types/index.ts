@@ -39,6 +39,7 @@ export interface Athlete {
   phone_athlete?: string;
   phone_father?: string;
   phone_mother?: string;
+  email?: string;
   tax_payer_name?: string;
   tax_payer_fiscal_code?: string;
   team_id: string;
