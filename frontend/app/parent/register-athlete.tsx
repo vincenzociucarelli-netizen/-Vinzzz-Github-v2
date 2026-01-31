@@ -124,6 +124,9 @@ export default function RegisterAthlete() {
   };
 
   const handleRegister = async () => {
+    // Prevent double submission
+    if (loading) return;
+    
     // Validazioni
     if (!firstName || !lastName) {
       showAlert('Errore', 'Inserisci nome e cognome');
