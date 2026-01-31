@@ -122,15 +122,6 @@ export default function AdminDashboard() {
         <View style={styles.menuContainer}>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => router.push('/admin/teams')}
-          >
-            <Ionicons name="basketball" size={24} color="#007AFF" />
-            <Text style={styles.menuText}>Gestione Squadre</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
             onPress={() => router.push('/admin/athletes')}
           >
             <Ionicons name="people" size={24} color="#007AFF" />
