@@ -485,6 +485,10 @@ const styles = StyleSheet.create({
     height: 80,
     textAlignVertical: 'top',
   },
+  textAreaLarge: {
+    height: 120,
+    textAlignVertical: 'top',
+  },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
