@@ -118,9 +118,13 @@ export default function CoachScreen() {
 
       {scanning ? (
         <View style={styles.scannerContainer}>
-          <BarCodeScanner
-            onBarCodeScanned={handleBarCodeScanned}
+          <CameraView
             style={StyleSheet.absoluteFillObject}
+            facing="back"
+            barcodeScannerSettings={{
+              barcodeTypes: ["qr"],
+            }}
+            onBarcodeScanned={handleBarCodeScanned}
           />
           
           <View style={styles.scannerOverlay}>
