@@ -315,6 +315,74 @@ export default function AthleteDetail() {
     }
   };
 
+  const formatDateForDisplay = (isoDate: string) => {
+    // Converti da ISO a GG/MM/AAAA
+    try {
+      const date = new Date(isoDate);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return isoDate;
+    }
+  };
+
+  const openEditModal = () => {
+    if (!athlete) return;
+    
+    // Popola i dati di modifica con i valori attuali
+    const nameParts = athlete.full_name.split(' ');
+    setEditData({
+      full_name: athlete.full_name || '',
+      date_of_birth: formatDateForDisplay(athlete.date_of_birth),
+      fiscal_code: athlete.fiscal_code || '',
+      address: athlete.address || '',
+      city: athlete.city || '',
+      postal_code: athlete.postal_code || '',
+      province: athlete.province || '',
+      phone_athlete: athlete.phone_athlete || '',
+      phone_father: athlete.phone_father || '',
+      phone_mother: athlete.phone_mother || '',
+      email: athlete.email || '',
+      tax_payer_name: athlete.tax_payer_name || '',
+      tax_payer_fiscal_code: athlete.tax_payer_fiscal_code || '',
+    });
+    setEditModalVisible(true);
+  };
+
+  const handleSaveEdit = async () => {
+    setSavingEdit(true);
+    try {
+      // Converti la data in formato ISO
+      const isoDate = convertToISODate(editData.date_of_birth);
+      
+      await api.patch(`/athletes/${id}`, {
+        full_name: editData.full_name,
+        date_of_birth: isoDate,
+        fiscal_code: editData.fiscal_code,
+        address: editData.address || null,
+        city: editData.city || null,
+        postal_code: editData.postal_code || null,
+        province: editData.province || null,
+        phone_athlete: editData.phone_athlete || null,
+        phone_father: editData.phone_father || null,
+        phone_mother: editData.phone_mother || null,
+        email: editData.email || null,
+        tax_payer_name: editData.tax_payer_name || null,
+        tax_payer_fiscal_code: editData.tax_payer_fiscal_code || null,
+      });
+
+      Alert.alert('Successo', 'Dati aggiornati con successo');
+      setEditModalVisible(false);
+      await loadData();
+    } catch (error: any) {
+      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   if (!athlete) {
     return (
       <View style={styles.container}>
