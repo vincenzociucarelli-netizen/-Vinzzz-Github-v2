@@ -213,7 +213,7 @@ export default function ParentsScreen() {
 
       <FlatList
         data={allItems}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => `${index < pendingParents.length ? 'pending' : 'approved'}-${item.id}`}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
