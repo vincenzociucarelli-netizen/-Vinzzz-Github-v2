@@ -631,6 +631,27 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
     
     return Athlete(**athlete)
 
+@api_router.delete("/athletes/{athlete_id}")
+async def delete_athlete(athlete_id: str, current_user = Depends(get_current_user)):
+    """Delete an athlete and all related data (certificates, payments, attendances)"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Check permissions - only parent of the athlete or admin can delete
+    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    # Delete all related data
+    await db.certificates.delete_many({"athlete_id": athlete_id})
+    await db.payments.delete_many({"athlete_id": athlete_id})
+    await db.attendances.delete_many({"athlete_id": athlete_id})
+    
+    # Delete the athlete
+    await db.athletes.delete_one({"id": athlete_id})
+    
+    return {"message": "Atleta eliminato con successo"}
+
 # ==================== CERTIFICATE ENDPOINTS ====================
 
 @api_router.post("/certificates")
