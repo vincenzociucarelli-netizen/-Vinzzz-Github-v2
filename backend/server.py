@@ -1629,11 +1629,25 @@ async def export_athletes(current_user = Depends(get_current_user)):
         payments = await db.payments.find({"athlete_id": athlete["id"]}).to_list(100)
         total_paid = sum(p.get("amount", 0) for p in payments if p.get("paid"))
         
+        # Format birth date to DD/MM/YYYY
+        birth_date_str = ""
+        dob = athlete.get("date_of_birth")
+        if dob:
+            if isinstance(dob, datetime):
+                birth_date_str = dob.strftime("%d/%m/%Y")
+            elif isinstance(dob, str):
+                try:
+                    # Try to parse ISO format
+                    parsed = datetime.fromisoformat(dob.replace('Z', '+00:00').split('T')[0])
+                    birth_date_str = parsed.strftime("%d/%m/%Y")
+                except:
+                    birth_date_str = dob
+        
         export_data.append({
             "Cognome": athlete.get("last_name", ""),
             "Nome": athlete.get("first_name", ""),
             "Nome Completo": athlete.get("full_name", ""),
-            "Data Nascita": athlete.get("date_of_birth", ""),
+            "Data Nascita": birth_date_str,
             "Luogo Nascita": athlete.get("birth_place", ""),
             "Codice Fiscale": athlete.get("fiscal_code", ""),
             "Codice Federale": athlete.get("federal_code", ""),
