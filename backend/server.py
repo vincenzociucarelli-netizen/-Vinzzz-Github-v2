@@ -38,17 +38,28 @@ api_router = APIRouter(prefix="/api")
 
 class UserRole:
     ADMIN = "admin"
+    VIEWER = "viewer"  # Dirigente solo visualizzazione
     COACH = "coach"
     PARENT = "parent"
     ATHLETE = "athlete"
+
+class UserStatus:
+    PENDING = "pending"      # In attesa di approvazione
+    APPROVED = "approved"    # Approvato
+    REJECTED = "rejected"    # Rifiutato
+    SUSPENDED = "suspended"  # Sospeso
 
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     email: EmailStr
     password_hash: str
-    role: str  # admin, coach, parent, athlete
+    role: str  # admin, viewer, coach, parent, athlete
     full_name: str
+    status: str = UserStatus.PENDING  # pending, approved, rejected, suspended
+    assigned_teams: List[str] = []  # For coaches - team IDs they can manage
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    approved_at: Optional[datetime] = None
+    approved_by: Optional[str] = None  # Admin ID who approved
 
 class UserCreate(BaseModel):
     email: EmailStr
