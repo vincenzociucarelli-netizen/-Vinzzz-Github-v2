@@ -686,9 +686,22 @@ async def upload_certificate_base64(
     if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
-    # Calculate expiry date
+    # Calculate expiry date: (issue_date + validity_months) - 1 day
+    # Example: issue 15/12/2025 + 12 months - 1 day = 14/12/2026
     issue_dt = datetime.fromisoformat(data.issue_date)
-    expiry_dt = issue_dt + timedelta(days=data.validity_months * 30)
+    
+    # Add months by using relativedelta-like calculation
+    expiry_year = issue_dt.year + (issue_dt.month + data.validity_months - 1) // 12
+    expiry_month = (issue_dt.month + data.validity_months - 1) % 12 + 1
+    expiry_day = issue_dt.day
+    
+    # Handle month overflow (e.g., Jan 31 + 1 month = Feb 28/29)
+    import calendar
+    max_day = calendar.monthrange(expiry_year, expiry_month)[1]
+    if expiry_day > max_day:
+        expiry_day = max_day
+    
+    expiry_dt = datetime(expiry_year, expiry_month, expiry_day) - timedelta(days=1)
     
     # Delete old certificate if exists
     await db.certificates.delete_many({"athlete_id": data.athlete_id})
