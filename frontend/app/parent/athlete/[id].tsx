@@ -978,6 +978,19 @@ export default function AthleteDetail() {
             <Text style={styles.modalTitle}>Modifica Dati</Text>
             
             <ScrollView style={styles.editScroll} showsVerticalScrollIndicator={false}>
+              <Text style={styles.inputLabel}>Squadra</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={editData.team_id}
+                  onValueChange={(value) => setEditData({...editData, team_id: value})}
+                  style={styles.picker}
+                >
+                  {teams.map((team) => (
+                    <Picker.Item key={team.id} label={team.name} value={team.id} />
+                  ))}
+                </Picker>
+              </View>
+
               <Text style={styles.inputLabel}>Nome Completo</Text>
               <TextInput
                 style={styles.textInput}
