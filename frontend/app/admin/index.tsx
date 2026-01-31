@@ -7,6 +7,7 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -20,16 +21,31 @@ interface Stats {
   today_attendances: number;
 }
 
+interface PendingCount {
+  dirigenti: number;
+  coaches: number;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [stats, setStats] = useState<Stats | null>(null);
+  const [pendingCounts, setPendingCounts] = useState<PendingCount>({ dirigenti: 0, coaches: 0 });
   const [refreshing, setRefreshing] = useState(false);
 
   const loadStats = async () => {
     try {
-      const response = await api.get('/stats/overview');
-      setStats(response.data);
+      const [statsRes, pendingRes] = await Promise.all([
+        api.get('/stats/overview'),
+        api.get('/users/pending'),
+      ]);
+      setStats(statsRes.data);
+      
+      // Count pending by role
+      const pending = pendingRes.data;
+      const dirigentiPending = pending.filter((u: any) => u.role === 'admin' || u.role === 'viewer').length;
+      const coachesPending = pending.filter((u: any) => u.role === 'coach').length;
+      setPendingCounts({ dirigenti: dirigentiPending, coaches: coachesPending });
     } catch (error) {
       console.error('Error loading stats:', error);
     }
@@ -46,20 +62,27 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Sei sicuro di voler uscire?',
-      [
-        { text: 'Annulla', style: 'cancel' },
-        {
-          text: 'Esci',
-          onPress: async () => {
-            await logout();
-            router.replace('/login');
+    if (Platform.OS === 'web') {
+      if (window.confirm('Sei sicuro di voler uscire?')) {
+        logout();
+        router.replace('/login');
+      }
+    } else {
+      Alert.alert(
+        'Logout',
+        'Sei sicuro di voler uscire?',
+        [
+          { text: 'Annulla', style: 'cancel' },
+          {
+            text: 'Esci',
+            onPress: async () => {
+              await logout();
+              router.replace('/login');
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   return (
@@ -79,63 +102,113 @@ export default function AdminDashboard() {
       >
         <Text style={styles.welcomeText}>Benvenuto, {user?.full_name}</Text>
 
+        {/* Quick Stats */}
         {stats && (
-          <View style={styles.statsContainer}>
-            <TouchableOpacity 
-              style={styles.statCard}
-              onPress={() => router.push('/admin/athletes')}
-            >
-              <Ionicons name="people" size={24} color="#007AFF" />
-              <Text style={styles.statNumber}>{stats.total_athletes}</Text>
-              <Text style={styles.statLabel}>Atleti Totali</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.statCard}
-              onPress={() => router.push('/admin/athletes')}
-            >
-              <Ionicons name="fitness" size={24} color="#34C759" />
-              <Text style={styles.statNumber}>{stats.active_athletes}</Text>
-              <Text style={styles.statLabel}>Atleti Attivi</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.statCard}
-              onPress={() => router.push('/admin/teams')}
-            >
-              <Ionicons name="basketball" size={24} color="#FF9500" />
-              <Text style={styles.statNumber}>{stats.total_teams}</Text>
-              <Text style={styles.statLabel}>Squadre</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.statCard}
-              onPress={() => router.push('/admin/attendances')}
-            >
-              <Ionicons name="checkmark-circle" size={24} color="#5856D6" />
-              <Text style={styles.statNumber}>{stats.today_attendances}</Text>
-              <Text style={styles.statLabel}>Presenze Oggi</Text>
-            </TouchableOpacity>
+          <View style={styles.quickStats}>
+            <View style={styles.quickStatItem}>
+              <Text style={styles.quickStatNumber}>{stats.total_athletes}</Text>
+              <Text style={styles.quickStatLabel}>Atleti</Text>
+            </View>
+            <View style={styles.quickStatDivider} />
+            <View style={styles.quickStatItem}>
+              <Text style={styles.quickStatNumber}>{stats.total_teams}</Text>
+              <Text style={styles.quickStatLabel}>Squadre</Text>
+            </View>
+            <View style={styles.quickStatDivider} />
+            <View style={styles.quickStatItem}>
+              <Text style={styles.quickStatNumber}>{stats.today_attendances}</Text>
+              <Text style={styles.quickStatLabel}>Presenze Oggi</Text>
+            </View>
           </View>
         )}
 
+        {/* Section Title */}
+        <Text style={styles.sectionTitle}>Gestione</Text>
+
+        {/* 4 Main Sections */}
         <View style={styles.menuContainer}>
+          {/* Dirigenti */}
           <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/admin/athletes')}
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/dirigenti')}
           >
-            <Ionicons name="people" size={24} color="#007AFF" />
-            <Text style={styles.menuText}>Visualizza Atleti</Text>
+            <View style={[styles.menuIcon, { backgroundColor: '#E8F4FD' }]}>
+              <Ionicons name="briefcase" size={28} color="#007AFF" />
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Dirigenti</Text>
+              <Text style={styles.menuCardSubtitle}>Admin e Visualizzatori</Text>
+            </View>
+            {pendingCounts.dirigenti > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingCounts.dirigenti}</Text>
+              </View>
+            )}
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
+          {/* Coach */}
           <TouchableOpacity
-            style={styles.menuItem}
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/coaches')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#FFF3E0' }]}>
+              <Ionicons name="fitness" size={28} color="#FF9500" />
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Coach</Text>
+              <Text style={styles.menuCardSubtitle}>Gestione allenatori</Text>
+            </View>
+            {pendingCounts.coaches > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingCounts.coaches}</Text>
+              </View>
+            )}
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+
+          {/* Squadre */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/teams')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
+              <Ionicons name="people" size={28} color="#34C759" />
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Squadre</Text>
+              <Text style={styles.menuCardSubtitle}>{stats?.total_teams || 0} squadre registrate</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+
+          {/* Atleti */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/athletes')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#F3E5F5' }]}>
+              <Ionicons name="person" size={28} color="#9C27B0" />
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Atleti</Text>
+              <Text style={styles.menuCardSubtitle}>{stats?.total_athletes || 0} atleti registrati</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Secondary Section */}
+        <Text style={styles.sectionTitle}>Altro</Text>
+        
+        <View style={styles.menuContainer}>
+          <TouchableOpacity
+            style={styles.menuItemSmall}
             onPress={() => router.push('/admin/attendances')}
           >
-            <Ionicons name="list" size={24} color="#007AFF" />
-            <Text style={styles.menuText}>Storico Presenze</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
+            <Ionicons name="calendar-outline" size={22} color="#5856D6" />
+            <Text style={styles.menuItemSmallText}>Storico Presenze</Text>
+            <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -171,17 +244,54 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 10,
   },
-  statsContainer: {
+  quickStats: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 10,
-  },
-  statCard: {
-    width: '48%',
     backgroundColor: '#fff',
-    margin: '1%',
-    padding: 16,
+    marginHorizontal: 16,
     borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  quickStatItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  quickStatNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
+  quickStatLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  quickStatDivider: {
+    width: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginHorizontal: 20,
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  menuContainer: {
+    paddingHorizontal: 16,
+  },
+  menuCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -189,39 +299,50 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  statNumber: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 6,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  menuContainer: {
-    padding: 10,
-    marginTop: 10,
-    marginBottom: 100,
-  },
-  menuItem: {
-    backgroundColor: '#fff',
-    padding: 16,
-    marginVertical: 6,
+  menuIcon: {
+    width: 50,
+    height: 50,
     borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuCardContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  menuCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  menuCardSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  badge: {
+    backgroundColor: '#FF3B30',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 8,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  menuItemSmall: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
-  menuText: {
+  menuItemSmallText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     color: '#333',
     marginLeft: 12,
   },
