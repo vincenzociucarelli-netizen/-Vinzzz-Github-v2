@@ -610,6 +610,11 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
         update_dict["tax_payer_name"] = update_data.tax_payer_name
     if update_data.tax_payer_fiscal_code is not None:
         update_dict["tax_payer_fiscal_code"] = update_data.tax_payer_fiscal_code
+    if update_data.team_id is not None:
+        # Verify team exists
+        team = await db.teams.find_one({"id": update_data.team_id})
+        if team:
+            update_dict["team_id"] = update_data.team_id
     
     # Campi booleani
     if update_data.privacy_accepted is not None:
