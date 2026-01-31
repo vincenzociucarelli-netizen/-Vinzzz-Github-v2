@@ -459,11 +459,12 @@ export default function AthleteDetail() {
             <Text style={styles.modalTitle}>Carica Certificato Medico</Text>
             
             {selectedFile && (
-              <View style={styles.selectedFileBox}>
-                <Ionicons name="document" size={24} color="#007AFF" />
-                <Text style={styles.selectedFileName} numberOfLines={1}>
-                  {selectedFile.name}
-                </Text>
+              <View style={styles.imagePreviewContainer}>
+                <Image
+                  source={{ uri: selectedFile.uri }}
+                  style={styles.imagePreview}
+                  resizeMode="contain"
+                />
               </View>
             )}
 
