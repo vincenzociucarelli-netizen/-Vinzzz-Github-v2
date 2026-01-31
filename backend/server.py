@@ -75,6 +75,16 @@ class TokenResponse(BaseModel):
     token: str
     user: dict
 
+class TrainingSession(BaseModel):
+    day: str  # es: "Lunedì", "Martedì"
+    time: str  # es: "18:00 / 20:00"
+    venue: str  # es: "Palestra Liceo Alessi"
+
+class MatchDay(BaseModel):
+    day: str  # es: "Sabato"
+    time: str  # es: "18:00"
+    venue: str  # es: "Palestra Liceo Alessi"
+
 class Team(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     name: str
@@ -90,12 +100,15 @@ class Team(BaseModel):
     installment_3_due_date: Optional[datetime] = None
     bank_info: Optional[str] = None
     paypal_email: Optional[str] = None
-    # Training schedule
-    venue: Optional[str] = None  # Palestra/Campo es: "Palestra Liceo Alessi"
-    training_schedule: Optional[str] = None  # es: "Lunedì 18:00-20:00, Mercoledì 19:00-21:00"
+    # Training schedule - structured
+    training_sessions: List[dict] = []  # List of TrainingSession
+    match_day: Optional[dict] = None  # MatchDay
+    # Legacy fields (keeping for backward compatibility)
+    venue: Optional[str] = None
+    training_schedule: Optional[str] = None
     # Championships
-    championships: Optional[str] = None  # es: "Serie C, Coppa Italia"
-    calendar_link: Optional[str] = None  # Link al calendario federazione
+    championships: Optional[str] = None
+    calendar_link: Optional[str] = None
 
 class TeamCreate(BaseModel):
     name: str
@@ -110,6 +123,8 @@ class TeamCreate(BaseModel):
     paypal_email: str
     venue: Optional[str] = None
     training_schedule: Optional[str] = None
+    training_sessions: Optional[List[dict]] = []
+    match_day: Optional[dict] = None
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
 
@@ -126,6 +141,8 @@ class TeamUpdate(BaseModel):
     paypal_email: Optional[str] = None
     venue: Optional[str] = None
     training_schedule: Optional[str] = None
+    training_sessions: Optional[List[dict]] = None
+    match_day: Optional[dict] = None
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
 
