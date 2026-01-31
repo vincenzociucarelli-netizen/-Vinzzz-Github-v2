@@ -10,6 +10,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
@@ -20,9 +21,19 @@ export default function TeamsScreen() {
   const router = useRouter();
   const [teams, setTeams] = useState<Team[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [newTeamName, setNewTeamName] = useState('');
-  const [newTeamDesc, setNewTeamDesc] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Form fields
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [totalAmount, setTotalAmount] = useState('');
+  const [installment1, setInstallment1] = useState('');
+  const [installment2, setInstallment2] = useState('');
+  const [installment2Date, setInstallment2Date] = useState('');
+  const [installment3, setInstallment3] = useState('');
+  const [installment3Date, setInstallment3Date] = useState('');
+  const [bankInfo, setBankInfo] = useState('');
+  const [paypalEmail, setPaypalEmail] = useState('');
 
   const loadTeams = async () => {
     try {
@@ -37,22 +48,57 @@ export default function TeamsScreen() {
     loadTeams();
   }, []);
 
+  const resetForm = () => {
+    setName('');
+    setDescription('');
+    setTotalAmount('');
+    setInstallment1('');
+    setInstallment2('');
+    setInstallment2Date('');
+    setInstallment3('');
+    setInstallment3Date('');
+    setBankInfo('');
+    setPaypalEmail('');
+  };
+
   const handleCreateTeam = async () => {
-    if (!newTeamName.trim()) {
+    if (!name.trim()) {
       Alert.alert('Errore', 'Inserisci il nome della squadra');
+      return;
+    }
+
+    if (!totalAmount || !installment1 || !installment2 || !installment3) {
+      Alert.alert('Errore', 'Inserisci tutti gli importi delle rate');
+      return;
+    }
+
+    if (!installment2Date || !installment3Date) {
+      Alert.alert('Errore', 'Inserisci le date di scadenza');
+      return;
+    }
+
+    if (!bankInfo || !paypalEmail) {
+      Alert.alert('Errore', 'Inserisci le informazioni di pagamento');
       return;
     }
 
     setLoading(true);
     try {
       await api.post('/teams', {
-        name: newTeamName,
-        description: newTeamDesc,
+        name,
+        description,
+        total_amount: parseFloat(totalAmount),
+        installment_1_amount: parseFloat(installment1),
+        installment_2_amount: parseFloat(installment2),
+        installment_2_due_date: installment2Date,
+        installment_3_amount: parseFloat(installment3),
+        installment_3_due_date: installment3Date,
+        bank_info: bankInfo,
+        paypal_email: paypalEmail,
       });
       
       setModalVisible(false);
-      setNewTeamName('');
-      setNewTeamDesc('');
+      resetForm();
       await loadTeams();
       Alert.alert('Successo', 'Squadra creata con successo');
     } catch (error: any) {
@@ -72,6 +118,9 @@ export default function TeamsScreen() {
         {item.description && (
           <Text style={styles.teamDesc}>{item.description}</Text>
         )}
+        <Text style={styles.teamAmount}>
+          Quota: €{item.total_amount} - Rate: €{item.installment_1_amount}/€{item.installment_2_amount}/€{item.installment_3_amount}
+        </Text>
       </View>
     </View>
   );
@@ -113,42 +162,127 @@ export default function TeamsScreen() {
           style={styles.modalOverlay}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Nuova Squadra</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>Nuova Squadra</Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Nome squadra"
-              value={newTeamName}
-              onChangeText={setNewTeamName}
-            />
+              <Text style={styles.label}>Nome Squadra *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Es: Under 15"
+                value={name}
+                onChangeText={setName}
+              />
 
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Descrizione (opzionale)"
-              value={newTeamDesc}
-              onChangeText={setNewTeamDesc}
-              multiline
-              numberOfLines={3}
-            />
+              <Text style={styles.label}>Descrizione</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Descrizione squadra (opzionale)"
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={2}
+              />
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonSecondary]}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.buttonSecondaryText}>Annulla</Text>
-              </TouchableOpacity>
+              <Text style={styles.sectionTitle}>💶 Pagamenti</Text>
 
-              <TouchableOpacity
-                style={[styles.button, styles.buttonPrimary]}
-                onPress={handleCreateTeam}
-                disabled={loading}
-              >
-                <Text style={styles.buttonPrimaryText}>
-                  {loading ? 'Creazione...' : 'Crea'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+              <Text style={styles.label}>Quota Totale Annuale (€) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Es: 600"
+                value={totalAmount}
+                onChangeText={setTotalAmount}
+                keyboardType="decimal-pad"
+              />
+
+              <Text style={styles.label}>Rata 1 - Dopo 7 giorni di prova (€) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Es: 250"
+                value={installment1}
+                onChangeText={setInstallment1}
+                keyboardType="decimal-pad"
+              />
+
+              <Text style={styles.label}>Rata 2 (€) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Es: 150"
+                value={installment2}
+                onChangeText={setInstallment2}
+                keyboardType="decimal-pad"
+              />
+
+              <Text style={styles.label}>Scadenza Rata 2 (YYYY-MM-DD) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Es: 2025-03-31"
+                value={installment2Date}
+                onChangeText={setInstallment2Date}
+                keyboardType="numbers-and-punctuation"
+              />
+
+              <Text style={styles.label}>Rata 3 (€) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Es: 200"
+                value={installment3}
+                onChangeText={setInstallment3}
+                keyboardType="decimal-pad"
+              />
+
+              <Text style={styles.label}>Scadenza Rata 3 (YYYY-MM-DD) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Es: 2025-06-30"
+                value={installment3Date}
+                onChangeText={setInstallment3Date}
+                keyboardType="numbers-and-punctuation"
+              />
+
+              <Text style={styles.sectionTitle}>🏦 Info Pagamento</Text>
+
+              <Text style={styles.label}>Dati Bonifico Bancario *</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="IBAN: IT00..."
+                value={bankInfo}
+                onChangeText={setBankInfo}
+                multiline
+                numberOfLines={3}
+              />
+
+              <Text style={styles.label}>Email PayPal *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="paypal@societa.it"
+                value={paypalEmail}
+                onChangeText={setPaypalEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.button, styles.buttonSecondary]}
+                  onPress={() => {
+                    setModalVisible(false);
+                    resetForm();
+                  }}
+                >
+                  <Text style={styles.buttonSecondaryText}>Annulla</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.button, styles.buttonPrimary]}
+                  onPress={handleCreateTeam}
+                  disabled={loading}
+                >
+                  <Text style={styles.buttonPrimaryText}>
+                    {loading ? 'Creazione...' : 'Crea Squadra'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -213,6 +347,12 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
+  teamAmount: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 6,
+    fontWeight: '500',
+  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -238,7 +378,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
-    width: '85%',
+    width: '90%',
+    maxHeight: '85%',
   },
   modalTitle: {
     fontSize: 22,
@@ -246,13 +387,27 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 20,
   },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 6,
+    marginTop: 8,
+  },
   input: {
     backgroundColor: '#f5f5f5',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
     fontSize: 16,
-    marginBottom: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#ddd',
   },
@@ -263,7 +418,7 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 20,
   },
   button: {
     flex: 1,
