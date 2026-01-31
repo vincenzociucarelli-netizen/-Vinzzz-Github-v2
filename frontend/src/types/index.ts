@@ -19,8 +19,8 @@ export interface Team {
   installment_3_due_date: string;
   bank_info: string;
   paypal_email: string;
-  training_days?: string;
-  training_time?: string;
+  venue?: string;
+  training_schedule?: string;
   championships?: string;
   calendar_link?: string;
 }
