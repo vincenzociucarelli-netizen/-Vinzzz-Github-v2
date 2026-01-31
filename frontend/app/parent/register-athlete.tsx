@@ -114,6 +114,7 @@ export default function RegisterAthlete() {
         phone_athlete: phoneAthlete || null,
         phone_father: phoneFather || null,
         phone_mother: phoneMother || null,
+        email: email || null,
         tax_payer_name: taxPayerName || null,
         tax_payer_fiscal_code: taxPayerFiscalCode || null,
         team_id: teamId,
