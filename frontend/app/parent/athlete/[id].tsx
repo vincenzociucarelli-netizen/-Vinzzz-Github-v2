@@ -38,6 +38,7 @@ export default function AthleteDetail() {
   const [privacyConfirmed, setPrivacyConfirmed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [uploadingCert, setUploadingCert] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState(false);
   // Certificate upload modal states
   const [certModalVisible, setCertModalVisible] = useState(false);
   const [selectedFile, setSelectedFile] = useState<any>(null);
