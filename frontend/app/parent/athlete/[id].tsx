@@ -39,6 +39,25 @@ export default function AthleteDetail() {
   const [selectedFile, setSelectedFile] = useState<any>(null);
   const [certIssueDate, setCertIssueDate] = useState('');
   const [certValidityMonths, setCertValidityMonths] = useState('12');
+  
+  // Edit mode states
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editData, setEditData] = useState({
+    full_name: '',
+    date_of_birth: '',
+    fiscal_code: '',
+    address: '',
+    city: '',
+    postal_code: '',
+    province: '',
+    phone_athlete: '',
+    phone_father: '',
+    phone_mother: '',
+    email: '',
+    tax_payer_name: '',
+    tax_payer_fiscal_code: '',
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const loadData = async () => {
     try {
