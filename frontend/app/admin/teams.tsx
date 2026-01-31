@@ -473,6 +473,24 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '500',
   },
+  teamStats: {
+    flexDirection: 'row',
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  statBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F4FD',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  statText: {
+    fontSize: 11,
+    color: '#666',
+    marginLeft: 4,
+  },
   teamVenue: {
     fontSize: 10,
     color: '#FF9500',
