@@ -173,6 +173,31 @@ export default function AthleteDetail() {
     }
   };
 
+  // Formatta automaticamente la data con le /
+  const formatDateInput = (text: string) => {
+    // Rimuovi tutto tranne i numeri
+    const numbers = text.replace(/[^\d]/g, '');
+    
+    // Applica il formato GG/MM/AAAA
+    let formatted = '';
+    if (numbers.length > 0) {
+      formatted = numbers.substring(0, 2);
+    }
+    if (numbers.length > 2) {
+      formatted += '/' + numbers.substring(2, 4);
+    }
+    if (numbers.length > 4) {
+      formatted += '/' + numbers.substring(4, 8);
+    }
+    
+    return formatted;
+  };
+
+  const handleDateChange = (text: string) => {
+    const formatted = formatDateInput(text);
+    setCertIssueDate(formatted);
+  };
+
   const convertToISODate = (dateStr: string) => {
     // Converti da GG/MM/AAAA a YYYY-MM-DD
     const parts = dateStr.split('/');
