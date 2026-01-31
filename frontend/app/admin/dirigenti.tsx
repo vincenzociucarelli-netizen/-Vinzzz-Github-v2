@@ -9,10 +9,12 @@ import {
   Modal,
   RefreshControl,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
+import { exportToExcel } from '../../src/utils/excelExport';
 
 interface Dirigente {
   id: string;
