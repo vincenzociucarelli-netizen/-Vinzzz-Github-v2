@@ -174,7 +174,8 @@ class Athlete(BaseModel):
     tax_payer_name: Optional[str] = None  # Nome cognome genitore detrazione
     tax_payer_fiscal_code: Optional[str] = None  # CF genitore detrazione
     # Squadra e stato
-    team_id: str
+    team_id: str  # Squadra principale (per pagamenti)
+    team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
     qr_code: str  # Base64 encoded QR code
     registration_date: datetime = Field(default_factory=datetime.utcnow)
     trial_end_date: datetime  # 7 days after registration
@@ -205,6 +206,7 @@ class AthleteCreate(BaseModel):
     tax_payer_name: Optional[str] = None
     tax_payer_fiscal_code: Optional[str] = None
     team_id: str
+    team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
     
 class AthleteUpdate(BaseModel):
     # Tesseramento (gestito da Admin)
