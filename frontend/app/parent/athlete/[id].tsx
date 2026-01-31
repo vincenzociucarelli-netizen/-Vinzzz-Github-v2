@@ -457,17 +457,19 @@ export default function AthleteDetail() {
     setTogglingStatus(true);
     try {
       const newStatus = athlete.status === 'trial' ? 'active' : 'trial';
-      await api.patch(`/athletes/${id}`, {
+      const response = await api.patch(`/athletes/${id}`, {
         status: newStatus,
         privacy_accepted: newStatus === 'active',
-        privacy_accepted_date: newStatus === 'active' ? new Date().toISOString() : null,
       });
+      
+      // Update local state immediately with response data
+      setAthlete(response.data);
       
       showAlert('Successo', newStatus === 'active' 
         ? 'Atleta attivato! Periodo di prova terminato.'
         : 'Atleta rimesso in periodo di prova.');
-      await loadData();
     } catch (error: any) {
+      console.error('Toggle error:', error);
       showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'aggiornamento');
     } finally {
       setTogglingStatus(false);
