@@ -60,8 +60,9 @@ export default function AdminAthleteDetail() {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<any>({});
   
-  // Add payment modal
+  // Add/Edit payment modal
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [newPayment, setNewPayment] = useState({
     amount: '',
     paid_date: '',
