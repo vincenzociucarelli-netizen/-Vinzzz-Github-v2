@@ -474,6 +474,41 @@ export default function AthleteDetail() {
     }
   };
 
+  const handleDeleteAthlete = () => {
+    if (!athlete) return;
+    
+    Alert.alert(
+      'Elimina Atleta',
+      `Sei sicuro di voler eliminare ${athlete.full_name}?\n\nQuesta azione è IRREVERSIBILE e cancellerà tutti i dati dell'atleta inclusi certificati, pagamenti e presenze.`,
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Elimina',
+          style: 'destructive',
+          onPress: () => confirmDeleteAthlete(),
+        },
+      ]
+    );
+  };
+
+  const confirmDeleteAthlete = async () => {
+    try {
+      await api.delete(`/athletes/${id}`);
+      Alert.alert(
+        'Atleta Eliminato',
+        'L\'atleta è stato eliminato con successo.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/parent'),
+          },
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante l\'eliminazione');
+    }
+  };
+
   if (!athlete) {
     return (
       <View style={styles.container}>
