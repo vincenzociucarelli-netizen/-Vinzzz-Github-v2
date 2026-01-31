@@ -336,18 +336,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-  menuItemSmall: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  menuItemSmallText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#333',
-    marginLeft: 12,
-  },
 });
