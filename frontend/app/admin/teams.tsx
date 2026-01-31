@@ -125,40 +125,57 @@ export default function TeamsScreen() {
 
   const handleDeleteTeam = (team: Team) => {
     const athletesCount = athletesCounts[team.id] || 0;
-    console.log('Delete team:', team.name, 'Athletes:', athletesCount);
     
     if (athletesCount > 0) {
-      Alert.alert(
-        'Impossibile Eliminare',
-        `La squadra "${team.name}" ha ${athletesCount} atleti iscritti.\n\nTrasferire o eliminare gli atleti prima di poter eliminare la squadra.`,
-        [{ text: 'OK' }]
-      );
+      if (Platform.OS === 'web') {
+        window.alert(`La squadra "${team.name}" ha ${athletesCount} atleti iscritti.\n\nTrasferire o eliminare gli atleti prima di poter eliminare la squadra.`);
+      } else {
+        Alert.alert(
+          'Impossibile Eliminare',
+          `La squadra "${team.name}" ha ${athletesCount} atleti iscritti.\n\nTrasferire o eliminare gli atleti prima di poter eliminare la squadra.`,
+          [{ text: 'OK' }]
+        );
+      }
       return;
     }
 
-    Alert.alert(
-      'Elimina Squadra',
-      `Sei sicuro di voler eliminare la squadra "${team.name}"?\n\nQuesta azione è irreversibile.`,
-      [
-        { text: 'Annulla', style: 'cancel' },
-        {
-          text: 'Elimina',
-          style: 'destructive',
-          onPress: () => confirmDeleteTeam(team.id),
-        },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`Sei sicuro di voler eliminare la squadra "${team.name}"?\n\nQuesta azione è irreversibile.`);
+      if (confirmed) {
+        confirmDeleteTeam(team.id);
+      }
+    } else {
+      Alert.alert(
+        'Elimina Squadra',
+        `Sei sicuro di voler eliminare la squadra "${team.name}"?\n\nQuesta azione è irreversibile.`,
+        [
+          { text: 'Annulla', style: 'cancel' },
+          {
+            text: 'Elimina',
+            style: 'destructive',
+            onPress: () => confirmDeleteTeam(team.id),
+          },
+        ]
+      );
+    }
   };
 
   const confirmDeleteTeam = async (teamId: string) => {
-    console.log('Confirming delete for team:', teamId);
     try {
       await api.delete(`/teams/${teamId}`);
-      Alert.alert('Successo', 'Squadra eliminata con successo');
+      if (Platform.OS === 'web') {
+        window.alert('Squadra eliminata con successo');
+      } else {
+        Alert.alert('Successo', 'Squadra eliminata con successo');
+      }
       await loadTeams();
     } catch (error: any) {
-      console.error('Delete error:', error);
-      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante l\'eliminazione');
+      const errorMsg = error.response?.data?.detail || 'Errore durante l\'eliminazione';
+      if (Platform.OS === 'web') {
+        window.alert(errorMsg);
+      } else {
+        Alert.alert('Errore', errorMsg);
+      }
     }
   };
 
