@@ -81,29 +81,41 @@ export default function AdminDashboard() {
 
         {stats && (
           <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Ionicons name="people" size={32} color="#007AFF" />
+            <TouchableOpacity 
+              style={styles.statCard}
+              onPress={() => router.push('/admin/athletes')}
+            >
+              <Ionicons name="people" size={24} color="#007AFF" />
               <Text style={styles.statNumber}>{stats.total_athletes}</Text>
               <Text style={styles.statLabel}>Atleti Totali</Text>
-            </View>
+            </TouchableOpacity>
 
-            <View style={styles.statCard}>
-              <Ionicons name="fitness" size={32} color="#34C759" />
+            <TouchableOpacity 
+              style={styles.statCard}
+              onPress={() => router.push('/admin/athletes')}
+            >
+              <Ionicons name="fitness" size={24} color="#34C759" />
               <Text style={styles.statNumber}>{stats.active_athletes}</Text>
               <Text style={styles.statLabel}>Atleti Attivi</Text>
-            </View>
+            </TouchableOpacity>
 
-            <View style={styles.statCard}>
-              <Ionicons name="basketball" size={32} color="#FF9500" />
+            <TouchableOpacity 
+              style={styles.statCard}
+              onPress={() => router.push('/admin/teams')}
+            >
+              <Ionicons name="basketball" size={24} color="#FF9500" />
               <Text style={styles.statNumber}>{stats.total_teams}</Text>
               <Text style={styles.statLabel}>Squadre</Text>
-            </View>
+            </TouchableOpacity>
 
-            <View style={styles.statCard}>
-              <Ionicons name="checkmark-circle" size={32} color="#5856D6" />
+            <TouchableOpacity 
+              style={styles.statCard}
+              onPress={() => router.push('/admin/attendances')}
+            >
+              <Ionicons name="checkmark-circle" size={24} color="#5856D6" />
               <Text style={styles.statNumber}>{stats.today_attendances}</Text>
               <Text style={styles.statLabel}>Presenze Oggi</Text>
-            </View>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -177,7 +189,7 @@ const styles = StyleSheet.create({
     width: '48%',
     backgroundColor: '#fff',
     margin: '1%',
-    padding: 20,
+    padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     shadowColor: '#000',
@@ -187,13 +199,13 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   statNumber: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
-    marginTop: 8,
+    marginTop: 6,
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
     marginTop: 4,
     textAlign: 'center',
@@ -201,6 +213,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     padding: 10,
     marginTop: 10,
+    marginBottom: 100,
   },
   menuItem: {
     backgroundColor: '#fff',
