@@ -311,9 +311,7 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
 @api_router.get("/teams", response_model=List[Team])
 async def get_teams(current_user = Depends(get_current_user)):
     teams = await db.teams.find().to_list(1000)
-    # Remove _id field from MongoDB documents
-    for team in teams:
-        team.pop('_id', None)
+    clean_mongo_docs(teams)
     return [Team(**team) for team in teams]
 
 @api_router.get("/teams/{team_id}", response_model=Team)
