@@ -1,15 +1,6 @@
 import * as XLSX from 'xlsx';
 import { Platform } from 'react-native';
 
-// Dynamic imports for mobile only
-let FileSystem: any = null;
-let Sharing: any = null;
-
-if (Platform.OS !== 'web') {
-  FileSystem = require('expo-file-system');
-  Sharing = require('expo-sharing');
-}
-
 export const exportToExcel = async (data: any[], filename: string) => {
   if (!data || data.length === 0) {
     throw new Error('Nessun dato da esportare');
@@ -31,11 +22,30 @@ export const exportToExcel = async (data: any[], filename: string) => {
 
   if (Platform.OS === 'web') {
     // Web export - direct download
-    XLSX.writeFile(workbook, `${filename}.xlsx`);
-    return true;
+    try {
+      XLSX.writeFile(workbook, `${filename}.xlsx`);
+      return true;
+    } catch (error) {
+      console.error('Web export error:', error);
+      // Fallback: use blob download
+      const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return true;
+    }
   } else {
     // Mobile export using file system
     try {
+      const FileSystem = require('expo-file-system');
+      const Sharing = require('expo-sharing');
+      
       const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
       const uri = FileSystem.documentDirectory + `${filename}.xlsx`;
       
