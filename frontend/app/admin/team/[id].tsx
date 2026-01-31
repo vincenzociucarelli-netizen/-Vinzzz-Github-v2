@@ -9,11 +9,16 @@ import {
   Alert,
   Linking,
   RefreshControl,
+  Modal,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
-import { Team } from '../../../src/types';
+import { Team, TrainingSession, MatchDay } from '../../../src/types';
+import { Picker } from '@react-native-picker/picker';
+
+const DAYS_OF_WEEK = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
 
 export default function TeamDetail() {
   const router = useRouter();
@@ -22,9 +27,13 @@ export default function TeamDetail() {
   const [editing, setEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   
-  // Form fields
+  // Form fields - basic info
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [championships, setChampionships] = useState('');
+  const [calendarLink, setCalendarLink] = useState('');
+  
+  // Form fields - payments
   const [totalAmount, setTotalAmount] = useState('');
   const [installment1, setInstallment1] = useState('');
   const [installment2, setInstallment2] = useState('');
@@ -33,10 +42,22 @@ export default function TeamDetail() {
   const [installment3Date, setInstallment3Date] = useState('');
   const [bankInfo, setBankInfo] = useState('');
   const [paypalEmail, setPaypalEmail] = useState('');
-  const [trainingDays, setTrainingDays] = useState('');
-  const [trainingTime, setTrainingTime] = useState('');
-  const [championships, setChampionships] = useState('');
-  const [calendarLink, setCalendarLink] = useState('');
+  
+  // Training sessions (2-4)
+  const [trainingSessions, setTrainingSessions] = useState<TrainingSession[]>([
+    { day: 'Lunedì', time: '', venue: '' },
+    { day: 'Mercoledì', time: '', venue: '' },
+  ]);
+  
+  // Match day
+  const [matchDay, setMatchDay] = useState<MatchDay>({
+    day: 'Sabato',
+    time: '',
+    venue: '',
+  });
+
+  // Training modal
+  const [trainingModalVisible, setTrainingModalVisible] = useState(false);
 
   const loadTeam = async () => {
     try {
@@ -55,13 +76,21 @@ export default function TeamDetail() {
       setInstallment3Date(teamData.installment_3_due_date?.split('T')[0] || '');
       setBankInfo(teamData.bank_info || '');
       setPaypalEmail(teamData.paypal_email || '');
-      setTrainingDays(teamData.training_days || '');
-      setTrainingTime(teamData.training_time || '');
       setChampionships(teamData.championships || '');
       setCalendarLink(teamData.calendar_link || '');
+      
+      // Load training sessions
+      if (teamData.training_sessions && teamData.training_sessions.length > 0) {
+        setTrainingSessions(teamData.training_sessions);
+      }
+      
+      // Load match day
+      if (teamData.match_day) {
+        setMatchDay(teamData.match_day);
+      }
     } catch (error) {
       console.error('Error loading team:', error);
-      Alert.alert('Errore', 'Impossibile caricare i dati della squadra');
+      showAlert('Errore', 'Impossibile caricare i dati della squadra');
     }
   };
 
@@ -69,15 +98,46 @@ export default function TeamDetail() {
     loadTeam();
   }, [id]);
 
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadTeam();
     setRefreshing(false);
   };
 
+  const addTrainingSession = () => {
+    if (trainingSessions.length >= 4) {
+      showAlert('Limite raggiunto', 'Massimo 4 allenamenti settimanali');
+      return;
+    }
+    setTrainingSessions([...trainingSessions, { day: 'Giovedì', time: '', venue: '' }]);
+  };
+
+  const removeTrainingSession = (index: number) => {
+    if (trainingSessions.length <= 2) {
+      showAlert('Limite minimo', 'Minimo 2 allenamenti settimanali');
+      return;
+    }
+    const newSessions = trainingSessions.filter((_, i) => i !== index);
+    setTrainingSessions(newSessions);
+  };
+
+  const updateTrainingSession = (index: number, field: keyof TrainingSession, value: string) => {
+    const newSessions = [...trainingSessions];
+    newSessions[index] = { ...newSessions[index], [field]: value };
+    setTrainingSessions(newSessions);
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Errore', 'Inserisci il nome della squadra');
+      showAlert('Errore', 'Inserisci il nome della squadra');
       return;
     }
 
@@ -85,10 +145,10 @@ export default function TeamDetail() {
       const updateData: any = {
         name,
         description: description || null,
-        training_days: trainingDays || null,
-        training_time: trainingTime || null,
         championships: championships || null,
         calendar_link: calendarLink || null,
+        training_sessions: trainingSessions,
+        match_day: matchDay,
       };
 
       // Only include payment fields if they are provided
@@ -104,17 +164,18 @@ export default function TeamDetail() {
       await api.patch(`/teams/${id}`, updateData);
       
       setEditing(false);
+      setTrainingModalVisible(false);
       await loadTeam();
-      Alert.alert('Successo', 'Squadra aggiornata con successo');
+      showAlert('Successo', 'Squadra aggiornata con successo');
     } catch (error: any) {
-      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante l\'aggiornamento');
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'aggiornamento');
     }
   };
 
   const handleOpenCalendar = () => {
     if (calendarLink) {
       Linking.openURL(calendarLink).catch(() => {
-        Alert.alert('Errore', 'Impossibile aprire il link');
+        showAlert('Errore', 'Impossibile aprire il link');
       });
     }
   };
@@ -140,7 +201,7 @@ export default function TeamDetail() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{team.name}</Text>
-        <TouchableOpacity onPress={() => editing ? setEditing(false) : setEditing(true)}>
+        <TouchableOpacity onPress={() => setEditing(!editing)}>
           <Ionicons name={editing ? "close" : "create"} size={24} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -151,39 +212,194 @@ export default function TeamDetail() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {!editing ? (
-          // View Mode
-          <>
+        {editing ? (
+          // EDIT MODE
+          <View style={styles.editForm}>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📋 Informazioni Generali</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Nome:</Text>
-                <Text style={styles.value}>{team.name}</Text>
-              </View>
-              {team.description && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Descrizione:</Text>
-                  <Text style={styles.value}>{team.description}</Text>
-                </View>
-              )}
+              <Text style={styles.sectionTitle}>📝 Informazioni Base</Text>
+              <Text style={styles.inputLabel}>Nome Squadra *</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Nome squadra"
+              />
+
+              <Text style={styles.inputLabel}>Descrizione</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Descrizione opzionale"
+                multiline
+              />
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🏟️ Allenamenti</Text>
-              {team.training_days ? (
-                <>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>Giorni:</Text>
-                    <Text style={styles.value}>{team.training_days}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>Orari:</Text>
-                    <Text style={styles.value}>{team.training_time}</Text>
-                  </View>
-                </>
-              ) : (
-                <Text style={styles.emptyText}>Nessun orario configurato</Text>
-              )}
+              <Text style={styles.sectionTitle}>💰 Quote e Pagamenti</Text>
+              <Text style={styles.inputLabel}>Quota Totale (€)</Text>
+              <TextInput
+                style={styles.input}
+                value={totalAmount}
+                onChangeText={setTotalAmount}
+                keyboardType="decimal-pad"
+                placeholder="Es: 450"
+              />
+
+              <Text style={styles.inputLabel}>Prima Rata (€)</Text>
+              <TextInput
+                style={styles.input}
+                value={installment1}
+                onChangeText={setInstallment1}
+                keyboardType="decimal-pad"
+                placeholder="Es: 150"
+              />
+
+              <View style={styles.row}>
+                <View style={styles.halfInput}>
+                  <Text style={styles.inputLabel}>Seconda Rata (€)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={installment2}
+                    onChangeText={setInstallment2}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <View style={styles.halfInput}>
+                  <Text style={styles.inputLabel}>Scadenza</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={installment2Date}
+                    onChangeText={setInstallment2Date}
+                    placeholder="YYYY-MM-DD"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.row}>
+                <View style={styles.halfInput}>
+                  <Text style={styles.inputLabel}>Terza Rata (€)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={installment3}
+                    onChangeText={setInstallment3}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <View style={styles.halfInput}>
+                  <Text style={styles.inputLabel}>Scadenza</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={installment3Date}
+                    onChangeText={setInstallment3Date}
+                    placeholder="YYYY-MM-DD"
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.inputLabel}>Coordinate Bancarie</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={bankInfo}
+                onChangeText={setBankInfo}
+                multiline
+                placeholder="IBAN e intestatario"
+              />
+
+              <Text style={styles.inputLabel}>Email PayPal</Text>
+              <TextInput
+                style={styles.input}
+                value={paypalEmail}
+                onChangeText={setPaypalEmail}
+                keyboardType="email-address"
+                placeholder="paypal@email.com"
+              />
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🏆 Campionati</Text>
+              <TextInput
+                style={styles.input}
+                value={championships}
+                onChangeText={setChampionships}
+                placeholder="Es: Serie C, Coppa Italia"
+              />
+              <Text style={styles.inputLabel}>Link Calendario Federazione</Text>
+              <TextInput
+                style={styles.input}
+                value={calendarLink}
+                onChangeText={setCalendarLink}
+                placeholder="https://..."
+              />
+            </View>
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+              <Ionicons name="checkmark" size={24} color="#fff" />
+              <Text style={styles.saveButtonText}>Salva Modifiche</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          // VIEW MODE
+          <>
+            {/* Training Schedule Card */}
+            <View style={styles.trainingCard}>
+              <View style={styles.trainingHeader}>
+                <Text style={styles.trainingTitle}>🏋️ Allenamenti Settimanali</Text>
+                <TouchableOpacity 
+                  style={styles.editTrainingBtn}
+                  onPress={() => setTrainingModalVisible(true)}
+                >
+                  <Ionicons name="pencil" size={18} color="#007AFF" />
+                  <Text style={styles.editTrainingText}>Modifica</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Training Table Header */}
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderCell, styles.dayCell]}>GIORNO</Text>
+                <Text style={[styles.tableHeaderCell, styles.timeCell]}>ORARIO</Text>
+                <Text style={[styles.tableHeaderCell, styles.venueCell]}>PALESTRA</Text>
+              </View>
+              
+              {/* Training Rows */}
+              {trainingSessions.map((session, index) => (
+                <View key={index} style={styles.tableRow}>
+                  <Text style={[styles.tableCell, styles.dayCell]}>{session.day}</Text>
+                  <Text style={[styles.tableCell, styles.timeCell]}>{session.time || '-'}</Text>
+                  <Text style={[styles.tableCell, styles.venueCell]}>{session.venue || '-'}</Text>
+                </View>
+              ))}
+              
+              {/* Match Day Section */}
+              <View style={styles.matchDayHeader}>
+                <Ionicons name="trophy" size={18} color="#FF9500" />
+                <Text style={styles.matchDayTitle}>GARA IN CASA</Text>
+              </View>
+              <View style={styles.tableRow}>
+                <Text style={[styles.tableCell, styles.dayCell]}>{matchDay.day}</Text>
+                <Text style={[styles.tableCell, styles.timeCell]}>{matchDay.time || '-'}</Text>
+                <Text style={[styles.tableCell, styles.venueCell]}>{matchDay.venue || '-'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>💰 Quote</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>Quota Totale:</Text>
+                <Text style={styles.value}>€{team.total_amount}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>1ª Rata (iscrizione):</Text>
+                <Text style={styles.value}>€{team.installment_1_amount}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>2ª Rata:</Text>
+                <Text style={styles.value}>€{team.installment_2_amount}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>3ª Rata:</Text>
+                <Text style={styles.value}>€{team.installment_3_amount}</Text>
+              </View>
             </View>
 
             <View style={styles.section}>
@@ -223,177 +439,143 @@ export default function TeamDetail() {
               </View>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </TouchableOpacity>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>💶 Quote e Pagamenti</Text>
-              <View style={styles.paymentCard}>
-                <Text style={styles.totalAmount}>Quota Totale: €{team.total_amount}</Text>
-                <View style={styles.installments}>
-                  <View style={styles.installmentItem}>
-                    <Text style={styles.installmentLabel}>Rata 1 (7 giorni)</Text>
-                    <Text style={styles.installmentAmount}>€{team.installment_1_amount}</Text>
-                  </View>
-                  <View style={styles.installmentItem}>
-                    <Text style={styles.installmentLabel}>Rata 2 ({installment2Date})</Text>
-                    <Text style={styles.installmentAmount}>€{team.installment_2_amount}</Text>
-                  </View>
-                  <View style={styles.installmentItem}>
-                    <Text style={styles.installmentLabel}>Rata 3 ({installment3Date})</Text>
-                    <Text style={styles.installmentAmount}>€{team.installment_3_amount}</Text>
-                  </View>
-                </View>
-              </View>
-              
-              <View style={styles.paymentInfo}>
-                <Text style={styles.paymentInfoTitle}>Modalità di Pagamento:</Text>
-                <Text style={styles.paymentInfoText}>
-                  <Text style={styles.bold}>Bonifico:</Text>
-                  {'\n'}{team.bank_info}
-                </Text>
-                <Text style={styles.paymentInfoText}>
-                  <Text style={styles.bold}>PayPal:</Text> {team.paypal_email}
-                </Text>
-              </View>
-            </View>
-          </>
-        ) : (
-          // Edit Mode
-          <>
-            <Text style={styles.editTitle}>Modifica Squadra</Text>
-
-            <Text style={styles.label}>Nome Squadra *</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-            />
-
-            <Text style={styles.label}>Descrizione</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={2}
-            />
-
-            <Text style={styles.sectionTitleEdit}>🏟️ Sede Allenamenti</Text>
-
-            <Text style={styles.label}>Giorni Allenamento</Text>
-            <TextInput
-              style={styles.input}
-              value={trainingDays}
-              onChangeText={setTrainingDays}
-              placeholder="Es: Lunedì, Mercoledì, Venerdì"
-            />
-
-            <Text style={styles.label}>Orari Allenamento</Text>
-            <TextInput
-              style={styles.input}
-              value={trainingTime}
-              onChangeText={setTrainingTime}
-              placeholder="Es: 18:00 - 20:00"
-            />
-
-            <Text style={styles.sectionTitleEdit}>🏆 Campionati</Text>
-
-            <Text style={styles.label}>Campionati Iscritti</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={championships}
-              onChangeText={setChampionships}
-              multiline
-              numberOfLines={2}
-              placeholder="Es: Serie C, Coppa Regionale"
-            />
-
-            <Text style={styles.label}>Link Calendario</Text>
-            <TextInput
-              style={styles.input}
-              value={calendarLink}
-              onChangeText={setCalendarLink}
-              placeholder="https://federazione.it/calendario"
-              keyboardType="url"
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.sectionTitleEdit}>💶 Quote e Scadenze</Text>
-
-            <Text style={styles.label}>Quota Totale (€)</Text>
-            <TextInput
-              style={styles.input}
-              value={totalAmount}
-              onChangeText={setTotalAmount}
-              keyboardType="decimal-pad"
-            />
-
-            <Text style={styles.label}>Rata 1 (€)</Text>
-            <TextInput
-              style={styles.input}
-              value={installment1}
-              onChangeText={setInstallment1}
-              keyboardType="decimal-pad"
-            />
-
-            <Text style={styles.label}>Rata 2 (€)</Text>
-            <TextInput
-              style={styles.input}
-              value={installment2}
-              onChangeText={setInstallment2}
-              keyboardType="decimal-pad"
-            />
-
-            <Text style={styles.label}>Scadenza Rata 2 (YYYY-MM-DD)</Text>
-            <TextInput
-              style={styles.input}
-              value={installment2Date}
-              onChangeText={setInstallment2Date}
-              keyboardType="numbers-and-punctuation"
-            />
-
-            <Text style={styles.label}>Rata 3 (€)</Text>
-            <TextInput
-              style={styles.input}
-              value={installment3}
-              onChangeText={setInstallment3}
-              keyboardType="decimal-pad"
-            />
-
-            <Text style={styles.label}>Scadenza Rata 3 (YYYY-MM-DD)</Text>
-            <TextInput
-              style={styles.input}
-              value={installment3Date}
-              onChangeText={setInstallment3Date}
-              keyboardType="numbers-and-punctuation"
-            />
-
-            <Text style={styles.sectionTitleEdit}>🏦 Info Pagamento</Text>
-
-            <Text style={styles.label}>Dati Bonifico</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={bankInfo}
-              onChangeText={setBankInfo}
-              multiline
-              numberOfLines={3}
-            />
-
-            <Text style={styles.label}>Email PayPal</Text>
-            <TextInput
-              style={styles.input}
-              value={paypalEmail}
-              onChangeText={setPaypalEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Ionicons name="checkmark-circle" size={24} color="#fff" />
-              <Text style={styles.saveButtonText}>Salva Modifiche</Text>
-            </TouchableOpacity>
           </>
         )}
       </ScrollView>
+
+      {/* Training Edit Modal */}
+      <Modal
+        visible={trainingModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setTrainingModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.trainingModalContent}>
+            <Text style={styles.modalTitle}>Modifica Allenamenti</Text>
+            
+            <ScrollView style={styles.trainingModalScroll}>
+              {/* Training Sessions */}
+              <Text style={styles.modalSectionTitle}>Allenamenti Settimanali (2-4)</Text>
+              
+              {trainingSessions.map((session, index) => (
+                <View key={index} style={styles.trainingFormRow}>
+                  <View style={styles.trainingFormHeader}>
+                    <Text style={styles.trainingFormLabel}>Allenamento {index + 1}</Text>
+                    {trainingSessions.length > 2 && (
+                      <TouchableOpacity onPress={() => removeTrainingSession(index)}>
+                        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  
+                  <View style={styles.trainingInputRow}>
+                    <View style={styles.pickerWrapper}>
+                      <Text style={styles.miniLabel}>Giorno</Text>
+                      <View style={styles.pickerContainer}>
+                        <Picker
+                          selectedValue={session.day}
+                          onValueChange={(value) => updateTrainingSession(index, 'day', value)}
+                          style={styles.picker}
+                        >
+                          {DAYS_OF_WEEK.map((day) => (
+                            <Picker.Item key={day} label={day} value={day} />
+                          ))}
+                        </Picker>
+                      </View>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.trainingInputRow}>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.miniLabel}>Orario</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={session.time}
+                        onChangeText={(value) => updateTrainingSession(index, 'time', value)}
+                        placeholder="Es: 18:00 / 20:00"
+                      />
+                    </View>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.miniLabel}>Palestra</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={session.venue}
+                        onChangeText={(value) => updateTrainingSession(index, 'venue', value)}
+                        placeholder="Es: Palestra Liceo"
+                      />
+                    </View>
+                  </View>
+                </View>
+              ))}
+              
+              {trainingSessions.length < 4 && (
+                <TouchableOpacity style={styles.addTrainingBtn} onPress={addTrainingSession}>
+                  <Ionicons name="add-circle" size={20} color="#007AFF" />
+                  <Text style={styles.addTrainingText}>Aggiungi Allenamento</Text>
+                </TouchableOpacity>
+              )}
+              
+              {/* Match Day */}
+              <Text style={styles.modalSectionTitle}>Gara in Casa</Text>
+              <View style={styles.trainingFormRow}>
+                <View style={styles.trainingInputRow}>
+                  <View style={styles.pickerWrapper}>
+                    <Text style={styles.miniLabel}>Giorno Gara</Text>
+                    <View style={styles.pickerContainer}>
+                      <Picker
+                        selectedValue={matchDay.day}
+                        onValueChange={(value) => setMatchDay({...matchDay, day: value})}
+                        style={styles.picker}
+                      >
+                        {DAYS_OF_WEEK.map((day) => (
+                          <Picker.Item key={day} label={day} value={day} />
+                        ))}
+                      </Picker>
+                    </View>
+                  </View>
+                </View>
+                
+                <View style={styles.trainingInputRow}>
+                  <View style={styles.halfInput}>
+                    <Text style={styles.miniLabel}>Orario</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={matchDay.time}
+                      onChangeText={(value) => setMatchDay({...matchDay, time: value})}
+                      placeholder="Es: 18:00"
+                    />
+                  </View>
+                  <View style={styles.halfInput}>
+                    <Text style={styles.miniLabel}>Palestra</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={matchDay.venue}
+                      onChangeText={(value) => setMatchDay({...matchDay, venue: value})}
+                      placeholder="Es: Palestra Liceo"
+                    />
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setTrainingModalVisible(false)}
+              >
+                <Text style={styles.cancelBtnText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveBtn}
+                onPress={handleSave}
+              >
+                <Text style={styles.saveBtnText}>Salva</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -423,6 +605,7 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: '#fff',
     margin: 16,
+    marginBottom: 8,
     padding: 16,
     borderRadius: 12,
     shadowColor: '#000',
@@ -432,31 +615,25 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 12,
   },
-  sectionTitleEdit: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginTop: 16,
-    marginBottom: 12,
-    marginHorizontal: 16,
-  },
   infoRow: {
-    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
     color: '#666',
-    marginBottom: 4,
-    marginHorizontal: 16,
   },
   value: {
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: '600',
     color: '#333',
   },
   emptyText: {
@@ -467,102 +644,135 @@ const styles = StyleSheet.create({
   linkButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
     padding: 12,
-    backgroundColor: '#E3F2FF',
+    backgroundColor: '#E8F4FD',
     borderRadius: 8,
+    marginTop: 8,
   },
   linkText: {
     flex: 1,
-    fontSize: 14,
-    color: '#007AFF',
     marginLeft: 8,
-    fontWeight: '500',
-  },
-  paymentCard: {
-    backgroundColor: '#f9f9f9',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  totalAmount: {
-    fontSize: 20,
-    fontWeight: 'bold',
     color: '#007AFF',
-    marginBottom: 16,
+    fontSize: 14,
   },
-  installments: {
-    gap: 12,
+  // Training Card
+  trainingCard: {
+    backgroundColor: '#fff',
+    margin: 16,
+    marginBottom: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  installmentItem: {
+  trainingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  installmentLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  installmentAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  paymentInfo: {
-    backgroundColor: '#f9f9f9',
     padding: 16,
-    borderRadius: 8,
+    backgroundColor: '#f9f9f9',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
-  paymentInfoTitle: {
+  trainingTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  editTrainingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editTrainingText: {
+    color: '#007AFF',
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    marginLeft: 4,
   },
-  paymentInfoText: {
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#007AFF',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  tableHeaderCell: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  tableCell: {
+    fontSize: 13,
+    color: '#333',
+  },
+  dayCell: {
+    flex: 2,
+  },
+  timeCell: {
+    flex: 2,
+    textAlign: 'center',
+  },
+  venueCell: {
+    flex: 3,
+  },
+  matchDayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  matchDayTitle: {
     fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FF9500',
+    marginLeft: 8,
+  },
+  // Edit Form
+  editForm: {
+    padding: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
     color: '#666',
-    marginBottom: 8,
-  },
-  bold: {
-    fontWeight: 'bold',
-  },
-  editTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
+    marginBottom: 6,
+    marginTop: 12,
   },
   input: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: '#f5f5f5',
     borderRadius: 8,
-    fontSize: 16,
-    marginHorizontal: 16,
-    marginBottom: 12,
+    padding: 12,
+    fontSize: 14,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#e0e0e0',
   },
   textArea: {
-    height: 80,
+    minHeight: 80,
     textAlignVertical: 'top',
   },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  halfInput: {
+    flex: 1,
+  },
   saveButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: '#007AFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
     borderRadius: 12,
-    margin: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    marginTop: 24,
   },
   saveButtonText: {
     color: '#fff',
@@ -570,7 +780,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
-  // Attendance Link styles
+  // Attendance Link
   attendanceLink: {
     backgroundColor: '#fff',
     marginHorizontal: 16,
@@ -611,5 +821,124 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginTop: 2,
+  },
+  // Training Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  trainingModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: '95%',
+    maxHeight: '90%',
+    overflow: 'hidden',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  trainingModalScroll: {
+    padding: 16,
+    maxHeight: 500,
+  },
+  modalSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  trainingFormRow: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  trainingFormHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  trainingFormLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  trainingInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  pickerWrapper: {
+    flex: 1,
+  },
+  miniLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+  },
+  addTrainingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    backgroundColor: '#E8F4FD',
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  addTrainingText: {
+    color: '#007AFF',
+    fontSize: 14,
+    marginLeft: 6,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  cancelBtn: {
+    flex: 1,
+    padding: 14,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  saveBtn: {
+    flex: 1,
+    padding: 14,
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  saveBtnText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
   },
 });
