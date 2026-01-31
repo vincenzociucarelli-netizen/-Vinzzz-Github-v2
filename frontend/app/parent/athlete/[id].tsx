@@ -198,16 +198,17 @@ export default function AthleteDetail() {
     setCertIssueDate(formatted);
   };
 
-  const calculateExpiryDate = (dateStr: string) => {
-    // Calcola la data di scadenza (365 giorni dopo)
+  const calculateExpiryDate = (dateStr: string, months: string) => {
+    // Calcola la data di scadenza (mesi * 30 giorni)
     const parts = dateStr.split('/');
-    if (parts.length === 3) {
+    const monthsNum = parseInt(months) || 0;
+    if (parts.length === 3 && monthsNum > 0) {
       const day = parseInt(parts[0]);
       const month = parseInt(parts[1]) - 1;
       const year = parseInt(parts[2]);
       const issueDate = new Date(year, month, day);
       const expiryDate = new Date(issueDate);
-      expiryDate.setDate(expiryDate.getDate() + 365);
+      expiryDate.setDate(expiryDate.getDate() + (monthsNum * 30));
       return format(expiryDate, 'dd/MM/yyyy', { locale: it });
     }
     return '';
