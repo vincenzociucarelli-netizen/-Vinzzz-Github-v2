@@ -480,11 +480,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
   },
-    marginTop: 8,
-  },
-  picker: {
-    height: 50,
-  },
   submitButton: {
     backgroundColor: '#34C759',
     flexDirection: 'row',
