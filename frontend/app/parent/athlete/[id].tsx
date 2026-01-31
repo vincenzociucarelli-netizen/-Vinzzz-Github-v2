@@ -627,6 +627,11 @@ export default function AthleteDetail() {
           </View>
           
           <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Squadra</Text>
+            <Text style={styles.dataValue}>{getTeamName(athlete.team_id)}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Nome Completo</Text>
             <Text style={styles.dataValue}>{athlete.full_name}</Text>
           </View>
