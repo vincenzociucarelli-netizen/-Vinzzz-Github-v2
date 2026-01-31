@@ -33,6 +33,11 @@ export default function AthleteDetail() {
   const [privacyConfirmed, setPrivacyConfirmed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [uploadingCert, setUploadingCert] = useState(false);
+  // Certificate upload modal states
+  const [certModalVisible, setCertModalVisible] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<any>(null);
+  const [certIssueDate, setCertIssueDate] = useState('');
+  const [certValidityMonths, setCertValidityMonths] = useState('12');
 
   const loadData = async () => {
     try {
