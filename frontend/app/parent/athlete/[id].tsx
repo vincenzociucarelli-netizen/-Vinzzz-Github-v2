@@ -436,6 +436,7 @@ export default function AthleteDetail() {
       email: athlete.email || '',
       tax_payer_name: athlete.tax_payer_name || '',
       tax_payer_fiscal_code: athlete.tax_payer_fiscal_code || '',
+      team_id: athlete.team_id || '',
     });
     setEditModalVisible(true);
   };
