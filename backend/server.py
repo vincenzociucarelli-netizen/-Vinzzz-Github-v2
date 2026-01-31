@@ -774,7 +774,21 @@ async def update_team(team_id: str, team_data: TeamUpdate, current_user = Depend
     for key, value in team_data.dict(exclude_unset=True).items():
         if value is not None:
             if "due_date" in key and isinstance(value, str):
-                update_dict[key] = datetime.fromisoformat(value)
+                # Parse date in various formats
+                try:
+                    # Try ISO format first
+                    update_dict[key] = datetime.fromisoformat(value)
+                except ValueError:
+                    # Try DD/MM/YYYY format
+                    try:
+                        parts = value.split('/')
+                        if len(parts) == 3:
+                            update_dict[key] = datetime(int(parts[2]), int(parts[1]), int(parts[0]))
+                        else:
+                            raise ValueError("Invalid date format")
+                    except:
+                        # Skip invalid dates
+                        pass
             else:
                 update_dict[key] = value
     
