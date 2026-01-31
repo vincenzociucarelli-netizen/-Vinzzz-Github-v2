@@ -124,6 +124,19 @@ class Athlete(BaseModel):
     full_name: str
     date_of_birth: datetime
     is_minor: bool
+    # New fields - anagrafica completa
+    fiscal_code: str  # Codice fiscale atleta
+    address: Optional[str] = None  # Via, numero civico
+    city: Optional[str] = None  # Città
+    postal_code: Optional[str] = None  # CAP
+    province: Optional[str] = None  # Provincia
+    phone_athlete: Optional[str] = None  # Telefono atleta
+    phone_father: Optional[str] = None  # Telefono padre
+    phone_mother: Optional[str] = None  # Telefono madre
+    # Dati genitore per detrazione
+    tax_payer_name: Optional[str] = None  # Nome cognome genitore detrazione
+    tax_payer_fiscal_code: Optional[str] = None  # CF genitore detrazione
+    # Existing fields
     team_id: str
     qr_code: str  # Base64 encoded QR code
     registration_date: datetime = Field(default_factory=datetime.utcnow)
@@ -136,6 +149,16 @@ class Athlete(BaseModel):
 class AthleteCreate(BaseModel):
     full_name: str
     date_of_birth: str
+    fiscal_code: str
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    province: Optional[str] = None
+    phone_athlete: Optional[str] = None
+    phone_father: Optional[str] = None
+    phone_mother: Optional[str] = None
+    tax_payer_name: Optional[str] = None
+    tax_payer_fiscal_code: Optional[str] = None
     team_id: str
     
 class AthleteUpdate(BaseModel):
