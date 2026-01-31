@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -27,20 +28,28 @@ interface PendingCount {
   parents: number;
 }
 
+interface SocietySettings {
+  name: string;
+  logo: string | null;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [stats, setStats] = useState<Stats | null>(null);
   const [pendingCounts, setPendingCounts] = useState<PendingCount>({ dirigenti: 0, coaches: 0, parents: 0 });
+  const [society, setSociety] = useState<SocietySettings>({ name: 'Società Sportiva', logo: null });
   const [refreshing, setRefreshing] = useState(false);
 
   const loadStats = async () => {
     try {
-      const [statsRes, pendingRes] = await Promise.all([
+      const [statsRes, pendingRes, societyRes] = await Promise.all([
         api.get('/stats/overview'),
         api.get('/users/pending'),
+        api.get('/settings/society'),
       ]);
       setStats(statsRes.data);
+      setSociety(societyRes.data);
       
       // Count pending by role
       const pending = pendingRes.data;
