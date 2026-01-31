@@ -92,29 +92,80 @@ export default function AthleteDetail() {
   };
 
   const handleUploadCertificate = async () => {
+    // Show options: camera or gallery
+    Alert.alert(
+      'Carica Certificato',
+      'Come vuoi caricare il certificato medico?',
+      [
+        {
+          text: 'Scatta Foto',
+          onPress: () => pickImage('camera'),
+        },
+        {
+          text: 'Scegli dalla Galleria',
+          onPress: () => pickImage('gallery'),
+        },
+        {
+          text: 'Annulla',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
+
+  const pickImage = async (source: 'camera' | 'gallery') => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/pdf',
-        copyToCacheDirectory: true,
-      });
+      let result;
+      
+      if (source === 'camera') {
+        // Request camera permission
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permesso Negato', 'È necessario il permesso per usare la fotocamera');
+          return;
+        }
+        
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          quality: 0.8,
+        });
+      } else {
+        // Request gallery permission
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permesso Negato', 'È necessario il permesso per accedere alla galleria');
+          return;
+        }
+        
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          quality: 0.8,
+        });
+      }
 
       if (result.canceled || !result.assets || result.assets.length === 0) {
         return;
       }
 
-      const file = result.assets[0];
+      const image = result.assets[0];
       
       // Set default issue date to today
       const today = new Date();
       const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
       
-      setSelectedFile(file);
+      setSelectedFile({
+        uri: image.uri,
+        name: 'certificato_medico.jpg',
+        type: 'image',
+      });
       setCertIssueDate(formattedDate);
       setCertValidityMonths('12');
       setCertModalVisible(true);
     } catch (error) {
-      console.error('Error picking document:', error);
-      Alert.alert('Errore', 'Impossibile selezionare il file');
+      console.error('Error picking image:', error);
+      Alert.alert('Errore', 'Impossibile selezionare l\'immagine');
     }
   };
 
