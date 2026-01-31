@@ -1596,6 +1596,54 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 4,
   },
+  // Status toggle styles
+  statusToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 12,
+  },
+  statusToggleInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  statusToggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  statusToggleSubtext: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 4,
+  },
+  statusToggle: {
+    width: 56,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FF9500',
+    padding: 3,
+    justifyContent: 'center',
+  },
+  statusToggleActive: {
+    backgroundColor: '#34C759',
+  },
+  statusToggleKnob: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#fff',
+  },
+  statusToggleKnobActive: {
+    alignSelf: 'flex-end',
+  },
+  statusToggleText: {
+    color: '#fff',
+    fontSize: 12,
+    textAlign: 'center',
+  },
   // Data display styles
   cardHeader: {
     flexDirection: 'row',
