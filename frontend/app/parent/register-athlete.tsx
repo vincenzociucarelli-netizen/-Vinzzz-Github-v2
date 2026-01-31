@@ -408,10 +408,20 @@ export default function RegisterAthlete() {
               <Text style={styles.checkboxSubtext}>
                 {isTrialPeriod 
                   ? 'Non è richiesta la firma sulla privacy durante la prova'
-                  : 'Accetto la privacy e la liberatoria (atleta che si riconferma)'}
+                  : 'Confermo e accetto la privacy e la liberatoria'}
               </Text>
             </View>
           </TouchableOpacity>
+          
+          {!isTrialPeriod && (
+            <TouchableOpacity 
+              style={styles.privacyLink}
+              onPress={() => setPrivacyModalVisible(true)}
+            >
+              <Ionicons name="document-text-outline" size={18} color="#007AFF" />
+              <Text style={styles.privacyLinkText}>Leggi l'informativa sulla privacy</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[styles.submitButton, loading && styles.submitButtonDisabled]}
@@ -427,6 +437,62 @@ export default function RegisterAthlete() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+      
+      {/* Privacy Modal */}
+      <Modal
+        visible={privacyModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setPrivacyModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.privacyModalContent}>
+            <View style={styles.privacyModalHeader}>
+              <Text style={styles.privacyModalTitle}>Informativa Privacy</Text>
+              <TouchableOpacity onPress={() => setPrivacyModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.privacyScroll}>
+              <Text style={styles.privacyText}>
+                <Text style={styles.privacyBold}>LIBERATORIA{'\n\n'}</Text>
+                Il/La sottoscritto/a _______________ nato/a il ___/___/_____ a _______________
+                in qualità di esercente la responsabilità genitoriale sul minore _______________
+                nato/a il ___/___/_____ a _______________ iscritto/a alla ASD/SSD ______________{'\n\n'}
+                
+                <Text style={styles.privacyBold}>DICHIARA{'\n\n'}</Text>
+                di essere stato informato e di aver preso visione dell'informativa ai sensi degli artt. 13 e 14 
+                del Regolamento (UE) 2016/679 sulla protezione dei dati (GDPR), disponibile anche sul sito web 
+                della società, riguardo il trattamento dei dati personali propri e del minore.{'\n\n'}
+                
+                <Text style={styles.privacyBold}>PRESTA IL PROPRIO CONSENSO{'\n\n'}</Text>
+                ☐ al trattamento dei dati personali propri e del minore per le finalità strettamente connesse 
+                e necessarie alla pratica sportiva dilettantistica (iscrizione, tesseramento, partecipazione a 
+                manifestazioni sportive, gestione amministrativa);{'\n\n'}
+                
+                ☐ all'utilizzo di immagini e/o video del minore per finalità promozionali e comunicative della 
+                società, sia su supporti tradizionali che digitali (sito web, social network, materiale promozionale), 
+                con l'impegno che tali immagini non saranno utilizzate per fini commerciali o cedute a terzi;{'\n\n'}
+                
+                ☐ alla comunicazione dei dati a federazioni, enti di promozione sportiva, assicurazioni e altri 
+                soggetti necessari per lo svolgimento dell'attività sportiva.{'\n\n'}
+                
+                Il consenso è revocabile in qualsiasi momento mediante comunicazione scritta alla società.
+                Il rifiuto del consenso ai trattamenti necessari comporterà l'impossibilità di partecipare 
+                all'attività sportiva.{'\n\n'}
+                
+                Data: ___/___/_____
+              </Text>
+            </ScrollView>
+            <TouchableOpacity 
+              style={styles.privacyAcceptBtn}
+              onPress={() => setPrivacyModalVisible(false)}
+            >
+              <Text style={styles.privacyAcceptBtnText}>Ho letto e compreso</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
