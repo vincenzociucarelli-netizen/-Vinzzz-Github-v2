@@ -1551,22 +1551,22 @@ const styles = StyleSheet.create({
   },
   dataRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    alignItems: 'flex-start',
   },
   dataLabel: {
     fontSize: 14,
     color: '#666',
-    flex: 1,
+    width: 120,
+    marginRight: 12,
   },
   dataValue: {
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
-    flex: 1.5,
-    textAlign: 'right',
+    flex: 1,
   },
   // Edit Modal styles
   editModalContent: {
