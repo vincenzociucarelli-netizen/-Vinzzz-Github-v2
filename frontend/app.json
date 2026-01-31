@@ -41,6 +41,12 @@
           "resizeMode": "contain",
           "backgroundColor": "#000"
         }
+      ],
+      [
+        "expo-barcode-scanner",
+        {
+          "cameraPermission": "Allow app to access camera for QR code scanning"
+        }
       ]
     ],
     "experiments": {
