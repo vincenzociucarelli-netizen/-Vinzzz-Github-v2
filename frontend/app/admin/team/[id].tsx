@@ -570,4 +570,46 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
+  // Attendance Link styles
+  attendanceLink: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  attendanceLinkContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  attendanceLinkIcon: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#F0EFFF',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attendanceLinkText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  attendanceLinkTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  attendanceLinkSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
 });
