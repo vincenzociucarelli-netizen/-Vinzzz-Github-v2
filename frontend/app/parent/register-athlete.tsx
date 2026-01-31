@@ -340,22 +340,23 @@ export default function RegisterAthlete() {
 
           <Text style={styles.sectionTitle}>💳 Dati per Fatturazione</Text>
 
-          <Text style={styles.label}>Nome Contribuente</Text>
+          <Text style={styles.label}>Cognome e Nome</Text>
           <TextInput
             style={styles.input}
-            placeholder="Nome e Cognome o Ragione Sociale"
+            placeholder="Es: ROSSI MARIO"
             value={taxPayerName}
             onChangeText={(text) => setTaxPayerName(text.toUpperCase())}
             autoCapitalize="characters"
           />
 
-          <Text style={styles.label}>Codice Fiscale Contribuente</Text>
+          <Text style={styles.label}>Codice Fiscale</Text>
           <TextInput
             style={styles.input}
-            placeholder="Codice Fiscale o P.IVA"
+            placeholder="Es: RSSMRA80A01H501Z"
             value={taxPayerFiscalCode}
             onChangeText={(text) => setTaxPayerFiscalCode(text.toUpperCase())}
             autoCapitalize="characters"
+            maxLength={16}
           />
 
           <Text style={styles.sectionTitle}>🏐 Squadre</Text>
