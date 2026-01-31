@@ -162,6 +162,18 @@ class AthleteCreate(BaseModel):
     team_id: str
     
 class AthleteUpdate(BaseModel):
+    full_name: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    fiscal_code: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    province: Optional[str] = None
+    phone_athlete: Optional[str] = None
+    phone_father: Optional[str] = None
+    phone_mother: Optional[str] = None
+    tax_payer_name: Optional[str] = None
+    tax_payer_fiscal_code: Optional[str] = None
     privacy_accepted: Optional[bool] = None
     image_consent: Optional[bool] = None
 
