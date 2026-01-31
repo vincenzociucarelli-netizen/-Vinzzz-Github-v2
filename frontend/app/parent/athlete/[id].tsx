@@ -790,6 +790,156 @@ export default function AthleteDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Edit Modal */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.editModalContent}>
+            <Text style={styles.modalTitle}>Modifica Dati</Text>
+            
+            <ScrollView style={styles.editScroll} showsVerticalScrollIndicator={false}>
+              <Text style={styles.inputLabel}>Nome Completo</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.full_name}
+                onChangeText={(text) => setEditData({...editData, full_name: text.toUpperCase()})}
+                autoCapitalize="characters"
+              />
+
+              <Text style={styles.inputLabel}>Data di Nascita (GG/MM/AAAA)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.date_of_birth}
+                onChangeText={(text) => setEditData({...editData, date_of_birth: formatDateInput(text)})}
+                keyboardType="number-pad"
+                maxLength={10}
+              />
+
+              <Text style={styles.inputLabel}>Codice Fiscale</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.fiscal_code}
+                onChangeText={(text) => setEditData({...editData, fiscal_code: text.toUpperCase()})}
+                autoCapitalize="characters"
+                maxLength={16}
+              />
+
+              <Text style={styles.inputLabel}>Indirizzo</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.address}
+                onChangeText={(text) => setEditData({...editData, address: text.toUpperCase()})}
+                autoCapitalize="characters"
+              />
+
+              <Text style={styles.inputLabel}>Città</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.city}
+                onChangeText={(text) => setEditData({...editData, city: text.toUpperCase()})}
+                autoCapitalize="characters"
+              />
+
+              <View style={styles.rowInputs}>
+                <View style={styles.halfInputContainer}>
+                  <Text style={styles.inputLabel}>CAP</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editData.postal_code}
+                    onChangeText={(text) => setEditData({...editData, postal_code: text})}
+                    keyboardType="number-pad"
+                    maxLength={5}
+                  />
+                </View>
+                <View style={styles.halfInputContainer}>
+                  <Text style={styles.inputLabel}>Provincia</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editData.province}
+                    onChangeText={(text) => setEditData({...editData, province: text.toUpperCase()})}
+                    autoCapitalize="characters"
+                    maxLength={2}
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.inputLabel}>Tel. Atleta</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.phone_athlete}
+                onChangeText={(text) => setEditData({...editData, phone_athlete: text})}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={styles.inputLabel}>Tel. Padre</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.phone_father}
+                onChangeText={(text) => setEditData({...editData, phone_father: text})}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={styles.inputLabel}>Tel. Madre</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.phone_mother}
+                onChangeText={(text) => setEditData({...editData, phone_mother: text})}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={styles.inputLabel}>Email</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.email}
+                onChangeText={(text) => setEditData({...editData, email: text.toLowerCase()})}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <Text style={styles.inputLabel}>Genitore Detrazione</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.tax_payer_name}
+                onChangeText={(text) => setEditData({...editData, tax_payer_name: text.toUpperCase()})}
+                autoCapitalize="characters"
+              />
+
+              <Text style={styles.inputLabel}>CF Genitore</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.tax_payer_fiscal_code}
+                onChangeText={(text) => setEditData({...editData, tax_payer_fiscal_code: text.toUpperCase()})}
+                autoCapitalize="characters"
+                maxLength={16}
+              />
+            </ScrollView>
+
+            <View style={styles.editModalButtons}>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonSecondary, styles.modalButton]}
+                onPress={() => setEditModalVisible(false)}
+              >
+                <Text style={styles.buttonSecondaryText}>Annulla</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.buttonPrimary, styles.modalButton]}
+                onPress={handleSaveEdit}
+                disabled={savingEdit}
+              >
+                <Text style={styles.buttonText}>
+                  {savingEdit ? 'Salvataggio...' : 'Salva'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
