@@ -35,6 +35,7 @@ export default function RegisterAthlete() {
   const [phoneAthlete, setPhoneAthlete] = useState('');
   const [phoneFather, setPhoneFather] = useState('');
   const [phoneMother, setPhoneMother] = useState('');
+  const [email, setEmail] = useState('');
   
   // Dati Fiscali
   const [taxPayerName, setTaxPayerName] = useState('');
