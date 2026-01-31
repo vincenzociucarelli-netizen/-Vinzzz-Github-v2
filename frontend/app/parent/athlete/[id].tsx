@@ -128,7 +128,8 @@ export default function AthleteDetail() {
         result = await ImagePicker.launchCameraAsync({
           mediaTypes: ['images'],
           allowsEditing: true,
-          quality: 0.8,
+          quality: 0.7,
+          base64: true,  // Get base64 directly
         });
       } else {
         // Request gallery permission
@@ -141,7 +142,8 @@ export default function AthleteDetail() {
         result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['images'],
           allowsEditing: true,
-          quality: 0.8,
+          quality: 0.7,
+          base64: true,  // Get base64 directly
         });
       }
 
@@ -150,6 +152,7 @@ export default function AthleteDetail() {
       }
 
       const image = result.assets[0];
+      console.log('Image picked, has base64:', !!image.base64);
       
       // Set default issue date to today
       const today = new Date();
@@ -157,6 +160,7 @@ export default function AthleteDetail() {
       
       setSelectedFile({
         uri: image.uri,
+        base64: image.base64,  // Store base64 directly
         name: 'certificato_medico.jpg',
         type: 'image',
       });
