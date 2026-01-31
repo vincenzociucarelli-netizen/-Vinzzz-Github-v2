@@ -127,9 +127,9 @@ export default function AthleteDetail() {
         
         result = await ImagePicker.launchCameraAsync({
           mediaTypes: ['images'],
-          allowsEditing: true,
+          allowsEditing: false,  // Disabled editing - direct upload
           quality: 0.7,
-          base64: true,  // Get base64 directly
+          base64: true,
         });
       } else {
         // Request gallery permission
@@ -141,9 +141,9 @@ export default function AthleteDetail() {
         
         result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['images'],
-          allowsEditing: true,
+          allowsEditing: false,  // Disabled editing - direct upload
           quality: 0.7,
-          base64: true,  // Get base64 directly
+          base64: true,
         });
       }
 
