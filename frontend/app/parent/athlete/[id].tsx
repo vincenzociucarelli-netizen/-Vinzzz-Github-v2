@@ -762,6 +762,20 @@ export default function AthleteDetail() {
             </View>
           )}
         </View>
+
+        {/* Delete Athlete Button */}
+        <View style={styles.deleteSection}>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDeleteAthlete}
+          >
+            <Ionicons name="trash-outline" size={20} color="#fff" />
+            <Text style={styles.deleteButtonText}>Elimina Atleta</Text>
+          </TouchableOpacity>
+          <Text style={styles.deleteWarning}>
+            Questa azione è irreversibile
+          </Text>
+        </View>
       </ScrollView>
 
       {/* QR Code Modal */}
