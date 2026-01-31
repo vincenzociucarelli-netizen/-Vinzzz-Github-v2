@@ -71,10 +71,10 @@ export default function RegisterAthlete() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (Platform.OS === 'web') {
       if (window.confirm('Sei sicuro di voler uscire?')) {
-        logout();
+        await logout();
         router.replace('/login');
       }
     } else {
