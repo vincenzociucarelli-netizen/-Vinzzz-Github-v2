@@ -220,7 +220,7 @@ export default function AthleteDetail() {
   };
 
   const calculateExpiryDate = (dateStr: string, months: string) => {
-    // Calcola la data di scadenza (mesi * 30 giorni)
+    // Scadenza = data emissione - 1 giorno + mesi di validità
     const parts = dateStr.split('/');
     const monthsNum = parseInt(months) || 0;
     if (parts.length === 3 && monthsNum > 0) {
@@ -228,11 +228,48 @@ export default function AthleteDetail() {
       const month = parseInt(parts[1]) - 1;
       const year = parseInt(parts[2]);
       const issueDate = new Date(year, month, day);
-      const expiryDate = new Date(issueDate);
-      expiryDate.setDate(expiryDate.getDate() + (monthsNum * 30));
-      return format(expiryDate, 'dd/MM/yyyy', { locale: it });
+      // Sottrai 1 giorno
+      issueDate.setDate(issueDate.getDate() - 1);
+      // Aggiungi i mesi
+      issueDate.setMonth(issueDate.getMonth() + monthsNum);
+      return format(issueDate, 'dd/MM/yyyy', { locale: it });
     }
     return '';
+  };
+
+  const printQRCode = async () => {
+    if (!athlete) return;
+    
+    const html = `
+      <html>
+        <head>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              text-align: center; 
+              padding: 40px;
+            }
+            h1 { font-size: 24px; margin-bottom: 10px; }
+            h2 { font-size: 18px; color: #666; margin-bottom: 30px; }
+            img { width: 300px; height: 300px; }
+            p { margin-top: 20px; font-size: 14px; color: #888; }
+          </style>
+        </head>
+        <body>
+          <h1>${athlete.full_name}</h1>
+          <h2>QR Code Atleta</h2>
+          <img src="data:image/png;base64,${athlete.qr_code}" />
+          <p>Presentare questo codice all'allenatore per registrare la presenza</p>
+        </body>
+      </html>
+    `;
+    
+    try {
+      await Print.printAsync({ html });
+    } catch (error) {
+      console.error('Errore stampa:', error);
+      Alert.alert('Errore', 'Impossibile stampare il QR code');
+    }
   };
 
   const convertToISODate = (dateStr: string) => {
