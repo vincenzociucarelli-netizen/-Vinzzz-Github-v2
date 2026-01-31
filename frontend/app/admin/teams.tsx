@@ -64,8 +64,7 @@ export default function TeamsScreen() {
     setBankInfo('');
     setPaypalEmail('');
     setVenue('');
-    setTrainingDays('');
-    setTrainingTime('');
+    setTrainingSchedule('');
     setChampionships('');
     setCalendarLink('');
   };
