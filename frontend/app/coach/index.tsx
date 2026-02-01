@@ -582,6 +582,10 @@ export default function CoachScreen() {
                       <Text style={styles.legendText}>Valido</Text>
                     </View>
                     <View style={styles.legendItem}>
+                      <Ionicons name="warning" size={14} color="#FF9500" />
+                      <Text style={styles.legendText}>In scadenza</Text>
+                    </View>
+                    <View style={styles.legendItem}>
                       <Ionicons name="close-circle" size={14} color="#FF3B30" />
                       <Text style={styles.legendText}>Scaduto/Mancante</Text>
                     </View>
