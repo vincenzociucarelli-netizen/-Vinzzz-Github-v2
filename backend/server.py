@@ -60,12 +60,62 @@ class User(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     approved_at: Optional[datetime] = None
     approved_by: Optional[str] = None  # Admin ID who approved
+    is_scorekeeper: bool = False  # For dirigenti - segnapunti
+    
+    # Coach specific fields - Dati Anagrafici
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    date_of_birth: Optional[datetime] = None
+    place_of_birth: Optional[str] = None
+    fiscal_code: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    province: Optional[str] = None
+    phone: Optional[str] = None
+    
+    # Coach specific - Tesserino
+    coach_license_number: Optional[str] = None  # Numero tesserino allenatore
+    coach_license_expiry: Optional[datetime] = None
+    
+    # Coach specific - Compensi
+    monthly_compensation: Optional[float] = None  # Compenso mensile
+    compensation_accepted: bool = False  # Flag accettazione compenso
+    compensation_accepted_date: Optional[datetime] = None
+    contract_start_date: Optional[datetime] = None  # Data inizio contratto
+    contract_end_date: Optional[datetime] = None  # Default 31/05 o esonero
+    is_terminated: bool = False  # Se esonerato/rinunciato
+
+class CoachCompensation(BaseModel):
+    """Monthly compensation record for coaches"""
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    coach_id: str
+    month: int  # 1-12
+    year: int
+    amount: float
+    received: bool = False  # Flag pagamento ricevuto
+    received_date: Optional[datetime] = None
+    exceeded_5000: bool = False  # Flag superamento €5.000 annuali
+    exceeded_5000_date: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
     role: str
     full_name: str
+    # Optional coach fields
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    place_of_birth: Optional[str] = None
+    fiscal_code: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    province: Optional[str] = None
+    phone: Optional[str] = None
+    coach_license_number: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
