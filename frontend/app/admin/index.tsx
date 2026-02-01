@@ -55,6 +55,8 @@ export default function AdminDashboard() {
   const [pendingCounts, setPendingCounts] = useState<PendingCount>({ dirigenti: 0, coaches: 0, parents: 0 });
   const [society, setSociety] = useState<SocietySettings>({ name: 'Società Sportiva', logo: null });
   const [refreshing, setRefreshing] = useState(false);
+  const [birthdays, setBirthdays] = useState<Birthday[]>([]);
+  const [expiringCerts, setExpiringCerts] = useState<ExpiringCertificates>({ count_today: 0, count_30_days: 0, expiring_today: [], expiring_soon: [] });
 
   const loadStats = async () => {
     try {
