@@ -236,6 +236,21 @@ export default function AdminDashboard() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
+          
+          {/* Archivio Stagioni */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/seasons')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#FBE9E7' }]}>
+              <Ionicons name="archive" size={28} color="#FF5722" />
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Archivio Stagioni</Text>
+              <Text style={styles.menuCardSubtitle}>Storico atleti, coach e campionati</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
         </View>
 
         {/* Bottom padding for Android navigation */}
