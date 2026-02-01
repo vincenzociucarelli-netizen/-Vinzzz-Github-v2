@@ -301,6 +301,49 @@ export default function AdminAthleteDetail() {
     }
   };
 
+  // Withdraw athlete
+  const handleWithdrawAthlete = async () => {
+    setWithdrawing(true);
+    try {
+      await api.patch(`/athletes/${id}`, {
+        is_withdrawn: true,
+        withdrawn_reason: withdrawReason || 'Ritiro dalla squadra',
+      });
+      showAlert('Successo', 'Atleta ritirato dalla squadra');
+      setWithdrawModalVisible(false);
+      setWithdrawReason('');
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il ritiro');
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
+  // Reactivate athlete
+  const handleReactivateAthlete = async () => {
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm('Riattivare questo atleta?')
+      : await new Promise((resolve) => {
+          Alert.alert('Conferma', 'Riattivare questo atleta?', [
+            { text: 'Annulla', onPress: () => resolve(false) },
+            { text: 'Riattiva', onPress: () => resolve(true) },
+          ]);
+        });
+
+    if (confirmed) {
+      try {
+        await api.patch(`/athletes/${id}`, {
+          is_withdrawn: false,
+        });
+        showAlert('Successo', 'Atleta riattivato');
+        await loadData();
+      } catch (error: any) {
+        showAlert('Errore', error.response?.data?.detail || 'Errore');
+      }
+    }
+  };
+
   const getPercentageColor = (percentage: number) => {
     if (percentage >= 80) return '#34C759';
     if (percentage >= 50) return '#FF9500';
