@@ -181,6 +181,7 @@ class MatchDay(BaseModel):
 
 class Team(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
+    society_id: Optional[str] = None  # ID della società (multi-tenancy)
     name: str
     description: Optional[str] = None
     created_by_admin_id: str
