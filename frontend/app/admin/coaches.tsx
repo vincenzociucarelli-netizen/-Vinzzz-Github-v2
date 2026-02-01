@@ -27,6 +27,16 @@ interface Coach {
   assigned_teams: string[];
   created_at: string;
   approved_at?: string;
+  // Coach specific fields
+  first_name?: string;
+  last_name?: string;
+  fiscal_code?: string;
+  coach_license_number?: string;
+  phone?: string;
+  monthly_compensation?: number;
+  compensation_accepted?: boolean;
+  contract_start_date?: string;
+  contract_end_date?: string;
 }
 
 export default function CoachesScreen() {
@@ -40,6 +50,11 @@ export default function CoachesScreen() {
   const [teamsModalVisible, setTeamsModalVisible] = useState(false);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [exporting, setExporting] = useState(false);
+  
+  // Compensation modal state
+  const [compensationModalVisible, setCompensationModalVisible] = useState(false);
+  const [compensationAmount, setCompensationAmount] = useState('');
+  const [savingCompensation, setSavingCompensation] = useState(false);
 
   const handleExport = async () => {
     setExporting(true);
