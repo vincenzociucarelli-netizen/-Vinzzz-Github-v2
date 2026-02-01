@@ -544,12 +544,28 @@ export default function CoachScreen() {
                 <Text style={styles.emptyText}>Nessun atleta</Text>
               </View>
             ) : (
-              <FlatList
-                data={athletes}
-                renderItem={renderAthleteItem}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-              />
+              <>
+                {/* Certificate Legend */}
+                <View style={styles.legendContainer}>
+                  <Text style={styles.legendTitle}>📋 Certificato Medico:</Text>
+                  <View style={styles.legendItems}>
+                    <View style={styles.legendItem}>
+                      <Ionicons name="checkmark-circle" size={14} color="#34C759" />
+                      <Text style={styles.legendText}>Valido</Text>
+                    </View>
+                    <View style={styles.legendItem}>
+                      <Ionicons name="close-circle" size={14} color="#FF3B30" />
+                      <Text style={styles.legendText}>Scaduto/Mancante</Text>
+                    </View>
+                  </View>
+                </View>
+                <FlatList
+                  data={athletes}
+                  renderItem={renderAthleteItem}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                />
+              </>
             )}
           </View>
         )}
