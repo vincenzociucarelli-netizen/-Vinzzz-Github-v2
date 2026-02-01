@@ -243,6 +243,7 @@ class TeamUpdate(BaseModel):
 
 class Athlete(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
+    society_id: Optional[str] = None  # ID della società (multi-tenancy)
     parent_id: str  # User ID of parent/guardian
     # Tesseramento (gestito da Admin)
     federal_code: Optional[str] = None  # Codice Federale
