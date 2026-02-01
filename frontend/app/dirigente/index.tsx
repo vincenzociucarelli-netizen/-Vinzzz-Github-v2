@@ -8,11 +8,14 @@ import {
   RefreshControl,
   Alert,
   Platform,
+  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
+import { format, differenceInDays } from 'date-fns';
+import { it } from 'date-fns/locale';
 
 interface Team {
   id: string;
@@ -20,31 +23,85 @@ interface Team {
   category: string;
 }
 
+interface Athlete {
+  id: string;
+  full_name: string;
+  team_id: string;
+  status: string;
+  medical_certificate_expiry?: string;
+  is_withdrawn?: boolean;
+}
+
+interface AthleteWithCert extends Athlete {
+  certificate_expiry?: string;
+  is_expired?: boolean;
+  days_to_expiry?: number;
+}
+
 export default function DirigenteIndex() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [athletes, setAthletes] = useState<AthleteWithCert[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = async () => {
+  const loadTeams = async () => {
     try {
-      const teamsRes = await api.get('/teams');
-      setTeams(teamsRes.data);
+      const response = await api.get('/teams');
+      setTeams(response.data);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading teams:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const loadAthletes = async (teamId: string) => {
+    try {
+      const response = await api.get(`/teams/${teamId}/athletes`);
+      // Process athletes to add certificate status
+      const processedAthletes = response.data.map((athlete: Athlete) => {
+        let isExpired = false;
+        let daysToExpiry = null;
+        
+        if (athlete.medical_certificate_expiry) {
+          const expiryDate = new Date(athlete.medical_certificate_expiry);
+          const today = new Date();
+          daysToExpiry = differenceInDays(expiryDate, today);
+          isExpired = daysToExpiry < 0;
+        }
+        
+        return {
+          ...athlete,
+          certificate_expiry: athlete.medical_certificate_expiry,
+          is_expired: isExpired,
+          days_to_expiry: daysToExpiry,
+        };
+      });
+      setAthletes(processedAthletes);
+    } catch (error) {
+      console.error('Error loading athletes:', error);
+    }
+  };
+
   useEffect(() => {
-    loadData();
+    loadTeams();
   }, []);
+
+  useEffect(() => {
+    if (selectedTeam) {
+      loadAthletes(selectedTeam.id);
+    }
+  }, [selectedTeam]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    await loadTeams();
+    if (selectedTeam) {
+      await loadAthletes(selectedTeam.id);
+    }
     setRefreshing(false);
   };
 
@@ -62,6 +119,80 @@ export default function DirigenteIndex() {
     }
   };
 
+  const formatExpiryDate = (dateStr: string | undefined) => {
+    if (!dateStr) return 'Non presente';
+    try {
+      return format(new Date(dateStr), 'dd/MM/yyyy', { locale: it });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const getCertificateStatus = (athlete: AthleteWithCert) => {
+    if (!athlete.certificate_expiry) {
+      return { color: '#FF3B30', text: 'MANCANTE', icon: 'close-circle' };
+    }
+    if (athlete.is_expired) {
+      return { color: '#FF3B30', text: 'SCADUTO', icon: 'close-circle' };
+    }
+    if (athlete.days_to_expiry !== null && athlete.days_to_expiry <= 30) {
+      return { color: '#FF9500', text: `SCADE TRA ${athlete.days_to_expiry}g`, icon: 'warning' };
+    }
+    return { color: '#34C759', text: 'VALIDO', icon: 'checkmark-circle' };
+  };
+
+  const renderTeamItem = ({ item }: { item: Team }) => (
+    <TouchableOpacity
+      style={[styles.teamCard, selectedTeam?.id === item.id && styles.teamCardSelected]}
+      onPress={() => setSelectedTeam(item)}
+    >
+      <View style={styles.teamIcon}>
+        <Ionicons name="people" size={24} color={selectedTeam?.id === item.id ? '#fff' : '#8E44AD'} />
+      </View>
+      <View style={styles.teamInfo}>
+        <Text style={[styles.teamName, selectedTeam?.id === item.id && styles.teamNameSelected]}>
+          {item.name}
+        </Text>
+        <Text style={[styles.teamCategory, selectedTeam?.id === item.id && styles.teamCategorySelected]}>
+          {item.category}
+        </Text>
+      </View>
+      <Ionicons 
+        name="chevron-forward" 
+        size={20} 
+        color={selectedTeam?.id === item.id ? '#fff' : '#999'} 
+      />
+    </TouchableOpacity>
+  );
+
+  const renderAthleteItem = ({ item }: { item: AthleteWithCert }) => {
+    const certStatus = getCertificateStatus(item);
+    
+    return (
+      <View style={[styles.athleteCard, item.is_withdrawn && styles.athleteCardWithdrawn]}>
+        <View style={styles.athleteInfo}>
+          <Text style={[styles.athleteName, item.is_withdrawn && styles.athleteNameWithdrawn]}>
+            {item.full_name}
+          </Text>
+          <View style={styles.athleteMeta}>
+            <View style={[styles.statusBadge, { backgroundColor: item.is_withdrawn ? '#FF3B30' : (item.status === 'trial' ? '#FF9500' : '#34C759') }]}>
+              <Text style={styles.statusBadgeText}>
+                {item.is_withdrawn ? 'RITIRATO' : (item.status === 'trial' ? 'IN PROVA' : 'ATTIVO')}
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.certificateInfo}>
+          <View style={[styles.certBadge, { backgroundColor: certStatus.color + '20' }]}>
+            <Ionicons name={certStatus.icon as any} size={16} color={certStatus.color} />
+            <Text style={[styles.certText, { color: certStatus.color }]}>{certStatus.text}</Text>
+          </View>
+          <Text style={styles.certDate}>{formatExpiryDate(item.certificate_expiry)}</Text>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -69,9 +200,14 @@ export default function DirigenteIndex() {
           <Text style={styles.headerTitle}>Dashboard Dirigente</Text>
           <Text style={styles.headerSubtitle}>Benvenuto, {user?.full_name}</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity onPress={() => router.push('/dirigente/profile')} style={styles.headerBtn}>
+            <Ionicons name="person-circle-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout} style={styles.headerBtn}>
+            <Ionicons name="log-out-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -84,12 +220,12 @@ export default function DirigenteIndex() {
           onPress={() => router.push('/dirigente/profile')}
         >
           <View style={styles.profileIcon}>
-            <Ionicons name="person" size={32} color="#8E44AD" />
+            <Ionicons name="person" size={28} color="#8E44AD" />
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileTitle}>Il Mio Profilo</Text>
             <Text style={styles.profileDescription}>
-              Visualizza e modifica i tuoi dati personali e gestisci i compensi
+              Gestisci dati personali e compensi
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#8E44AD" />
@@ -97,26 +233,65 @@ export default function DirigenteIndex() {
 
         {/* Teams Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏐 Squadre della Società</Text>
+          <Text style={styles.sectionTitle}>🏐 Squadre ({teams.length})</Text>
           {teams.length === 0 ? (
             <View style={styles.emptyCard}>
               <Ionicons name="people-outline" size={48} color="#ccc" />
               <Text style={styles.emptyText}>Nessuna squadra registrata</Text>
             </View>
           ) : (
-            teams.map((team) => (
-              <View key={team.id} style={styles.teamCard}>
-                <View style={styles.teamIcon}>
-                  <Ionicons name="people" size={24} color="#8E44AD" />
-                </View>
-                <View style={styles.teamInfo}>
-                  <Text style={styles.teamName}>{team.name}</Text>
-                  <Text style={styles.teamCategory}>{team.category}</Text>
-                </View>
-              </View>
-            ))
+            <FlatList
+              data={teams}
+              renderItem={renderTeamItem}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+            />
           )}
         </View>
+
+        {/* Athletes Section - Shows when a team is selected */}
+        {selectedTeam && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                👥 Atleti di {selectedTeam.name} ({athletes.length})
+              </Text>
+              <TouchableOpacity onPress={() => setSelectedTeam(null)}>
+                <Ionicons name="close-circle" size={24} color="#999" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Certificate Legend */}
+            <View style={styles.legendContainer}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#34C759' }]} />
+                <Text style={styles.legendText}>Valido</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#FF9500' }]} />
+                <Text style={styles.legendText}>In scadenza</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#FF3B30' }]} />
+                <Text style={styles.legendText}>Scaduto/Mancante</Text>
+              </View>
+            </View>
+
+            {athletes.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Ionicons name="person-outline" size={48} color="#ccc" />
+                <Text style={styles.emptyText}>Nessun atleta in questa squadra</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={athletes}
+                renderItem={renderAthleteItem}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+              />
+            )}
+          </View>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -148,6 +323,13 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     marginTop: 4,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  headerBtn: {
+    padding: 4,
+  },
   content: {
     flex: 1,
   },
@@ -155,8 +337,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginHorizontal: 16,
     marginTop: 16,
-    padding: 20,
-    borderRadius: 16,
+    padding: 16,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
@@ -166,32 +348,36 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   profileIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#F3E5F5',
     justifyContent: 'center',
     alignItems: 'center',
   },
   profileInfo: {
     flex: 1,
-    marginLeft: 16,
-    marginRight: 8,
+    marginLeft: 12,
   },
   profileTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
   },
   profileDescription: {
     fontSize: 13,
     color: '#666',
-    marginTop: 4,
-    lineHeight: 18,
+    marginTop: 2,
   },
   section: {
-    marginTop: 24,
+    marginTop: 20,
     paddingHorizontal: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 18,
@@ -201,21 +387,24 @@ const styles = StyleSheet.create({
   },
   teamCard: {
     backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
   },
+  teamCardSelected: {
+    backgroundColor: '#8E44AD',
+  },
   teamIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#F3E5F5',
     justifyContent: 'center',
     alignItems: 'center',
@@ -229,10 +418,98 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
+  teamNameSelected: {
+    color: '#fff',
+  },
   teamCategory: {
     fontSize: 13,
     color: '#666',
     marginTop: 2,
+  },
+  teamCategorySelected: {
+    color: 'rgba(255,255,255,0.8)',
+  },
+  legendContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+    justifyContent: 'space-around',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 6,
+  },
+  legendText: {
+    fontSize: 11,
+    color: '#666',
+  },
+  athleteCard: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  athleteCardWithdrawn: {
+    backgroundColor: '#FFF5F5',
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF3B30',
+  },
+  athleteInfo: {
+    flex: 1,
+  },
+  athleteName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  athleteNameWithdrawn: {
+    color: '#FF3B30',
+    textDecorationLine: 'line-through',
+  },
+  athleteMeta: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  certificateInfo: {
+    alignItems: 'flex-end',
+  },
+  certBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  certText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  certDate: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 4,
   },
   emptyCard: {
     backgroundColor: '#fff',
