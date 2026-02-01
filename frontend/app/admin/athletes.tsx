@@ -91,21 +91,41 @@ export default function AdminAthletes() {
 
   const renderAthleteItem = ({ item }: { item: Athlete }) => (
     <TouchableOpacity 
-      style={styles.athleteCard}
+      style={[
+        styles.athleteCard,
+        item.is_withdrawn && styles.athleteCardWithdrawn
+      ]}
       onPress={() => router.push(`/admin/athlete/${item.id}`)}
     >
-      <View style={styles.athleteIcon}>
-        <Ionicons name="person" size={32} color="#007AFF" />
+      <View style={[
+        styles.athleteIcon,
+        item.is_withdrawn && styles.athleteIconWithdrawn
+      ]}>
+        <Ionicons name="person" size={32} color={item.is_withdrawn ? "#FF3B30" : "#007AFF"} />
       </View>
       <View style={styles.athleteInfo}>
-        <Text style={styles.athleteName}>{item.full_name}</Text>
+        <Text style={[
+          styles.athleteName,
+          item.is_withdrawn && styles.athleteNameWithdrawn
+        ]}>
+          {item.full_name}
+          {item.is_withdrawn && ' ⛔'}
+        </Text>
         <Text style={styles.teamName}>
           {teams[item.team_id]?.name || 'Squadra sconosciuta'}
         </Text>
-        <Text style={styles.athleteStatus}>
-          {item.status === 'trial' ? 'Periodo di prova' : 'Attivo'}
-          {!item.privacy_accepted && ' - Privacy non accettata'}
-        </Text>
+        {item.is_withdrawn ? (
+          <View style={styles.withdrawnBadge}>
+            <Text style={styles.withdrawnBadgeText}>
+              RITIRATO {item.withdrawn_reason ? `- ${item.withdrawn_reason}` : ''}
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.athleteStatus}>
+            {item.status === 'trial' ? 'Periodo di prova' : 'Attivo'}
+            {!item.privacy_accepted && ' - Privacy non accettata'}
+          </Text>
+        )}
       </View>
       <Ionicons name="chevron-forward" size={24} color="#999" />
     </TouchableOpacity>
