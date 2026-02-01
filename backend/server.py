@@ -358,6 +358,53 @@ class PaymentSettingsCreate(BaseModel):
     bank_info: str
     paypal_email: str
 
+# ==================== ARCHIVIO STORICO STAGIONI ====================
+
+class SeasonArchive(BaseModel):
+    """Archivio storico di una stagione sportiva (01/07 - 30/06)"""
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    season_name: str  # e.g., "2024-2025"
+    start_date: datetime  # 01/07/YYYY
+    end_date: datetime  # 30/06/YYYY+1
+    is_current: bool = False  # True se è la stagione corrente
+    
+    # Snapshot data at end of season
+    teams: List[dict] = []  # Team info with athletes and championships
+    coaches: List[dict] = []  # Coach info
+    total_athletes: int = 0
+    total_teams: int = 0
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    archived_at: Optional[datetime] = None
+    archived_by: Optional[str] = None
+
+class SeasonTeamArchive(BaseModel):
+    """Snapshot of a team for season archive"""
+    team_id: str
+    team_name: str
+    championships: List[str] = []  # List of championship names
+    coach_names: List[str] = []  # Coach names assigned to team
+    athlete_names: List[str] = []  # Athlete names in team
+    total_athletes: int = 0
+
+class Championship(BaseModel):
+    """Championship/Tournament a team participates in"""
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    name: str  # e.g., "Serie C Femminile"
+    season: str  # e.g., "2024-2025"
+    team_id: str
+    federation: Optional[str] = None  # e.g., "FIPAV"
+    category: Optional[str] = None  # e.g., "Under 18"
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ChampionshipCreate(BaseModel):
+    name: str
+    team_id: str
+    federation: Optional[str] = None
+    category: Optional[str] = None
+    notes: Optional[str] = None
+
 class PaymentUpdate(BaseModel):
     paid: bool
     payment_method: Optional[str] = None
