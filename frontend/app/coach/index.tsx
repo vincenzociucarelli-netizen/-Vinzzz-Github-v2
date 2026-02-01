@@ -258,7 +258,37 @@ export default function CoachScreen() {
   );
 
   const renderAthleteItem = ({ item }: { item: AthleteWithCert }) => {
-    const isExpired = item.is_expired || (item.certificate_expiry && new Date(item.certificate_expiry) < new Date());
+    const today = new Date();
+    const expiryDate = item.certificate_expiry ? new Date(item.certificate_expiry) : null;
+    const isExpired = item.is_expired || (expiryDate && expiryDate < today);
+    
+    // Check if expiring within 30 days
+    let isExpiringSoon = false;
+    if (expiryDate && !isExpired) {
+      const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      isExpiringSoon = daysUntilExpiry <= 30;
+    }
+    
+    // Determine color: red = expired/missing, orange = expiring soon, green = valid
+    let statusColor = '#34C759'; // green
+    let statusIcon = 'checkmark-circle';
+    let statusText = '';
+    
+    if (!item.certificate_expiry) {
+      statusColor = '#FF3B30'; // red
+      statusIcon = 'close-circle';
+      statusText = 'Nessun certificato';
+    } else if (isExpired) {
+      statusColor = '#FF3B30'; // red
+      statusIcon = 'close-circle';
+      statusText = `Scadenza: ${formatDate(item.certificate_expiry)} (SCADUTO)`;
+    } else if (isExpiringSoon) {
+      statusColor = '#FF9500'; // orange
+      statusIcon = 'warning';
+      statusText = `Scadenza: ${formatDate(item.certificate_expiry)} (IN SCADENZA)`;
+    } else {
+      statusText = `Scadenza: ${formatDate(item.certificate_expiry)}`;
+    }
     
     return (
       <View style={styles.athleteItem}>
@@ -266,14 +296,12 @@ export default function CoachScreen() {
           <Text style={styles.athleteName}>{item.full_name}</Text>
           <View style={styles.certRow}>
             <Ionicons 
-              name={isExpired ? "close-circle" : "checkmark-circle"} 
+              name={statusIcon as any} 
               size={18} 
-              color={isExpired ? "#FF3B30" : "#34C759"} 
+              color={statusColor} 
             />
-            <Text style={[styles.certText, { color: isExpired ? "#FF3B30" : "#34C759" }]}>
-              {item.certificate_expiry 
-                ? `Scadenza: ${formatDate(item.certificate_expiry)}${isExpired ? ' (SCADUTO)' : ''}`
-                : 'Nessun certificato'}
+            <Text style={[styles.certText, { color: statusColor }]}>
+              {statusText}
             </Text>
           </View>
         </View>
