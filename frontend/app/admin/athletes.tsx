@@ -201,6 +201,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  athleteCardWithdrawn: {
+    backgroundColor: '#FFF5F5',
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+  },
   athleteIcon: {
     width: 60,
     height: 60,
@@ -208,6 +213,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#E3F2FF',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  athleteIconWithdrawn: {
+    backgroundColor: '#FFEBEE',
   },
   athleteInfo: {
     flex: 1,
@@ -218,6 +226,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
+  athleteNameWithdrawn: {
+    color: '#FF3B30',
+    textDecorationLine: 'line-through',
+  },
   teamName: {
     fontSize: 14,
     color: '#007AFF',
@@ -227,6 +239,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 4,
+  },
+  withdrawnBadge: {
+    backgroundColor: '#FFF3CD',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+  withdrawnBadgeText: {
+    color: '#856404',
+    fontSize: 11,
+    fontWeight: '600',
   },
   statusIcon: {
     marginLeft: 12,
