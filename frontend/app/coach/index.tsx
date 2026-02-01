@@ -43,6 +43,13 @@ export default function CoachScreen() {
   const [athletes, setAthletes] = useState<AthleteWithCert[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Web scanner states
+  const [webScannerActive, setWebScannerActive] = useState(false);
+  const [manualQrInput, setManualQrInput] = useState('');
+  const [manualInputModalVisible, setManualInputModalVisible] = useState(false);
+  const webScannerRef = useRef<any>(null);
+  const scannerContainerRef = useRef<HTMLDivElement | null>(null);
 
   const loadTeams = async () => {
     try {
