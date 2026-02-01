@@ -251,6 +251,21 @@ export default function AdminDashboard() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
+
+          {/* Il Mio Profilo */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/profile')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E3F2FD' }]}>
+              <Ionicons name="person-circle" size={28} color="#2196F3" />
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Il Mio Profilo</Text>
+              <Text style={styles.menuCardSubtitle}>Dati personali e compensi</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
         </View>
 
         {/* Bottom padding for Android navigation */}
