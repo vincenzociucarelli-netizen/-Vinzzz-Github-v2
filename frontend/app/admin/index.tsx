@@ -264,20 +264,42 @@ export default function AdminDashboard() {
             <Text style={styles.inviteCodeHint}>
               Condividi questo codice con coach, dirigenti e genitori per farli registrare alla tua società
             </Text>
-            <TouchableOpacity 
-              style={styles.copyCodeButton}
-              onPress={() => {
-                if (Platform.OS === 'web') {
-                  navigator.clipboard.writeText(inviteCode);
-                  showInfo('Copiato!', 'Codice invito copiato negli appunti');
-                } else {
-                  showInfo('Codice Invito', `${inviteCode}\n\nComunica questo codice ai tuoi membri`);
-                }
-              }}
-            >
-              <Ionicons name="copy-outline" size={18} color="#fff" />
-              <Text style={styles.copyCodeButtonText}>Copia Codice</Text>
-            </TouchableOpacity>
+            <View style={styles.inviteCodeButtons}>
+              <TouchableOpacity 
+                style={styles.copyCodeButton}
+                onPress={() => {
+                  if (Platform.OS === 'web') {
+                    navigator.clipboard.writeText(inviteCode);
+                    showInfo('Copiato!', 'Codice invito copiato negli appunti');
+                  } else {
+                    showInfo('Codice Invito', `${inviteCode}\n\nComunica questo codice ai tuoi membri`);
+                  }
+                }}
+              >
+                <Ionicons name="copy-outline" size={18} color="#fff" />
+                <Text style={styles.copyCodeButtonText}>Copia</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.regenerateCodeButton}
+                onPress={async () => {
+                  const confirmRegen = Platform.OS === 'web' 
+                    ? window.confirm('Sei sicuro? Il vecchio codice non funzionerà più.')
+                    : true;
+                  if (confirmRegen) {
+                    try {
+                      const res = await api.post('/societies/regenerate-invite-code');
+                      setInviteCode(res.data.invite_code);
+                      showInfo('Fatto!', `Nuovo codice: ${res.data.invite_code}`);
+                    } catch (e) {
+                      showInfo('Errore', 'Impossibile rigenerare il codice');
+                    }
+                  }
+                }}
+              >
+                <Ionicons name="refresh-outline" size={18} color="#007AFF" />
+                <Text style={styles.regenerateCodeButtonText}>Rigenera</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
