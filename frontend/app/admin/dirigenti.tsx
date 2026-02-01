@@ -518,6 +518,9 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 4,
   },
+  moreBtn: {
+    padding: 8,
+  },
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 60,
