@@ -605,6 +605,123 @@ async def check_athlete_status(athlete_id: str):
     
     return {"allowed": True, "reason": combined_warning, "warning": combined_warning}
 
+# ==================== SOCIETY MANAGEMENT ENDPOINTS (Multi-tenancy) ====================
+
+@api_router.post("/societies")
+async def create_society(society_data: SocietyCreate, current_user = Depends(get_current_user)):
+    """Create a new society - only for admins without a society or super-admins"""
+    # Check if user already has a society
+    if current_user.get("society_id"):
+        raise HTTPException(status_code=400, detail="Sei già associato a una società")
+    
+    # Create society with unique invite code
+    invite_code = generate_invite_code()
+    # Make sure code is unique
+    while await db.societies.find_one({"invite_code": invite_code}):
+        invite_code = generate_invite_code()
+    
+    society = Society(
+        name=society_data.name,
+        email=society_data.email,
+        phone=society_data.phone,
+        invite_code=invite_code,
+        owner_id=current_user["id"]
+    )
+    
+    await db.societies.insert_one(society.dict())
+    
+    # Update current user with society_id
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {"society_id": society.id}}
+    )
+    
+    return {
+        "message": "Società creata con successo",
+        "society": {
+            "id": society.id,
+            "name": society.name,
+            "invite_code": society.invite_code
+        }
+    }
+
+@api_router.get("/societies/my")
+async def get_my_society(current_user = Depends(get_current_user)):
+    """Get current user's society details"""
+    if not current_user.get("society_id"):
+        raise HTTPException(status_code=404, detail="Non sei associato a nessuna società")
+    
+    society = await db.societies.find_one({"id": current_user["society_id"]})
+    if not society:
+        raise HTTPException(status_code=404, detail="Società non trovata")
+    
+    clean_mongo_doc(society)
+    return society
+
+@api_router.get("/societies/invite-code")
+async def get_invite_code(current_user = Depends(get_current_user)):
+    """Get society invite code - admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere il codice invito")
+    
+    if not current_user.get("society_id"):
+        raise HTTPException(status_code=404, detail="Non sei associato a nessuna società")
+    
+    society = await db.societies.find_one({"id": current_user["society_id"]})
+    if not society:
+        raise HTTPException(status_code=404, detail="Società non trovata")
+    
+    return {
+        "invite_code": society["invite_code"],
+        "society_name": society["name"]
+    }
+
+@api_router.post("/societies/regenerate-invite-code")
+async def regenerate_invite_code(current_user = Depends(get_current_user)):
+    """Regenerate society invite code - admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può rigenerare il codice invito")
+    
+    if not current_user.get("society_id"):
+        raise HTTPException(status_code=404, detail="Non sei associato a nessuna società")
+    
+    # Generate new unique code
+    new_code = generate_invite_code()
+    while await db.societies.find_one({"invite_code": new_code}):
+        new_code = generate_invite_code()
+    
+    await db.societies.update_one(
+        {"id": current_user["society_id"]},
+        {"$set": {"invite_code": new_code}}
+    )
+    
+    return {
+        "message": "Codice invito rigenerato",
+        "invite_code": new_code
+    }
+
+@api_router.patch("/societies/my")
+async def update_my_society(update_data: dict, current_user = Depends(get_current_user)):
+    """Update society details - admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare la società")
+    
+    if not current_user.get("society_id"):
+        raise HTTPException(status_code=404, detail="Non sei associato a nessuna società")
+    
+    # Allowed fields to update
+    allowed_fields = ["name", "logo", "address", "city", "postal_code", "province", 
+                      "phone", "email", "website", "fiscal_code"]
+    update_dict = {k: v for k, v in update_data.items() if k in allowed_fields}
+    
+    if update_dict:
+        await db.societies.update_one(
+            {"id": current_user["society_id"]},
+            {"$set": update_dict}
+        )
+    
+    return {"message": "Società aggiornata"}
+
 # ==================== AUTH ENDPOINTS ====================
 
 @api_router.post("/auth/register", response_model=TokenResponse)
