@@ -440,6 +440,11 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
+  quickStatIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   quickStatDivider: {
     width: 1,
     backgroundColor: '#E0E0E0',
