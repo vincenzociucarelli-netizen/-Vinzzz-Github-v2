@@ -215,20 +215,30 @@ export default function DirigentiScreen() {
     >
       <View style={styles.userAvatar}>
         <Ionicons 
-          name="briefcase" 
+          name={item.role === 'admin' ? 'shield-checkmark' : 'briefcase'} 
           size={24} 
-          color="#8E44AD" 
+          color={item.role === 'admin' ? '#007AFF' : '#8E44AD'} 
         />
       </View>
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{item.full_name}</Text>
         <Text style={styles.userEmail}>{item.email}</Text>
         <View style={styles.userMeta}>
+          <View style={[styles.roleBadge, item.role === 'admin' && styles.adminBadge]}>
+            <Text style={[styles.roleBadgeText, item.role === 'admin' && styles.adminBadgeText]}>
+              {item.role === 'admin' ? 'ADMIN' : 'VISUALIZZATORE'}
+            </Text>
+          </View>
           <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
           <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#999" />
+      <TouchableOpacity 
+        style={styles.moreBtn}
+        onPress={() => openActionModal(item)}
+      >
+        <Ionicons name="ellipsis-vertical" size={20} color="#999" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
