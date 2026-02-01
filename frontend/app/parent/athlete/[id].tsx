@@ -96,6 +96,19 @@ export default function AthleteDetail() {
       setPayments(paymentsRes.data);
       setTeams(teamsRes.data);
 
+      // Check if athlete has data password
+      try {
+        const passwordRes = await api.get(`/athletes/${id}/has-password`);
+        setHasPassword(passwordRes.data.has_password);
+        // If no password is set, data is automatically unlocked
+        if (!passwordRes.data.has_password) {
+          setDataUnlocked(true);
+        }
+      } catch (error) {
+        setHasPassword(false);
+        setDataUnlocked(true);
+      }
+
       // Try to load certificate
       try {
         const certRes = await api.get(`/certificates/${id}`);
@@ -135,6 +148,42 @@ export default function AthleteDetail() {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
+  };
+
+  // Password verification function
+  const handleVerifyPassword = async () => {
+    if (!enteredPassword) {
+      setPasswordError('Inserisci la password');
+      return;
+    }
+    
+    setCheckingPassword(true);
+    setPasswordError('');
+    
+    try {
+      const response = await api.post(`/athletes/${id}/verify-password`, {
+        password: enteredPassword
+      });
+      
+      if (response.data.verified) {
+        setDataUnlocked(true);
+        setPasswordModalVisible(false);
+        setEnteredPassword('');
+      } else {
+        setPasswordError('Password non corretta');
+      }
+    } catch (error: any) {
+      setPasswordError(error.response?.data?.detail || 'Errore verifica password');
+    } finally {
+      setCheckingPassword(false);
+    }
+  };
+
+  // Mask sensitive data if not unlocked
+  const maskData = (data: string | null | undefined): string => {
+    if (!data) return '-';
+    if (dataUnlocked) return data;
+    return '••••••••';
   };
 
   const handleUploadCertificate = async () => {
