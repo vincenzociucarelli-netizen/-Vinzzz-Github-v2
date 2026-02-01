@@ -796,11 +796,35 @@ export default function AthleteDetail() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Dati Iscrizione</Text>
-            <TouchableOpacity onPress={openEditModal} style={styles.editButton}>
-              <Ionicons name="pencil" size={20} color="#007AFF" />
-              <Text style={styles.editButtonText}>Modifica</Text>
-            </TouchableOpacity>
+            {hasPassword && !dataUnlocked ? (
+              <TouchableOpacity 
+                onPress={() => setPasswordModalVisible(true)} 
+                style={styles.lockButton}
+              >
+                <Ionicons name="lock-closed" size={20} color="#FF9500" />
+                <Text style={styles.lockButtonText}>Sblocca</Text>
+              </TouchableOpacity>
+            ) : hasPassword && dataUnlocked && user?.role === 'parent' ? (
+              <TouchableOpacity onPress={openEditModal} style={styles.editButton}>
+                <Ionicons name="pencil" size={20} color="#007AFF" />
+                <Text style={styles.editButtonText}>Modifica</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={openEditModal} style={styles.editButton}>
+                <Ionicons name="pencil" size={20} color="#007AFF" />
+                <Text style={styles.editButtonText}>Modifica</Text>
+              </TouchableOpacity>
+            )}
           </View>
+          
+          {hasPassword && !dataUnlocked && (
+            <View style={styles.lockedBanner}>
+              <Ionicons name="shield-checkmark" size={20} color="#FF9500" />
+              <Text style={styles.lockedBannerText}>
+                Dati protetti da password. Tocca "Sblocca" per visualizzare.
+              </Text>
+            </View>
+          )}
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Squadra</Text>
@@ -814,54 +838,57 @@ export default function AthleteDetail() {
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Data di Nascita</Text>
-            <Text style={styles.dataValue}>{formatDateForDisplay(athlete.date_of_birth)}</Text>
+            <Text style={styles.dataValue}>{dataUnlocked ? formatDateForDisplay(athlete.date_of_birth) : '••/••/••••'}</Text>
           </View>
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Codice Fiscale</Text>
-            <Text style={styles.dataValue}>{athlete.fiscal_code || '-'}</Text>
+            <Text style={styles.dataValue}>{maskData(athlete.fiscal_code)}</Text>
           </View>
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Indirizzo</Text>
-            <Text style={styles.dataValue}>{athlete.address || '-'}</Text>
+            <Text style={styles.dataValue}>{maskData(athlete.address)}</Text>
           </View>
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Città</Text>
             <Text style={styles.dataValue}>
-              {[athlete.city, athlete.province, athlete.postal_code].filter(Boolean).join(' - ') || '-'}
+              {dataUnlocked 
+                ? ([athlete.city, athlete.province, athlete.postal_code].filter(Boolean).join(' - ') || '-')
+                : '••••••••'
+              }
             </Text>
           </View>
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Tel. Atleta</Text>
-            <Text style={styles.dataValue}>{athlete.phone_athlete || '-'}</Text>
+            <Text style={styles.dataValue}>{maskData(athlete.phone_athlete)}</Text>
           </View>
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Tel. Padre</Text>
-            <Text style={styles.dataValue}>{athlete.phone_father || '-'}</Text>
+            <Text style={styles.dataValue}>{maskData(athlete.phone_father)}</Text>
           </View>
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Tel. Madre</Text>
-            <Text style={styles.dataValue}>{athlete.phone_mother || '-'}</Text>
+            <Text style={styles.dataValue}>{maskData(athlete.phone_mother)}</Text>
           </View>
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Email</Text>
-            <Text style={styles.dataValue}>{athlete.email || '-'}</Text>
+            <Text style={styles.dataValue}>{maskData(athlete.email)}</Text>
           </View>
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Genitore Detrazione</Text>
-            <Text style={styles.dataValue}>{athlete.tax_payer_name || '-'}</Text>
+            <Text style={styles.dataValue}>{maskData(athlete.tax_payer_name)}</Text>
           </View>
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>CF Genitore</Text>
-            <Text style={styles.dataValue}>{athlete.tax_payer_fiscal_code || '-'}</Text>
+            <Text style={styles.dataValue}>{maskData(athlete.tax_payer_fiscal_code)}</Text>
           </View>
         </View>
 
