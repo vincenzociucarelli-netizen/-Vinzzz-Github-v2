@@ -1937,6 +1937,324 @@ async def get_stats_overview(current_user = Depends(get_current_user)):
         "today_attendances": today_attendances
     }
 
+# ==================== COACH COMPENSATION ENDPOINTS ====================
+
+@api_router.get("/coach/{coach_id}/compensation")
+async def get_coach_compensation(coach_id: str, current_user = Depends(get_current_user)):
+    """Get compensation records for a coach"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    if current_user["role"] == UserRole.COACH and current_user["id"] != coach_id:
+        raise HTTPException(status_code=403, detail="Puoi vedere solo i tuoi compensi")
+    
+    records = await db.coach_compensations.find({"coach_id": coach_id}).sort([("year", -1), ("month", -1)]).to_list(100)
+    clean_mongo_docs(records)
+    return records
+
+@api_router.post("/coach/{coach_id}/compensation")
+async def set_coach_compensation(coach_id: str, amount: float, current_user = Depends(get_current_user)):
+    """Set monthly compensation for a coach (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può impostare compensi")
+    
+    # Update coach record
+    await db.users.update_one(
+        {"id": coach_id, "role": UserRole.COACH},
+        {"$set": {
+            "monthly_compensation": amount,
+            "compensation_accepted": False  # Reset acceptance
+        }}
+    )
+    
+    return {"message": "Compenso mensile impostato", "amount": amount}
+
+@api_router.post("/coach/{coach_id}/accept-compensation")
+async def accept_coach_compensation(coach_id: str, current_user = Depends(get_current_user)):
+    """Coach accepts the compensation offer"""
+    if current_user["role"] != UserRole.COACH or current_user["id"] != coach_id:
+        raise HTTPException(status_code=403, detail="Solo il coach può accettare il proprio compenso")
+    
+    # Update coach record
+    now = datetime.utcnow()
+    # Calculate contract end date (31/05 of current season)
+    season_end_year = now.year if now.month <= 5 else now.year + 1
+    contract_end = datetime(season_end_year, 5, 31)
+    
+    await db.users.update_one(
+        {"id": coach_id},
+        {"$set": {
+            "compensation_accepted": True,
+            "compensation_accepted_date": now,
+            "contract_start_date": now,
+            "contract_end_date": contract_end
+        }}
+    )
+    
+    return {"message": "Compenso accettato", "contract_end": contract_end.strftime("%d/%m/%Y")}
+
+@api_router.post("/coach/{coach_id}/compensation/{year}/{month}/received")
+async def mark_compensation_received(
+    coach_id: str, 
+    year: int, 
+    month: int, 
+    exceeded_5000: bool = False,
+    current_user = Depends(get_current_user)
+):
+    """Coach marks compensation as received for a specific month"""
+    if current_user["role"] != UserRole.COACH or current_user["id"] != coach_id:
+        raise HTTPException(status_code=403, detail="Solo il coach può confermare i propri compensi")
+    
+    # Get coach's monthly compensation amount
+    coach = await db.users.find_one({"id": coach_id})
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach non trovato")
+    
+    amount = coach.get("monthly_compensation", 0)
+    
+    # Check if record exists
+    existing = await db.coach_compensations.find_one({
+        "coach_id": coach_id,
+        "year": year,
+        "month": month
+    })
+    
+    now = datetime.utcnow()
+    
+    if existing:
+        # Update existing
+        await db.coach_compensations.update_one(
+            {"id": existing["id"]},
+            {"$set": {
+                "received": True,
+                "received_date": now,
+                "exceeded_5000": exceeded_5000,
+                "exceeded_5000_date": now if exceeded_5000 else None
+            }}
+        )
+    else:
+        # Create new record
+        record = CoachCompensation(
+            coach_id=coach_id,
+            month=month,
+            year=year,
+            amount=amount,
+            received=True,
+            received_date=now,
+            exceeded_5000=exceeded_5000,
+            exceeded_5000_date=now if exceeded_5000 else None
+        )
+        await db.coach_compensations.insert_one(record.dict())
+    
+    # If exceeded €5000, notify admin
+    if exceeded_5000:
+        # Create notification for admin (we can implement this later)
+        pass
+    
+    return {"message": "Compenso confermato", "exceeded_5000": exceeded_5000}
+
+@api_router.get("/coach/{coach_id}/compensation/annual/{year}")
+async def get_annual_compensation_summary(coach_id: str, year: int, current_user = Depends(get_current_user)):
+    """Get annual summary of compensations"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    records = await db.coach_compensations.find({
+        "coach_id": coach_id,
+        "year": year,
+        "received": True
+    }).to_list(12)
+    
+    total = sum(r.get("amount", 0) for r in records)
+    exceeded_month = next((r for r in records if r.get("exceeded_5000")), None)
+    
+    return {
+        "year": year,
+        "total_received": total,
+        "months_received": len(records),
+        "exceeded_5000": exceeded_month is not None,
+        "exceeded_month": exceeded_month.get("month") if exceeded_month else None
+    }
+
+# ==================== CHAMPIONSHIP ENDPOINTS ====================
+
+@api_router.get("/championships")
+async def get_championships(current_user = Depends(get_current_user)):
+    """Get all championships"""
+    championships = await db.championships.find({}).to_list(100)
+    clean_mongo_docs(championships)
+    return championships
+
+@api_router.get("/teams/{team_id}/championships")
+async def get_team_championships(team_id: str, current_user = Depends(get_current_user)):
+    """Get championships for a specific team"""
+    championships = await db.championships.find({"team_id": team_id}).to_list(100)
+    clean_mongo_docs(championships)
+    return championships
+
+@api_router.post("/championships")
+async def create_championship(data: ChampionshipCreate, current_user = Depends(get_current_user)):
+    """Create a new championship (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può creare campionati")
+    
+    # Determine current season
+    now = datetime.utcnow()
+    if now.month >= 7:
+        season = f"{now.year}-{now.year + 1}"
+    else:
+        season = f"{now.year - 1}-{now.year}"
+    
+    championship = Championship(
+        name=data.name,
+        team_id=data.team_id,
+        season=season,
+        federation=data.federation,
+        category=data.category,
+        notes=data.notes
+    )
+    
+    await db.championships.insert_one(championship.dict())
+    return championship
+
+@api_router.delete("/championships/{championship_id}")
+async def delete_championship(championship_id: str, current_user = Depends(get_current_user)):
+    """Delete a championship (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare campionati")
+    
+    await db.championships.delete_one({"id": championship_id})
+    return {"message": "Campionato eliminato"}
+
+# ==================== SEASON ARCHIVE ENDPOINTS ====================
+
+def get_current_season():
+    """Get current season name based on date (July to June)"""
+    now = datetime.utcnow()
+    if now.month >= 7:
+        return f"{now.year}-{now.year + 1}"
+    else:
+        return f"{now.year - 1}-{now.year}"
+
+@api_router.get("/seasons")
+async def get_seasons(current_user = Depends(get_current_user)):
+    """Get all season archives (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere l'archivio")
+    
+    seasons = await db.season_archives.find({}).sort("start_date", -1).to_list(100)
+    clean_mongo_docs(seasons)
+    return seasons
+
+@api_router.get("/seasons/current")
+async def get_current_season_data(current_user = Depends(get_current_user)):
+    """Get current season summary"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i dati stagione")
+    
+    season_name = get_current_season()
+    
+    # Get all teams
+    teams = await db.teams.find({}).to_list(100)
+    clean_mongo_docs(teams)
+    
+    # Get all athletes
+    athletes = await db.athletes.find({}).to_list(1000)
+    clean_mongo_docs(athletes)
+    
+    # Get all coaches
+    coaches = await db.users.find({"role": UserRole.COACH, "status": UserStatus.APPROVED}).to_list(100)
+    clean_mongo_docs(coaches)
+    
+    # Get all championships
+    championships = await db.championships.find({"season": season_name}).to_list(100)
+    clean_mongo_docs(championships)
+    
+    # Build team summaries
+    team_data = []
+    for team in teams:
+        team_athletes = [a for a in athletes if a.get("team_id") == team["id"] or a.get("team_id_2") == team["id"]]
+        team_championships = [c for c in championships if c.get("team_id") == team["id"]]
+        team_coaches = [c for c in coaches if team["id"] in c.get("assigned_teams", [])]
+        
+        team_data.append({
+            "id": team["id"],
+            "name": team["name"],
+            "total_athletes": len(team_athletes),
+            "athlete_names": [a["full_name"] for a in team_athletes],
+            "championships": [c["name"] for c in team_championships],
+            "coach_names": [c["full_name"] for c in team_coaches]
+        })
+    
+    return {
+        "season": season_name,
+        "is_current": True,
+        "total_teams": len(teams),
+        "total_athletes": len(athletes),
+        "total_coaches": len(coaches),
+        "teams": team_data
+    }
+
+@api_router.post("/seasons/archive")
+async def archive_season(current_user = Depends(get_current_user)):
+    """Archive current season and create new one (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può archiviare stagioni")
+    
+    # Get current season data
+    current_data = await get_current_season_data(current_user)
+    
+    now = datetime.utcnow()
+    season_name = get_current_season()
+    
+    # Determine season dates
+    year_parts = season_name.split("-")
+    start_year = int(year_parts[0])
+    start_date = datetime(start_year, 7, 1)
+    end_date = datetime(start_year + 1, 6, 30)
+    
+    # Create archive record
+    archive = SeasonArchive(
+        season_name=season_name,
+        start_date=start_date,
+        end_date=end_date,
+        is_current=False,
+        teams=current_data["teams"],
+        coaches=[{"name": c} for c in set(
+            name for t in current_data["teams"] for name in t.get("coach_names", [])
+        )],
+        total_athletes=current_data["total_athletes"],
+        total_teams=current_data["total_teams"],
+        archived_at=now,
+        archived_by=current_user["id"]
+    )
+    
+    # Check if already archived
+    existing = await db.season_archives.find_one({"season_name": season_name})
+    if existing:
+        # Update existing
+        await db.season_archives.update_one(
+            {"season_name": season_name},
+            {"$set": archive.dict()}
+        )
+    else:
+        await db.season_archives.insert_one(archive.dict())
+    
+    return {"message": f"Stagione {season_name} archiviata con successo"}
+
+@api_router.get("/seasons/{season_name}")
+async def get_season_archive(season_name: str, current_user = Depends(get_current_user)):
+    """Get specific season archive details"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere l'archivio")
+    
+    archive = await db.season_archives.find_one({"season_name": season_name})
+    if not archive:
+        raise HTTPException(status_code=404, detail="Stagione non trovata")
+    
+    clean_mongo_doc(archive)
+    return archive
+
 # ==================== ROOT ====================
 
 @api_router.get("/")
