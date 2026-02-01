@@ -2024,6 +2024,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 16,
     borderRadius: 8,
+    alignItems: 'center',
+  },
+  qrCodeText: {
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    color: '#666',
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 4,
+    letterSpacing: 1,
   },
   qrButtonsRow: {
     flexDirection: 'row',
