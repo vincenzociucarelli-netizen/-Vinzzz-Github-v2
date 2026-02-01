@@ -982,6 +982,54 @@ export default function AdminAthleteDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Withdraw Modal */}
+      <Modal
+        visible={withdrawModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setWithdrawModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="remove-circle" size={32} color="#FF3B30" />
+              <Text style={styles.modalTitleDanger}>Ritira Atleta</Text>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              L'atleta non sarà più visibile nella squadra e non potrà accedere agli allenamenti.
+            </Text>
+            <Text style={styles.inputLabel}>Motivo del ritiro (opzionale)</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Es: Trasferimento ad altra squadra"
+              value={withdrawReason}
+              onChangeText={setWithdrawReason}
+              multiline
+            />
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => {
+                  setWithdrawModalVisible(false);
+                  setWithdrawReason('');
+                }}
+              >
+                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonDanger]}
+                onPress={handleWithdrawAthlete}
+                disabled={withdrawing}
+              >
+                <Text style={styles.modalButtonDangerText}>
+                  {withdrawing ? 'Ritiro...' : 'Conferma Ritiro'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
