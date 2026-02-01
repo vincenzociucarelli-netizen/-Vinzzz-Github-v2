@@ -515,7 +515,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             "email": user["email"], 
             "full_name": user["full_name"],
             "assigned_teams": user.get("assigned_teams", []),
-            "status": user.get("status", "pending")
+            "status": user.get("status", "pending"),
+            "society_id": user.get("society_id")
         }
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
