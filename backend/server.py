@@ -2167,6 +2167,67 @@ async def get_stats_overview(current_user = Depends(get_current_user)):
         "today_attendances": today_attendances
     }
 
+@api_router.get("/birthdays/today")
+async def get_today_birthdays(current_user = Depends(get_current_user)):
+    """Get all birthdays for today - athletes, coaches, and dirigenti"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i compleanni")
+    
+    today = datetime.utcnow()
+    today_month = today.month
+    today_day = today.day
+    
+    birthdays = []
+    
+    # Check athletes
+    athletes = await db.athletes.find({}).to_list(1000)
+    for athlete in athletes:
+        dob = athlete.get("date_of_birth")
+        if dob:
+            if isinstance(dob, str):
+                try:
+                    dob = datetime.fromisoformat(dob.replace('Z', '+00:00'))
+                except:
+                    continue
+            if dob.month == today_month and dob.day == today_day:
+                age = today.year - dob.year
+                birthdays.append({
+                    "id": athlete["id"],
+                    "name": athlete["full_name"],
+                    "type": "atleta",
+                    "age": age,
+                    "icon": "person"
+                })
+    
+    # Check users (coaches and dirigenti)
+    users = await db.users.find({
+        "role": {"$in": [UserRole.COACH, UserRole.VIEWER, UserRole.ADMIN]},
+        "status": UserStatus.APPROVED
+    }).to_list(1000)
+    
+    for user in users:
+        dob = user.get("date_of_birth")
+        if dob:
+            if isinstance(dob, str):
+                try:
+                    dob = datetime.fromisoformat(dob.replace('Z', '+00:00'))
+                except:
+                    continue
+            if dob.month == today_month and dob.day == today_day:
+                age = today.year - dob.year
+                role_label = "coach" if user["role"] == UserRole.COACH else "dirigente"
+                if user["role"] == UserRole.ADMIN:
+                    role_label = "admin"
+                birthdays.append({
+                    "id": user["id"],
+                    "name": user["full_name"],
+                    "type": role_label,
+                    "age": age,
+                    "icon": "fitness" if user["role"] == UserRole.COACH else "briefcase"
+                })
+    
+    return birthdays
+
 # ==================== COACH COMPENSATION ENDPOINTS ====================
 
 @api_router.get("/coach/{coach_id}/compensation")
