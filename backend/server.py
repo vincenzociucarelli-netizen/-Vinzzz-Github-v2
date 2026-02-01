@@ -614,6 +614,16 @@ async def register(user_data: UserCreate):
     if existing:
         raise HTTPException(status_code=400, detail="Email già registrata")
     
+    # Find society by invite code
+    society_id = None
+    if user_data.invite_code:
+        society = await db.societies.find_one({"invite_code": user_data.invite_code.upper()})
+        if not society:
+            raise HTTPException(status_code=400, detail="Codice invito non valido")
+        if not society.get("is_active", True):
+            raise HTTPException(status_code=400, detail="Questa società non è più attiva")
+        society_id = society["id"]
+    
     # All users start as PENDING and need Admin approval
     initial_status = UserStatus.PENDING
     
@@ -623,7 +633,10 @@ async def register(user_data: UserCreate):
         password_hash=hash_password(user_data.password),
         role=user_data.role,
         full_name=user_data.full_name,
-        status=initial_status
+        status=initial_status,
+        society_id=society_id,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name
     )
     
     await db.users.insert_one(user.dict())
@@ -637,7 +650,8 @@ async def register(user_data: UserCreate):
             "email": user.email, 
             "role": user.role, 
             "full_name": user.full_name,
-            "status": user.status
+            "status": user.status,
+            "society_id": user.society_id
         }
     )
 
