@@ -499,11 +499,19 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
   legendContainer: {
-    flexDirection: 'row',
     backgroundColor: '#fff',
-    padding: 10,
+    padding: 12,
     borderRadius: 8,
     marginBottom: 12,
+  },
+  legendTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  legendItems: {
+    flexDirection: 'row',
     justifyContent: 'space-around',
   },
   legendItem: {
