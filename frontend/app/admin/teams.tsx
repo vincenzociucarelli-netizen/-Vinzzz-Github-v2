@@ -340,93 +340,130 @@ export default function TeamsScreen() {
                 numberOfLines={2}
               />
 
-              <Text style={styles.sectionTitle}>🏟️ Allenamenti e Gare</Text>
+              <Text style={styles.sectionTitle}>🏟️ Allenamenti Settimanali</Text>
+              <Text style={styles.hint}>Minimo 2, massimo 4 allenamenti</Text>
 
-              <Text style={styles.label}>Allenamenti (minimo 2) *</Text>
               {trainings.map((training, index) => (
-                <View key={index} style={styles.trainingContainer}>
+                <View key={index} style={styles.trainingRow}>
                   <View style={styles.trainingHeader}>
-                    <Text style={styles.trainingTitle}>Allenamento {index + 1}</Text>
+                    <Text style={styles.trainingLabel}>Allenamento {index + 1}</Text>
                     {trainings.length > 2 && (
                       <TouchableOpacity onPress={() => removeTraining(index)}>
-                        <Ionicons name="close-circle" size={20} color="#FF3B30" />
+                        <Ionicons name="close-circle" size={24} color="#FF3B30" />
                       </TouchableOpacity>
                     )}
                   </View>
                   
-                  <Text style={styles.subLabel}>Giorno</Text>
-                  <View style={styles.pickerContainer}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Seleziona giorno"
-                      value={training.day}
-                      onChangeText={(value) => updateTraining(index, 'day', value)}
-                    />
-                  </View>
-                  
-                  <View style={styles.timeRow}>
-                    <View style={styles.timeInput}>
-                      <Text style={styles.subLabel}>Ora Inizio</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="20:00"
-                        value={training.timeStart}
-                        onChangeText={(value) => updateTraining(index, 'timeStart', value)}
-                      />
+                  <View style={styles.trainingFields}>
+                    <View style={styles.fieldRow}>
+                      <View style={styles.fieldHalf}>
+                        <Text style={styles.miniLabel}>Giorno</Text>
+                        <View style={styles.pickerContainer}>
+                          <TouchableOpacity 
+                            style={styles.pickerButton}
+                            onPress={() => {
+                              if (Platform.OS === 'web') {
+                                // For web, use a simple prompt or cycle through days
+                                const currentIdx = daysOfWeek.indexOf(training.day);
+                                const nextIdx = (currentIdx + 1) % daysOfWeek.length;
+                                updateTraining(index, 'day', daysOfWeek[nextIdx]);
+                              }
+                            }}
+                          >
+                            <Text style={training.day ? styles.pickerText : styles.pickerPlaceholder}>
+                              {training.day || 'Seleziona'}
+                            </Text>
+                            <Ionicons name="chevron-down" size={16} color="#666" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                      <View style={styles.fieldHalf}>
+                        <Text style={styles.miniLabel}>Palestra</Text>
+                        <TextInput
+                          style={styles.miniInput}
+                          placeholder="Es: Liceo Alessi"
+                          value={training.venue}
+                          onChangeText={(v) => updateTraining(index, 'venue', v)}
+                        />
+                      </View>
                     </View>
-                    <View style={styles.timeInput}>
-                      <Text style={styles.subLabel}>Ora Fine</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="22:00"
-                        value={training.timeEnd}
-                        onChangeText={(value) => updateTraining(index, 'timeEnd', value)}
-                      />
+                    
+                    <View style={styles.fieldRow}>
+                      <View style={styles.fieldHalf}>
+                        <Text style={styles.miniLabel}>Dalle</Text>
+                        <TextInput
+                          style={styles.miniInput}
+                          placeholder="18:00"
+                          value={training.timeStart}
+                          onChangeText={(v) => updateTraining(index, 'timeStart', v)}
+                        />
+                      </View>
+                      <View style={styles.fieldHalf}>
+                        <Text style={styles.miniLabel}>Alle</Text>
+                        <TextInput
+                          style={styles.miniInput}
+                          placeholder="20:00"
+                          value={training.timeEnd}
+                          onChangeText={(v) => updateTraining(index, 'timeEnd', v)}
+                        />
+                      </View>
                     </View>
                   </View>
-                  
-                  <Text style={styles.subLabel}>Palestra/Campo</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Es: Palestra Liceo Alessi"
-                    value={training.venue}
-                    onChangeText={(value) => updateTraining(index, 'venue', value)}
-                  />
                 </View>
               ))}
-              
+
               {trainings.length < 4 && (
                 <TouchableOpacity style={styles.addButton} onPress={addTraining}>
-                  <Ionicons name="add-circle-outline" size={20} color="#007AFF" />
+                  <Ionicons name="add-circle" size={20} color="#007AFF" />
                   <Text style={styles.addButtonText}>Aggiungi Allenamento</Text>
                 </TouchableOpacity>
               )}
 
-              <Text style={styles.label}>Giorno Gara *</Text>
-              <View style={styles.trainingContainer}>
-                <Text style={styles.subLabel}>Giorno</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Es: Sabato"
-                  value={matchDay.day}
-                  onChangeText={(value) => setMatchDay({...matchDay, day: value})}
-                />
-                
-                <Text style={styles.subLabel}>Orario</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Es: 17:00"
-                  value={matchDay.time}
-                  onChangeText={(value) => setMatchDay({...matchDay, time: value})}
-                />
-                
-                <Text style={styles.subLabel}>Palestra/Campo</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Es: Palestra Comunale"
-                  value={matchDay.venue}
-                  onChangeText={(value) => setMatchDay({...matchDay, venue: value})}
-                />
+              <Text style={styles.sectionTitle}>🏆 Giorno Gara</Text>
+              
+              <View style={styles.trainingFields}>
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.miniLabel}>Giorno</Text>
+                    <View style={styles.pickerContainer}>
+                      <TouchableOpacity 
+                        style={styles.pickerButton}
+                        onPress={() => {
+                          if (Platform.OS === 'web') {
+                            const currentIdx = daysOfWeek.indexOf(matchDay.day);
+                            const nextIdx = (currentIdx + 1) % daysOfWeek.length;
+                            setMatchDay({...matchDay, day: daysOfWeek[nextIdx]});
+                          }
+                        }}
+                      >
+                        <Text style={matchDay.day ? styles.pickerText : styles.pickerPlaceholder}>
+                          {matchDay.day || 'Seleziona'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={16} color="#666" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.miniLabel}>Orario</Text>
+                    <TextInput
+                      style={styles.miniInput}
+                      placeholder="17:00"
+                      value={matchDay.time}
+                      onChangeText={(v) => setMatchDay({...matchDay, time: v})}
+                    />
+                  </View>
+                </View>
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldFull}>
+                    <Text style={styles.miniLabel}>Palestra Gare Casalinghe</Text>
+                    <TextInput
+                      style={styles.miniInput}
+                      placeholder="Es: Palasport Perugia"
+                      value={matchDay.venue}
+                      onChangeText={(v) => setMatchDay({...matchDay, venue: v})}
+                    />
+                  </View>
+                </View>
               </View>
 
               <Text style={styles.sectionTitle}>🏆 Campionati</Text>
