@@ -124,6 +124,7 @@ export default function RegisterDirigente() {
         password,
         full_name: fullName,
         role: 'viewer',  // Dirigente = viewer role
+        invite_code: inviteCode.toUpperCase(),
         first_name: firstName,
         last_name: lastName,
         date_of_birth: isoDate,
