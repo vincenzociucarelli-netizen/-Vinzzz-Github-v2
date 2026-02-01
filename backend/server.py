@@ -392,21 +392,44 @@ async def check_athlete_status(athlete_id: str):
     """Check if athlete can attend (certificate valid, payments up to date, privacy accepted)"""
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
-        return {"allowed": False, "reason": "Atleta non trovato"}
+        return {"allowed": False, "reason": "Atleta non trovato", "warning": None}
     
     # Check if trial period ended and privacy not accepted
     if datetime.utcnow() > athlete["trial_end_date"] and not athlete.get("privacy_accepted"):
-        return {"allowed": False, "reason": "Privacy non accettata - periodo di prova terminato"}
+        return {"allowed": False, "reason": "Privacy non accettata - periodo di prova terminato", "warning": None}
     
     # Check certificate
     certificate = await db.certificates.find_one({"athlete_id": athlete_id})
     if not certificate:
-        return {"allowed": False, "reason": "Certificato medico mancante"}
+        return {"allowed": False, "reason": "Certificato medico mancante", "warning": None}
     
+    # Certificate expired - BLOCK
     if datetime.utcnow() > certificate["expiry_date"]:
-        return {"allowed": False, "reason": "Certificato medico scaduto"}
+        return {"allowed": False, "reason": "⛔ CERTIFICATO MEDICO SCADUTO - Atleta NON ammesso all'allenamento", "warning": None}
     
-    # Check payments
+    # Check if certificate is expiring soon (within 30 days)
+    days_to_expiry = (certificate["expiry_date"] - datetime.utcnow()).days
+    cert_warning = None
+    if days_to_expiry <= 30:
+        cert_warning = f"⚠️ ATTENZIONE: CERTIFICATO MEDICO IN SCADENZA tra {days_to_expiry} giorni! Provvedere al rinnovo prima della scadenza per evitare di non essere ammessi agli allenamenti."
+    
+    # Check payments - upcoming due (within 7 days)
+    payment_warning = None
+    upcoming_payments = await db.payments.find({
+        "athlete_id": athlete_id,
+        "paid": False,
+        "due_date": {
+            "$gt": datetime.utcnow(),
+            "$lt": datetime.utcnow() + timedelta(days=7)
+        }
+    }).to_list(100)
+    
+    if upcoming_payments:
+        installments = [p["installment_number"] for p in upcoming_payments]
+        amounts = sum(p["amount"] for p in upcoming_payments)
+        payment_warning = f"💰 PROMEMORIA: Pagamento rata {', '.join(map(str, installments))} (€{amounts:.2f}) in scadenza entro 7 giorni."
+    
+    # Check payments overdue
     unpaid_payments = await db.payments.find({
         "athlete_id": athlete_id,
         "paid": False,
@@ -415,9 +438,19 @@ async def check_athlete_status(athlete_id: str):
     
     if unpaid_payments:
         installments = [p["installment_number"] for p in unpaid_payments]
-        return {"allowed": False, "reason": f"Rate non pagate: {', '.join(map(str, installments))}"}
+        amounts = sum(p["amount"] for p in unpaid_payments)
+        payment_warning = f"💰 ATTENZIONE: Pagamento rata {', '.join(map(str, installments))} (€{amounts:.2f}) SCADUTO! Ricordare all'atleta."
     
-    return {"allowed": True, "reason": None}
+    # Combine warnings
+    warnings = []
+    if cert_warning:
+        warnings.append(cert_warning)
+    if payment_warning:
+        warnings.append(payment_warning)
+    
+    combined_warning = "\n\n".join(warnings) if warnings else None
+    
+    return {"allowed": True, "reason": combined_warning, "warning": combined_warning}
 
 # ==================== AUTH ENDPOINTS ====================
 
