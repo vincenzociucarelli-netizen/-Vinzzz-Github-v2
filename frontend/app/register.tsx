@@ -207,6 +207,12 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 8,
   },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6c757d',
+    marginBottom: 4,
+  },
   picker: {
     backgroundColor: '#fff',
     borderRadius: 8,
