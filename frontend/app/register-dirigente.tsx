@@ -460,9 +460,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 8,
     fontSize: 16,
-    marginBottom: 16,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#ddd',
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 6,
   },
   row: {
     flexDirection: 'row',
