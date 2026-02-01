@@ -22,6 +22,7 @@ export default function RegisterCoach() {
   const [step, setStep] = useState(1); // 1: Account, 2: Anagrafica, 3: Fiscale
 
   // Step 1 - Account
+  const [inviteCode, setInviteCode] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
