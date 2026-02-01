@@ -115,15 +115,28 @@ export default function CoachScreen() {
       const attendance = response.data;
       
       if (attendance.status === 'blocked') {
+        // Blocked - show error with red styling
         showAlert(
-          'Accesso Negato',
+          '⛔ ACCESSO NEGATO',
           attendance.block_reason || 'Atleta non autorizzato'
         );
       } else {
-        showAlert(
-          'Presenza Registrata',
-          'Atleta autorizzato e presenza registrata con successo!'
-        );
+        // Allowed - check for warnings
+        const hasWarning = attendance.block_reason && attendance.block_reason.trim() !== '';
+        
+        if (hasWarning) {
+          // Allowed but with warnings (certificate expiring, payment due)
+          showAlert(
+            '✅ PRESENZA REGISTRATA - ATTENZIONE!',
+            `Atleta ammesso all'allenamento.\n\n${attendance.block_reason}`
+          );
+        } else {
+          // All clear
+          showAlert(
+            '✅ Presenza Registrata',
+            'Atleta autorizzato e presenza registrata con successo!'
+          );
+        }
       }
     } catch (error: any) {
       showAlert(
