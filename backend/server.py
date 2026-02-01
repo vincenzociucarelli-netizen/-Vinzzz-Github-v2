@@ -649,6 +649,10 @@ class UserProfileUpdate(BaseModel):
     province: Optional[str] = None
     phone: Optional[str] = None
     coach_license_number: Optional[str] = None
+    # Compensation fields
+    compensation_accepted: Optional[bool] = None
+    compensation_history: Optional[dict] = None
+    over_5000_limit: Optional[dict] = None
 
 @api_router.patch("/auth/me")
 async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_user)):
@@ -682,6 +686,15 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
         update_dict["phone"] = data.phone
     if data.coach_license_number is not None:
         update_dict["coach_license_number"] = data.coach_license_number
+    # Compensation fields
+    if data.compensation_accepted is not None:
+        update_dict["compensation_accepted"] = data.compensation_accepted
+        if data.compensation_accepted:
+            update_dict["compensation_accepted_date"] = datetime.utcnow()
+    if data.compensation_history is not None:
+        update_dict["compensation_history"] = data.compensation_history
+    if data.over_5000_limit is not None:
+        update_dict["over_5000_limit"] = data.over_5000_limit
     
     if update_dict:
         await db.users.update_one(
