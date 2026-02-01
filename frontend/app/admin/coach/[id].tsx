@@ -172,6 +172,49 @@ export default function AdminCoachDetail() {
     }
   };
 
+  const pickImage = async (side: 'front' | 'back') => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        if (side === 'front') {
+          setDocumentFront(result.assets[0].base64);
+        } else {
+          setDocumentBack(result.assets[0].base64);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+    }
+  };
+
+  const handleSaveBankDetails = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/users/${id}/bank-details`, {
+        document_type: documentType,
+        document_front: documentFront,
+        document_back: documentBack,
+        iban: iban.toUpperCase().replace(/\s/g, ''),
+        iban_holder: ibanHolder.toUpperCase(),
+        bank_name: bankName.toUpperCase(),
+      });
+      showAlert('Successo', 'Dati bancari aggiornati con successo');
+      setEditingBank(false);
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Generate season months (July to June)
   const getSeasonMonths = () => {
     const now = new Date();
