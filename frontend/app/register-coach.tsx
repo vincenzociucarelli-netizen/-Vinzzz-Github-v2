@@ -177,6 +177,19 @@ export default function RegisterCoach() {
     <>
       <Text style={styles.stepTitle}>👤 Credenziali Account</Text>
       
+      <View style={styles.inviteCodeSection}>
+        <Text style={styles.inviteCodeLabel}>🎟️ Codice Invito Società *</Text>
+        <TextInput
+          style={styles.inviteCodeInput}
+          placeholder="Es: PUZTKF74"
+          value={inviteCode}
+          onChangeText={(text) => setInviteCode(text.toUpperCase())}
+          autoCapitalize="characters"
+          maxLength={8}
+        />
+        <Text style={styles.inviteCodeHint}>Chiedi il codice al tuo club</Text>
+      </View>
+      
       <Text style={styles.inputLabel}>Email *</Text>
       <TextInput
         style={styles.input}
