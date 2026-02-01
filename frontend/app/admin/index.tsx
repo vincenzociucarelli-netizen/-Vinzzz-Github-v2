@@ -166,20 +166,29 @@ export default function AdminDashboard() {
         {/* Quick Stats */}
         {stats && (
           <View style={styles.quickStats}>
-            <View style={styles.quickStatItem}>
+            <TouchableOpacity 
+              style={styles.quickStatItem}
+              onPress={() => router.push('/admin/athletes')}
+            >
               <Text style={styles.quickStatNumber}>{stats.total_athletes}</Text>
               <Text style={styles.quickStatLabel}>Atleti</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.quickStatDivider} />
-            <View style={styles.quickStatItem}>
+            <TouchableOpacity 
+              style={styles.quickStatItem}
+              onPress={() => router.push('/admin/teams')}
+            >
               <Text style={styles.quickStatNumber}>{stats.total_teams}</Text>
               <Text style={styles.quickStatLabel}>Squadre</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.quickStatDivider} />
-            <View style={styles.quickStatItem}>
+            <TouchableOpacity 
+              style={styles.quickStatItem}
+              onPress={() => router.push('/admin/attendances')}
+            >
               <Text style={styles.quickStatNumber}>{stats.today_attendances}</Text>
               <Text style={styles.quickStatLabel}>Presenze Oggi</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.quickStatDivider} />
             <TouchableOpacity 
               style={styles.quickStatItem}
