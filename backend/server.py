@@ -298,6 +298,8 @@ class AthleteUpdate(BaseModel):
     discount_note: Optional[str] = None
     status: Optional[str] = None  # trial, active, blocked
     data_password: Optional[str] = None  # Nuova password protezione dati
+    is_withdrawn: Optional[bool] = None  # Ritiro atleta
+    withdrawn_reason: Optional[str] = None  # Motivo ritiro
 
 class Certificate(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
