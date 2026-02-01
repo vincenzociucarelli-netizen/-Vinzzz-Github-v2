@@ -430,6 +430,25 @@ export default function AdminAthleteDetail() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* Withdrawn Banner */}
+        {athlete.is_withdrawn && (
+          <View style={styles.withdrawnBanner}>
+            <Ionicons name="warning" size={24} color="#fff" />
+            <View style={styles.withdrawnBannerText}>
+              <Text style={styles.withdrawnBannerTitle}>ATLETA RITIRATO</Text>
+              {athlete.withdrawn_reason && (
+                <Text style={styles.withdrawnBannerSubtitle}>Motivo: {athlete.withdrawn_reason}</Text>
+              )}
+            </View>
+            <TouchableOpacity 
+              style={styles.reactivateButton}
+              onPress={handleReactivateAthlete}
+            >
+              <Text style={styles.reactivateButtonText}>Riattiva</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* DATI TAB */}
         {activeTab === 'dati' && (
           <>
