@@ -1,72 +1,288 @@
+diff --git a/frontend/app/admin/teams.tsx b/frontend/app/admin/teams.tsx
+index 7603d93..06e635b 100644
+--- a/frontend/app/admin/teams.tsx
++++ b/frontend/app/admin/teams.tsx
+@@ -125,6 +125,18 @@ export default function TeamsScreen() {
+       return;
+     }
+ 
++    // Validate trainings (at least 2 complete)
++    const validTrainings = trainings.filter(t => t.day && t.timeStart && t.timeEnd && t.venue);
++    if (validTrainings.length < 2) {
++      Alert.alert('Errore', 'Inserisci almeno 2 allenamenti completi');
++      return;
++    }
++
++    if (!matchDay.day || !matchDay.time || !matchDay.venue) {
++      Alert.alert('Errore', 'Inserisci il giorno gara completo');
++      return;
++    }
++
+     if (!totalAmount || !installment1 || !installment2 || !installment3) {
+       Alert.alert('Errore', 'Inserisci tutti gli importi delle rate');
+       return;
+@@ -140,6 +152,13 @@ export default function TeamsScreen() {
+       return;
+     }
+ 
++    // Build training schedule string from structured data
++    let trainingScheduleStr = '';
++    validTrainings.forEach((t, idx) => {
++      trainingScheduleStr += `${t.day.toUpperCase()}: ${t.venue} dalle ${t.timeStart} alle ${t.timeEnd}\n`;
++    });
++    trainingScheduleStr += `GIORNO GARA: ${matchDay.day.toUpperCase()} alle ${matchDay.time} - ${matchDay.venue}`;
++
+     setLoading(true);
+     try {
+       await api.post('/teams', {
+@@ -153,8 +172,9 @@ export default function TeamsScreen() {
+         installment_3_due_date: installment3Date,
+         bank_info: bankInfo,
+         paypal_email: paypalEmail,
+-        venue: venue || null,
+-        training_schedule: trainingSchedule || null,
++        training_schedule: trainingScheduleStr,
++        trainings: validTrainings,
++        match_day: matchDay,
+         championships: championships || null,
+         calendar_link: calendarLink || null,
+       });
+@@ -322,15 +342,92 @@ export default function TeamsScreen() {
+ 
+               <Text style={styles.sectionTitle}>🏟️ Allenamenti e Gare</Text>
+ 
+-              <Text style={styles.label}>Calendario Settimanale *</Text>
+-              <TextInput
+-                style={[styles.input, styles.textAreaLarge]}
+-                placeholder={"LUNEDÌ: Palestra Liceo Alessi dalle 20:00 alle 22:00\nMERCOLEDÌ: Palestra Capitini dalle 19:00 alle 21:00\nVENERDÌ: Palestra Alessi dalle 18:00 alle 20:00\nGIORNO GARA CASALINGHE: SABATO alle 17:00"}
+-                value={trainingSchedule}
+-                onChangeText={setTrainingSchedule}
+-                multiline
+-                numberOfLines={5}
+-              />
++              <Text style={styles.label}>Allenamenti (minimo 2) *</Text>
++              {trainings.map((training, index) => (
++                <View key={index} style={styles.trainingContainer}>
++                  <View style={styles.trainingHeader}>
++                    <Text style={styles.trainingTitle}>Allenamento {index + 1}</Text>
++                    {trainings.length > 2 && (
++                      <TouchableOpacity onPress={() => removeTraining(index)}>
++                        <Ionicons name="close-circle" size={20} color="#FF3B30" />
++                      </TouchableOpacity>
++                    )}
++                  </View>
++                  
++                  <Text style={styles.subLabel}>Giorno</Text>
++                  <View style={styles.pickerContainer}>
++                    <TextInput
++                      style={styles.input}
++                      placeholder="Seleziona giorno"
++                      value={training.day}
++                      onChangeText={(value) => updateTraining(index, 'day', value)}
++                    />
++                  </View>
++                  
++                  <View style={styles.timeRow}>
++                    <View style={styles.timeInput}>
++                      <Text style={styles.subLabel}>Ora Inizio</Text>
++                      <TextInput
++                        style={styles.input}
++                        placeholder="20:00"
++                        value={training.timeStart}
++                        onChangeText={(value) => updateTraining(index, 'timeStart', value)}
++                      />
++                    </View>
++                    <View style={styles.timeInput}>
++                      <Text style={styles.subLabel}>Ora Fine</Text>
++                      <TextInput
++                        style={styles.input}
++                        placeholder="22:00"
++                        value={training.timeEnd}
++                        onChangeText={(value) => updateTraining(index, 'timeEnd', value)}
++                      />
++                    </View>
++                  </View>
++                  
++                  <Text style={styles.subLabel}>Palestra/Campo</Text>
++                  <TextInput
++                    style={styles.input}
++                    placeholder="Es: Palestra Liceo Alessi"
++                    value={training.venue}
++                    onChangeText={(value) => updateTraining(index, 'venue', value)}
++                  />
++                </View>
++              ))}
++              
++              {trainings.length < 4 && (
++                <TouchableOpacity style={styles.addButton} onPress={addTraining}>
++                  <Ionicons name="add-circle-outline" size={20} color="#007AFF" />
++                  <Text style={styles.addButtonText}>Aggiungi Allenamento</Text>
++                </TouchableOpacity>
++              )}
++
++              <Text style={styles.label}>Giorno Gara *</Text>
++              <View style={styles.trainingContainer}>
++                <Text style={styles.subLabel}>Giorno</Text>
++                <TextInput
++                  style={styles.input}
++                  placeholder="Es: Sabato"
++                  value={matchDay.day}
++                  onChangeText={(value) => setMatchDay({...matchDay, day: value})}
++                />
++                
++                <Text style={styles.subLabel}>Orario</Text>
++                <TextInput
++                  style={styles.input}
++                  placeholder="Es: 17:00"
++                  value={matchDay.time}
++                  onChangeText={(value) => setMatchDay({...matchDay, time: value})}
++                />
++                
++                <Text style={styles.subLabel}>Palestra/Campo</Text>
++                <TextInput
++                  style={styles.input}
++                  placeholder="Es: Palestra Comunale"
++                  value={matchDay.venue}
++                  onChangeText={(value) => setMatchDay({...matchDay, venue: value})}
++                />
++              </View>
+ 
+               <Text style={styles.sectionTitle}>🏆 Campionati</Text>
+ 
+@@ -662,4 +759,59 @@ const styles = StyleSheet.create({
+     fontSize: 16,
+     fontWeight: '600',
+   },
++  trainingContainer: {
++    backgroundColor: '#f8f9fa',
++    padding: 16,
++    borderRadius: 8,
++    marginBottom: 12,
++    borderWidth: 1,
++    borderColor: '#e9ecef',
++  },
++  trainingHeader: {
++    flexDirection: 'row',
++    justifyContent: 'space-between',
++    alignItems: 'center',
++    marginBottom: 12,
++  },
++  trainingTitle: {
++    fontSize: 16,
++    fontWeight: '600',
++    color: '#007AFF',
++  },
++  subLabel: {
++    fontSize: 12,
++    fontWeight: '600',
++    color: '#666',
++    marginBottom: 4,
++    marginTop: 8,
++  },
++  pickerContainer: {
++    marginBottom: 8,
++  },
++  timeRow: {
++    flexDirection: 'row',
++    justifyContent: 'space-between',
++    gap: 12,
++  },
++  timeInput: {
++    flex: 1,
++  },
++  addButton: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    justifyContent: 'center',
++    backgroundColor: '#f0f8ff',
++    padding: 12,
++    borderRadius: 8,
++    borderWidth: 1,
++    borderColor: '#007AFF',
++    borderStyle: 'dashed',
++    marginBottom: 16,
++  },
++  addButtonText: {
++    color: '#007AFF',
++    fontSize: 14,
++    fontWeight: '600',
++    marginLeft: 8,
++  },
+ });
 diff --git a/model.patch b/model.patch
-index d074d59..e69de29 100644
+index 1692058..2238a1e 100644
 --- a/model.patch
 +++ b/model.patch
-@@ -1,67 +0,0 @@
+@@ -1,72 +0,0 @@
 -diff --git a/model.patch b/model.patch
--index 2a92e94..e69de29 100644
+-index d074d59..e69de29 100644
 ---- a/model.patch
 -+++ b/model.patch
--@@ -1,62 +0,0 @@
---diff --git a/test_result.md b/test_result.md
---index cb35c18..3fde7d0 100644
------ a/test_result.md
---+++ b/test_result.md
---@@ -110,27 +110,33 @@ user_problem_statement: >
--- backend:
---   - task: "Certificate Upload Base64 Endpoint"
---     implemented: true
----    working: "NA"
---+    working: true
---     file: "server.py"
---     stuck_count: 0
---     priority: "high"
----    needs_retesting: true
---+    needs_retesting: false
---     status_history:
---       - working: "NA"
---         agent: "main"
---         comment: "Refactored endpoint to accept JSON body with CertificateUploadBase64 model instead of query params. Uses athlete_id, issue_date, validity_months, pdf_base64 fields."
---+      - working: true
---+        agent: "testing"
---+        comment: "✅ TESTED SUCCESSFULLY: POST /api/certificates/upload-base64 endpoint working correctly. Full test flow completed: admin registration → parent registration → team creation → athlete creation → certificate upload via base64. Authentication, data validation, and certificate storage all functioning properly. Certificate retrieval also working. Expiry date calculation correct (12 months from issue date)."
--- 
---   - task: "Team Creation Endpoint"
---     implemented: true
----    working: "NA"
---+    working: true
---     file: "server.py"
---     stuck_count: 0
---     priority: "medium"
----    needs_retesting: true
---+    needs_retesting: false
---     status_history:
---       - working: "NA"
---         agent: "main"
---         comment: "Team create endpoint exists with optional venue field. Needs testing."
---+      - working: true
---+        agent: "testing"
---+        comment: "✅ TESTED SUCCESSFULLY: POST /api/teams endpoint working correctly. Admin authentication required and enforced. All required fields (name, total_amount, installment amounts, due dates, bank_info, paypal_email) accepted. Optional fields (venue, training_schedule, championships, calendar_link) working. Team creation generates proper team_id for athlete registration."
--- 
--- frontend:
---   - task: "Certificate Upload UI"
---@@ -152,13 +158,13 @@ metadata:
---   run_ui: false
--- 
--- test_plan:
----  current_focus:
----    - "Certificate Upload Base64 Endpoint"
----    - "Team Creation Endpoint"
---+  current_focus: []
---   stuck_tasks: []
---   test_all: false
---   test_priority: "high_first"
--- 
--- agent_communication:
---   - agent: "main"
----    message: "Fixed certificate upload: 1) Backend now accepts JSON body with CertificateUploadBase64 model. 2) Frontend uses expo-file-system to read PDF as base64. 3) Added modal UI for date and validity input. Please test the /api/certificates/upload-base64 endpoint with a POST request containing JSON body."
---\ No newline at end of file
---+    message: "Fixed certificate upload: 1) Backend now accepts JSON body with CertificateUploadBase64 model. 2) Frontend uses expo-file-system to read PDF as base64. 3) Added modal UI for date and validity input. Please test the /api/certificates/upload-base64 endpoint with a POST request containing JSON body."
---+  - agent: "testing"
---+    message: "✅ BACKEND TESTING COMPLETE: All high priority backend endpoints tested successfully. Certificate Upload Base64 endpoint (HIGH PRIORITY) working perfectly - accepts JSON body with athlete_id, issue_date, validity_months, pdf_base64 fields. Team Creation endpoint also working correctly with all required and optional fields. Authentication properly enforced on all endpoints. Created comprehensive backend_test.py with full test flow. Both tasks marked as working=true and needs_retesting=false."
---\ No newline at end of file
+-@@ -1,67 +0,0 @@
+--diff --git a/model.patch b/model.patch
+--index 2a92e94..e69de29 100644
+----- a/model.patch
+--+++ b/model.patch
+--@@ -1,62 +0,0 @@
+---diff --git a/test_result.md b/test_result.md
+---index cb35c18..3fde7d0 100644
+------ a/test_result.md
+---+++ b/test_result.md
+---@@ -110,27 +110,33 @@ user_problem_statement: >
+--- backend:
+---   - task: "Certificate Upload Base64 Endpoint"
+---     implemented: true
+----    working: "NA"
+---+    working: true
+---     file: "server.py"
+---     stuck_count: 0
+---     priority: "high"
+----    needs_retesting: true
+---+    needs_retesting: false
+---     status_history:
+---       - working: "NA"
+---         agent: "main"
+---         comment: "Refactored endpoint to accept JSON body with CertificateUploadBase64 model instead of query params. Uses athlete_id, issue_date, validity_months, pdf_base64 fields."
+---+      - working: true
+---+        agent: "testing"
+---+        comment: "✅ TESTED SUCCESSFULLY: POST /api/certificates/upload-base64 endpoint working correctly. Full test flow completed: admin registration → parent registration → team creation → athlete creation → certificate upload via base64. Authentication, data validation, and certificate storage all functioning properly. Certificate retrieval also working. Expiry date calculation correct (12 months from issue date)."
+--- 
+---   - task: "Team Creation Endpoint"
+---     implemented: true
+----    working: "NA"
+---+    working: true
+---     file: "server.py"
+---     stuck_count: 0
+---     priority: "medium"
+----    needs_retesting: true
+---+    needs_retesting: false
+---     status_history:
+---       - working: "NA"
+---         agent: "main"
+---         comment: "Team create endpoint exists with optional venue field. Needs testing."
+---+      - working: true
+---+        agent: "testing"
+---+        comment: "✅ TESTED SUCCESSFULLY: POST /api/teams endpoint working correctly. Admin authentication required and enforced. All required fields (name, total_amount, installment amounts, due dates, bank_info, paypal_email) accepted. Optional fields (venue, training_schedule, championships, calendar_link) working. Team creation generates proper team_id for athlete registration."
+--- 
+--- frontend:
+---   - task: "Certificate Upload UI"
+---@@ -152,13 +158,13 @@ metadata:
+---   run_ui: false
+--- 
+--- test_plan:
+----  current_focus:
+----    - "Certificate Upload Base64 Endpoint"
+----    - "Team Creation Endpoint"
+---+  current_focus: []
+---   stuck_tasks: []
+---   test_all: false
+---   test_priority: "high_first"
+--- 
+--- agent_communication:
+---   - agent: "main"
+----    message: "Fixed certificate upload: 1) Backend now accepts JSON body with CertificateUploadBase64 model. 2) Frontend uses expo-file-system to read PDF as base64. 3) Added modal UI for date and validity input. Please test the /api/certificates/upload-base64 endpoint with a POST request containing JSON body."
+---\ No newline at end of file
+---+    message: "Fixed certificate upload: 1) Backend now accepts JSON body with CertificateUploadBase64 model. 2) Frontend uses expo-file-system to read PDF as base64. 3) Added modal UI for date and validity input. Please test the /api/certificates/upload-base64 endpoint with a POST request containing JSON body."
+---+  - agent: "testing"
+---+    message: "✅ BACKEND TESTING COMPLETE: All high priority backend endpoints tested successfully. Certificate Upload Base64 endpoint (HIGH PRIORITY) working perfectly - accepts JSON body with athlete_id, issue_date, validity_months, pdf_base64 fields. Team Creation endpoint also working correctly with all required and optional fields. Authentication properly enforced on all endpoints. Created comprehensive backend_test.py with full test flow. Both tasks marked as working=true and needs_retesting=false."
+---\ No newline at end of file
