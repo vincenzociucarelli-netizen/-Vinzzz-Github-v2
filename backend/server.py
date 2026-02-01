@@ -238,6 +238,10 @@ class Athlete(BaseModel):
     discount_note: Optional[str] = None  # Nota sullo sconto
     # Password protezione dati sensibili (hash)
     data_password_hash: Optional[str] = None  # Password per accesso/modifica dati sensibili
+    # Ritiro atleta
+    is_withdrawn: bool = False  # Flag: atleta ritirato dalla squadra
+    withdrawn_date: Optional[datetime] = None  # Data ritiro
+    withdrawn_reason: Optional[str] = None  # Motivo ritiro
 
 class AthleteCreate(BaseModel):
     full_name: str
