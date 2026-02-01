@@ -305,7 +305,8 @@ export default function CoachScreen() {
       );
     }
 
-    if (scanning && permission.granted) {
+    // Mobile scanning with camera
+    if (scanning && permission?.granted && Platform.OS !== 'web') {
       return (
         <View style={styles.container}>
           <View style={styles.scannerContainer}>
@@ -329,6 +330,31 @@ export default function CoachScreen() {
                 <Text style={styles.cancelButtonText}>Annulla</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      );
+    }
+
+    // Web scanner active
+    if (Platform.OS === 'web' && webScannerActive) {
+      return (
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Scanner Presenze</Text>
+            <TouchableOpacity onPress={() => { stopWebScanner(); }}>
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.webScannerContainer}>
+            <div id="web-qr-scanner" style={{ width: '100%', maxWidth: 500 }} />
+            
+            <TouchableOpacity
+              style={[styles.cancelButton, { marginTop: 20 }]}
+              onPress={stopWebScanner}
+            >
+              <Text style={styles.cancelButtonText}>Chiudi Scanner</Text>
+            </TouchableOpacity>
           </View>
         </View>
       );
@@ -359,10 +385,27 @@ export default function CoachScreen() {
           <Text style={styles.title}>Pronto per scansionare</Text>
           <Text style={styles.subtitle}>Registra le presenze degli atleti</Text>
           
-          <TouchableOpacity style={styles.button} onPress={() => setScanning(true)}>
-            <Ionicons name="scan" size={24} color="#fff" />
-            <Text style={styles.buttonText}>Scansiona QR Code</Text>
-          </TouchableOpacity>
+          {Platform.OS === 'web' ? (
+            <>
+              <TouchableOpacity style={styles.button} onPress={startWebScanner}>
+                <Ionicons name="camera" size={24} color="#fff" />
+                <Text style={styles.buttonText}>Apri Scanner Fotocamera</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.button, styles.buttonSecondary]} 
+                onPress={() => setManualInputModalVisible(true)}
+              >
+                <Ionicons name="keypad" size={24} color="#007AFF" />
+                <Text style={styles.buttonSecondaryText}>Inserisci Codice Manualmente</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity style={styles.button} onPress={() => setScanning(true)}>
+              <Ionicons name="scan" size={24} color="#fff" />
+              <Text style={styles.buttonText}>Scansiona QR Code</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.historyButton}
@@ -372,6 +415,51 @@ export default function CoachScreen() {
             <Text style={styles.historyButtonText}>Storico Presenze</Text>
           </TouchableOpacity>
         </View>
+        
+        {/* Manual Input Modal */}
+        <Modal
+          visible={manualInputModalVisible}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setManualInputModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Inserisci Codice QR</Text>
+              <Text style={styles.modalSubtitle}>
+                Inserisci il codice presente sotto il QR dell'atleta
+              </Text>
+              
+              <TextInput
+                style={styles.manualInput}
+                placeholder="Codice QR atleta"
+                value={manualQrInput}
+                onChangeText={setManualQrInput}
+                autoCapitalize="characters"
+                autoFocus
+              />
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonCancel]}
+                  onPress={() => {
+                    setManualInputModalVisible(false);
+                    setManualQrInput('');
+                  }}
+                >
+                  <Text style={styles.modalButtonCancelText}>Annulla</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonConfirm]}
+                  onPress={handleManualQrSubmit}
+                >
+                  <Text style={styles.modalButtonConfirmText}>Verifica</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
