@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  SectionList,
   RefreshControl,
   ActivityIndicator,
   Alert,
   Platform,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
@@ -17,6 +19,8 @@ import { Athlete, Team } from '../../src/types';
 import { exportToExcel } from '../../src/utils/excelExport';
 import { useAuthStore } from '../../src/store/authStore';
 
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
 export default function AdminAthletes() {
   const router = useRouter();
   const { logout } = useAuthStore();
@@ -24,26 +28,14 @@ export default function AdminAthletes() {
   const [teams, setTeams] = useState<{[key: string]: Team}>({});
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const sectionListRef = useRef<SectionList>(null);
 
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
       window.alert(`${title}\n\n${message}`);
     } else {
       Alert.alert(title, message);
-    }
-  };
-
-  const handleLogout = async () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Sei sicuro di voler uscire?')) {
-        await logout();
-        window.location.href = '/login';
-      }
-    } else {
-      Alert.alert('Logout', 'Sei sicuro di voler uscire?', [
-        { text: 'Annulla', style: 'cancel' },
-        { text: 'Esci', onPress: async () => { await logout(); router.replace('/login'); } },
-      ]);
     }
   };
 
@@ -89,6 +81,83 @@ export default function AdminAthletes() {
     setRefreshing(false);
   };
 
+  // Get surname from full_name (assumes format "COGNOME NOME" or "COGNOME")
+  const getSurname = (fullName: string) => {
+    const parts = fullName.trim().split(' ');
+    return parts[0] || '';
+  };
+
+  // Sort and filter athletes
+  const processedAthletes = useMemo(() => {
+    let filtered = athletes;
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = athletes.filter(a => 
+        a.full_name.toLowerCase().includes(query) ||
+        teams[a.team_id]?.name?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Sort by surname alphabetically
+    return filtered.sort((a, b) => {
+      const surnameA = getSurname(a.full_name).toUpperCase();
+      const surnameB = getSurname(b.full_name).toUpperCase();
+      return surnameA.localeCompare(surnameB, 'it');
+    });
+  }, [athletes, searchQuery, teams]);
+
+  // Group athletes by first letter of surname for sections
+  const sections = useMemo(() => {
+    const grouped: { [key: string]: Athlete[] } = {};
+    
+    processedAthletes.forEach(athlete => {
+      const surname = getSurname(athlete.full_name);
+      const firstLetter = surname.charAt(0).toUpperCase() || '#';
+      if (!grouped[firstLetter]) {
+        grouped[firstLetter] = [];
+      }
+      grouped[firstLetter].push(athlete);
+    });
+
+    return Object.keys(grouped)
+      .sort((a, b) => a.localeCompare(b, 'it'))
+      .map(letter => ({
+        title: letter,
+        data: grouped[letter],
+      }));
+  }, [processedAthletes]);
+
+  // Get available letters for sidebar
+  const availableLetters = useMemo(() => {
+    return sections.map(s => s.title);
+  }, [sections]);
+
+  const scrollToLetter = (letter: string) => {
+    const sectionIndex = sections.findIndex(s => s.title === letter);
+    if (sectionIndex !== -1 && sectionListRef.current) {
+      sectionListRef.current.scrollToLocation({
+        sectionIndex,
+        itemIndex: 0,
+        animated: true,
+        viewOffset: 0,
+      });
+    }
+  };
+
+  const getStatusText = (item: Athlete) => {
+    if (item.is_withdrawn) return 'Ritirato';
+    if (item.status === 'trial') return 'In prova';
+    return 'Attivo';
+  };
+
+  const getStatusColor = (item: Athlete) => {
+    if (item.is_withdrawn) return '#FF3B30';
+    if (item.status === 'trial') return '#FF9500';
+    return '#34C759';
+  };
+
   const renderAthleteItem = ({ item }: { item: Athlete }) => (
     <TouchableOpacity 
       style={[
@@ -97,38 +166,30 @@ export default function AdminAthletes() {
       ]}
       onPress={() => router.push(`/admin/athlete/${item.id}`)}
     >
-      <View style={[
-        styles.athleteIcon,
-        item.is_withdrawn && styles.athleteIconWithdrawn
-      ]}>
-        <Ionicons name="person" size={32} color={item.is_withdrawn ? "#FF3B30" : "#007AFF"} />
-      </View>
       <View style={styles.athleteInfo}>
         <Text style={[
           styles.athleteName,
           item.is_withdrawn && styles.athleteNameWithdrawn
-        ]}>
+        ]} numberOfLines={1}>
           {item.full_name}
-          {item.is_withdrawn && ' ⛔'}
         </Text>
-        <Text style={styles.teamName}>
-          {teams[item.team_id]?.name || 'Squadra sconosciuta'}
+        <Text style={styles.teamName} numberOfLines={1}>
+          {teams[item.team_id]?.name || '-'}
         </Text>
-        {item.is_withdrawn ? (
-          <View style={styles.withdrawnBadge}>
-            <Text style={styles.withdrawnBadgeText}>
-              RITIRATO {item.withdrawn_reason ? `- ${item.withdrawn_reason}` : ''}
-            </Text>
-          </View>
-        ) : (
-          <Text style={styles.athleteStatus}>
-            {item.status === 'trial' ? 'Periodo di prova' : 'Attivo'}
-            {!item.privacy_accepted && ' - Privacy non accettata'}
-          </Text>
-        )}
       </View>
-      <Ionicons name="chevron-forward" size={24} color="#999" />
+      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item) + '20' }]}>
+        <Text style={[styles.statusText, { color: getStatusColor(item) }]}>
+          {getStatusText(item)}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color="#ccc" />
     </TouchableOpacity>
+  );
+
+  const renderSectionHeader = ({ section }: { section: { title: string } }) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionHeaderText}>{section.title}</Text>
+    </View>
   );
 
   return (
@@ -137,7 +198,7 @@ export default function AdminAthletes() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Tutti gli Atleti</Text>
+        <Text style={styles.headerTitle}>Atleti ({processedAthletes.length})</Text>
         <TouchableOpacity onPress={handleExport} disabled={exporting}>
           {exporting ? (
             <ActivityIndicator size="small" color="#fff" />
@@ -147,21 +208,80 @@ export default function AdminAthletes() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={athletes}
-        renderItem={renderAthleteItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>Nessun atleta registrato</Text>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={20} color="#999" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Cerca atleta o squadra..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.contentContainer}>
+        {/* Athletes List */}
+        <SectionList
+          ref={sectionListRef}
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          renderItem={renderAthleteItem}
+          renderSectionHeader={renderSectionHeader}
+          stickySectionHeadersEnabled={true}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={48} color="#ccc" />
+              <Text style={styles.emptyText}>
+                {searchQuery ? 'Nessun risultato' : 'Nessun atleta registrato'}
+              </Text>
+            </View>
+          }
+          getItemLayout={(data, index) => ({
+            length: 56,
+            offset: 56 * index,
+            index,
+          })}
+          onScrollToIndexFailed={() => {}}
+        />
+
+        {/* Alphabet Sidebar */}
+        {!searchQuery && processedAthletes.length > 10 && (
+          <View style={styles.alphabetSidebar}>
+            {ALPHABET.map((letter) => {
+              const isAvailable = availableLetters.includes(letter);
+              return (
+                <TouchableOpacity
+                  key={letter}
+                  style={styles.alphabetItem}
+                  onPress={() => isAvailable && scrollToLetter(letter)}
+                  disabled={!isAvailable}
+                >
+                  <Text style={[
+                    styles.alphabetText,
+                    !isAvailable && styles.alphabetTextDisabled
+                  ]}>
+                    {letter}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        }
-      />
+        )}
+      </View>
     </View>
   );
 }
@@ -174,55 +294,77 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#007AFF',
     paddingTop: 50,
-    paddingBottom: 20,
+    paddingBottom: 16,
     paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
   },
+  searchContainer: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    marginLeft: 8,
+    color: '#000',
+  },
+  contentContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
   list: {
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 20,
+    paddingRight: 30,
+  },
+  sectionHeader: {
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  sectionHeaderText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#007AFF',
   },
   athleteCard: {
     backgroundColor: '#fff',
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 4,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    minHeight: 52,
   },
   athleteCardWithdrawn: {
     backgroundColor: '#FFF5F5',
-    borderWidth: 1,
-    borderColor: '#FFCDD2',
-  },
-  athleteIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#E3F2FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  athleteIconWithdrawn: {
-    backgroundColor: '#FFEBEE',
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF3B30',
   },
   athleteInfo: {
     flex: 1,
-    marginLeft: 16,
+    marginRight: 8,
   },
   athleteName: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
     color: '#333',
   },
@@ -231,30 +373,41 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   teamName: {
-    fontSize: 14,
-    color: '#007AFF',
-    marginTop: 4,
-  },
-  athleteStatus: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    color: '#007AFF',
+    marginTop: 2,
   },
-  withdrawnBadge: {
-    backgroundColor: '#FFF3CD',
-    paddingHorizontal: 10,
+  statusBadge: {
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
-    marginTop: 6,
-    alignSelf: 'flex-start',
+    borderRadius: 10,
+    marginRight: 8,
   },
-  withdrawnBadgeText: {
-    color: '#856404',
+  statusText: {
     fontSize: 11,
     fontWeight: '600',
   },
-  statusIcon: {
-    marginLeft: 12,
+  alphabetSidebar: {
+    position: 'absolute',
+    right: 2,
+    top: 0,
+    bottom: 0,
+    width: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  alphabetItem: {
+    paddingVertical: 1,
+    paddingHorizontal: 4,
+  },
+  alphabetText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  alphabetTextDisabled: {
+    color: '#ddd',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -262,8 +415,8 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#999',
-    marginTop: 16,
+    marginTop: 12,
   },
 });
