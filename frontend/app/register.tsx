@@ -22,6 +22,7 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [role, setRole] = useState('parent');
   const [loading, setLoading] = useState(false);
 
@@ -48,7 +49,12 @@ export default function Register() {
     }
 
     if (!email || !password || !firstName || !lastName) {
-      showAlert('Errore', 'Compila tutti i campi');
+      showAlert('Errore', 'Compila tutti i campi obbligatori');
+      return;
+    }
+
+    if (!inviteCode) {
+      showAlert('Errore', 'Inserisci il codice invito della tua società sportiva');
       return;
     }
 
@@ -61,6 +67,7 @@ export default function Register() {
         first_name: firstName,
         last_name: lastName.toUpperCase(),
         role,
+        invite_code: inviteCode.toUpperCase(),
       });
       
       await setUser(response.data.user, response.data.token);
