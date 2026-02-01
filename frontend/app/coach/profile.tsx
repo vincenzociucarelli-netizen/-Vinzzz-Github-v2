@@ -103,6 +103,12 @@ export default function CoachProfile() {
         monthly_compensation: data.monthly_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
       });
+      // Load compensation history
+      setCompensationHistory(data.compensation_history || {});
+      setOver5000Limit(data.over_5000_limit || {});
+      // Check if any month has exceeded €5000
+      const exceeded = data.over_5000_limit && Object.values(data.over_5000_limit).some((v: any) => v === true);
+      setHasExceeded5000(exceeded || false);
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
