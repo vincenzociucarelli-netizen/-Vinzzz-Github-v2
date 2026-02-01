@@ -166,6 +166,29 @@ export default function RegisterAthlete() {
       return;
     }
 
+    // Calcola se minorenne per validare password
+    const parts = dateOfBirth.split('/');
+    const birthDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    const today = new Date();
+    const age = Math.floor((today.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+    const isMinor = age < 18;
+
+    // Se minorenne, password obbligatoria
+    if (isMinor && !dataPassword) {
+      showAlert('Errore', 'Per un atleta minorenne è obbligatorio impostare una password di protezione dati');
+      return;
+    }
+    
+    if (dataPassword && dataPassword !== dataPasswordConfirm) {
+      showAlert('Errore', 'Le password non coincidono');
+      return;
+    }
+    
+    if (dataPassword && dataPassword.length < 4) {
+      showAlert('Errore', 'La password deve essere di almeno 4 caratteri');
+      return;
+    }
+
     setLoading(true);
     try {
       const fullName = `${lastName} ${firstName}`;
@@ -191,6 +214,7 @@ export default function RegisterAthlete() {
         team_id_2: teamId2 || null,
         is_trial: isTrialPeriod,
         privacy_accepted: !isTrialPeriod,  // Se non è prova, accetta privacy
+        data_password: dataPassword || null,
       });
       
       const successMsg = isTrialPeriod 
