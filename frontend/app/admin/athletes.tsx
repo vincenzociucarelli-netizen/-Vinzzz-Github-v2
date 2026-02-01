@@ -81,10 +81,15 @@ export default function AdminAthletes() {
     setRefreshing(false);
   };
 
-  // Get surname from full_name (assumes format "COGNOME NOME" or "COGNOME")
-  const getSurname = (fullName: string) => {
-    const parts = fullName.trim().split(' ');
-    return parts[0] || '';
+  // Get surname from athlete - uses last_name if available, otherwise extracts from full_name
+  const getSurname = (athlete: Athlete) => {
+    // If last_name field is available, use it
+    if (athlete.last_name) {
+      return athlete.last_name.trim();
+    }
+    // Otherwise, assume full_name is "Nome Cognome" and take the last word
+    const parts = athlete.full_name.trim().split(' ');
+    return parts.length > 1 ? parts[parts.length - 1] : parts[0];
   };
 
   // Sort and filter athletes
@@ -102,8 +107,8 @@ export default function AdminAthletes() {
     
     // Sort by surname alphabetically
     return filtered.sort((a, b) => {
-      const surnameA = getSurname(a.full_name).toUpperCase();
-      const surnameB = getSurname(b.full_name).toUpperCase();
+      const surnameA = getSurname(a).toUpperCase();
+      const surnameB = getSurname(b).toUpperCase();
       return surnameA.localeCompare(surnameB, 'it');
     });
   }, [athletes, searchQuery, teams]);
@@ -113,7 +118,7 @@ export default function AdminAthletes() {
     const grouped: { [key: string]: Athlete[] } = {};
     
     processedAthletes.forEach(athlete => {
-      const surname = getSurname(athlete.full_name);
+      const surname = getSurname(athlete);
       const firstLetter = surname.charAt(0).toUpperCase() || '#';
       if (!grouped[firstLetter]) {
         grouped[firstLetter] = [];
