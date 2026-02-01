@@ -6,12 +6,15 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
+  Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useAuthStore } from '../../src/store/authStore';
 
 interface AttendanceWithAthlete {
   id: string;
@@ -24,6 +27,7 @@ interface AttendanceWithAthlete {
 
 export default function CoachHistory() {
   const router = useRouter();
+  const { logout } = useAuthStore();
   const [attendances, setAttendances] = useState<AttendanceWithAthlete[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -44,6 +48,30 @@ export default function CoachHistory() {
     setRefreshing(true);
     await loadAttendances();
     setRefreshing(false);
+  };
+
+  const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Sei sicuro di voler uscire?')) {
+        await logout();
+        window.location.href = '/login';
+      }
+    } else {
+      Alert.alert(
+        'Logout',
+        'Sei sicuro di voler uscire?',
+        [
+          { text: 'Annulla', style: 'cancel' },
+          {
+            text: 'Esci',
+            onPress: async () => {
+              await logout();
+              router.replace('/login');
+            },
+          },
+        ]
+      );
+    }
   };
 
   const renderItem = ({ item }: { item: AttendanceWithAthlete }) => (
