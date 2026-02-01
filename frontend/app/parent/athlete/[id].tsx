@@ -25,10 +25,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Athlete, Certificate, Payment, PaymentSettings, Team } from '../../../src/types';
 import { format, differenceInDays, addMonths, subDays } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useAuthStore } from '../../../src/store/authStore';
 
 export default function AthleteDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { user } = useAuthStore();
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -44,6 +46,14 @@ export default function AthleteDetail() {
   const [selectedFile, setSelectedFile] = useState<any>(null);
   const [certIssueDate, setCertIssueDate] = useState('');
   const [certValidityMonths, setCertValidityMonths] = useState('12');
+  
+  // Data protection password states
+  const [dataUnlocked, setDataUnlocked] = useState(false);
+  const [hasPassword, setHasPassword] = useState(false);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [enteredPassword, setEnteredPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [checkingPassword, setCheckingPassword] = useState(false);
   
   // Edit mode states
   const [editModalVisible, setEditModalVisible] = useState(false);
