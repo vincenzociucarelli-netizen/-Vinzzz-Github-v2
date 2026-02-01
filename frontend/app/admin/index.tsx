@@ -321,6 +321,11 @@ const styles = StyleSheet.create({
   headerBtn: {
     padding: 4,
   },
+  dirigenteSwitchBtn: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 5,
+  },
   content: {
     flex: 1,
   },
