@@ -230,8 +230,17 @@ export default function RegisterCoach() {
       <TextInput
         style={styles.input}
         placeholder="GG/MM/AAAA"
+        placeholderTextColor="#999"
         value={dateOfBirth}
-        onChangeText={setDateOfBirth}
+        onChangeText={(text) => {
+          // Auto-format date with slashes
+          const cleaned = text.replace(/\D/g, '');
+          let formatted = '';
+          if (cleaned.length > 0) formatted = cleaned.substring(0, 2);
+          if (cleaned.length > 2) formatted += '/' + cleaned.substring(2, 4);
+          if (cleaned.length > 4) formatted += '/' + cleaned.substring(4, 8);
+          setDateOfBirth(formatted);
+        }}
         keyboardType="numeric"
         maxLength={10}
       />
@@ -475,15 +484,16 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 8,
     fontSize: 16,
-    marginBottom: 8,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#ddd',
+    color: '#000',
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 6,
+    color: '#6c757d',
+    marginBottom: 4,
   },
   row: {
     flexDirection: 'row',
