@@ -251,7 +251,7 @@ export default function DirigentiScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Dirigenti</Text>
+        <Text style={styles.headerTitle}>{societyName}</Text>
         <TouchableOpacity onPress={handleExport} disabled={exporting}>
           {exporting ? (
             <ActivityIndicator size="small" color="#fff" />
