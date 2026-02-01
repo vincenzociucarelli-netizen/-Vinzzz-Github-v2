@@ -1163,6 +1163,35 @@ async def get_team_athletes_count(team_id: str, current_user = Depends(get_curre
     count = await db.athletes.count_documents({"team_id": team_id})
     return {"count": count}
 
+@api_router.get("/teams/{team_id}/athletes")
+async def get_team_athletes(team_id: str, current_user = Depends(get_current_user)):
+    """Get all athletes in a team - accessible by admin, coach, and viewer (dirigente)"""
+    # Allow admin, coach, and viewer to see athletes
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH, UserRole.VIEWER]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    athletes = await db.athletes.find({"team_id": team_id}).to_list(1000)
+    
+    result = []
+    for athlete in athletes:
+        result.append({
+            "id": athlete["id"],
+            "full_name": athlete["full_name"],
+            "first_name": athlete.get("first_name"),
+            "last_name": athlete.get("last_name"),
+            "team_id": athlete["team_id"],
+            "status": athlete.get("status", "active"),
+            "medical_certificate_expiry": athlete.get("medical_certificate_expiry"),
+            "is_withdrawn": athlete.get("is_withdrawn", False),
+            "withdrawal_reason": athlete.get("withdrawal_reason"),
+        })
+    
+    return result
+
 @api_router.get("/teams/athletes-count/all")
 async def get_all_teams_athletes_count(current_user = Depends(get_current_user)):
     """Get the count of athletes for all teams"""
