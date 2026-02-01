@@ -30,7 +30,7 @@ import { useAuthStore } from '../../../src/store/authStore';
 export default function AthleteDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
