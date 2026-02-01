@@ -57,20 +57,23 @@ export default function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [expiringCerts, setExpiringCerts] = useState<ExpiringCertificates>({ count_today: 0, count_30_days: 0, expiring_today: [], expiring_soon: [] });
+  const [inviteCode, setInviteCode] = useState<string>('');
 
   const loadStats = async () => {
     try {
-      const [statsRes, pendingRes, societyRes, birthdaysRes, certsRes] = await Promise.all([
+      const [statsRes, pendingRes, societyRes, birthdaysRes, certsRes, inviteRes] = await Promise.all([
         api.get('/stats/overview'),
         api.get('/users/pending'),
         api.get('/settings/society'),
         api.get('/birthdays/today'),
         api.get('/certificates/expiring'),
+        api.get('/societies/invite-code').catch(() => ({ data: { invite_code: '' } })),
       ]);
       setStats(statsRes.data);
       setSociety(societyRes.data);
       setBirthdays(birthdaysRes.data);
       setExpiringCerts(certsRes.data);
+      setInviteCode(inviteRes.data.invite_code || '');
       
       // Count pending by role
       const pending = pendingRes.data;
