@@ -129,6 +129,7 @@ export default function RegisterCoach() {
         password,
         full_name: fullName,
         role: 'coach',
+        invite_code: inviteCode.toUpperCase(),
         first_name: firstName,
         last_name: lastName,
         date_of_birth: isoDate,
