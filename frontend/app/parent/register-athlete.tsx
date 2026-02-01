@@ -51,6 +51,11 @@ export default function RegisterAthlete() {
   
   // Periodo di prova
   const [isTrialPeriod, setIsTrialPeriod] = useState(true);  // Default: periodo di prova
+  
+  // Password protezione dati sensibili
+  const [dataPassword, setDataPassword] = useState('');
+  const [dataPasswordConfirm, setDataPasswordConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     loadTeams();
