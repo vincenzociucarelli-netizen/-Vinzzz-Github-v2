@@ -147,6 +147,7 @@ class UserCreate(BaseModel):
     password: str
     role: str
     full_name: str
+    invite_code: Optional[str] = None  # Codice invito per unirsi a una società esistente
     # Optional coach fields
     first_name: Optional[str] = None
     last_name: Optional[str] = None
