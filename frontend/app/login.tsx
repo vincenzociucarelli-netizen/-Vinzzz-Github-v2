@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
@@ -20,6 +21,28 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Society branding
+  const [societyName, setSocietyName] = useState('GESTIONE SOCIETÀ');
+  const [societyLogo, setSocietyLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadSocietySettings();
+  }, []);
+
+  const loadSocietySettings = async () => {
+    try {
+      const response = await api.get('/settings/society');
+      if (response.data.name) {
+        setSocietyName(response.data.name);
+      }
+      if (response.data.logo) {
+        setSocietyLogo(response.data.logo);
+      }
+    } catch (error) {
+      // Use default name if settings not found
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -54,7 +77,16 @@ export default function Login() {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Gestione Presenze Atleti</Text>
+        {societyLogo && (
+          <View style={styles.logoContainer}>
+            <Image
+              source={{ uri: `data:image/jpeg;base64,${societyLogo}` }}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+        )}
+        <Text style={styles.title}>{societyName}</Text>
         <Text style={styles.subtitle}>Accedi al tuo account</Text>
 
         <View style={styles.form}>
@@ -107,8 +139,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#fff',
+  },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',
