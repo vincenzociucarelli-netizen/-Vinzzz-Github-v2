@@ -20,7 +20,8 @@ export default function Register() {
   const setUser = useAuthStore((state) => state.setUser);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [role, setRole] = useState('parent');
   const [loading, setLoading] = useState(false);
 
@@ -46,7 +47,7 @@ export default function Register() {
       return;
     }
 
-    if (!email || !password || !fullName) {
+    if (!email || !password || !firstName || !lastName) {
       showAlert('Errore', 'Compila tutti i campi');
       return;
     }
@@ -56,16 +57,16 @@ export default function Register() {
       const response = await api.post('/auth/register', {
         email,
         password,
-        full_name: fullName,
+        full_name: `${lastName.toUpperCase()} ${firstName}`,
+        first_name: firstName,
+        last_name: lastName.toUpperCase(),
         role,
       });
       
       await setUser(response.data.user, response.data.token);
       
       // Navigate based on role
-      if (role === 'admin') {
-        router.replace('/admin');
-      } else if (role === 'parent') {
+      if (role === 'parent') {
         router.replace('/parent');
       }
     } catch (error: any) {
