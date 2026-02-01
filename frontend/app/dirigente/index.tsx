@@ -201,6 +201,15 @@ export default function DirigenteIndex() {
           <Text style={styles.headerSubtitle}>Benvenuto, {user?.full_name}</Text>
         </View>
         <View style={styles.headerButtons}>
+          {/* Switch to Admin button - only for admin users */}
+          {user?.role === 'admin' && (
+            <TouchableOpacity 
+              onPress={() => router.replace('/admin')} 
+              style={[styles.headerBtn, styles.adminSwitchBtn]}
+            >
+              <Ionicons name="shield-checkmark" size={20} color="#007AFF" />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={() => router.push('/dirigente/profile')} style={styles.headerBtn}>
             <Ionicons name="person-circle-outline" size={24} color="#fff" />
           </TouchableOpacity>
@@ -214,6 +223,25 @@ export default function DirigenteIndex() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* Admin Switch Card - only for admin users */}
+        {user?.role === 'admin' && (
+          <TouchableOpacity
+            style={styles.adminSwitchCard}
+            onPress={() => router.replace('/admin')}
+          >
+            <View style={styles.adminSwitchIcon}>
+              <Ionicons name="shield-checkmark" size={24} color="#007AFF" />
+            </View>
+            <View style={styles.adminSwitchInfo}>
+              <Text style={styles.adminSwitchTitle}>Passa a Modalità Admin</Text>
+              <Text style={styles.adminSwitchDescription}>
+                Gestisci società, atleti e impostazioni
+              </Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={28} color="#007AFF" />
+          </TouchableOpacity>
+        )}
+
         {/* Profile Card */}
         <TouchableOpacity
           style={styles.profileCard}
