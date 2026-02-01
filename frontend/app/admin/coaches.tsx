@@ -250,7 +250,11 @@ export default function CoachesScreen() {
   );
 
   const renderCoachItem = ({ item }: { item: Coach }) => (
-    <TouchableOpacity style={styles.userCard} onPress={() => openActionModal(item)}>
+    <TouchableOpacity 
+      style={styles.userCard} 
+      onPress={() => router.push(`/admin/coach/${item.id}`)}
+      onLongPress={() => openActionModal(item)}
+    >
       <View style={styles.userAvatar}>
         <Ionicons name="fitness" size={24} color="#FF9500" />
       </View>
@@ -263,9 +267,12 @@ export default function CoachesScreen() {
         <View style={styles.userMeta}>
           <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
           <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
+          {item.monthly_compensation && item.monthly_compensation > 0 && (
+            <Text style={styles.compensationText}> • €{item.monthly_compensation}/mese</Text>
+          )}
         </View>
       </View>
-      <Ionicons name="ellipsis-vertical" size={20} color="#999" />
+      <Ionicons name="chevron-forward" size={20} color="#999" />
     </TouchableOpacity>
   );
 
