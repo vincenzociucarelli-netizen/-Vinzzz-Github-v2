@@ -186,6 +186,8 @@ class Athlete(BaseModel):
     # Sconto personalizzato dall'admin
     discount_amount: float = 0.0  # Sconto in euro da detrarre dall'ultima rata
     discount_note: Optional[str] = None  # Nota sullo sconto
+    # Password protezione dati sensibili (hash)
+    data_password_hash: Optional[str] = None  # Password per accesso/modifica dati sensibili
 
 class AthleteCreate(BaseModel):
     full_name: str
@@ -209,6 +211,7 @@ class AthleteCreate(BaseModel):
     team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
     is_trial: bool = True  # Default: periodo di prova
     privacy_accepted: bool = False
+    data_password: Optional[str] = None  # Password protezione dati sensibili
     
 class AthleteUpdate(BaseModel):
     # Tesseramento (gestito da Admin)
@@ -240,6 +243,7 @@ class AthleteUpdate(BaseModel):
     discount_amount: Optional[float] = None
     discount_note: Optional[str] = None
     status: Optional[str] = None  # trial, active, blocked
+    data_password: Optional[str] = None  # Nuova password protezione dati
 
 class Certificate(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
