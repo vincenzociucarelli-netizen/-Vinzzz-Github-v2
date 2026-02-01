@@ -497,6 +497,38 @@ const styles = StyleSheet.create({
   form: {
     width: '100%',
   },
+  inviteCodeSection: {
+    backgroundColor: '#E3F2FD',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  inviteCodeLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#007AFF',
+    marginBottom: 8,
+  },
+  inviteCodeInput: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 8,
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    letterSpacing: 4,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  inviteCodeHint: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 8,
+  },
   input: {
     backgroundColor: '#fff',
     paddingHorizontal: 16,
