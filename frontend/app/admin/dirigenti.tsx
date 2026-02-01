@@ -208,28 +208,27 @@ export default function DirigentiScreen() {
   );
 
   const renderDirigenteItem = ({ item }: { item: Dirigente }) => (
-    <TouchableOpacity style={styles.userCard} onPress={() => openActionModal(item)}>
+    <TouchableOpacity 
+      style={styles.userCard} 
+      onPress={() => router.push(`/admin/dirigente/${item.id}`)}
+      onLongPress={() => openActionModal(item)}
+    >
       <View style={styles.userAvatar}>
         <Ionicons 
-          name={item.role === 'admin' ? 'shield-checkmark' : 'eye'} 
+          name="briefcase" 
           size={24} 
-          color={item.role === 'admin' ? '#007AFF' : '#8E8E93'} 
+          color="#8E44AD" 
         />
       </View>
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{item.full_name}</Text>
         <Text style={styles.userEmail}>{item.email}</Text>
         <View style={styles.userMeta}>
-          <View style={[styles.roleBadge, item.role === 'admin' && styles.adminBadge]}>
-            <Text style={[styles.roleBadgeText, item.role === 'admin' && styles.adminBadgeText]}>
-              {getRoleLabel(item.role)}
-            </Text>
-          </View>
           <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
           <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
         </View>
       </View>
-      <Ionicons name="ellipsis-vertical" size={20} color="#999" />
+      <Ionicons name="chevron-forward" size={20} color="#999" />
     </TouchableOpacity>
   );
 
