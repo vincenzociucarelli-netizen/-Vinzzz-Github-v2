@@ -415,8 +415,8 @@ export default function CoachProfile() {
             <View style={styles.limitSection}>
               <Text style={styles.limitTitle}>⚠️ Dichiarazione Superamento €5.000</Text>
               <Text style={styles.limitDescription}>
-                Se il totale dei compensi ricevuti nell'anno supera €5.000, 
-                devi segnalarlo per gli adempimenti fiscali.
+                Se il totale dei compensi ricevuti nell'anno SOLARE (dal 01/01 al 31/12) supera €5.000, 
+                devi segnalarlo per gli adempimenti fiscali previsti dalla legge.
               </Text>
               <TouchableOpacity
                 style={[styles.limitCheckbox, hasExceeded5000 && styles.limitCheckboxActive]}
