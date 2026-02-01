@@ -63,6 +63,8 @@ export default function Login() {
         router.replace('/coach');
       } else if (role === 'parent') {
         router.replace('/parent');
+      } else if (role === 'viewer') {
+        router.replace('/dirigente');
       }
     } catch (error: any) {
       Alert.alert('Errore', error.response?.data?.detail || 'Errore durante il login');
