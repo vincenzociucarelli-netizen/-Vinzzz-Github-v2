@@ -125,6 +125,18 @@ export default function TeamsScreen() {
       return;
     }
 
+    // Validate trainings (at least 2 complete)
+    const validTrainings = trainings.filter(t => t.day && t.timeStart && t.timeEnd && t.venue);
+    if (validTrainings.length < 2) {
+      Alert.alert('Errore', 'Inserisci almeno 2 allenamenti completi');
+      return;
+    }
+
+    if (!matchDay.day || !matchDay.time || !matchDay.venue) {
+      Alert.alert('Errore', 'Inserisci il giorno gara completo');
+      return;
+    }
+
     if (!totalAmount || !installment1 || !installment2 || !installment3) {
       Alert.alert('Errore', 'Inserisci tutti gli importi delle rate');
       return;
@@ -140,6 +152,13 @@ export default function TeamsScreen() {
       return;
     }
 
+    // Build training schedule string from structured data
+    let trainingScheduleStr = '';
+    validTrainings.forEach((t, idx) => {
+      trainingScheduleStr += `${t.day.toUpperCase()}: ${t.venue} dalle ${t.timeStart} alle ${t.timeEnd}\n`;
+    });
+    trainingScheduleStr += `GIORNO GARA: ${matchDay.day.toUpperCase()} alle ${matchDay.time} - ${matchDay.venue}`;
+
     setLoading(true);
     try {
       await api.post('/teams', {
@@ -153,8 +172,9 @@ export default function TeamsScreen() {
         installment_3_due_date: installment3Date,
         bank_info: bankInfo,
         paypal_email: paypalEmail,
-        venue: venue || null,
-        training_schedule: trainingSchedule || null,
+        training_schedule: trainingScheduleStr,
+        trainings: validTrainings,
+        match_day: matchDay,
         championships: championships || null,
         calendar_link: calendarLink || null,
       });
