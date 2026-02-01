@@ -93,6 +93,7 @@ class SocietyCreate(BaseModel):
 
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
+    society_id: Optional[str] = None  # ID della società di appartenenza (multi-tenancy)
     email: EmailStr
     password_hash: str
     role: str  # admin, viewer, coach, parent, athlete
