@@ -955,6 +955,32 @@ async def assign_teams_to_coach(user_id: str, data: CoachAssignTeams, current_us
     
     return {"message": "Squadre assegnate con successo"}
 
+@api_router.patch("/users/{user_id}/compensation")
+async def update_user_compensation(user_id: str, data: dict, current_user = Depends(get_current_user)):
+    """Update monthly compensation for coach/dirigente (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare il compenso")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    if user["role"] not in [UserRole.COACH, UserRole.VIEWER, UserRole.ADMIN]:
+        raise HTTPException(status_code=400, detail="Compenso applicabile solo a coach e dirigenti")
+    
+    update_data = {}
+    if "monthly_compensation" in data:
+        update_data["monthly_compensation"] = float(data["monthly_compensation"])
+        update_data["compensation_accepted"] = False  # Reset acceptance when changed
+    
+    if update_data:
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": update_data}
+        )
+    
+    return {"message": "Compenso aggiornato con successo"}
+
 @api_router.delete("/users/{user_id}")
 async def delete_user(user_id: str, current_user = Depends(get_current_user)):
     """Delete a user (only admin can delete)"""
