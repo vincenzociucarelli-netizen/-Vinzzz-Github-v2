@@ -60,13 +60,17 @@ export default function AdminDashboard() {
 
   const loadStats = async () => {
     try {
-      const [statsRes, pendingRes, societyRes] = await Promise.all([
+      const [statsRes, pendingRes, societyRes, birthdaysRes, certsRes] = await Promise.all([
         api.get('/stats/overview'),
         api.get('/users/pending'),
         api.get('/settings/society'),
+        api.get('/birthdays/today'),
+        api.get('/certificates/expiring'),
       ]);
       setStats(statsRes.data);
       setSociety(societyRes.data);
+      setBirthdays(birthdaysRes.data);
+      setExpiringCerts(certsRes.data);
       
       // Count pending by role
       const pending = pendingRes.data;
