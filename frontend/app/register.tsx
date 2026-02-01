@@ -24,9 +24,24 @@ export default function Register() {
   const [role, setRole] = useState('parent');
   const [loading, setLoading] = useState(false);
 
+  const showAlert = (title: string, message: string, onOk?: () => void) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+      if (onOk) onOk();
+    } else {
+      Alert.alert(title, message, [{ text: 'OK', onPress: onOk }]);
+    }
+  };
+
   const handleRegister = async () => {
+    // If coach, redirect to specific registration page
+    if (role === 'coach') {
+      router.push('/register-coach');
+      return;
+    }
+
     if (!email || !password || !fullName) {
-      Alert.alert('Errore', 'Compila tutti i campi');
+      showAlert('Errore', 'Compila tutti i campi');
       return;
     }
 
@@ -44,13 +59,11 @@ export default function Register() {
       // Navigate based on role
       if (role === 'admin') {
         router.replace('/admin');
-      } else if (role === 'coach') {
-        router.replace('/coach');
       } else if (role === 'parent') {
         router.replace('/parent');
       }
     } catch (error: any) {
-      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la registrazione');
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la registrazione');
     } finally {
       setLoading(false);
     }
