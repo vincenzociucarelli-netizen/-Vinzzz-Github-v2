@@ -342,15 +342,92 @@ export default function TeamsScreen() {
 
               <Text style={styles.sectionTitle}>🏟️ Allenamenti e Gare</Text>
 
-              <Text style={styles.label}>Calendario Settimanale *</Text>
-              <TextInput
-                style={[styles.input, styles.textAreaLarge]}
-                placeholder={"LUNEDÌ: Palestra Liceo Alessi dalle 20:00 alle 22:00\nMERCOLEDÌ: Palestra Capitini dalle 19:00 alle 21:00\nVENERDÌ: Palestra Alessi dalle 18:00 alle 20:00\nGIORNO GARA CASALINGHE: SABATO alle 17:00"}
-                value={trainingSchedule}
-                onChangeText={setTrainingSchedule}
-                multiline
-                numberOfLines={5}
-              />
+              <Text style={styles.label}>Allenamenti (minimo 2) *</Text>
+              {trainings.map((training, index) => (
+                <View key={index} style={styles.trainingContainer}>
+                  <View style={styles.trainingHeader}>
+                    <Text style={styles.trainingTitle}>Allenamento {index + 1}</Text>
+                    {trainings.length > 2 && (
+                      <TouchableOpacity onPress={() => removeTraining(index)}>
+                        <Ionicons name="close-circle" size={20} color="#FF3B30" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  
+                  <Text style={styles.subLabel}>Giorno</Text>
+                  <View style={styles.pickerContainer}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Seleziona giorno"
+                      value={training.day}
+                      onChangeText={(value) => updateTraining(index, 'day', value)}
+                    />
+                  </View>
+                  
+                  <View style={styles.timeRow}>
+                    <View style={styles.timeInput}>
+                      <Text style={styles.subLabel}>Ora Inizio</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="20:00"
+                        value={training.timeStart}
+                        onChangeText={(value) => updateTraining(index, 'timeStart', value)}
+                      />
+                    </View>
+                    <View style={styles.timeInput}>
+                      <Text style={styles.subLabel}>Ora Fine</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="22:00"
+                        value={training.timeEnd}
+                        onChangeText={(value) => updateTraining(index, 'timeEnd', value)}
+                      />
+                    </View>
+                  </View>
+                  
+                  <Text style={styles.subLabel}>Palestra/Campo</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Es: Palestra Liceo Alessi"
+                    value={training.venue}
+                    onChangeText={(value) => updateTraining(index, 'venue', value)}
+                  />
+                </View>
+              ))}
+              
+              {trainings.length < 4 && (
+                <TouchableOpacity style={styles.addButton} onPress={addTraining}>
+                  <Ionicons name="add-circle-outline" size={20} color="#007AFF" />
+                  <Text style={styles.addButtonText}>Aggiungi Allenamento</Text>
+                </TouchableOpacity>
+              )}
+
+              <Text style={styles.label}>Giorno Gara *</Text>
+              <View style={styles.trainingContainer}>
+                <Text style={styles.subLabel}>Giorno</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Es: Sabato"
+                  value={matchDay.day}
+                  onChangeText={(value) => setMatchDay({...matchDay, day: value})}
+                />
+                
+                <Text style={styles.subLabel}>Orario</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Es: 17:00"
+                  value={matchDay.time}
+                  onChangeText={(value) => setMatchDay({...matchDay, time: value})}
+                />
+                
+                <Text style={styles.subLabel}>Palestra/Campo</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Es: Palestra Comunale"
+                  value={matchDay.venue}
+                  onChangeText={(value) => setMatchDay({...matchDay, venue: value})}
+                />
+              </View>
 
               <Text style={styles.sectionTitle}>🏆 Campionati</Text>
 
