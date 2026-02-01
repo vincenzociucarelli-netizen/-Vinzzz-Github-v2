@@ -581,6 +581,11 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 4,
   },
+  compensationText: {
+    fontSize: 12,
+    color: '#FF9500',
+    fontWeight: '500',
+  },
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 60,
