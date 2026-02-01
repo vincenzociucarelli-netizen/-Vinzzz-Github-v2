@@ -1361,6 +1361,65 @@ export default function AthleteDetail() {
           </View>
         </View>
       </Modal>
+      
+      {/* Password Unlock Modal */}
+      <Modal
+        visible={passwordModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setPasswordModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.passwordModal}>
+            <View style={styles.passwordModalHeader}>
+              <Ionicons name="lock-closed" size={32} color="#FF9500" />
+              <Text style={styles.passwordModalTitle}>Dati Protetti</Text>
+              <Text style={styles.passwordModalSubtitle}>
+                Inserisci la password per visualizzare e modificare i dati sensibili
+              </Text>
+            </View>
+            
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Password"
+              value={enteredPassword}
+              onChangeText={setEnteredPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoFocus
+            />
+            
+            {passwordError ? (
+              <Text style={styles.passwordError}>{passwordError}</Text>
+            ) : null}
+            
+            <View style={styles.passwordModalButtons}>
+              <TouchableOpacity
+                style={[styles.passwordModalBtn, styles.passwordModalBtnCancel]}
+                onPress={() => {
+                  setPasswordModalVisible(false);
+                  setEnteredPassword('');
+                  setPasswordError('');
+                }}
+              >
+                <Text style={styles.passwordModalBtnCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.passwordModalBtn, styles.passwordModalBtnConfirm]}
+                onPress={handleVerifyPassword}
+                disabled={checkingPassword}
+              >
+                {checkingPassword ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.passwordModalBtnConfirmText}>Sblocca</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
