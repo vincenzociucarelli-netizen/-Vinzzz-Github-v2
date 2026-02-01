@@ -71,6 +71,13 @@ export default function AdminCoachDetail() {
   
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
+  // Bank details
+  const [documentType, setDocumentType] = useState('');
+  const [documentFront, setDocumentFront] = useState('');
+  const [documentBack, setDocumentBack] = useState('');
+  const [iban, setIban] = useState('');
+  const [ibanHolder, setIbanHolder] = useState('');
+  const [bankName, setBankName] = useState('');
 
   const loadData = async () => {
     try {
@@ -81,6 +88,12 @@ export default function AdminCoachDetail() {
       setCoach(coachRes.data);
       setTeams(teamsRes.data);
       setMonthlyCompensation(coachRes.data.monthly_compensation?.toString() || '0');
+      setDocumentType(coachRes.data.document_type || '');
+      setDocumentFront(coachRes.data.document_front || '');
+      setDocumentBack(coachRes.data.document_back || '');
+      setIban(coachRes.data.iban || '');
+      setIbanHolder(coachRes.data.iban_holder || '');
+      setBankName(coachRes.data.bank_name || '');
     } catch (error) {
       console.error('Error loading coach data:', error);
     } finally {
