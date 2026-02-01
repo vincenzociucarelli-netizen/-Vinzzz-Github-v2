@@ -708,6 +708,31 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
+  legendContainer: {
+    backgroundColor: '#f9f9f9',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  legendTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 6,
+  },
+  legendItems: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  legendText: {
+    fontSize: 11,
+    color: '#666',
+  },
   athleteItem: {
     paddingVertical: 14,
     borderBottomWidth: 1,
