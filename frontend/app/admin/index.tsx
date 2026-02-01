@@ -172,6 +172,64 @@ export default function AdminDashboard() {
               <Text style={styles.quickStatNumber}>{stats.today_attendances}</Text>
               <Text style={styles.quickStatLabel}>Presenze Oggi</Text>
             </View>
+            <View style={styles.quickStatDivider} />
+            <TouchableOpacity 
+              style={styles.quickStatItem}
+              onPress={() => birthdays.length > 0 && Alert.alert(
+                '🎂 Compleanni di Oggi',
+                birthdays.map(b => `${b.name} (${b.age} anni) - ${b.type}`).join('\n') || 'Nessun compleanno oggi'
+              )}
+            >
+              <View style={styles.quickStatIconRow}>
+                <Ionicons name="gift" size={20} color={birthdays.length > 0 ? '#FF9500' : '#007AFF'} />
+                <Text style={[styles.quickStatNumber, birthdays.length > 0 && { color: '#FF9500' }]}>
+                  {birthdays.length}
+                </Text>
+              </View>
+              <Text style={styles.quickStatLabel}>Compleanni</Text>
+            </TouchableOpacity>
+            <View style={styles.quickStatDivider} />
+            <TouchableOpacity 
+              style={styles.quickStatItem}
+              onPress={() => {
+                const total = expiringCerts.count_today + expiringCerts.count_30_days;
+                if (total > 0) {
+                  let message = '';
+                  if (expiringCerts.count_today > 0) {
+                    message += `⚠️ OGGI: ${expiringCerts.count_today} certificati\n`;
+                    expiringCerts.expiring_today.forEach((c: any) => {
+                      message += `• ${c.athlete_name}\n`;
+                    });
+                  }
+                  if (expiringCerts.count_30_days > 0) {
+                    message += `\n📋 Prossimi 30 giorni: ${expiringCerts.count_30_days}\n`;
+                    expiringCerts.expiring_soon.slice(0, 5).forEach((c: any) => {
+                      message += `• ${c.athlete_name} (${c.days_until_expiry}g)\n`;
+                    });
+                    if (expiringCerts.count_30_days > 5) {
+                      message += `... e altri ${expiringCerts.count_30_days - 5}`;
+                    }
+                  }
+                  Alert.alert('📋 Certificati in Scadenza', message);
+                }
+              }}
+            >
+              <View style={styles.quickStatIconRow}>
+                <Ionicons 
+                  name="document-text" 
+                  size={20} 
+                  color={expiringCerts.count_today > 0 ? '#FF3B30' : (expiringCerts.count_30_days > 0 ? '#FF9500' : '#007AFF')} 
+                />
+                <Text style={[
+                  styles.quickStatNumber, 
+                  expiringCerts.count_today > 0 && { color: '#FF3B30' },
+                  expiringCerts.count_today === 0 && expiringCerts.count_30_days > 0 && { color: '#FF9500' }
+                ]}>
+                  {expiringCerts.count_today + expiringCerts.count_30_days}
+                </Text>
+              </View>
+              <Text style={styles.quickStatLabel}>Cert. Scadenza</Text>
+            </TouchableOpacity>
           </View>
         )}
 
