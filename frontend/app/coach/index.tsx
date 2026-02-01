@@ -133,6 +133,75 @@ export default function CoachScreen() {
     }
   };
 
+  // Web scanner initialization
+  const startWebScanner = () => {
+    if (Platform.OS !== 'web' || !Html5QrcodeScanner) return;
+    
+    setWebScannerActive(true);
+    
+    // Wait for DOM to be ready
+    setTimeout(() => {
+      try {
+        const html5QrcodeScanner = new Html5QrcodeScanner(
+          "web-qr-scanner",
+          { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 },
+            rememberLastUsedCamera: true,
+          },
+          false
+        );
+        
+        html5QrcodeScanner.render(
+          async (decodedText: string) => {
+            html5QrcodeScanner.clear();
+            setWebScannerActive(false);
+            await handleBarCodeScanned({ data: decodedText });
+          },
+          (error: any) => {
+            // Ignore scanning errors (they happen constantly while scanning)
+          }
+        );
+        
+        webScannerRef.current = html5QrcodeScanner;
+      } catch (error) {
+        console.error('Error starting web scanner:', error);
+        showAlert('Errore', 'Impossibile avviare lo scanner. Prova a inserire il codice manualmente.');
+      }
+    }, 100);
+  };
+
+  const stopWebScanner = () => {
+    if (webScannerRef.current) {
+      try {
+        webScannerRef.current.clear();
+      } catch (error) {
+        console.log('Scanner already cleared');
+      }
+      webScannerRef.current = null;
+    }
+    setWebScannerActive(false);
+  };
+
+  // Manual QR code input
+  const handleManualQrSubmit = async () => {
+    if (!manualQrInput.trim()) {
+      showAlert('Errore', 'Inserisci il codice QR');
+      return;
+    }
+    
+    setManualInputModalVisible(false);
+    await handleBarCodeScanned({ data: manualQrInput.trim() });
+    setManualQrInput('');
+  };
+
+  // Cleanup web scanner on unmount
+  useEffect(() => {
+    return () => {
+      stopWebScanner();
+    };
+  }, []);
+
   const handleLogout = () => {
     if (Platform.OS === 'web') {
       if (window.confirm('Sei sicuro di voler uscire?')) {
