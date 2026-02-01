@@ -39,6 +39,12 @@ export default function Register() {
       router.push('/register-coach');
       return;
     }
+    
+    // If dirigente (viewer), redirect to specific registration page
+    if (role === 'viewer') {
+      router.push('/register-dirigente');
+      return;
+    }
 
     if (!email || !password || !fullName) {
       showAlert('Errore', 'Compila tutti i campi');
