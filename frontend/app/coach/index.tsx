@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   RefreshControl,
   Platform,
   FlatList,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -18,6 +20,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Team, Athlete } from '../../src/types';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+
+// Web QR Scanner
+let Html5QrcodeScanner: any = null;
+if (Platform.OS === 'web') {
+  Html5QrcodeScanner = require('html5-qrcode').Html5QrcodeScanner;
+}
 
 interface AthleteWithCert extends Athlete {
   certificate_expiry?: string;
