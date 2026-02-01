@@ -93,6 +93,22 @@ export default function Register() {
         <Text style={styles.subtitle}>Crea il tuo account</Text>
 
         <View style={styles.form}>
+          <View style={styles.inviteCodeSection}>
+            <Text style={styles.inviteCodeLabel}>🎟️ Codice Invito Società *</Text>
+            <TextInput
+              style={styles.inviteCodeInput}
+              placeholder="Es: PUZTKF74"
+              placeholderTextColor="#999"
+              value={inviteCode}
+              onChangeText={(text) => setInviteCode(text.toUpperCase())}
+              autoCapitalize="characters"
+              maxLength={8}
+            />
+            <Text style={styles.inviteCodeHint}>
+              Chiedi il codice al tuo club sportivo
+            </Text>
+          </View>
+
           <Text style={styles.inputLabel}>Cognome *</Text>
           <TextInput
             style={styles.input}
