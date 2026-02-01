@@ -35,6 +35,7 @@ export default function DirigentiScreen() {
   const [selectedUser, setSelectedUser] = useState<Dirigente | null>(null);
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [societyName, setSocietyName] = useState('Società');
 
   const handleExport = async () => {
     setExporting(true);
@@ -51,11 +52,13 @@ export default function DirigentiScreen() {
 
   const loadData = async () => {
     try {
-      const [dirigentiRes, pendingRes] = await Promise.all([
+      const [dirigentiRes, pendingRes, societyRes] = await Promise.all([
         api.get('/users/dirigenti'),
         api.get('/users/pending'),
+        api.get('/settings/society'),
       ]);
       setDirigenti(dirigentiRes.data);
+      setSocietyName(societyRes.data.name || 'Società');
       // Filter pending users for dirigenti only
       const pendingDirigenti = pendingRes.data.filter(
         (u: Dirigente) => u.role === 'admin' || u.role === 'viewer'
