@@ -991,6 +991,7 @@ export default function AthleteDetail() {
                 style={styles.qrImage}
                 resizeMode="contain"
               />
+              <Text style={styles.qrCodeText}>{athlete.id}</Text>
             </View>
             <Text style={styles.qrInstructions}>
               Mostra questo QR code al coach per registrare la presenza
