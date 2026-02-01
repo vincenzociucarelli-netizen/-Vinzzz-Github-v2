@@ -253,6 +253,34 @@ export default function AdminDashboard() {
           </View>
         )}
 
+        {/* Invite Code Card */}
+        {inviteCode && (
+          <View style={styles.inviteCodeCard}>
+            <View style={styles.inviteCodeHeader}>
+              <Ionicons name="ticket-outline" size={24} color="#007AFF" />
+              <Text style={styles.inviteCodeTitle}>Codice Invito Società</Text>
+            </View>
+            <Text style={styles.inviteCodeValue}>{inviteCode}</Text>
+            <Text style={styles.inviteCodeHint}>
+              Condividi questo codice con coach, dirigenti e genitori per farli registrare alla tua società
+            </Text>
+            <TouchableOpacity 
+              style={styles.copyCodeButton}
+              onPress={() => {
+                if (Platform.OS === 'web') {
+                  navigator.clipboard.writeText(inviteCode);
+                  showInfo('Copiato!', 'Codice invito copiato negli appunti');
+                } else {
+                  showInfo('Codice Invito', `${inviteCode}\n\nComunica questo codice ai tuoi membri`);
+                }
+              }}
+            >
+              <Ionicons name="copy-outline" size={18} color="#fff" />
+              <Text style={styles.copyCodeButtonText}>Copia Codice</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Section Title */}
         <Text style={styles.sectionTitle}>Gestione</Text>
 
