@@ -958,6 +958,47 @@ async def delete_user(user_id: str, current_user = Depends(get_current_user)):
     
     return {"message": "Utente eliminato con successo"}
 
+@api_router.get("/users/{user_id}")
+async def get_user_detail(user_id: str, current_user = Depends(get_current_user)):
+    """Get detailed user information by ID"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i dettagli utente")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    # Return all relevant fields
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "full_name": user["full_name"],
+        "role": user["role"],
+        "status": user.get("status", UserStatus.APPROVED),
+        "assigned_teams": user.get("assigned_teams", []),
+        "created_at": user.get("created_at"),
+        "approved_at": user.get("approved_at"),
+        # Personal data
+        "first_name": user.get("first_name"),
+        "last_name": user.get("last_name"),
+        "date_of_birth": user.get("date_of_birth"),
+        "place_of_birth": user.get("place_of_birth"),
+        # Contact
+        "phone": user.get("phone"),
+        "address": user.get("address"),
+        "city": user.get("city"),
+        "postal_code": user.get("postal_code"),
+        "province": user.get("province"),
+        # Fiscal
+        "fiscal_code": user.get("fiscal_code"),
+        "coach_license_number": user.get("coach_license_number"),
+        # Compensation
+        "monthly_compensation": user.get("monthly_compensation", 0),
+        "compensation_accepted": user.get("compensation_accepted", False),
+        "compensation_history": user.get("compensation_history", {}),
+        "over_5000_limit": user.get("over_5000_limit", {}),
+    }
+
 # ==================== TEAM ENDPOINTS (ADMIN) ====================
 
 @api_router.post("/teams", response_model=Team)
