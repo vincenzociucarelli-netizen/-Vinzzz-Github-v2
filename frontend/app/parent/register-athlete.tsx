@@ -423,6 +423,45 @@ export default function RegisterAthlete() {
             💡 I dati economici (pagamenti) sono relativi solo alla squadra principale
           </Text>
 
+          <Text style={styles.sectionTitle}>🔐 Protezione Dati Sensibili</Text>
+          
+          <Text style={styles.protectionNote}>
+            Per proteggere i dati anagrafici e il certificato medico dell'atleta minorenne, 
+            imposta una password. Solo tu potrai visualizzare e modificare questi dati.
+          </Text>
+
+          <Text style={styles.label}>Password protezione dati *</Text>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Minimo 4 caratteri"
+              value={dataPassword}
+              onChangeText={setDataPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity 
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Ionicons 
+                name={showPassword ? "eye-off" : "eye"} 
+                size={22} 
+                color="#666" 
+              />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.label}>Conferma password *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Ripeti la password"
+            value={dataPasswordConfirm}
+            onChangeText={setDataPasswordConfirm}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+          />
+
           <Text style={styles.sectionTitle}>📝 Tipo Iscrizione</Text>
           
           <TouchableOpacity 
