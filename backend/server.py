@@ -904,6 +904,11 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
     is_trial = getattr(athlete_data, 'is_trial', True)
     privacy_accepted = getattr(athlete_data, 'privacy_accepted', False)
     
+    # Hash data password if provided (for minors - protects sensitive data)
+    data_password_hash = None
+    if athlete_data.data_password and is_minor:
+        data_password_hash = hash_password(athlete_data.data_password)
+    
     athlete = Athlete(
         id=athlete_id,
         parent_id=current_user["id"],
@@ -930,6 +935,7 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
         status="trial" if is_trial else "active",
         privacy_accepted=privacy_accepted,
         privacy_accepted_date=datetime.utcnow() if privacy_accepted else None,
+        data_password_hash=data_password_hash,
     )
     
     await db.athletes.insert_one(athlete.dict())
