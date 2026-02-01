@@ -58,7 +58,8 @@ export default function Login() {
       // Navigate based on role
       const role = response.data.user.role;
       if (role === 'admin') {
-        router.replace('/admin');
+        // Admin può scegliere se entrare come Admin o Dirigente
+        router.replace('/select-role');
       } else if (role === 'coach') {
         router.replace('/coach');
       } else if (role === 'parent') {
@@ -67,9 +68,17 @@ export default function Login() {
         router.replace('/dirigente');
       }
     } catch (error: any) {
-      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante il login');
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il login');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
     }
   };
 
