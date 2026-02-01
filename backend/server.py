@@ -497,6 +497,10 @@ async def check_athlete_status(athlete_id: str):
     if not athlete:
         return {"allowed": False, "reason": "Atleta non trovato", "warning": None}
     
+    # Check if athlete is withdrawn
+    if athlete.get("is_withdrawn", False):
+        return {"allowed": False, "reason": "⛔ ATLETA RITIRATO - Non più iscritto alla squadra", "warning": None}
+    
     # Check if trial period ended and privacy not accepted
     if datetime.utcnow() > athlete["trial_end_date"] and not athlete.get("privacy_accepted"):
         return {"allowed": False, "reason": "Privacy non accettata - periodo di prova terminato", "warning": None}
