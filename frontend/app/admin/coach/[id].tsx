@@ -11,12 +11,14 @@ import {
   Alert,
   Platform,
   Switch,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import * as ImagePicker from 'expo-image-picker';
 
 interface Coach {
   id: string;
@@ -42,6 +44,13 @@ interface Coach {
   compensation_accepted?: boolean;
   compensation_history?: { [key: string]: boolean };
   over_5000_limit?: { [key: string]: boolean };
+  // Document fields
+  document_type?: string;
+  document_front?: string;
+  document_back?: string;
+  iban?: string;
+  iban_holder?: string;
+  bank_name?: string;
 }
 
 interface Team {
@@ -58,6 +67,7 @@ export default function AdminCoachDetail() {
   const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingBank, setEditingBank] = useState(false);
   
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
