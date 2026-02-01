@@ -195,6 +195,54 @@ export default function CoachProfile() {
     }
   };
 
+  const handleAcceptCompensation = async () => {
+    try {
+      await api.patch('/auth/me', { compensation_accepted: true });
+      showAlert('Successo', 'Compenso accettato con successo');
+      await loadProfile();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'accettazione');
+    }
+  };
+
+  const handleToggleMonth = async (monthKey: string) => {
+    const newHistory = { ...compensationHistory };
+    newHistory[monthKey] = !newHistory[monthKey];
+    setCompensationHistory(newHistory);
+    
+    try {
+      await api.patch('/auth/me', { compensation_history: newHistory });
+    } catch (error: any) {
+      // Revert on error
+      setCompensationHistory(compensationHistory);
+      showAlert('Errore', 'Errore durante il salvataggio');
+    }
+  };
+
+  const handleToggle5000Limit = async () => {
+    const newValue = !hasExceeded5000;
+    setHasExceeded5000(newValue);
+    
+    // Set current month as the exceeded month
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const newLimit = { ...over5000Limit };
+    newLimit[currentMonthKey] = newValue;
+    setOver5000Limit(newLimit);
+    
+    try {
+      await api.patch('/auth/me', { over_5000_limit: newLimit });
+      if (newValue) {
+        showAlert('Attenzione', 'La tua dichiarazione è stata registrata. L\'amministratore riceverà una notifica.');
+      }
+    } catch (error: any) {
+      // Revert on error
+      setHasExceeded5000(!newValue);
+      setOver5000Limit(over5000Limit);
+      showAlert('Errore', 'Errore durante il salvataggio');
+    }
+  };
+
   const renderField = (label: string, value: string, key: string, editable: boolean = true) => (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
