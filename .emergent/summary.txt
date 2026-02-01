@@ -1,203 +1,203 @@
 <analysis>
-**original_problem_statement**: The user wants to build a sports club management app with Admin, Coach, and Parent/Athlete roles. The initial request was to fix a broken PDF upload for medical certificates and correct the expiry date logic.
 
-Over the session, the scope expanded significantly to include:
-- **Role-Based Access Control (RBAC):** A full user approval system where Admins must approve all new registrants (Dirigenti, Coach, Parents). Admins can also assign roles (Admin vs. Visualizzatore) to other Dirigenti.
-- **Admin Dashboard Rework:** A complete redesign of the admin dashboard into sections for managing Dirigenti, Coaches, Teams, Athletes, and Parents.
-- **Advanced Team Management:** Admins can define a structured weekly training schedule (2-4 sessions) and a game day for each team. They can also see athlete counts and delete empty teams.
-- **Advanced Athlete Data Model:** The athlete's profile was expanded to include many new fields (separate first/last name, birth place, federal code, registration status, multiple phone numbers, etc.).
-- **Advanced Payment System:** Admins can now add a discount to an athlete's fees and manually record payments made (including date, amount, and cash payments), with the system calculating the remaining balance.
-- **Coach-Specific UI:** Coaches need a limited view, seeing only their assigned teams, athlete names, certificate expiry dates, and attendance stats, with all financial information hidden.
-- **Global Branding:** Admins can upload a society logo that appears in the app header for all users.
-- **User-Requested Features:** QR code sharing, viewing uploaded certificates, deleting athletes, and detailed attendance statistics.
+**original_problem_statement**: The initial goal was to build a comprehensive sports club management app. This session focused on implementing a vast number of user-requested features and bug fixes.
+
+The key requests implemented in this session include:
+- **UI Fixes:** Corrected spacing in the training schedule modal and completely reworked the payment history section to allow editing and deleting manual payments.
+- **Excel Export:** Added functionality to export lists of managers, coaches, and athletes to an Excel file, including a fix for date formatting.
+- **Coach UI & Logic:** Created a basic UI for coaches to see their assigned teams and fixed a critical bug where assigned teams were not appearing.
+- **Payment & Balance Logic:** Investigated and confirmed the backend calculation for the remaining balance () is correct. The UI was adjusted to only show manually entered payments, not pre-generated installments.
+- **Advanced Athlete Registration & Profile:**
+    - **Trial Period:** Added a trial period checkbox. If unchecked, the athlete becomes 'active' and must accept a privacy policy.
+    - **Status Toggle:** Parents can now end the trial period early, which requires accepting the full privacy policy.
+    - **Dual Teams:** Athletes can now be assigned to a second team.
+    - **UI/UX:** Fixed multiple UI layout issues, prevented double registration, and corrected form labels.
+    - **Web Compatibility:** Fixed certificate uploads and logout functionality for the web platform.
+- **Global Settings:** Admins can now resize the society logo using a slider.
+- **Admin Dashboard:** The Parents section was removed from the admin menu as requested.
+- **Deployment Readiness:** Fixed missing environment variables (, ) identified by the deployment agent.
+
+The session ended with the user asking about the pricing/cost of the application, which the agent correctly identified as a query for the support team.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application is a full-stack Expo/FastAPI app with a comprehensive set of features.
-- **Backend ():** The data models (, , , ) have been heavily modified to support the new requirements. This includes user approval statuses (, ), expanded athlete Pydantic models, structured training schedules on teams, and new models for manual payments and society settings. Numerous new endpoints have been created for user management, payment handling, settings, and statistics.
-- **Frontend:**
-    - The **Admin** section has been completely restructured with new pages for managing , , , and .
-    - The admin team detail page () now includes a form to manage the complex training/game schedule.
-    - A new, highly detailed admin athlete detail page () has been created with a tabbed interface for viewing/editing extensive personal data and managing a new, complex payment system (discounts, manual payments).
-    - The **Parent** athlete detail page () is feature-complete with QR code sharing, certificate viewing, team editing, and athlete deletion.
-    - A global  component displays a custom logo fetched from the backend.
-    - User registration now defaults all new users to a  state, requiring admin approval to log in.
+The application is a feature-rich, full-stack Expo/FastAPI app.
+- **Backend ():** Includes extensive RBAC, user approval workflows, and complex data models for athletes, teams, and payments. New fields like , , , , and  have been added. Endpoints exist for all CRUD operations, Excel exports, and role-specific data fetching. A JWT secret is now properly configured via environment variables.
+- **Frontend:** The UI has been significantly enhanced:
+    - **Admin:** Features for editing payments, exporting data to Excel, and managing a resizable society logo are complete. The Parents menu has been removed.
+    - **Parent:** The athlete registration form is highly customized with logic for trial periods, privacy acceptance (including a modal with the full policy text), and a second team selection. The athlete detail page allows parents to end a trial period, which triggers the privacy acceptance flow. Numerous layout and usability fixes have been implemented.
+    - **Coach:** A basic dashboard exists to view assigned teams.
+    - **Utilities:** An Excel export helper () has been created and refined to work on the web.
 
 **Last working item**:
--   Last item agent was working: The user defined the requirements for the Coach's user interface, which should be a restricted view of the app. The agent had just fixed a React duplicate key warning in  and was about to begin implementing the Coach UI.
--   Status: IN PROGRESS
--   Agent Testing Done: N
--   Which testing method agent to use? both
+-   Last item agent was working: The agent received a non-technical question from the user regarding the application's cost. Following the system prompt, the agent prepared to escalate this query to the . Immediately prior to this, the agent had successfully resolved two critical environment/deployment issues related to missing  variables ( and ) that were flagged by the .
+-   Status: NONE (Awaiting next instruction after escalating a non-dev query. The last development task is considered complete).
+-   Agent Testing Done: Y (The agent verified the backend and frontend were running after fixing the .env issues).
+-   Which testing method agent to use? manual testing by curl
 -   User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   Issue 1: UI fixes in Admin section (P1)
--   Issue 2: Implement Mandatory Privacy Checkbox on Registration (P2)
--   Issue 3: React duplicate key warning in  and  (P2)
+-   Issue 1: Implement Coach-to-Admin Notification System (P0)
+-   Issue 2: Add Segnapunti (Scorekeeper) Role to Dirigenti (P1)
+-   Issue 3: Improve Layout on Admin Team Page (P2)
 
 **Issues Detail**:
--   **Issue 1: UI fixes in Admin section (P1)**
-    -   **Description**: The user requested two UI fixes in message #344:
-        1.  In the Allenamenti settimanali (weekly training) modal on the team detail page, there is not enough space between the time input and the gym name input.
-        2.  In the Storico pagamenti (payment history) section of the admin athlete detail page, the user wants the ability to edit/correct manually entered payments and to remove the list of unpaid installments as it's redundant.
-    -   **Attempted fixes**: None yet for the payment history part. The agent was about to fix the spacing issue before being interrupted.
+-   **Issue 1: Implement Coach-to-Admin Notification System (P0)**
+    -   **Description**: In message #327, the user requested two features that require a notification system:
+        1.  If a coach attempts to check in an athlete with an expired medical certificate, the check-in should be blocked, and a notification should be sent to the admin.
+        2.  If an athlete has a missed payment, the coach should still be able to check them in, but this action should trigger a notification to the admin.
+    -   **Attempted fixes**: None. The agent explicitly postponed this due to its complexity.
     -   **Next debug checklist**:
-        1.  For the spacing issue, edit , locate the  for the training time and gym inputs, and add  or adjust flexbox properties to create space.
-        2.  For the payment history, edit .
-            -   Remove the JSX that renders the list of unpaid installments.
-            -   For each item in the  list, add an Edit button.
-            -   The Edit button should open a modal pre-filled with the payment data, allowing the admin to change the amount/date/method and submit the changes to a new  endpoint (which needs to be created in ).
-            -   Also add a Delete button next to each manual payment, calling a  endpoint (which also needs to be created).
-    -   **Why fix this issue and what will be achieved with the fix?**: Improves usability and fulfills direct user requests for the admin interface.
+        1.  Design a notification model in  (e.g.,  with fields like , , , , , ).
+        2.  Create a new collection in MongoDB for notifications.
+        3.  Create new API endpoints: , , .
+        4.  In the backend logic for athlete check-in, add checks for certificate expiry and payment status. If conditions are met, create a new notification record for the admin.
+        5.  On the frontend, create a notification icon/center in the admin's  or dashboard to display unread notifications fetched from the new endpoint.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical feature for managing compliance (certificates) and finances, enabling better communication between roles.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?**: both
 
--   **Issue 2: Implement Mandatory Privacy Checkbox on Registration (P2)**
-    -   **Description**: A mandatory privacy policy checkbox is still missing from the athlete registration form (). This was requested in the previous session and has been overlooked.
-    -   **Attempted fixes**: None.
+-   **Issue 2: Add Segnapunti (Scorekeeper) Role to Dirigenti (P1)**
+    -   **Description**: In message #327, the user asked to add a checkbox to mark a  (manager) as a  (scorekeeper). The agent added the  field to the  model in  and to the  type on the frontend, but the implementation is incomplete.
+    -   **Attempted fixes**: The data model was updated. The UI in  was touched upon but not completed.
     -   **Next debug checklist**:
-        1.  In , add a  for the checkbox state.
-        2.  Add a  component and a  component with the privacy policy text near the submit button.
-        3.  In the  function, add a check to ensure the box is checked before submitting.
-    -   **Why fix this issue and what will be achieved with the fix?**: Fulfills a legal/compliance requirement and a direct user request.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?**: frontend
+        1.  In , add a checkbox or toggle within the  component to display the current  status.
+        2.  Add a mechanism (e.g., in the action modal) to toggle this status.
+        3.  In , ensure the  or a similar endpoint can update the  field for a user.
+        4.  Update the  Pydantic model if necessary to include .
+    -   **Why fix this issue and what will be achieved with the fix?**: Fulfills a direct user request for more granular role/permission management.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?**: both
 
--   **Issue 3: React duplicate key warning in  and  (P2)**
-    -   **Description**: The agent fixed the duplicate key warning in  by adding a prefix to keys. The same issue likely exists in  and  as they use the same pattern of combining pending and approved users in one list.
-    -   **Attempted fixes**: Fixed in , but not the other files.
+-   **Issue 3: Improve Layout on Admin Team Page (P2)**
+    -   **Description**: In message #224, the user noted that on the team management page, the data inputs are too far from their labels, making them hard to read, especially on the web. This was fixed for the parent's athlete detail page but not for the admin's team page.
+    -   **Attempted fixes**: None for this specific page.
     -   **Next debug checklist**:
-        1.  Open  and .
-        2.  Locate the  or  function that renders the combined user list.
-        3.  Modify the  or  prop to use a unique prefix for each list, e.g.,  for pending users and  for approved users.
-    -   **Why fix this issue and what will be achieved with the fix?**: Resolves a React warning that can lead to unpredictable UI rendering bugs.
+        1.  Examine .
+        2.  Identify the  rules for the form rows (e.g., for payment installments, training schedules).
+        3.  Modify the flexbox properties (e.g., use  on the row container and remove fixed widths or  from the value) to bring the label and input closer together, similar to the fix applied in .
+    -   **Why fix this issue and what will be achieved with the fix?**: Improves UI/UX and addresses a direct user complaint.
     -   **Status**: NOT STARTED
-    -   **Is recurring issue?** Y
+    -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?**: frontend
 
 **In progress Task List**:
--   **Task 1: Implement the complete Coach UI (P0)**
-    -   **Where to resume**: Create the main dashboard for the coach role. This will likely be at .
-    -   **What will be achieved with this?**: This will fulfill the user's requirement for a restricted Coach view.
-    -   **Details**:
-        1.  The coach's dashboard should fetch and display only the teams they are assigned to (this assignment logic needs to be built, likely on the team edit page for admins).
-        2.  Clicking a team should navigate to a team detail page showing a list of athletes.
-        3.  The athlete list should only display Name and Medical Certificate Expiry Date. All financial information must be hidden.
-        4.  There should be a link to the attendance page (, which may need to be moved to a shared location like  or have its logic adapted for coaches).
-        5.  Backend endpoints might need to be modified or new ones created to provide this limited data to the coach role, respecting the security constraints. For example,  might need to return different data based on the user's role.
-    -   **Status**: NOT STARTED
-    -   **Should Test frontend/backend/both after fix?**: both
+-   There are no other partially completed tasks besides the Segnapunti issue listed above.
 
 **Upcoming and Future Tasks**
--   There are no other explicit future tasks mentioned by the user. The current focus is on completing the RBAC implementation and refining the admin/coach UIs.
+-   **Upcoming Tasks**:
+    -   Implement the Coach-to-Admin notification system for expired certificates and missed payments (P0).
+-   **Future Tasks**:
+    -   There are no other explicit future tasks mentioned by the user.
 
 **Completed work in this session**
-- **Parent/Athlete Module**: Implemented QR code sharing, viewing uploaded certificates, editing the assigned team, and deleting an athlete profile with confirmation.
-- **Certificate Logic**: Correctly implemented the expiry date calculation () on both frontend and backend.
-- **Full User Approval System**: All new users (Dirigenti, Coach, Parent) now register in a  state and must be approved by an Admin to access the app.
-- **Admin Dashboard Rework**: Completely redesigned with dedicated sections and management pages for Dirigenti, Coaches, Parents, Teams, and Athletes.
-- **Advanced Team Management**: Admins can now define a detailed weekly training and game day schedule in a structured table format.
-- **Advanced Athlete Data Management**: The admin's view of an athlete profile is now a comprehensive page with tabs for extensive personal data, a new payment system (manual entries, discounts), and attendance stats.
-- **Data Model Expansion**: The backend  model was heavily expanded with fields like , , , , , etc.
-- **Global Branding**: Implemented a system for the Admin to upload a society logo that is displayed globally in the app header.
-- **Bug Fixes**: Addressed a team picker height issue, a duplicate button on the admin dashboard, a broken attendance link, and a React key prop warning.
+- **Deployment Readiness:** Resolved missing  and  environment variables.
+- **Athlete Status Flow:** Implemented a complete flow for trial periods. Parents can end a trial, which forces them to view and accept a privacy policy, automatically changing the athlete's status to 'active'.
+- **Dual-Team Athletes:** Athletes can now be assigned to a primary and a secondary team.
+- **Web Compatibility Fixes:** Resolved issues with file uploads (medical certificates) and logout functionality on the web platform.
+- **Excel Export:** Implemented and debugged a feature to export user and athlete data to  files, including correct date formatting.
+- **UI/UX Enhancements:**
+    - Removed the Genitori (Parents) section from the Admin menu.
+    - Reworked labels on the athlete registration form (e.g., Cognome e Nome instead of Ragione Sociale).
+    - Added a modal to display the full privacy policy text during registration/activation.
+    - Fixed a double-registration bug by disabling the submit button on click.
+    - Corrected UI layouts on the parent-facing athlete detail page.
+- **Bug Fix: Coach Team Visibility:** Fixed a bug where coaches could not see their assigned teams due to missing data in the JWT payload.
+- **Payment History Rework:** The admin's payment history view for an athlete now allows editing/deleting payments and only shows manually recorded transactions.
+- **Logo Resizing:** Admins can now control the size of the society logo via a slider in the settings.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Mandatory Privacy Checkbox**
-    -   **Why to solve this issue and what will be achieved with this?**: This is a legal/compliance requirement and a carry-over request from a previous session that has been repeatedly overlooked.
-    -   **Debug checklist**: See Issue 2 in All Pending/In progress Issue list.
+-   **Issue 1: Coach-Admin Notification System**
+    -   **Why to solve this issue and what will be achieved with this?**: It's a core functional requirement for managing athlete compliance and club finances. It was explicitly requested but postponed due to complexity.
+    -   **Debug checklist**: See Issue 1 in All Pending/In progress Issue list.
+    -   **Should Test frontend/backend/both after fix**: both
+    -   **Is recurring issue?** N
+-   **Issue 2: Admin Team Page Layout**
+    -   **Why to solve this issue and what will be achieved with this?**: Improves usability of a key admin screen and resolves a direct user complaint.
+    -   **Debug checklist**: See Issue 3 in All Pending/In progress Issue list.
     -   **Should Test frontend/backend/both after fix**: frontend
-    -   **Is recurring issue?** Y
+    -   **Is recurring issue?** N
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Incorrect certificate expiry date calculation.
--   **Recurrence count**: Multiple times in the previous session.
--   **Status**: RESOLVED (The agent fixed this on both the frontend and backend early in this session).
+-   The web logout from the  page was a recurring issue, with the agent trying 3 different fixes. The final fix uses , which should be reliable but is worth re-testing.
+-   The Excel export functionality failed multiple times due to platform incompatibilities ( on web). The final implementation has separate logic for web and mobile, which appears to be a stable solution.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend**: React Native, Expo, Zustand, Axios, , , .
+- **Frontend**: React Native, Expo, Zustand, Axios, , , , .
 - **Backend**: FastAPI, Pydantic, MongoDB, Motor, JWT.
 - **Architecture**:
-    - **Role-Based Access Control (RBAC)**: Backend logic now heavily checks user roles and status (/) to control access to endpoints.
-    - **User Approval Workflow**: A new admin-centric workflow for onboarding all user types.
-    - **Complex Data Models**: Pydantic and TypeScript models have been significantly expanded to accommodate detailed user, team, and payment information.
-    - **Separation of Concerns**: The creation of dedicated pages for managing different user types (, ) and a separate settings page improves admin UI organization.
+    - **Complex State Logic**: Frontend state management now handles complex conditional UI based on athlete status (/), privacy acceptance, and user roles.
+    - **Web/Mobile Compatibility**: Explicit logic was added to handle differences between web and native mobile environments for file system access () and file picking ().
+    - **Environment Configuration**: Corrected the use of  files for critical secrets () and build configuration (), removing hardcoded fallbacks.
 
 **key DB schema**
-- **users**: added .  can now be , , , or .
-- **athletes**: added , , , , , , , , , , , and more.  is now deprecated.
-- **teams**: added  and  for structured schedule management.
-- **manual_payments**: new collection to store payments recorded by the admin, with fields like , Sat Jan 31 20:37:51 UTC 2026, , .
-- **settings**: new collection to store global settings like  and .
+- **users**: added .
+- **athletes**: added , , , , .
+- **settings**: added .
 
 **changes in tech stack**
-- No fundamental changes, but new libraries were added:  and .
+- Added  for Excel generation.
+- Added  for the logo size UI.
 
 **All files of reference**
-- : The single source of truth for all business logic, data models, and API endpoints. Has undergone massive changes.
-- : A complex new page representing the pinnacle of the admin's data management capabilities.
-- : Modified to handle the new structured training schedule UI.
-- : The main entry point for the Admin, completely redesigned.
-- : Crucial for keeping frontend types in sync with the rapidly changing backend models.
-- : The main parent-facing screen, now feature-complete.
+- : The core backend logic, updated extensively.
+- : The most heavily modified frontend file, containing complex business logic for registration.
+- : The second most modified file, containing the end trial and privacy acceptance flow.
+- : The new utility for handling file exports.
+- : The page for the new logo resizing feature.
+-  & : Critical configuration files that were fixed.
 
 **Critical Info for New Agent**
-- The user is highly engaged and provides detailed, frequent feedback. They often request new features while the agent is in the middle of another task. Be prepared to pivot or politely manage the workflow.
-- Your immediate priority (P0) is to build the **Coach interface** with the specific data restrictions requested by the user. This is a significant piece of the RBAC implementation.
-- Do not forget the pending UI fixes (Issue 1) and the long-overlooked mandatory privacy checkbox (Issue 2). The latter is a legal requirement and should be addressed soon.
-- The user has been very pleased with the agent's work in this session (perfetto!.. sei un grande .. grazie!), so maintaining this positive momentum is key.
+- The immediate next task is to respond to the user about their pricing question. You MUST use the  for this, as it's a non-technical, commercial query.
+- After addressing the support query, the highest priority development task is implementing the **Coach-to-Admin notification system** (Issue #1). This is a significant new feature.
+- Be aware of the recurring issues with web vs. mobile compatibility. Test any new file or device-related features on both platforms if possible.
+- The user is highly engaged and provides detailed feedback in batches. It's effective to address all points in a batch and then summarize the changes for confirmation.
 
 **documents created in this job**
 - 
-- 
-- 
-- 
-- 
-- 
-- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User**: Requests fix for training schedule UI (spacing) and changes to payment history UI (edit/delete payments, remove redundancy). (NOT DONE)
-9.  **User**: Reports a React duplicate key error with a screenshot. (PARTIALLY DONE - fixed for coaches, but likely persists for others)
-8.  **User**: Defines the requirements for the Coach interface (view assigned teams, names, cert expiry, stats, NO financial data). (NOT STARTED)
-7.  **User**: Confirms to proceed with the Coach UI implementation. (PENDING)
-6.  **User**: Acknowledges agent's plan to fix duplicate key error. (PENDING)
-5.  **User**: Asks to add Codice Federale and Tesserato checkbox to athlete data. (DONE)
-4.  **User**: Asks to proceed with frontend implementation of new athlete/payment fields. (DONE)
-3.  **User**: Provides massive list of new fields for athlete profiles and new features for payment management (discounts, manual entry, remaining balance). (DONE)
-2.  **User**: Takes a dinner break. (N/A)
-1.  **User**: Requests admin/viewer to see athlete details (data, payments, attendance). (DONE)
+10. **User**: Asks about the monthly cost of the app for the society, coaches, and families, and whether web access is free. (PENDING - needs support_agent).
+9.  **User**: Confirms the status toggle works but requires a page refresh. States that moving to active status must require privacy acceptance. (DONE - agent implemented this flow).
+8.  **User**: Reports the trial period status toggle doesn't work. (DONE - agent fixed the backend endpoint).
+7.  **User**: Approves the idea of a status toggle to end the trial period early. (DONE).
+6.  **User**: Confirms the logic for setting athlete status based on the trial checkbox is correct. (N/A).
+5.  **User**: Provides a long list of final requests: fix web logout, add trial period logic, remove Parents menu, add Scorekeeper checkbox, and add two complex notification features (payments/certificates). (PARTIALLY DONE - agent did the first 4, postponed notifications).
+4.  **User**: Asks to fix web logout and add a second team for athletes. (DONE).
+3.  **User**: Reports issues with double registration, a non-working logout, and a UI layout problem. (DONE).
+2.  **User**: Provides a long list of feedback including bugs (logout, cert upload) and feature requests (date formats, UI layouts). (DONE).
+1.  **User**: Reports the Excel export is still not working. (DONE - agent provided a web-based workaround).
 
 **Project Health Check:**
--   **Broken**:
-    -   The UI for manual payment editing/deletion is missing.
-    -   The training schedule form has a minor layout bug.
--   **Incomplete**:
-    -   The entire Coach-specific user interface is yet to be built.
-    -   The mandatory privacy policy checkbox on the registration form is still missing.
-    -   React duplicate key warning likely still exists on  and .
+- **Broken**:
+    - The Segnapunti feature is incomplete. The data model is updated, but the UI and backend logic to save the change are missing.
+    - The admin team page has a minor layout issue (labels/values are too far apart).
+- **Incomplete**:
+    - The entire Coach-to-Admin notification system for expired certificates and missed payments is a pending feature.
 
 **3rd Party Integrations**
 - None.
 
 **Testing status**
--   **Testing agent used after significant changes**: NO
--   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: None.
--   **Known regressions**: None.
+- **Testing agent used after significant changes**: YES (The  was used at the end, which performs health checks).
+- **Troubleshoot agent used after agent stuck in loop**: NO
+- **Test files created**: None.
+- **Known regressions**: None.
 
 **Credentials to test flow:**
--   Admin:  / 
--   Parent:  / 
--   Coach:  / 
+- Admin:  / 
+- Parent:  / 
+- Coach:  / 
 
 **What agent forgot to execute**
-- The agent has consistently forgotten to implement the **mandatory privacy policy checkbox** on the athlete registration page, which was part of the original problem statement from the previous fork.
+- The agent explicitly and correctly postponed the implementation of the two notification-based features requested in message #327 (alerting admins about expired certificates and missed payments) due to their complexity and the end-of-session timing. These are the main pending tasks.
+- The implementation of the Segnapunti (Scorekeeper) feature for Dirigenti was started but not finished.
+- The layout fix for the admin team page (message #224) was overlooked.
 
 </analysis>
