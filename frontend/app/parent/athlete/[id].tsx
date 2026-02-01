@@ -1559,6 +1559,9 @@ const styles = StyleSheet.create({
   buttonSecondary: {
     backgroundColor: '#f5f5f5',
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   buttonText: {
     color: '#fff',
     fontSize: 14,
