@@ -16,9 +16,11 @@ import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { Team } from '../../src/types';
+import { useAuthStore } from '../../src/store/authStore';
 
 export default function TeamsScreen() {
   const router = useRouter();
+  const { logout } = useAuthStore();
   const [teams, setTeams] = useState<Team[]>([]);
   const [athletesCounts, setAthletesCounts] = useState<{[key: string]: number}>({});
   const [modalVisible, setModalVisible] = useState(false);
@@ -38,6 +40,20 @@ export default function TeamsScreen() {
   const [trainingSchedule, setTrainingSchedule] = useState('');
   const [championships, setChampionships] = useState('');
   const [calendarLink, setCalendarLink] = useState('');
+  
+  const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Sei sicuro di voler uscire?')) {
+        await logout();
+        window.location.href = '/login';
+      }
+    } else {
+      Alert.alert('Logout', 'Sei sicuro di voler uscire?', [
+        { text: 'Annulla', style: 'cancel' },
+        { text: 'Esci', onPress: async () => { await logout(); router.replace('/login'); } },
+      ]);
+    }
+  };
 
   const loadTeams = async () => {
     try {
