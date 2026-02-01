@@ -110,7 +110,11 @@ export default function TeamsScreen() {
     setInstallment3Date('');
     setBankInfo('');
     setPaypalEmail('');
-    setTrainingSchedule('');
+    setTrainings([
+      { day: '', timeStart: '', timeEnd: '', venue: '' },
+      { day: '', timeStart: '', timeEnd: '', venue: '' },
+    ]);
+    setMatchDay({ day: '', time: '', venue: '' });
     setChampionships('');
     setCalendarLink('');
   };
