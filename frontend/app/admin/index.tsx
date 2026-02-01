@@ -33,6 +33,21 @@ interface SocietySettings {
   logo: string | null;
 }
 
+interface Birthday {
+  id: string;
+  name: string;
+  type: string;
+  age: number;
+  icon: string;
+}
+
+interface ExpiringCertificates {
+  count_today: number;
+  count_30_days: number;
+  expiring_today: any[];
+  expiring_soon: any[];
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
