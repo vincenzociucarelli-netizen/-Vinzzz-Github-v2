@@ -179,6 +179,31 @@ export default function AthleteDetail() {
     }
   };
 
+  // Logout function
+  const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Sei sicuro di voler uscire?')) {
+        await logout();
+        window.location.href = '/login';
+      }
+    } else {
+      Alert.alert(
+        'Logout',
+        'Sei sicuro di voler uscire?',
+        [
+          { text: 'Annulla', style: 'cancel' },
+          {
+            text: 'Esci',
+            onPress: async () => {
+              await logout();
+              router.replace('/login');
+            },
+          },
+        ]
+      );
+    }
+  };
+
   // Mask sensitive data if not unlocked
   const maskData = (data: string | null | undefined): string => {
     if (!data) return '-';
