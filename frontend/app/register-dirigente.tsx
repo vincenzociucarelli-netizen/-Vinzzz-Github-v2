@@ -165,28 +165,31 @@ export default function RegisterDirigente() {
     <>
       <Text style={styles.stepTitle}>👤 Credenziali Account</Text>
       
+      <Text style={styles.inputLabel}>Email *</Text>
       <TextInput
         style={styles.input}
-        placeholder="Email *"
+        placeholder="esempio@email.com"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(text) => setEmail(text.toLowerCase())}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
       />
 
+      <Text style={styles.inputLabel}>Password *</Text>
       <TextInput
         style={styles.input}
-        placeholder="Password *"
+        placeholder="Minimo 6 caratteri"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
         autoCapitalize="none"
       />
 
+      <Text style={styles.inputLabel}>Conferma Password *</Text>
       <TextInput
         style={styles.input}
-        placeholder="Conferma Password *"
+        placeholder="Ripeti la password"
         value={confirmPassword}
         onChangeText={setConfirmPassword}
         secureTextEntry
@@ -199,34 +202,38 @@ export default function RegisterDirigente() {
     <>
       <Text style={styles.stepTitle}>📋 Dati Anagrafici</Text>
       
+      <Text style={styles.inputLabel}>Nome *</Text>
       <TextInput
         style={styles.input}
-        placeholder="Nome *"
+        placeholder="MARIO"
         value={firstName}
-        onChangeText={setFirstName}
-        autoCapitalize="words"
+        onChangeText={(text) => setFirstName(text.toUpperCase())}
+        autoCapitalize="characters"
       />
 
+      <Text style={styles.inputLabel}>Cognome *</Text>
       <TextInput
         style={styles.input}
-        placeholder="Cognome *"
+        placeholder="ROSSI"
         value={lastName}
-        onChangeText={setLastName}
-        autoCapitalize="words"
+        onChangeText={(text) => setLastName(text.toUpperCase())}
+        autoCapitalize="characters"
       />
 
+      <Text style={styles.inputLabel}>Data di nascita *</Text>
       <TextInput
         style={styles.input}
-        placeholder="Data di nascita (GG/MM/AAAA) *"
+        placeholder="GG/MM/AAAA"
         value={dateOfBirth}
         onChangeText={setDateOfBirth}
         keyboardType="numeric"
         maxLength={10}
       />
 
+      <Text style={styles.inputLabel}>Luogo di nascita</Text>
       <TextInput
         style={styles.input}
-        placeholder="Luogo di nascita"
+        placeholder="PERUGIA"
         value={placeOfBirth}
         onChangeText={setPlaceOfBirth}
         autoCapitalize="words"
