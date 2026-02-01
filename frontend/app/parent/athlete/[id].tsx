@@ -756,19 +756,21 @@ export default function AthleteDetail() {
               </View>
               <View style={styles.certButtonsRow}>
                 <TouchableOpacity
-                  style={[styles.button, styles.buttonView]}
-                  onPress={() => setViewCertModalVisible(true)}
+                  style={[styles.button, styles.buttonView, (!dataUnlocked && hasPassword) && styles.buttonDisabled]}
+                  onPress={() => dataUnlocked ? setViewCertModalVisible(true) : setPasswordModalVisible(true)}
                 >
-                  <Ionicons name="eye" size={18} color="#007AFF" />
-                  <Text style={styles.buttonViewText}>Visualizza</Text>
+                  <Ionicons name={dataUnlocked ? "eye" : "lock-closed"} size={18} color={dataUnlocked ? "#007AFF" : "#FF9500"} />
+                  <Text style={[styles.buttonViewText, (!dataUnlocked && hasPassword) && { color: '#FF9500' }]}>
+                    {dataUnlocked ? 'Visualizza' : 'Sblocca'}
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.button, styles.buttonSecondary, { flex: 1 }]}
-                  onPress={handleUploadCertificate}
+                  style={[styles.button, styles.buttonSecondary, { flex: 1 }, (!dataUnlocked && hasPassword) && styles.buttonDisabled]}
+                  onPress={() => dataUnlocked ? handleUploadCertificate() : setPasswordModalVisible(true)}
                   disabled={uploadingCert}
                 >
                   <Text style={styles.buttonSecondaryText}>
-                    {uploadingCert ? 'Caricamento...' : 'Carica Nuovo'}
+                    {uploadingCert ? 'Caricamento...' : (dataUnlocked ? 'Carica Nuovo' : 'Sblocca per caricare')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -780,12 +782,12 @@ export default function AthleteDetail() {
                 <Text style={styles.warningText}>Nessun certificato caricato</Text>
               </View>
               <TouchableOpacity
-                style={styles.button}
-                onPress={handleUploadCertificate}
+                style={[styles.button, (!dataUnlocked && hasPassword) && styles.buttonDisabled]}
+                onPress={() => dataUnlocked ? handleUploadCertificate() : setPasswordModalVisible(true)}
                 disabled={uploadingCert}
               >
                 <Text style={styles.buttonText}>
-                  {uploadingCert ? 'Caricamento...' : 'Carica Certificato'}
+                  {uploadingCert ? 'Caricamento...' : (dataUnlocked ? 'Carica Certificato' : 'Sblocca per caricare')}
                 </Text>
               </TouchableOpacity>
             </View>
