@@ -15,9 +15,11 @@ import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { Athlete, Team } from '../../src/types';
 import { exportToExcel } from '../../src/utils/excelExport';
+import { useAuthStore } from '../../src/store/authStore';
 
 export default function AdminAthletes() {
   const router = useRouter();
+  const { logout } = useAuthStore();
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [teams, setTeams] = useState<{[key: string]: Team}>({});
   const [refreshing, setRefreshing] = useState(false);
@@ -28,6 +30,20 @@ export default function AdminAthletes() {
       window.alert(`${title}\n\n${message}`);
     } else {
       Alert.alert(title, message);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Sei sicuro di voler uscire?')) {
+        await logout();
+        window.location.href = '/login';
+      }
+    } else {
+      Alert.alert('Logout', 'Sei sicuro di voler uscire?', [
+        { text: 'Annulla', style: 'cancel' },
+        { text: 'Esci', onPress: async () => { await logout(); router.replace('/login'); } },
+      ]);
     }
   };
 
