@@ -1219,6 +1219,14 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
         if update_data.status in ["trial", "active", "blocked"]:
             update_dict["status"] = update_data.status
     
+    # Ritiro atleta (solo admin)
+    if update_data.is_withdrawn is not None and current_user["role"] == UserRole.ADMIN:
+        update_dict["is_withdrawn"] = update_data.is_withdrawn
+        if update_data.is_withdrawn:
+            update_dict["withdrawn_date"] = datetime.utcnow()
+            if update_data.withdrawn_reason:
+                update_dict["withdrawn_reason"] = update_data.withdrawn_reason
+    
     if update_dict:
         await db.athletes.update_one({"id": athlete_id}, {"$set": update_dict})
         athlete.update(update_dict)
