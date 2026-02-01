@@ -279,27 +279,84 @@ export default function CoachProfile() {
           <Text style={styles.cardTitle}>💰 Compenso</Text>
           <View style={styles.fieldContainer}>
             <Text style={styles.fieldLabel}>Compenso Mensile</Text>
-            <Text style={styles.fieldValue}>
+            <Text style={styles.compensationAmount}>
               {profileData.monthly_compensation > 0 
                 ? `€ ${profileData.monthly_compensation.toFixed(2)}`
                 : 'Non ancora impostato'}
             </Text>
           </View>
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Stato</Text>
-            <View style={[
-              styles.statusBadge,
-              profileData.compensation_accepted ? styles.statusAccepted : styles.statusPending
-            ]}>
-              <Text style={[
-                styles.statusText,
-                profileData.compensation_accepted ? styles.statusTextAccepted : styles.statusTextPending
-              ]}>
-                {profileData.compensation_accepted ? '✓ Accettato' : '⏳ In attesa di accettazione'}
+          
+          {profileData.monthly_compensation > 0 && !profileData.compensation_accepted && (
+            <TouchableOpacity
+              style={styles.acceptButton}
+              onPress={handleAcceptCompensation}
+            >
+              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <Text style={styles.acceptButtonText}>Accetta Compenso</Text>
+            </TouchableOpacity>
+          )}
+
+          {profileData.compensation_accepted && (
+            <View style={styles.acceptedBadge}>
+              <Ionicons name="checkmark-circle" size={18} color="#34C759" />
+              <Text style={styles.acceptedBadgeText}>Compenso Accettato</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Monthly Payment Tracking */}
+        {profileData.monthly_compensation > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📅 Registro Pagamenti Mensili</Text>
+            <Text style={styles.cardSubtitle}>
+              Indica i mesi in cui hai ricevuto il compenso
+            </Text>
+            
+            {getSeasonMonths().map((month) => {
+              const isPaid = compensationHistory[month.key] === true;
+              const isOver5000 = over5000Limit[month.key] === true;
+              
+              return (
+                <View key={month.key} style={styles.monthRow}>
+                  <View style={styles.monthInfo}>
+                    <Text style={styles.monthLabel}>{month.label}</Text>
+                  </View>
+                  <View style={styles.monthActions}>
+                    <TouchableOpacity
+                      style={[styles.monthCheckbox, isPaid && styles.monthCheckboxActive]}
+                      onPress={() => handleToggleMonth(month.key)}
+                    >
+                      {isPaid && <Ionicons name="checkmark" size={16} color="#fff" />}
+                    </TouchableOpacity>
+                    <Text style={[styles.monthStatusText, isPaid && styles.monthStatusTextPaid]}>
+                      {isPaid ? 'PAGATO' : 'NON PAGATO'}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+
+            {/* €5000 Limit Declaration */}
+            <View style={styles.limitSection}>
+              <Text style={styles.limitTitle}>⚠️ Dichiarazione Superamento €5.000</Text>
+              <Text style={styles.limitDescription}>
+                Se il totale dei compensi ricevuti nell'anno supera €5.000, 
+                devi segnalarlo per gli adempimenti fiscali.
               </Text>
+              <TouchableOpacity
+                style={[styles.limitCheckbox, hasExceeded5000 && styles.limitCheckboxActive]}
+                onPress={handleToggle5000Limit}
+              >
+                <View style={[styles.checkbox, hasExceeded5000 && styles.checkboxActive]}>
+                  {hasExceeded5000 && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+                <Text style={styles.limitCheckboxText}>
+                  Dichiaro di aver superato il limite di €5.000 annui
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </View>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
