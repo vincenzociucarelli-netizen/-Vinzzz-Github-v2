@@ -151,6 +151,21 @@ export default function AdminAthletes() {
     }
   };
 
+  // Format name as "COGNOME Nome" for display
+  const formatAthleteNameForDisplay = (athlete: Athlete) => {
+    if (athlete.last_name && athlete.first_name) {
+      return `${athlete.last_name.toUpperCase()} ${athlete.first_name}`;
+    }
+    // If no separate fields, try to reverse "Nome Cognome" to "COGNOME Nome"
+    const parts = athlete.full_name.trim().split(' ');
+    if (parts.length >= 2) {
+      const surname = parts[parts.length - 1];
+      const name = parts.slice(0, -1).join(' ');
+      return `${surname.toUpperCase()} ${name}`;
+    }
+    return athlete.full_name;
+  };
+
   const getStatusText = (item: Athlete) => {
     if (item.is_withdrawn) return 'Ritirato';
     if (item.status === 'trial') return 'In prova';
