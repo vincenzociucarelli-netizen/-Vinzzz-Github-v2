@@ -183,7 +183,7 @@ export default function AdminDashboard() {
             <View style={styles.quickStatDivider} />
             <TouchableOpacity 
               style={styles.quickStatItem}
-              onPress={() => birthdays.length > 0 && Alert.alert(
+              onPress={() => birthdays.length > 0 && showInfo(
                 '🎂 Compleanni di Oggi',
                 birthdays.map(b => `${b.name} (${b.age} anni) - ${b.type}`).join('\n') || 'Nessun compleanno oggi'
               )}
@@ -218,7 +218,7 @@ export default function AdminDashboard() {
                       message += `... e altri ${expiringCerts.count_30_days - 5}`;
                     }
                   }
-                  Alert.alert('📋 Certificati in Scadenza', message);
+                  showInfo('📋 Certificati in Scadenza', message);
                 }
               }}
             >
