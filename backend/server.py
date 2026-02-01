@@ -36,6 +36,14 @@ api_router = APIRouter(prefix="/api")
 
 # ==================== MODELS ====================
 
+import secrets
+import string
+
+def generate_invite_code(length=8):
+    """Generate a random invite code"""
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(secrets.choice(chars) for _ in range(length))
+
 class UserRole:
     ADMIN = "admin"
     VIEWER = "viewer"  # Dirigente solo visualizzazione
@@ -48,6 +56,40 @@ class UserStatus:
     APPROVED = "approved"    # Approvato
     REJECTED = "rejected"    # Rifiutato
     SUSPENDED = "suspended"  # Sospeso
+
+# ==================== SOCIETY MODEL (Multi-tenancy) ====================
+
+class Society(BaseModel):
+    """Società sportiva - entità principale per multi-tenancy"""
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    name: str  # Nome società (es. "Pallavolo Perugia SSD")
+    logo: Optional[str] = None  # Base64 encoded logo
+    invite_code: str = Field(default_factory=lambda: generate_invite_code())  # Codice invito
+    
+    # Dati società
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    province: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    website: Optional[str] = None
+    fiscal_code: Optional[str] = None  # Codice fiscale/P.IVA
+    
+    # Owner (primo admin che ha creato la società)
+    owner_id: Optional[str] = None
+    
+    # Impostazioni
+    is_active: bool = True
+    subscription_tier: str = "free"  # free, basic, premium
+    subscription_expires: Optional[datetime] = None
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SocietyCreate(BaseModel):
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
 
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
