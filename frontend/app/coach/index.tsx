@@ -554,6 +554,16 @@ export default function CoachScreen() {
           </View>
         )}
 
+        {/* Profile Link */}
+        <TouchableOpacity
+          style={styles.profileLink}
+          onPress={() => router.push('/coach/profile')}
+        >
+          <Ionicons name="person-circle" size={24} color="#007AFF" />
+          <Text style={styles.profileLinkText}>Il Mio Profilo</Text>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
