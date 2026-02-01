@@ -700,6 +700,17 @@ export default function AdminAthleteDetail() {
                 </View>
               )}
             </View>
+
+            {/* Withdraw Athlete Button */}
+            {!athlete.is_withdrawn && (
+              <TouchableOpacity
+                style={styles.withdrawButton}
+                onPress={() => setWithdrawModalVisible(true)}
+              >
+                <Ionicons name="remove-circle" size={20} color="#FF3B30" />
+                <Text style={styles.withdrawButtonText}>Ritira Atleta dalla Squadra</Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
 
