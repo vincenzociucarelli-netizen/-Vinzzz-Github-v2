@@ -358,8 +358,46 @@ const styles = StyleSheet.create({
   headerBtn: {
     padding: 4,
   },
+  adminSwitchBtn: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 6,
+  },
   content: {
     flex: 1,
+  },
+  adminSwitchCard: {
+    backgroundColor: '#E3F2FD',
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  adminSwitchIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  adminSwitchInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  adminSwitchTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  adminSwitchDescription: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
   },
   profileCard: {
     backgroundColor: '#fff',
