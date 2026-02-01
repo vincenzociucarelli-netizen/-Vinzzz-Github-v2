@@ -117,6 +117,14 @@ export default function AdminDashboard() {
     }
   };
 
+  const showInfo = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
