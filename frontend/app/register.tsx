@@ -86,17 +86,31 @@ export default function Register() {
         <Text style={styles.subtitle}>Crea il tuo account</Text>
 
         <View style={styles.form}>
+          <Text style={styles.inputLabel}>Cognome *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Nome completo"
-            value={fullName}
-            onChangeText={setFullName}
+            placeholder="Inserisci il cognome"
+            placeholderTextColor="#999"
+            value={lastName}
+            onChangeText={(text) => setLastName(text.toUpperCase())}
+            autoCapitalize="characters"
+          />
+
+          <Text style={styles.inputLabel}>Nome *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Inserisci il nome"
+            placeholderTextColor="#999"
+            value={firstName}
+            onChangeText={setFirstName}
             autoCapitalize="words"
           />
 
+          <Text style={styles.inputLabel}>Email *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="esempio@email.com"
+            placeholderTextColor="#999"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -104,9 +118,11 @@ export default function Register() {
             autoCorrect={false}
           />
 
+          <Text style={styles.inputLabel}>Password *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder="Minimo 6 caratteri"
+            placeholderTextColor="#999"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -114,7 +130,7 @@ export default function Register() {
           />
 
           <View style={styles.pickerContainer}>
-            <Text style={styles.label}>Ruolo:</Text>
+            <Text style={styles.inputLabel}>Ruolo *</Text>
             <View style={styles.picker}>
               <Picker
                 selectedValue={role}
@@ -122,7 +138,7 @@ export default function Register() {
               >
                 <Picker.Item label="Genitore/Atleta" value="parent" />
                 <Picker.Item label="Coach" value="coach" />
-                <Picker.Item label="Admin" value="admin" />
+                <Picker.Item label="Dirigente" value="viewer" />
               </Picker>
             </View>
           </View>
