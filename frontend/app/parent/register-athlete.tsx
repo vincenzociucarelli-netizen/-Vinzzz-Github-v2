@@ -641,6 +641,33 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
   },
+  protectionNote: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 12,
+    lineHeight: 20,
+    backgroundColor: '#FFF8E1',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFA000',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 14,
+    fontSize: 16,
+  },
+  eyeButton: {
+    padding: 12,
+  },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
