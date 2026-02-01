@@ -223,66 +223,83 @@ export default function RegisterCoach() {
         placeholder="ROSSI"
         value={lastName}
         onChangeText={(text) => setLastName(text.toUpperCase())}
-        autoCapitalize="words"
+        autoCapitalize="characters"
       />
 
+      <Text style={styles.inputLabel}>Data di nascita *</Text>
       <TextInput
         style={styles.input}
-        placeholder="Data di nascita (GG/MM/AAAA) *"
+        placeholder="GG/MM/AAAA"
         value={dateOfBirth}
         onChangeText={setDateOfBirth}
         keyboardType="numeric"
         maxLength={10}
       />
 
+      <Text style={styles.inputLabel}>Luogo di nascita</Text>
       <TextInput
         style={styles.input}
-        placeholder="Luogo di nascita"
+        placeholder="PERUGIA"
         value={placeOfBirth}
-        onChangeText={setPlaceOfBirth}
-        autoCapitalize="words"
+        onChangeText={(text) => setPlaceOfBirth(text.toUpperCase())}
+        autoCapitalize="characters"
       />
 
+      <Text style={styles.inputLabel}>Indirizzo</Text>
       <TextInput
         style={styles.input}
-        placeholder="Indirizzo"
+        placeholder="VIA ROMA 1"
         value={address}
-        onChangeText={setAddress}
+        onChangeText={(text) => setAddress(text.toUpperCase())}
+        autoCapitalize="characters"
       />
 
       <View style={styles.row}>
-        <TextInput
-          style={[styles.input, styles.inputHalf]}
-          placeholder="Città"
-          value={city}
-          onChangeText={setCity}
-        />
-        <TextInput
-          style={[styles.input, styles.inputSmall]}
-          placeholder="Prov."
-          value={province}
-          onChangeText={setProvince}
-          maxLength={2}
-          autoCapitalize="characters"
-        />
+        <View style={styles.inputHalf}>
+          <Text style={styles.inputLabel}>Città</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="PERUGIA"
+            value={city}
+            onChangeText={(text) => setCity(text.toUpperCase())}
+            autoCapitalize="characters"
+          />
+        </View>
+        <View style={styles.inputSmall}>
+          <Text style={styles.inputLabel}>Prov.</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="PG"
+            value={province}
+            onChangeText={(text) => setProvince(text.toUpperCase())}
+            maxLength={2}
+            autoCapitalize="characters"
+          />
+        </View>
       </View>
 
       <View style={styles.row}>
-        <TextInput
-          style={[styles.input, styles.inputSmall]}
-          placeholder="CAP"
-          value={postalCode}
-          onChangeText={setPostalCode}
-          keyboardType="numeric"
-          maxLength={5}
-        />
-        <TextInput
-          style={[styles.input, styles.inputHalf]}
-          placeholder="Telefono"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-        />
+        <View style={styles.inputSmall}>
+          <Text style={styles.inputLabel}>CAP</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="06100"
+            value={postalCode}
+            onChangeText={setPostalCode}
+            keyboardType="numeric"
+            maxLength={5}
+          />
+        </View>
+        <View style={styles.inputHalf}>
+          <Text style={styles.inputLabel}>Telefono</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="333 1234567"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
+        </View>
       </View>
     </>
   );
