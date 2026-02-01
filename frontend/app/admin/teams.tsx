@@ -152,6 +152,20 @@ export default function TeamsScreen() {
       return;
     }
 
+    // Convert date from DD/MM/YYYY to YYYY-MM-DD
+    const convertDate = (dateStr: string): string => {
+      if (dateStr.includes('-') && dateStr.split('-')[0].length === 4) {
+        // Already in YYYY-MM-DD format
+        return dateStr;
+      }
+      // Convert from DD/MM/YYYY to YYYY-MM-DD
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+      return dateStr;
+    };
+
     // Build training schedule string from structured data
     let trainingScheduleStr = '';
     validTrainings.forEach((t, idx) => {
@@ -167,9 +181,9 @@ export default function TeamsScreen() {
         total_amount: parseFloat(totalAmount),
         installment_1_amount: parseFloat(installment1),
         installment_2_amount: parseFloat(installment2),
-        installment_2_due_date: installment2Date,
+        installment_2_due_date: convertDate(installment2Date),
         installment_3_amount: parseFloat(installment3),
-        installment_3_due_date: installment3Date,
+        installment_3_due_date: convertDate(installment3Date),
         bank_info: bankInfo,
         paypal_email: paypalEmail,
         training_schedule: trainingScheduleStr,
