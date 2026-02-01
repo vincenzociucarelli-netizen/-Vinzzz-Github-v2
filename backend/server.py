@@ -1618,6 +1618,66 @@ async def upload_certificate_base64(
     
     return {"message": "Certificato caricato con successo", "expiry_date": expiry_dt.isoformat()}
 
+
+@api_router.get("/certificates/expiring")
+async def get_expiring_certificates(current_user = Depends(get_current_user)):
+    """Get certificates expiring today and within next 30 days"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i certificati in scadenza")
+    
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    thirty_days = today + timedelta(days=30)
+    
+    expiring_today = []
+    expiring_soon = []
+    
+    # Get all certificates
+    certificates = await db.certificates.find({}).to_list(1000)
+    
+    for cert in certificates:
+        expiry = cert.get("expiry_date")
+        if not expiry:
+            continue
+            
+        if isinstance(expiry, str):
+            try:
+                expiry = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+            except:
+                continue
+        
+        # Get athlete info
+        athlete = await db.athletes.find_one({"id": cert.get("athlete_id")})
+        if not athlete:
+            continue
+        
+        # Check if withdrawn
+        if athlete.get("is_withdrawn"):
+            continue
+            
+        cert_info = {
+            "id": str(cert.get("_id")),
+            "athlete_id": athlete["id"],
+            "athlete_name": athlete["full_name"],
+            "expiry_date": expiry.isoformat(),
+            "team_id": athlete.get("team_id")
+        }
+        
+        # Expiring today
+        if expiry.date() == today.date():
+            expiring_today.append(cert_info)
+        # Expiring within 30 days
+        elif today < expiry <= thirty_days:
+            cert_info["days_until_expiry"] = (expiry - today).days
+            expiring_soon.append(cert_info)
+    
+    return {
+        "expiring_today": expiring_today,
+        "expiring_soon": sorted(expiring_soon, key=lambda x: x.get("days_until_expiry", 30)),
+        "count_today": len(expiring_today),
+        "count_30_days": len(expiring_soon)
+    }
+
+
 @api_router.get("/certificates/{athlete_id}")
 async def get_certificate(athlete_id: str, current_user = Depends(get_current_user)):
     certificate = await db.certificates.find_one({"athlete_id": athlete_id})
