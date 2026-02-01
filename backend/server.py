@@ -1010,7 +1010,46 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "compensation_accepted": user.get("compensation_accepted", False),
         "compensation_history": user.get("compensation_history", {}),
         "over_5000_limit": user.get("over_5000_limit", {}),
+        # Document and Bank details
+        "document_type": user.get("document_type"),
+        "document_front": user.get("document_front"),
+        "document_back": user.get("document_back"),
+        "iban": user.get("iban"),
+        "iban_holder": user.get("iban_holder"),
+        "bank_name": user.get("bank_name"),
     }
+
+@api_router.patch("/users/{user_id}/bank-details")
+async def update_user_bank_details(user_id: str, data: dict, current_user = Depends(get_current_user)):
+    """Update document and bank details for coach/dirigente (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare i dati bancari")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    update_data = {}
+    if "document_type" in data:
+        update_data["document_type"] = data["document_type"]
+    if "document_front" in data:
+        update_data["document_front"] = data["document_front"]
+    if "document_back" in data:
+        update_data["document_back"] = data["document_back"]
+    if "iban" in data:
+        update_data["iban"] = data["iban"]
+    if "iban_holder" in data:
+        update_data["iban_holder"] = data["iban_holder"]
+    if "bank_name" in data:
+        update_data["bank_name"] = data["bank_name"]
+    
+    if update_data:
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": update_data}
+        )
+    
+    return {"message": "Dati bancari aggiornati con successo"}
 
 # ==================== TEAM ENDPOINTS (ADMIN) ====================
 
