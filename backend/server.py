@@ -625,7 +625,71 @@ async def login(credentials: UserLogin):
 
 @api_router.get("/auth/me")
 async def get_me(current_user = Depends(get_current_user)):
-    return current_user
+    """Get full user profile"""
+    user = await db.users.find_one({"id": current_user["id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    clean_mongo_doc(user)
+    # Remove sensitive fields
+    user.pop("password_hash", None)
+    user.pop("hashed_password", None)
+    return user
+
+class UserProfileUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    full_name: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    place_of_birth: Optional[str] = None
+    fiscal_code: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    province: Optional[str] = None
+    phone: Optional[str] = None
+    coach_license_number: Optional[str] = None
+
+@api_router.patch("/auth/me")
+async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_user)):
+    """Update user profile"""
+    update_dict = {}
+    
+    if data.first_name is not None:
+        update_dict["first_name"] = data.first_name
+    if data.last_name is not None:
+        update_dict["last_name"] = data.last_name
+    if data.full_name is not None:
+        update_dict["full_name"] = data.full_name
+    if data.date_of_birth is not None:
+        try:
+            update_dict["date_of_birth"] = datetime.fromisoformat(data.date_of_birth.replace('Z', '+00:00'))
+        except:
+            pass
+    if data.place_of_birth is not None:
+        update_dict["place_of_birth"] = data.place_of_birth
+    if data.fiscal_code is not None:
+        update_dict["fiscal_code"] = data.fiscal_code
+    if data.address is not None:
+        update_dict["address"] = data.address
+    if data.city is not None:
+        update_dict["city"] = data.city
+    if data.postal_code is not None:
+        update_dict["postal_code"] = data.postal_code
+    if data.province is not None:
+        update_dict["province"] = data.province
+    if data.phone is not None:
+        update_dict["phone"] = data.phone
+    if data.coach_license_number is not None:
+        update_dict["coach_license_number"] = data.coach_license_number
+    
+    if update_dict:
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": update_dict}
+        )
+    
+    return {"message": "Profilo aggiornato"}
 
 # ==================== SOCIETY SETTINGS ENDPOINTS ====================
 
