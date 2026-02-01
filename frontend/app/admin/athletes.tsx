@@ -191,7 +191,7 @@ export default function AdminAthletes() {
           styles.athleteName,
           item.is_withdrawn && styles.athleteNameWithdrawn
         ]} numberOfLines={1}>
-          {item.full_name}
+          {formatAthleteNameForDisplay(item)}
         </Text>
         <Text style={styles.teamName} numberOfLines={1}>
           {teams[item.team_id]?.name || '-'}
