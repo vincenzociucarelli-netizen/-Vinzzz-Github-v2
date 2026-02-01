@@ -291,17 +291,20 @@ export default function DirigenteIndex() {
             
             {/* Certificate Legend */}
             <View style={styles.legendContainer}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#34C759' }]} />
-                <Text style={styles.legendText}>Valido</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#FF9500' }]} />
-                <Text style={styles.legendText}>In scadenza</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#FF3B30' }]} />
-                <Text style={styles.legendText}>Scaduto/Mancante</Text>
+              <Text style={styles.legendTitle}>📋 Certificato Medico:</Text>
+              <View style={styles.legendItems}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#34C759' }]} />
+                  <Text style={styles.legendText}>Valido</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#FF9500' }]} />
+                  <Text style={styles.legendText}>In scadenza</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#FF3B30' }]} />
+                  <Text style={styles.legendText}>Scaduto/Mancante</Text>
+                </View>
               </View>
             </View>
 
