@@ -161,8 +161,8 @@ export default function AdminDashboard() {
               <Ionicons name="briefcase" size={28} color="#007AFF" />
             </View>
             <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Dirigenti</Text>
-              <Text style={styles.menuCardSubtitle}>Admin e Visualizzatori</Text>
+              <Text style={styles.menuCardTitle}>{society.name || 'Società'}</Text>
+              <Text style={styles.menuCardSubtitle}>Amministratori e Dirigenti</Text>
             </View>
             {pendingCounts.dirigenti > 0 && (
               <View style={styles.badge}>
