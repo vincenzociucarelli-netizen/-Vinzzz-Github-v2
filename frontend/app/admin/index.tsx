@@ -110,6 +110,13 @@ export default function AdminDashboard() {
           <Text style={styles.headerTitle}>{society.name}</Text>
         </View>
         <View style={styles.headerButtons}>
+          {/* Switch to Dirigente button */}
+          <TouchableOpacity 
+            onPress={() => router.replace('/dirigente')} 
+            style={[styles.headerBtn, styles.dirigenteSwitchBtn]}
+          >
+            <Ionicons name="briefcase" size={18} color="#8E44AD" />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerBtn}>
             <Ionicons name="settings-outline" size={24} color="#fff" />
           </TouchableOpacity>
