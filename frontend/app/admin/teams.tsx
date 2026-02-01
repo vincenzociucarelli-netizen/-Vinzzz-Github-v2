@@ -37,9 +37,36 @@ export default function TeamsScreen() {
   const [installment3Date, setInstallment3Date] = useState('');
   const [bankInfo, setBankInfo] = useState('');
   const [paypalEmail, setPaypalEmail] = useState('');
-  const [trainingSchedule, setTrainingSchedule] = useState('');
   const [championships, setChampionships] = useState('');
   const [calendarLink, setCalendarLink] = useState('');
+  
+  // Training schedule - structured format
+  const [trainings, setTrainings] = useState([
+    { day: '', timeStart: '', timeEnd: '', venue: '' },
+    { day: '', timeStart: '', timeEnd: '', venue: '' },
+  ]);
+  const [matchDay, setMatchDay] = useState({ day: '', time: '', venue: '' });
+  
+  const daysOfWeek = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+  
+  const addTraining = () => {
+    if (trainings.length < 4) {
+      setTrainings([...trainings, { day: '', timeStart: '', timeEnd: '', venue: '' }]);
+    }
+  };
+  
+  const removeTraining = (index: number) => {
+    if (trainings.length > 2) {
+      const newTrainings = trainings.filter((_, i) => i !== index);
+      setTrainings(newTrainings);
+    }
+  };
+  
+  const updateTraining = (index: number, field: string, value: string) => {
+    const newTrainings = [...trainings];
+    newTrainings[index] = { ...newTrainings[index], [field]: value };
+    setTrainings(newTrainings);
+  };
   
   const handleLogout = async () => {
     if (Platform.OS === 'web') {
