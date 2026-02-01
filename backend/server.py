@@ -1085,6 +1085,70 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
     
     return Athlete(**athlete)
 
+# ==================== DATA PASSWORD ENDPOINTS ====================
+
+class VerifyDataPassword(BaseModel):
+    password: str
+
+class ChangeDataPassword(BaseModel):
+    old_password: Optional[str] = None  # Opzionale solo se non esiste password
+    new_password: str
+
+@api_router.post("/athletes/{athlete_id}/verify-password")
+async def verify_data_password(athlete_id: str, data: VerifyDataPassword, current_user = Depends(get_current_user)):
+    """Verify data password for an athlete - returns True if correct"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Check permissions (parent or admin can verify)
+    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    # If no password is set, return special response
+    if not athlete.get("data_password_hash"):
+        return {"verified": True, "has_password": False}
+    
+    # Verify password
+    is_valid = verify_password(data.password, athlete["data_password_hash"])
+    return {"verified": is_valid, "has_password": True}
+
+@api_router.post("/athletes/{athlete_id}/change-password")
+async def change_data_password(athlete_id: str, data: ChangeDataPassword, current_user = Depends(get_current_user)):
+    """Change or set data password for an athlete (parent only)"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Only parent can change password
+    if current_user["role"] != UserRole.PARENT or athlete["parent_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Solo il genitore può modificare la password")
+    
+    # If password exists, verify old password
+    if athlete.get("data_password_hash"):
+        if not data.old_password:
+            raise HTTPException(status_code=400, detail="Inserisci la password attuale")
+        if not verify_password(data.old_password, athlete["data_password_hash"]):
+            raise HTTPException(status_code=401, detail="Password attuale non corretta")
+    
+    # Hash and set new password
+    new_hash = hash_password(data.new_password)
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {"data_password_hash": new_hash}}
+    )
+    
+    return {"message": "Password dati aggiornata con successo"}
+
+@api_router.get("/athletes/{athlete_id}/has-password")
+async def check_has_password(athlete_id: str, current_user = Depends(get_current_user)):
+    """Check if athlete has a data password set"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    return {"has_password": bool(athlete.get("data_password_hash"))}
+
 @api_router.delete("/athletes/{athlete_id}")
 async def delete_athlete(athlete_id: str, current_user = Depends(get_current_user)):
     """Delete an athlete and all related data (certificates, payments, attendances)"""
