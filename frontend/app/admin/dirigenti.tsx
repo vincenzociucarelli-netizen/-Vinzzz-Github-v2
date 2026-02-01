@@ -229,7 +229,7 @@ export default function DirigentiScreen() {
         <View style={styles.userMeta}>
           <View style={[styles.roleBadge, item.role === 'admin' && styles.adminBadge]}>
             <Text style={[styles.roleBadgeText, item.role === 'admin' && styles.adminBadgeText]}>
-              {item.role === 'admin' ? 'ADMIN' : 'VISUALIZZATORE'}
+              {item.role === 'admin' ? 'ADMIN' : 'DIRIGENTE'}
             </Text>
           </View>
           <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
