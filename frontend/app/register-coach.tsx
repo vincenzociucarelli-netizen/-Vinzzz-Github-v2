@@ -308,20 +308,22 @@ export default function RegisterCoach() {
     <>
       <Text style={styles.stepTitle}>💼 Dati Fiscali e Tesserino</Text>
       
+      <Text style={styles.inputLabel}>Codice Fiscale *</Text>
       <TextInput
         style={styles.input}
-        placeholder="Codice Fiscale *"
+        placeholder="RSSMRA80A01H501Z"
         value={fiscalCode}
         onChangeText={(text) => setFiscalCode(text.toUpperCase())}
         autoCapitalize="characters"
         maxLength={16}
       />
 
+      <Text style={styles.inputLabel}>Numero Tesserino Allenatore *</Text>
       <TextInput
         style={styles.input}
-        placeholder="Numero Tesserino Allenatore *"
+        placeholder="123456"
         value={coachLicenseNumber}
-        onChangeText={setCoachLicenseNumber}
+        onChangeText={(text) => setCoachLicenseNumber(text.toUpperCase())}
         autoCapitalize="characters"
       />
 
