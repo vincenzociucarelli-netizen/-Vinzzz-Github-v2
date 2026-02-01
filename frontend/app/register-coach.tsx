@@ -52,6 +52,10 @@ export default function RegisterCoach() {
   };
 
   const validateStep1 = () => {
+    if (!inviteCode) {
+      showAlert('Errore', 'Inserisci il codice invito della società');
+      return false;
+    }
     if (!email || !password) {
       showAlert('Errore', 'Compila tutti i campi');
       return false;
