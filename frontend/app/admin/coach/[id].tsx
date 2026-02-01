@@ -455,6 +455,131 @@ export default function AdminCoachDetail() {
           })}
         </View>
 
+        {/* Documenti e IBAN - Solo per utenti approvati */}
+        {coach.status === 'approved' && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>🏦 Documento e Dati Bancari</Text>
+              <TouchableOpacity onPress={() => setEditingBank(!editingBank)}>
+                <Ionicons name={editingBank ? "close" : "create"} size={22} color="#FF9500" />
+              </TouchableOpacity>
+            </View>
+
+            {editingBank ? (
+              <>
+                <Text style={styles.inputLabel}>Tipo Documento</Text>
+                <View style={styles.docTypeButtons}>
+                  {['C.I.', 'Passaporto', 'Patente'].map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[styles.docTypeBtn, documentType === type && styles.docTypeBtnActive]}
+                      onPress={() => setDocumentType(type)}
+                    >
+                      <Text style={[styles.docTypeBtnText, documentType === type && styles.docTypeBtnTextActive]}>
+                        {type}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={styles.inputLabel}>Documento Fronte</Text>
+                <TouchableOpacity style={styles.uploadBtn} onPress={() => pickImage('front')}>
+                  {documentFront ? (
+                    <Image source={{ uri: `data:image/jpeg;base64,${documentFront}` }} style={styles.docPreview} />
+                  ) : (
+                    <>
+                      <Ionicons name="camera" size={24} color="#FF9500" />
+                      <Text style={styles.uploadBtnText}>Carica Fronte</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <Text style={styles.inputLabel}>Documento Retro</Text>
+                <TouchableOpacity style={styles.uploadBtn} onPress={() => pickImage('back')}>
+                  {documentBack ? (
+                    <Image source={{ uri: `data:image/jpeg;base64,${documentBack}` }} style={styles.docPreview} />
+                  ) : (
+                    <>
+                      <Ionicons name="camera" size={24} color="#FF9500" />
+                      <Text style={styles.uploadBtnText}>Carica Retro</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <Text style={styles.inputLabel}>IBAN</Text>
+                <TextInput
+                  style={styles.input}
+                  value={iban}
+                  onChangeText={(text) => setIban(text.toUpperCase())}
+                  placeholder="IT00X0000000000000000000000"
+                  autoCapitalize="characters"
+                />
+
+                <Text style={styles.inputLabel}>Intestatario Conto</Text>
+                <TextInput
+                  style={styles.input}
+                  value={ibanHolder}
+                  onChangeText={(text) => setIbanHolder(text.toUpperCase())}
+                  placeholder="NOME COGNOME"
+                  autoCapitalize="characters"
+                />
+
+                <Text style={styles.inputLabel}>Nome Banca</Text>
+                <TextInput
+                  style={styles.input}
+                  value={bankName}
+                  onChangeText={(text) => setBankName(text.toUpperCase())}
+                  placeholder="ES. UNICREDIT, INTESA SANPAOLO"
+                  autoCapitalize="characters"
+                />
+
+                <TouchableOpacity
+                  style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+                  onPress={handleSaveBankDetails}
+                  disabled={saving}
+                >
+                  <Text style={styles.saveBtnText}>
+                    {saving ? 'Salvataggio...' : 'Salva Dati Bancari'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <View style={styles.infoRow}>
+                  <Text style={styles.label}>Tipo Documento</Text>
+                  <Text style={styles.value}>{coach.document_type || '-'}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.label}>Documento</Text>
+                  <Text style={styles.value}>
+                    {coach.document_front ? '✅ Caricato' : '❌ Mancante'}
+                  </Text>
+                </View>
+                {coach.document_front && (
+                  <View style={styles.docImagesRow}>
+                    <Image source={{ uri: `data:image/jpeg;base64,${coach.document_front}` }} style={styles.docThumb} />
+                    {coach.document_back && (
+                      <Image source={{ uri: `data:image/jpeg;base64,${coach.document_back}` }} style={styles.docThumb} />
+                    )}
+                  </View>
+                )}
+                <View style={styles.infoRow}>
+                  <Text style={styles.label}>IBAN</Text>
+                  <Text style={[styles.value, styles.valueCode]}>{coach.iban || '-'}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.label}>Intestatario</Text>
+                  <Text style={styles.value}>{coach.iban_holder || '-'}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.label}>Banca</Text>
+                  <Text style={styles.value}>{coach.bank_name || '-'}</Text>
+                </View>
+              </>
+            )}
+          </View>
+        )}
+
         {/* Date Registrazione */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📋 Informazioni Account</Text>
