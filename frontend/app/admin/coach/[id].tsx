@@ -67,20 +67,12 @@ export default function AdminCoachDetail() {
   const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [editingBank, setEditingBank] = useState(false);
   const [editingTeams, setEditingTeams] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [savingTeams, setSavingTeams] = useState(false);
   
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
-  // Bank details
-  const [documentType, setDocumentType] = useState('');
-  const [documentFront, setDocumentFront] = useState('');
-  const [documentBack, setDocumentBack] = useState('');
-  const [iban, setIban] = useState('');
-  const [ibanHolder, setIbanHolder] = useState('');
-  const [bankName, setBankName] = useState('');
 
   const loadData = async () => {
     try {
