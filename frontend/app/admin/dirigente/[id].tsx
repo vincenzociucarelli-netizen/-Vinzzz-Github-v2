@@ -42,11 +42,13 @@ interface Dirigente {
   compensation_history?: { [key: string]: boolean };
   over_5000_limit?: { [key: string]: boolean };
   // Document fields
-  document_type?: string;
-  document_front?: string;
-  document_back?: string;
+  id_type?: string;
+  id_front?: string;
+  id_back?: string;
+  doc_front_image?: string;
+  doc_back_image?: string;
   iban?: string;
-  iban_holder?: string;
+  account_holder?: string;
   bank_name?: string;
 }
 
