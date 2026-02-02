@@ -354,31 +354,38 @@ export default function TeamDetail() {
                 </TouchableOpacity>
               </View>
               
-              {/* Training Table Header */}
+              {/* Training Table Header - 4 columns */}
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderCell, styles.dayCell]}>GIORNO</Text>
-                <Text style={[styles.tableHeaderCell, styles.timeCell]}>ORARIO</Text>
-                <Text style={[styles.tableHeaderCell, styles.venueCell]}>PALESTRA</Text>
+                <Text style={[styles.tableHeaderCell, styles.dayCell]}>Giorno</Text>
+                <Text style={[styles.tableHeaderCell, styles.timeCell]}>Inizio</Text>
+                <Text style={[styles.tableHeaderCell, styles.timeCell]}>Fine</Text>
+                <Text style={[styles.tableHeaderCell, styles.venueCell]}>Palestra</Text>
               </View>
               
               {/* Training Rows */}
               {trainingSessions.map((session, index) => (
                 <View key={index} style={styles.tableRow}>
                   <Text style={[styles.tableCell, styles.dayCell]}>{session.day}</Text>
-                  <Text style={[styles.tableCell, styles.timeCell]}>{session.time || '-'}</Text>
+                  <Text style={[styles.tableCell, styles.timeCell]}>{session.timeStart || '-'}</Text>
+                  <Text style={[styles.tableCell, styles.timeCell]}>{session.timeEnd || '-'}</Text>
                   <Text style={[styles.tableCell, styles.venueCell]}>{session.venue || '-'}</Text>
                 </View>
               ))}
               
-              {/* Match Day Section */}
+              {/* Match Day Section - 3 columns */}
               <View style={styles.matchDayHeader}>
                 <Ionicons name="trophy" size={18} color="#FF9500" />
                 <Text style={styles.matchDayTitle}>GARA IN CASA</Text>
               </View>
+              <View style={styles.tableHeader2}>
+                <Text style={[styles.tableHeaderCell, styles.dayCell]}>Giorno</Text>
+                <Text style={[styles.tableHeaderCell, styles.timeCell]}>Inizio</Text>
+                <Text style={[styles.tableHeaderCell, styles.venueCell2]}>Palestra</Text>
+              </View>
               <View style={styles.tableRow}>
                 <Text style={[styles.tableCell, styles.dayCell]}>{matchDay.day}</Text>
                 <Text style={[styles.tableCell, styles.timeCell]}>{matchDay.time || '-'}</Text>
-                <Text style={[styles.tableCell, styles.venueCell]}>{matchDay.venue || '-'}</Text>
+                <Text style={[styles.tableCell, styles.venueCell2]}>{matchDay.venue || '-'}</Text>
               </View>
             </View>
 
