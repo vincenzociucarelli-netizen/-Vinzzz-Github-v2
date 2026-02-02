@@ -208,16 +208,6 @@ export default function AdminAthleteDetail() {
     }
   };
 
-  const formatDateInput = (text: string) => {
-    // Auto-format date as user types (gg/mm/aaaa)
-    const cleaned = text.replace(/\D/g, '');
-    let formatted = '';
-    if (cleaned.length > 0) formatted = cleaned.substring(0, 2);
-    if (cleaned.length > 2) formatted += '/' + cleaned.substring(2, 4);
-    if (cleaned.length > 4) formatted += '/' + cleaned.substring(4, 8);
-    return formatted;
-  };
-
   const handleSaveData = async () => {
     try {
       const updatePayload: any = {
