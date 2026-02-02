@@ -710,4 +710,26 @@ const styles = StyleSheet.create({
     fontWeight: '500', 
     color: '#333' 
   },
+  readOnlyNote: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
+    marginBottom: 16,
+  },
+  readOnlyField: {
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  readOnlyLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  readOnlyValue: {
+    fontSize: 15,
+    color: '#333',
+    fontWeight: '500',
+  },
 });
