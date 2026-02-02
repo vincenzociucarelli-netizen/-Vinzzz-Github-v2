@@ -789,6 +789,30 @@ const styles = StyleSheet.create({
     height: 150,
     resizeMode: 'cover',
   },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
+  },
+  saveBankButtonFixed: {
+    backgroundColor: '#34C759',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  saveBankButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
   cancelButtonText: {
     color: '#666',
     fontWeight: '600',
