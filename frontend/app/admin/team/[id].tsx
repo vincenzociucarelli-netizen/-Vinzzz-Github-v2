@@ -45,8 +45,8 @@ export default function TeamDetail() {
   
   // Training sessions (2-4)
   const [trainingSessions, setTrainingSessions] = useState<TrainingSession[]>([
-    { day: 'Lunedì', time: '', venue: '' },
-    { day: 'Mercoledì', time: '', venue: '' },
+    { day: 'Lunedì', timeStart: '', timeEnd: '', venue: '' },
+    { day: 'Mercoledì', timeStart: '', timeEnd: '', venue: '' },
   ]);
   
   // Match day
