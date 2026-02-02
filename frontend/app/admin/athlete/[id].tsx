@@ -1141,10 +1141,10 @@ export default function AdminAthleteDetail() {
             <TextInput
               style={styles.modalInput}
               value={certExpiryDate}
-              onChangeText={setCertExpiryDate}
-              placeholder="es. 31/12/2025"
+              onChangeText={formatDateInput}
+              placeholder="31/12/2025"
               placeholderTextColor="#999"
-              keyboardType="numeric"
+              keyboardType="number-pad"
               maxLength={10}
             />
             
