@@ -740,6 +740,15 @@ export default function AdminAthleteDetail() {
                   <Text style={styles.warningText}>Nessun certificato</Text>
                 </View>
               )}
+              <TouchableOpacity
+                style={styles.addCertButton}
+                onPress={() => setCertModalVisible(true)}
+              >
+                <Ionicons name={certificate ? "create" : "add-circle"} size={18} color="#007AFF" />
+                <Text style={styles.addCertButtonText}>
+                  {certificate ? 'Aggiorna Certificato' : 'Aggiungi Certificato'}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             {/* Withdraw Athlete Button */}
