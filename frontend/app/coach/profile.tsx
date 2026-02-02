@@ -503,13 +503,18 @@ export default function CoachProfile() {
           {editingBank ? (
             <>
               <Text style={styles.inputLabel}>Tipo Documento</Text>
-              <TextInput
-                style={styles.input}
-                value={editData.id_type}
-                onChangeText={(v) => setEditData({...editData, id_type: v})}
-                placeholder="es. Carta d'Identità"
-                placeholderTextColor="#ccc"
-              />
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={editData.id_type}
+                  onValueChange={(v) => setEditData({...editData, id_type: v})}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Seleziona..." value="" />
+                  {DOC_TYPES.map((type) => (
+                    <Picker.Item key={type} label={type} value={type} />
+                  ))}
+                </Picker>
+              </View>
               
               <Text style={styles.inputLabel}>Numero Documento</Text>
               <TextInput
