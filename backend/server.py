@@ -2469,29 +2469,44 @@ async def export_coaches(current_user = Depends(get_current_user)):
 
 @api_router.get("/export/athletes")
 async def export_athletes(current_user = Depends(get_current_user)):
-    """Export all athletes to JSON for Excel conversion"""
+    """Export all athletes to JSON for Excel conversion - OPTIMIZED"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può esportare")
     
     athletes = await db.athletes.find({}).to_list(5000)
     clean_mongo_docs(athletes)
     
+    # Batch fetch all related data to avoid N+1 queries
+    teams_list = await db.teams.find().to_list(1000)
+    teams_dict = {t["id"]: t for t in teams_list}
+    
+    certs_list = await db.certificates.find().to_list(5000)
+    certs_dict = {c["athlete_id"]: c for c in certs_list}
+    
+    payments_list = await db.payments.find().to_list(10000)
+    payments_by_athlete = {}
+    for p in payments_list:
+        athlete_id = p.get("athlete_id")
+        if athlete_id not in payments_by_athlete:
+            payments_by_athlete[athlete_id] = []
+        payments_by_athlete[athlete_id].append(p)
+    
     export_data = []
     for athlete in athletes:
-        # Get team name
-        team = await db.teams.find_one({"id": athlete.get("team_id", "")})
+        # Get team name from dict
+        team = teams_dict.get(athlete.get("team_id", ""))
         team_name = team.get("name", "") if team else ""
         
-        # Get certificate info
-        cert = await db.certificates.find_one({"athlete_id": athlete["id"]})
+        # Get certificate info from dict
+        cert = certs_dict.get(athlete["id"])
         cert_expiry = ""
         cert_status = "Mancante"
         if cert and cert.get("expiry_date"):
             cert_expiry = cert["expiry_date"].strftime("%d/%m/%Y") if isinstance(cert["expiry_date"], datetime) else cert["expiry_date"]
             cert_status = "Scaduto" if cert["expiry_date"] < datetime.now() else "Valido"
         
-        # Get payment summary
-        payments = await db.payments.find({"athlete_id": athlete["id"]}).to_list(100)
+        # Get payment summary from dict
+        payments = payments_by_athlete.get(athlete["id"], [])
         total_paid = sum(p.get("amount", 0) for p in payments if p.get("paid"))
         
         # Format birth date to DD/MM/YYYY
