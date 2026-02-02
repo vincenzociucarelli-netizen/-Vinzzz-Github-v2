@@ -1558,17 +1558,23 @@ async def get_my_athletes(current_user = Depends(get_current_user)):
 
 @api_router.get("/athletes/pending")
 async def get_pending_athletes(current_user = Depends(get_current_user)):
-    """Get all athletes pending approval - admin only"""
+    """Get all athletes pending approval - admin only - OPTIMIZED"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere gli atleti in attesa")
     
     pending = await db.athletes.find({"status": AthleteStatus.PENDING}).to_list(1000)
     
-    # Get team info for each athlete
+    # Batch fetch teams and users to avoid N+1 queries
+    teams_list = await db.teams.find().to_list(1000)
+    teams_dict = {t["id"]: t for t in teams_list}
+    
+    users_list = await db.users.find().to_list(1000)
+    users_dict = {u["id"]: u for u in users_list}
+    
     result = []
     for athlete in pending:
-        team = await db.teams.find_one({"id": athlete["team_id"]})
-        parent = await db.users.find_one({"id": athlete["parent_id"]})
+        team = teams_dict.get(athlete["team_id"])
+        parent = users_dict.get(athlete["parent_id"])
         result.append({
             "id": athlete["id"],
             "full_name": athlete["full_name"],
