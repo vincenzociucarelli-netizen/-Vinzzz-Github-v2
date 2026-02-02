@@ -2440,22 +2440,22 @@ async def export_dirigenti(current_user = Depends(get_current_user)):
 
 @api_router.get("/export/coaches")
 async def export_coaches(current_user = Depends(get_current_user)):
-    """Export all coaches to JSON for Excel conversion"""
+    """Export all coaches to JSON for Excel conversion - OPTIMIZED"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può esportare")
     
     users = await db.users.find({"role": UserRole.COACH}).to_list(1000)
     clean_mongo_docs(users)
     
+    # Batch fetch all teams to avoid N+1 queries
+    teams_list = await db.teams.find().to_list(1000)
+    teams_dict = {t["id"]: t for t in teams_list}
+    
     # Get team names for assigned teams
     export_data = []
     for user in users:
         assigned_teams = user.get("assigned_teams", [])
-        team_names = []
-        for team_id in assigned_teams:
-            team = await db.teams.find_one({"id": team_id})
-            if team:
-                team_names.append(team.get("name", ""))
+        team_names = [teams_dict.get(tid, {}).get("name", "") for tid in assigned_teams if teams_dict.get(tid)]
         
         export_data.append({
             "Nome Completo": user.get("full_name", ""),
