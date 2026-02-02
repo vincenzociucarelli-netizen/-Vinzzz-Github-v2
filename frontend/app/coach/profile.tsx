@@ -757,6 +757,30 @@ const styles = StyleSheet.create({
   saveButtonDisabled: {
     opacity: 0.6,
   },
+  imageUploadBtn: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderStyle: 'dashed',
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  imageUploadPlaceholder: {
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageUploadText: {
+    color: '#ccc',
+    fontSize: 14,
+    marginTop: 8,
+  },
+  docImage: {
+    width: '100%',
+    height: 150,
+    resizeMode: 'cover',
+  },
   cancelButtonText: {
     color: '#666',
     fontWeight: '600',
