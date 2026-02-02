@@ -1107,6 +1107,55 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 6,
   },
+  trainingEditRow: {
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  trainingEditHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  trainingEditLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  trainingEditFields: {
+    gap: 8,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  fieldQuarter: {
+    width: '23%',
+    minWidth: 70,
+  },
+  fieldHalf: {
+    flex: 1,
+    minWidth: 100,
+  },
+  miniLabel: {
+    fontSize: 11,
+    color: '#666',
+    marginBottom: 4,
+  },
+  miniInput: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 6,
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
   modalButtons: {
     flexDirection: 'row',
     padding: 16,
