@@ -523,14 +523,22 @@ export default function AdminDirigenteDetail() {
                 <View style={styles.infoRow}>
                   <Text style={styles.label}>Documento</Text>
                   <Text style={styles.value}>
-                    {dirigente.document_front ? '✅ Caricato' : '❌ Mancante'}
+                    {dirigente.doc_front_image ? '✅ Caricato' : '❌ Mancante'}
                   </Text>
                 </View>
-                {dirigente.document_front && (
+                {(dirigente.doc_front_image || dirigente.doc_back_image) && (
                   <View style={styles.docImagesRow}>
-                    <Image source={{ uri: `data:image/jpeg;base64,${dirigente.document_front}` }} style={styles.docThumb} />
-                    {dirigente.document_back && (
-                      <Image source={{ uri: `data:image/jpeg;base64,${dirigente.document_back}` }} style={styles.docThumb} />
+                    {dirigente.doc_front_image && (
+                      <View style={styles.docImageContainer}>
+                        <Text style={styles.docImageLabel}>Fronte</Text>
+                        <Image source={{ uri: `data:image/jpeg;base64,${dirigente.doc_front_image}` }} style={styles.docThumb} />
+                      </View>
+                    )}
+                    {dirigente.doc_back_image && (
+                      <View style={styles.docImageContainer}>
+                        <Text style={styles.docImageLabel}>Retro</Text>
+                        <Image source={{ uri: `data:image/jpeg;base64,${dirigente.doc_back_image}` }} style={styles.docThumb} />
+                      </View>
                     )}
                   </View>
                 )}
@@ -540,7 +548,7 @@ export default function AdminDirigenteDetail() {
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.label}>Intestatario</Text>
-                  <Text style={styles.value}>{dirigente.iban_holder || '-'}</Text>
+                  <Text style={styles.value}>{dirigente.account_holder || '-'}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.label}>Banca</Text>
