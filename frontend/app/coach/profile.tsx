@@ -520,6 +520,22 @@ export default function CoachProfile() {
                   Dichiaro di aver superato il limite di €5.000 annui
                 </Text>
               </TouchableOpacity>
+              {/* Mostra la data di dichiarazione se presente */}
+              {(() => {
+                const now = new Date();
+                const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                const declarationDate = over5000Limit[`${currentMonthKey}_date`];
+                if (declarationDate) {
+                  const d = new Date(declarationDate);
+                  const formattedDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                  return (
+                    <Text style={styles.declarationDate}>
+                      📅 Data dichiarazione: {formattedDate}
+                    </Text>
+                  );
+                }
+                return null;
+              })()}
             </View>
           </View>
         )}
