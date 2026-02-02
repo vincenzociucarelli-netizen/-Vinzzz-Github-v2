@@ -1231,4 +1231,7 @@ const styles = StyleSheet.create({
   reactivateButtonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
   withdrawButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF0F0', marginHorizontal: 16, marginVertical: 8, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#FFCDD2' },
   withdrawButtonText: { color: '#FF3B30', fontSize: 14, fontWeight: '600', marginLeft: 8 },
+  addCertButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E3F2FD', marginTop: 12, padding: 10, borderRadius: 8 },
+  addCertButtonText: { color: '#007AFF', fontSize: 14, fontWeight: '600', marginLeft: 6 },
+  inputLabel: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8, marginTop: 12 },
 });
