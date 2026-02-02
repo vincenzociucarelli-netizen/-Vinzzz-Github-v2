@@ -705,11 +705,6 @@ const styles = StyleSheet.create({
     color: '#6c757d', 
     marginBottom: 4 
   },
-  readOnlyValue: { 
-    fontSize: 14, 
-    fontWeight: '500', 
-    color: '#333' 
-  },
   readOnlyNote: {
     fontSize: 12,
     color: '#999',
