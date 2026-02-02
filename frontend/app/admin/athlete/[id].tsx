@@ -1273,4 +1273,8 @@ const styles = StyleSheet.create({
   addCertButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E3F2FD', marginTop: 12, padding: 10, borderRadius: 8 },
   addCertButtonText: { color: '#007AFF', fontSize: 14, fontWeight: '600', marginLeft: 6 },
   inputLabel: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8, marginTop: 12 },
+  certImageBtn: { backgroundColor: '#f5f5f5', borderRadius: 8, borderWidth: 1, borderColor: '#ddd', borderStyle: 'dashed', marginBottom: 16, overflow: 'hidden' },
+  certImagePlaceholder: { height: 80, justifyContent: 'center', alignItems: 'center' },
+  certImageText: { color: '#007AFF', fontSize: 12, marginTop: 4 },
+  certImagePreview: { width: '100%', height: 120, resizeMode: 'cover' },
 });
