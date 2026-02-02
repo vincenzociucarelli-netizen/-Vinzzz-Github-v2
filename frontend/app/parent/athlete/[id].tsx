@@ -476,17 +476,6 @@ export default function AthleteDetail() {
   };
 
   const handleAcceptPrivacy = async () => {
-    if (!privacyConfirmed) {
-      if (Platform.OS === 'web') {
-        // Su web non mostriamo doppia conferma, procediamo direttamente
-        setPrivacyConfirmed(true);
-      } else {
-        Alert.alert('Attenzione', 'Devi confermare due volte per procedere');
-        setPrivacyConfirmed(true);
-        return;
-      }
-    }
-
     try {
       // Accetta privacy E attiva l'atleta in un'unica chiamata
       const response = await api.patch(`/athletes/${id}`, {
@@ -495,12 +484,14 @@ export default function AthleteDetail() {
         status: 'active',
       });
 
-      // Aggiorna lo stato locale immediatamente
+      // Chiudi il modal PRIMA di tutto
+      setPrivacyModalVisible(false);
+      setPrivacyConfirmed(false);
+      
+      // Aggiorna lo stato locale
       setAthlete(response.data);
       
       showAlert('Successo', 'Privacy accettata e atleta attivato!');
-      setPrivacyModalVisible(false);
-      setPrivacyConfirmed(false);
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'accettazione');
     }
