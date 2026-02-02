@@ -786,11 +786,20 @@ const styles = StyleSheet.create({
     flex: 2,
   },
   timeCell: {
-    flex: 2,
+    flex: 1.5,
     textAlign: 'center',
   },
   venueCell: {
     flex: 3,
+  },
+  venueCell2: {
+    flex: 4,
+  },
+  tableHeader2: {
+    flexDirection: 'row',
+    backgroundColor: '#FF9500',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   matchDayHeader: {
     flexDirection: 'row',
