@@ -787,6 +787,36 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
   },
+  docImagesRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  docImageBtnSmall: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    overflow: 'hidden',
+    height: 80,
+  },
+  docImagePlaceholderSmall: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+  },
+  docImageTextSmall: {
+    color: '#007AFF',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  docImageSmall: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
   compensationAmount: {
     fontSize: 28,
     fontWeight: 'bold',
