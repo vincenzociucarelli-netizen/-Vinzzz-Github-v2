@@ -396,11 +396,42 @@ export default function TeamDetail() {
                 <Text style={styles.label}>2ª Rata:</Text>
                 <Text style={styles.value}>€{team.installment_2_amount}</Text>
               </View>
+              {team.installment_2_due_date && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.label}>Scadenza 2ª Rata:</Text>
+                  <Text style={styles.value}>{new Date(team.installment_2_due_date).toLocaleDateString('it-IT')}</Text>
+                </View>
+              )}
               <View style={styles.infoRow}>
                 <Text style={styles.label}>3ª Rata:</Text>
                 <Text style={styles.value}>€{team.installment_3_amount}</Text>
               </View>
+              {team.installment_3_due_date && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.label}>Scadenza 3ª Rata:</Text>
+                  <Text style={styles.value}>{new Date(team.installment_3_due_date).toLocaleDateString('it-IT')}</Text>
+                </View>
+              )}
             </View>
+
+            {/* Bank Info Section */}
+            {(team.bank_info || team.paypal_email) && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>🏦 Dati per il Pagamento</Text>
+                {team.bank_info && (
+                  <View style={styles.bankInfoBox}>
+                    <Text style={styles.bankInfoLabel}>Bonifico Bancario:</Text>
+                    <Text style={styles.bankInfoText}>{team.bank_info}</Text>
+                  </View>
+                )}
+                {team.paypal_email && (
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>PayPal:</Text>
+                    <Text style={styles.value}>{team.paypal_email}</Text>
+                  </View>
+                )}
+              </View>
+            )}
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>🏆 Campionati</Text>
