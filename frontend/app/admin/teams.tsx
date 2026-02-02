@@ -174,7 +174,9 @@ export default function TeamsScreen() {
     validTrainings.forEach((t, idx) => {
       trainingScheduleStr += `${t.day.toUpperCase()}: ${t.venue} dalle ${t.timeStart} alle ${t.timeEnd}\n`;
     });
-    trainingScheduleStr += `GIORNO GARA: ${matchDay.day.toUpperCase()} alle ${matchDay.time} - ${matchDay.venue}`;
+    if (hasCompleteMatchDay) {
+      trainingScheduleStr += `GIORNO GARA: ${matchDay.day.toUpperCase()} alle ${matchDay.time} - ${matchDay.venue}`;
+    }
 
     setLoading(true);
     try {
@@ -191,7 +193,7 @@ export default function TeamsScreen() {
         paypal_email: paypalEmail,
         training_schedule: trainingScheduleStr,
         trainings: validTrainings,
-        match_day: matchDay,
+        match_day: hasCompleteMatchDay ? matchDay : null,
         championships: championships || null,
         calendar_link: calendarLink || null,
       });
