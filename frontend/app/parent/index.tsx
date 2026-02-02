@@ -92,19 +92,36 @@ export default function ParentDashboard() {
             {athletes.map((athlete) => (
               <TouchableOpacity
                 key={athlete.id}
-                style={styles.athleteCard}
-                onPress={() => router.push(`/parent/athlete/${athlete.id}`)}
+                style={[
+                  styles.athleteCard,
+                  athlete.status === 'pending' && styles.athleteCardPending
+                ]}
+                onPress={() => athlete.status !== 'pending' && router.push(`/parent/athlete/${athlete.id}`)}
+                disabled={athlete.status === 'pending'}
               >
                 <View style={styles.athleteIcon}>
-                  <Ionicons name="person" size={32} color="#007AFF" />
+                  <Ionicons 
+                    name={athlete.status === 'pending' ? "time" : "person"} 
+                    size={32} 
+                    color={athlete.status === 'pending' ? "#FF9500" : "#007AFF"} 
+                  />
                 </View>
                 <View style={styles.athleteInfo}>
                   <Text style={styles.athleteName}>{athlete.full_name}</Text>
-                  <Text style={styles.athleteStatus}>
-                    {athlete.status === 'trial' ? 'Periodo di prova' : 'Attivo'}
+                  <Text style={[
+                    styles.athleteStatus,
+                    athlete.status === 'pending' && styles.athleteStatusPending
+                  ]}>
+                    {athlete.status === 'pending' 
+                      ? '⏳ In attesa di approvazione' 
+                      : athlete.status === 'trial' 
+                        ? 'Periodo di prova' 
+                        : 'Attivo'}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={24} color="#999" />
+                {athlete.status !== 'pending' && (
+                  <Ionicons name="chevron-forward" size={24} color="#999" />
+                )}
               </TouchableOpacity>
             ))}
           </View>
