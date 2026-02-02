@@ -1574,6 +1574,113 @@ async def get_my_athletes(current_user = Depends(get_current_user)):
     clean_mongo_docs(athletes)
     return [Athlete(**athlete) for athlete in athletes]
 
+@api_router.get("/athletes/pending")
+async def get_pending_athletes(current_user = Depends(get_current_user)):
+    """Get all athletes pending approval - admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere gli atleti in attesa")
+    
+    pending = await db.athletes.find({"status": AthleteStatus.PENDING}).to_list(1000)
+    
+    # Get team info for each athlete
+    result = []
+    for athlete in pending:
+        team = await db.teams.find_one({"id": athlete["team_id"]})
+        parent = await db.users.find_one({"id": athlete["parent_id"]})
+        result.append({
+            "id": athlete["id"],
+            "full_name": athlete["full_name"],
+            "first_name": athlete.get("first_name"),
+            "last_name": athlete.get("last_name"),
+            "date_of_birth": athlete.get("date_of_birth"),
+            "fiscal_code": athlete.get("fiscal_code"),
+            "team_id": athlete["team_id"],
+            "team_name": team["name"] if team else "Sconosciuta",
+            "parent_name": parent["full_name"] if parent else "Sconosciuto",
+            "parent_email": parent["email"] if parent else "",
+            "registration_date": athlete.get("registration_date"),
+            "status": athlete.get("status", "pending"),
+        })
+    
+    return result
+
+class AthleteApprovalUpdate(BaseModel):
+    status: str  # trial, active, rejected
+
+@api_router.patch("/athletes/{athlete_id}/approval")
+async def update_athlete_approval(athlete_id: str, data: AthleteApprovalUpdate, current_user = Depends(get_current_user)):
+    """Approve or reject an athlete - admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può approvare atleti")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Validate status
+    if data.status not in [AthleteStatus.TRIAL, AthleteStatus.ACTIVE, "rejected"]:
+        raise HTTPException(status_code=400, detail="Stato non valido. Usa: trial, active, rejected")
+    
+    update_data = {
+        "status": data.status,
+        "approved_at": datetime.utcnow(),
+        "approved_by": current_user["id"]
+    }
+    
+    # If approving to trial, set trial end date from now
+    if data.status == AthleteStatus.TRIAL:
+        update_data["trial_end_date"] = datetime.utcnow() + timedelta(days=7)
+    
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": update_data}
+    )
+    
+    # If approving, create payment records
+    if data.status in [AthleteStatus.TRIAL, AthleteStatus.ACTIVE]:
+        # Check if payments already exist
+        existing_payments = await db.payments.count_documents({"athlete_id": athlete_id})
+        if existing_payments == 0:
+            team = await db.teams.find_one({"id": athlete["team_id"]})
+            if team and team.get("installment_1_amount", 0) > 0:
+                trial_end = update_data.get("trial_end_date", datetime.utcnow())
+                # Installment 1
+                payment1 = Payment(
+                    athlete_id=athlete_id,
+                    installment_number=1,
+                    amount=team["installment_1_amount"],
+                    due_date=trial_end
+                )
+                await db.payments.insert_one(payment1.dict())
+                
+                # Installment 2
+                if team.get("installment_2_amount", 0) > 0 and team.get("installment_2_due_date"):
+                    payment2 = Payment(
+                        athlete_id=athlete_id,
+                        installment_number=2,
+                        amount=team["installment_2_amount"],
+                        due_date=team["installment_2_due_date"]
+                    )
+                    await db.payments.insert_one(payment2.dict())
+                
+                # Installment 3
+                if team.get("installment_3_amount", 0) > 0 and team.get("installment_3_due_date"):
+                    payment3 = Payment(
+                        athlete_id=athlete_id,
+                        installment_number=3,
+                        amount=team["installment_3_amount"],
+                        due_date=team["installment_3_due_date"]
+                    )
+                    await db.payments.insert_one(payment3.dict())
+    
+    status_text = {
+        AthleteStatus.TRIAL: "approvato (periodo di prova)",
+        AthleteStatus.ACTIVE: "approvato (attivo)",
+        "rejected": "rifiutato"
+    }
+    
+    return {"message": f"Atleta {status_text.get(data.status, data.status)} con successo"}
+
 @api_router.get("/athletes/{athlete_id}", response_model=Athlete)
 async def get_athlete(athlete_id: str, current_user = Depends(get_current_user)):
     athlete = await db.athletes.find_one({"id": athlete_id})
