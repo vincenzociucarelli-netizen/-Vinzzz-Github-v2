@@ -631,7 +631,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    flex: 1,
   },
   copyCodeButtonText: {
     color: '#fff',
