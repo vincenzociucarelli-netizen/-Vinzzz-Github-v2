@@ -461,6 +461,46 @@ export default function AdminDashboard() {
           </TouchableOpacity>
         </View>
 
+        {/* Rigenera Codice - A fondo pagina */}
+        {inviteCode && (
+          <View style={styles.regenSection}>
+            <Text style={styles.regenSectionTitle}>⚙️ Impostazioni Avanzate</Text>
+            <TouchableOpacity 
+              style={styles.regenButtonBottom}
+              onPress={async () => {
+                const confirmText = 'ATTENZIONE: Rigenerando il codice, quello vecchio non funzionerà più.\n\nTutti i link di registrazione già condivisi non funzioneranno più.\n\nSei sicuro di voler procedere?';
+                const confirmRegen = Platform.OS === 'web' 
+                  ? window.confirm(confirmText)
+                  : await new Promise((resolve) => {
+                      Alert.alert(
+                        'Conferma Rigenerazione',
+                        confirmText,
+                        [
+                          { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                          { text: 'Sì, Rigenera', style: 'destructive', onPress: () => resolve(true) },
+                        ]
+                      );
+                    });
+                if (confirmRegen) {
+                  try {
+                    const res = await api.post('/societies/regenerate-invite-code');
+                    setInviteCode(res.data.invite_code);
+                    showInfo('Fatto!', `Nuovo codice: ${res.data.invite_code}`);
+                  } catch (e) {
+                    showInfo('Errore', 'Impossibile rigenerare il codice');
+                  }
+                }
+              }}
+            >
+              <Ionicons name="refresh" size={16} color="#FF3B30" />
+              <Text style={styles.regenButtonBottomText}>Rigenera Codice Invito</Text>
+            </TouchableOpacity>
+            <Text style={styles.regenWarning}>
+              ⚠️ Usa questa opzione solo se necessario. Il vecchio codice smetterà di funzionare.
+            </Text>
+          </View>
+        )}
+
         {/* Bottom padding for Android navigation */}
         <View style={{ height: 100 }} />
       </ScrollView>
