@@ -241,6 +241,12 @@ class TeamUpdate(BaseModel):
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
 
+class AthleteStatus:
+    PENDING = "pending"      # In attesa di approvazione admin
+    TRIAL = "trial"          # In periodo di prova
+    ACTIVE = "active"        # Attivo
+    BLOCKED = "blocked"      # Bloccato
+
 class Athlete(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     society_id: Optional[str] = None  # ID della società (multi-tenancy)
@@ -278,7 +284,10 @@ class Athlete(BaseModel):
     privacy_accepted: bool = False
     privacy_accepted_date: Optional[datetime] = None
     image_consent: bool = False
-    status: str = "trial"  # trial, active, blocked
+    status: str = "pending"  # pending, trial, active, blocked
+    # Approvazione
+    approved_at: Optional[datetime] = None
+    approved_by: Optional[str] = None
     # Sconto personalizzato dall'admin
     discount_amount: float = 0.0  # Sconto in euro da detrarre dall'ultima rata
     discount_note: Optional[str] = None  # Nota sullo sconto
