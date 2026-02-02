@@ -53,6 +53,8 @@ export default function CoachProfile() {
   const [compensationHistory, setCompensationHistory] = useState<{[key: string]: boolean}>({});
   const [over5000Limit, setOver5000Limit] = useState<{[key: string]: boolean}>({});
   const [hasExceeded5000, setHasExceeded5000] = useState(false);
+  const [editingBank, setEditingBank] = useState(false);
+  const [savingBank, setSavingBank] = useState(false);
 
   // Generate season months (July to June)
   const getSeasonMonths = () => {
