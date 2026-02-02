@@ -140,6 +140,22 @@ export default function AdminCoachDetail() {
       .join(', ');
   };
 
+  const handleSaveTeams = async () => {
+    setSavingTeams(true);
+    try {
+      await api.patch(`/users/${id}/assigned-teams`, {
+        assigned_teams: selectedTeams
+      });
+      setCoach({ ...coach!, assigned_teams: selectedTeams });
+      setEditingTeams(false);
+      showAlert('Salvato', 'Squadre assegnate con successo');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
+    } finally {
+      setSavingTeams(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved': return '#34C759';
