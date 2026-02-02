@@ -256,50 +256,19 @@ export default function AdminDashboard() {
           </View>
         )}
 
-        {/* Invite Code Card - Redesigned */}
+        {/* Invite Code Card - NUOVA VERSIONE SEMPLIFICATA */}
         {inviteCode && (
           <View style={styles.inviteCodeCard}>
             <View style={styles.inviteCodeHeader}>
-              <View style={styles.inviteCodeHeaderLeft}>
-                <Ionicons name="ticket-outline" size={20} color="#007AFF" />
-                <Text style={styles.inviteCodeTitle}>Codice Invito Società</Text>
-              </View>
-              <TouchableOpacity 
-                style={styles.regenerateIconBtn}
-                onPress={async () => {
-                  const confirmText = 'ATTENZIONE: Rigenerando il codice, quello vecchio non funzionerà più. Sei sicuro di voler procedere?';
-                  const confirmRegen = Platform.OS === 'web' 
-                    ? window.confirm(confirmText)
-                    : await new Promise((resolve) => {
-                        Alert.alert(
-                          'Conferma',
-                          confirmText,
-                          [
-                            { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-                            { text: 'Sì, Rigenera', style: 'destructive', onPress: () => resolve(true) },
-                          ]
-                        );
-                      });
-                  if (confirmRegen) {
-                    try {
-                      const res = await api.post('/societies/regenerate-invite-code');
-                      setInviteCode(res.data.invite_code);
-                      showInfo('Fatto!', `Nuovo codice: ${res.data.invite_code}`);
-                    } catch (e) {
-                      showInfo('Errore', 'Impossibile rigenerare il codice');
-                    }
-                  }
-                }}
-              >
-                <Ionicons name="refresh-outline" size={16} color="#999" />
-              </TouchableOpacity>
+              <Ionicons name="ticket-outline" size={20} color="#007AFF" />
+              <Text style={styles.inviteCodeTitle}>Codice Invito Società</Text>
             </View>
             <Text style={styles.inviteCodeValue}>{inviteCode}</Text>
             <Text style={styles.inviteCodeHint}>
               Condividi questo codice con coach, dirigenti e genitori per farli registrare alla tua società
             </Text>
             <TouchableOpacity 
-              style={styles.copyCodeButton}
+              style={styles.copyCodeButtonFull}
               onPress={() => {
                 if (Platform.OS === 'web') {
                   navigator.clipboard.writeText(inviteCode);
