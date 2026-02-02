@@ -117,7 +117,7 @@ export default function TeamDetail() {
       showAlert('Limite raggiunto', 'Massimo 4 allenamenti settimanali');
       return;
     }
-    setTrainingSessions([...trainingSessions, { day: 'Giovedì', time: '', venue: '' }]);
+    setTrainingSessions([...trainingSessions, { day: 'Giovedì', timeStart: '', timeEnd: '', venue: '' }]);
   };
 
   const removeTrainingSession = (index: number) => {
