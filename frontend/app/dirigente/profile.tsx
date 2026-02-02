@@ -525,35 +525,37 @@ export default function DirigenteProfile() {
                 keyboardType="numeric"
               />
               
-              <Text style={styles.inputLabel}>Foto Documento (Fronte)</Text>
-              <TouchableOpacity style={styles.imageUploadBtn} onPress={() => pickImage('front')}>
-                {(docFrontImage || editData.doc_front_image) ? (
-                  <Image 
-                    source={{ uri: `data:image/jpeg;base64,${docFrontImage || editData.doc_front_image}` }} 
-                    style={styles.docImage} 
-                  />
-                ) : (
-                  <View style={styles.imageUploadPlaceholder}>
-                    <Ionicons name="camera" size={32} color="#ccc" />
-                    <Text style={styles.imageUploadText}>Tocca per caricare</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-              
-              <Text style={styles.inputLabel}>Foto Documento (Retro)</Text>
-              <TouchableOpacity style={styles.imageUploadBtn} onPress={() => pickImage('back')}>
-                {(docBackImage || editData.doc_back_image) ? (
-                  <Image 
-                    source={{ uri: `data:image/jpeg;base64,${docBackImage || editData.doc_back_image}` }} 
-                    style={styles.docImage} 
-                  />
-                ) : (
-                  <View style={styles.imageUploadPlaceholder}>
-                    <Ionicons name="camera" size={32} color="#ccc" />
-                    <Text style={styles.imageUploadText}>Tocca per caricare</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+              {/* Foto Documento - Due icone in una riga */}
+              <Text style={styles.inputLabel}>Foto Documento</Text>
+              <View style={styles.docImagesRow}>
+                <TouchableOpacity style={styles.docImageBtnSmall} onPress={() => pickImage('front')}>
+                  {(docFrontImage || editData.doc_front_image) ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${docFrontImage || editData.doc_front_image}` }} 
+                      style={styles.docImageSmall} 
+                    />
+                  ) : (
+                    <View style={styles.docImagePlaceholderSmall}>
+                      <Ionicons name="card-outline" size={24} color="#007AFF" />
+                      <Text style={styles.docImageTextSmall}>Fronte</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.docImageBtnSmall} onPress={() => pickImage('back')}>
+                  {(docBackImage || editData.doc_back_image) ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${docBackImage || editData.doc_back_image}` }} 
+                      style={styles.docImageSmall} 
+                    />
+                  ) : (
+                    <View style={styles.docImagePlaceholderSmall}>
+                      <Ionicons name="card-outline" size={24} color="#007AFF" />
+                      <Text style={styles.docImageTextSmall}>Retro</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
               
               <Text style={styles.inputLabel}>IBAN</Text>
               <TextInput
