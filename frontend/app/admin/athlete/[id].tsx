@@ -81,7 +81,21 @@ export default function AdminAthleteDetail() {
   // Certificate modal
   const [certModalVisible, setCertModalVisible] = useState(false);
   const [certExpiryDate, setCertExpiryDate] = useState('');
+  const [certImage, setCertImage] = useState<string | null>(null);
   const [savingCert, setSavingCert] = useState(false);
+
+  const pickCertImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.5,
+      base64: true,
+    });
+    
+    if (!result.canceled && result.assets[0].base64) {
+      setCertImage(result.assets[0].base64);
+    }
+  };
 
   const loadData = async () => {
     try {
