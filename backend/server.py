@@ -1951,6 +1951,53 @@ async def upload_certificate_base64(
     return {"message": "Certificato caricato con successo", "expiry_date": expiry_dt.isoformat()}
 
 
+class CertificateSimple(BaseModel):
+    athlete_id: str
+    expiry_date: str  # ISO format
+    image_base64: Optional[str] = None  # Optional image of the certificate
+
+@api_router.post("/certificates/simple")
+async def create_certificate_simple(
+    data: CertificateSimple,
+    current_user = Depends(get_current_user)
+):
+    """Create/update certificate with just expiry date - Admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può aggiungere certificati")
+    
+    # Check athlete exists
+    athlete = await db.athletes.find_one({"id": data.athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Parse expiry date
+    try:
+        expiry_dt = datetime.fromisoformat(data.expiry_date.replace('Z', '+00:00'))
+    except:
+        raise HTTPException(status_code=400, detail="Formato data non valido")
+    
+    # Delete old certificate if exists
+    await db.certificates.delete_many({"athlete_id": data.athlete_id})
+    
+    # Create certificate
+    certificate = Certificate(
+        athlete_id=data.athlete_id,
+        pdf_data=data.image_base64 or "",
+        issue_date=datetime.utcnow(),
+        validity_months=12,
+        expiry_date=expiry_dt
+    )
+    
+    await db.certificates.insert_one(certificate.dict())
+    
+    return {
+        "id": certificate.id,
+        "athlete_id": certificate.athlete_id,
+        "expiry_date": certificate.expiry_date.isoformat(),
+        "message": "Certificato salvato con successo"
+    }
+
+
 @api_router.get("/certificates/expiring")
 async def get_expiring_certificates(current_user = Depends(get_current_user)):
     """Get certificates expiring today and within next 30 days"""
