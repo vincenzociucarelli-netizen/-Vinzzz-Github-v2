@@ -494,7 +494,7 @@ export default function TeamDetail() {
             
             <ScrollView style={styles.trainingModalScroll}>
               {/* Training Sessions */}
-              <Text style={styles.modalSectionTitle}>Allenamenti Settimanali (2-4)</Text>
+              <Text style={styles.modalSectionTitle}>Allenamenti Settimanali (min 2, max 4)</Text>
               
               {trainingSessions.map((session, index) => (
                 <View key={index} style={styles.trainingFormRow}>
@@ -526,21 +526,35 @@ export default function TeamDetail() {
                   
                   <View style={styles.trainingInputRow}>
                     <View style={styles.timeInputWrapper}>
-                      <Text style={styles.miniLabel}>Orario</Text>
+                      <Text style={styles.miniLabel}>Inizio (HH:MM)</Text>
                       <TextInput
                         style={styles.input}
-                        value={session.time}
-                        onChangeText={(value) => updateTrainingSession(index, 'time', value)}
-                        placeholder="Es: 18:00 / 20:00"
+                        value={session.timeStart}
+                        onChangeText={(value) => updateTrainingSession(index, 'timeStart', value)}
+                        placeholder="18:00"
+                        maxLength={5}
                       />
                     </View>
-                    <View style={styles.venueInputWrapper}>
+                    <View style={styles.timeInputWrapper}>
+                      <Text style={styles.miniLabel}>Fine (HH:MM)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={session.timeEnd}
+                        onChangeText={(value) => updateTrainingSession(index, 'timeEnd', value)}
+                        placeholder="20:00"
+                        maxLength={5}
+                      />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.trainingInputRow}>
+                    <View style={styles.venueInputWrapper2}>
                       <Text style={styles.miniLabel}>Palestra</Text>
                       <TextInput
                         style={styles.input}
                         value={session.venue}
                         onChangeText={(value) => updateTrainingSession(index, 'venue', value)}
-                        placeholder="Es: Palestra Liceo"
+                        placeholder="Es: Palestra Liceo Alessi"
                       />
                     </View>
                   </View>
@@ -576,12 +590,13 @@ export default function TeamDetail() {
                 
                 <View style={styles.trainingInputRow}>
                   <View style={styles.timeInputWrapper}>
-                    <Text style={styles.miniLabel}>Orario</Text>
+                    <Text style={styles.miniLabel}>Inizio (HH:MM)</Text>
                     <TextInput
                       style={styles.input}
                       value={matchDay.time}
                       onChangeText={(value) => setMatchDay({...matchDay, time: value})}
-                      placeholder="Es: 18:00"
+                      placeholder="17:00"
+                      maxLength={5}
                     />
                   </View>
                   <View style={styles.venueInputWrapper}>
@@ -590,7 +605,7 @@ export default function TeamDetail() {
                       style={styles.input}
                       value={matchDay.venue}
                       onChangeText={(value) => setMatchDay({...matchDay, venue: value})}
-                      placeholder="Es: Palestra Liceo"
+                      placeholder="Es: Palasport"
                     />
                   </View>
                 </View>
