@@ -9,11 +9,16 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { Picker } from '@react-native-picker/picker';
+
+const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
 export default function DirigenteProfile() {
   const router = useRouter();
@@ -22,6 +27,12 @@ export default function DirigenteProfile() {
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [editingBank, setEditingBank] = useState(false);
+  const [savingBank, setSavingBank] = useState(false);
+  
+  // Document images
+  const [docFrontImage, setDocFrontImage] = useState<string | null>(null);
+  const [docBackImage, setDocBackImage] = useState<string | null>(null);
   
   // Profile data
   const [profileData, setProfileData] = useState({
@@ -39,12 +50,45 @@ export default function DirigenteProfile() {
     phone: '',
     monthly_compensation: 0,
     compensation_accepted: false,
+    // Documento e Dati Bancari
+    id_type: '',
+    id_front: '',
+    id_back: '',
+    iban: '',
+    account_holder: '',
+    bank_name: '',
+    doc_front_image: '',
+    doc_back_image: '',
   });
 
   const [editData, setEditData] = useState({ ...profileData });
   const [compensationHistory, setCompensationHistory] = useState<{[key: string]: boolean}>({});
   const [over5000Limit, setOver5000Limit] = useState<{[key: string]: boolean}>({});
   const [hasExceeded5000, setHasExceeded5000] = useState(false);
+
+  const pickImage = async (side: 'front' | 'back') => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        if (side === 'front') {
+          setDocFrontImage(result.assets[0].base64);
+          setEditData({...editData, doc_front_image: result.assets[0].base64});
+        } else {
+          setDocBackImage(result.assets[0].base64);
+          setEditData({...editData, doc_back_image: result.assets[0].base64});
+        }
+      }
+    } catch (error) {
+      showAlert('Errore', 'Impossibile selezionare l\'immagine');
+    }
+  };
 
   // Generate season months (July to June)
   const getSeasonMonths = () => {
