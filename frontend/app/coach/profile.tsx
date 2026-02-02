@@ -607,7 +607,7 @@ export default function CoachProfile() {
               />
               
               <TouchableOpacity
-                style={[styles.saveButton, savingBank && styles.saveButtonDisabled]}
+                style={[styles.saveBankButtonFixed, savingBank && styles.saveButtonDisabled]}
                 onPress={async () => {
                   setSavingBank(true);
                   try {
@@ -642,8 +642,8 @@ export default function CoachProfile() {
                 }}
                 disabled={savingBank}
               >
-                <Text style={styles.saveButtonText}>
-                  {savingBank ? 'Salvataggio...' : 'Salva Dati Bancari'}
+                <Text style={styles.saveBankButtonText}>
+                  {savingBank ? 'Salvataggio...' : '💾 SALVA DATI BANCARI'}
                 </Text>
               </TouchableOpacity>
             </>
