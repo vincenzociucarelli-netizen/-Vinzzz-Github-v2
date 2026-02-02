@@ -8,7 +8,8 @@ export interface User {
 
 export interface TrainingSession {
   day: string;
-  time: string;
+  timeStart: string;
+  timeEnd: string;
   venue: string;
 }
 
