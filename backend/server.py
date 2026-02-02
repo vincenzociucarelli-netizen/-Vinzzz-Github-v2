@@ -1429,15 +1429,23 @@ async def get_team_athletes(team_id: str, current_user = Depends(get_current_use
 
 @api_router.get("/teams/athletes-count/all")
 async def get_all_teams_athletes_count(current_user = Depends(get_current_user)):
-    """Get the count of athletes for all teams"""
+    """Get the count of athletes for all teams - OPTIMIZED with aggregation"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere queste statistiche")
     
+    # Use aggregation pipeline instead of N+1 queries
+    pipeline = [
+        {"$group": {"_id": "$team_id", "count": {"$sum": 1}}}
+    ]
+    counts = await db.athletes.aggregate(pipeline).to_list(1000)
+    result = {item["_id"]: item["count"] for item in counts if item["_id"]}
+    
+    # Also include teams with 0 athletes
     teams = await db.teams.find().to_list(1000)
-    result = {}
     for team in teams:
-        count = await db.athletes.count_documents({"team_id": team["id"]})
-        result[team["id"]] = count
+        if team["id"] not in result:
+            result[team["id"]] = 0
+    
     return result
 
 @api_router.delete("/teams/{team_id}")
