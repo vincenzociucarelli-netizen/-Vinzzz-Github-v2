@@ -481,6 +481,27 @@ export default function AdminCoachDetail() {
               <Text style={styles.readOnlyValue}>{coach.id_back || '-'}</Text>
             </View>
             
+            {/* Foto Documenti se presenti */}
+            {coach.doc_front_image && (
+              <View style={styles.readOnlyField}>
+                <Text style={styles.readOnlyLabel}>Documento Fronte</Text>
+                <Image 
+                  source={{ uri: `data:image/jpeg;base64,${coach.doc_front_image}` }} 
+                  style={styles.docImagePreview} 
+                />
+              </View>
+            )}
+            
+            {coach.doc_back_image && (
+              <View style={styles.readOnlyField}>
+                <Text style={styles.readOnlyLabel}>Documento Retro</Text>
+                <Image 
+                  source={{ uri: `data:image/jpeg;base64,${coach.doc_back_image}` }} 
+                  style={styles.docImagePreview} 
+                />
+              </View>
+            )}
+            
             <View style={styles.readOnlyField}>
               <Text style={styles.readOnlyLabel}>IBAN</Text>
               <Text style={styles.readOnlyValue}>{coach.iban || '-'}</Text>
