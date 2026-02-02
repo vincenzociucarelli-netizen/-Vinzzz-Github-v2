@@ -1233,12 +1233,14 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "compensation_accepted": user.get("compensation_accepted", False),
         "compensation_history": user.get("compensation_history", {}),
         "over_5000_limit": user.get("over_5000_limit", {}),
-        # Document and Bank details
-        "document_type": user.get("document_type"),
-        "document_front": user.get("document_front"),
-        "document_back": user.get("document_back"),
+        # Document and Bank details (new fields)
+        "id_type": user.get("id_type"),
+        "id_front": user.get("id_front"),
+        "id_back": user.get("id_back"),
+        "doc_front_image": user.get("doc_front_image"),
+        "doc_back_image": user.get("doc_back_image"),
         "iban": user.get("iban"),
-        "iban_holder": user.get("iban_holder"),
+        "account_holder": user.get("account_holder"),
         "bank_name": user.get("bank_name"),
     }
 
