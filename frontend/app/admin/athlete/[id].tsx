@@ -97,6 +97,26 @@ export default function AdminAthleteDetail() {
     }
   };
 
+  // Formatta automaticamente la data come GG/MM/AAAA
+  const formatDateInput = (text: string) => {
+    // Rimuovi tutto tranne i numeri
+    const numbers = text.replace(/\D/g, '');
+    
+    // Formatta come GG/MM/AAAA
+    let formatted = '';
+    if (numbers.length > 0) {
+      formatted = numbers.substring(0, 2);
+    }
+    if (numbers.length > 2) {
+      formatted += '/' + numbers.substring(2, 4);
+    }
+    if (numbers.length > 4) {
+      formatted += '/' + numbers.substring(4, 8);
+    }
+    
+    setCertExpiryDate(formatted);
+  };
+
   const loadData = async () => {
     try {
       const [athleteRes, paymentsRes, certRes] = await Promise.all([
