@@ -40,6 +40,13 @@ export default function CoachProfile() {
     coach_license_number: '',
     monthly_compensation: 0,
     compensation_accepted: false,
+    // Documento e Dati Bancari
+    id_type: '',
+    id_front: '',
+    id_back: '',
+    iban: '',
+    account_holder: '',
+    bank_name: '',
   });
 
   const [editData, setEditData] = useState({ ...profileData });
