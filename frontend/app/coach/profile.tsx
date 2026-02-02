@@ -57,6 +57,34 @@ export default function CoachProfile() {
   const [hasExceeded5000, setHasExceeded5000] = useState(false);
   const [editingBank, setEditingBank] = useState(false);
   const [savingBank, setSavingBank] = useState(false);
+  
+  // Document images
+  const [docFrontImage, setDocFrontImage] = useState<string | null>(null);
+  const [docBackImage, setDocBackImage] = useState<string | null>(null);
+
+  const pickImage = async (side: 'front' | 'back') => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        if (side === 'front') {
+          setDocFrontImage(result.assets[0].base64);
+          setEditData({...editData, doc_front_image: result.assets[0].base64});
+        } else {
+          setDocBackImage(result.assets[0].base64);
+          setEditData({...editData, doc_back_image: result.assets[0].base64});
+        }
+      }
+    } catch (error) {
+      showAlert('Errore', 'Impossibile selezionare l\'immagine');
+    }
+  };
 
   // Generate season months (July to June)
   const getSeasonMonths = () => {
