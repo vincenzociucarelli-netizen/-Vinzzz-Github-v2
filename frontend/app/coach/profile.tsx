@@ -456,6 +456,133 @@ export default function CoachProfile() {
           </View>
         )}
 
+        {/* Documento e Dati Bancari */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>🏦 Documento e Dati Bancari</Text>
+            <TouchableOpacity onPress={() => setEditingBank(!editingBank)}>
+              <Ionicons name={editingBank ? "close" : "create"} size={22} color="#007AFF" />
+            </TouchableOpacity>
+          </View>
+          
+          {editingBank ? (
+            <>
+              <Text style={styles.inputLabel}>Tipo Documento</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.id_type}
+                onChangeText={(v) => setEditData({...editData, id_type: v})}
+                placeholder="Es: Carta d'Identità, Patente"
+              />
+              
+              <Text style={styles.inputLabel}>Numero/Codice Documento</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.id_front}
+                onChangeText={(v) => setEditData({...editData, id_front: v})}
+                placeholder="Es: AX123456"
+              />
+              
+              <Text style={styles.inputLabel}>Scadenza Documento (GG/MM/AAAA)</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.id_back}
+                onChangeText={(v) => setEditData({...editData, id_back: v})}
+                placeholder="Es: 31/12/2030"
+              />
+              
+              <Text style={styles.inputLabel}>IBAN</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.iban}
+                onChangeText={(v) => setEditData({...editData, iban: v.toUpperCase()})}
+                placeholder="IT60X0542811101000000123456"
+                autoCapitalize="characters"
+              />
+              
+              <Text style={styles.inputLabel}>Intestatario Conto</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.account_holder}
+                onChangeText={(v) => setEditData({...editData, account_holder: v})}
+                placeholder="Nome e Cognome intestatario"
+              />
+              
+              <Text style={styles.inputLabel}>Nome Banca</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.bank_name}
+                onChangeText={(v) => setEditData({...editData, bank_name: v})}
+                placeholder="Es: Intesa Sanpaolo"
+              />
+              
+              <TouchableOpacity
+                style={[styles.saveButton, savingBank && styles.saveButtonDisabled]}
+                onPress={async () => {
+                  setSavingBank(true);
+                  try {
+                    await api.patch('/users/me/bank-details', {
+                      id_type: editData.id_type,
+                      id_front: editData.id_front,
+                      id_back: editData.id_back,
+                      iban: editData.iban,
+                      account_holder: editData.account_holder,
+                      bank_name: editData.bank_name,
+                    });
+                    setProfileData({
+                      ...profileData,
+                      id_type: editData.id_type,
+                      id_front: editData.id_front,
+                      id_back: editData.id_back,
+                      iban: editData.iban,
+                      account_holder: editData.account_holder,
+                      bank_name: editData.bank_name,
+                    });
+                    setEditingBank(false);
+                    showAlert('Salvato', 'Dati bancari aggiornati');
+                  } catch (error: any) {
+                    showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
+                  } finally {
+                    setSavingBank(false);
+                  }
+                }}
+                disabled={savingBank}
+              >
+                <Text style={styles.saveButtonText}>
+                  {savingBank ? 'Salvataggio...' : 'Salva Dati Bancari'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Tipo Documento</Text>
+                <Text style={styles.fieldValue}>{profileData.id_type || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Numero Documento</Text>
+                <Text style={styles.fieldValue}>{profileData.id_front || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Scadenza</Text>
+                <Text style={styles.fieldValue}>{profileData.id_back || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>IBAN</Text>
+                <Text style={styles.fieldValue}>{profileData.iban || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Intestatario</Text>
+                <Text style={styles.fieldValue}>{profileData.account_holder || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Banca</Text>
+                <Text style={styles.fieldValue}>{profileData.bank_name || '-'}</Text>
+              </View>
+            </>
+          )}
+        </View>
+
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
