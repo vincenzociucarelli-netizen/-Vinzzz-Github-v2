@@ -762,4 +762,24 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
     marginTop: 8,
   },
+  docImagesRowAdmin: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  docImageContainerAdmin: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  docImageLabelAdmin: {
+    fontSize: 11,
+    color: '#666',
+    marginBottom: 4,
+  },
+  docImagePreviewSmall: {
+    width: '100%',
+    height: 80,
+    borderRadius: 8,
+    resizeMode: 'cover',
+  },
 });
