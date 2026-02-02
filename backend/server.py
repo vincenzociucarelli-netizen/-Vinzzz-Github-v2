@@ -1236,6 +1236,16 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può creare squadre")
     
+    # Helper function to parse date in multiple formats
+    def parse_date(date_str: str) -> datetime:
+        # Try DD/MM/YYYY format first
+        if '/' in date_str:
+            parts = date_str.split('/')
+            if len(parts) == 3:
+                return datetime(int(parts[2]), int(parts[1]), int(parts[0]))
+        # Try ISO format (YYYY-MM-DD)
+        return datetime.fromisoformat(date_str)
+    
     team = Team(
         name=team_data.name,
         description=team_data.description,
@@ -1243,9 +1253,9 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
         total_amount=team_data.total_amount,
         installment_1_amount=team_data.installment_1_amount,
         installment_2_amount=team_data.installment_2_amount,
-        installment_2_due_date=datetime.fromisoformat(team_data.installment_2_due_date),
+        installment_2_due_date=parse_date(team_data.installment_2_due_date),
         installment_3_amount=team_data.installment_3_amount,
-        installment_3_due_date=datetime.fromisoformat(team_data.installment_3_due_date),
+        installment_3_due_date=parse_date(team_data.installment_3_due_date),
         bank_info=team_data.bank_info,
         paypal_email=team_data.paypal_email,
         venue=team_data.venue if team_data.venue else None,
