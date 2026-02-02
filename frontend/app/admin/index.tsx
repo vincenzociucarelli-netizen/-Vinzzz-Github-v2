@@ -145,36 +145,6 @@ export default function AdminDashboard() {
           <Text style={styles.headerTitle}>{society.name}</Text>
         </View>
         <View style={styles.headerButtons}>
-          {/* Rigenera Codice - piccolo e discreto */}
-          <TouchableOpacity 
-            onPress={async () => {
-              const confirmText = 'ATTENZIONE: Rigenerando il codice, quello vecchio non funzionerà più.\n\nSei sicuro di voler procedere?';
-              const confirmRegen = Platform.OS === 'web' 
-                ? window.confirm(confirmText)
-                : await new Promise((resolve) => {
-                    Alert.alert(
-                      'Conferma Rigenerazione',
-                      confirmText,
-                      [
-                        { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-                        { text: 'Sì, Rigenera', style: 'destructive', onPress: () => resolve(true) },
-                      ]
-                    );
-                  });
-              if (confirmRegen) {
-                try {
-                  const res = await api.post('/societies/regenerate-invite-code');
-                  setInviteCode(res.data.invite_code);
-                  showInfo('Fatto!', `Nuovo codice: ${res.data.invite_code}`);
-                } catch (e) {
-                  showInfo('Errore', 'Impossibile rigenerare il codice');
-                }
-              }
-            }} 
-            style={[styles.headerBtn, styles.regenBtn]}
-          >
-            <Ionicons name="refresh" size={16} color="#FF9500" />
-          </TouchableOpacity>
           {/* Switch to Dirigente button */}
           <TouchableOpacity 
             onPress={() => router.replace('/dirigente')} 
