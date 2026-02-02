@@ -1529,36 +1529,8 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
     
     await db.athletes.insert_one(athlete.dict())
     
-    # Create payment records using team's payment settings
-    if team.get("installment_1_amount", 0) > 0:
-        # Installment 1 - due after trial period
-        payment1 = Payment(
-            athlete_id=athlete.id,
-            installment_number=1,
-            amount=team["installment_1_amount"],
-            due_date=athlete.trial_end_date
-        )
-        await db.payments.insert_one(payment1.dict())
-        
-        # Installment 2
-        if team.get("installment_2_amount", 0) > 0 and team.get("installment_2_due_date"):
-            payment2 = Payment(
-                athlete_id=athlete.id,
-                installment_number=2,
-                amount=team["installment_2_amount"],
-                due_date=team["installment_2_due_date"]
-            )
-            await db.payments.insert_one(payment2.dict())
-        
-        # Installment 3
-        if team.get("installment_3_amount", 0) > 0 and team.get("installment_3_due_date"):
-            payment3 = Payment(
-                athlete_id=athlete.id,
-                installment_number=3,
-                amount=team["installment_3_amount"],
-                due_date=team["installment_3_due_date"]
-            )
-            await db.payments.insert_one(payment3.dict())
+    # Payment records are created when admin approves the athlete
+    # This ensures payments are only created for approved athletes
     
     return athlete
 
