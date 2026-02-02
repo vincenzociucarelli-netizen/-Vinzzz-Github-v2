@@ -471,6 +471,207 @@ export default function DirigenteProfile() {
           </View>
         )}
 
+        {/* Documento e Dati Bancari */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>🏦 Documento e Dati Bancari</Text>
+            <TouchableOpacity onPress={() => setEditingBank(!editingBank)}>
+              <Ionicons name={editingBank ? "close" : "create"} size={22} color="#8E44AD" />
+            </TouchableOpacity>
+          </View>
+          
+          {editingBank ? (
+            <>
+              <Text style={styles.inputLabel}>Tipo Documento</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={editData.id_type}
+                  onValueChange={(v) => setEditData({...editData, id_type: v})}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Seleziona..." value="" />
+                  {DOC_TYPES.map((type) => (
+                    <Picker.Item key={type} label={type} value={type} />
+                  ))}
+                </Picker>
+              </View>
+              
+              <Text style={styles.inputLabel}>Numero Documento</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.id_front}
+                onChangeText={(v) => setEditData({...editData, id_front: v})}
+                placeholder="es. AX1234567"
+                placeholderTextColor="#ccc"
+              />
+              
+              <Text style={styles.inputLabel}>Scadenza Documento</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.id_back}
+                onChangeText={(v) => {
+                  let formatted = v.replace(/[^0-9]/g, '');
+                  if (formatted.length > 2) {
+                    formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
+                  }
+                  if (formatted.length > 5) {
+                    formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
+                  }
+                  setEditData({...editData, id_back: formatted});
+                }}
+                placeholder="gg/mm/aaaa"
+                placeholderTextColor="#ccc"
+                maxLength={10}
+                keyboardType="numeric"
+              />
+              
+              <Text style={styles.inputLabel}>Foto Documento (Fronte)</Text>
+              <TouchableOpacity style={styles.imageUploadBtn} onPress={() => pickImage('front')}>
+                {(docFrontImage || editData.doc_front_image) ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${docFrontImage || editData.doc_front_image}` }} 
+                    style={styles.docImage} 
+                  />
+                ) : (
+                  <View style={styles.imageUploadPlaceholder}>
+                    <Ionicons name="camera" size={32} color="#ccc" />
+                    <Text style={styles.imageUploadText}>Tocca per caricare</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              
+              <Text style={styles.inputLabel}>Foto Documento (Retro)</Text>
+              <TouchableOpacity style={styles.imageUploadBtn} onPress={() => pickImage('back')}>
+                {(docBackImage || editData.doc_back_image) ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${docBackImage || editData.doc_back_image}` }} 
+                    style={styles.docImage} 
+                  />
+                ) : (
+                  <View style={styles.imageUploadPlaceholder}>
+                    <Ionicons name="camera" size={32} color="#ccc" />
+                    <Text style={styles.imageUploadText}>Tocca per caricare</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              
+              <Text style={styles.inputLabel}>IBAN</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.iban}
+                onChangeText={(v) => setEditData({...editData, iban: v.toUpperCase()})}
+                placeholder="es. IT60X0542811101000000123456"
+                placeholderTextColor="#ccc"
+                autoCapitalize="characters"
+              />
+              
+              <Text style={styles.inputLabel}>Intestatario Conto</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.account_holder}
+                onChangeText={(v) => setEditData({...editData, account_holder: v})}
+                placeholder="es. Intestazione del conto"
+                placeholderTextColor="#ccc"
+              />
+              
+              <Text style={styles.inputLabel}>Nome Banca</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.bank_name}
+                onChangeText={(v) => setEditData({...editData, bank_name: v})}
+                placeholder="es. Intesa Sanpaolo"
+                placeholderTextColor="#ccc"
+              />
+              
+              <TouchableOpacity
+                style={[styles.saveBankButtonFixed, savingBank && styles.saveButtonDisabled]}
+                onPress={async () => {
+                  setSavingBank(true);
+                  try {
+                    await api.patch('/users/me/bank-details', {
+                      id_type: editData.id_type,
+                      id_front: editData.id_front,
+                      id_back: editData.id_back,
+                      iban: editData.iban,
+                      account_holder: editData.account_holder,
+                      bank_name: editData.bank_name,
+                      doc_front_image: docFrontImage || editData.doc_front_image,
+                      doc_back_image: docBackImage || editData.doc_back_image,
+                    });
+                    setProfileData({
+                      ...profileData,
+                      id_type: editData.id_type,
+                      id_front: editData.id_front,
+                      id_back: editData.id_back,
+                      iban: editData.iban,
+                      account_holder: editData.account_holder,
+                      bank_name: editData.bank_name,
+                      doc_front_image: docFrontImage || editData.doc_front_image || '',
+                      doc_back_image: docBackImage || editData.doc_back_image || '',
+                    });
+                    setEditingBank(false);
+                    showAlert('Salvato', 'Dati bancari aggiornati');
+                  } catch (error: any) {
+                    showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
+                  } finally {
+                    setSavingBank(false);
+                  }
+                }}
+                disabled={savingBank}
+              >
+                <Text style={styles.saveBankButtonText}>
+                  {savingBank ? 'Salvataggio...' : '💾 SALVA DATI BANCARI'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Tipo Documento</Text>
+                <Text style={styles.fieldValue}>{profileData.id_type || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Numero Documento</Text>
+                <Text style={styles.fieldValue}>{profileData.id_front || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Scadenza</Text>
+                <Text style={styles.fieldValue}>{profileData.id_back || '-'}</Text>
+              </View>
+              {profileData.doc_front_image && (
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Documento Fronte</Text>
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${profileData.doc_front_image}` }} 
+                    style={styles.docImage} 
+                  />
+                </View>
+              )}
+              {profileData.doc_back_image && (
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Documento Retro</Text>
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${profileData.doc_back_image}` }} 
+                    style={styles.docImage} 
+                  />
+                </View>
+              )}
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>IBAN</Text>
+                <Text style={styles.fieldValue}>{profileData.iban || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Intestatario</Text>
+                <Text style={styles.fieldValue}>{profileData.account_holder || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Banca</Text>
+                <Text style={styles.fieldValue}>{profileData.bank_name || '-'}</Text>
+              </View>
+            </>
+          )}
+        </View>
+
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
