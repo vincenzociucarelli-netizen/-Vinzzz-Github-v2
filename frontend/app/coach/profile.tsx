@@ -647,6 +647,30 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#f0f0f0',
   },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  inputLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
   cancelButtonText: {
     color: '#666',
     fontWeight: '600',
