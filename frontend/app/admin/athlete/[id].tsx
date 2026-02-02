@@ -1080,6 +1080,54 @@ export default function AdminAthleteDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Certificate Modal */}
+      <Modal
+        visible={certModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setCertModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {certificate ? 'Aggiorna Certificato Medico' : 'Aggiungi Certificato Medico'}
+            </Text>
+            
+            <Text style={styles.inputLabel}>Data Scadenza (GG/MM/AAAA)</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={certExpiryDate}
+              onChangeText={setCertExpiryDate}
+              placeholder="es. 31/12/2025"
+              placeholderTextColor="#999"
+              keyboardType="numeric"
+              maxLength={10}
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setCertModalVisible(false);
+                  setCertExpiryDate('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleSaveCertificate}
+                disabled={savingCert}
+              >
+                <Text style={styles.saveButtonText}>
+                  {savingCert ? 'Salvataggio...' : 'Salva'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
