@@ -560,13 +560,24 @@ export default function TeamsScreen() {
                 keyboardType="decimal-pad"
               />
 
-              <Text style={styles.label}>Scadenza Rata 3 (YYYY-MM-DD) *</Text>
+              <Text style={styles.label}>Scadenza Rata 3 *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Es: 2025-06-30"
+                placeholder="GG/MM/AAAA"
                 value={installment3Date}
-                onChangeText={setInstallment3Date}
+                onChangeText={(text) => {
+                  // Auto-format: add / after day and month
+                  let formatted = text.replace(/[^0-9]/g, '');
+                  if (formatted.length > 2) {
+                    formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
+                  }
+                  if (formatted.length > 5) {
+                    formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
+                  }
+                  setInstallment3Date(formatted);
+                }}
                 keyboardType="numbers-and-punctuation"
+                maxLength={10}
               />
 
               <Text style={styles.sectionTitle}>🏦 Info Pagamento</Text>
