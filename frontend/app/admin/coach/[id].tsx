@@ -737,6 +737,43 @@ const styles = StyleSheet.create({
   value: { fontSize: 14, fontWeight: '500', color: '#000', flex: 1, textAlign: 'right' },
   valueCode: { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: '#FF9500' },
   teamsText: { fontSize: 14, color: '#007AFF', lineHeight: 22 },
+  hintText: { fontSize: 13, color: '#666', marginBottom: 12 },
+  teamCheckbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  teamCheckboxSelected: {
+    backgroundColor: '#E3F2FD',
+    borderColor: '#007AFF',
+  },
+  teamCheckboxText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#333',
+  },
+  teamCheckboxTextSelected: {
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  saveTeamsBtn: {
+    backgroundColor: '#007AFF',
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  saveTeamsBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   inputLabel: { fontSize: 13, color: '#6c757d', marginBottom: 4, marginTop: 8 },
   input: { 
     backgroundColor: '#f5f5f5', 
