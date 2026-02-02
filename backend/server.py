@@ -1079,6 +1079,28 @@ async def update_user_status(user_id: str, data: UserUpdateStatus, current_user 
     
     return {"message": f"Utente {data.status} con successo"}
 
+@api_router.patch("/users/{user_id}/assigned-teams")
+async def update_assigned_teams(user_id: str, data: dict, current_user = Depends(get_current_user)):
+    """Assign teams to a coach - admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può assegnare squadre")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    if user["role"] != UserRole.COACH:
+        raise HTTPException(status_code=400, detail="Solo i coach possono avere squadre assegnate")
+    
+    assigned_teams = data.get("assigned_teams", [])
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"assigned_teams": assigned_teams}}
+    )
+    
+    return {"message": "Squadre assegnate con successo"}
+
 @api_router.patch("/users/{user_id}/teams")
 async def assign_teams_to_coach(user_id: str, data: CoachAssignTeams, current_user = Depends(get_current_user)):
     """Assign teams to a coach"""
