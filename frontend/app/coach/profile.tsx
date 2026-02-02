@@ -49,6 +49,8 @@ export default function CoachProfile() {
     iban: '',
     account_holder: '',
     bank_name: '',
+    doc_front_image: '',
+    doc_back_image: '',
   });
 
   const [editData, setEditData] = useState({ ...profileData });
