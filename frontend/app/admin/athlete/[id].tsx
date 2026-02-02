@@ -376,15 +376,22 @@ export default function AdminAthleteDetail() {
     
     setSavingCert(true);
     try {
-      const response = await api.post('/certificates', {
+      const response = await api.post('/certificates/simple', {
         athlete_id: id,
         expiry_date: expiryDate.toISOString(),
+        image_base64: certImage || null,
       });
-      setCertificate(response.data);
+      setCertificate({
+        id: response.data.id,
+        athlete_id: id as string,
+        expiry_date: response.data.expiry_date,
+      });
       setCertModalVisible(false);
       setCertExpiryDate('');
+      setCertImage(null);
       showAlert('Successo', 'Certificato medico salvato');
     } catch (error: any) {
+      console.error('Error saving certificate:', error);
       showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
     } finally {
       setSavingCert(false);
