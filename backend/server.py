@@ -1483,9 +1483,8 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
     athlete_id = str(ObjectId())
     qr_code = generate_qr_code(athlete_id)
     
-    # Determine status based on trial period
-    # If is_trial=True -> status="trial", trial period 7 days
-    # If is_trial=False -> status="active", privacy accepted, no trial
+    # All athletes start as PENDING and need Admin approval
+    # is_trial is preserved to know what status to set after approval
     is_trial = getattr(athlete_data, 'is_trial', True)
     privacy_accepted = getattr(athlete_data, 'privacy_accepted', False)
     
@@ -1494,9 +1493,14 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
     if athlete_data.data_password and is_minor:
         data_password_hash = hash_password(athlete_data.data_password)
     
+    # Get society_id from the user's parent
+    parent_user = await db.users.find_one({"id": current_user["id"]})
+    society_id = parent_user.get("society_id") if parent_user else None
+    
     athlete = Athlete(
         id=athlete_id,
         parent_id=current_user["id"],
+        society_id=society_id,
         full_name=athlete_data.full_name,
         first_name=athlete_data.first_name,
         last_name=athlete_data.last_name,
@@ -1517,7 +1521,7 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
         team_id_2=athlete_data.team_id_2,
         qr_code=qr_code,
         trial_end_date=datetime.utcnow() + timedelta(days=7) if is_trial else datetime.utcnow(),
-        status="trial" if is_trial else "active",
+        status=AthleteStatus.PENDING,  # ALL athletes start as PENDING
         privacy_accepted=privacy_accepted,
         privacy_accepted_date=datetime.utcnow() if privacy_accepted else None,
         data_password_hash=data_password_hash,
