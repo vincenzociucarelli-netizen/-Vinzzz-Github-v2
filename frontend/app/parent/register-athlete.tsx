@@ -218,10 +218,10 @@ export default function RegisterAthlete() {
       });
       
       const successMsg = isTrialPeriod 
-        ? 'Atleta registrato in periodo di prova (7 giorni)'
-        : 'Atleta registrato con privacy accettata';
+        ? 'Atleta registrato! In attesa di approvazione da parte dell\'amministratore.'
+        : 'Atleta registrato con privacy accettata! In attesa di approvazione.';
       
-      showAlert('Successo', successMsg, () => router.back());
+      showAlert('Successo', successMsg, () => router.replace('/parent'));
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante la registrazione');
     } finally {
