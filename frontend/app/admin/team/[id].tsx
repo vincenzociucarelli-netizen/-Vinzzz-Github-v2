@@ -962,6 +962,9 @@ const styles = StyleSheet.create({
   venueInputWrapper: {
     flex: 1.5,
   },
+  venueInputWrapper2: {
+    flex: 1,
+  },
   pickerWrapper: {
     flex: 1,
   },
