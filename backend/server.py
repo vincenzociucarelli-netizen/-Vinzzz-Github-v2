@@ -1031,7 +1031,7 @@ async def get_pending_users(current_user = Depends(get_current_user)):
 @api_router.patch("/users/me/bank-details")
 async def update_my_bank_details(data: dict, current_user = Depends(get_current_user)):
     """Update current user's bank and document details"""
-    allowed_fields = ["id_type", "id_front", "id_back", "iban", "account_holder", "bank_name"]
+    allowed_fields = ["id_type", "id_front", "id_back", "iban", "account_holder", "bank_name", "doc_front_image", "doc_back_image"]
     update_dict = {k: v for k, v in data.items() if k in allowed_fields}
     
     if update_dict:
