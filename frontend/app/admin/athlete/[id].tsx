@@ -12,6 +12,7 @@ import {
   Switch,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
@@ -19,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Athlete, Team, Payment, Certificate } from '../../../src/types';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import * as ImagePicker from 'expo-image-picker';
 
 interface PaymentSummary {
   total_due: number;
