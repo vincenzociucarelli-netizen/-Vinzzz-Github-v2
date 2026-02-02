@@ -76,6 +76,11 @@ export default function AdminAthleteDetail() {
   });
   const [savingPayment, setSavingPayment] = useState(false);
 
+  // Certificate modal
+  const [certModalVisible, setCertModalVisible] = useState(false);
+  const [certExpiryDate, setCertExpiryDate] = useState('');
+  const [savingCert, setSavingCert] = useState(false);
+
   const loadData = async () => {
     try {
       const [athleteRes, paymentsRes, certRes] = await Promise.all([
