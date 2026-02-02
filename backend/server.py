@@ -1028,6 +1028,20 @@ async def get_pending_users(current_user = Depends(get_current_user)):
     
     return result
 
+@api_router.patch("/users/me/bank-details")
+async def update_my_bank_details(data: dict, current_user = Depends(get_current_user)):
+    """Update current user's bank and document details"""
+    allowed_fields = ["id_type", "id_front", "id_back", "iban", "account_holder", "bank_name"]
+    update_dict = {k: v for k, v in data.items() if k in allowed_fields}
+    
+    if update_dict:
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": update_dict}
+        )
+    
+    return {"message": "Dati bancari aggiornati"}
+
 @api_router.patch("/users/{user_id}/role")
 async def update_user_role(user_id: str, data: UserUpdateRole, current_user = Depends(get_current_user)):
     """Update user role (only for dirigenti: admin/viewer)"""
