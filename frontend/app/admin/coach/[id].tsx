@@ -373,8 +373,54 @@ export default function AdminCoachDetail() {
 
         {/* Squadre Assegnate */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🏐 Squadre Assegnate</Text>
-          <Text style={styles.teamsText}>{getTeamNames(coach.assigned_teams)}</Text>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>🏐 Squadre Assegnate</Text>
+            <TouchableOpacity onPress={() => setEditingTeams(!editingTeams)}>
+              <Ionicons name={editingTeams ? "close" : "create"} size={22} color="#007AFF" />
+            </TouchableOpacity>
+          </View>
+          
+          {editingTeams ? (
+            <>
+              <Text style={styles.hintText}>Seleziona le squadre da assegnare al coach:</Text>
+              {teams.map((team) => {
+                const isAssigned = selectedTeams.includes(team.id);
+                return (
+                  <TouchableOpacity
+                    key={team.id}
+                    style={[styles.teamCheckbox, isAssigned && styles.teamCheckboxSelected]}
+                    onPress={() => {
+                      if (isAssigned) {
+                        setSelectedTeams(selectedTeams.filter(t => t !== team.id));
+                      } else {
+                        setSelectedTeams([...selectedTeams, team.id]);
+                      }
+                    }}
+                  >
+                    <Ionicons 
+                      name={isAssigned ? "checkbox" : "square-outline"} 
+                      size={22} 
+                      color={isAssigned ? "#007AFF" : "#999"} 
+                    />
+                    <Text style={[styles.teamCheckboxText, isAssigned && styles.teamCheckboxTextSelected]}>
+                      {team.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity
+                style={[styles.saveTeamsBtn, savingTeams && styles.saveBtnDisabled]}
+                onPress={handleSaveTeams}
+                disabled={savingTeams}
+              >
+                <Text style={styles.saveTeamsBtnText}>
+                  {savingTeams ? 'Salvataggio...' : 'Salva Squadre'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={styles.teamsText}>{getTeamNames(coach.assigned_teams)}</Text>
+          )}
         </View>
 
         {/* Compenso */}
