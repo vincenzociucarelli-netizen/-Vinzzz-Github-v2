@@ -256,38 +256,30 @@ export default function AdminDashboard() {
           </View>
         )}
 
-        {/* Invite Code Card */}
+        {/* Invite Code Card - Redesigned */}
         {inviteCode && (
           <View style={styles.inviteCodeCard}>
             <View style={styles.inviteCodeHeader}>
-              <Ionicons name="ticket-outline" size={24} color="#007AFF" />
-              <Text style={styles.inviteCodeTitle}>Codice Invito Società</Text>
-            </View>
-            <Text style={styles.inviteCodeValue}>{inviteCode}</Text>
-            <Text style={styles.inviteCodeHint}>
-              Condividi questo codice con coach, dirigenti e genitori per farli registrare alla tua società
-            </Text>
-            <View style={styles.inviteCodeButtons}>
+              <View style={styles.inviteCodeHeaderLeft}>
+                <Ionicons name="ticket-outline" size={20} color="#007AFF" />
+                <Text style={styles.inviteCodeTitle}>Codice Invito Società</Text>
+              </View>
               <TouchableOpacity 
-                style={styles.copyCodeButton}
-                onPress={() => {
-                  if (Platform.OS === 'web') {
-                    navigator.clipboard.writeText(inviteCode);
-                    showInfo('Copiato!', 'Codice invito copiato negli appunti');
-                  } else {
-                    showInfo('Codice Invito', `${inviteCode}\n\nComunica questo codice ai tuoi membri`);
-                  }
-                }}
-              >
-                <Ionicons name="copy-outline" size={18} color="#fff" />
-                <Text style={styles.copyCodeButtonText}>Copia</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.regenerateCodeButton}
+                style={styles.regenerateIconBtn}
                 onPress={async () => {
+                  const confirmText = 'ATTENZIONE: Rigenerando il codice, quello vecchio non funzionerà più. Sei sicuro di voler procedere?';
                   const confirmRegen = Platform.OS === 'web' 
-                    ? window.confirm('Sei sicuro? Il vecchio codice non funzionerà più.')
-                    : true;
+                    ? window.confirm(confirmText)
+                    : await new Promise((resolve) => {
+                        Alert.alert(
+                          'Conferma',
+                          confirmText,
+                          [
+                            { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                            { text: 'Sì, Rigenera', style: 'destructive', onPress: () => resolve(true) },
+                          ]
+                        );
+                      });
                   if (confirmRegen) {
                     try {
                       const res = await api.post('/societies/regenerate-invite-code');
@@ -299,10 +291,83 @@ export default function AdminDashboard() {
                   }
                 }}
               >
-                <Ionicons name="refresh-outline" size={18} color="#007AFF" />
-                <Text style={styles.regenerateCodeButtonText}>Rigenera</Text>
+                <Ionicons name="refresh-outline" size={16} color="#999" />
               </TouchableOpacity>
             </View>
+            <Text style={styles.inviteCodeValue}>{inviteCode}</Text>
+            <Text style={styles.inviteCodeHint}>
+              Condividi questo codice con coach, dirigenti e genitori per farli registrare alla tua società
+            </Text>
+            <TouchableOpacity 
+              style={styles.copyCodeButton}
+              onPress={() => {
+                if (Platform.OS === 'web') {
+                  navigator.clipboard.writeText(inviteCode);
+                  showInfo('Copiato!', 'Codice invito copiato negli appunti');
+                } else {
+                  showInfo('Codice Invito', `${inviteCode}\n\nComunica questo codice ai tuoi membri`);
+                }
+              }}
+            >
+              <Ionicons name="copy-outline" size={18} color="#fff" />
+              <Text style={styles.copyCodeButtonText}>Copia Codice</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Pending Athletes Section */}
+        {pendingAthletes.length > 0 && (
+          <View style={styles.pendingAthletesCard}>
+            <View style={styles.pendingAthletesHeader}>
+              <Ionicons name="time" size={24} color="#FF9500" />
+              <Text style={styles.pendingAthletesTitle}>
+                Atleti in Attesa di Approvazione ({pendingAthletes.length})
+              </Text>
+            </View>
+            {pendingAthletes.map((athlete) => (
+              <View key={athlete.id} style={styles.pendingAthleteItem}>
+                <View style={styles.pendingAthleteInfo}>
+                  <Text style={styles.pendingAthleteName}>{athlete.full_name}</Text>
+                  <Text style={styles.pendingAthleteTeam}>{athlete.team_name}</Text>
+                  <Text style={styles.pendingAthleteParent}>Genitore: {athlete.parent_name}</Text>
+                </View>
+                <View style={styles.pendingAthleteActions}>
+                  <TouchableOpacity
+                    style={styles.approveButton}
+                    onPress={async () => {
+                      try {
+                        await api.patch(`/athletes/${athlete.id}/approval`, { status: 'trial' });
+                        showInfo('Approvato', `${athlete.full_name} è stato approvato in periodo di prova`);
+                        loadStats();
+                      } catch (e) {
+                        showInfo('Errore', 'Impossibile approvare l\'atleta');
+                      }
+                    }}
+                  >
+                    <Ionicons name="checkmark" size={18} color="#fff" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.rejectButton}
+                    onPress={async () => {
+                      const confirmReject = Platform.OS === 'web'
+                        ? window.confirm(`Sei sicuro di voler rifiutare ${athlete.full_name}?`)
+                        : true;
+                      if (confirmReject) {
+                        try {
+                          await api.patch(`/athletes/${athlete.id}/approval`, { status: 'rejected' });
+                          showInfo('Rifiutato', `${athlete.full_name} è stato rifiutato`);
+                          loadStats();
+                        } catch (e) {
+                          showInfo('Errore', 'Impossibile rifiutare l\'atleta');
+                        }
+                      }
+                    }}
+                  >
+                    <Ionicons name="close" size={18} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
           </View>
         )}
 
