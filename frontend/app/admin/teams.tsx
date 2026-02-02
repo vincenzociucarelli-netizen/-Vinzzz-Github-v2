@@ -132,8 +132,11 @@ export default function TeamsScreen() {
       return;
     }
 
-    if (!matchDay.day || !matchDay.time || !matchDay.venue) {
-      Alert.alert('Errore', 'Inserisci il giorno gara completo');
+    // Match day is optional - only validate if partially filled
+    const hasPartialMatchDay = matchDay.day || matchDay.time || matchDay.venue;
+    const hasCompleteMatchDay = matchDay.day && matchDay.time && matchDay.venue;
+    if (hasPartialMatchDay && !hasCompleteMatchDay) {
+      Alert.alert('Errore', 'Completa tutti i campi del giorno gara oppure lasciali tutti vuoti');
       return;
     }
 
