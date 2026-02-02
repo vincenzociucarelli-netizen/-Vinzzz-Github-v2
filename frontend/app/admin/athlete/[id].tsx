@@ -1128,12 +1128,28 @@ export default function AdminAthleteDetail() {
               maxLength={10}
             />
             
+            <Text style={styles.inputLabel}>Foto Certificato (opzionale)</Text>
+            <TouchableOpacity style={styles.certImageBtn} onPress={pickCertImage}>
+              {certImage ? (
+                <Image 
+                  source={{ uri: `data:image/jpeg;base64,${certImage}` }} 
+                  style={styles.certImagePreview} 
+                />
+              ) : (
+                <View style={styles.certImagePlaceholder}>
+                  <Ionicons name="camera" size={24} color="#007AFF" />
+                  <Text style={styles.certImageText}>Carica foto</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setCertModalVisible(false);
                   setCertExpiryDate('');
+                  setCertImage(null);
                 }}
               >
                 <Text style={styles.cancelButtonText}>Annulla</Text>
