@@ -738,6 +738,8 @@ const styles = StyleSheet.create({
   },
   uploadBtnText: { color: '#8E44AD', marginTop: 8 },
   docPreview: { width: '100%', height: 150, borderRadius: 8 },
-  docImagesRow: { flexDirection: 'row', gap: 8, marginVertical: 8 },
+  docImagesRow: { flexDirection: 'row', gap: 12, marginVertical: 8 },
   docThumb: { width: 100, height: 70, borderRadius: 6 },
+  docImageContainer: { alignItems: 'center' },
+  docImageLabel: { fontSize: 11, color: '#666', marginBottom: 4 },
 });
