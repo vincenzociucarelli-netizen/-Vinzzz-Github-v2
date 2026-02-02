@@ -316,6 +316,121 @@ export default function TeamDetail() {
               />
             </View>
 
+            {/* Sezione Allenamenti */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🏋️ Allenamenti Settimanali (min 2, max 4)</Text>
+              
+              {trainingSessions.map((session, index) => (
+                <View key={index} style={styles.trainingEditRow}>
+                  <View style={styles.trainingEditHeader}>
+                    <Text style={styles.trainingEditLabel}>Allenamento {index + 1}</Text>
+                    {trainingSessions.length > 2 && (
+                      <TouchableOpacity onPress={() => removeTrainingSession(index)}>
+                        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  
+                  <View style={styles.trainingEditFields}>
+                    <View style={styles.fieldRow}>
+                      <View style={styles.fieldQuarter}>
+                        <Text style={styles.miniLabel}>Giorno</Text>
+                        <View style={styles.pickerContainer}>
+                          <Picker
+                            selectedValue={session.day}
+                            onValueChange={(value) => updateTrainingSession(index, 'day', value)}
+                            style={styles.picker}
+                          >
+                            {DAYS_OF_WEEK.map((day) => (
+                              <Picker.Item key={day} label={day} value={day} />
+                            ))}
+                          </Picker>
+                        </View>
+                      </View>
+                      <View style={styles.fieldQuarter}>
+                        <Text style={styles.miniLabel}>Inizio</Text>
+                        <TextInput
+                          style={styles.miniInput}
+                          value={session.timeStart}
+                          onChangeText={(v) => updateTrainingSession(index, 'timeStart', v)}
+                          placeholder="18:00"
+                          maxLength={5}
+                        />
+                      </View>
+                      <View style={styles.fieldQuarter}>
+                        <Text style={styles.miniLabel}>Fine</Text>
+                        <TextInput
+                          style={styles.miniInput}
+                          value={session.timeEnd}
+                          onChangeText={(v) => updateTrainingSession(index, 'timeEnd', v)}
+                          placeholder="20:00"
+                          maxLength={5}
+                        />
+                      </View>
+                      <View style={styles.fieldHalf}>
+                        <Text style={styles.miniLabel}>Palestra</Text>
+                        <TextInput
+                          style={styles.miniInput}
+                          value={session.venue}
+                          onChangeText={(v) => updateTrainingSession(index, 'venue', v)}
+                          placeholder="Palestra"
+                        />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ))}
+              
+              {trainingSessions.length < 4 && (
+                <TouchableOpacity style={styles.addTrainingBtn} onPress={addTrainingSession}>
+                  <Ionicons name="add-circle" size={20} color="#007AFF" />
+                  <Text style={styles.addTrainingText}>Aggiungi Allenamento</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Sezione Giorno Gara */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🏆 Giorno Gara in Casa</Text>
+              <View style={styles.trainingEditFields}>
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldQuarter}>
+                    <Text style={styles.miniLabel}>Giorno</Text>
+                    <View style={styles.pickerContainer}>
+                      <Picker
+                        selectedValue={matchDay.day}
+                        onValueChange={(value) => setMatchDay({...matchDay, day: value})}
+                        style={styles.picker}
+                      >
+                        {DAYS_OF_WEEK.map((day) => (
+                          <Picker.Item key={day} label={day} value={day} />
+                        ))}
+                      </Picker>
+                    </View>
+                  </View>
+                  <View style={styles.fieldQuarter}>
+                    <Text style={styles.miniLabel}>Orario</Text>
+                    <TextInput
+                      style={styles.miniInput}
+                      value={matchDay.time}
+                      onChangeText={(v) => setMatchDay({...matchDay, time: v})}
+                      placeholder="17:00"
+                      maxLength={5}
+                    />
+                  </View>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.miniLabel}>Palestra</Text>
+                    <TextInput
+                      style={styles.miniInput}
+                      value={matchDay.venue}
+                      onChangeText={(v) => setMatchDay({...matchDay, venue: v})}
+                      placeholder="Palasport"
+                    />
+                  </View>
+                </View>
+              </View>
+            </View>
+
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>🏆 Campionati</Text>
               <TextInput
