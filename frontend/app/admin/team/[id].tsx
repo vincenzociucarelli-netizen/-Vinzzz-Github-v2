@@ -345,13 +345,6 @@ export default function TeamDetail() {
             <View style={styles.trainingCard}>
               <View style={styles.trainingHeader}>
                 <Text style={styles.trainingTitle}>🏋️ Allenamenti Settimanali</Text>
-                <TouchableOpacity 
-                  style={styles.editTrainingBtn}
-                  onPress={() => setTrainingModalVisible(true)}
-                >
-                  <Ionicons name="pencil" size={18} color="#007AFF" />
-                  <Text style={styles.editTrainingText}>Modifica</Text>
-                </TouchableOpacity>
               </View>
               
               {/* Training Table Header - 4 columns */}
