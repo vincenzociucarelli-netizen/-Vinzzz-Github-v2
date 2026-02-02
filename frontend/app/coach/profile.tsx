@@ -279,19 +279,52 @@ export default function CoachProfile() {
 
   const handleToggle5000Limit = async () => {
     const newValue = !hasExceeded5000;
+    
+    // Se si sta attivando, chiedi conferma
+    if (newValue) {
+      const now = new Date();
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      
+      const confirmMsg = `ATTENZIONE: Stai dichiarando di aver superato il limite di €5.000.\n\nLa data di oggi (${dateStr}) verrà memorizzata nell'archivio e rimarrà visibile anche se dovessi togliere il flag in futuro.\n\nConfermi?`;
+      
+      const confirmAction = Platform.OS === 'web'
+        ? window.confirm(confirmMsg)
+        : await new Promise((resolve) => {
+            Alert.alert(
+              'Conferma Dichiarazione',
+              confirmMsg,
+              [
+                { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Confermo', style: 'destructive', onPress: () => resolve(true) },
+              ]
+            );
+          });
+      
+      if (!confirmAction) return;
+    }
+    
     setHasExceeded5000(newValue);
     
-    // Set current month as the exceeded month
+    // Set current month as the exceeded month with date
     const now = new Date();
     const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const newLimit = { ...over5000Limit };
-    newLimit[currentMonthKey] = newValue;
+    
+    if (newValue) {
+      // Memorizza anche la data esatta della dichiarazione
+      newLimit[currentMonthKey] = true;
+      newLimit[`${currentMonthKey}_date`] = now.toISOString();
+    } else {
+      newLimit[currentMonthKey] = false;
+      // NON rimuoviamo la data - rimane nell'archivio
+    }
+    
     setOver5000Limit(newLimit);
     
     try {
       await api.patch('/auth/me', { over_5000_limit: newLimit });
       if (newValue) {
-        showAlert('Attenzione', 'La tua dichiarazione è stata registrata. L\'amministratore riceverà una notifica.');
+        showAlert('Registrato', 'La tua dichiarazione è stata memorizzata con la data odierna. L\'amministratore riceverà una notifica.');
       }
     } catch (error: any) {
       // Revert on error
