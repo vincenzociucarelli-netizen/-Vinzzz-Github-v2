@@ -355,6 +355,42 @@ export default function AdminAthleteDetail() {
     return '#FF3B30';
   };
 
+  const handleSaveCertificate = async () => {
+    if (!certExpiryDate) {
+      showAlert('Errore', 'Inserisci la data di scadenza');
+      return;
+    }
+    
+    // Converti da DD/MM/YYYY a ISO
+    const parts = certExpiryDate.split('/');
+    if (parts.length !== 3) {
+      showAlert('Errore', 'Formato data non valido. Usa GG/MM/AAAA');
+      return;
+    }
+    
+    const expiryDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    if (isNaN(expiryDate.getTime())) {
+      showAlert('Errore', 'Data non valida');
+      return;
+    }
+    
+    setSavingCert(true);
+    try {
+      const response = await api.post('/certificates', {
+        athlete_id: id,
+        expiry_date: expiryDate.toISOString(),
+      });
+      setCertificate(response.data);
+      setCertModalVisible(false);
+      setCertExpiryDate('');
+      showAlert('Successo', 'Certificato medico salvato');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
+    } finally {
+      setSavingCert(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
