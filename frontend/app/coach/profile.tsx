@@ -16,6 +16,9 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { Picker } from '@react-native-picker/picker';
+
+const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
 export default function CoachProfile() {
   const router = useRouter();
