@@ -482,24 +482,30 @@ export default function AdminCoachDetail() {
               <Text style={styles.readOnlyValue}>{coach.id_back || '-'}</Text>
             </View>
             
-            {/* Foto Documenti se presenti */}
-            {coach.doc_front_image && (
+            {/* Foto Documenti se presenti - in riga compatta */}
+            {(coach.doc_front_image || coach.doc_back_image) && (
               <View style={styles.readOnlyField}>
-                <Text style={styles.readOnlyLabel}>Documento Fronte</Text>
-                <Image 
-                  source={{ uri: `data:image/jpeg;base64,${coach.doc_front_image}` }} 
-                  style={styles.docImagePreview} 
-                />
-              </View>
-            )}
-            
-            {coach.doc_back_image && (
-              <View style={styles.readOnlyField}>
-                <Text style={styles.readOnlyLabel}>Documento Retro</Text>
-                <Image 
-                  source={{ uri: `data:image/jpeg;base64,${coach.doc_back_image}` }} 
-                  style={styles.docImagePreview} 
-                />
+                <Text style={styles.readOnlyLabel}>Foto Documento</Text>
+                <View style={styles.docImagesRowAdmin}>
+                  {coach.doc_front_image && (
+                    <View style={styles.docImageContainerAdmin}>
+                      <Text style={styles.docImageLabelAdmin}>Fronte</Text>
+                      <Image 
+                        source={{ uri: `data:image/jpeg;base64,${coach.doc_front_image}` }} 
+                        style={styles.docImagePreviewSmall} 
+                      />
+                    </View>
+                  )}
+                  {coach.doc_back_image && (
+                    <View style={styles.docImageContainerAdmin}>
+                      <Text style={styles.docImageLabelAdmin}>Retro</Text>
+                      <Image 
+                        source={{ uri: `data:image/jpeg;base64,${coach.doc_back_image}` }} 
+                        style={styles.docImagePreviewSmall} 
+                      />
+                    </View>
+                  )}
+                </View>
               </View>
             )}
             
