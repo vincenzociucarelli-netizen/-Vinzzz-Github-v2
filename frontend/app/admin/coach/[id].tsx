@@ -83,12 +83,6 @@ export default function AdminCoachDetail() {
       setCoach(coachRes.data);
       setTeams(teamsRes.data);
       setMonthlyCompensation(coachRes.data.monthly_compensation?.toString() || '0');
-      setDocumentType(coachRes.data.document_type || '');
-      setDocumentFront(coachRes.data.document_front || '');
-      setDocumentBack(coachRes.data.document_back || '');
-      setIban(coachRes.data.iban || '');
-      setIbanHolder(coachRes.data.iban_holder || '');
-      setBankName(coachRes.data.bank_name || '');
       setSelectedTeams(coachRes.data.assigned_teams || []);
     } catch (error) {
       console.error('Error loading coach data:', error);
