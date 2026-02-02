@@ -53,6 +53,7 @@ export default function AdminDashboard() {
   const { user, logout } = useAuthStore();
   const [stats, setStats] = useState<Stats | null>(null);
   const [pendingCounts, setPendingCounts] = useState<PendingCount>({ dirigenti: 0, coaches: 0, parents: 0 });
+  const [pendingAthletes, setPendingAthletes] = useState<any[]>([]);
   const [society, setSociety] = useState<SocietySettings>({ name: 'Società Sportiva', logo: null });
   const [refreshing, setRefreshing] = useState(false);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
@@ -61,19 +62,21 @@ export default function AdminDashboard() {
 
   const loadStats = async () => {
     try {
-      const [statsRes, pendingRes, societyRes, birthdaysRes, certsRes, inviteRes] = await Promise.all([
+      const [statsRes, pendingRes, societyRes, birthdaysRes, certsRes, inviteRes, pendingAthletesRes] = await Promise.all([
         api.get('/stats/overview'),
         api.get('/users/pending'),
         api.get('/settings/society'),
         api.get('/birthdays/today'),
         api.get('/certificates/expiring'),
         api.get('/societies/invite-code').catch(() => ({ data: { invite_code: '' } })),
+        api.get('/athletes/pending').catch(() => ({ data: [] })),
       ]);
       setStats(statsRes.data);
       setSociety(societyRes.data);
       setBirthdays(birthdaysRes.data);
       setExpiringCerts(certsRes.data);
       setInviteCode(inviteRes.data.invite_code || '');
+      setPendingAthletes(pendingAthletesRes.data || []);
       
       // Count pending by role
       const pending = pendingRes.data;
