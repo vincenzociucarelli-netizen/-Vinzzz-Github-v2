@@ -672,6 +672,22 @@ const styles = StyleSheet.create({
     color: '#999',
     fontStyle: 'italic',
   },
+  bankInfoBox: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  bankInfoLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  bankInfoText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
   linkButton: {
     flexDirection: 'row',
     alignItems: 'center',
