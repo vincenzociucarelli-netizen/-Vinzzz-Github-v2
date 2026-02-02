@@ -778,4 +778,26 @@ const styles = StyleSheet.create({
   docPreview: { width: '100%', height: 150, borderRadius: 8 },
   docImagesRow: { flexDirection: 'row', gap: 8, marginVertical: 8 },
   docThumb: { width: 100, height: 70, borderRadius: 6 },
+  readOnlyNote: { 
+    fontSize: 12, 
+    color: '#999', 
+    fontStyle: 'italic', 
+    marginBottom: 16, 
+    marginTop: -8 
+  },
+  readOnlyField: { 
+    paddingVertical: 12, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f0f0f0' 
+  },
+  readOnlyLabel: { 
+    fontSize: 13, 
+    color: '#6c757d', 
+    marginBottom: 4 
+  },
+  readOnlyValue: { 
+    fontSize: 14, 
+    fontWeight: '500', 
+    color: '#333' 
+  },
 });
