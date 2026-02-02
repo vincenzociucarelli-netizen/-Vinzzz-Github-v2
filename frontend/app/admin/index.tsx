@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   inviteCodeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
     marginBottom: 12,
   },
   inviteCodeTitle: {
