@@ -542,6 +542,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 5,
   },
+  regenBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 6,
+    padding: 6,
+  },
   content: {
     flex: 1,
   },
