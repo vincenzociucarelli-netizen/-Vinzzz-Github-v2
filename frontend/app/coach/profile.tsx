@@ -504,31 +504,79 @@ export default function CoachProfile() {
                 style={styles.input}
                 value={editData.id_type}
                 onChangeText={(v) => setEditData({...editData, id_type: v})}
-                placeholder="Es: Carta d'Identità, Patente"
+                placeholder="es. Carta d'Identità"
+                placeholderTextColor="#ccc"
               />
               
-              <Text style={styles.inputLabel}>Numero/Codice Documento</Text>
+              <Text style={styles.inputLabel}>Numero Documento</Text>
               <TextInput
                 style={styles.input}
                 value={editData.id_front}
                 onChangeText={(v) => setEditData({...editData, id_front: v})}
-                placeholder="Es: AX123456"
+                placeholder="es. AX1234567"
+                placeholderTextColor="#ccc"
               />
               
-              <Text style={styles.inputLabel}>Scadenza Documento (GG/MM/AAAA)</Text>
+              <Text style={styles.inputLabel}>Scadenza Documento</Text>
               <TextInput
                 style={styles.input}
                 value={editData.id_back}
-                onChangeText={(v) => setEditData({...editData, id_back: v})}
-                placeholder="Es: 31/12/2030"
+                onChangeText={(v) => {
+                  // Auto-format: add / after day and month
+                  let formatted = v.replace(/[^0-9]/g, '');
+                  if (formatted.length > 2) {
+                    formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
+                  }
+                  if (formatted.length > 5) {
+                    formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
+                  }
+                  setEditData({...editData, id_back: formatted});
+                }}
+                placeholder="gg/mm/aaaa"
+                placeholderTextColor="#ccc"
+                maxLength={10}
+                keyboardType="numeric"
               />
+              
+              {/* Foto Documento Fronte */}
+              <Text style={styles.inputLabel}>Foto Documento (Fronte)</Text>
+              <TouchableOpacity style={styles.imageUploadBtn} onPress={() => pickImage('front')}>
+                {(docFrontImage || editData.doc_front_image) ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${docFrontImage || editData.doc_front_image}` }} 
+                    style={styles.docImage} 
+                  />
+                ) : (
+                  <View style={styles.imageUploadPlaceholder}>
+                    <Ionicons name="camera" size={32} color="#ccc" />
+                    <Text style={styles.imageUploadText}>Tocca per caricare</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              
+              {/* Foto Documento Retro */}
+              <Text style={styles.inputLabel}>Foto Documento (Retro)</Text>
+              <TouchableOpacity style={styles.imageUploadBtn} onPress={() => pickImage('back')}>
+                {(docBackImage || editData.doc_back_image) ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${docBackImage || editData.doc_back_image}` }} 
+                    style={styles.docImage} 
+                  />
+                ) : (
+                  <View style={styles.imageUploadPlaceholder}>
+                    <Ionicons name="camera" size={32} color="#ccc" />
+                    <Text style={styles.imageUploadText}>Tocca per caricare</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
               
               <Text style={styles.inputLabel}>IBAN</Text>
               <TextInput
                 style={styles.input}
                 value={editData.iban}
                 onChangeText={(v) => setEditData({...editData, iban: v.toUpperCase()})}
-                placeholder="IT60X0542811101000000123456"
+                placeholder="es. IT60X0542811101000000123456"
+                placeholderTextColor="#ccc"
                 autoCapitalize="characters"
               />
               
@@ -537,7 +585,8 @@ export default function CoachProfile() {
                 style={styles.input}
                 value={editData.account_holder}
                 onChangeText={(v) => setEditData({...editData, account_holder: v})}
-                placeholder="Nome e Cognome intestatario"
+                placeholder="es. Intestazione del conto"
+                placeholderTextColor="#ccc"
               />
               
               <Text style={styles.inputLabel}>Nome Banca</Text>
@@ -545,7 +594,8 @@ export default function CoachProfile() {
                 style={styles.input}
                 value={editData.bank_name}
                 onChangeText={(v) => setEditData({...editData, bank_name: v})}
-                placeholder="Es: Intesa Sanpaolo"
+                placeholder="es. Intesa Sanpaolo"
+                placeholderTextColor="#ccc"
               />
               
               <TouchableOpacity
@@ -560,6 +610,8 @@ export default function CoachProfile() {
                       iban: editData.iban,
                       account_holder: editData.account_holder,
                       bank_name: editData.bank_name,
+                      doc_front_image: docFrontImage || editData.doc_front_image,
+                      doc_back_image: docBackImage || editData.doc_back_image,
                     });
                     setProfileData({
                       ...profileData,
@@ -569,6 +621,8 @@ export default function CoachProfile() {
                       iban: editData.iban,
                       account_holder: editData.account_holder,
                       bank_name: editData.bank_name,
+                      doc_front_image: docFrontImage || editData.doc_front_image || '',
+                      doc_back_image: docBackImage || editData.doc_back_image || '',
                     });
                     setEditingBank(false);
                     showAlert('Salvato', 'Dati bancari aggiornati');
