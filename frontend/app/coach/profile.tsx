@@ -1093,4 +1093,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#333',
   },
+  declarationDate: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
 });
