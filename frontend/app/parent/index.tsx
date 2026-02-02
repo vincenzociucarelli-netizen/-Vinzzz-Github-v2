@@ -220,6 +220,15 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
+  athleteStatusPending: {
+    color: '#FF9500',
+    fontWeight: '600',
+  },
+  athleteCardPending: {
+    backgroundColor: '#FFF8E1',
+    borderWidth: 1,
+    borderColor: '#FFE082',
+  },
   addButton: {
     backgroundColor: '#007AFF',
     margin: 16,
