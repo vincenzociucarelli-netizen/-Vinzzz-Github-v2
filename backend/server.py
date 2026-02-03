@@ -3223,6 +3223,11 @@ async def get_season_archive(season_name: str, current_user = Depends(get_curren
 async def root():
     return {"message": "Athlete Attendance API"}
 
+@api_router.get("/health")
+async def api_health():
+    """Health check endpoint for Kubernetes"""
+    return {"status": "healthy", "service": "backend"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
