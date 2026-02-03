@@ -341,6 +341,48 @@ export default function CoachProfile() {
     }
   };
 
+  const handleChangePassword = async () => {
+    // Validations
+    if (!currentPassword) {
+      showAlert('Errore', 'Inserisci la password attuale');
+      return;
+    }
+    if (!newPassword) {
+      showAlert('Errore', 'Inserisci la nuova password');
+      return;
+    }
+    if (newPassword.length < 6) {
+      showAlert('Errore', 'La nuova password deve avere almeno 6 caratteri');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      showAlert('Errore', 'Le nuove password non coincidono');
+      return;
+    }
+    if (currentPassword === newPassword) {
+      showAlert('Errore', 'La nuova password deve essere diversa da quella attuale');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await api.post('/auth/change-password', {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      showAlert('Successo', 'Password cambiata con successo!');
+      // Reset form
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setShowChangePassword(false);
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il cambio password');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const renderField = (label: string, value: string, key: string, editable: boolean = true) => (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
