@@ -138,6 +138,42 @@ backend:
         agent: "testing"
         comment: "✅ TESTED SUCCESSFULLY: POST /api/teams endpoint working correctly. Admin authentication required and enforced. All required fields (name, total_amount, installment amounts, due dates, bank_info, paypal_email) accepted. Optional fields (venue, training_schedule, championships, calendar_link) working. Team creation generates proper team_id for athlete registration."
 
+  - task: "Forgot Password Endpoint"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: POST /api/auth/forgot-password endpoint working correctly. Returns expected message 'Se l'email esiste, riceverai un codice di reset' for any email input. Endpoint exists and responds properly with 200 status code."
+
+  - task: "Reset Password Endpoint"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: POST /api/auth/reset-password endpoint working correctly. Properly validates reset codes and returns appropriate error messages when invalid codes are provided. Returns 400 status with expected error messages like 'Nessuna richiesta di reset trovata' or 'Codice non valido'."
+
+  - task: "Change Password Endpoint"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED SUCCESSFULLY: POST /api/auth/change-password endpoint working correctly. Properly requires authentication (returns 401/403 without token). With valid authentication, correctly validates current password and returns 400 with 'Password attuale non corretta' when wrong current password is provided."
+
 frontend:
   - task: "Certificate Upload UI"
     implemented: true
