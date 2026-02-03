@@ -34,6 +34,19 @@ ALGORITHM = "HS256"
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# ==================== HEALTH CHECK (ROOT) ====================
+# These endpoints are on the main app (not /api) for Kubernetes health checks
+
+@app.get("/")
+async def root_health():
+    """Root health check for Kubernetes/Nginx"""
+    return {"status": "ok", "app": "Club Manager"}
+
+@app.get("/health")
+async def health():
+    """Health check endpoint"""
+    return {"status": "healthy"}
+
 # ==================== MODELS ====================
 
 import secrets
