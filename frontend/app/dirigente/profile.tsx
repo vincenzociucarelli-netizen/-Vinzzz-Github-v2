@@ -1185,4 +1185,56 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.6,
   },
+  // Header buttons row
+  headerButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  passwordButton: {
+    backgroundColor: '#E3F2FD',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  passwordButtonText: {
+    color: '#007AFF',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  // Change password buttons row
+  changePasswordButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  cancelPasswordButton: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelPasswordButtonText: {
+    color: '#666',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  // Bank save button - GREEN
+  saveBankButtonFixed: {
+    backgroundColor: '#34C759',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  saveBankButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
 });
