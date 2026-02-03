@@ -531,6 +531,15 @@ export default function AdminAthleteDetail() {
   }
 
   const isCertificateExpired = certificate && new Date(certificate.expiry_date) < new Date();
+  const isCertificateExpiringSoon = certificate && !isCertificateExpired && 
+    new Date(certificate.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  
+  // Determine certificate color: red=expired, orange=expiring soon, green=valid
+  const getCertificateColor = () => {
+    if (isCertificateExpired) return '#FF3B30'; // Red
+    if (isCertificateExpiringSoon) return '#FF9500'; // Orange
+    return '#34C759'; // Green
+  };
 
   return (
     <View style={styles.container}>
