@@ -1326,6 +1326,44 @@ export default function AdminAthleteDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Certificate Viewer Modal */}
+      <Modal
+        visible={certViewerVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setCertViewerVisible(false)}
+      >
+        <View style={styles.certViewerOverlay}>
+          <View style={styles.certViewerHeader}>
+            <Text style={styles.certViewerTitle}>📋 Certificato Medico</Text>
+            <TouchableOpacity 
+              style={styles.certViewerClose}
+              onPress={() => setCertViewerVisible(false)}
+            >
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          {certificate?.image_base64 && (
+            <Image 
+              source={{ uri: `data:image/jpeg;base64,${certificate.image_base64}` }} 
+              style={styles.certViewerImage}
+              resizeMode="contain"
+            />
+          )}
+          <View style={styles.certViewerInfo}>
+            <Text style={styles.certViewerInfoText}>
+              Scadenza: {certificate && formatDate(certificate.expiry_date)}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.certViewerCloseBtn}
+            onPress={() => setCertViewerVisible(false)}
+          >
+            <Text style={styles.certViewerCloseBtnText}>Chiudi</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
