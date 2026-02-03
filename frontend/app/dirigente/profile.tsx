@@ -776,18 +776,20 @@ export default function DirigenteProfile() {
               <TextInput
                 style={styles.input}
                 value={editData.account_holder}
-                onChangeText={(v) => setEditData({...editData, account_holder: v})}
-                placeholder="es. Intestazione del conto"
+                onChangeText={(v) => setEditData({...editData, account_holder: v.toUpperCase()})}
+                placeholder="es. MARIO ROSSI"
                 placeholderTextColor="#ccc"
+                autoCapitalize="characters"
               />
               
               <Text style={styles.inputLabel}>Nome Banca</Text>
               <TextInput
                 style={styles.input}
                 value={editData.bank_name}
-                onChangeText={(v) => setEditData({...editData, bank_name: v})}
-                placeholder="es. Intesa Sanpaolo"
+                onChangeText={(v) => setEditData({...editData, bank_name: v.toUpperCase()})}
+                placeholder="es. INTESA SANPAOLO"
                 placeholderTextColor="#ccc"
+                autoCapitalize="characters"
               />
               
               <TouchableOpacity
