@@ -2205,7 +2205,7 @@ async def create_certificate_simple(
     # Create certificate
     certificate = Certificate(
         athlete_id=data.athlete_id,
-        pdf_data=data.image_base64 or "",
+        pdf_data=data.pdf_data or "",
         issue_date=datetime.utcnow(),
         validity_months=12,
         expiry_date=expiry_dt
