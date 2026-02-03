@@ -853,6 +853,17 @@ export default function AdminAthleteDetail() {
                   {certificate ? 'Aggiorna Certificato' : 'Aggiungi Certificato'}
                 </Text>
               </TouchableOpacity>
+              
+              {/* View Certificate Button */}
+              {certificate && certificate.image_base64 && (
+                <TouchableOpacity
+                  style={styles.viewCertButton}
+                  onPress={() => setCertViewerVisible(true)}
+                >
+                  <Ionicons name="eye" size={18} color="#34C759" />
+                  <Text style={styles.viewCertButtonText}>Visualizza Certificato</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Withdraw Athlete Button */}
