@@ -477,7 +477,7 @@ export default function AdminAthleteDetail() {
       const response = await api.post('/certificates/simple', {
         athlete_id: id,
         expiry_date: expiryDate.toISOString(),
-        image_base64: certImage || null,
+        pdf_data: certImage || null,
       });
       setCertificate({
         id: response.data.id,
@@ -867,7 +867,7 @@ export default function AdminAthleteDetail() {
               </TouchableOpacity>
               
               {/* View Certificate Button */}
-              {certificate && certificate.image_base64 && (
+              {certificate && certificate.pdf_data && (
                 <TouchableOpacity
                   style={styles.viewCertButton}
                   onPress={() => setCertViewerVisible(true)}
@@ -1357,7 +1357,7 @@ export default function AdminAthleteDetail() {
             </TouchableOpacity>
             <Text style={styles.certViewerTitleFull}>📋 Certificato Medico</Text>
             {/* Print Button - Web only */}
-            {Platform.OS === 'web' && certificate?.image_base64 && (
+            {Platform.OS === 'web' && certificate?.pdf_data && (
               <TouchableOpacity 
                 style={styles.printBtn}
                 onPress={() => {
@@ -1390,7 +1390,7 @@ export default function AdminAthleteDetail() {
                         <body>
                           <h1>Certificato Medico - ${athlete?.full_name}</h1>
                           <p>Scadenza: ${certificate ? formatDate(certificate.expiry_date) : 'N/D'}</p>
-                          <img src="data:image/jpeg;base64,${certificate.image_base64}" />
+                          <img src="data:image/jpeg;base64,${certificate.pdf_data}" />
                           <script>
                             window.onload = function() { window.print(); }
                           </script>
