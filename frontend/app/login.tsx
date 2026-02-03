@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import api from '../src/services/api';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function Login() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   // Society branding
   const [societyName, setSocietyName] = useState('GESTIONE SOCIETÀ');
