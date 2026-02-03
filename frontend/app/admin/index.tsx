@@ -385,6 +385,26 @@ export default function AdminDashboard() {
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
+          {/* Genitori */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/parents')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#FCE4EC' }]}>
+              <Ionicons name="people-circle" size={28} color="#E91E63" />
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Genitori</Text>
+              <Text style={styles.menuCardSubtitle}>Gestione genitori e figli</Text>
+            </View>
+            {pendingCounts.parents > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingCounts.parents}</Text>
+              </View>
+            )}
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+
           {/* Squadre */}
           <TouchableOpacity
             style={styles.menuCard}
