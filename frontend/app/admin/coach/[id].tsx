@@ -836,4 +836,53 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     resizeMode: 'cover',
   },
+  tapToEnlarge: {
+    fontSize: 10,
+    color: '#007AFF',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  // Image Viewer Modal styles
+  imageViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerHeader: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 10,
+  },
+  imageViewerTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  imageViewerClose: {
+    padding: 8,
+  },
+  imageViewerImage: {
+    width: Dimensions.get('window').width - 40,
+    height: Dimensions.get('window').height - 200,
+  },
+  imageViewerCloseBtn: {
+    position: 'absolute',
+    bottom: 50,
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 40,
+    paddingVertical: 14,
+    borderRadius: 25,
+  },
+  imageViewerCloseBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
