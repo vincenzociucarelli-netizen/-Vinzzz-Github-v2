@@ -440,6 +440,238 @@ def test_auth_validation(test_results):
         )
         return False
 
+def test_forgot_password(test_results):
+    """Test POST /api/auth/forgot-password endpoint"""
+    url = f"{BACKEND_URL}/auth/forgot-password"
+    data = {
+        "email": "test@example.com"
+    }
+    
+    try:
+        response = requests.post(url, json=data)
+        if response.status_code == 200:
+            result = response.json()
+            expected_message = "Se l'email esiste, riceverai un codice di reset"
+            
+            if result.get("message") == expected_message:
+                test_results.add_result(
+                    "Forgot Password Endpoint", 
+                    True, 
+                    "Forgot password endpoint working correctly",
+                    {"message": result.get("message")}
+                )
+                return True
+            else:
+                test_results.add_result(
+                    "Forgot Password Endpoint", 
+                    False, 
+                    f"Unexpected message: {result.get('message')}",
+                    {"expected": expected_message, "actual": result.get("message")}
+                )
+                return False
+        else:
+            test_results.add_result(
+                "Forgot Password Endpoint", 
+                False, 
+                f"Forgot password failed with status {response.status_code}",
+                {"response": response.text}
+            )
+            return False
+    except Exception as e:
+        test_results.add_result(
+            "Forgot Password Endpoint", 
+            False, 
+            f"Request failed: {str(e)}"
+        )
+        return False
+
+def test_reset_password(test_results):
+    """Test POST /api/auth/reset-password endpoint"""
+    url = f"{BACKEND_URL}/auth/reset-password"
+    data = {
+        "email": "test@example.com",
+        "reset_code": "TESTCODE",
+        "new_password": "newpass123"
+    }
+    
+    try:
+        response = requests.post(url, json=data)
+        # This should fail with 400 since we don't have a valid reset token
+        if response.status_code == 400:
+            result = response.json()
+            error_detail = result.get("detail", "")
+            
+            # Check for expected error messages
+            expected_errors = [
+                "Email non trovata",
+                "Nessuna richiesta di reset trovata",
+                "Codice scaduto",
+                "Codice non valido"
+            ]
+            
+            if any(expected in error_detail for expected in expected_errors):
+                test_results.add_result(
+                    "Reset Password Endpoint", 
+                    True, 
+                    "Reset password endpoint working correctly",
+                    {"error_detail": error_detail}
+                )
+                return True
+            else:
+                test_results.add_result(
+                    "Reset Password Endpoint", 
+                    False, 
+                    f"Unexpected error message: {error_detail}",
+                    {"response": response.text}
+                )
+                return False
+        else:
+            test_results.add_result(
+                "Reset Password Endpoint", 
+                False, 
+                f"Unexpected status code: {response.status_code}",
+                {"response": response.text}
+            )
+            return False
+    except Exception as e:
+        test_results.add_result(
+            "Reset Password Endpoint", 
+            False, 
+            f"Request failed: {str(e)}"
+        )
+        return False
+
+def test_change_password_no_auth(test_results):
+    """Test POST /api/auth/change-password without authentication"""
+    url = f"{BACKEND_URL}/auth/change-password"
+    data = {
+        "current_password": "wrongpass",
+        "new_password": "newpass123"
+    }
+    
+    try:
+        response = requests.post(url, json=data)
+        # Should fail with 401 or 403 due to missing authentication
+        if response.status_code in [401, 403]:
+            test_results.add_result(
+                "Change Password No Auth", 
+                True, 
+                "Change password correctly requires authentication",
+                {"status_code": response.status_code}
+            )
+            return True
+        else:
+            test_results.add_result(
+                "Change Password No Auth", 
+                False, 
+                f"Unexpected status code: {response.status_code}",
+                {"response": response.text}
+            )
+            return False
+    except Exception as e:
+        test_results.add_result(
+            "Change Password No Auth", 
+            False, 
+            f"Request failed: {str(e)}"
+        )
+        return False
+
+def test_change_password_with_auth(test_results):
+    """Test POST /api/auth/change-password with authentication"""
+    if not test_results.admin_token:
+        test_results.add_result(
+            "Change Password With Auth", 
+            False, 
+            "No admin token available for authenticated test"
+        )
+        return False
+    
+    url = f"{BACKEND_URL}/auth/change-password"
+    headers = {"Authorization": f"Bearer {test_results.admin_token}"}
+    
+    # Test with wrong current password
+    data = {
+        "current_password": "wrongpass",
+        "new_password": "newpass123"
+    }
+    
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        # Should fail with 400 due to incorrect current password
+        if response.status_code == 400:
+            result = response.json()
+            error_detail = result.get("detail", "")
+            
+            if "Password attuale non corretta" in error_detail:
+                test_results.add_result(
+                    "Change Password With Auth", 
+                    True, 
+                    "Change password correctly validates current password",
+                    {"error_detail": error_detail}
+                )
+                return True
+            else:
+                test_results.add_result(
+                    "Change Password With Auth", 
+                    False, 
+                    f"Unexpected error message: {error_detail}",
+                    {"response": response.text}
+                )
+                return False
+        else:
+            test_results.add_result(
+                "Change Password With Auth", 
+                False, 
+                f"Unexpected status code: {response.status_code}",
+                {"response": response.text}
+            )
+            return False
+    except Exception as e:
+        test_results.add_result(
+            "Change Password With Auth", 
+            False, 
+            f"Request failed: {str(e)}"
+        )
+        return False
+
+def test_admin_login_existing(test_results):
+    """Test login with existing admin credentials"""
+    url = f"{BACKEND_URL}/auth/login"
+    data = {
+        "email": "pallavoloperugia@gmail.com",
+        "password": "11092012"
+    }
+    
+    try:
+        response = requests.post(url, json=data)
+        if response.status_code == 200:
+            result = response.json()
+            # Store the existing admin token for change password test
+            if not test_results.admin_token:  # Only if we don't have one from registration
+                test_results.admin_token = result.get("token")
+            test_results.add_result(
+                "Existing Admin Login", 
+                True, 
+                "Existing admin login successful",
+                {"user_id": result.get("user", {}).get("id")}
+            )
+            return True
+        else:
+            test_results.add_result(
+                "Existing Admin Login", 
+                False, 
+                f"Login failed with status {response.status_code}",
+                {"response": response.text}
+            )
+            return False
+    except Exception as e:
+        test_results.add_result(
+            "Existing Admin Login", 
+            False, 
+            f"Request failed: {str(e)}"
+        )
+        return False
+
 def main():
     print("Starting Backend API Tests for Sports Club App")
     print(f"Testing against: {BACKEND_URL}")
