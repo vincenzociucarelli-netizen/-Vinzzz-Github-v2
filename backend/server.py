@@ -891,6 +891,217 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
     
     return {"message": "Profilo aggiornato"}
 
+# ==================== PASSWORD RESET ENDPOINTS ====================
+
+# SendGrid Email Setup
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+
+SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY")
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "noreply@example.com")
+
+def generate_reset_token():
+    """Generate a secure random token for password reset"""
+    return secrets.token_urlsafe(32)
+
+async def send_password_reset_email(to_email: str, reset_token: str, user_name: str):
+    """Send password reset email via SendGrid"""
+    if not SENDGRID_API_KEY:
+        raise HTTPException(status_code=500, detail="Email service not configured")
+    
+    # Get society name for branding
+    settings = await db.settings.find_one({"type": "society"})
+    society_name = settings.get("name", "Gestione Società") if settings else "Gestione Società"
+    
+    # Create reset code (first 8 chars of token for easier communication)
+    reset_code = reset_token[:8].upper()
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background-color: #007AFF; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+            .content {{ background-color: #f9f9f9; padding: 30px; border: 1px solid #ddd; }}
+            .code {{ background-color: #007AFF; color: white; font-size: 28px; font-weight: bold; 
+                     padding: 15px 30px; text-align: center; border-radius: 8px; margin: 20px 0;
+                     letter-spacing: 4px; }}
+            .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+            .warning {{ color: #ff6b6b; font-size: 13px; margin-top: 20px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>{society_name}</h1>
+            </div>
+            <div class="content">
+                <p>Ciao <strong>{user_name}</strong>,</p>
+                <p>Hai richiesto il reset della password. Usa questo codice per impostare una nuova password:</p>
+                
+                <div class="code">{reset_code}</div>
+                
+                <p>Inserisci questo codice nella pagina di reset password dell'app.</p>
+                
+                <p class="warning">
+                    ⚠️ Il codice scade tra <strong>1 ora</strong>.<br>
+                    Se non hai richiesto tu il reset della password, ignora questa email.
+                </p>
+            </div>
+            <div class="footer">
+                <p>Questa è un'email automatica, non rispondere.</p>
+                <p>© {datetime.now().year} {society_name}</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    message = Mail(
+        from_email=SENDER_EMAIL,
+        to_emails=to_email,
+        subject=f"🔐 Reset Password - {society_name}",
+        html_content=html_content
+    )
+    
+    try:
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        return response.status_code == 202
+    except Exception as e:
+        logging.error(f"SendGrid error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Errore invio email: {str(e)}")
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    reset_code: str
+    new_password: str
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest):
+    """Request password reset - sends email with reset code"""
+    # Find user by email
+    user = await db.users.find_one({"email": data.email.lower()})
+    
+    # Always return success to prevent email enumeration
+    if not user:
+        return {"message": "Se l'email esiste, riceverai un codice di reset"}
+    
+    # Generate reset token
+    reset_token = generate_reset_token()
+    reset_expires = datetime.utcnow() + timedelta(hours=1)
+    
+    # Store token in database
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "password_reset_token": reset_token,
+            "password_reset_expires": reset_expires
+        }}
+    )
+    
+    # Send email
+    try:
+        await send_password_reset_email(
+            to_email=user["email"],
+            reset_token=reset_token,
+            user_name=user.get("full_name", "Utente")
+        )
+    except Exception as e:
+        logging.error(f"Failed to send reset email: {str(e)}")
+        raise HTTPException(status_code=500, detail="Errore nell'invio dell'email. Riprova più tardi.")
+    
+    return {"message": "Se l'email esiste, riceverai un codice di reset"}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: ResetPasswordRequest):
+    """Reset password using the code received via email"""
+    # Find user by email
+    user = await db.users.find_one({"email": data.email.lower()})
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Email non trovata")
+    
+    # Check if user has a valid reset token
+    stored_token = user.get("password_reset_token")
+    token_expires = user.get("password_reset_expires")
+    
+    if not stored_token or not token_expires:
+        raise HTTPException(status_code=400, detail="Nessuna richiesta di reset trovata. Richiedi un nuovo codice.")
+    
+    # Check if token expired
+    if datetime.utcnow() > token_expires:
+        # Clear expired token
+        await db.users.update_one(
+            {"id": user["id"]},
+            {"$unset": {"password_reset_token": "", "password_reset_expires": ""}}
+        )
+        raise HTTPException(status_code=400, detail="Codice scaduto. Richiedi un nuovo codice.")
+    
+    # Verify reset code (first 8 chars of token, case insensitive)
+    expected_code = stored_token[:8].upper()
+    provided_code = data.reset_code.strip().upper()
+    
+    if provided_code != expected_code:
+        raise HTTPException(status_code=400, detail="Codice non valido")
+    
+    # Validate new password
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="La password deve avere almeno 6 caratteri")
+    
+    # Update password and clear reset token
+    new_password_hash = hash_password(data.new_password)
+    
+    await db.users.update_one(
+        {"id": user["id"]},
+        {
+            "$set": {"password_hash": new_password_hash},
+            "$unset": {"password_reset_token": "", "password_reset_expires": ""}
+        }
+    )
+    
+    return {"message": "Password aggiornata con successo! Ora puoi accedere con la nuova password."}
+
+@api_router.post("/auth/change-password")
+async def change_password(data: ChangePasswordRequest, current_user = Depends(get_current_user)):
+    """Change password for logged-in user"""
+    # Get full user data
+    user = await db.users.find_one({"id": current_user["id"]})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    # Verify current password
+    if not verify_password(data.current_password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Password attuale non corretta")
+    
+    # Validate new password
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="La nuova password deve avere almeno 6 caratteri")
+    
+    if data.current_password == data.new_password:
+        raise HTTPException(status_code=400, detail="La nuova password deve essere diversa da quella attuale")
+    
+    # Update password
+    new_password_hash = hash_password(data.new_password)
+    
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {"password_hash": new_password_hash}}
+    )
+    
+    return {"message": "Password cambiata con successo!"}
+
 # ==================== SOCIETY SETTINGS ENDPOINTS ====================
 
 class SocietySettingsUpdate(BaseModel):
