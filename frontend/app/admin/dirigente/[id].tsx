@@ -541,17 +541,24 @@ export default function AdminDirigenteDetail() {
                 </View>
                 {(dirigente.doc_front_image || dirigente.doc_back_image) && (
                   <View style={styles.docImagesRow}>
+                    <Text style={styles.tapHint}>👆 Tocca per ingrandire</Text>
                     {dirigente.doc_front_image && (
-                      <View style={styles.docImageContainer}>
+                      <TouchableOpacity 
+                        style={styles.docImageContainer}
+                        onPress={() => openImageViewer(dirigente.doc_front_image!, 'Documento Fronte')}
+                      >
                         <Text style={styles.docImageLabel}>Fronte</Text>
                         <Image source={{ uri: `data:image/jpeg;base64,${dirigente.doc_front_image}` }} style={styles.docThumb} />
-                      </View>
+                      </TouchableOpacity>
                     )}
                     {dirigente.doc_back_image && (
-                      <View style={styles.docImageContainer}>
+                      <TouchableOpacity 
+                        style={styles.docImageContainer}
+                        onPress={() => openImageViewer(dirigente.doc_back_image!, 'Documento Retro')}
+                      >
                         <Text style={styles.docImageLabel}>Retro</Text>
                         <Image source={{ uri: `data:image/jpeg;base64,${dirigente.doc_back_image}` }} style={styles.docThumb} />
-                      </View>
+                      </TouchableOpacity>
                     )}
                   </View>
                 )}
