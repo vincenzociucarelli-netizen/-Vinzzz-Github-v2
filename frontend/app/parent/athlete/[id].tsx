@@ -1098,49 +1098,95 @@ export default function AthleteDetail() {
       <Modal
         visible={viewCertModalVisible}
         animationType="fade"
-        transparent={true}
+        transparent={false}
         onRequestClose={() => setViewCertModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.viewCertModalContent}>
-            <Text style={styles.modalTitle}>Certificato Medico</Text>
-            {certificate && (
-              <View style={styles.certImageContainer}>
-                <Image
-                  source={{ uri: `data:image/jpeg;base64,${certificate.pdf_data}` }}
-                  style={styles.certImage}
-                  resizeMode="contain"
-                />
-                <View style={styles.certInfoRow}>
-                  <Ionicons name="calendar-outline" size={16} color="#666" />
-                  <Text style={styles.certInfoText}>
-                    Emissione: {format(new Date(certificate.issue_date), 'dd/MM/yyyy', { locale: it })}
-                  </Text>
-                </View>
-                <View style={styles.certInfoRow}>
-                  <Ionicons name="time-outline" size={16} color="#666" />
-                  <Text style={styles.certInfoText}>
-                    Validità: {certificate.validity_months} mesi
-                  </Text>
-                </View>
-                <View style={styles.certInfoRow}>
-                  <Ionicons 
-                    name={isCertificateExpired ? "close-circle" : "checkmark-circle"} 
-                    size={16} 
-                    color={isCertificateExpired ? "#FF3B30" : "#34C759"} 
-                  />
-                  <Text style={[styles.certInfoText, isCertificateExpired && styles.certExpiredText]}>
-                    Scadenza: {format(new Date(certificate.expiry_date), 'dd/MM/yyyy', { locale: it })}
-                    {isCertificateExpired && ' (SCADUTO)'}
-                  </Text>
-                </View>
-              </View>
-            )}
-            <TouchableOpacity
-              style={styles.closeButton}
+        <View style={styles.certViewerFullScreen}>
+          {/* Header */}
+          <View style={styles.certViewerHeader}>
+            <TouchableOpacity 
+              style={styles.certViewerBackBtn}
               onPress={() => setViewCertModalVisible(false)}
             >
-              <Text style={styles.closeButtonText}>Chiudi</Text>
+              <Ionicons name="arrow-back" size={24} color="#333" />
+            </TouchableOpacity>
+            <Text style={styles.certViewerTitle}>📋 Certificato Medico</Text>
+            {/* Print Button - Web only */}
+            {Platform.OS === 'web' && certificate?.pdf_data && (
+              <TouchableOpacity 
+                style={styles.printBtn}
+                onPress={() => {
+                  const printWindow = window.open('', '_blank');
+                  if (printWindow) {
+                    printWindow.document.write(`
+                      <html>
+                        <head>
+                          <title>Certificato Medico - ${athlete?.full_name}</title>
+                          <style>
+                            body { margin: 0; padding: 20px; font-family: Arial; text-align: center; }
+                            h1 { font-size: 18px; margin-bottom: 10px; }
+                            p { font-size: 14px; color: #666; margin-bottom: 20px; }
+                            img { max-width: 100%; max-height: 90vh; object-fit: contain; }
+                          </style>
+                        </head>
+                        <body>
+                          <h1>Certificato Medico - ${athlete?.full_name}</h1>
+                          <p>Scadenza: ${certificate ? format(new Date(certificate.expiry_date), 'dd/MM/yyyy', { locale: it }) : 'N/D'}</p>
+                          <img src="data:image/jpeg;base64,${certificate.pdf_data}" />
+                          <script>window.onload = function() { window.print(); }</script>
+                        </body>
+                      </html>
+                    `);
+                    printWindow.document.close();
+                  }
+                }}
+              >
+                <Ionicons name="print" size={22} color="#007AFF" />
+                <Text style={styles.printBtnText}>Stampa</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {/* Certificate Image - Full Size */}
+          <ScrollView 
+            style={styles.certViewerScrollView}
+            contentContainerStyle={styles.certViewerScrollContent}
+            maximumZoomScale={3}
+            minimumZoomScale={1}
+          >
+            {certificate?.pdf_data && (
+              <Image 
+                source={{ uri: `data:image/jpeg;base64,${certificate.pdf_data}` }} 
+                style={styles.certViewerImageFull}
+                resizeMode="contain"
+              />
+            )}
+          </ScrollView>
+          
+          {/* Footer Info */}
+          <View style={styles.certViewerFooter}>
+            <View style={styles.certViewerInfoRow}>
+              <Ionicons name="calendar" size={16} color="#666" />
+              <Text style={styles.certViewerInfoText}>
+                Emissione: {certificate && format(new Date(certificate.issue_date), 'dd/MM/yyyy', { locale: it })}
+              </Text>
+            </View>
+            <View style={styles.certViewerInfoRow}>
+              <Ionicons 
+                name={isCertificateExpired ? "close-circle" : "checkmark-circle"} 
+                size={16} 
+                color={isCertificateExpired ? "#FF3B30" : "#34C759"} 
+              />
+              <Text style={[styles.certViewerInfoText, isCertificateExpired && { color: '#FF3B30' }]}>
+                Scadenza: {certificate && format(new Date(certificate.expiry_date), 'dd/MM/yyyy', { locale: it })}
+                {isCertificateExpired && ' (SCADUTO)'}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.closeCertBtn}
+              onPress={() => setViewCertModalVisible(false)}
+            >
+              <Text style={styles.closeCertBtnText}>Chiudi</Text>
             </TouchableOpacity>
           </View>
         </View>
