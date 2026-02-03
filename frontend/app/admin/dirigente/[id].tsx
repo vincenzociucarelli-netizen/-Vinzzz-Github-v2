@@ -64,6 +64,11 @@ export default function AdminDirigenteDetail() {
   const [saving, setSaving] = useState(false);
   const [editingBank, setEditingBank] = useState(false);
   
+  // Image viewer modal
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [viewingImageTitle, setViewingImageTitle] = useState('');
+  
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
   // Bank details
@@ -73,6 +78,12 @@ export default function AdminDirigenteDetail() {
   const [iban, setIban] = useState('');
   const [ibanHolder, setIbanHolder] = useState('');
   const [bankName, setBankName] = useState('');
+
+  const openImageViewer = (imageBase64: string, title: string) => {
+    setViewingImage(imageBase64);
+    setViewingImageTitle(title);
+    setImageViewerVisible(true);
+  };
 
   const loadData = async () => {
     try {
