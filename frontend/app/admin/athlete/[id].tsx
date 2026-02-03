@@ -842,10 +842,12 @@ export default function AdminAthleteDetail() {
                   <Ionicons
                     name={isCertificateExpired ? 'close-circle' : 'checkmark-circle'}
                     size={24}
-                    color={isCertificateExpired ? '#FF3B30' : '#34C759'}
+                    color={getCertificateColor()}
                   />
-                  <Text style={[styles.certText, { color: isCertificateExpired ? '#FF3B30' : '#34C759' }]}>
-                    Scadenza: {formatDate(certificate.expiry_date)} {isCertificateExpired && '(SCADUTO)'}
+                  <Text style={[styles.certText, { color: getCertificateColor() }]}>
+                    Scadenza: {formatDate(certificate.expiry_date)} 
+                    {isCertificateExpired && ' (SCADUTO)'}
+                    {isCertificateExpiringSoon && ' (IN SCADENZA)'}
                   </Text>
                 </View>
               ) : (
