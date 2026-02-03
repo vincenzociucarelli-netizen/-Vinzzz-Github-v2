@@ -1339,41 +1339,116 @@ export default function AdminAthleteDetail() {
         </View>
       </Modal>
 
-      {/* Certificate Viewer Modal */}
+      {/* Certificate Viewer Modal - FULL SCREEN */}
       <Modal
         visible={certViewerVisible}
         animationType="fade"
-        transparent={true}
+        transparent={false}
         onRequestClose={() => setCertViewerVisible(false)}
       >
-        <View style={styles.certViewerOverlay}>
-          <View style={styles.certViewerHeader}>
-            <Text style={styles.certViewerTitle}>📋 Certificato Medico</Text>
+        <View style={styles.certViewerFullScreen}>
+          {/* Header */}
+          <View style={styles.certViewerHeaderFull}>
             <TouchableOpacity 
-              style={styles.certViewerClose}
+              style={styles.certViewerBackBtn}
               onPress={() => setCertViewerVisible(false)}
             >
-              <Ionicons name="close" size={28} color="#fff" />
+              <Ionicons name="arrow-back" size={24} color="#333" />
             </TouchableOpacity>
+            <Text style={styles.certViewerTitleFull}>📋 Certificato Medico</Text>
+            {/* Print Button - Web only */}
+            {Platform.OS === 'web' && certificate?.image_base64 && (
+              <TouchableOpacity 
+                style={styles.printBtn}
+                onPress={() => {
+                  const printWindow = window.open('', '_blank');
+                  if (printWindow) {
+                    printWindow.document.write(`
+                      <html>
+                        <head>
+                          <title>Certificato Medico - ${athlete?.full_name}</title>
+                          <style>
+                            body { 
+                              margin: 0; 
+                              padding: 20px; 
+                              font-family: Arial, sans-serif;
+                              text-align: center;
+                            }
+                            h1 { font-size: 18px; margin-bottom: 10px; }
+                            p { font-size: 14px; color: #666; margin-bottom: 20px; }
+                            img { 
+                              max-width: 100%; 
+                              max-height: 90vh; 
+                              object-fit: contain;
+                            }
+                            @media print {
+                              body { padding: 0; }
+                              img { max-height: 100%; }
+                            }
+                          </style>
+                        </head>
+                        <body>
+                          <h1>Certificato Medico - ${athlete?.full_name}</h1>
+                          <p>Scadenza: ${certificate ? formatDate(certificate.expiry_date) : 'N/D'}</p>
+                          <img src="data:image/jpeg;base64,${certificate.image_base64}" />
+                          <script>
+                            window.onload = function() { window.print(); }
+                          </script>
+                        </body>
+                      </html>
+                    `);
+                    printWindow.document.close();
+                  }
+                }}
+              >
+                <Ionicons name="print" size={22} color="#007AFF" />
+                <Text style={styles.printBtnText}>Stampa</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          {certificate?.image_base64 && (
-            <Image 
-              source={{ uri: `data:image/jpeg;base64,${certificate.image_base64}` }} 
-              style={styles.certViewerImage}
-              resizeMode="contain"
-            />
-          )}
-          <View style={styles.certViewerInfo}>
-            <Text style={styles.certViewerInfoText}>
-              Scadenza: {certificate && formatDate(certificate.expiry_date)}
-            </Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.certViewerCloseBtn}
-            onPress={() => setCertViewerVisible(false)}
+          
+          {/* Certificate Image - Full Size */}
+          <ScrollView 
+            style={styles.certViewerScrollView}
+            contentContainerStyle={styles.certViewerScrollContent}
+            maximumZoomScale={3}
+            minimumZoomScale={1}
+            showsVerticalScrollIndicator={true}
           >
-            <Text style={styles.certViewerCloseBtnText}>Chiudi</Text>
-          </TouchableOpacity>
+            {certificate?.image_base64 && (
+              <Image 
+                source={{ uri: `data:image/jpeg;base64,${certificate.image_base64}` }} 
+                style={styles.certViewerImageFull}
+                resizeMode="contain"
+              />
+            )}
+          </ScrollView>
+          
+          {/* Footer Info */}
+          <View style={styles.certViewerFooter}>
+            <View style={styles.certViewerInfoFull}>
+              <Ionicons name="calendar" size={18} color="#666" />
+              <Text style={styles.certViewerInfoTextFull}>
+                Scadenza: {certificate && formatDate(certificate.expiry_date)}
+                {isCertificateExpired && ' (SCADUTO)'}
+                {isCertificateExpiringSoon && ' (IN SCADENZA)'}
+              </Text>
+            </View>
+            <View style={styles.certViewerButtons}>
+              {Platform.OS !== 'web' && (
+                <TouchableOpacity style={styles.shareBtn}>
+                  <Ionicons name="share-outline" size={20} color="#007AFF" />
+                  <Text style={styles.shareBtnText}>Condividi</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                style={styles.closeCertBtn}
+                onPress={() => setCertViewerVisible(false)}
+              >
+                <Text style={styles.closeCertBtnText}>Chiudi</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
     </View>
