@@ -67,6 +67,12 @@ export default function AdminAthleteDetail() {
   const [withdrawReason, setWithdrawReason] = useState('');
   const [withdrawing, setWithdrawing] = useState(false);
   
+  // Reactivate modal with team selection
+  const [reactivateModalVisible, setReactivateModalVisible] = useState(false);
+  const [allTeams, setAllTeams] = useState<Team[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+  const [reactivating, setReactivating] = useState(false);
+  
   // Add/Edit payment modal
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
