@@ -684,20 +684,29 @@ def main():
     test_register_admin(test_results)
     test_register_parent(test_results)
     
-    print("\n2. Testing Team Creation...")
+    print("\n2. Testing Existing Admin Login...")
+    test_admin_login_existing(test_results)
+    
+    print("\n3. Testing Team Creation...")
     test_create_team(test_results)
     
-    print("\n3. Testing Athlete Creation...")
+    print("\n4. Testing Athlete Creation...")
     test_create_athlete(test_results)
     
-    print("\n4. Testing Certificate Upload (HIGH PRIORITY)...")
+    print("\n5. Testing Certificate Upload (HIGH PRIORITY)...")
     test_certificate_upload_base64(test_results)
     
-    print("\n5. Testing Certificate Retrieval...")
+    print("\n6. Testing Certificate Retrieval...")
     test_get_certificate(test_results)
     
-    print("\n6. Testing Authentication...")
+    print("\n7. Testing Authentication...")
     test_auth_validation(test_results)
+    
+    print("\n8. Testing Password Management Endpoints...")
+    test_forgot_password(test_results)
+    test_reset_password(test_results)
+    test_change_password_no_auth(test_results)
+    test_change_password_with_auth(test_results)
     
     # Print final summary
     test_results.print_summary()
