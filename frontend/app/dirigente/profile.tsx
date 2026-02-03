@@ -30,6 +30,13 @@ export default function DirigenteProfile() {
   const [editingBank, setEditingBank] = useState(false);
   const [savingBank, setSavingBank] = useState(false);
   
+  // Change Password state
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  
   // Document images
   const [docFrontImage, setDocFrontImage] = useState<string | null>(null);
   const [docBackImage, setDocBackImage] = useState<string | null>(null);
