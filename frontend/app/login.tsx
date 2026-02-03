@@ -129,6 +129,13 @@ export default function Login() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={styles.forgotButton}
+            onPress={() => router.push('/forgot-password')}
+          >
+            <Text style={styles.forgotText}>Password dimenticata?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.linkButton}
             onPress={() => router.push('/register')}
           >
