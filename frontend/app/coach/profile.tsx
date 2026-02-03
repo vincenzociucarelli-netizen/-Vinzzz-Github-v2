@@ -449,15 +449,92 @@ export default function CoachProfile() {
               </TouchableOpacity>
             </>
           ) : (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.editButton]}
-              onPress={() => setEditing(true)}
-            >
-              <Ionicons name="pencil" size={20} color="#007AFF" />
-              <Text style={styles.editButtonText}>Modifica Dati</Text>
-            </TouchableOpacity>
+            <View style={styles.headerButtonsRow}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.editButton]}
+                onPress={() => setEditing(true)}
+              >
+                <Ionicons name="pencil" size={20} color="#007AFF" />
+                <Text style={styles.editButtonText}>Modifica Dati</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.passwordButton]}
+                onPress={() => setShowChangePassword(!showChangePassword)}
+              >
+                <Ionicons name="key" size={20} color="#007AFF" />
+                <Text style={styles.passwordButtonText}>Password</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
+
+        {/* Change Password Section - Now at top */}
+        {showChangePassword && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🔐 Cambia Password</Text>
+            <View style={styles.changePasswordForm}>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Password Attuale</Text>
+                <TextInput
+                  style={styles.input}
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  secureTextEntry
+                  placeholder="Inserisci password attuale"
+                  autoCapitalize="none"
+                />
+              </View>
+              
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Nuova Password</Text>
+                <TextInput
+                  style={styles.input}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  secureTextEntry
+                  placeholder="Minimo 6 caratteri"
+                  autoCapitalize="none"
+                />
+              </View>
+              
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Conferma Nuova Password</Text>
+                <TextInput
+                  style={styles.input}
+                  value={confirmNewPassword}
+                  onChangeText={setConfirmNewPassword}
+                  secureTextEntry
+                  placeholder="Ripeti la nuova password"
+                  autoCapitalize="none"
+                />
+              </View>
+              
+              <View style={styles.changePasswordButtonsRow}>
+                <TouchableOpacity
+                  style={styles.cancelPasswordButton}
+                  onPress={() => {
+                    setShowChangePassword(false);
+                    setCurrentPassword('');
+                    setNewPassword('');
+                    setConfirmNewPassword('');
+                  }}
+                >
+                  <Text style={styles.cancelPasswordButtonText}>Annulla</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.changePasswordButton, changingPassword && styles.buttonDisabled]}
+                  onPress={handleChangePassword}
+                  disabled={changingPassword}
+                >
+                  <Ionicons name="key" size={18} color="#fff" />
+                  <Text style={styles.changePasswordButtonText}>
+                    {changingPassword ? 'Cambio...' : 'Cambia Password'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Account Info */}
         <View style={styles.card}>
