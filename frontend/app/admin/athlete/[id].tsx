@@ -13,6 +13,7 @@ import {
   Alert,
   Platform,
   Image,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
