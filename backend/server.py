@@ -2177,7 +2177,7 @@ async def upload_certificate_base64(
 class CertificateSimple(BaseModel):
     athlete_id: str
     expiry_date: str  # ISO format
-    image_base64: Optional[str] = None  # Optional image of the certificate
+    pdf_data: Optional[str] = None  # Optional image of the certificate (base64)
 
 @api_router.post("/certificates/simple")
 async def create_certificate_simple(
