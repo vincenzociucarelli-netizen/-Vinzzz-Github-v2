@@ -498,25 +498,33 @@ export default function AdminCoachDetail() {
             {/* Foto Documenti se presenti - in riga compatta */}
             {(coach.doc_front_image || coach.doc_back_image) && (
               <View style={styles.readOnlyField}>
-                <Text style={styles.readOnlyLabel}>Foto Documento</Text>
+                <Text style={styles.readOnlyLabel}>Foto Documento (clicca per ingrandire)</Text>
                 <View style={styles.docImagesRowAdmin}>
                   {coach.doc_front_image && (
-                    <View style={styles.docImageContainerAdmin}>
+                    <TouchableOpacity 
+                      style={styles.docImageContainerAdmin}
+                      onPress={() => openImageViewer(coach.doc_front_image!, 'Documento Fronte')}
+                    >
                       <Text style={styles.docImageLabelAdmin}>Fronte</Text>
                       <Image 
                         source={{ uri: `data:image/jpeg;base64,${coach.doc_front_image}` }} 
                         style={styles.docImagePreviewSmall} 
                       />
-                    </View>
+                      <Text style={styles.tapToEnlarge}>👆 Tocca per ingrandire</Text>
+                    </TouchableOpacity>
                   )}
                   {coach.doc_back_image && (
-                    <View style={styles.docImageContainerAdmin}>
+                    <TouchableOpacity 
+                      style={styles.docImageContainerAdmin}
+                      onPress={() => openImageViewer(coach.doc_back_image!, 'Documento Retro')}
+                    >
                       <Text style={styles.docImageLabelAdmin}>Retro</Text>
                       <Image 
                         source={{ uri: `data:image/jpeg;base64,${coach.doc_back_image}` }} 
                         style={styles.docImagePreviewSmall} 
                       />
-                    </View>
+                      <Text style={styles.tapToEnlarge}>👆 Tocca per ingrandire</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               </View>
