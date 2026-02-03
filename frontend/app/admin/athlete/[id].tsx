@@ -89,6 +89,9 @@ export default function AdminAthleteDetail() {
   const [certExpiryDate, setCertExpiryDate] = useState('');
   const [certImage, setCertImage] = useState<string | null>(null);
   const [savingCert, setSavingCert] = useState(false);
+  
+  // Certificate viewer modal
+  const [certViewerVisible, setCertViewerVisible] = useState(false);
 
   const pickCertImage = async () => {
     // Show action sheet to choose camera or gallery
