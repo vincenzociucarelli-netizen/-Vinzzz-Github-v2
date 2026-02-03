@@ -1482,7 +1482,6 @@ const styles = StyleSheet.create({
   value: { fontSize: 14, fontWeight: '500', color: '#333', flex: 1, textAlign: 'right' },
   valueCode: { fontSize: 14, fontWeight: '600', color: '#007AFF', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   valueSmall: { fontSize: 12 },
-  inputLabel: { fontSize: 13, color: '#666', marginBottom: 6, marginTop: 10 },
   input: { backgroundColor: '#f5f5f5', borderRadius: 8, padding: 12, fontSize: 14, borderWidth: 1, borderColor: '#e0e0e0' },
   row: { flexDirection: 'row', gap: 10 },
   flex1: { flex: 1 },
