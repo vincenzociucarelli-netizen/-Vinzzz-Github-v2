@@ -404,27 +404,42 @@ export default function AdminAthleteDetail() {
     }
   };
 
-  // Reactivate athlete
+  // Reactivate athlete - open modal to select team
   const handleReactivateAthlete = async () => {
-    const confirmed = Platform.OS === 'web'
-      ? window.confirm('Riattivare questo atleta?')
-      : await new Promise((resolve) => {
-          Alert.alert('Conferma', 'Riattivare questo atleta?', [
-            { text: 'Annulla', onPress: () => resolve(false) },
-            { text: 'Riattiva', onPress: () => resolve(true) },
-          ]);
-        });
-
-    if (confirmed) {
-      try {
-        await api.patch(`/athletes/${id}`, {
-          is_withdrawn: false,
-        });
-        showAlert('Successo', 'Atleta riattivato');
-        await loadData();
-      } catch (error: any) {
-        showAlert('Errore', error.response?.data?.detail || 'Errore');
+    // Load all teams first
+    try {
+      const teamsRes = await api.get('/teams');
+      setAllTeams(teamsRes.data);
+      // Pre-select current team if exists
+      if (athlete?.team_id) {
+        setSelectedTeamId(athlete.team_id);
       }
+      setReactivateModalVisible(true);
+    } catch (error) {
+      showAlert('Errore', 'Impossibile caricare le squadre');
+    }
+  };
+
+  // Confirm reactivation with selected team
+  const confirmReactivation = async () => {
+    if (!selectedTeamId) {
+      showAlert('Errore', 'Seleziona una squadra');
+      return;
+    }
+
+    setReactivating(true);
+    try {
+      await api.patch(`/athletes/${id}`, {
+        is_withdrawn: false,
+        team_id: selectedTeamId,
+      });
+      showAlert('Successo', 'Atleta riattivato e assegnato alla nuova squadra');
+      setReactivateModalVisible(false);
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la riattivazione');
+    } finally {
+      setReactivating(false);
     }
   };
 
