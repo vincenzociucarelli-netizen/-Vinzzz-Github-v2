@@ -365,16 +365,46 @@ export default function DirigenteProfile() {
     }
   };
 
+  // Formattazione automatica data gg/mm/aaaa
+  const formatDateInput = (text: string, key: string) => {
+    // Remove non-digits
+    const cleaned = text.replace(/\D/g, '');
+    let formatted = '';
+    
+    if (cleaned.length > 0) {
+      formatted = cleaned.substring(0, 2);
+    }
+    if (cleaned.length >= 3) {
+      formatted += '/' + cleaned.substring(2, 4);
+    }
+    if (cleaned.length >= 5) {
+      formatted += '/' + cleaned.substring(4, 8);
+    }
+    
+    setEditData({ ...editData, [key]: formatted });
+  };
+
   const renderField = (label: string, value: string, key: string, editable: boolean = true) => (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
       {editing && editable ? (
-        <TextInput
-          style={styles.input}
-          value={editData[key as keyof typeof editData]?.toString() || ''}
-          onChangeText={(text) => setEditData({ ...editData, [key]: text.toUpperCase() })}
-          autoCapitalize="characters"
-        />
+        key === 'date_of_birth' ? (
+          <TextInput
+            style={styles.input}
+            value={editData[key as keyof typeof editData]?.toString() || ''}
+            onChangeText={(text) => formatDateInput(text, key)}
+            placeholder="GG/MM/AAAA"
+            keyboardType="number-pad"
+            maxLength={10}
+          />
+        ) : (
+          <TextInput
+            style={styles.input}
+            value={editData[key as keyof typeof editData]?.toString() || ''}
+            onChangeText={(text) => setEditData({ ...editData, [key]: text.toUpperCase() })}
+            autoCapitalize="characters"
+          />
+        )
       ) : (
         <Text style={styles.fieldValue}>{value || '-'}</Text>
       )}
