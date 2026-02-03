@@ -70,8 +70,19 @@ export default function AdminCoachDetail() {
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [savingTeams, setSavingTeams] = useState(false);
   
+  // Image viewer modal
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [viewingImageTitle, setViewingImageTitle] = useState('');
+  
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
+
+  const openImageViewer = (imageBase64: string, title: string) => {
+    setViewingImage(imageBase64);
+    setViewingImageTitle(title);
+    setImageViewerVisible(true);
+  };
 
   const loadData = async () => {
     try {
