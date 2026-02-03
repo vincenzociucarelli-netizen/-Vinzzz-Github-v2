@@ -1476,6 +1476,8 @@ const styles = StyleSheet.create({
   withdrawButtonText: { color: '#FF3B30', fontSize: 14, fontWeight: '600', marginLeft: 8 },
   addCertButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E3F2FD', marginTop: 12, padding: 10, borderRadius: 8 },
   addCertButtonText: { color: '#007AFF', fontSize: 14, fontWeight: '600', marginLeft: 6 },
+  viewCertButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F5E9', marginTop: 8, padding: 10, borderRadius: 8 },
+  viewCertButtonText: { color: '#34C759', fontSize: 14, fontWeight: '600', marginLeft: 6 },
   inputLabel: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8, marginTop: 12 },
   certImageBtn: { backgroundColor: '#f5f5f5', borderRadius: 8, borderWidth: 1, borderColor: '#ddd', borderStyle: 'dashed', marginBottom: 16, overflow: 'hidden' },
   certImagePlaceholder: { height: 80, justifyContent: 'center', alignItems: 'center' },
@@ -1485,4 +1487,14 @@ const styles = StyleSheet.create({
   cancelButtonText: { fontSize: 16, color: '#666', fontWeight: '600' },
   saveButton: { backgroundColor: '#007AFF' },
   saveButtonText: { fontSize: 16, color: '#fff', fontWeight: '600' },
+  // Certificate Viewer Modal styles
+  certViewerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
+  certViewerHeader: { position: 'absolute', top: 50, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, zIndex: 10 },
+  certViewerTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
+  certViewerClose: { padding: 8 },
+  certViewerImage: { width: Dimensions.get('window').width - 40, height: Dimensions.get('window').height - 250 },
+  certViewerInfo: { position: 'absolute', bottom: 100, backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
+  certViewerInfoText: { fontSize: 14, fontWeight: '600', color: '#333' },
+  certViewerCloseBtn: { position: 'absolute', bottom: 40, backgroundColor: '#34C759', paddingHorizontal: 40, paddingVertical: 14, borderRadius: 25 },
+  certViewerCloseBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
