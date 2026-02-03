@@ -1394,6 +1394,7 @@ const styles = StyleSheet.create({
   modalContent: { backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#333', textAlign: 'center', marginBottom: 20 },
   modalTitleDanger: { fontSize: 20, fontWeight: 'bold', color: '#FF3B30', textAlign: 'center', marginTop: 12 },
+  modalTitleSuccess: { fontSize: 20, fontWeight: 'bold', color: '#34C759', textAlign: 'center', marginTop: 12 },
   modalSubtitle: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 16 },
   modalButtons: { flexDirection: 'row', gap: 12, marginTop: 20 },
   modalButtonsRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
@@ -1406,6 +1407,12 @@ const styles = StyleSheet.create({
   modalInput: { backgroundColor: '#f5f5f5', borderRadius: 8, padding: 12, fontSize: 14, minHeight: 60, textAlignVertical: 'top' },
   cancelBtn: { flex: 1, padding: 14, backgroundColor: '#f5f5f5', borderRadius: 10, alignItems: 'center' },
   cancelBtnText: { fontSize: 16, color: '#666' },
+  // Team picker styles
+  teamPickerContainer: { maxHeight: 200, marginBottom: 8 },
+  teamOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#f5f5f5', borderRadius: 8, marginBottom: 8 },
+  teamOptionSelected: { backgroundColor: '#E3F2FD', borderWidth: 1, borderColor: '#007AFF' },
+  teamOptionText: { fontSize: 15, color: '#333' },
+  teamOptionTextSelected: { color: '#007AFF', fontWeight: '600' },
   // Withdrawn styles
   withdrawnBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FF3B30', marginHorizontal: 16, marginTop: 16, padding: 16, borderRadius: 12 },
   withdrawnBannerText: { flex: 1, marginLeft: 12 },
