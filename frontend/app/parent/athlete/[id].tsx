@@ -2196,4 +2196,88 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: 'italic',
   },
+  // Certificate Viewer Full Screen styles
+  certViewerFullScreen: { 
+    flex: 1, 
+    backgroundColor: '#fff',
+  },
+  certViewerHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    paddingTop: 50, 
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#fff',
+  },
+  certViewerBackBtn: {
+    padding: 8,
+  },
+  certViewerTitle: { 
+    fontSize: 18, 
+    fontWeight: '600', 
+    color: '#333',
+  },
+  printBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  printBtnText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  certViewerScrollView: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  certViewerScrollContent: {
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100%',
+  },
+  certViewerImageFull: { 
+    width: '100%', 
+    height: 500,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+  },
+  certViewerFooter: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    alignItems: 'center',
+  },
+  certViewerInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  certViewerInfoText: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 8,
+  },
+  closeCertBtn: {
+    backgroundColor: '#34C759',
+    paddingHorizontal: 40,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginTop: 8,
+  },
+  closeCertBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
