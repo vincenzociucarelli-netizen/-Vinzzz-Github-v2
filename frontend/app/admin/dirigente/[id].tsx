@@ -596,6 +596,39 @@ export default function AdminDirigenteDetail() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Image Viewer Modal */}
+      <Modal
+        visible={imageViewerVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setImageViewerVisible(false)}
+      >
+        <View style={styles.imageViewerOverlay}>
+          <View style={styles.imageViewerHeader}>
+            <Text style={styles.imageViewerTitle}>{viewingImageTitle}</Text>
+            <TouchableOpacity 
+              style={styles.imageViewerClose}
+              onPress={() => setImageViewerVisible(false)}
+            >
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          {viewingImage && (
+            <Image 
+              source={{ uri: `data:image/jpeg;base64,${viewingImage}` }} 
+              style={styles.imageViewerImage}
+              resizeMode="contain"
+            />
+          )}
+          <TouchableOpacity 
+            style={styles.imageViewerCloseBtn}
+            onPress={() => setImageViewerVisible(false)}
+          >
+            <Text style={styles.imageViewerCloseBtnText}>Chiudi</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
