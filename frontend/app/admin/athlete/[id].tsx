@@ -1182,6 +1182,73 @@ export default function AdminAthleteDetail() {
         </View>
       </Modal>
 
+      {/* Reactivate Modal with Team Selection */}
+      <Modal
+        visible={reactivateModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setReactivateModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="checkmark-circle" size={32} color="#34C759" />
+              <Text style={styles.modalTitleSuccess}>Riattiva Atleta</Text>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              Seleziona la squadra in cui vuoi inserire l'atleta.
+            </Text>
+            
+            <Text style={styles.inputLabel}>Squadra *</Text>
+            <View style={styles.teamPickerContainer}>
+              {allTeams.map((t) => (
+                <TouchableOpacity
+                  key={t.id}
+                  style={[
+                    styles.teamOption,
+                    selectedTeamId === t.id && styles.teamOptionSelected,
+                  ]}
+                  onPress={() => setSelectedTeamId(t.id)}
+                >
+                  <Text
+                    style={[
+                      styles.teamOptionText,
+                      selectedTeamId === t.id && styles.teamOptionTextSelected,
+                    ]}
+                  >
+                    {t.name}
+                  </Text>
+                  {selectedTeamId === t.id && (
+                    <Ionicons name="checkmark" size={20} color="#007AFF" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => {
+                  setReactivateModalVisible(false);
+                  setSelectedTeamId('');
+                }}
+              >
+                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={confirmReactivation}
+                disabled={reactivating || !selectedTeamId}
+              >
+                <Text style={styles.saveButtonText}>
+                  {reactivating ? 'Riattivazione...' : 'Riattiva'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Certificate Modal */}
       <Modal
         visible={certModalVisible}
