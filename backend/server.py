@@ -1216,23 +1216,28 @@ async def get_coaches(current_user = Depends(get_current_user)):
 
 @api_router.get("/users/parents")
 async def get_parents(current_user = Depends(get_current_user)):
-    """Get all parents/athletes"""
+    """Get all parents/athletes - OPTIMIZED with aggregation"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i genitori")
     
     parents = await db.users.find({"role": UserRole.PARENT}).to_list(1000)
     
+    # Batch fetch athlete counts using aggregation (avoid N+1 queries)
+    pipeline = [
+        {"$group": {"_id": "$parent_id", "count": {"$sum": 1}}}
+    ]
+    athlete_counts = await db.athletes.aggregate(pipeline).to_list(1000)
+    counts_dict = {item["_id"]: item["count"] for item in athlete_counts if item["_id"]}
+    
     result = []
     for p in parents:
-        # Count athletes for this parent
-        athletes_count = await db.athletes.count_documents({"parent_id": p["id"]})
         result.append({
             "id": p["id"],
             "email": p["email"],
             "full_name": p["full_name"],
             "role": p["role"],
             "status": p.get("status", UserStatus.APPROVED),
-            "athletes_count": athletes_count,
+            "athletes_count": counts_dict.get(p["id"], 0),
             "created_at": p.get("created_at"),
             "approved_at": p.get("approved_at"),
         })
