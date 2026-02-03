@@ -85,15 +85,62 @@ export default function AdminAthleteDetail() {
   const [savingCert, setSavingCert] = useState(false);
 
   const pickCertImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.5,
-      base64: true,
-    });
-    
-    if (!result.canceled && result.assets[0].base64) {
-      setCertImage(result.assets[0].base64);
+    // Show action sheet to choose camera or gallery
+    if (Platform.OS === 'web') {
+      // On web, directly launch gallery (camera not well supported)
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.5,
+        base64: true,
+      });
+      
+      if (!result.canceled && result.assets[0].base64) {
+        setCertImage(result.assets[0].base64);
+      }
+    } else {
+      // On mobile, show options
+      Alert.alert(
+        'Carica Certificato',
+        'Come vuoi caricare l\'immagine?',
+        [
+          {
+            text: 'Scatta Foto',
+            onPress: async () => {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status !== 'granted') {
+                showAlert('Permesso negato', 'È necessario il permesso per usare la fotocamera');
+                return;
+              }
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.5,
+                base64: true,
+              });
+              if (!result.canceled && result.assets[0].base64) {
+                setCertImage(result.assets[0].base64);
+              }
+            },
+          },
+          {
+            text: 'Scegli dalla Galleria',
+            onPress: async () => {
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.5,
+                base64: true,
+              });
+              if (!result.canceled && result.assets[0].base64) {
+                setCertImage(result.assets[0].base64);
+              }
+            },
+          },
+          { text: 'Annulla', style: 'cancel' },
+        ]
+      );
     }
   };
 
