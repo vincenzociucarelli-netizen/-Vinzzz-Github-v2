@@ -1287,4 +1287,8 @@ const styles = StyleSheet.create({
   certImagePlaceholder: { height: 80, justifyContent: 'center', alignItems: 'center' },
   certImageText: { color: '#007AFF', fontSize: 12, marginTop: 4 },
   certImagePreview: { width: '100%', height: 120, resizeMode: 'cover' },
+  cancelButton: { backgroundColor: '#f5f5f5' },
+  cancelButtonText: { fontSize: 16, color: '#666', fontWeight: '600' },
+  saveButton: { backgroundColor: '#007AFF' },
+  saveButtonText: { fontSize: 16, color: '#fff', fontWeight: '600' },
 });
