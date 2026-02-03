@@ -216,4 +216,12 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontSize: 14,
   },
+  forgotButton: {
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  forgotText: {
+    color: '#666',
+    fontSize: 13,
+  },
 });
