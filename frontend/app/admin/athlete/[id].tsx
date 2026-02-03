@@ -97,7 +97,7 @@ export default function AdminAthleteDetail() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: false,
-        quality: 0.5,
+        quality: 0.7,
         base64: true,
       });
       
@@ -120,8 +120,8 @@ export default function AdminAthleteDetail() {
               }
               const result = await ImagePicker.launchCameraAsync({
                 allowsEditing: true,
-                aspect: [4, 3],
-                quality: 0.5,
+                aspect: [3, 4],
+                quality: 0.7,
                 base64: true,
               });
               if (!result.canceled && result.assets[0].base64) {
@@ -135,8 +135,8 @@ export default function AdminAthleteDetail() {
               const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
-                aspect: [4, 3],
-                quality: 0.5,
+                aspect: [3, 4],
+                quality: 0.7,
                 base64: true,
               });
               if (!result.canceled && result.assets[0].base64) {
