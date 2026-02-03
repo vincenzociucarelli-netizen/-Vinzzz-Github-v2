@@ -1415,9 +1415,9 @@ export default function AdminAthleteDetail() {
             minimumZoomScale={1}
             showsVerticalScrollIndicator={true}
           >
-            {certificate?.image_base64 && (
+            {certificate?.pdf_data && (
               <Image 
-                source={{ uri: `data:image/jpeg;base64,${certificate.image_base64}` }} 
+                source={{ uri: `data:image/jpeg;base64,${certificate.pdf_data}` }} 
                 style={styles.certViewerImageFull}
                 resizeMode="contain"
               />
