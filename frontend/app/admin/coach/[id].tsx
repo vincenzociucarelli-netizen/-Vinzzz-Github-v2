@@ -10,6 +10,8 @@ import {
   Alert,
   Platform,
   Image,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
