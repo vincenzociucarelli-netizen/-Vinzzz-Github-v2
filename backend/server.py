@@ -35,17 +35,11 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # ==================== HEALTH CHECK (ROOT) ====================
-# These endpoints are on the main app (not /api) for Kubernetes health checks
-
-@app.get("/")
-async def root_health():
-    """Root health check for Kubernetes/Nginx"""
-    return {"status": "ok", "app": "Club Manager"}
-
+# Health check endpoint for Kubernetes
 @app.get("/health")
 async def health():
     """Health check endpoint"""
-    return {"status": "healthy"}
+    return {"status": "healthy", "service": "backend"}
 
 # ==================== MODELS ====================
 
