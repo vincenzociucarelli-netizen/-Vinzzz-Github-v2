@@ -1417,23 +1417,41 @@ export default function AthleteDetail() {
                 onChangeText={(text) => setEditData({...editData, email: text.toLowerCase()})}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                returnKeyType="next"
               />
 
-              <Text style={styles.inputLabel}>Genitore Detrazione</Text>
+              <Text style={styles.inputLabel}>Cognome Genitore (per detrazione)</Text>
               <TextInput
                 style={styles.textInput}
-                value={editData.tax_payer_name}
-                onChangeText={(text) => setEditData({...editData, tax_payer_name: text.toUpperCase()})}
+                value={editData.tax_payer_last_name}
+                onChangeText={(text) => setEditData({...editData, tax_payer_last_name: text.toUpperCase()})}
                 autoCapitalize="characters"
+                placeholder="es: ROSSI"
+                placeholderTextColor="#aaa"
+                returnKeyType="next"
               />
 
-              <Text style={styles.inputLabel}>CF Genitore</Text>
+              <Text style={styles.inputLabel}>Nome Genitore (per detrazione)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.tax_payer_first_name}
+                onChangeText={(text) => setEditData({...editData, tax_payer_first_name: text.toUpperCase()})}
+                autoCapitalize="characters"
+                placeholder="es: MARIO"
+                placeholderTextColor="#aaa"
+                returnKeyType="next"
+              />
+
+              <Text style={styles.inputLabel}>Codice Fiscale Genitore</Text>
               <TextInput
                 style={styles.textInput}
                 value={editData.tax_payer_fiscal_code}
                 onChangeText={(text) => setEditData({...editData, tax_payer_fiscal_code: text.toUpperCase()})}
                 autoCapitalize="characters"
                 maxLength={16}
+                placeholder="es: RSSMRA80A01H501Z"
+                placeholderTextColor="#aaa"
+                returnKeyType="done"
               />
             </ScrollView>
 
