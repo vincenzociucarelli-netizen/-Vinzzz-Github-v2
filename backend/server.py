@@ -776,7 +776,8 @@ async def register(user_data: UserCreate):
         status=initial_status,
         society_id=society_id,
         first_name=user_data.first_name,
-        last_name=user_data.last_name
+        last_name=user_data.last_name,
+        phone=user_data.phone
     )
     
     await db.users.insert_one(user.dict())
