@@ -1304,12 +1304,22 @@ export default function AthleteDetail() {
                 </Picker>
               </View>
 
-              <Text style={styles.inputLabel}>Nome Completo</Text>
+              <Text style={styles.inputLabel}>Cognome</Text>
               <TextInput
                 style={styles.textInput}
-                value={editData.full_name}
-                onChangeText={(text) => setEditData({...editData, full_name: text.toUpperCase()})}
+                value={editData.last_name}
+                onChangeText={(text) => setEditData({...editData, last_name: text.toUpperCase()})}
                 autoCapitalize="characters"
+                returnKeyType="next"
+              />
+
+              <Text style={styles.inputLabel}>Nome</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.first_name}
+                onChangeText={(text) => setEditData({...editData, first_name: text.toUpperCase()})}
+                autoCapitalize="characters"
+                returnKeyType="next"
               />
 
               <Text style={styles.inputLabel}>Data di Nascita (GG/MM/AAAA)</Text>
@@ -1319,6 +1329,7 @@ export default function AthleteDetail() {
                 onChangeText={(text) => setEditData({...editData, date_of_birth: formatDateInput(text)})}
                 keyboardType="number-pad"
                 maxLength={10}
+                returnKeyType="next"
               />
 
               <Text style={styles.inputLabel}>Codice Fiscale</Text>
@@ -1328,6 +1339,7 @@ export default function AthleteDetail() {
                 onChangeText={(text) => setEditData({...editData, fiscal_code: text.toUpperCase()})}
                 autoCapitalize="characters"
                 maxLength={16}
+                returnKeyType="next"
               />
 
               <Text style={styles.inputLabel}>Indirizzo</Text>
@@ -1336,6 +1348,7 @@ export default function AthleteDetail() {
                 value={editData.address}
                 onChangeText={(text) => setEditData({...editData, address: text.toUpperCase()})}
                 autoCapitalize="characters"
+                returnKeyType="next"
               />
 
               <Text style={styles.inputLabel}>Città</Text>
@@ -1344,6 +1357,7 @@ export default function AthleteDetail() {
                 value={editData.city}
                 onChangeText={(text) => setEditData({...editData, city: text.toUpperCase()})}
                 autoCapitalize="characters"
+                returnKeyType="next"
               />
 
               <View style={styles.rowInputs}>
@@ -1355,6 +1369,7 @@ export default function AthleteDetail() {
                     onChangeText={(text) => setEditData({...editData, postal_code: text})}
                     keyboardType="number-pad"
                     maxLength={5}
+                    returnKeyType="next"
                   />
                 </View>
                 <View style={styles.halfInputContainer}>
@@ -1365,6 +1380,7 @@ export default function AthleteDetail() {
                     onChangeText={(text) => setEditData({...editData, province: text.toUpperCase()})}
                     autoCapitalize="characters"
                     maxLength={2}
+                    returnKeyType="next"
                   />
                 </View>
               </View>
@@ -1375,6 +1391,7 @@ export default function AthleteDetail() {
                 value={editData.phone_athlete}
                 onChangeText={(text) => setEditData({...editData, phone_athlete: text})}
                 keyboardType="phone-pad"
+                returnKeyType="next"
               />
 
               <Text style={styles.inputLabel}>Tel. Padre</Text>
