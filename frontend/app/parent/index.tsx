@@ -46,6 +46,37 @@ export default function ParentDashboard() {
     setRefreshing(false);
   };
 
+  const openEditProfile = () => {
+    // Split full_name into first and last name
+    const nameParts = (user?.full_name || '').split(' ');
+    setEditLastName(nameParts[0] || '');
+    setEditFirstName(nameParts.slice(1).join(' ') || '');
+    setEditProfileVisible(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editLastName.trim() || !editFirstName.trim()) {
+      Alert.alert('Errore', 'Cognome e Nome sono obbligatori');
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      const fullName = `${editLastName.trim()} ${editFirstName.trim()}`;
+      await api.patch('/auth/me', {
+        full_name: fullName,
+        first_name: editFirstName.trim(),
+        last_name: editLastName.trim(),
+      });
+      await refreshUser();
+      setEditProfileVisible(false);
+      Alert.alert('Successo', 'Dati aggiornati correttamente');
+    } catch (error) {
+      Alert.alert('Errore', 'Impossibile aggiornare i dati');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   const handleLogout = async () => {
     if (Platform.OS === 'web') {
       if (window.confirm('Sei sicuro di voler uscire?')) {
