@@ -251,7 +251,8 @@ export default function RegisterAthlete() {
           <Text style={styles.label}>Cognome *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: ROSSI"
+            placeholder="es: Rossi"
+            placeholderTextColor="#aaa"
             value={lastName}
             onChangeText={(text) => setLastName(text.toUpperCase())}
             autoCapitalize="characters"
@@ -260,7 +261,8 @@ export default function RegisterAthlete() {
           <Text style={styles.label}>Nome *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: MARIO"
+            placeholder="es: Mario"
+            placeholderTextColor="#aaa"
             value={firstName}
             onChangeText={(text) => setFirstName(text.toUpperCase())}
             autoCapitalize="characters"
@@ -269,7 +271,8 @@ export default function RegisterAthlete() {
           <Text style={styles.label}>Data di Nascita (GG/MM/AAAA) *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: 15/05/2010"
+            placeholder="es: 15/05/2010"
+            placeholderTextColor="#aaa"
             value={dateOfBirth}
             onChangeText={(text) => setDateOfBirth(formatDateInput(text))}
             keyboardType="number-pad"
@@ -279,7 +282,8 @@ export default function RegisterAthlete() {
           <Text style={styles.label}>Codice Fiscale *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: RSSMRA10E15H501Z"
+            placeholder="es: RSSMRA10E15H501Z"
+            placeholderTextColor="#aaa"
             value={fiscalCode}
             onChangeText={(text) => setFiscalCode(text.toUpperCase())}
             autoCapitalize="characters"
@@ -289,7 +293,8 @@ export default function RegisterAthlete() {
           <Text style={styles.label}>Indirizzo</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: VIA ROMA 123"
+            placeholder="es: Via Roma 123"
+            placeholderTextColor="#aaa"
             value={address}
             onChangeText={(text) => setAddress(text.toUpperCase())}
             autoCapitalize="characters"
