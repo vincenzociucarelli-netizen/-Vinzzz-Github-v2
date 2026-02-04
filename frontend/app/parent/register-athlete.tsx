@@ -44,7 +44,8 @@ export default function RegisterAthlete() {
   const [email, setEmail] = useState('');
   
   // Dati Fiscali
-  const [taxPayerName, setTaxPayerName] = useState('');
+  const [taxPayerLastName, setTaxPayerLastName] = useState('');
+  const [taxPayerFirstName, setTaxPayerFirstName] = useState('');
   const [taxPayerFiscalCode, setTaxPayerFiscalCode] = useState('');
   
   // Squadre
