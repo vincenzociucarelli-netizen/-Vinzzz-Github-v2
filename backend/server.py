@@ -2116,6 +2116,29 @@ async def check_has_password(athlete_id: str, current_user = Depends(get_current
     
     return {"has_password": bool(athlete.get("data_password_hash"))}
 
+@api_router.post("/athletes/{athlete_id}/request-deletion")
+async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_current_user)):
+    """Request deletion of an athlete - sends notification to admin"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Check permissions - only parent of the athlete can request deletion
+    if current_user["role"] == UserRole.PARENT and athlete.get("parent_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    # Mark athlete for deletion request
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "deletion_requested": True,
+            "deletion_requested_at": datetime.utcnow(),
+            "deletion_requested_by": current_user["id"]
+        }}
+    )
+    
+    return {"message": "Richiesta di cancellazione inviata"}
+
 @api_router.delete("/athletes/{athlete_id}")
 async def delete_athlete(athlete_id: str, current_user = Depends(get_current_user)):
     """Delete an athlete and all related data (certificates, payments, attendances)"""
