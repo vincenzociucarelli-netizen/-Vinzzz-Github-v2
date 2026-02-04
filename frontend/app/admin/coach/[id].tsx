@@ -838,9 +838,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginTop: 8,
+    flexWrap: 'wrap',
   },
   docImageContainerAdmin: {
-    flex: 1,
     alignItems: 'center',
   },
   docImageLabelAdmin: {
@@ -849,10 +849,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   docImagePreviewSmall: {
-    width: '100%',
-    height: 80,
-    borderRadius: 8,
-    resizeMode: 'cover',
+    width: 100,
+    height: 70,
+    borderRadius: 6,
   },
   tapToEnlarge: {
     fontSize: 10,
