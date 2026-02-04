@@ -415,25 +415,38 @@ export default function RegisterAthlete() {
 
           <Text style={styles.sectionTitle}>💳 Dati per Fatturazione</Text>
 
-          <Text style={styles.label}>Cognome e Nome</Text>
+          <Text style={styles.label}>Cognome Genitore</Text>
           <TextInput
             style={styles.input}
-            placeholder="es: Rossi Mario"
+            placeholder="es: ROSSI"
             placeholderTextColor="#aaa"
-            value={taxPayerName}
-            onChangeText={(text) => setTaxPayerName(text.toUpperCase())}
+            value={taxPayerLastName}
+            onChangeText={(text) => setTaxPayerLastName(text.toUpperCase())}
             autoCapitalize="characters"
+            returnKeyType="next"
           />
 
-          <Text style={styles.label}>Codice Fiscale</Text>
+          <Text style={styles.label}>Nome Genitore</Text>
           <TextInput
             style={styles.input}
-            placeholder="Inserire codice fiscale"
+            placeholder="es: MARIO"
+            placeholderTextColor="#aaa"
+            value={taxPayerFirstName}
+            onChangeText={(text) => setTaxPayerFirstName(text.toUpperCase())}
+            autoCapitalize="characters"
+            returnKeyType="next"
+          />
+
+          <Text style={styles.label}>Codice Fiscale Genitore</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="es: RSSMRA80A01H501Z"
             placeholderTextColor="#aaa"
             value={taxPayerFiscalCode}
             onChangeText={(text) => setTaxPayerFiscalCode(text.toUpperCase())}
             autoCapitalize="characters"
             maxLength={16}
+            returnKeyType="next"
           />
 
           <Text style={styles.sectionTitle}>🏐 Squadre</Text>
