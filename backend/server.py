@@ -1847,6 +1847,21 @@ async def update_athlete_approval(athlete_id: str, data: AthleteApprovalUpdate, 
         {"$set": update_data}
     )
     
+    # AUTO-APPROVE PARENT: When approving an athlete, also approve their parent
+    if data.status in [AthleteStatus.TRIAL, AthleteStatus.ACTIVE]:
+        parent_id = athlete.get("parent_id")
+        if parent_id:
+            parent = await db.users.find_one({"id": parent_id})
+            if parent and parent.get("status") == UserStatus.PENDING:
+                await db.users.update_one(
+                    {"id": parent_id},
+                    {"$set": {
+                        "status": UserStatus.APPROVED,
+                        "approved_at": datetime.utcnow(),
+                        "approved_by": current_user["id"]
+                    }}
+                )
+    
     # If approving, create payment records
     if data.status in [AthleteStatus.TRIAL, AthleteStatus.ACTIVE]:
         # Check if payments already exist
