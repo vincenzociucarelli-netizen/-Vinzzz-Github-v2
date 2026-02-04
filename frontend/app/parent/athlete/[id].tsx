@@ -204,11 +204,11 @@ export default function AthleteDetail() {
     }
   };
 
-  // Mask sensitive data if not unlocked
+  // Data is always visible, but editing is locked until password verified
+  // maskData is no longer used to hide data - data is always shown
   const maskData = (data: string | null | undefined): string => {
     if (!data) return '-';
-    if (dataUnlocked) return data;
-    return '••••••••';
+    return data;  // Always show data - no masking
   };
 
   const handleUploadCertificate = async () => {
