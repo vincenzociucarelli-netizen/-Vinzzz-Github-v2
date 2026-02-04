@@ -562,9 +562,9 @@ export default function AthleteDetail() {
     if (!athlete) return;
     
     // Popola i dati di modifica con i valori attuali
-    const nameParts = athlete.full_name.split(' ');
     setEditData({
-      full_name: athlete.full_name || '',
+      first_name: athlete.first_name || '',
+      last_name: athlete.last_name || '',
       date_of_birth: formatDateForDisplay(athlete.date_of_birth),
       fiscal_code: athlete.fiscal_code || '',
       address: athlete.address || '',
@@ -575,7 +575,8 @@ export default function AthleteDetail() {
       phone_father: athlete.phone_father || '',
       phone_mother: athlete.phone_mother || '',
       email: athlete.email || '',
-      tax_payer_name: athlete.tax_payer_name || '',
+      tax_payer_last_name: athlete.tax_payer_last_name || '',
+      tax_payer_first_name: athlete.tax_payer_first_name || '',
       tax_payer_fiscal_code: athlete.tax_payer_fiscal_code || '',
       team_id: athlete.team_id || '',
     });
@@ -589,7 +590,9 @@ export default function AthleteDetail() {
       const isoDate = convertToISODate(editData.date_of_birth);
       
       await api.patch(`/athletes/${id}`, {
-        full_name: editData.full_name,
+        first_name: editData.first_name,
+        last_name: editData.last_name,
+        full_name: `${editData.last_name} ${editData.first_name}`,
         date_of_birth: isoDate,
         fiscal_code: editData.fiscal_code,
         address: editData.address || null,
@@ -600,7 +603,8 @@ export default function AthleteDetail() {
         phone_father: editData.phone_father || null,
         phone_mother: editData.phone_mother || null,
         email: editData.email || null,
-        tax_payer_name: editData.tax_payer_name || null,
+        tax_payer_last_name: editData.tax_payer_last_name || null,
+        tax_payer_first_name: editData.tax_payer_first_name || null,
         tax_payer_fiscal_code: editData.tax_payer_fiscal_code || null,
         team_id: editData.team_id || null,
       });
