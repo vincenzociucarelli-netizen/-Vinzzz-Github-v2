@@ -58,7 +58,8 @@ export default function AthleteDetail() {
   // Edit mode states
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editData, setEditData] = useState({
-    full_name: '',
+    first_name: '',
+    last_name: '',
     date_of_birth: '',
     fiscal_code: '',
     address: '',
@@ -69,7 +70,8 @@ export default function AthleteDetail() {
     phone_father: '',
     phone_mother: '',
     email: '',
-    tax_payer_name: '',
+    tax_payer_last_name: '',
+    tax_payer_first_name: '',
     tax_payer_fiscal_code: '',
     team_id: '',
   });
