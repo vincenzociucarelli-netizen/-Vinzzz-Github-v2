@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,28 +19,23 @@ export default function RegisterCoach() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1); // 1: Account, 2: Anagrafica, 3: Fiscale
+  const [showPasswords, setShowPasswords] = useState(true);
 
-  // Step 1 - Account
+  // Form fields - simplified
   const [inviteCode, setInviteCode] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Step 2 - Dati Anagrafici
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [placeOfBirth, setPlaceOfBirth] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [province, setProvince] = useState('');
-  const [phone, setPhone] = useState('');
-
-  // Step 3 - Dati Fiscali e Tesserino
-  const [fiscalCode, setFiscalCode] = useState('');
-  const [coachLicenseNumber, setCoachLicenseNumber] = useState('');
+  // Refs for navigation
+  const firstNameRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
 
   const showAlert = (title: string, message: string, onOk?: () => void) => {
     if (Platform.OS === 'web') {
@@ -51,96 +46,46 @@ export default function RegisterCoach() {
     }
   };
 
-  const validateStep1 = () => {
+  const handleRegister = async () => {
+    // Validation
     if (!inviteCode) {
       showAlert('Errore', 'Inserisci il codice invito della società');
-      return false;
+      return;
     }
-    if (!email || !password) {
-      showAlert('Errore', 'Compila tutti i campi');
-      return false;
+    if (!lastName.trim() || !firstName.trim()) {
+      showAlert('Errore', 'Inserisci cognome e nome');
+      return;
     }
-    if (password !== confirmPassword) {
-      showAlert('Errore', 'Le password non coincidono');
-      return false;
+    if (!email.trim()) {
+      showAlert('Errore', 'Inserisci la tua email');
+      return;
+    }
+    if (!password) {
+      showAlert('Errore', 'Inserisci una password');
+      return;
     }
     if (password.length < 6) {
       showAlert('Errore', 'La password deve essere di almeno 6 caratteri');
-      return false;
+      return;
     }
-    return true;
-  };
-
-  const validateStep2 = () => {
-    if (!firstName || !lastName || !dateOfBirth) {
-      showAlert('Errore', 'Compila nome, cognome e data di nascita');
-      return false;
+    if (password !== confirmPassword) {
+      showAlert('Errore', 'Le password non coincidono');
+      return;
     }
-    // Validate date format
-    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-    if (!dateRegex.test(dateOfBirth)) {
-      showAlert('Errore', 'Formato data non valido. Usa GG/MM/AAAA');
-      return false;
-    }
-    return true;
-  };
-
-  const validateStep3 = () => {
-    if (!fiscalCode) {
-      showAlert('Errore', 'Inserisci il codice fiscale');
-      return false;
-    }
-    if (!coachLicenseNumber) {
-      showAlert('Errore', 'Inserisci il numero di tesserino allenatore');
-      return false;
-    }
-    return true;
-  };
-
-  const handleNextStep = () => {
-    if (step === 1 && validateStep1()) {
-      setStep(2);
-    } else if (step === 2 && validateStep2()) {
-      setStep(3);
-    }
-  };
-
-  const handlePrevStep = () => {
-    if (step > 1) {
-      setStep(step - 1);
-    }
-  };
-
-  const convertToISODate = (dateStr: string): string => {
-    const [day, month, year] = dateStr.split('/');
-    return `${year}-${month}-${day}`;
-  };
-
-  const handleRegister = async () => {
-    if (!validateStep3()) return;
 
     setLoading(true);
     try {
-      const fullName = `${lastName} ${firstName}`;
-      const isoDate = convertToISODate(dateOfBirth);
+      const fullName = `${lastName.trim()} ${firstName.trim()}`;
 
       const response = await api.post('/auth/register', {
-        email,
+        email: email.trim().toLowerCase(),
         password,
         full_name: fullName,
         role: 'coach',
         invite_code: inviteCode.toUpperCase(),
-        first_name: firstName,
-        last_name: lastName,
-        date_of_birth: isoDate,
-        place_of_birth: placeOfBirth || null,
-        fiscal_code: fiscalCode,
-        address: address || null,
-        city: city || null,
-        postal_code: postalCode || null,
-        province: province || null,
-        phone: phone || null,
-        coach_license_number: coachLicenseNumber,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        phone: phone.trim() || null,
       });
 
       await setUser(response.data.user, response.data.token);
@@ -157,213 +102,6 @@ export default function RegisterCoach() {
     }
   };
 
-  const renderStepIndicator = () => (
-    <View style={styles.stepIndicator}>
-      <View style={[styles.stepDot, step >= 1 && styles.stepDotActive]}>
-        <Text style={[styles.stepDotText, step >= 1 && styles.stepDotTextActive]}>1</Text>
-      </View>
-      <View style={[styles.stepLine, step >= 2 && styles.stepLineActive]} />
-      <View style={[styles.stepDot, step >= 2 && styles.stepDotActive]}>
-        <Text style={[styles.stepDotText, step >= 2 && styles.stepDotTextActive]}>2</Text>
-      </View>
-      <View style={[styles.stepLine, step >= 3 && styles.stepLineActive]} />
-      <View style={[styles.stepDot, step >= 3 && styles.stepDotActive]}>
-        <Text style={[styles.stepDotText, step >= 3 && styles.stepDotTextActive]}>3</Text>
-      </View>
-    </View>
-  );
-
-  const renderStep1 = () => (
-    <>
-      <Text style={styles.stepTitle}>👤 Credenziali Account</Text>
-      
-      <View style={styles.inviteCodeSection}>
-        <Text style={styles.inviteCodeLabel}>🎟️ Codice Invito Società *</Text>
-        <TextInput
-          style={styles.inviteCodeInput}
-          placeholder="Es: PUZTKF74"
-          value={inviteCode}
-          onChangeText={(text) => setInviteCode(text.toUpperCase())}
-          autoCapitalize="characters"
-          maxLength={8}
-        />
-        <Text style={styles.inviteCodeHint}>Chiedi il codice al tuo club</Text>
-      </View>
-      
-      <Text style={styles.inputLabel}>Email *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="esempio@email.com"
-        value={email}
-        onChangeText={(text) => setEmail(text.toLowerCase())}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-
-      <Text style={styles.inputLabel}>Password *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Minimo 6 caratteri"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoCapitalize="none"
-      />
-
-      <Text style={styles.inputLabel}>Conferma Password *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Ripeti la password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-        autoCapitalize="none"
-      />
-    </>
-  );
-
-  const renderStep2 = () => (
-    <>
-      <Text style={styles.stepTitle}>📋 Dati Anagrafici</Text>
-      
-      <Text style={styles.inputLabel}>Nome *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="MARIO"
-        value={firstName}
-        onChangeText={(text) => setFirstName(text.toUpperCase())}
-        autoCapitalize="characters"
-      />
-
-      <Text style={styles.inputLabel}>Cognome *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="ROSSI"
-        value={lastName}
-        onChangeText={(text) => setLastName(text.toUpperCase())}
-        autoCapitalize="characters"
-      />
-
-      <Text style={styles.inputLabel}>Data di nascita *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="GG/MM/AAAA"
-        placeholderTextColor="#999"
-        value={dateOfBirth}
-        onChangeText={(text) => {
-          // Auto-format date with slashes
-          const cleaned = text.replace(/\D/g, '');
-          let formatted = '';
-          if (cleaned.length > 0) formatted = cleaned.substring(0, 2);
-          if (cleaned.length > 2) formatted += '/' + cleaned.substring(2, 4);
-          if (cleaned.length > 4) formatted += '/' + cleaned.substring(4, 8);
-          setDateOfBirth(formatted);
-        }}
-        keyboardType="numeric"
-        maxLength={10}
-      />
-
-      <Text style={styles.inputLabel}>Luogo di nascita</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="PERUGIA"
-        value={placeOfBirth}
-        onChangeText={(text) => setPlaceOfBirth(text.toUpperCase())}
-        autoCapitalize="characters"
-      />
-
-      <Text style={styles.inputLabel}>Indirizzo</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="VIA ROMA 1"
-        value={address}
-        onChangeText={(text) => setAddress(text.toUpperCase())}
-        autoCapitalize="characters"
-      />
-
-      <View style={styles.row}>
-        <View style={styles.inputHalf}>
-          <Text style={styles.inputLabel}>Città</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="PERUGIA"
-            value={city}
-            onChangeText={(text) => setCity(text.toUpperCase())}
-            autoCapitalize="characters"
-          />
-        </View>
-        <View style={styles.inputSmall}>
-          <Text style={styles.inputLabel}>Prov.</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="PG"
-            value={province}
-            onChangeText={(text) => setProvince(text.toUpperCase())}
-            maxLength={2}
-            autoCapitalize="characters"
-          />
-        </View>
-      </View>
-
-      <View style={styles.row}>
-        <View style={styles.inputSmall}>
-          <Text style={styles.inputLabel}>CAP</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="06100"
-            value={postalCode}
-            onChangeText={setPostalCode}
-            keyboardType="numeric"
-            maxLength={5}
-          />
-        </View>
-        <View style={styles.inputHalf}>
-          <Text style={styles.inputLabel}>Telefono</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="333 1234567"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-          />
-        </View>
-      </View>
-    </>
-  );
-
-  const renderStep3 = () => (
-    <>
-      <Text style={styles.stepTitle}>💼 Dati Fiscali e Tesserino</Text>
-      
-      <Text style={styles.inputLabel}>Codice Fiscale *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="RSSMRA80A01H501Z"
-        value={fiscalCode}
-        onChangeText={(text) => setFiscalCode(text.toUpperCase())}
-        autoCapitalize="characters"
-        maxLength={16}
-      />
-
-      <Text style={styles.inputLabel}>Numero Tesserino Allenatore *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="123456"
-        value={coachLicenseNumber}
-        onChangeText={(text) => setCoachLicenseNumber(text.toUpperCase())}
-        autoCapitalize="characters"
-      />
-
-      <View style={styles.infoBox}>
-        <Ionicons name="information-circle" size={20} color="#007AFF" />
-        <Text style={styles.infoText}>
-          Il compenso mensile e le squadre assegnate saranno configurati dall'amministratore della società dopo l'approvazione.
-        </Text>
-      </View>
-    </>
-  );
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -378,49 +116,151 @@ export default function RegisterCoach() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {renderStepIndicator()}
-        
-        <Text style={styles.stepLabel}>
-          Passo {step} di 3: {step === 1 ? 'Account' : step === 2 ? 'Anagrafica' : 'Fiscale'}
-        </Text>
+        <Text style={styles.subtitle}>Crea il tuo account coach in pochi secondi</Text>
 
         <View style={styles.form}>
-          {step === 1 && renderStep1()}
-          {step === 2 && renderStep2()}
-          {step === 3 && renderStep3()}
+          {/* Invite Code */}
+          <View style={styles.inviteCodeSection}>
+            <Text style={styles.inviteCodeLabel}>🎟️ Codice Invito Società</Text>
+            <TextInput
+              style={styles.inviteCodeInput}
+              placeholder="Es: PUZTKF74"
+              placeholderTextColor="#999"
+              value={inviteCode}
+              onChangeText={(text) => setInviteCode(text.toUpperCase())}
+              autoCapitalize="characters"
+              maxLength={8}
+              returnKeyType="next"
+            />
+            <Text style={styles.inviteCodeHint}>Chiedi il codice al tuo club</Text>
+          </View>
 
-          <View style={styles.buttonRow}>
-            {step > 1 && (
-              <TouchableOpacity
-                style={[styles.button, styles.buttonSecondary]}
-                onPress={handlePrevStep}
+          {/* Personal Info */}
+          <Text style={styles.inputLabel}>Cognome</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="es: ROSSI"
+            placeholderTextColor="#aaa"
+            value={lastName}
+            onChangeText={(text) => setLastName(text.toUpperCase())}
+            autoCapitalize="characters"
+            returnKeyType="next"
+            onSubmitEditing={() => firstNameRef.current?.focus()}
+          />
+
+          <Text style={styles.inputLabel}>Nome</Text>
+          <TextInput
+            ref={firstNameRef}
+            style={styles.input}
+            placeholder="es: MARIO"
+            placeholderTextColor="#aaa"
+            value={firstName}
+            onChangeText={(text) => setFirstName(text.toUpperCase())}
+            autoCapitalize="characters"
+            returnKeyType="next"
+            onSubmitEditing={() => phoneRef.current?.focus()}
+          />
+
+          <Text style={styles.inputLabel}>Telefono</Text>
+          <TextInput
+            ref={phoneRef}
+            style={styles.input}
+            placeholder="es: 333 1234567"
+            placeholderTextColor="#aaa"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            returnKeyType="next"
+            onSubmitEditing={() => emailRef.current?.focus()}
+          />
+
+          <Text style={styles.inputLabel}>Email (sarà il tuo User ID)</Text>
+          <TextInput
+            ref={emailRef}
+            style={styles.input}
+            placeholder="esempio@email.com"
+            placeholderTextColor="#aaa"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+          />
+
+          {/* Passwords */}
+          <View style={styles.passwordSection}>
+            <View style={styles.passwordHeader}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <TouchableOpacity 
+                style={styles.togglePasswordBtn}
+                onPress={() => setShowPasswords(!showPasswords)}
               >
-                <Ionicons name="arrow-back" size={20} color="#007AFF" />
-                <Text style={styles.buttonSecondaryText}>Indietro</Text>
-              </TouchableOpacity>
-            )}
-            
-            {step < 3 ? (
-              <TouchableOpacity
-                style={[styles.button, styles.buttonPrimary, step === 1 && { flex: 1 }]}
-                onPress={handleNextStep}
-              >
-                <Text style={styles.buttonPrimaryText}>Avanti</Text>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.button, styles.buttonPrimary, loading && styles.buttonDisabled]}
-                onPress={handleRegister}
-                disabled={loading}
-              >
-                <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                <Text style={styles.buttonPrimaryText}>
-                  {loading ? 'Registrazione...' : 'Completa Registrazione'}
+                <Ionicons 
+                  name={showPasswords ? "eye-off" : "eye"} 
+                  size={18} 
+                  color="#666" 
+                />
+                <Text style={styles.togglePasswordText}>
+                  {showPasswords ? 'Nascondi' : 'Mostra'}
                 </Text>
               </TouchableOpacity>
-            )}
+            </View>
+            <TextInput
+              ref={passwordRef}
+              style={styles.input}
+              placeholder="Minimo 6 caratteri"
+              placeholderTextColor="#aaa"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPasswords}
+              autoCapitalize="none"
+              returnKeyType="next"
+              onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+            />
+
+            <Text style={styles.inputLabel}>Conferma Password</Text>
+            <TextInput
+              ref={confirmPasswordRef}
+              style={styles.input}
+              placeholder="Ripeti la password"
+              placeholderTextColor="#aaa"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showPasswords}
+              autoCapitalize="none"
+              returnKeyType="done"
+              onSubmitEditing={handleRegister}
+            />
           </View>
+
+          {/* Info Box */}
+          <View style={styles.infoBox}>
+            <Ionicons name="information-circle" size={20} color="#007AFF" />
+            <Text style={styles.infoText}>
+              I dati aggiuntivi (data nascita, codice fiscale, tesserino, ecc.) potranno essere inseriti dopo la registrazione nel tuo profilo.
+            </Text>
+          </View>
+
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            <Ionicons name="checkmark-circle" size={20} color="#fff" />
+            <Text style={styles.buttonText}>
+              {loading ? 'Registrazione...' : 'Registrati'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.linkButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.linkText}>Hai già un account? Accedi</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -450,49 +290,11 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 24,
   },
-  stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  stepDot: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#e0e0e0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepDotActive: {
-    backgroundColor: '#007AFF',
-  },
-  stepDotText: {
-    color: '#999',
-    fontWeight: 'bold',
-  },
-  stepDotTextActive: {
-    color: '#fff',
-  },
-  stepLine: {
-    width: 40,
-    height: 3,
-    backgroundColor: '#e0e0e0',
-  },
-  stepLineActive: {
-    backgroundColor: '#007AFF',
-  },
-  stepLabel: {
-    fontSize: 14,
+  subtitle: {
+    fontSize: 16,
     color: '#666',
     textAlign: 'center',
     marginBottom: 24,
-  },
-  stepTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
   },
   form: {
     width: '100%',
@@ -533,35 +335,42 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 10,
     fontSize: 16,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#ddd',
-    color: '#000',
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6c757d',
-    marginBottom: 4,
+    color: '#555',
+    marginBottom: 6,
   },
-  row: {
+  passwordSection: {
+    marginTop: 8,
+  },
+  passwordHeader: {
     flexDirection: 'row',
-    gap: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
   },
-  inputHalf: {
-    flex: 1,
+  togglePasswordBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 4,
   },
-  inputSmall: {
-    width: 100,
+  togglePasswordText: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
   },
   infoBox: {
     flexDirection: 'row',
     backgroundColor: '#E8F4FD',
     padding: 16,
-    borderRadius: 8,
-    marginTop: 8,
+    borderRadius: 10,
     marginBottom: 16,
   },
   infoText: {
@@ -571,38 +380,29 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     lineHeight: 20,
   },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-  },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    gap: 8,
-  },
-  buttonPrimary: {
-    flex: 1,
     backgroundColor: '#007AFF',
-  },
-  buttonSecondary: {
-    backgroundColor: '#f0f0f0',
+    paddingVertical: 16,
+    borderRadius: 10,
+    gap: 8,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
-  buttonPrimaryText: {
+  buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
   },
-  buttonSecondaryText: {
+  linkButton: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  linkText: {
     color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
   },
 });
