@@ -8,6 +8,8 @@ import {
   RefreshControl,
   Alert,
   Platform,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -17,9 +19,13 @@ import { Athlete } from '../../src/types';
 
 export default function ParentDashboard() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, refreshUser } = useAuthStore();
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const loadAthletes = async () => {
     try {
