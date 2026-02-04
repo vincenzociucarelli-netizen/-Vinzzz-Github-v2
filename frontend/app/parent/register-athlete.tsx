@@ -201,6 +201,8 @@ export default function RegisterAthlete() {
         first_name: firstName,
         last_name: lastName,
         date_of_birth: isoDate,
+        birth_place: birthPlace || null,
+        birth_province: birthProvince || null,
         fiscal_code: fiscalCode,
         address: address || null,
         city: city || null,
