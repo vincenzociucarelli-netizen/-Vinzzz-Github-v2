@@ -280,7 +280,9 @@ class Athlete(BaseModel):
     city: Optional[str] = None  # Città
     province: Optional[str] = None  # Provincia
     # Dati genitore per detrazione
-    tax_payer_name: Optional[str] = None  # Nome cognome genitore detrazione
+    tax_payer_name: Optional[str] = None  # Nome cognome genitore detrazione (legacy)
+    tax_payer_last_name: Optional[str] = None  # Cognome genitore detrazione
+    tax_payer_first_name: Optional[str] = None  # Nome genitore detrazione
     tax_payer_fiscal_code: Optional[str] = None  # CF genitore detrazione
     # Squadra e stato
     team_id: str  # Squadra principale (per pagamenti)
