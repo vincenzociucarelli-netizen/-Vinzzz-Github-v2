@@ -8,11 +8,13 @@ interface AuthState {
   token: string | null;
   isLoading: boolean;
   setUser: (user: User | null, token: string | null) => Promise<void>;
+  updateUser: (updates: Partial<User>) => Promise<void>;
+  refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
   loadAuth: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
   isLoading: true,
@@ -23,6 +25,28 @@ export const useAuthStore = create<AuthState>((set) => ({
       await AsyncStorage.setItem('user', JSON.stringify(user));
     }
     set({ user, token, isLoading: false });
+  },
+
+  updateUser: async (updates) => {
+    const currentUser = get().user;
+    if (currentUser) {
+      const updatedUser = { ...currentUser, ...updates };
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      set({ user: updatedUser });
+    }
+  },
+
+  refreshUser: async () => {
+    // Simply reload user from AsyncStorage - the API already saved the data
+    try {
+      const userStr = await AsyncStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        set({ user });
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+    }
   },
   
   logout: async () => {
