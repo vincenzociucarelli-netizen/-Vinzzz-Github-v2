@@ -178,6 +178,58 @@ export default function ParentDashboard() {
           <Text style={styles.addButtonText}>Registra Nuovo Atleta</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Modal per modifica nome */}
+      <Modal
+        visible={editProfileVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditProfileVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Modifica Dati Personali</Text>
+            
+            <Text style={styles.inputLabel}>Cognome</Text>
+            <TextInput
+              style={styles.textInput}
+              value={editLastName}
+              onChangeText={(text) => setEditLastName(text.toUpperCase())}
+              autoCapitalize="characters"
+              placeholder="es: ROSSI"
+              placeholderTextColor="#aaa"
+            />
+
+            <Text style={styles.inputLabel}>Nome</Text>
+            <TextInput
+              style={styles.textInput}
+              value={editFirstName}
+              onChangeText={(text) => setEditFirstName(text.toUpperCase())}
+              autoCapitalize="characters"
+              placeholder="es: MARIO"
+              placeholderTextColor="#aaa"
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setEditProfileVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveProfile}
+                disabled={savingProfile}
+              >
+                <Text style={styles.saveButtonText}>
+                  {savingProfile ? 'Salvataggio...' : 'Salva'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
