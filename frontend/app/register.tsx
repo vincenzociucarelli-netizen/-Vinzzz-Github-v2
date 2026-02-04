@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,17 +14,30 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import api from '../src/services/api';
 import { Picker } from '@react-native-picker/picker';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function Register() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
+  
+  // Form fields
+  const [lastName, setLastName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [role, setRole] = useState('parent');
   const [loading, setLoading] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(true); // Passwords visible by default
+
+  // Refs for field navigation
+  const firstNameRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
 
   const showAlert = (title: string, message: string, onOk?: () => void) => {
     if (Platform.OS === 'web') {
@@ -48,8 +61,29 @@ export default function Register() {
       return;
     }
 
-    if (!email || !password || !firstName || !lastName) {
-      showAlert('Errore', 'Compila tutti i campi obbligatori');
+    // Validation
+    if (!lastName.trim() || !firstName.trim()) {
+      showAlert('Errore', 'Inserisci cognome e nome');
+      return;
+    }
+
+    if (!email.trim()) {
+      showAlert('Errore', 'Inserisci la tua email');
+      return;
+    }
+
+    if (!password) {
+      showAlert('Errore', 'Inserisci una password');
+      return;
+    }
+
+    if (password.length < 6) {
+      showAlert('Errore', 'La password deve essere di almeno 6 caratteri');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      showAlert('Errore', 'Le password non coincidono');
       return;
     }
 
@@ -61,11 +95,12 @@ export default function Register() {
     setLoading(true);
     try {
       const response = await api.post('/auth/register', {
-        email,
+        email: email.trim().toLowerCase(),
         password,
-        full_name: `${lastName.toUpperCase()} ${firstName}`,
-        first_name: firstName,
-        last_name: lastName.toUpperCase(),
+        full_name: `${lastName.trim().toUpperCase()} ${firstName.trim()}`,
+        first_name: firstName.trim(),
+        last_name: lastName.trim().toUpperCase(),
+        phone: phone.trim() || null,
         role,
         invite_code: inviteCode.toUpperCase(),
       });
@@ -89,12 +124,13 @@ export default function Register() {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Registrazione</Text>
-        <Text style={styles.subtitle}>Crea il tuo account</Text>
+        <Text style={styles.title}>👋 Registrazione</Text>
+        <Text style={styles.subtitle}>Crea il tuo account in pochi secondi</Text>
 
         <View style={styles.form}>
+          {/* Invite Code Section */}
           <View style={styles.inviteCodeSection}>
-            <Text style={styles.inviteCodeLabel}>🎟️ Codice Invito Società *</Text>
+            <Text style={styles.inviteCodeLabel}>🎟️ Codice Invito Società</Text>
             <TextInput
               style={styles.inviteCodeInput}
               placeholder="Es: PUZTKF74"
@@ -103,75 +139,152 @@ export default function Register() {
               onChangeText={(text) => setInviteCode(text.toUpperCase())}
               autoCapitalize="characters"
               maxLength={8}
+              returnKeyType="next"
             />
             <Text style={styles.inviteCodeHint}>
               Chiedi il codice al tuo club sportivo
             </Text>
           </View>
 
-          <Text style={styles.inputLabel}>Cognome *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Inserisci il cognome"
-            placeholderTextColor="#999"
-            value={lastName}
-            onChangeText={(text) => setLastName(text.toUpperCase())}
-            autoCapitalize="characters"
-          />
-
-          <Text style={styles.inputLabel}>Nome *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Inserisci il nome"
-            placeholderTextColor="#999"
-            value={firstName}
-            onChangeText={setFirstName}
-            autoCapitalize="words"
-          />
-
-          <Text style={styles.inputLabel}>Email *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="esempio@email.com"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <Text style={styles.inputLabel}>Password *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Minimo 6 caratteri"
-            placeholderTextColor="#999"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-          />
-
-          <View style={styles.pickerContainer}>
-            <Text style={styles.inputLabel}>Ruolo *</Text>
-            <View style={styles.picker}>
-              <Picker
-                selectedValue={role}
-                onValueChange={(value) => setRole(value)}
+          {/* Role Selector */}
+          <View style={styles.roleSection}>
+            <Text style={styles.inputLabel}>Tipo di account</Text>
+            <View style={styles.roleButtons}>
+              <TouchableOpacity
+                style={[styles.roleButton, role === 'parent' && styles.roleButtonActive]}
+                onPress={() => setRole('parent')}
               >
-                <Picker.Item label="Genitore/Atleta" value="parent" />
-                <Picker.Item label="Coach" value="coach" />
-                <Picker.Item label="Dirigente" value="viewer" />
-              </Picker>
+                <Ionicons name="people" size={20} color={role === 'parent' ? '#fff' : '#007AFF'} />
+                <Text style={[styles.roleButtonText, role === 'parent' && styles.roleButtonTextActive]}>Genitore</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.roleButton, role === 'coach' && styles.roleButtonActive]}
+                onPress={() => setRole('coach')}
+              >
+                <Ionicons name="fitness" size={20} color={role === 'coach' ? '#fff' : '#007AFF'} />
+                <Text style={[styles.roleButtonText, role === 'coach' && styles.roleButtonTextActive]}>Coach</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.roleButton, role === 'viewer' && styles.roleButtonActive]}
+                onPress={() => setRole('viewer')}
+              >
+                <Ionicons name="briefcase" size={20} color={role === 'viewer' ? '#fff' : '#007AFF'} />
+                <Text style={[styles.roleButtonText, role === 'viewer' && styles.roleButtonTextActive]}>Dirigente</Text>
+              </TouchableOpacity>
             </View>
           </View>
+
+          {/* Personal Info - Only for parent role */}
+          {role === 'parent' && (
+            <>
+              <Text style={styles.inputLabel}>Cognome</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="es: ROSSI"
+                placeholderTextColor="#aaa"
+                value={lastName}
+                onChangeText={(text) => setLastName(text.toUpperCase())}
+                autoCapitalize="characters"
+                returnKeyType="next"
+                onSubmitEditing={() => firstNameRef.current?.focus()}
+              />
+
+              <Text style={styles.inputLabel}>Nome</Text>
+              <TextInput
+                ref={firstNameRef}
+                style={styles.input}
+                placeholder="es: Mario"
+                placeholderTextColor="#aaa"
+                value={firstName}
+                onChangeText={setFirstName}
+                autoCapitalize="words"
+                returnKeyType="next"
+                onSubmitEditing={() => phoneRef.current?.focus()}
+              />
+
+              <Text style={styles.inputLabel}>Telefono</Text>
+              <TextInput
+                ref={phoneRef}
+                style={styles.input}
+                placeholder="es: 333 1234567"
+                placeholderTextColor="#aaa"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                returnKeyType="next"
+                onSubmitEditing={() => emailRef.current?.focus()}
+              />
+
+              <Text style={styles.inputLabel}>Email (sarà il tuo User ID)</Text>
+              <TextInput
+                ref={emailRef}
+                style={styles.input}
+                placeholder="esempio@email.com"
+                placeholderTextColor="#aaa"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+              />
+
+              <View style={styles.passwordSection}>
+                <View style={styles.passwordHeader}>
+                  <Text style={styles.inputLabel}>Password</Text>
+                  <TouchableOpacity 
+                    style={styles.togglePasswordBtn}
+                    onPress={() => setShowPasswords(!showPasswords)}
+                  >
+                    <Ionicons 
+                      name={showPasswords ? "eye-off" : "eye"} 
+                      size={18} 
+                      color="#666" 
+                    />
+                    <Text style={styles.togglePasswordText}>
+                      {showPasswords ? 'Nascondi' : 'Mostra'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <TextInput
+                  ref={passwordRef}
+                  style={styles.input}
+                  placeholder="Minimo 6 caratteri"
+                  placeholderTextColor="#aaa"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPasswords}
+                  autoCapitalize="none"
+                  returnKeyType="next"
+                  onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                />
+
+                <Text style={styles.inputLabel}>Conferma Password</Text>
+                <TextInput
+                  ref={confirmPasswordRef}
+                  style={styles.input}
+                  placeholder="Ripeti la password"
+                  placeholderTextColor="#aaa"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showPasswords}
+                  autoCapitalize="none"
+                  returnKeyType="done"
+                  onSubmitEditing={handleRegister}
+                />
+              </View>
+            </>
+          )}
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleRegister}
             disabled={loading}
           >
-            <Text style={styles.buttonText}>{loading ? 'Registrazione...' : 'Registrati'}</Text>
+            <Text style={styles.buttonText}>
+              {loading ? 'Registrazione...' : role === 'parent' ? 'Registrati' : 'Continua →'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
