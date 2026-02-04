@@ -874,10 +874,7 @@ export default function AthleteDetail() {
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Città</Text>
             <Text style={styles.dataValue}>
-              {dataUnlocked 
-                ? ([athlete.city, athlete.province, athlete.postal_code].filter(Boolean).join(' - ') || '-')
-                : '••••••••'
-              }
+              {[athlete.city, athlete.province, athlete.postal_code].filter(Boolean).join(' - ') || '-'}
             </Text>
           </View>
           
