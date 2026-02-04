@@ -29,6 +29,8 @@ export default function RegisterAthlete() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [birthPlace, setBirthPlace] = useState('');
+  const [birthProvince, setBirthProvince] = useState('');
   const [fiscalCode, setFiscalCode] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
