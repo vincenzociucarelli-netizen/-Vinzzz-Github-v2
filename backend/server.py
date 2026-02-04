@@ -354,6 +354,8 @@ class AthleteUpdate(BaseModel):
     city: Optional[str] = None
     province: Optional[str] = None
     tax_payer_name: Optional[str] = None
+    tax_payer_last_name: Optional[str] = None
+    tax_payer_first_name: Optional[str] = None
     tax_payer_fiscal_code: Optional[str] = None
     privacy_accepted: Optional[bool] = None
     privacy_accepted_date: Optional[str] = None
