@@ -306,6 +306,7 @@ export default function RegisterAthlete() {
               <TextInput
                 style={styles.input}
                 placeholder="00100"
+                placeholderTextColor="#aaa"
                 value={postalCode}
                 onChangeText={setPostalCode}
                 keyboardType="number-pad"
@@ -316,7 +317,8 @@ export default function RegisterAthlete() {
               <Text style={styles.label}>Città</Text>
               <TextInput
                 style={styles.input}
-                placeholder="ROMA"
+                placeholder="Roma"
+                placeholderTextColor="#aaa"
                 value={city}
                 onChangeText={(text) => setCity(text.toUpperCase())}
                 autoCapitalize="characters"
@@ -327,6 +329,7 @@ export default function RegisterAthlete() {
               <TextInput
                 style={styles.input}
                 placeholder="RM"
+                placeholderTextColor="#aaa"
                 value={province}
                 onChangeText={(text) => setProvince(text.toUpperCase())}
                 maxLength={2}
@@ -341,6 +344,7 @@ export default function RegisterAthlete() {
           <TextInput
             style={styles.input}
             placeholder="333 1234567"
+            placeholderTextColor="#aaa"
             value={phoneAthlete}
             onChangeText={setPhoneAthlete}
             keyboardType="phone-pad"
@@ -350,6 +354,7 @@ export default function RegisterAthlete() {
           <TextInput
             style={styles.input}
             placeholder="333 1234567"
+            placeholderTextColor="#aaa"
             value={phoneFather}
             onChangeText={setPhoneFather}
             keyboardType="phone-pad"
@@ -359,6 +364,7 @@ export default function RegisterAthlete() {
           <TextInput
             style={styles.input}
             placeholder="333 1234567"
+            placeholderTextColor="#aaa"
             value={phoneMother}
             onChangeText={setPhoneMother}
             keyboardType="phone-pad"
@@ -368,6 +374,7 @@ export default function RegisterAthlete() {
           <TextInput
             style={styles.input}
             placeholder="email@esempio.com"
+            placeholderTextColor="#aaa"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -379,7 +386,8 @@ export default function RegisterAthlete() {
           <Text style={styles.label}>Cognome e Nome</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: ROSSI MARIO"
+            placeholder="es: Rossi Mario"
+            placeholderTextColor="#aaa"
             value={taxPayerName}
             onChangeText={(text) => setTaxPayerName(text.toUpperCase())}
             autoCapitalize="characters"
@@ -388,7 +396,8 @@ export default function RegisterAthlete() {
           <Text style={styles.label}>Codice Fiscale</Text>
           <TextInput
             style={styles.input}
-            placeholder="Es: RSSMRA80A01H501Z"
+            placeholder="Inserire codice fiscale"
+            placeholderTextColor="#aaa"
             value={taxPayerFiscalCode}
             onChangeText={(text) => setTaxPayerFiscalCode(text.toUpperCase())}
             autoCapitalize="characters"
