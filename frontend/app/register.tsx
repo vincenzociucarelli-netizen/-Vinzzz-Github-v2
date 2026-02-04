@@ -193,11 +193,11 @@ export default function Register() {
               <TextInput
                 ref={firstNameRef}
                 style={styles.input}
-                placeholder="es: Mario"
+                placeholder="es: MARIO"
                 placeholderTextColor="#aaa"
                 value={firstName}
-                onChangeText={setFirstName}
-                autoCapitalize="words"
+                onChangeText={(text) => setFirstName(text.toUpperCase())}
+                autoCapitalize="characters"
                 returnKeyType="next"
                 onSubmitEditing={() => phoneRef.current?.focus()}
               />
