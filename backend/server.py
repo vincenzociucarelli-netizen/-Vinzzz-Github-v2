@@ -1696,6 +1696,35 @@ async def delete_team(team_id: str, current_user = Depends(get_current_user)):
 
 # ==================== ATHLETE ENDPOINTS ====================
 
+@api_router.get("/athletes")
+async def get_all_athletes(current_user = Depends(get_current_user)):
+    """Get all athletes - admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere tutti gli atleti")
+    
+    athletes = await db.athletes.find({}).to_list(5000)
+    
+    # Enrich with team names
+    team_ids = list(set([a.get("team_id") for a in athletes if a.get("team_id")]))
+    teams = await db.teams.find({"id": {"$in": team_ids}}).to_list(100)
+    team_names = {t["id"]: t["name"] for t in teams}
+    
+    result = []
+    for a in athletes:
+        result.append({
+            "id": a["id"],
+            "full_name": f"{a.get('last_name', '')} {a.get('first_name', '')}".strip(),
+            "first_name": a.get("first_name", ""),
+            "last_name": a.get("last_name", ""),
+            "team_id": a.get("team_id"),
+            "team_name": team_names.get(a.get("team_id"), ""),
+            "parent_id": a.get("parent_id"),
+            "status": a.get("status", "pending"),
+            "date_of_birth": a.get("date_of_birth"),
+        })
+    
+    return result
+
 @api_router.post("/athletes", response_model=Athlete)
 async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get_current_user)):
     # Only parents can create athletes
