@@ -116,7 +116,13 @@ export default function ParentDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Text style={styles.welcomeText}>Benvenuto, {user?.full_name}</Text>
+        <View style={styles.profileSection}>
+          <Text style={styles.welcomeText}>Benvenuto, {user?.full_name}</Text>
+          <TouchableOpacity onPress={openEditProfile} style={styles.editProfileBtn}>
+            <Ionicons name="create-outline" size={18} color="#007AFF" />
+            <Text style={styles.editProfileText}>Modifica nome</Text>
+          </TouchableOpacity>
+        </View>
 
         {athletes.length === 0 ? (
           <View style={styles.emptyContainer}>
