@@ -775,6 +775,10 @@ export default function AdminAthleteDetail() {
                     <Text style={styles.value}>{editData.first_name || '-'}</Text>
                   </View>
                   <View style={styles.infoRow}>
+                    <Text style={styles.label}>Data di nascita</Text>
+                    <Text style={styles.value}>{athlete.date_of_birth ? formatDate(athlete.date_of_birth) : '-'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
                     <Text style={styles.label}>Luogo di nascita</Text>
                     <Text style={styles.value}>{athlete.birth_place || '-'}</Text>
                   </View>
