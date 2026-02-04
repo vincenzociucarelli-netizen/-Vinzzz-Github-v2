@@ -858,7 +858,7 @@ export default function AthleteDetail() {
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Data di Nascita</Text>
-            <Text style={styles.dataValue}>{dataUnlocked ? formatDateForDisplay(athlete.date_of_birth) : '••/••/••••'}</Text>
+            <Text style={styles.dataValue}>{formatDateForDisplay(athlete.date_of_birth)}</Text>
           </View>
           
           <View style={styles.dataRow}>
