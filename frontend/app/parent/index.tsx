@@ -19,7 +19,7 @@ import { Athlete } from '../../src/types';
 
 export default function ParentDashboard() {
   const router = useRouter();
-  const { user, logout, refreshUser } = useAuthStore();
+  const { user, logout, updateUser } = useAuthStore();
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [editProfileVisible, setEditProfileVisible] = useState(false);
