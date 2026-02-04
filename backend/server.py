@@ -324,6 +324,8 @@ class AthleteCreate(BaseModel):
     city: Optional[str] = None
     province: Optional[str] = None
     tax_payer_name: Optional[str] = None
+    tax_payer_last_name: Optional[str] = None
+    tax_payer_first_name: Optional[str] = None
     tax_payer_fiscal_code: Optional[str] = None
     team_id: str
     team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
