@@ -277,6 +277,23 @@ export default function AdminCoachDetail() {
               <Text style={styles.alertText}>
                 Il coach ha dichiarato di aver superato il limite di €5.000 annui.
               </Text>
+              {/* Mostra la data di dichiarazione */}
+              {(() => {
+                if (!coach.over_5000_limit) return null;
+                // Cerca la data più recente di dichiarazione
+                const dateKeys = Object.keys(coach.over_5000_limit).filter(k => k.endsWith('_date'));
+                if (dateKeys.length === 0) return null;
+                const latestDateKey = dateKeys.sort().reverse()[0];
+                const declarationDate = coach.over_5000_limit[latestDateKey];
+                if (!declarationDate) return null;
+                const d = new Date(declarationDate);
+                const formattedDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} alle ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                return (
+                  <Text style={styles.declarationDateAdmin}>
+                    📅 Dichiarato il: {formattedDate}
+                  </Text>
+                );
+              })()}
             </View>
           </View>
         )}
