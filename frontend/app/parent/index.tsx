@@ -62,15 +62,19 @@ export default function ParentDashboard() {
     setSavingProfile(true);
     try {
       const fullName = `${editLastName.trim()} ${editFirstName.trim()}`;
-      const response = await api.patch('/auth/me', {
+      await api.patch('/auth/me', {
         full_name: fullName,
         first_name: editFirstName.trim(),
         last_name: editLastName.trim(),
       });
-      console.log('Profile update response:', response.data);
-      await refreshUser();
+      // Update local user state
+      await updateUser({
+        full_name: fullName,
+        first_name: editFirstName.trim(),
+        last_name: editLastName.trim(),
+      });
       setEditProfileVisible(false);
-      Alert.alert('Successo', 'Dati aggiornati correttamente');
+      Alert.alert('✅ Successo', 'I tuoi dati sono stati aggiornati correttamente');
     } catch (error: any) {
       console.error('Profile update error:', error.response?.data || error.message);
       const errorMessage = error.response?.data?.detail || 'Impossibile aggiornare i dati';
