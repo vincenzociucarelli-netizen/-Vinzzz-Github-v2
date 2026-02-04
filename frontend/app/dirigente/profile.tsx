@@ -134,6 +134,14 @@ export default function DirigenteProfile() {
         phone: data.phone || '',
         monthly_compensation: data.monthly_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
+        id_type: data.id_type || '',
+        id_front: data.id_front || '',
+        id_back: data.id_back || '',
+        iban: data.iban || '',
+        account_holder: data.account_holder || '',
+        bank_name: data.bank_name || '',
+        doc_front_image: data.doc_front_image || '',
+        doc_back_image: data.doc_back_image || '',
       });
       setEditData({
         email: data.email || '',
@@ -150,6 +158,14 @@ export default function DirigenteProfile() {
         phone: data.phone || '',
         monthly_compensation: data.monthly_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
+        id_type: data.id_type || '',
+        id_front: data.id_front || '',
+        id_back: data.id_back || '',
+        iban: data.iban || '',
+        account_holder: data.account_holder || '',
+        bank_name: data.bank_name || '',
+        doc_front_image: data.doc_front_image || '',
+        doc_back_image: data.doc_back_image || '',
       });
       // Load compensation history
       setCompensationHistory(data.compensation_history || {});
