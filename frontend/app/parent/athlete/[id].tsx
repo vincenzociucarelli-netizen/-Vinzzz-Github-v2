@@ -852,8 +852,13 @@ export default function AthleteDetail() {
           </View>
           
           <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Nome Completo</Text>
-            <Text style={styles.dataValue}>{athlete.full_name}</Text>
+            <Text style={styles.dataLabel}>Cognome</Text>
+            <Text style={styles.dataValue}>{athlete.last_name || '-'}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Nome</Text>
+            <Text style={styles.dataValue}>{athlete.first_name || '-'}</Text>
           </View>
           
           <View style={styles.dataRow}>
@@ -899,8 +904,13 @@ export default function AthleteDetail() {
           </View>
           
           <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Genitore Detrazione</Text>
-            <Text style={styles.dataValue}>{maskData(athlete.tax_payer_name)}</Text>
+            <Text style={styles.dataLabel}>Cognome Genitore</Text>
+            <Text style={styles.dataValue}>{maskData(athlete.tax_payer_last_name)}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Nome Genitore</Text>
+            <Text style={styles.dataValue}>{maskData(athlete.tax_payer_first_name)}</Text>
           </View>
           
           <View style={styles.dataRow}>
