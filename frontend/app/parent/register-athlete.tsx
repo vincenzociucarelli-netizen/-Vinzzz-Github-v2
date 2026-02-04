@@ -698,9 +698,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
     marginTop: 8,
+    minHeight: 56,
   },
   picker: {
-    height: 50,
+    height: 56,
+    width: '100%',
   },
   hint: {
     fontSize: 13,
