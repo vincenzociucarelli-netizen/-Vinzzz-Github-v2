@@ -2162,37 +2162,6 @@ async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_c
     
     return {"message": "Richiesta di cancellazione inviata"}
 
-@api_router.get("/athletes/deletion-requests")
-async def get_deletion_requests(current_user = Depends(get_current_user)):
-    """Get all athletes with deletion requests - admin only"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può vedere le richieste di cancellazione")
-    
-    requests = await db.athletes.find({"deletion_requested": True}).to_list(1000)
-    
-    # Batch fetch related data
-    teams_list = await db.teams.find().to_list(1000)
-    teams_dict = {t["id"]: t for t in teams_list}
-    users_list = await db.users.find().to_list(1000)
-    users_dict = {u["id"]: u for u in users_list}
-    
-    result = []
-    for athlete in requests:
-        team = teams_dict.get(athlete.get("team_id"))
-        parent = users_dict.get(athlete.get("parent_id"))
-        requested_by = users_dict.get(athlete.get("deletion_requested_by"))
-        result.append({
-            "id": athlete["id"],
-            "full_name": athlete["full_name"],
-            "team_name": team["name"] if team else "Sconosciuta",
-            "parent_name": parent["full_name"] if parent else "Sconosciuto",
-            "parent_email": parent["email"] if parent else "",
-            "requested_at": athlete.get("deletion_requested_at"),
-            "requested_by_name": requested_by["full_name"] if requested_by else "Sconosciuto",
-        })
-    
-    return result
-
 @api_router.post("/athletes/{athlete_id}/approve-deletion")
 async def approve_athlete_deletion(athlete_id: str, current_user = Depends(get_current_user)):
     """Approve deletion request and delete the athlete - admin only"""
