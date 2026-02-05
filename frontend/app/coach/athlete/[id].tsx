@@ -238,7 +238,12 @@ export default function CoachAthleteDetail() {
         {/* Athlete Info Card */}
         <View style={styles.athleteCard}>
           <View style={styles.photoSection}>
-            {photoArtistic ? (
+            {transformingPhoto ? (
+              <View style={styles.photoPlaceholder}>
+                <ActivityIndicator size="large" color="#007AFF" />
+                <Text style={styles.transformingText}>Trasformando...</Text>
+              </View>
+            ) : photoArtistic ? (
               <Image
                 source={{ uri: `data:image/jpeg;base64,${photoArtistic}` }}
                 style={styles.athletePhoto}
@@ -248,7 +253,11 @@ export default function CoachAthleteDetail() {
                 <Ionicons name="person" size={48} color="#ccc" />
               </View>
             )}
-            <TouchableOpacity style={styles.changePhotoBtn} onPress={handleSelectPhoto}>
+            <TouchableOpacity 
+              style={[styles.changePhotoBtn, transformingPhoto && styles.changePhotoBtnDisabled]} 
+              onPress={handleSelectPhoto}
+              disabled={transformingPhoto}
+            >
               <Ionicons name="camera" size={16} color="#fff" />
               <Text style={styles.changePhotoBtnText}>Foto</Text>
             </TouchableOpacity>
