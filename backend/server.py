@@ -2018,6 +2018,73 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
     
     return Athlete(**athlete)
 
+@api_router.get("/athletes/{athlete_id}/technical-data")
+async def get_athlete_technical_data(athlete_id: str, current_user = Depends(get_current_user)):
+    """Get only technical data of an athlete - accessible by coach, admin, and parent"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Get certificate info
+    certificate = await db.certificates.find_one({"athlete_id": athlete_id})
+    cert_status = None
+    cert_expiry = None
+    if certificate:
+        cert_expiry = certificate.get("expiry_date")
+        if cert_expiry:
+            expiry_date = datetime.fromisoformat(cert_expiry.replace('Z', '+00:00')) if isinstance(cert_expiry, str) else cert_expiry
+            if expiry_date < datetime.now(expiry_date.tzinfo) if expiry_date.tzinfo else datetime.utcnow():
+                cert_status = "expired"
+            elif expiry_date < (datetime.now(expiry_date.tzinfo) if expiry_date.tzinfo else datetime.utcnow()) + timedelta(days=30):
+                cert_status = "expiring_soon"
+            else:
+                cert_status = "valid"
+    
+    # Return only technical data + certificate status
+    return {
+        "id": athlete["id"],
+        "full_name": athlete.get("full_name"),
+        "first_name": athlete.get("first_name"),
+        "last_name": athlete.get("last_name"),
+        "date_of_birth": athlete.get("date_of_birth"),  # For age calculation only
+        "team_id": athlete.get("team_id"),
+        "team_id_2": athlete.get("team_id_2"),
+        # Technical data
+        "athlete_photo": athlete.get("athlete_photo"),
+        "athlete_photo_artistic": athlete.get("athlete_photo_artistic"),
+        "athlete_role": athlete.get("athlete_role"),
+        "athlete_height": athlete.get("athlete_height"),
+        "athlete_weight": athlete.get("athlete_weight"),
+        "athlete_characteristics": athlete.get("athlete_characteristics", []),
+        # Certificate info (visible to all)
+        "certificate_status": cert_status,
+        "certificate_expiry": cert_expiry,
+    }
+
+@api_router.patch("/athletes/{athlete_id}/technical-data")
+async def update_athlete_technical_data(athlete_id: str, data: dict, current_user = Depends(get_current_user)):
+    """Update only technical data of an athlete - accessible by coach and admin"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH]:
+        raise HTTPException(status_code=403, detail="Solo admin e coach possono modificare i dati tecnici")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Only allow updating technical fields
+    allowed_fields = ["athlete_photo", "athlete_photo_artistic", "athlete_role", 
+                      "athlete_height", "athlete_weight", "athlete_characteristics"]
+    
+    update_dict = {k: v for k, v in data.items() if k in allowed_fields}
+    
+    if update_dict:
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": update_dict}
+        )
+    
+    return {"message": "Dati tecnici aggiornati con successo"}
+
 @api_router.patch("/athletes/{athlete_id}", response_model=Athlete)
 async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_user = Depends(get_current_user)):
     athlete = await db.athletes.find_one({"id": athlete_id})
