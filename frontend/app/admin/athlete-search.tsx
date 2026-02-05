@@ -100,12 +100,21 @@ export default function AthleteSearchScreen() {
       result = result.filter(a => a.athlete_role === filters.role);
     }
 
-    // Filter by birth year
-    if (filters.birthYear) {
+    // Filter by birth year range
+    if (filters.birthYearFrom) {
+      const yearFrom = parseInt(filters.birthYearFrom);
       result = result.filter(a => {
         if (!a.date_of_birth) return false;
         const year = new Date(a.date_of_birth).getFullYear();
-        return year === parseInt(filters.birthYear);
+        return year >= yearFrom;
+      });
+    }
+    if (filters.birthYearTo) {
+      const yearTo = parseInt(filters.birthYearTo);
+      result = result.filter(a => {
+        if (!a.date_of_birth) return false;
+        const year = new Date(a.date_of_birth).getFullYear();
+        return year <= yearTo;
       });
     }
 
