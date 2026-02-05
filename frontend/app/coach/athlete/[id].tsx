@@ -1,0 +1,537 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Image,
+} from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
+import * as ImagePicker from 'expo-image-picker';
+import api from '../../../src/services/api';
+
+interface Athlete {
+  id: string;
+  full_name: string;
+  first_name?: string;
+  last_name?: string;
+  date_of_birth: string;
+  team_id: string;
+  athlete_photo?: string;
+  athlete_photo_artistic?: string;
+  athlete_role?: string;
+  athlete_height?: number;
+  athlete_weight?: number;
+  athlete_characteristics?: string[];
+}
+
+interface SocietySettings {
+  athlete_roles: string[];
+  athlete_characteristics: string[];
+}
+
+export default function CoachAthleteDetail() {
+  const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [athlete, setAthlete] = useState<Athlete | null>(null);
+  const [settings, setSettings] = useState<SocietySettings>({ athlete_roles: [], athlete_characteristics: [] });
+  
+  // Form state
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoArtistic, setPhotoArtistic] = useState<string | null>(null);
+  const [role, setRole] = useState<string>('');
+  const [height, setHeight] = useState<string>('');
+  const [weight, setWeight] = useState<string>('');
+  const [selectedCharacteristics, setSelectedCharacteristics] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadData();
+  }, [id]);
+
+  const loadData = async () => {
+    try {
+      const [athleteRes, settingsRes] = await Promise.all([
+        api.get(`/athletes/${id}`),
+        api.get('/settings/society'),
+      ]);
+      
+      const athleteData = athleteRes.data;
+      setAthlete(athleteData);
+      setSettings({
+        athlete_roles: settingsRes.data.athlete_roles || [],
+        athlete_characteristics: settingsRes.data.athlete_characteristics || [],
+      });
+      
+      // Initialize form state
+      setPhoto(athleteData.athlete_photo || null);
+      setPhotoArtistic(athleteData.athlete_photo_artistic || null);
+      setRole(athleteData.athlete_role || '');
+      setHeight(athleteData.athlete_height ? String(athleteData.athlete_height) : '');
+      setWeight(athleteData.athlete_weight ? String(athleteData.athlete_weight) : '');
+      setSelectedCharacteristics(athleteData.athlete_characteristics || []);
+    } catch (error) {
+      console.error('Error loading athlete:', error);
+      showAlert('Errore', 'Impossibile caricare i dati dell\'atleta');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const handleSelectPhoto = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        showAlert('Permesso negato', 'È necessario concedere il permesso per accedere alla galleria');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        setPhoto(result.assets[0].base64);
+        // TODO: In futuro, qui chiameremo l'API per generare la versione artistica
+        // Per ora, usiamo la stessa foto
+        setPhotoArtistic(result.assets[0].base64);
+      }
+    } catch (error) {
+      console.error('Error selecting image:', error);
+      showAlert('Errore', 'Impossibile selezionare l\'immagine');
+    }
+  };
+
+  const toggleCharacteristic = (char: string) => {
+    if (selectedCharacteristics.includes(char)) {
+      setSelectedCharacteristics(selectedCharacteristics.filter(c => c !== char));
+    } else {
+      setSelectedCharacteristics([...selectedCharacteristics, char]);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/athletes/${id}`, {
+        athlete_photo: photo,
+        athlete_photo_artistic: photoArtistic,
+        athlete_role: role || null,
+        athlete_height: height ? parseInt(height) : null,
+        athlete_weight: weight ? parseInt(weight) : null,
+        athlete_characteristics: selectedCharacteristics,
+      });
+      showAlert('✅ Successo', 'Dati tecnici salvati correttamente');
+    } catch (error: any) {
+      console.error('Error saving:', error);
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const calculateAge = (dateOfBirth: string) => {
+    const dob = new Date(dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Dati Tecnici</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      </View>
+    );
+  }
+
+  if (!athlete) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Errore</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text>Atleta non trovato</Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Dati Tecnici</Text>
+        <TouchableOpacity onPress={handleSave} disabled={saving}>
+          {saving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="checkmark" size={24} color="#fff" />
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.content}>
+        {/* Athlete Info Card */}
+        <View style={styles.athleteCard}>
+          <View style={styles.photoSection}>
+            {photoArtistic ? (
+              <Image
+                source={{ uri: `data:image/jpeg;base64,${photoArtistic}` }}
+                style={styles.athletePhoto}
+              />
+            ) : (
+              <View style={styles.photoPlaceholder}>
+                <Ionicons name="person" size={48} color="#ccc" />
+              </View>
+            )}
+            <TouchableOpacity style={styles.changePhotoBtn} onPress={handleSelectPhoto}>
+              <Ionicons name="camera" size={16} color="#fff" />
+              <Text style={styles.changePhotoBtnText}>Foto</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.athleteInfo}>
+            <Text style={styles.athleteName}>{athlete.full_name}</Text>
+            <Text style={styles.athleteAge}>{calculateAge(athlete.date_of_birth)} anni</Text>
+          </View>
+        </View>
+
+        {/* Role Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏐 Ruolo</Text>
+          {settings.athlete_roles.length > 0 ? (
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={role}
+                onValueChange={setRole}
+                style={styles.picker}
+              >
+                <Picker.Item label="Seleziona ruolo..." value="" />
+                {settings.athlete_roles.map((r, index) => (
+                  <Picker.Item key={index} label={r} value={r} />
+                ))}
+              </Picker>
+            </View>
+          ) : (
+            <Text style={styles.noSettingsText}>
+              ⚠️ Nessun ruolo definito. L'admin deve configurare i ruoli nelle impostazioni della società.
+            </Text>
+          )}
+        </View>
+
+        {/* Physical Data Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📏 Dati Fisici</Text>
+          
+          <View style={styles.physicalRow}>
+            <View style={styles.physicalInput}>
+              <Text style={styles.inputLabel}>Altezza (cm)</Text>
+              <TextInput
+                style={styles.input}
+                value={height}
+                onChangeText={setHeight}
+                placeholder="es: 175"
+                keyboardType="numeric"
+                placeholderTextColor="#aaa"
+              />
+            </View>
+            
+            <View style={styles.physicalInput}>
+              <Text style={styles.inputLabel}>Peso (kg)</Text>
+              <TextInput
+                style={styles.input}
+                value={weight}
+                onChangeText={setWeight}
+                placeholder="es: 65"
+                keyboardType="numeric"
+                placeholderTextColor="#aaa"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Characteristics Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📊 Caratteristiche</Text>
+          {settings.athlete_characteristics.length > 0 ? (
+            <View style={styles.characteristicsContainer}>
+              {settings.athlete_characteristics.map((char, index) => {
+                const isSelected = selectedCharacteristics.includes(char);
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={[styles.characteristicTag, isSelected && styles.characteristicTagSelected]}
+                    onPress={() => toggleCharacteristic(char)}
+                  >
+                    <Text style={[styles.characteristicText, isSelected && styles.characteristicTextSelected]}>
+                      {char}
+                    </Text>
+                    {isSelected && <Ionicons name="checkmark" size={16} color="#fff" />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : (
+            <Text style={styles.noSettingsText}>
+              ⚠️ Nessuna caratteristica definita. L'admin deve configurare le caratteristiche nelle impostazioni.
+            </Text>
+          )}
+        </View>
+
+        {/* Save Button */}
+        <TouchableOpacity
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle" size={24} color="#fff" />
+              <Text style={styles.saveButtonText}>Salva Dati Tecnici</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    backgroundColor: '#007AFF',
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  athleteCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  photoSection: {
+    position: 'relative',
+  },
+  athletePhoto: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#f0f0f0',
+  },
+  photoPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    borderStyle: 'dashed',
+  },
+  changePhotoBtn: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#007AFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    gap: 4,
+  },
+  changePhotoBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  athleteInfo: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  athleteName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  athleteAge: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  section: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  pickerContainer: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  picker: {
+    height: 50,
+  },
+  noSettingsText: {
+    fontSize: 13,
+    color: '#FF9500',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    padding: 12,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 8,
+  },
+  physicalRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  physicalInput: {
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    textAlign: 'center',
+  },
+  characteristicsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  characteristicTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    gap: 6,
+  },
+  characteristicTagSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  characteristicText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  characteristicTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  saveButton: {
+    backgroundColor: '#34C759',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 40,
+    gap: 8,
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+});
