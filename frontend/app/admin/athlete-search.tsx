@@ -157,6 +157,74 @@ export default function AthleteSearchScreen() {
     setFilteredAthletes(athletes);
   };
 
+  const exportToXLS = async () => {
+    if (filteredAthletes.length === 0) {
+      Alert.alert('Attenzione', 'Nessun atleta da esportare');
+      return;
+    }
+
+    try {
+      // Prepare data for export
+      const exportData = filteredAthletes.map(athlete => ({
+        'Nome Completo': athlete.full_name,
+        'Data di Nascita': athlete.date_of_birth ? new Date(athlete.date_of_birth).toLocaleDateString('it-IT') : '',
+        'Età': athlete.date_of_birth ? calculateAge(athlete.date_of_birth) : '',
+        'Ruolo': athlete.athlete_role || '',
+        'Altezza (cm)': athlete.athlete_height || '',
+        'CAP': athlete.postal_code || '',
+        'Squadra': athlete.team_name || '',
+      }));
+
+      // Create workbook
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Atleti');
+
+      // Generate file
+      const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+
+      if (Platform.OS === 'web') {
+        // For web, download directly
+        const blob = new Blob([s2ab(atob(wbout))], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `atleti_${new Date().toISOString().split('T')[0]}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        Alert.alert('✅ Esportato', 'File XLS scaricato');
+      } else {
+        // For mobile, use FileSystem and Sharing
+        const fileName = `atleti_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const fileUri = FileSystem.documentDirectory + fileName;
+        
+        await FileSystem.writeAsStringAsync(fileUri, wbout, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            dialogTitle: 'Esporta Lista Atleti',
+          });
+        } else {
+          Alert.alert('✅ Esportato', `File salvato: ${fileName}`);
+        }
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Errore', 'Impossibile esportare i dati');
+    }
+  };
+
+  // Helper function for web export
+  const s2ab = (s: string) => {
+    const buf = new ArrayBuffer(s.length);
+    const view = new Uint8Array(buf);
+    for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xff;
+    return buf;
+  };
+
   const calculateAge = (dateOfBirth: string) => {
     const dob = new Date(dateOfBirth);
     const today = new Date();
