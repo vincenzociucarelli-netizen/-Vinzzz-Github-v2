@@ -796,11 +796,27 @@ const styles = StyleSheet.create({
   inviteCodeCard: {
     backgroundColor: '#E3F2FD',
     marginHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1.5,
+    marginTop: 10,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
     borderColor: '#007AFF',
+  },
+  inviteCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  inviteCodeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  inviteCodeRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   inviteCodeHeader: {
     flexDirection: 'row',
@@ -809,17 +825,20 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   inviteCodeTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#007AFF',
   },
   inviteCodeValue: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#007AFF',
-    textAlign: 'center',
-    letterSpacing: 4,
-    marginVertical: 6,
+    letterSpacing: 2,
+  },
+  copyIconButton: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   inviteCodeHint: {
     fontSize: 11,
