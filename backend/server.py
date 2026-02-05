@@ -1122,17 +1122,21 @@ class SocietySettingsUpdate(BaseModel):
     name: Optional[str] = None
     logo: Optional[str] = None  # Base64 encoded image
     logo_size: Optional[int] = None  # Logo size in pixels
+    athlete_roles: Optional[List[str]] = None  # Custom roles for athletes
+    athlete_characteristics: Optional[List[str]] = None  # Custom characteristics for athletes
 
 @api_router.get("/settings/society")
 async def get_society_settings():
     """Get society settings (public endpoint - no auth required for logo display)"""
     settings = await db.settings.find_one({"type": "society"})
     if not settings:
-        return {"name": "Società Sportiva", "logo": None, "logo_size": 50}
+        return {"name": "Società Sportiva", "logo": None, "logo_size": 50, "athlete_roles": [], "athlete_characteristics": []}
     return {
         "name": settings.get("name", "Società Sportiva"),
         "logo": settings.get("logo"),
-        "logo_size": settings.get("logo_size", 50)
+        "logo_size": settings.get("logo_size", 50),
+        "athlete_roles": settings.get("athlete_roles", []),
+        "athlete_characteristics": settings.get("athlete_characteristics", [])
     }
 
 @api_router.patch("/settings/society")
