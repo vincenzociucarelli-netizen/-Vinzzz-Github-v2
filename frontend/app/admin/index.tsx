@@ -54,15 +54,17 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [pendingCounts, setPendingCounts] = useState<PendingCount>({ dirigenti: 0, coaches: 0, parents: 0 });
   const [pendingAthletes, setPendingAthletes] = useState<any[]>([]);
+  const [deletionRequests, setDeletionRequests] = useState<any[]>([]);
   const [society, setSociety] = useState<SocietySettings>({ name: 'Società Sportiva', logo: null });
   const [refreshing, setRefreshing] = useState(false);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [expiringCerts, setExpiringCerts] = useState<ExpiringCertificates>({ count_today: 0, count_30_days: 0, expiring_today: [], expiring_soon: [] });
   const [inviteCode, setInviteCode] = useState<string>('');
+  const [processingDeletion, setProcessingDeletion] = useState<string | null>(null);
 
   const loadStats = async () => {
     try {
-      const [statsRes, pendingRes, societyRes, birthdaysRes, certsRes, inviteRes, pendingAthletesRes] = await Promise.all([
+      const [statsRes, pendingRes, societyRes, birthdaysRes, certsRes, inviteRes, pendingAthletesRes, deletionRes] = await Promise.all([
         api.get('/stats/overview'),
         api.get('/users/pending'),
         api.get('/settings/society'),
@@ -70,6 +72,7 @@ export default function AdminDashboard() {
         api.get('/certificates/expiring'),
         api.get('/societies/invite-code').catch(() => ({ data: { invite_code: '' } })),
         api.get('/athletes/pending').catch(() => ({ data: [] })),
+        api.get('/athletes/deletion-requests').catch(() => ({ data: [] })),
       ]);
       setStats(statsRes.data);
       setSociety(societyRes.data);
@@ -77,6 +80,7 @@ export default function AdminDashboard() {
       setExpiringCerts(certsRes.data);
       setInviteCode(inviteRes.data.invite_code || '');
       setPendingAthletes(pendingAthletesRes.data || []);
+      setDeletionRequests(deletionRes.data || []);
       
       // Count pending by role
       const pending = pendingRes.data;
@@ -86,6 +90,70 @@ export default function AdminDashboard() {
       setPendingCounts({ dirigenti: dirigentiPending, coaches: coachesPending, parents: parentsPending });
     } catch (error) {
       console.error('Error loading stats:', error);
+    }
+  };
+
+  const handleApproveDeletion = async (athleteId: string, athleteName: string) => {
+    const confirmAction = Platform.OS === 'web'
+      ? window.confirm(`Sei sicuro di voler ELIMINARE definitivamente l'atleta "${athleteName}"?\n\nQuesta azione è irreversibile!`)
+      : await new Promise((resolve) => {
+          Alert.alert(
+            '⚠️ Conferma Eliminazione',
+            `Sei sicuro di voler ELIMINARE definitivamente l'atleta "${athleteName}"?\n\nQuesta azione è irreversibile!`,
+            [
+              { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'ELIMINA', style: 'destructive', onPress: () => resolve(true) },
+            ]
+          );
+        });
+    
+    if (!confirmAction) return;
+    
+    setProcessingDeletion(athleteId);
+    try {
+      await api.post(`/athletes/${athleteId}/approve-deletion`);
+      showAlert('Successo', 'Atleta eliminato con successo');
+      loadStats();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'eliminazione');
+    } finally {
+      setProcessingDeletion(null);
+    }
+  };
+
+  const handleRejectDeletion = async (athleteId: string, athleteName: string) => {
+    const confirmAction = Platform.OS === 'web'
+      ? window.confirm(`Rifiutare la richiesta di cancellazione per "${athleteName}"?`)
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Conferma',
+            `Rifiutare la richiesta di cancellazione per "${athleteName}"?`,
+            [
+              { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Rifiuta', onPress: () => resolve(true) },
+            ]
+          );
+        });
+    
+    if (!confirmAction) return;
+    
+    setProcessingDeletion(athleteId);
+    try {
+      await api.post(`/athletes/${athleteId}/reject-deletion`);
+      showAlert('Successo', 'Richiesta rifiutata');
+      loadStats();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore');
+    } finally {
+      setProcessingDeletion(null);
+    }
+  };
+
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
     }
   };
 
