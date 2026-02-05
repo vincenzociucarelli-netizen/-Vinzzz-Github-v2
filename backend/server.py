@@ -954,6 +954,90 @@ def generate_reset_token():
     """Generate a secure random token for password reset"""
     return secrets.token_urlsafe(32)
 
+@api_router.post("/auth/me/transform-photo")
+async def transform_user_photo(data: ImageTransformRequest, current_user = Depends(get_current_user)):
+    """Transform user profile photo to artistic style using AI - for coach and dirigente"""
+    if current_user["role"] not in [UserRole.COACH, UserRole.VIEWER, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Funzionalità disponibile solo per coach e dirigenti")
+    
+    try:
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Chiave API non configurata")
+        
+        if HAS_OPENAI_CLIENT:
+            client = AsyncOpenAI(
+                api_key=api_key,
+                base_url="https://llm.integrations.emergent.sh/v1"
+            )
+            
+            image_bytes = base64.b64decode(data.image_base64)
+            
+            response = await client.images.edit(
+                model="gpt-image-1",
+                image=image_bytes,
+                prompt="Transform this photo into a highly realistic pencil sketch portrait style. Keep the facial features accurate and recognizable. The sketch should be detailed, artistic, with professional shading and fine details. Preserve the person's likeness exactly.",
+                n=1,
+                size="1024x1024"
+            )
+            
+            if response.data and len(response.data) > 0:
+                result = response.data[0]
+                if hasattr(result, 'b64_json') and result.b64_json:
+                    artistic_base64 = result.b64_json
+                elif hasattr(result, 'url') and result.url:
+                    import httpx
+                    async with httpx.AsyncClient() as http_client:
+                        img_response = await http_client.get(result.url)
+                        artistic_base64 = base64.b64encode(img_response.content).decode('utf-8')
+                else:
+                    raise HTTPException(status_code=500, detail="Formato risposta non valido")
+                
+                # Save to user profile
+                await db.users.update_one(
+                    {"id": current_user["id"]},
+                    {"$set": {
+                        "profile_photo": data.image_base64,
+                        "profile_photo_artistic": artistic_base64
+                    }}
+                )
+                
+                return {
+                    "success": True,
+                    "artistic_photo": artistic_base64
+                }
+            else:
+                raise HTTPException(status_code=500, detail="Nessuna immagine generata")
+        else:
+            # Fallback
+            await db.users.update_one(
+                {"id": current_user["id"]},
+                {"$set": {
+                    "profile_photo": data.image_base64,
+                    "profile_photo_artistic": data.image_base64
+                }}
+            )
+            return {
+                "success": True,
+                "artistic_photo": data.image_base64,
+                "note": "Trasformazione non disponibile"
+            }
+            
+    except Exception as e:
+        logging.error(f"Error transforming user photo: {str(e)}")
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": {
+                "profile_photo": data.image_base64,
+                "profile_photo_artistic": data.image_base64
+            }}
+        )
+        return {
+            "success": True,
+            "artistic_photo": data.image_base64,
+            "note": f"Errore: {str(e)}"
+        }
+
 async def send_password_reset_email(to_email: str, reset_token: str, user_name: str):
     """Send password reset email via SendGrid"""
     if not SENDGRID_API_KEY:
