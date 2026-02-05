@@ -868,7 +868,7 @@ export default function CoachProfile() {
               {over5000Limit.exceeded_15000_date && (
                 <Text style={styles.declarationDate}>
                   📅 Dichiarato il: {(() => {
-                    const d = new Date(over5000Limit.exceeded_15000_date as string);
+                    const d = new Date(over5000Limit.exceeded_15000_date);
                     return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
                   })()}
                 </Text>
