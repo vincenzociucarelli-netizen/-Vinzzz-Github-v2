@@ -95,6 +95,8 @@ export default function SettingsScreen() {
         name: societyName,
         logo: logo,
         logo_size: logoSize,
+        athlete_roles: athleteRoles,
+        athlete_characteristics: athleteCharacteristics,
       });
       showAlert('Successo', 'Impostazioni salvate con successo');
     } catch (error: any) {
@@ -102,6 +104,28 @@ export default function SettingsScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const addRole = () => {
+    if (newRole.trim() && !athleteRoles.includes(newRole.trim().toUpperCase())) {
+      setAthleteRoles([...athleteRoles, newRole.trim().toUpperCase()]);
+      setNewRole('');
+    }
+  };
+
+  const removeRole = (role: string) => {
+    setAthleteRoles(athleteRoles.filter(r => r !== role));
+  };
+
+  const addCharacteristic = () => {
+    if (newCharacteristic.trim() && !athleteCharacteristics.includes(newCharacteristic.trim().toUpperCase())) {
+      setAthleteCharacteristics([...athleteCharacteristics, newCharacteristic.trim().toUpperCase()]);
+      setNewCharacteristic('');
+    }
+  };
+
+  const removeCharacteristic = (char: string) => {
+    setAthleteCharacteristics(athleteCharacteristics.filter(c => c !== char));
   };
 
   if (loading) {
