@@ -324,16 +324,16 @@ export default function AdminDashboard() {
           </View>
         )}
 
-        {/* Invite Code Card - NUOVA VERSIONE SEMPLIFICATA */}
+        {/* Invite Code Card - VERSIONE COMPATTA */}
         {inviteCode && (
           <View style={styles.inviteCodeCard}>
             <View style={styles.inviteCodeHeader}>
-              <Ionicons name="ticket-outline" size={20} color="#007AFF" />
+              <Ionicons name="ticket-outline" size={16} color="#007AFF" />
               <Text style={styles.inviteCodeTitle}>Codice Invito Società</Text>
             </View>
             <Text style={styles.inviteCodeValue}>{inviteCode}</Text>
             <Text style={styles.inviteCodeHint}>
-              Condividi questo codice con coach, dirigenti e genitori per farli registrare alla tua società
+              Condividi con coach, dirigenti e genitori
             </Text>
             <TouchableOpacity 
               style={styles.copyCodeButtonFull}
@@ -346,7 +346,7 @@ export default function AdminDashboard() {
                 }
               }}
             >
-              <Ionicons name="copy-outline" size={18} color="#fff" />
+              <Ionicons name="copy-outline" size={16} color="#fff" />
               <Text style={styles.copyCodeButtonText}>Copia Codice</Text>
             </TouchableOpacity>
           </View>
