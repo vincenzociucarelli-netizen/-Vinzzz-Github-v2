@@ -448,7 +448,7 @@ export default function CoachProfile() {
     }
   };
 
-  const renderField = (label: string, value: string, key: string, editable: boolean = true) => (
+  const renderField = (label, value, key, editable = true) => (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
       {editing && editable ? (
