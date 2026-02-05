@@ -2464,4 +2464,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  // Athlete photo styles
+  photoContainer: { alignItems: 'center', paddingVertical: 16 },
+  athletePhotoLarge: { width: 150, height: 150, borderRadius: 75, backgroundColor: '#f0f0f0' },
+  photoPlaceholder: { width: 150, height: 150, borderRadius: 75, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#e0e0e0', borderStyle: 'dashed' },
+  photoPlaceholderText: { color: '#aaa', fontSize: 14, marginTop: 8 },
+  transformingText: { color: '#007AFF', fontSize: 13, marginTop: 10, fontStyle: 'italic' },
+  uploadPhotoButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#007AFF', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 25, marginTop: 16, gap: 8 },
+  uploadPhotoButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  photoHint: { color: '#888', fontSize: 12, marginTop: 12, textAlign: 'center', fontStyle: 'italic' },
+  buttonDisabled: { opacity: 0.5 },
 });
