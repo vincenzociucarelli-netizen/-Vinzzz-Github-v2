@@ -113,10 +113,31 @@ export default function CoachAthleteDetail() {
       });
 
       if (!result.canceled && result.assets[0].base64) {
-        setPhoto(result.assets[0].base64);
-        // TODO: In futuro, qui chiameremo l'API per generare la versione artistica
-        // Per ora, usiamo la stessa foto
-        setPhotoArtistic(result.assets[0].base64);
+        const originalPhoto = result.assets[0].base64;
+        setPhoto(originalPhoto);
+        
+        // Transform photo to artistic style
+        setTransformingPhoto(true);
+        try {
+          const response = await api.post(`/athletes/${id}/transform-photo`, {
+            image_base64: originalPhoto
+          });
+          
+          if (response.data.success && response.data.artistic_photo) {
+            setPhotoArtistic(response.data.artistic_photo);
+            showAlert('✅ Foto Trasformata', 'La foto è stata trasformata in stile artistico!');
+          } else {
+            // Fallback to original photo
+            setPhotoArtistic(originalPhoto);
+          }
+        } catch (transformError: any) {
+          console.error('Error transforming photo:', transformError);
+          // Use original photo as fallback
+          setPhotoArtistic(originalPhoto);
+          showAlert('Info', 'Foto caricata. La trasformazione artistica non è disponibile al momento.');
+        } finally {
+          setTransformingPhoto(false);
+        }
       }
     } catch (error) {
       console.error('Error selecting image:', error);
