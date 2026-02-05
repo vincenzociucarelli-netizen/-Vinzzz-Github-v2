@@ -2178,6 +2178,68 @@ async def check_has_password(athlete_id: str, current_user = Depends(get_current
     
     return {"has_password": bool(athlete.get("data_password_hash"))}
 
+class ImageTransformRequest(BaseModel):
+    image_base64: str
+
+@api_router.post("/athletes/{athlete_id}/transform-photo")
+async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, current_user = Depends(get_current_user)):
+    """Transform athlete photo to artistic style using AI"""
+    if not HAS_IMAGE_GENERATION:
+        raise HTTPException(status_code=503, detail="Servizio di generazione immagini non disponibile")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Check permissions - admin, coach, or parent of athlete
+    if current_user["role"] == UserRole.PARENT and athlete.get("parent_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    try:
+        # Get API key
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Chiave API non configurata")
+        
+        # Initialize the image generator
+        image_gen = OpenAIImageGeneration(api_key=api_key)
+        
+        # Generate artistic version of the photo
+        prompt = f"""Transform this photo into a highly realistic pencil sketch portrait style. 
+        Keep the facial features accurate and recognizable. 
+        The sketch should be detailed, artistic, and suitable for a sports athlete profile.
+        Make it look like a professional hand-drawn portrait sketch with shading and fine details."""
+        
+        images = await image_gen.generate_images(
+            prompt=prompt,
+            model="gpt-image-1",
+            number_of_images=1
+        )
+        
+        if images and len(images) > 0:
+            # Convert to base64
+            artistic_base64 = base64.b64encode(images[0]).decode('utf-8')
+            
+            # Save both photos to the athlete record
+            await db.athletes.update_one(
+                {"id": athlete_id},
+                {"$set": {
+                    "athlete_photo": data.image_base64,
+                    "athlete_photo_artistic": artistic_base64
+                }}
+            )
+            
+            return {
+                "success": True,
+                "artistic_photo": artistic_base64
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Nessuna immagine generata")
+            
+    except Exception as e:
+        logging.error(f"Error generating artistic photo: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Errore durante la trasformazione: {str(e)}")
+
 @api_router.post("/athletes/{athlete_id}/request-deletion")
 async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_current_user)):
     """Request deletion of an athlete - sends notification to admin"""
