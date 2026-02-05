@@ -67,13 +67,15 @@ export default function ParentDashboard() {
         first_name: editFirstName.trim(),
         last_name: editLastName.trim(),
       });
-      // Update local user state
+      // Update local user state and force re-render
       await updateUser({
         full_name: fullName,
         first_name: editFirstName.trim(),
         last_name: editLastName.trim(),
       });
       setEditProfileVisible(false);
+      // Reload athletes to force refresh
+      await loadAthletes();
       Alert.alert('✅ Successo', 'I tuoi dati sono stati aggiornati correttamente');
     } catch (error: any) {
       console.error('Profile update error:', error.response?.data || error.message);
