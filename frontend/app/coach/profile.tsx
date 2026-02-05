@@ -151,7 +151,7 @@ export default function CoachProfile() {
     }
   };
 
-  const pickImage = async (side: 'front' | 'back') => {
+  const pickImage = async (side) => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
