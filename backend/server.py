@@ -375,6 +375,13 @@ class AthleteUpdate(BaseModel):
     data_password: Optional[str] = None  # Nuova password protezione dati
     is_withdrawn: Optional[bool] = None  # Ritiro atleta
     withdrawn_reason: Optional[str] = None  # Motivo ritiro
+    # Dati tecnici
+    athlete_photo: Optional[str] = None
+    athlete_photo_artistic: Optional[str] = None
+    athlete_role: Optional[str] = None
+    athlete_height: Optional[int] = None
+    athlete_weight: Optional[int] = None
+    athlete_characteristics: Optional[List[str]] = None
 
 class Certificate(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
