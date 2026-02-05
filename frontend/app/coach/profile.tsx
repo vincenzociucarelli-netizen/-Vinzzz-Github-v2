@@ -58,8 +58,8 @@ export default function CoachProfile() {
   });
 
   const [editData, setEditData] = useState({ ...profileData });
-  const [compensationHistory, setCompensationHistory] = useState<{[key: string]: boolean}>({});
-  const [over5000Limit, setOver5000Limit] = useState<{[key: string]: boolean | string}>({});
+  const [compensationHistory, setCompensationHistory] = useState<Record<string, boolean>>({});
+  const [over5000Limit, setOver5000Limit] = useState<Record<string, boolean | string>>({});
   const [hasExceeded5000, setHasExceeded5000] = useState(false);
   const [hasExceeded15000, setHasExceeded15000] = useState(false);
   const [editingBank, setEditingBank] = useState(false);
