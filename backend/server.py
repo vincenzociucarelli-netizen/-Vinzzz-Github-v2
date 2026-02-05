@@ -954,6 +954,9 @@ def generate_reset_token():
     """Generate a secure random token for password reset"""
     return secrets.token_urlsafe(32)
 
+class ImageTransformRequest(BaseModel):
+    image_base64: str
+
 @api_router.post("/auth/me/transform-photo")
 async def transform_user_photo(data: ImageTransformRequest, current_user = Depends(get_current_user)):
     """Transform user profile photo to artistic style using AI - for coach and dirigente"""
