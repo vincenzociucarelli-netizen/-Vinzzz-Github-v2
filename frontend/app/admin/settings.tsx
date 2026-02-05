@@ -225,6 +225,80 @@ export default function SettingsScreen() {
           />
         </View>
 
+        {/* Ruoli Atleti */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏐 Ruoli Atleti</Text>
+          <Text style={styles.sectionDesc}>
+            Definisci i ruoli specifici per il tuo sport (es: Palleggiatore, Centrale, Schiacciatore per il volley)
+          </Text>
+          
+          <View style={styles.tagInputRow}>
+            <TextInput
+              style={styles.tagInput}
+              value={newRole}
+              onChangeText={setNewRole}
+              placeholder="Aggiungi ruolo..."
+              onSubmitEditing={addRole}
+              returnKeyType="done"
+            />
+            <TouchableOpacity style={styles.addTagBtn} onPress={addRole}>
+              <Ionicons name="add" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.tagsContainer}>
+            {athleteRoles.length === 0 ? (
+              <Text style={styles.noTagsText}>Nessun ruolo definito</Text>
+            ) : (
+              athleteRoles.map((role, index) => (
+                <View key={index} style={styles.tag}>
+                  <Text style={styles.tagText}>{role}</Text>
+                  <TouchableOpacity onPress={() => removeRole(role)}>
+                    <Ionicons name="close-circle" size={18} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </View>
+        </View>
+
+        {/* Caratteristiche Atleti */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📊 Caratteristiche Atleti</Text>
+          <Text style={styles.sectionDesc}>
+            Definisci altre caratteristiche da registrare (es: Mano Forte, Ricezione, ecc.)
+          </Text>
+          
+          <View style={styles.tagInputRow}>
+            <TextInput
+              style={styles.tagInput}
+              value={newCharacteristic}
+              onChangeText={setNewCharacteristic}
+              placeholder="Aggiungi caratteristica..."
+              onSubmitEditing={addCharacteristic}
+              returnKeyType="done"
+            />
+            <TouchableOpacity style={[styles.addTagBtn, { backgroundColor: '#5856D6' }]} onPress={addCharacteristic}>
+              <Ionicons name="add" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.tagsContainer}>
+            {athleteCharacteristics.length === 0 ? (
+              <Text style={styles.noTagsText}>Nessuna caratteristica definita</Text>
+            ) : (
+              athleteCharacteristics.map((char, index) => (
+                <View key={index} style={[styles.tag, { backgroundColor: '#F0EFFF', borderColor: '#5856D6' }]}>
+                  <Text style={[styles.tagText, { color: '#5856D6' }]}>{char}</Text>
+                  <TouchableOpacity onPress={() => removeCharacteristic(char)}>
+                    <Ionicons name="close-circle" size={18} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </View>
+        </View>
+
         <TouchableOpacity 
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
           onPress={handleSave}
