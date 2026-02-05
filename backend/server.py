@@ -1849,9 +1849,14 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
     
     result = []
     for a in athletes:
+        # Build full_name from last_name + first_name if available
+        full_name = a.get("full_name", "")
+        if a.get("last_name") or a.get("first_name"):
+            full_name = f"{a.get('last_name', '')} {a.get('first_name', '')}".strip()
+        
         result.append({
             "id": a["id"],
-            "full_name": f"{a.get('last_name', '')} {a.get('first_name', '')}".strip(),
+            "full_name": full_name,
             "first_name": a.get("first_name", ""),
             "last_name": a.get("last_name", ""),
             "team_id": a.get("team_id"),
@@ -1859,6 +1864,12 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
             "parent_id": a.get("parent_id"),
             "status": a.get("status", "pending"),
             "date_of_birth": a.get("date_of_birth"),
+            # Additional fields for advanced search
+            "postal_code": a.get("postal_code"),
+            "athlete_role": a.get("athlete_role"),
+            "athlete_height": a.get("athlete_height"),
+            "athlete_weight": a.get("athlete_weight"),
+            "city": a.get("city"),
         })
     
     return result
