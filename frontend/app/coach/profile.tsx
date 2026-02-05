@@ -295,7 +295,7 @@ export default function CoachProfile() {
       const now = new Date();
       const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
       
-      const confirmMsg = `ATTENZIONE: Stai dichiarando di aver superato il limite di €5.000.\n\nLa data di oggi (${dateStr}) verrà memorizzata nell'archivio e rimarrà visibile anche se dovessi togliere il flag in futuro.\n\nConfermi?`;
+      const confirmMsg = `ATTENZIONE: Stai dichiarando di aver superato il limite di €5.000 nell'anno solare.\n\nLa data di oggi (${dateStr}) verrà memorizzata e rimarrà visibile all'amministratore.\n\nConfermi?`;
       
       const confirmAction = Platform.OS === 'web'
         ? window.confirm(confirmMsg)
@@ -315,18 +315,14 @@ export default function CoachProfile() {
     
     setHasExceeded5000(newValue);
     
-    // Set current month as the exceeded month with date
     const now = new Date();
-    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const newLimit = { ...over5000Limit };
     
     if (newValue) {
-      // Memorizza anche la data esatta della dichiarazione
-      newLimit[currentMonthKey] = true;
-      newLimit[`${currentMonthKey}_date`] = now.toISOString();
+      newLimit.exceeded_5000 = true;
+      newLimit.exceeded_5000_date = now.toISOString();
     } else {
-      newLimit[currentMonthKey] = false;
-      // NON rimuoviamo la data - rimane nell'archivio
+      newLimit.exceeded_5000 = false;
     }
     
     setOver5000Limit(newLimit);
@@ -334,11 +330,68 @@ export default function CoachProfile() {
     try {
       await api.patch('/auth/me', { over_5000_limit: newLimit });
       if (newValue) {
-        showAlert('Registrato', 'La tua dichiarazione è stata memorizzata con la data odierna. L\'amministratore riceverà una notifica.');
+        showAlert('Registrato', 'La tua dichiarazione è stata memorizzata. Da ora dovrai versare i contributi INPS.');
       }
     } catch (error: any) {
-      // Revert on error
       setHasExceeded5000(!newValue);
+      setOver5000Limit(over5000Limit);
+      showAlert('Errore', 'Errore durante il salvataggio');
+    }
+  };
+
+  const handleToggle15000Limit = async () => {
+    const newValue = !hasExceeded15000;
+    
+    // Se si sta attivando, chiedi conferma
+    if (newValue) {
+      const now = new Date();
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      
+      const confirmMsg = `ATTENZIONE: Stai dichiarando di aver superato il limite di €15.000 nell'anno solare.\n\nLa data di oggi (${dateStr}) verrà memorizzata e rimarrà visibile all'amministratore.\n\nOltre ai contributi INPS, sarà dovuta anche l'IRPEF sulla parte eccedente.\n\nConfermi?`;
+      
+      const confirmAction = Platform.OS === 'web'
+        ? window.confirm(confirmMsg)
+        : await new Promise((resolve) => {
+            Alert.alert(
+              'Conferma Dichiarazione',
+              confirmMsg,
+              [
+                { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Confermo', style: 'destructive', onPress: () => resolve(true) },
+              ]
+            );
+          });
+      
+      if (!confirmAction) return;
+    }
+    
+    setHasExceeded15000(newValue);
+    
+    const now = new Date();
+    const newLimit = { ...over5000Limit };
+    
+    if (newValue) {
+      newLimit.exceeded_15000 = true;
+      newLimit.exceeded_15000_date = now.toISOString();
+      // Se supera 15k, automaticamente ha superato anche 5k
+      if (!newLimit.exceeded_5000) {
+        newLimit.exceeded_5000 = true;
+        newLimit.exceeded_5000_date = now.toISOString();
+        setHasExceeded5000(true);
+      }
+    } else {
+      newLimit.exceeded_15000 = false;
+    }
+    
+    setOver5000Limit(newLimit);
+    
+    try {
+      await api.patch('/auth/me', { over_5000_limit: newLimit });
+      if (newValue) {
+        showAlert('Registrato', 'La tua dichiarazione è stata memorizzata. Sarà dovuta IRPEF sulla parte eccedente i €15.000.');
+      }
+    } catch (error: any) {
+      setHasExceeded15000(!newValue);
       setOver5000Limit(over5000Limit);
       showAlert('Errore', 'Errore durante il salvataggio');
     }
