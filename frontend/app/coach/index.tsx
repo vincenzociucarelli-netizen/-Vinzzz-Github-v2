@@ -293,7 +293,11 @@ export default function CoachScreen() {
     return (
       <TouchableOpacity 
         style={styles.athleteItem}
-        onPress={() => router.push(`/coach/athlete/${item.id}`)}
+        onPress={() => {
+          console.log('Navigating to athlete:', item.id);
+          router.push(`/coach/athlete/${item.id}`);
+        }}
+        activeOpacity={0.7}
       >
         <View style={styles.athleteInfo}>
           <Text style={styles.athleteName}>{item.full_name}</Text>
