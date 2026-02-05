@@ -9,11 +9,14 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../../src/store/authStore';
 import api from '../../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function AdminProfile() {
   const router = useRouter();
@@ -22,6 +25,11 @@ export default function AdminProfile() {
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState(false);
+  
+  // Profile photo states
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [profilePhotoArtistic, setProfilePhotoArtistic] = useState<string | null>(null);
+  const [transformingPhoto, setTransformingPhoto] = useState(false);
   
   // Profile data
   const [profileData, setProfileData] = useState({
