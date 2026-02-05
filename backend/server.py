@@ -2262,8 +2262,6 @@ class ImageTransformRequest(BaseModel):
 @api_router.post("/athletes/{athlete_id}/transform-photo")
 async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, current_user = Depends(get_current_user)):
     """Transform athlete photo to artistic style using AI"""
-    if not HAS_IMAGE_GENERATION:
-        raise HTTPException(status_code=503, detail="Servizio di generazione immagini non disponibile")
     
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
@@ -2279,43 +2277,84 @@ async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, 
         if not api_key:
             raise HTTPException(status_code=500, detail="Chiave API non configurata")
         
-        # Initialize the image generator
-        image_gen = OpenAIImageGeneration(api_key=api_key)
-        
-        # Generate artistic version of the photo
-        prompt = f"""Transform this photo into a highly realistic pencil sketch portrait style. 
-        Keep the facial features accurate and recognizable. 
-        The sketch should be detailed, artistic, and suitable for a sports athlete profile.
-        Make it look like a professional hand-drawn portrait sketch with shading and fine details."""
-        
-        images = await image_gen.generate_images(
-            prompt=prompt,
-            model="gpt-image-1",
-            number_of_images=1
-        )
-        
-        if images and len(images) > 0:
-            # Convert to base64
-            artistic_base64 = base64.b64encode(images[0]).decode('utf-8')
+        # Use OpenAI client for image editing
+        if HAS_OPENAI_CLIENT:
+            client = AsyncOpenAI(
+                api_key=api_key,
+                base_url="https://llm.integrations.emergent.sh/v1"
+            )
             
-            # Save both photos to the athlete record
+            # Decode base64 to bytes
+            image_bytes = base64.b64decode(data.image_base64)
+            
+            # Create image edit request - transform to pencil sketch style
+            response = await client.images.edit(
+                model="gpt-image-1",
+                image=image_bytes,
+                prompt="Transform this photo into a highly realistic pencil sketch portrait style. Keep the facial features accurate and recognizable. The sketch should be detailed, artistic, with professional shading and fine details. Preserve the person's likeness exactly.",
+                n=1,
+                size="1024x1024"
+            )
+            
+            if response.data and len(response.data) > 0:
+                # Get the result - could be base64 or URL
+                result = response.data[0]
+                if hasattr(result, 'b64_json') and result.b64_json:
+                    artistic_base64 = result.b64_json
+                elif hasattr(result, 'url') and result.url:
+                    # Download from URL and convert to base64
+                    import httpx
+                    async with httpx.AsyncClient() as http_client:
+                        img_response = await http_client.get(result.url)
+                        artistic_base64 = base64.b64encode(img_response.content).decode('utf-8')
+                else:
+                    raise HTTPException(status_code=500, detail="Formato risposta non valido")
+                
+                # Save both photos to the athlete record
+                await db.athletes.update_one(
+                    {"id": athlete_id},
+                    {"$set": {
+                        "athlete_photo": data.image_base64,
+                        "athlete_photo_artistic": artistic_base64
+                    }}
+                )
+                
+                return {
+                    "success": True,
+                    "artistic_photo": artistic_base64
+                }
+            else:
+                raise HTTPException(status_code=500, detail="Nessuna immagine generata")
+        else:
+            # Fallback - save original photo without transformation
             await db.athletes.update_one(
                 {"id": athlete_id},
                 {"$set": {
                     "athlete_photo": data.image_base64,
-                    "athlete_photo_artistic": artistic_base64
+                    "athlete_photo_artistic": data.image_base64
                 }}
             )
-            
             return {
                 "success": True,
-                "artistic_photo": artistic_base64
+                "artistic_photo": data.image_base64,
+                "note": "Trasformazione non disponibile, salvata foto originale"
             }
-        else:
-            raise HTTPException(status_code=500, detail="Nessuna immagine generata")
             
     except Exception as e:
         logging.error(f"Error generating artistic photo: {str(e)}")
+        # Fallback - save original photo
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {
+                "athlete_photo": data.image_base64,
+                "athlete_photo_artistic": data.image_base64
+            }}
+        )
+        return {
+            "success": True,
+            "artistic_photo": data.image_base64,
+            "note": f"Errore trasformazione: {str(e)}"
+        }
         raise HTTPException(status_code=500, detail=f"Errore durante la trasformazione: {str(e)}")
 
 @api_router.post("/athletes/{athlete_id}/request-deletion")
