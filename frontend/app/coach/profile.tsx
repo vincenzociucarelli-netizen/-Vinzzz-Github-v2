@@ -684,40 +684,99 @@ export default function CoachProfile() {
               );
             })}
 
-            {/* €5000 Limit Declaration */}
+            {/* Tabella Fiscale Compensi */}
+            <View style={styles.taxTableSection}>
+              <Text style={styles.taxTableTitle}>📊 Regime Fiscale Compensi Sportivi</Text>
+              <Text style={styles.taxTableSubtitle}>Anno solare 01/01 - 31/12</Text>
+              
+              <View style={styles.taxTable}>
+                <View style={styles.taxTableHeader}>
+                  <Text style={styles.taxTableHeaderCell}>Fascia</Text>
+                  <Text style={styles.taxTableHeaderCell}>IRPEF</Text>
+                  <Text style={styles.taxTableHeaderCell}>INPS</Text>
+                  <Text style={styles.taxTableHeaderCell}>Adempimenti</Text>
+                </View>
+                
+                <View style={[styles.taxTableRow, !hasExceeded5000 && styles.taxTableRowActive]}>
+                  <Text style={styles.taxTableCell}>0 - 5.000€</Text>
+                  <Text style={[styles.taxTableCell, styles.taxCellGreen]}>❌ NO</Text>
+                  <Text style={[styles.taxTableCell, styles.taxCellGreen]}>❌ NO</Text>
+                  <Text style={[styles.taxTableCell, styles.taxCellOrange]}>⚠️ SÌ</Text>
+                </View>
+                
+                <View style={[styles.taxTableRow, hasExceeded5000 && !hasExceeded15000 && styles.taxTableRowActive]}>
+                  <Text style={styles.taxTableCell}>5.001 - 15.000€</Text>
+                  <Text style={[styles.taxTableCell, styles.taxCellGreen]}>❌ NO</Text>
+                  <Text style={[styles.taxTableCell, styles.taxCellRed]}>✅ SÌ</Text>
+                  <Text style={[styles.taxTableCell, styles.taxCellOrange]}>⚠️ SÌ</Text>
+                </View>
+                
+                <View style={[styles.taxTableRow, hasExceeded15000 && styles.taxTableRowActive]}>
+                  <Text style={styles.taxTableCell}>Oltre 15.000€</Text>
+                  <Text style={[styles.taxTableCell, styles.taxCellRed]}>✅ SÌ*</Text>
+                  <Text style={[styles.taxTableCell, styles.taxCellRed]}>✅ SÌ</Text>
+                  <Text style={[styles.taxTableCell, styles.taxCellOrange]}>⚠️ SÌ</Text>
+                </View>
+              </View>
+              
+              <Text style={styles.taxTableNote}>* IRPEF solo sulla parte eccedente i €15.000</Text>
+            </View>
+
+            {/* Dichiarazioni Superamento Limiti */}
             <View style={styles.limitSection}>
-              <Text style={styles.limitTitle}>⚠️ Dichiarazione Superamento €5.000</Text>
-              <Text style={styles.limitDescription}>
-                Se il totale dei compensi ricevuti nell'anno SOLARE (dal 01/01 al 31/12) supera €5.000, 
-                devi segnalarlo per gli adempimenti fiscali previsti dalla legge.
-              </Text>
+              <Text style={styles.limitSectionTitle}>📝 Dichiarazioni da comunicare alla società</Text>
+              
+              {/* Dichiarazione €5.000 */}
               <TouchableOpacity
-                style={[styles.limitCheckbox, hasExceeded5000 && styles.limitCheckboxActive]}
+                style={[styles.limitCheckbox, hasExceeded5000 && styles.limitCheckbox5000Active]}
                 onPress={handleToggle5000Limit}
               >
-                <View style={[styles.checkbox, hasExceeded5000 && styles.checkboxActive]}>
+                <View style={[styles.checkbox, hasExceeded5000 && styles.checkbox5000Active]}>
                   {hasExceeded5000 && <Ionicons name="checkmark" size={16} color="#fff" />}
                 </View>
-                <Text style={styles.limitCheckboxText}>
-                  Dichiaro di aver superato il limite di €5.000 annui
-                </Text>
+                <View style={styles.limitCheckboxContent}>
+                  <Text style={styles.limitCheckboxTitle}>Superamento €5.000</Text>
+                  <Text style={styles.limitCheckboxDesc}>
+                    Dichiaro di aver superato €5.000 di compensi totali nell'anno solare
+                  </Text>
+                </View>
               </TouchableOpacity>
-              {/* Mostra la data di dichiarazione se presente */}
-              {(() => {
-                const now = new Date();
-                const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                const declarationDate = over5000Limit[`${currentMonthKey}_date`];
-                if (declarationDate) {
-                  const d = new Date(declarationDate);
-                  const formattedDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-                  return (
-                    <Text style={styles.declarationDate}>
-                      📅 Data dichiarazione: {formattedDate}
-                    </Text>
-                  );
-                }
-                return null;
-              })()}
+              
+              {/* Data dichiarazione €5.000 */}
+              {over5000Limit.exceeded_5000_date && (
+                <Text style={styles.declarationDate}>
+                  📅 Dichiarato il: {(() => {
+                    const d = new Date(over5000Limit.exceeded_5000_date as string);
+                    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                  })()}
+                </Text>
+              )}
+              
+              {/* Dichiarazione €15.000 */}
+              <TouchableOpacity
+                style={[styles.limitCheckbox, hasExceeded15000 && styles.limitCheckbox15000Active, { marginTop: 12 }]}
+                onPress={handleToggle15000Limit}
+              >
+                <View style={[styles.checkbox, hasExceeded15000 && styles.checkbox15000Active]}>
+                  {hasExceeded15000 && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+                <View style={styles.limitCheckboxContent}>
+                  <Text style={styles.limitCheckboxTitle}>Superamento €15.000</Text>
+                  <Text style={styles.limitCheckboxDesc}>
+                    Dichiaro di aver superato €15.000 di compensi totali nell'anno solare
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              
+              {/* Data dichiarazione €15.000 */}
+              {over5000Limit.exceeded_15000_date && (
+                <Text style={styles.declarationDate}>
+                  📅 Dichiarato il: {(() => {
+                    const d = new Date(over5000Limit.exceeded_15000_date as string);
+                    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                  })()}
+                </Text>
+              )}
             </View>
           </View>
         )}
