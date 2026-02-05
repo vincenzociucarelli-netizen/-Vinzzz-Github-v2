@@ -282,7 +282,7 @@ export default function CoachProfile() {
     }
   };
 
-  const handleToggleMonth = async (monthKey: string) => {
+  const handleToggleMonth = async (monthKey) => {
     const newHistory = { ...compensationHistory };
     newHistory[monthKey] = !newHistory[monthKey];
     setCompensationHistory(newHistory);
