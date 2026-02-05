@@ -2343,9 +2343,6 @@ async def check_has_password(athlete_id: str, current_user = Depends(get_current
     
     return {"has_password": bool(athlete.get("data_password_hash"))}
 
-class ImageTransformRequest(BaseModel):
-    image_base64: str
-
 @api_router.post("/athletes/{athlete_id}/transform-photo")
 async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, current_user = Depends(get_current_user)):
     """Transform athlete photo to artistic style using AI"""
