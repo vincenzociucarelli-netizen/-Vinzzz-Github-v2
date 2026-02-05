@@ -16,6 +16,14 @@ import io
 import qrcode
 from bson import ObjectId
 
+# Emergent LLM integration for image generation
+try:
+    from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
+    HAS_IMAGE_GENERATION = True
+except ImportError:
+    HAS_IMAGE_GENERATION = False
+    logging.warning("emergentintegrations not available, image generation disabled")
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
