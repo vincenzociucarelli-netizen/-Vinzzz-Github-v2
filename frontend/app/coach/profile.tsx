@@ -137,7 +137,7 @@ export default function CoachProfile() {
       setCompensationHistory(data.compensation_history || {});
       setOver5000Limit(data.over_5000_limit || {});
       // Check if any month has exceeded €5000 or €15000
-      const exceeded5000 = data.over_5000_limit && (data.over_5000_limit.exceeded_5000 === true || Object.values(data.over_5000_limit).some((v: any) => v === true && typeof v === 'boolean'));
+      const exceeded5000 = data.over_5000_limit && (data.over_5000_limit.exceeded_5000 === true || Object.values(data.over_5000_limit).some((v) => v === true && typeof v === 'boolean'));
       const exceeded15000 = data.over_5000_limit && data.over_5000_limit.exceeded_15000 === true;
       setHasExceeded5000(exceeded5000 || false);
       setHasExceeded15000(exceeded15000 || false);
