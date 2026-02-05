@@ -554,6 +554,21 @@ export default function AdminDashboard() {
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
+          {/* Ricerca Avanzata Atleti */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/athlete-search')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E8EAF6' }]}>
+              <Ionicons name="search" size={28} color="#3F51B5" />
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>🔍 Ricerca Avanzata</Text>
+              <Text style={styles.menuCardSubtitle}>Filtra atleti per ruolo, anno, CAP, altezza</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+
           {/* Storico Presenze */}
           <TouchableOpacity
             style={styles.menuCard}
