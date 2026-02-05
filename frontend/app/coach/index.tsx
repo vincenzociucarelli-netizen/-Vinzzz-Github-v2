@@ -799,6 +799,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginLeft: 6,
   },
+  roleTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0EFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    gap: 4,
+  },
+  roleText: {
+    fontSize: 11,
+    color: '#5856D6',
+    fontWeight: '600',
+  },
+  athleteActions: {
+    justifyContent: 'center',
+    paddingLeft: 8,
+  },
   attendanceBtn: {
     flexDirection: 'row',
     alignItems: 'center',
