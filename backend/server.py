@@ -979,7 +979,7 @@ async def transform_user_photo(data: ImageTransformRequest, current_user = Depen
             response = await client.images.edit(
                 model="gpt-image-1",
                 image=image_bytes,
-                prompt="Transform this photo into a soft pastel portrait style with gentle, muted colors. Keep the facial features accurate and recognizable. The portrait should look like a professional pastel drawing with soft blending, delicate tones, and an artistic quality. Preserve the person's likeness exactly while giving it a warm, artistic feel.",
+                prompt="Transform this photo into a VIBRANT PASTEL CHALK DRAWING with visible brush strokes and artistic texture. Use bold, saturated pastel colors (soft pinks, sky blues, warm yellows, mint greens). The style should clearly look like hand-drawn art, NOT a photo filter. Add subtle paper texture and visible artistic strokes. Keep facial features recognizable but stylized like a professional pastel portrait. Make it OBVIOUS this is an artistic transformation.",
                 n=1,
                 size="1024x1024"
             )
