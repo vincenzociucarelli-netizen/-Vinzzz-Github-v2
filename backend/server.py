@@ -306,6 +306,13 @@ class Athlete(BaseModel):
     is_withdrawn: bool = False  # Flag: atleta ritirato dalla squadra
     withdrawn_date: Optional[datetime] = None  # Data ritiro
     withdrawn_reason: Optional[str] = None  # Motivo ritiro
+    # Dati tecnici (gestiti da Coach)
+    athlete_photo: Optional[str] = None  # Foto atleta (base64)
+    athlete_photo_artistic: Optional[str] = None  # Foto stile artistico (base64)
+    athlete_role: Optional[str] = None  # Ruolo dell'atleta
+    athlete_height: Optional[int] = None  # Altezza in cm
+    athlete_weight: Optional[int] = None  # Peso in kg
+    athlete_characteristics: Optional[List[str]] = None  # Caratteristiche selezionate
 
 class AthleteCreate(BaseModel):
     full_name: str
