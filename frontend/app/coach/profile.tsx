@@ -73,12 +73,12 @@ export default function CoachProfile() {
   const [changingPassword, setChangingPassword] = useState(false);
   
   // Document images
-  const [docFrontImage, setDocFrontImage] = useState<string | null>(null);
-  const [docBackImage, setDocBackImage] = useState<string | null>(null);
+  const [docFrontImage, setDocFrontImage] = useState(null);
+  const [docBackImage, setDocBackImage] = useState(null);
   
   // Profile photo (artistic)
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
-  const [profilePhotoArtistic, setProfilePhotoArtistic] = useState<string | null>(null);
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [profilePhotoArtistic, setProfilePhotoArtistic] = useState(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
 
   const loadProfile = async () => {
