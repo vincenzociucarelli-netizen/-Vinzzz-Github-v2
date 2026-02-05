@@ -324,31 +324,31 @@ export default function AdminDashboard() {
           </View>
         )}
 
-        {/* Invite Code Card - VERSIONE COMPATTA */}
+        {/* Invite Code Card - VERSIONE ULTRA COMPATTA */}
         {inviteCode && (
           <View style={styles.inviteCodeCard}>
-            <View style={styles.inviteCodeHeader}>
-              <Ionicons name="ticket-outline" size={16} color="#007AFF" />
-              <Text style={styles.inviteCodeTitle}>Codice Invito Società</Text>
+            <View style={styles.inviteCodeRow}>
+              <View style={styles.inviteCodeLeft}>
+                <Ionicons name="ticket-outline" size={14} color="#007AFF" />
+                <Text style={styles.inviteCodeTitle}>Codice Invito</Text>
+              </View>
+              <View style={styles.inviteCodeRight}>
+                <Text style={styles.inviteCodeValue}>{inviteCode}</Text>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (Platform.OS === 'web') {
+                      navigator.clipboard.writeText(inviteCode);
+                      showInfo('✓ Copiato!', 'Codice negli appunti');
+                    } else {
+                      showInfo('Codice Invito', `${inviteCode}\n\nComunica questo codice ai tuoi membri`);
+                    }
+                  }}
+                  style={styles.copyIconButton}
+                >
+                  <Ionicons name="copy-outline" size={18} color="#007AFF" />
+                </TouchableOpacity>
+              </View>
             </View>
-            <Text style={styles.inviteCodeValue}>{inviteCode}</Text>
-            <Text style={styles.inviteCodeHint}>
-              Condividi con coach, dirigenti e genitori
-            </Text>
-            <TouchableOpacity 
-              style={styles.copyCodeButtonFull}
-              onPress={() => {
-                if (Platform.OS === 'web') {
-                  navigator.clipboard.writeText(inviteCode);
-                  showInfo('Copiato!', 'Codice invito copiato negli appunti');
-                } else {
-                  showInfo('Codice Invito', `${inviteCode}\n\nComunica questo codice ai tuoi membri`);
-                }
-              }}
-            >
-              <Ionicons name="copy-outline" size={16} color="#fff" />
-              <Text style={styles.copyCodeButtonText}>Copia Codice</Text>
-            </TouchableOpacity>
           </View>
         )}
 
