@@ -24,6 +24,12 @@ export default function SettingsScreen() {
   const [logoSize, setLogoSize] = useState(50); // Default size in pixels (header display)
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Athlete roles and characteristics
+  const [athleteRoles, setAthleteRoles] = useState<string[]>([]);
+  const [athleteCharacteristics, setAthleteCharacteristics] = useState<string[]>([]);
+  const [newRole, setNewRole] = useState('');
+  const [newCharacteristic, setNewCharacteristic] = useState('');
 
   const loadSettings = async () => {
     try {
@@ -31,6 +37,8 @@ export default function SettingsScreen() {
       setSocietyName(response.data.name || '');
       setLogo(response.data.logo || null);
       setLogoSize(response.data.logo_size || 50);
+      setAthleteRoles(response.data.athlete_roles || []);
+      setAthleteCharacteristics(response.data.athlete_characteristics || []);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
