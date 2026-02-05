@@ -291,7 +291,10 @@ export default function CoachScreen() {
     }
     
     return (
-      <View style={styles.athleteItem}>
+      <TouchableOpacity 
+        style={styles.athleteItem}
+        onPress={() => router.push(`/coach/athlete/${item.id}`)}
+      >
         <View style={styles.athleteInfo}>
           <Text style={styles.athleteName}>{item.full_name}</Text>
           <View style={styles.certRow}>
@@ -304,8 +307,17 @@ export default function CoachScreen() {
               {statusText}
             </Text>
           </View>
+          {item.athlete_role && (
+            <View style={styles.roleTag}>
+              <Ionicons name="person" size={12} color="#5856D6" />
+              <Text style={styles.roleText}>{item.athlete_role}</Text>
+            </View>
+          )}
         </View>
-      </View>
+        <View style={styles.athleteActions}>
+          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+        </View>
+      </TouchableOpacity>
     );
   };
 
