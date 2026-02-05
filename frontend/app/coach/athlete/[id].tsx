@@ -48,6 +48,7 @@ export default function CoachAthleteDetail() {
   // Form state
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoArtistic, setPhotoArtistic] = useState<string | null>(null);
+  const [transformingPhoto, setTransformingPhoto] = useState(false);
   const [role, setRole] = useState<string>('');
   const [height, setHeight] = useState<string>('');
   const [weight, setWeight] = useState<string>('');
