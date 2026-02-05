@@ -392,9 +392,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    minHeight: 55,
   },
   picker: {
-    height: 50,
+    height: 55,
   },
   filterInput: {
     backgroundColor: '#f5f5f5',
