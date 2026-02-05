@@ -313,6 +313,64 @@ export default function CoachAthleteDetail() {
           )}
         </View>
 
+        {/* Emergency Contacts - CRITICAL FOR COACH */}
+        <View style={[styles.section, styles.emergencySection]}>
+          <Text style={styles.sectionTitle}>📞 Contatti Emergenza</Text>
+          
+          {athlete.parent_name && (
+            <View style={styles.emergencyContact}>
+              <Ionicons name="person" size={18} color="#007AFF" />
+              <Text style={styles.emergencyLabel}>Genitore:</Text>
+              <Text style={styles.emergencyValue}>{athlete.parent_name}</Text>
+            </View>
+          )}
+          
+          {athlete.parent_phone && (
+            <TouchableOpacity 
+              style={styles.emergencyPhoneRow}
+              onPress={() => {
+                // Open phone dialer
+                const phoneUrl = `tel:${athlete.parent_phone}`;
+                import('react-native').then(({ Linking }) => {
+                  Linking.openURL(phoneUrl);
+                });
+              }}
+            >
+              <Ionicons name="call" size={18} color="#34C759" />
+              <Text style={styles.emergencyPhone}>{athlete.parent_phone}</Text>
+              <View style={styles.callButton}>
+                <Ionicons name="call" size={14} color="#fff" />
+                <Text style={styles.callButtonText}>Chiama</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          
+          {athlete.emergency_phone && athlete.emergency_phone !== athlete.parent_phone && (
+            <TouchableOpacity 
+              style={styles.emergencyPhoneRow}
+              onPress={() => {
+                const phoneUrl = `tel:${athlete.emergency_phone}`;
+                import('react-native').then(({ Linking }) => {
+                  Linking.openURL(phoneUrl);
+                });
+              }}
+            >
+              <Ionicons name="alert-circle" size={18} color="#FF9500" />
+              <Text style={styles.emergencyPhone}>{athlete.emergency_phone}</Text>
+              <View style={[styles.callButton, { backgroundColor: '#FF9500' }]}>
+                <Ionicons name="call" size={14} color="#fff" />
+                <Text style={styles.callButtonText}>Emergenza</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          
+          {!athlete.parent_phone && !athlete.emergency_phone && (
+            <Text style={styles.noEmergencyContact}>
+              ⚠️ Nessun contatto di emergenza disponibile
+            </Text>
+          )}
+        </View>
+
         {/* Role Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🏐 Ruolo</Text>
