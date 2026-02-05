@@ -1266,14 +1266,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  input: {
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
   statusBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
