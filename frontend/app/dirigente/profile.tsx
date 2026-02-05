@@ -179,6 +179,9 @@ export default function DirigenteProfile() {
       // Check if any month has exceeded €5000
       const exceeded = data.over_5000_limit && Object.values(data.over_5000_limit).some((v: any) => v === true);
       setHasExceeded5000(exceeded || false);
+      // Load profile photo
+      setProfilePhoto(data.profile_photo || null);
+      setProfilePhotoArtistic(data.profile_photo_artistic || null);
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
