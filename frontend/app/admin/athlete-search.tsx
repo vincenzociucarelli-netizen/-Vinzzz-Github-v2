@@ -28,7 +28,8 @@ interface Athlete {
 
 interface FilterState {
   role: string;
-  birthYear: string;
+  birthYearFrom: string;
+  birthYearTo: string;
   postalCode: string;
   heightMin: string;
   heightMax: string;
