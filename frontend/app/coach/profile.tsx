@@ -661,7 +661,7 @@ export default function CoachProfile() {
                       } else {
                         setProfilePhotoArtistic(originalPhoto);
                       }
-                    } catch (transformError: any) {
+                    } catch (transformError) {
                       console.error('Error transforming photo:', transformError);
                       setProfilePhotoArtistic(originalPhoto);
                       showAlert('Info', 'Foto caricata. La trasformazione artistica non è disponibile al momento.');
