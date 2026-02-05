@@ -448,6 +448,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  changePhotoBtnDisabled: {
+    opacity: 0.5,
+  },
+  transformingText: {
+    color: '#007AFF',
+    fontSize: 12,
+    marginTop: 8,
+  },
   athleteInfo: {
     marginLeft: 16,
     flex: 1,
