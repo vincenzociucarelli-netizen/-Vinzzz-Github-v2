@@ -454,7 +454,7 @@ export default function CoachProfile() {
       {editing && editable ? (
         <TextInput
           style={styles.input}
-          value={editData[key as keyof typeof editData]?.toString() || ''}
+          value={editData[key]?.toString() || ''}
           onChangeText={(text) => setEditData({ ...editData, [key]: text.toUpperCase() })}
           autoCapitalize="characters"
         />
