@@ -32,6 +32,10 @@ interface TechnicalData {
   athlete_characteristics?: string[];
   certificate_status?: string;
   certificate_expiry?: string;
+  // Emergency contacts
+  parent_name?: string;
+  parent_phone?: string;
+  emergency_phone?: string;
 }
 
 interface SocietySettings {
