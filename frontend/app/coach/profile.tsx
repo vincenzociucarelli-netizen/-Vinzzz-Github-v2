@@ -251,7 +251,7 @@ export default function CoachProfile() {
       showAlert('Successo', 'Profilo aggiornato con successo');
       setEditing(false);
       await loadProfile();
-    } catch (error: any) {
+    } catch (error) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
     } finally {
       setSaving(false);
@@ -277,7 +277,7 @@ export default function CoachProfile() {
       await api.patch('/auth/me', { compensation_accepted: true });
       showAlert('Successo', 'Compenso accettato con successo');
       await loadProfile();
-    } catch (error: any) {
+    } catch (error) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'accettazione');
     }
   };
@@ -289,7 +289,7 @@ export default function CoachProfile() {
     
     try {
       await api.patch('/auth/me', { compensation_history: newHistory });
-    } catch (error: any) {
+    } catch (error) {
       // Revert on error
       setCompensationHistory(compensationHistory);
       showAlert('Errore', 'Errore durante il salvataggio');
@@ -341,7 +341,7 @@ export default function CoachProfile() {
       if (newValue) {
         showAlert('Registrato', 'La tua dichiarazione è stata memorizzata. Da ora dovrai versare i contributi INPS.');
       }
-    } catch (error: any) {
+    } catch (error) {
       setHasExceeded5000(!newValue);
       setOver5000Limit(over5000Limit);
       showAlert('Errore', 'Errore durante il salvataggio');
@@ -399,7 +399,7 @@ export default function CoachProfile() {
       if (newValue) {
         showAlert('Registrato', 'La tua dichiarazione è stata memorizzata. Sarà dovuta IRPEF sulla parte eccedente i €15.000.');
       }
-    } catch (error: any) {
+    } catch (error) {
       setHasExceeded15000(!newValue);
       setOver5000Limit(over5000Limit);
       showAlert('Errore', 'Errore durante il salvataggio');
@@ -441,7 +441,7 @@ export default function CoachProfile() {
       setNewPassword('');
       setConfirmNewPassword('');
       setShowChangePassword(false);
-    } catch (error: any) {
+    } catch (error) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il cambio password');
     } finally {
       setChangingPassword(false);
@@ -1022,7 +1022,7 @@ export default function CoachProfile() {
                     });
                     setEditingBank(false);
                     showAlert('Salvato', 'Dati bancari aggiornati');
-                  } catch (error: any) {
+                  } catch (error) {
                     showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
                   } finally {
                     setSavingBank(false);
