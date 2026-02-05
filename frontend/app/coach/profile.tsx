@@ -74,6 +74,11 @@ export default function CoachProfile() {
   // Document images
   const [docFrontImage, setDocFrontImage] = useState<string | null>(null);
   const [docBackImage, setDocBackImage] = useState<string | null>(null);
+  
+  // Profile photo (artistic)
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [profilePhotoArtistic, setProfilePhotoArtistic] = useState<string | null>(null);
+  const [transformingPhoto, setTransformingPhoto] = useState(false);
 
   const pickImage = async (side: 'front' | 'back') => {
     try {
