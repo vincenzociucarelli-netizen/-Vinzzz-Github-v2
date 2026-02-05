@@ -149,6 +149,8 @@ export default function CoachProfile() {
       setLoading(false);
     }
   };
+
+  const pickImage = async (side: 'front' | 'back') => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
