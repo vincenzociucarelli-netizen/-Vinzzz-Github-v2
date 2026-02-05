@@ -1342,6 +1342,117 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: 'italic',
   },
+  // Tax Table Styles
+  taxTableSection: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  taxTableTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 4,
+  },
+  taxTableSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 12,
+  },
+  taxTable: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  taxTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+  },
+  taxTableHeaderCell: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+  },
+  taxTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    backgroundColor: '#fff',
+  },
+  taxTableRowActive: {
+    backgroundColor: '#E3F2FD',
+  },
+  taxTableCell: {
+    flex: 1,
+    fontSize: 11,
+    color: '#333',
+    textAlign: 'center',
+  },
+  taxCellGreen: {
+    color: '#34C759',
+    fontWeight: '600',
+  },
+  taxCellRed: {
+    color: '#FF3B30',
+    fontWeight: '600',
+  },
+  taxCellOrange: {
+    color: '#FF9500',
+    fontWeight: '600',
+  },
+  taxTableNote: {
+    fontSize: 11,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  // Limit Section Styles
+  limitSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 12,
+    marginTop: 20,
+  },
+  limitCheckboxContent: {
+    flex: 1,
+  },
+  limitCheckboxTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  limitCheckboxDesc: {
+    fontSize: 12,
+    color: '#666',
+  },
+  limitCheckbox5000Active: {
+    backgroundColor: '#FFF3E0',
+    borderColor: '#FF9500',
+    borderWidth: 1,
+  },
+  limitCheckbox15000Active: {
+    backgroundColor: '#FFEBEE',
+    borderColor: '#FF3B30',
+    borderWidth: 1,
+  },
+  checkbox5000Active: {
+    backgroundColor: '#FF9500',
+    borderColor: '#FF9500',
+  },
+  checkbox15000Active: {
+    backgroundColor: '#FF3B30',
+    borderColor: '#FF3B30',
+  },
   changePasswordHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
