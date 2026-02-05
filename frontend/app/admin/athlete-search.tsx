@@ -393,6 +393,12 @@ export default function AthleteSearchScreen() {
         <Text style={styles.resultsCount}>
           {filteredAthletes.length} atleti trovati
         </Text>
+        {filteredAthletes.length > 0 && (
+          <TouchableOpacity style={styles.exportButton} onPress={exportToXLS}>
+            <Ionicons name="download-outline" size={18} color="#fff" />
+            <Text style={styles.exportButtonText}>Esporta XLS</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {loading ? (
