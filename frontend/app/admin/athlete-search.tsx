@@ -243,20 +243,27 @@ export default function AthleteSearchScreen() {
             </View>
           </View>
 
-          {/* Birth Year Filter */}
+          {/* Birth Year Range Filter */}
           <View style={styles.filterRow}>
             <Text style={styles.filterLabel}>Anno di Nascita</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={filters.birthYear}
-                onValueChange={(value) => setFilters({...filters, birthYear: value})}
-                style={styles.picker}
-              >
-                <Picker.Item label="Tutti gli anni" value="" />
-                {birthYears.map((year) => (
-                  <Picker.Item key={year} label={String(year)} value={String(year)} />
-                ))}
-              </Picker>
+            <View style={styles.rangeInputs}>
+              <TextInput
+                style={[styles.filterInput, styles.rangeInput]}
+                value={filters.birthYearFrom}
+                onChangeText={(text) => setFilters({...filters, birthYearFrom: text})}
+                placeholder="Da"
+                keyboardType="numeric"
+                maxLength={4}
+              />
+              <Text style={styles.rangeSeparator}>-</Text>
+              <TextInput
+                style={[styles.filterInput, styles.rangeInput]}
+                value={filters.birthYearTo}
+                onChangeText={(text) => setFilters({...filters, birthYearTo: text})}
+                placeholder="A"
+                keyboardType="numeric"
+                maxLength={4}
+              />
             </View>
           </View>
 
