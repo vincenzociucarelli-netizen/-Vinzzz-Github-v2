@@ -24,6 +24,14 @@ except ImportError:
     HAS_IMAGE_GENERATION = False
     logging.warning("emergentintegrations not available, image generation disabled")
 
+# OpenAI client for image editing
+try:
+    from openai import AsyncOpenAI
+    HAS_OPENAI_CLIENT = True
+except ImportError:
+    HAS_OPENAI_CLIENT = False
+    logging.warning("openai client not available")
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
