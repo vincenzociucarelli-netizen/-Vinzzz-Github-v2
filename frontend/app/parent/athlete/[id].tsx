@@ -716,6 +716,93 @@ export default function AthleteDetail() {
           </TouchableOpacity>
         </View>
 
+        {/* Athlete Photo Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>📸 Foto Atleta</Text>
+          <View style={styles.photoContainer}>
+            {transformingPhoto ? (
+              <View style={styles.photoPlaceholder}>
+                <ActivityIndicator size="large" color="#007AFF" />
+                <Text style={styles.transformingText}>Creando ritratto artistico...</Text>
+              </View>
+            ) : athletePhotoArtistic ? (
+              <Image
+                source={{ uri: `data:image/jpeg;base64,${athletePhotoArtistic}` }}
+                style={styles.athletePhotoLarge}
+              />
+            ) : athletePhoto ? (
+              <Image
+                source={{ uri: `data:image/jpeg;base64,${athletePhoto}` }}
+                style={styles.athletePhotoLarge}
+              />
+            ) : (
+              <View style={styles.photoPlaceholder}>
+                <Ionicons name="person" size={64} color="#ccc" />
+                <Text style={styles.photoPlaceholderText}>Nessuna foto</Text>
+              </View>
+            )}
+            
+            <TouchableOpacity
+              style={[styles.uploadPhotoButton, transformingPhoto && styles.buttonDisabled]}
+              onPress={async () => {
+                try {
+                  const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                  if (!permissionResult.granted) {
+                    Alert.alert('Permesso negato', 'È necessario concedere il permesso per accedere alla galleria');
+                    return;
+                  }
+
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                    quality: 0.7,
+                    base64: true,
+                  });
+
+                  if (!result.canceled && result.assets[0].base64) {
+                    const originalPhoto = result.assets[0].base64;
+                    setAthletePhoto(originalPhoto);
+                    setTransformingPhoto(true);
+                    
+                    try {
+                      const response = await api.post(`/athletes/${id}/transform-photo`, {
+                        image_base64: originalPhoto
+                      });
+                      
+                      if (response.data.success && response.data.artistic_photo) {
+                        setAthletePhotoArtistic(response.data.artistic_photo);
+                        Alert.alert('✅ Foto Trasformata', 'La foto è stata trasformata in stile pastello!');
+                      } else {
+                        setAthletePhotoArtistic(originalPhoto);
+                      }
+                    } catch (transformError: any) {
+                      console.error('Error transforming photo:', transformError);
+                      setAthletePhotoArtistic(originalPhoto);
+                      Alert.alert('Info', 'Foto caricata. La trasformazione artistica non è disponibile al momento.');
+                    } finally {
+                      setTransformingPhoto(false);
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error selecting image:', error);
+                  Alert.alert('Errore', 'Impossibile selezionare l\'immagine');
+                }
+              }}
+              disabled={transformingPhoto}
+            >
+              <Ionicons name="camera" size={20} color="#fff" />
+              <Text style={styles.uploadPhotoButtonText}>
+                {athletePhotoArtistic ? 'Cambia Foto' : 'Carica Foto'}
+              </Text>
+            </TouchableOpacity>
+            
+            <Text style={styles.photoHint}>
+              🎨 La foto verrà trasformata in stile pastello artistico
+            </Text>
+          </View>
+        </View>
+
         {/* Status Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Stato</Text>
