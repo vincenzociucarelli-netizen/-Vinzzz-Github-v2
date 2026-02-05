@@ -2141,7 +2141,15 @@ async def get_athlete_technical_data(athlete_id: str, current_user = Depends(get
             else:
                 cert_status = "valid"
     
-    # Return only technical data + certificate status
+    # Get parent contact info for emergencies
+    parent = await db.users.find_one({"id": athlete.get("parent_id")})
+    parent_phone = parent.get("phone") if parent else None
+    parent_name = parent.get("full_name") if parent else None
+    
+    # Also get emergency phone from athlete record
+    emergency_phone = athlete.get("emergency_phone")
+    
+    # Return technical data + certificate status + emergency contacts
     return {
         "id": athlete["id"],
         "full_name": athlete.get("full_name"),
@@ -2160,6 +2168,10 @@ async def get_athlete_technical_data(athlete_id: str, current_user = Depends(get
         # Certificate info (visible to all)
         "certificate_status": cert_status,
         "certificate_expiry": cert_expiry,
+        # Emergency contacts (visible to coach for emergencies)
+        "parent_name": parent_name,
+        "parent_phone": parent_phone,
+        "emergency_phone": emergency_phone,
     }
 
 @api_router.patch("/athletes/{athlete_id}/technical-data")
