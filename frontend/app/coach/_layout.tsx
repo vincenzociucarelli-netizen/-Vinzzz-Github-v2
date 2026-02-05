@@ -5,6 +5,7 @@ export default function CoachLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="history" />
+      <Stack.Screen name="athlete/[id]" />
     </Stack>
   );
 }
