@@ -83,6 +83,11 @@ export default function AthleteDetail() {
   // Certificate viewing modal
   const [viewCertModalVisible, setViewCertModalVisible] = useState(false);
   
+  // Athlete photo states
+  const [athletePhoto, setAthletePhoto] = useState<string | null>(null);
+  const [athletePhotoArtistic, setAthletePhotoArtistic] = useState<string | null>(null);
+  const [transformingPhoto, setTransformingPhoto] = useState(false);
+  
   // QR Code ref for sharing
   const qrCodeRef = useRef<View>(null);
 
