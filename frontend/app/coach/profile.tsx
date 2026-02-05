@@ -833,7 +833,7 @@ export default function CoachProfile() {
                 <View style={styles.limitCheckboxContent}>
                   <Text style={styles.limitCheckboxTitle}>Superamento €5.000</Text>
                   <Text style={styles.limitCheckboxDesc}>
-                    Dichiaro di aver superato €5.000 di compensi totali nell'anno solare
+                    Dichiaro di aver superato €5.000 di compensi totali nell&apos;anno solare
                   </Text>
                 </View>
               </TouchableOpacity>
