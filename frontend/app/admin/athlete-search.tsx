@@ -534,11 +534,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   resultsCount: {
     fontSize: 14,
     color: '#666',
     fontWeight: '500',
+  },
+  exportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#34C759',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 6,
+  },
+  exportButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
