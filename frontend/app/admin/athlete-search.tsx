@@ -145,7 +145,8 @@ export default function AthleteSearchScreen() {
   const clearFilters = () => {
     setFilters({
       role: '',
-      birthYear: '',
+      birthYearFrom: '',
+      birthYearTo: '',
       postalCode: '',
       heightMin: '',
       heightMax: '',
