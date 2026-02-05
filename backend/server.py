@@ -1152,6 +1152,10 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
         update_dict["logo"] = data.logo
     if data.logo_size is not None:
         update_dict["logo_size"] = data.logo_size
+    if data.athlete_roles is not None:
+        update_dict["athlete_roles"] = data.athlete_roles
+    if data.athlete_characteristics is not None:
+        update_dict["athlete_characteristics"] = data.athlete_characteristics
     
     if update_dict:
         await db.settings.update_one(
