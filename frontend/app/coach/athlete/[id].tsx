@@ -17,19 +17,21 @@ import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../../src/services/api';
 
-interface Athlete {
+interface TechnicalData {
   id: string;
   full_name: string;
   first_name?: string;
   last_name?: string;
-  date_of_birth: string;
-  team_id: string;
+  date_of_birth?: string;
+  team_id?: string;
   athlete_photo?: string;
   athlete_photo_artistic?: string;
   athlete_role?: string;
   athlete_height?: number;
   athlete_weight?: number;
   athlete_characteristics?: string[];
+  certificate_status?: string;
+  certificate_expiry?: string;
 }
 
 interface SocietySettings {
@@ -42,7 +44,7 @@ export default function CoachAthleteDetail() {
   const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [athlete, setAthlete] = useState<Athlete | null>(null);
+  const [athlete, setAthlete] = useState<TechnicalData | null>(null);
   const [settings, setSettings] = useState<SocietySettings>({ athlete_roles: [], athlete_characteristics: [] });
   
   // Form state
@@ -61,7 +63,7 @@ export default function CoachAthleteDetail() {
   const loadData = async () => {
     try {
       const [athleteRes, settingsRes] = await Promise.all([
-        api.get(`/athletes/${id}`),
+        api.get(`/athletes/${id}/technical-data`),
         api.get('/settings/society'),
       ]);
       
@@ -127,12 +129,10 @@ export default function CoachAthleteDetail() {
             setPhotoArtistic(response.data.artistic_photo);
             showAlert('✅ Foto Trasformata', 'La foto è stata trasformata in stile artistico!');
           } else {
-            // Fallback to original photo
             setPhotoArtistic(originalPhoto);
           }
         } catch (transformError: any) {
           console.error('Error transforming photo:', transformError);
-          // Use original photo as fallback
           setPhotoArtistic(originalPhoto);
           showAlert('Info', 'Foto caricata. La trasformazione artistica non è disponibile al momento.');
         } finally {
@@ -156,7 +156,7 @@ export default function CoachAthleteDetail() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.patch(`/athletes/${id}`, {
+      await api.patch(`/athletes/${id}/technical-data`, {
         athlete_photo: photo,
         athlete_photo_artistic: photoArtistic,
         athlete_role: role || null,
@@ -173,7 +173,8 @@ export default function CoachAthleteDetail() {
     }
   };
 
-  const calculateAge = (dateOfBirth: string) => {
+  const calculateAge = (dateOfBirth?: string) => {
+    if (!dateOfBirth) return null;
     const dob = new Date(dateOfBirth);
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
@@ -182,6 +183,28 @@ export default function CoachAthleteDetail() {
       age--;
     }
     return age;
+  };
+
+  const getCertificateInfo = () => {
+    if (!athlete?.certificate_status) {
+      return { icon: 'alert-circle', color: '#FF9500', text: 'Certificato non presente' };
+    }
+    switch (athlete.certificate_status) {
+      case 'valid':
+        return { icon: 'checkmark-circle', color: '#34C759', text: 'Certificato valido' };
+      case 'expiring_soon':
+        return { icon: 'warning', color: '#FF9500', text: 'Certificato in scadenza' };
+      case 'expired':
+        return { icon: 'close-circle', color: '#FF3B30', text: 'Certificato scaduto' };
+      default:
+        return { icon: 'alert-circle', color: '#FF9500', text: 'Stato sconosciuto' };
+    }
+  };
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
   };
 
   if (loading) {
@@ -217,6 +240,9 @@ export default function CoachAthleteDetail() {
       </View>
     );
   }
+
+  const certInfo = getCertificateInfo();
+  const age = calculateAge(athlete.date_of_birth);
 
   return (
     <View style={styles.container}>
@@ -264,8 +290,23 @@ export default function CoachAthleteDetail() {
           </View>
           <View style={styles.athleteInfo}>
             <Text style={styles.athleteName}>{athlete.full_name}</Text>
-            <Text style={styles.athleteAge}>{calculateAge(athlete.date_of_birth)} anni</Text>
+            {age && <Text style={styles.athleteAge}>{age} anni</Text>}
           </View>
+        </View>
+
+        {/* Certificate Status - VISIBLE TO ALL */}
+        <View style={[styles.section, styles.certificateSection]}>
+          <View style={styles.certificateHeader}>
+            <Ionicons name={certInfo.icon as any} size={24} color={certInfo.color} />
+            <Text style={[styles.certificateStatus, { color: certInfo.color }]}>
+              {certInfo.text}
+            </Text>
+          </View>
+          {athlete.certificate_expiry && (
+            <Text style={styles.certificateExpiry}>
+              Scadenza: {formatDate(athlete.certificate_expiry)}
+            </Text>
+          )}
         </View>
 
         {/* Role Section */}
@@ -348,6 +389,14 @@ export default function CoachAthleteDetail() {
               ⚠️ Nessuna caratteristica definita. L'admin deve configurare le caratteristiche nelle impostazioni.
             </Text>
           )}
+        </View>
+
+        {/* Privacy Notice */}
+        <View style={styles.privacyNotice}>
+          <Ionicons name="lock-closed" size={16} color="#666" />
+          <Text style={styles.privacyText}>
+            I dati anagrafici dell'atleta sono riservati e non visibili in questa sezione.
+          </Text>
         </View>
 
         {/* Save Button */}
@@ -481,6 +530,25 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  certificateSection: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+  },
+  certificateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  certificateStatus: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  certificateExpiry: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 8,
+    marginLeft: 36,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -554,6 +622,21 @@ const styles = StyleSheet.create({
   characteristicTextSelected: {
     color: '#fff',
     fontWeight: '600',
+  },
+  privacyNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  privacyText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
   },
   saveButton: {
     backgroundColor: '#34C759',
