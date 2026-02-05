@@ -408,6 +408,57 @@ export default function AdminDashboard() {
           </View>
         )}
 
+        {/* Deletion Requests Section */}
+        {deletionRequests.length > 0 && (
+          <View style={styles.deletionRequestsCard}>
+            <View style={styles.deletionRequestsHeader}>
+              <Ionicons name="trash" size={20} color="#FF3B30" />
+              <Text style={styles.deletionRequestsTitle}>
+                🗑️ Richieste di Cancellazione ({deletionRequests.length})
+              </Text>
+            </View>
+            {deletionRequests.map((request) => {
+              const requestDate = request.requested_at ? new Date(request.requested_at) : null;
+              const formattedDate = requestDate 
+                ? `${String(requestDate.getDate()).padStart(2, '0')}/${String(requestDate.getMonth() + 1).padStart(2, '0')}/${requestDate.getFullYear()}`
+                : '';
+              
+              return (
+                <View key={request.id} style={styles.deletionRequestItem}>
+                  <View style={styles.deletionRequestInfo}>
+                    <Text style={styles.deletionRequestName}>{request.full_name}</Text>
+                    <Text style={styles.deletionRequestTeam}>{request.team_name}</Text>
+                    <Text style={styles.deletionRequestParent}>
+                      Richiesto da: {request.requested_by_name}
+                    </Text>
+                    {formattedDate && (
+                      <Text style={styles.deletionRequestDate}>📅 {formattedDate}</Text>
+                    )}
+                  </View>
+                  <View style={styles.deletionRequestActions}>
+                    <TouchableOpacity
+                      style={[styles.rejectDeletionBtn, processingDeletion === request.id && styles.btnDisabled]}
+                      onPress={() => handleRejectDeletion(request.id, request.full_name)}
+                      disabled={processingDeletion === request.id}
+                    >
+                      <Ionicons name="close" size={16} color="#FF9500" />
+                      <Text style={styles.rejectDeletionText}>Rifiuta</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.approveDeletionBtn, processingDeletion === request.id && styles.btnDisabled]}
+                      onPress={() => handleApproveDeletion(request.id, request.full_name)}
+                      disabled={processingDeletion === request.id}
+                    >
+                      <Ionicons name="trash" size={16} color="#fff" />
+                      <Text style={styles.approveDeletionText}>Elimina</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
         {/* Section Title */}
         <Text style={styles.sectionTitle}>Gestione</Text>
 
