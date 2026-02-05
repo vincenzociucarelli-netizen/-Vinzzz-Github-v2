@@ -887,6 +887,9 @@ class UserProfileUpdate(BaseModel):
     compensation_accepted: Optional[bool] = None
     compensation_history: Optional[dict] = None
     over_5000_limit: Optional[dict] = None
+    # Profile photo
+    profile_photo: Optional[str] = None
+    profile_photo_artistic: Optional[str] = None
 
 @api_router.patch("/auth/me")
 async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_user)):
