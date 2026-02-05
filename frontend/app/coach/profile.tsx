@@ -193,7 +193,7 @@ export default function CoachProfile() {
     return months;
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
     const day = String(date.getDate()).padStart(2, '0');
