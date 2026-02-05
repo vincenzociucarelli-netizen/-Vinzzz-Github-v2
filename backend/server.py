@@ -2355,7 +2355,6 @@ async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, 
             "artistic_photo": data.image_base64,
             "note": f"Errore trasformazione: {str(e)}"
         }
-        raise HTTPException(status_code=500, detail=f"Errore durante la trasformazione: {str(e)}")
 
 @api_router.post("/athletes/{athlete_id}/request-deletion")
 async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_current_user)):
