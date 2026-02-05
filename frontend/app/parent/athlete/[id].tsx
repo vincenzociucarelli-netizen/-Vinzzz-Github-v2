@@ -102,6 +102,10 @@ export default function AthleteDetail() {
       setAthlete(athleteRes.data);
       setPayments(paymentsRes.data);
       setTeams(teamsRes.data);
+      
+      // Load athlete photo
+      setAthletePhoto(athleteRes.data.athlete_photo || null);
+      setAthletePhotoArtistic(athleteRes.data.athlete_photo_artistic || null);
 
       // Check if athlete has data password
       try {
