@@ -979,7 +979,7 @@ async def transform_user_photo(data: ImageTransformRequest, current_user = Depen
             response = await client.images.edit(
                 model="gpt-image-1",
                 image=image_bytes,
-                prompt="Transform this photo into a highly realistic pencil sketch portrait style. Keep the facial features accurate and recognizable. The sketch should be detailed, artistic, with professional shading and fine details. Preserve the person's likeness exactly.",
+                prompt="Transform this photo into a soft pastel portrait style with gentle, muted colors. Keep the facial features accurate and recognizable. The portrait should look like a professional pastel drawing with soft blending, delicate tones, and an artistic quality. Preserve the person's likeness exactly while giving it a warm, artistic feel.",
                 n=1,
                 size="1024x1024"
             )
@@ -2378,7 +2378,7 @@ async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, 
             response = await client.images.edit(
                 model="gpt-image-1",
                 image=image_bytes,
-                prompt="Transform this photo into a highly realistic pencil sketch portrait style. Keep the facial features accurate and recognizable. The sketch should be detailed, artistic, with professional shading and fine details. Preserve the person's likeness exactly.",
+                prompt="Transform this photo into a soft pastel portrait style with gentle, muted colors. Keep the facial features accurate and recognizable. The portrait should look like a professional pastel drawing with soft blending, delicate tones, and an artistic quality. Preserve the person's likeness exactly while giving it a warm, artistic feel.",
                 n=1,
                 size="1024x1024"
             )
