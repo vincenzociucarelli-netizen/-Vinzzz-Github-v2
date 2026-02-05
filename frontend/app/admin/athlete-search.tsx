@@ -49,7 +49,8 @@ export default function AthleteSearchScreen() {
   
   const [filters, setFilters] = useState<FilterState>({
     role: '',
-    birthYear: '',
+    birthYearFrom: '',
+    birthYearTo: '',
     postalCode: '',
     heightMin: '',
     heightMax: '',
