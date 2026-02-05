@@ -212,7 +212,7 @@ export default function CoachProfile() {
     setRefreshing(false);
   };
 
-  const showAlert = (title: string, message: string, onOk?: () => void) => {
+  const showAlert = (title, message, onOk) => {
     if (Platform.OS === 'web') {
       window.alert(`${title}\n\n${message}`);
       if (onOk) onOk();
