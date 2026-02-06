@@ -1338,7 +1338,7 @@ const styles = StyleSheet.create({
   },
   coachPhone: {
     fontSize: 13,
-    color: '#007AFF',
+    color: '#25D366',
   },
   // Photo modal
   photoModalOverlay: {
