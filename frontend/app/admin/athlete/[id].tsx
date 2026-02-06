@@ -693,6 +693,15 @@ export default function AdminAthleteDetail() {
                     onChangeText={(t) => setEditData({...editData, first_name: t.toUpperCase()})}
                     autoCapitalize="characters"
                   />
+                  <Text style={styles.inputLabel}>Data di Nascita (GG/MM/AAAA)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editData.date_of_birth}
+                    onChangeText={(t) => setEditData({...editData, date_of_birth: formatDateInputAuto(t)})}
+                    placeholder="01/01/2010"
+                    keyboardType="number-pad"
+                    maxLength={10}
+                  />
                   <View style={styles.row}>
                     <View style={styles.flex2}>
                       <Text style={styles.inputLabel}>Luogo di nascita</Text>
