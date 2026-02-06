@@ -1689,7 +1689,30 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     clean_mongo_doc(team)
-    return Team(**team)
+    
+    # Find coaches assigned to this team
+    coaches = await db.users.find({
+        "role": "coach",
+        "assigned_teams": team_id
+    }).to_list(10)
+    
+    coach_info = []
+    for coach in coaches:
+        coach_info.append({
+            "id": coach.get("id"),
+            "full_name": coach.get("full_name", ""),
+            "email": coach.get("email", ""),
+            "phone": coach.get("phone", ""),
+            "profile_photo": coach.get("profile_photo", ""),
+            "profile_photo_artistic": coach.get("profile_photo_artistic", ""),
+        })
+    
+    team_obj = Team(**team)
+    # Add coach_info as extra field
+    team_dict = team_obj.dict()
+    team_dict["coach_info"] = coach_info
+    
+    return team_dict
 
 @api_router.patch("/teams/{team_id}", response_model=Team)
 async def update_team(team_id: str, team_data: TeamUpdate, current_user = Depends(get_current_user)):
