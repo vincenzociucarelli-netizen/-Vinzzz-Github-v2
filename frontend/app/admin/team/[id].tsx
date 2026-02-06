@@ -477,6 +477,50 @@ export default function TeamDetail() {
         ) : (
           // VIEW MODE
           <>
+            {/* Coach Section */}
+            {coachInfo.length > 0 && (
+              <View style={styles.coachSection}>
+                <Text style={styles.sectionTitle}>👨‍🏫 Coach</Text>
+                {coachInfo.map((coach, index) => (
+                  <View key={coach.id || index} style={styles.coachCard}>
+                    <TouchableOpacity 
+                      onPress={() => {
+                        const photo = coach.profile_photo_artistic || coach.profile_photo;
+                        if (photo) {
+                          setSelectedCoachPhoto(photo);
+                          setSelectedCoachName(coach.full_name);
+                          setCoachPhotoModal(true);
+                        }
+                      }}
+                    >
+                      {coach.profile_photo_artistic || coach.profile_photo ? (
+                        <Image 
+                          source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
+                          style={styles.coachPhotoSmall}
+                        />
+                      ) : (
+                        <View style={styles.coachPhotoPlaceholder}>
+                          <Ionicons name="person" size={24} color="#999" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                    <View style={styles.coachInfo}>
+                      <Text style={styles.coachName}>{coach.full_name}</Text>
+                      {coach.phone && (
+                        <TouchableOpacity 
+                          style={styles.coachContactRow}
+                          onPress={() => Linking.openURL(`tel:${coach.phone}`)}
+                        >
+                          <Ionicons name="call" size={14} color="#007AFF" />
+                          <Text style={styles.coachPhone}>{coach.phone}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
             {/* Training Schedule Card */}
             <View style={styles.trainingCard}>
               <View style={styles.trainingHeader}>
