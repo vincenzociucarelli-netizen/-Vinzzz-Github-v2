@@ -1358,6 +1358,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#25D366',
   },
+  noCoachText: {
+    fontSize: 14,
+    color: '#888',
+    fontStyle: 'italic',
+    paddingVertical: 8,
+  },
   // Photo modal
   photoModalOverlay: {
     flex: 1,
