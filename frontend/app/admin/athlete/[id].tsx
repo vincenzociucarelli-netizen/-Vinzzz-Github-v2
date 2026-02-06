@@ -201,6 +201,25 @@ export default function AdminAthleteDetail() {
       setPayments(paymentsRes.data);
       setCertificate(certRes.data);
       
+      // Load athlete photo
+      setAthletePhoto(athleteData.athlete_photo || null);
+      setAthletePhotoArtistic(athleteData.athlete_photo_artistic || null);
+      
+      // Load technical data
+      setAthleteRole(athleteData.athlete_role || '');
+      setAthleteHeight(athleteData.athlete_height?.toString() || '');
+      setAthleteWeight(athleteData.athlete_weight?.toString() || '');
+      setAthleteCharacteristics(athleteData.athlete_characteristics || []);
+      
+      // Load available roles and characteristics from settings
+      try {
+        const settingsRes = await api.get('/settings/society');
+        setAvailableRoles(settingsRes.data.athlete_roles || []);
+        setAvailableCharacteristics(settingsRes.data.athlete_characteristics || []);
+      } catch (e) {
+        console.log('Could not load settings');
+      }
+      
       // Populate edit data
       setEditData({
         federal_code: athleteData.federal_code || '',
