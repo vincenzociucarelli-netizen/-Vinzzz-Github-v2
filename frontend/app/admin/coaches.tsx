@@ -557,6 +557,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF3E0',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  coachPhoto: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   userInfo: {
     flex: 1,
