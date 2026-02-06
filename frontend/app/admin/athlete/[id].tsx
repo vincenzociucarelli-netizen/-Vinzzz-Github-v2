@@ -193,6 +193,7 @@ export default function AdminAthleteDetail() {
         is_registered: athleteData.is_registered || false,
         last_name: athleteData.last_name || athleteData.full_name?.split(' ')[0] || '',
         first_name: athleteData.first_name || athleteData.full_name?.split(' ').slice(1).join(' ') || '',
+        date_of_birth: athleteData.date_of_birth ? formatDateForInput(athleteData.date_of_birth) : '',
         birth_place: athleteData.birth_place || '',
         birth_province: athleteData.birth_province || '',
         fiscal_code: athleteData.fiscal_code || '',
