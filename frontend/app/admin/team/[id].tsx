@@ -386,9 +386,10 @@ export default function TeamDetail() {
                         <TextInput
                           style={styles.miniInput}
                           value={session.timeStart}
-                          onChangeText={(v) => updateTrainingSession(index, 'timeStart', v)}
+                          onChangeText={(v) => updateTrainingSession(index, 'timeStart', formatTimeInput(v))}
                           placeholder="18:00"
                           maxLength={5}
+                          keyboardType="number-pad"
                         />
                       </View>
                       <View style={styles.fieldQuarter}>
@@ -396,9 +397,10 @@ export default function TeamDetail() {
                         <TextInput
                           style={styles.miniInput}
                           value={session.timeEnd}
-                          onChangeText={(v) => updateTrainingSession(index, 'timeEnd', v)}
+                          onChangeText={(v) => updateTrainingSession(index, 'timeEnd', formatTimeInput(v))}
                           placeholder="20:00"
                           maxLength={5}
+                          keyboardType="number-pad"
                         />
                       </View>
                       <View style={styles.fieldHalf}>
