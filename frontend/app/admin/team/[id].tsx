@@ -88,6 +88,8 @@ export default function TeamDetail() {
       // Set coach info
       if (teamData.coach_info) {
         setCoachInfo(teamData.coach_info);
+        // Set selected coach IDs for editing
+        setSelectedCoachIds(teamData.coach_info.map((c: CoachInfo) => c.id));
       }
       
       // Populate form
@@ -119,8 +121,18 @@ export default function TeamDetail() {
     }
   };
 
+  const loadAvailableCoaches = async () => {
+    try {
+      const response = await api.get('/users/coaches');
+      setAvailableCoaches(response.data);
+    } catch (error) {
+      console.error('Error loading coaches:', error);
+    }
+  };
+
   useEffect(() => {
     loadTeam();
+    loadAvailableCoaches();
   }, [id]);
 
   const showAlert = (title: string, message: string) => {
