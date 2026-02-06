@@ -288,6 +288,56 @@ export default function TeamDetail() {
               />
             </View>
 
+            {/* Coach Assignment Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>👨‍🏫 Assegna Coach</Text>
+              {availableCoaches.length > 0 ? (
+                <View style={styles.coachSelectionList}>
+                  {availableCoaches.map((coach) => (
+                    <TouchableOpacity
+                      key={coach.id}
+                      style={[
+                        styles.coachSelectionItem,
+                        selectedCoachIds.includes(coach.id) && styles.coachSelectionItemSelected
+                      ]}
+                      onPress={() => {
+                        if (selectedCoachIds.includes(coach.id)) {
+                          setSelectedCoachIds(selectedCoachIds.filter(cId => cId !== coach.id));
+                        } else {
+                          setSelectedCoachIds([...selectedCoachIds, coach.id]);
+                        }
+                      }}
+                    >
+                      {coach.profile_photo_artistic || coach.profile_photo ? (
+                        <Image 
+                          source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
+                          style={styles.coachSelectionPhoto}
+                        />
+                      ) : (
+                        <View style={styles.coachSelectionPhotoPlaceholder}>
+                          <Ionicons name="person" size={18} color="#999" />
+                        </View>
+                      )}
+                      <Text style={[
+                        styles.coachSelectionName,
+                        selectedCoachIds.includes(coach.id) && styles.coachSelectionNameSelected
+                      ]}>
+                        {coach.full_name}
+                      </Text>
+                      {selectedCoachIds.includes(coach.id) && (
+                        <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.noCoachText}>Nessun coach disponibile nel sistema</Text>
+              )}
+              <Text style={styles.helperText}>
+                Seleziona uno o più coach da assegnare a questa squadra
+              </Text>
+            </View>
+
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>💰 Quote e Pagamenti</Text>
               <Text style={styles.inputLabel}>Quota Totale (€)</Text>
