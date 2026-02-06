@@ -448,21 +448,51 @@ export default function CoachProfile() {
     }
   };
 
-  const renderField = (label, value, key, editable = true) => (
-    <View style={styles.fieldContainer}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      {editing && editable ? (
-        <TextInput
-          style={styles.input}
-          value={editData[key]?.toString() || ''}
-          onChangeText={(text) => setEditData({ ...editData, [key]: text.toUpperCase() })}
-          autoCapitalize="characters"
-        />
-      ) : (
-        <Text style={styles.fieldValue}>{value || '-'}</Text>
-      )}
-    </View>
-  );
+  // Auto-format date as GG/MM/AAAA
+  const formatDateInputAuto = (text: string) => {
+    const numbers = text.replace(/\D/g, '');
+    let formatted = '';
+    if (numbers.length > 0) {
+      formatted = numbers.substring(0, 2);
+    }
+    if (numbers.length > 2) {
+      formatted += '/' + numbers.substring(2, 4);
+    }
+    if (numbers.length > 4) {
+      formatted += '/' + numbers.substring(4, 8);
+    }
+    return formatted;
+  };
+
+  const renderField = (label: string, value: string, key: string, editable = true) => {
+    // Special handling for date_of_birth field
+    const isDateField = key === 'date_of_birth';
+    
+    return (
+      <View style={styles.fieldContainer}>
+        <Text style={styles.fieldLabel}>{label}{isDateField && editing ? ' (GG/MM/AAAA)' : ''}</Text>
+        {editing && editable ? (
+          <TextInput
+            style={styles.input}
+            value={editData[key]?.toString() || ''}
+            onChangeText={(text) => {
+              if (isDateField) {
+                setEditData({ ...editData, [key]: formatDateInputAuto(text) });
+              } else {
+                setEditData({ ...editData, [key]: text.toUpperCase() });
+              }
+            }}
+            autoCapitalize={isDateField ? 'none' : 'characters'}
+            keyboardType={isDateField ? 'number-pad' : 'default'}
+            maxLength={isDateField ? 10 : undefined}
+            placeholder={isDateField ? '01/01/1990' : undefined}
+          />
+        ) : (
+          <Text style={styles.fieldValue}>{value || '-'}</Text>
+        )}
+      </View>
+    );
+  };
 
   if (loading) {
     return (
