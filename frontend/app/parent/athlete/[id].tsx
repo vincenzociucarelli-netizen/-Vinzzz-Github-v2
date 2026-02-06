@@ -80,6 +80,15 @@ export default function AthleteDetail() {
   // Teams list for team selection
   const [teams, setTeams] = useState<Team[]>([]);
   
+  // Coach info for team
+  const [coachInfo, setCoachInfo] = useState<{
+    full_name: string;
+    phone: string;
+    profile_photo?: string;
+    profile_photo_artistic?: string;
+  } | null>(null);
+  const [coachPhotoModalVisible, setCoachPhotoModalVisible] = useState(false);
+  
   // Certificate viewing modal
   const [viewCertModalVisible, setViewCertModalVisible] = useState(false);
   
