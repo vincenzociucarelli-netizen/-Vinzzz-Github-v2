@@ -974,6 +974,52 @@ export default function AthleteDetail() {
             <Text style={styles.dataValue}>{getTeamName(athlete.team_id)}</Text>
           </View>
           
+          {/* Coach Info */}
+          {coachInfo && (
+            <View style={styles.coachInfoCard}>
+              <Text style={styles.coachInfoTitle}>👨‍🏫 Coach della Squadra</Text>
+              <View style={styles.coachInfoRow}>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (coachInfo.profile_photo_artistic || coachInfo.profile_photo) {
+                      setCoachPhotoModalVisible(true);
+                    }
+                  }}
+                >
+                  {coachInfo.profile_photo_artistic || coachInfo.profile_photo ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${coachInfo.profile_photo_artistic || coachInfo.profile_photo}` }}
+                      style={styles.coachPhotoSmall}
+                    />
+                  ) : (
+                    <View style={styles.coachPhotoPlaceholder}>
+                      <Ionicons name="person" size={20} color="#999" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <View style={styles.coachInfoDetails}>
+                  <Text style={styles.coachName}>{coachInfo.full_name}</Text>
+                  {coachInfo.phone && (
+                    <TouchableOpacity 
+                      style={styles.whatsappButton}
+                      onPress={() => {
+                        let phone = coachInfo.phone.replace(/\s+/g, '').replace(/^0/, '39');
+                        if (!phone.startsWith('+') && !phone.startsWith('39')) {
+                          phone = '39' + phone;
+                        }
+                        phone = phone.replace('+', '');
+                        Linking.openURL(`https://wa.me/${phone}`);
+                      }}
+                    >
+                      <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                      <Text style={styles.whatsappText}>Messaggio WhatsApp</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </View>
+          )}
+          
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Cognome</Text>
             <Text style={styles.dataValue}>{athlete.last_name || '-'}</Text>
