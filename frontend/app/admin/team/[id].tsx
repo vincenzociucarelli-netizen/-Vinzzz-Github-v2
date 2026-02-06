@@ -494,10 +494,10 @@ export default function TeamDetail() {
           // VIEW MODE
           <>
             {/* Coach Section */}
-            {coachInfo.length > 0 && (
-              <View style={styles.coachSection}>
-                <Text style={styles.sectionTitle}>👨‍🏫 Coach</Text>
-                {coachInfo.map((coach, index) => (
+            <View style={styles.coachSection}>
+              <Text style={styles.sectionTitle}>👨‍🏫 Coach</Text>
+              {coachInfo.length > 0 ? (
+                coachInfo.map((coach, index) => (
                   <View key={coach.id || index} style={styles.coachCard}>
                     <TouchableOpacity 
                       onPress={() => {
@@ -541,9 +541,11 @@ export default function TeamDetail() {
                       )}
                     </View>
                   </View>
-                ))}
-              </View>
-            )}
+                ))
+              ) : (
+                <Text style={styles.noCoachText}>Nessun coach assegnato a questa squadra</Text>
+              )}
+            </View>
 
             {/* Training Schedule Card */}
             <View style={styles.trainingCard}>
