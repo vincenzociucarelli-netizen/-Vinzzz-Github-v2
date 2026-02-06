@@ -213,6 +213,9 @@ export default function TeamDetail() {
 
       await api.patch(`/teams/${id}`, updateData);
       
+      // Assign coaches to team
+      await api.post(`/teams/${id}/assign-coaches`, selectedCoachIds);
+      
       setEditing(false);
       setTrainingModalVisible(false);
       await loadTeam();
