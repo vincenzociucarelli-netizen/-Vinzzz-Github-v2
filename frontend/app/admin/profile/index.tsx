@@ -17,6 +17,7 @@ import { useAuthStore } from '../../../src/store/authStore';
 import api from '../../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { Picker } from '@react-native-picker/picker';
 
 export default function AdminProfile() {
   const router = useRouter();
