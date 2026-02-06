@@ -979,7 +979,7 @@ async def transform_user_photo(data: ImageTransformRequest, current_user = Depen
             response = await client.images.edit(
                 model="gpt-image-1",
                 image=image_bytes,
-                prompt="Transform this photo into a VIBRANT PASTEL CHALK DRAWING with visible brush strokes and artistic texture. Use bold, saturated pastel colors (soft pinks, sky blues, warm yellows, mint greens). The style should clearly look like hand-drawn art, NOT a photo filter. Add subtle paper texture and visible artistic strokes. Keep facial features recognizable but stylized like a professional pastel portrait. Make it OBVIOUS this is an artistic transformation.",
+                prompt="Transform this portrait photo into a HAND-DRAWN COLORED PENCIL SKETCH with soft pastel tones. The style should look like an artistic sketch made with colored pencils on textured paper. Use light, delicate pencil strokes visible throughout. Apply soft pastel colors (light peach for skin, muted blues, gentle pinks, warm yellows). The drawing should have a loose, artistic quality like a professional portrait sketch - NOT a photo filter. Show visible pencil hatching and cross-hatching techniques. Keep the face recognizable but clearly hand-drawn with artistic imperfections. Add subtle paper grain texture in the background.",
                 n=1,
                 size="1024x1024"
             )
@@ -2401,7 +2401,7 @@ async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, 
             response = await client.images.edit(
                 model="gpt-image-1",
                 image=image_bytes,
-                prompt="Transform this photo into a VIBRANT PASTEL CHALK DRAWING with visible brush strokes and artistic texture. Use bold, saturated pastel colors (soft pinks, sky blues, warm yellows, mint greens). The style should clearly look like hand-drawn art, NOT a photo filter. Add subtle paper texture and visible artistic strokes. Keep facial features recognizable but stylized like a professional pastel portrait. Make it OBVIOUS this is an artistic transformation.",
+                prompt="Transform this portrait photo into a HAND-DRAWN COLORED PENCIL SKETCH with soft pastel tones. The style should look like an artistic sketch made with colored pencils on textured paper. Use light, delicate pencil strokes visible throughout. Apply soft pastel colors (light peach for skin, muted blues, gentle pinks, warm yellows). The drawing should have a loose, artistic quality like a professional portrait sketch - NOT a photo filter. Show visible pencil hatching and cross-hatching techniques. Keep the face recognizable but clearly hand-drawn with artistic imperfections. Add subtle paper grain texture in the background.",
                 n=1,
                 size="1024x1024"
             )
