@@ -1440,7 +1440,36 @@ export default function AdminAthleteDetail() {
             </View>
             <View style={styles.certViewerButtons}>
               {Platform.OS !== 'web' && (
-                <TouchableOpacity style={styles.shareBtn}>
+                <TouchableOpacity 
+                  style={styles.shareBtn}
+                  onPress={async () => {
+                    if (certificate?.pdf_data) {
+                      try {
+                        const Sharing = require('expo-sharing');
+                        const FileSystem = require('expo-file-system');
+                        
+                        const filename = `certificato_${athlete?.full_name?.replace(/\s+/g, '_')}.jpg`;
+                        const fileUri = FileSystem.documentDirectory + filename;
+                        
+                        await FileSystem.writeAsStringAsync(fileUri, certificate.pdf_data, {
+                          encoding: FileSystem.EncodingType.Base64,
+                        });
+                        
+                        if (await Sharing.isAvailableAsync()) {
+                          await Sharing.shareAsync(fileUri, {
+                            mimeType: 'image/jpeg',
+                            dialogTitle: `Certificato Medico - ${athlete?.full_name}`,
+                          });
+                        } else {
+                          showAlert('Errore', 'Condivisione non disponibile su questo dispositivo');
+                        }
+                      } catch (error) {
+                        console.error('Share error:', error);
+                        showAlert('Errore', 'Impossibile condividere il certificato');
+                      }
+                    }
+                  }}
+                >
                   <Ionicons name="share-outline" size={20} color="#007AFF" />
                   <Text style={styles.shareBtnText}>Condividi</Text>
                 </TouchableOpacity>
