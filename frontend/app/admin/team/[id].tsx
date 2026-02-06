@@ -1087,10 +1087,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
     overflow: 'hidden',
-    minHeight: 60,
+    minHeight: 55,
   },
   picker: {
-    height: 60,
+    height: 55,
     width: '100%',
   },
   addTrainingBtn: {
