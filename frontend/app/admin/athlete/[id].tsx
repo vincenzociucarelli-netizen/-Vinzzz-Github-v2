@@ -1935,4 +1935,128 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  // Photo section styles
+  photoSection: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  athletePhotoPreview: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#f0f0f0',
+  },
+  photoPlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    borderStyle: 'dashed',
+  },
+  photoPlaceholderText: {
+    color: '#aaa',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  transformingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 8,
+  },
+  transformingText: {
+    color: '#007AFF',
+    fontSize: 13,
+  },
+  uploadPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginTop: 12,
+    gap: 6,
+  },
+  uploadPhotoBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Technical data styles
+  techDataGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  techDataItem: {
+    flex: 1,
+    minWidth: 80,
+    backgroundColor: '#f9f9f9',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  techDataLabel: {
+    fontSize: 11,
+    color: '#666',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  techDataValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  characteristicsSection: {
+    marginTop: 12,
+  },
+  characteristicsTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  characteristicTag: {
+    backgroundColor: '#E3F2FD',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
+  characteristicTagText: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  // Photo modal
+  photoModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoModalContent: {
+    alignItems: 'center',
+  },
+  photoModalImage: {
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+  },
+  closePhotoBtn: {
+    marginTop: 24,
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 25,
+  },
+  closePhotoBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
 });
