@@ -47,9 +47,25 @@ export default function AdminProfile() {
     phone: '',
     monthly_compensation: 0,
     compensation_accepted: false,
+    // Document and Bank details
+    id_type: '',
+    id_front: '',
+    id_back: '',
+    iban: '',
+    account_holder: '',
+    bank_name: '',
+    doc_front_image: '',
+    doc_back_image: '',
   });
 
   const [editData, setEditData] = useState({ ...profileData });
+  
+  // Document images (for upload)
+  const [docFrontImage, setDocFrontImage] = useState<string | null>(null);
+  const [docBackImage, setDocBackImage] = useState<string | null>(null);
+  const [editingBank, setEditingBank] = useState(false);
+  const [savingBank, setSavingBank] = useState(false);
+  
   const [compensationHistory, setCompensationHistory] = useState<{[key: string]: boolean}>({});
   const [over5000Limit, setOver5000Limit] = useState<{[key: string]: boolean}>({});
   const [hasExceeded5000, setHasExceeded5000] = useState(false);
