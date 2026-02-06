@@ -683,6 +683,119 @@ export default function AdminAthleteDetail() {
         {/* DATI TAB */}
         {activeTab === 'dati' && (
           <>
+            {/* Foto Atleta */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>📸 Foto Atleta</Text>
+              <View style={styles.photoSection}>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (athletePhotoArtistic || athletePhoto) {
+                      setPhotoModalVisible(true);
+                    }
+                  }}
+                >
+                  {athletePhotoArtistic ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${athletePhotoArtistic}` }}
+                      style={styles.athletePhotoPreview}
+                    />
+                  ) : athletePhoto ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${athletePhoto}` }}
+                      style={styles.athletePhotoPreview}
+                    />
+                  ) : (
+                    <View style={styles.photoPlaceholder}>
+                      <Ionicons name="person" size={48} color="#ccc" />
+                      <Text style={styles.photoPlaceholderText}>Nessuna foto</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                
+                {transformingPhoto ? (
+                  <View style={styles.transformingContainer}>
+                    <ActivityIndicator color="#007AFF" />
+                    <Text style={styles.transformingText}>Trasformazione in corso...</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.uploadPhotoBtn}
+                    onPress={async () => {
+                      try {
+                        const result = await ImagePicker.launchImageLibraryAsync({
+                          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                          allowsEditing: true,
+                          aspect: [1, 1],
+                          quality: 0.7,
+                          base64: true,
+                        });
+
+                        if (!result.canceled && result.assets[0].base64) {
+                          const photo = result.assets[0].base64;
+                          setAthletePhoto(photo);
+                          setTransformingPhoto(true);
+                          
+                          try {
+                            const response = await api.post(`/athletes/${id}/transform-photo`, {
+                              image_base64: photo
+                            });
+                            
+                            if (response.data.success && response.data.artistic_photo) {
+                              setAthletePhotoArtistic(response.data.artistic_photo);
+                              showAlert('Successo', 'Foto trasformata con successo!');
+                            }
+                          } catch (err) {
+                            console.error('Transform error:', err);
+                            setAthletePhotoArtistic(photo);
+                          } finally {
+                            setTransformingPhoto(false);
+                          }
+                        }
+                      } catch (err) {
+                        console.error('Image picker error:', err);
+                      }
+                    }}
+                  >
+                    <Ionicons name="camera" size={18} color="#fff" />
+                    <Text style={styles.uploadPhotoBtnText}>
+                      {athletePhoto ? 'Cambia Foto' : 'Carica Foto'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Dati Tecnici */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>📊 Dati Tecnici</Text>
+              <View style={styles.techDataGrid}>
+                <View style={styles.techDataItem}>
+                  <Text style={styles.techDataLabel}>Ruolo</Text>
+                  <Text style={styles.techDataValue}>{athleteRole || '-'}</Text>
+                </View>
+                <View style={styles.techDataItem}>
+                  <Text style={styles.techDataLabel}>Altezza</Text>
+                  <Text style={styles.techDataValue}>{athleteHeight ? `${athleteHeight} cm` : '-'}</Text>
+                </View>
+                <View style={styles.techDataItem}>
+                  <Text style={styles.techDataLabel}>Peso</Text>
+                  <Text style={styles.techDataValue}>{athleteWeight ? `${athleteWeight} kg` : '-'}</Text>
+                </View>
+              </View>
+              {athleteCharacteristics.length > 0 && (
+                <View style={styles.characteristicsSection}>
+                  <Text style={styles.techDataLabel}>Caratteristiche</Text>
+                  <View style={styles.characteristicsTags}>
+                    {athleteCharacteristics.map((char, idx) => (
+                      <View key={idx} style={styles.characteristicTag}>
+                        <Text style={styles.characteristicTagText}>{char}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+
             {/* Tesseramento */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>🏅 Tesseramento</Text>
