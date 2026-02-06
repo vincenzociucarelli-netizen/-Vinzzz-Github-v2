@@ -448,18 +448,23 @@ export default function RegisterAthlete() {
 
           <Text style={styles.sectionTitle}>🏐 Squadre</Text>
 
-          <Text style={styles.label}>Squadra Principale *</Text>
+          <Text style={styles.label}>Squadra Principale (opzionale)</Text>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={teamId}
               onValueChange={(value) => setTeamId(value)}
               style={styles.picker}
             >
+              <Picker.Item label="-- Non assegnata --" value="" />
               {teams.map((team) => (
                 <Picker.Item key={team.id} label={team.name} value={team.id} />
               ))}
             </Picker>
           </View>
+          
+          <Text style={styles.infoBox}>
+            💡 Se non conosci la squadra, lascia "Non assegnata". L'admin la assegnerà in seguito.
+          </Text>
 
           <Text style={styles.label}>Seconda Squadra (opzionale)</Text>
           <View style={styles.pickerContainer}>
