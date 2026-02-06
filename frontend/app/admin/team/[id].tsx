@@ -81,6 +81,11 @@ export default function TeamDetail() {
       const teamData = response.data;
       setTeam(teamData);
       
+      // Set coach info
+      if (teamData.coach_info) {
+        setCoachInfo(teamData.coach_info);
+      }
+      
       // Populate form
       setName(teamData.name);
       setDescription(teamData.description || '');
