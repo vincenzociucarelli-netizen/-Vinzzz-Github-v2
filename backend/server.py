@@ -979,7 +979,7 @@ async def transform_user_photo(data: ImageTransformRequest, current_user = Depen
             response = await client.images.edit(
                 model="gpt-image-1",
                 image=image_bytes,
-                prompt="Transform this portrait photo into a PENCIL SKETCH DRAWING in BLACK AND WHITE ONLY. Create a realistic graphite pencil portrait with visible hatching and cross-hatching strokes. Use only shades of gray - NO COLOR at all. Show construction lines and guidelines like an artist's study. The style should look exactly like a hand-drawn pencil sketch on white paper with visible pencil texture and strokes. Make the background simple white or light gray with minimal detail. Focus on capturing the likeness through pencil shading techniques.",
+                prompt="Convert this photo into a traditional GRAPHITE PENCIL PORTRAIT SKETCH. Style: classic pencil drawing on white paper. Requirements: 1) STRICTLY BLACK AND WHITE with gray shading only - absolutely NO color, 2) Visible pencil strokes and hatching lines for shading, 3) Softer, slightly blurred edges like real pencil work, 4) Clean white or very light gray background, 5) Emphasis on facial features with detailed pencil shading around eyes and hair, 6) The texture should look like real graphite on paper. Make it look like a skilled artist drew this portrait by hand with a pencil.",
                 n=1,
                 size="1024x1024"
             )
@@ -2424,7 +2424,7 @@ async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, 
             response = await client.images.edit(
                 model="gpt-image-1",
                 image=image_bytes,
-                prompt="Transform this portrait photo into a PENCIL SKETCH DRAWING in BLACK AND WHITE ONLY. Create a realistic graphite pencil portrait with visible hatching and cross-hatching strokes. Use only shades of gray - NO COLOR at all. Show construction lines and guidelines like an artist's study. The style should look exactly like a hand-drawn pencil sketch on white paper with visible pencil texture and strokes. Make the background simple white or light gray with minimal detail. Focus on capturing the likeness through pencil shading techniques.",
+                prompt="Convert this photo into a traditional GRAPHITE PENCIL PORTRAIT SKETCH. Style: classic pencil drawing on white paper. Requirements: 1) STRICTLY BLACK AND WHITE with gray shading only - absolutely NO color, 2) Visible pencil strokes and hatching lines for shading, 3) Softer, slightly blurred edges like real pencil work, 4) Clean white or very light gray background, 5) Emphasis on facial features with detailed pencil shading around eyes and hair, 6) The texture should look like real graphite on paper. Make it look like a skilled artist drew this portrait by hand with a pencil.",
                 n=1,
                 size="1024x1024"
             )
