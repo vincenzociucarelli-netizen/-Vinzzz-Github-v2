@@ -11,12 +11,22 @@ import {
   RefreshControl,
   Modal,
   Platform,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { Team, TrainingSession, MatchDay } from '../../../src/types';
 import { Picker } from '@react-native-picker/picker';
+
+interface CoachInfo {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  profile_photo?: string;
+  profile_photo_artistic?: string;
+}
 
 const DAYS_OF_WEEK = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
 
