@@ -297,12 +297,25 @@ export default function AdminAthleteDetail() {
 
   const handleSaveData = async () => {
     try {
+      // Convert date_of_birth from dd/mm/yyyy to ISO
+      let dateOfBirthISO = null;
+      if (editData.date_of_birth) {
+        const parts = editData.date_of_birth.split('/');
+        if (parts.length === 3) {
+          const date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+          if (!isNaN(date.getTime())) {
+            dateOfBirthISO = date.toISOString();
+          }
+        }
+      }
+
       const updatePayload: any = {
         federal_code: editData.federal_code || null,
         is_registered: editData.is_registered,
         first_name: editData.first_name,
         last_name: editData.last_name,
         full_name: `${editData.last_name} ${editData.first_name}`.trim(),
+        date_of_birth: dateOfBirthISO,
         birth_place: editData.birth_place || null,
         birth_province: editData.birth_province || null,
         fiscal_code: editData.fiscal_code || null,
