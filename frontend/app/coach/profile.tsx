@@ -1244,10 +1244,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
     overflow: 'hidden',
-    minHeight: 60,
+    minHeight: 70,
   },
   picker: {
-    height: 60,
+    height: 70,
   },
   saveBankButtonFixed: {
     backgroundColor: '#34C759',
