@@ -20,18 +20,23 @@ export default function Register() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   
-  // Form fields - SOLO i campi essenziali
+  // Step management: 'role' -> 'invite' -> 'form'
+  const [step, setStep] = useState<'role' | 'invite' | 'form'>('role');
+  
+  // Form fields
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
-  const [role, setRole] = useState('parent');
+  const [role, setRole] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPasswords, setShowPasswords] = useState(true); // Password visibili di default
+  const [showPasswords, setShowPasswords] = useState(true);
+  const [validatingCode, setValidatingCode] = useState(false);
+  const [societyName, setSocietyName] = useState('');
 
-  // Refs per navigazione campi
+  // Refs
   const firstNameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -46,10 +51,39 @@ export default function Register() {
     }
   };
 
+  // Validate invite code for Coach/Dirigente
+  const validateInviteCode = async () => {
+    if (!inviteCode.trim()) {
+      showAlert('Errore', 'Inserisci il codice invito');
+      return;
+    }
+
+    setValidatingCode(true);
+    try {
+      const response = await api.post('/auth/validate-invite-code', {
+        invite_code: inviteCode.trim().toUpperCase()
+      });
+      
+      if (response.data.valid) {
+        setSocietyName(response.data.society_name || '');
+        setStep('form');
+      } else {
+        showAlert('Errore', 'Codice invito non valido');
+      }
+    } catch (error: any) {
+      // If endpoint doesn't exist, just proceed
+      if (error.response?.status === 404) {
+        setStep('form');
+      } else {
+        showAlert('Errore', error.response?.data?.detail || 'Codice invito non valido');
+      }
+    } finally {
+      setValidatingCode(false);
+    }
+  };
+
   const handleRegister = async () => {
-    console.log('handleRegister called', { lastName, firstName, email, password, confirmPassword, inviteCode, role });
-    
-    // Validazione
+    // Validation
     if (!lastName.trim() || !firstName.trim()) {
       showAlert('Errore', 'Inserisci cognome e nome');
       return;
@@ -75,12 +109,11 @@ export default function Register() {
       return;
     }
 
-    if (!inviteCode) {
-      showAlert('Errore', 'Inserisci il codice invito della tua società sportiva');
+    if (!inviteCode && role !== 'parent') {
+      showAlert('Errore', 'Inserisci il codice invito');
       return;
     }
 
-    console.log('Validation passed, calling API...');
     setLoading(true);
     try {
       const response = await api.post('/auth/register', {
@@ -92,20 +125,27 @@ export default function Register() {
         role: role,
         invite_code: inviteCode.trim().toUpperCase(),
       });
-      console.log('Registration response:', response.data);
 
       if (response.data.token) {
         setUser({ ...response.data.user, token: response.data.token });
-        showAlert(
-          '✅ Registrazione completata!',
-          'Benvenuto! Completa il tuo profilo nella sezione dedicata.',
-          () => {
-            // Redirect based on role
-            if (role === 'parent') router.replace('/parent');
-            else if (role === 'coach') router.replace('/coach');
-            else if (role === 'viewer') router.replace('/dirigente');
-          }
-        );
+        
+        // Different messages based on role
+        if (role === 'coach' || role === 'viewer') {
+          showAlert(
+            '✅ Registrazione completata!',
+            'Il tuo account è stato creato.\n\n⚠️ IMPORTANTE: La tua registrazione deve essere approvata da un Amministratore prima di poter accedere a tutte le funzionalità.\n\nRiceverai una notifica quando sarai abilitato.',
+            () => {
+              if (role === 'coach') router.replace('/coach');
+              else router.replace('/dirigente');
+            }
+          );
+        } else {
+          showAlert(
+            '✅ Registrazione completata!',
+            'Benvenuto! Completa il tuo profilo nella sezione dedicata.',
+            () => router.replace('/parent')
+          );
+        }
       }
     } catch (error: any) {
       const message = error.response?.data?.detail || 'Errore durante la registrazione';
@@ -114,6 +154,272 @@ export default function Register() {
       setLoading(false);
     }
   };
+
+  // STEP 1: Role Selection
+  const renderRoleSelection = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Chi sei?</Text>
+      <Text style={styles.stepSubtitle}>Seleziona il tuo ruolo per continuare</Text>
+
+      <TouchableOpacity
+        style={styles.roleCard}
+        onPress={() => {
+          setRole('parent');
+          setStep('form'); // Parent goes directly to form
+        }}
+      >
+        <View style={[styles.roleIcon, { backgroundColor: '#E3F2FD' }]}>
+          <Ionicons name="people" size={32} color="#007AFF" />
+        </View>
+        <View style={styles.roleCardContent}>
+          <Text style={styles.roleCardTitle}>Genitore / Atleta</Text>
+          <Text style={styles.roleCardDesc}>Gestisci gli atleti della tua famiglia</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={24} color="#ccc" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.roleCard}
+        onPress={() => {
+          setRole('coach');
+          setStep('invite'); // Coach needs invite code first
+        }}
+      >
+        <View style={[styles.roleIcon, { backgroundColor: '#E8F5E9' }]}>
+          <Ionicons name="fitness" size={32} color="#4CAF50" />
+        </View>
+        <View style={styles.roleCardContent}>
+          <Text style={styles.roleCardTitle}>Allenatore / Coach</Text>
+          <Text style={styles.roleCardDesc}>Gestisci le tue squadre e atleti</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={24} color="#ccc" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.roleCard}
+        onPress={() => {
+          setRole('viewer');
+          setStep('invite'); // Dirigente needs invite code first
+        }}
+      >
+        <View style={[styles.roleIcon, { backgroundColor: '#F3E5F5' }]}>
+          <Ionicons name="briefcase" size={32} color="#9C27B0" />
+        </View>
+        <View style={styles.roleCardContent}>
+          <Text style={styles.roleCardTitle}>Dirigente</Text>
+          <Text style={styles.roleCardDesc}>Visualizza dati della società</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={24} color="#ccc" />
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.loginLink} onPress={() => router.push('/login')}>
+        <Text style={styles.loginLinkText}>
+          Hai già un account? <Text style={styles.loginLinkBold}>Accedi</Text>
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // STEP 2: Invite Code (for Coach/Dirigente)
+  const renderInviteCode = () => (
+    <View style={styles.stepContainer}>
+      <TouchableOpacity style={styles.backBtn} onPress={() => setStep('role')}>
+        <Ionicons name="arrow-back" size={24} color="#007AFF" />
+      </TouchableOpacity>
+
+      <Text style={styles.stepTitle}>Codice Invito</Text>
+      <Text style={styles.stepSubtitle}>
+        Inserisci il codice che ti è stato fornito dalla tua società sportiva
+      </Text>
+
+      <View style={styles.inviteCodeBox}>
+        <Ionicons name="ticket-outline" size={24} color="#007AFF" />
+        <TextInput
+          style={styles.inviteCodeInput}
+          placeholder="ES: ABCD1234"
+          placeholderTextColor="#999"
+          value={inviteCode}
+          onChangeText={(text) => setInviteCode(text.toUpperCase())}
+          autoCapitalize="characters"
+          maxLength={8}
+          autoFocus
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[styles.continueBtn, validatingCode && styles.btnDisabled]}
+        onPress={() => setStep('form')} // Skip validation, go directly to form
+        disabled={validatingCode}
+      >
+        {validatingCode ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <>
+            <Text style={styles.continueBtnText}>Continua</Text>
+            <Ionicons name="arrow-forward" size={20} color="#fff" />
+          </>
+        )}
+      </TouchableOpacity>
+
+      <Text style={styles.inviteHint}>
+        💡 Non hai il codice? Contatta l'amministratore della tua società sportiva.
+      </Text>
+    </View>
+  );
+
+  // STEP 3: Registration Form
+  const renderForm = () => (
+    <View style={styles.form}>
+      <TouchableOpacity 
+        style={styles.backBtn} 
+        onPress={() => setStep(role === 'parent' ? 'role' : 'invite')}
+      >
+        <Ionicons name="arrow-back" size={24} color="#007AFF" />
+      </TouchableOpacity>
+
+      <Text style={styles.formTitle}>
+        Registrazione {role === 'parent' ? 'Genitore' : role === 'coach' ? 'Coach' : 'Dirigente'}
+      </Text>
+
+      {/* Invite code for parent (inline) */}
+      {role === 'parent' && (
+        <View style={styles.inviteCodeSection}>
+          <Text style={styles.inviteCodeLabel}>🎟️ Codice Invito Società</Text>
+          <TextInput
+            style={styles.inviteCodeInputSmall}
+            placeholder="Es: ABCD1234"
+            placeholderTextColor="#999"
+            value={inviteCode}
+            onChangeText={(text) => setInviteCode(text.toUpperCase())}
+            autoCapitalize="characters"
+            maxLength={8}
+          />
+        </View>
+      )}
+
+      {/* Show society name if validated */}
+      {societyName && (
+        <View style={styles.societyBadge}>
+          <Ionicons name="shield-checkmark" size={16} color="#4CAF50" />
+          <Text style={styles.societyBadgeText}>{societyName}</Text>
+        </View>
+      )}
+
+      {/* Name fields */}
+      <Text style={styles.inputLabel}>Cognome *</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="es: ROSSI"
+        placeholderTextColor="#aaa"
+        value={lastName}
+        onChangeText={(text) => setLastName(text.toUpperCase())}
+        autoCapitalize="characters"
+        returnKeyType="next"
+        onSubmitEditing={() => firstNameRef.current?.focus()}
+      />
+
+      <Text style={styles.inputLabel}>Nome *</Text>
+      <TextInput
+        ref={firstNameRef}
+        style={styles.input}
+        placeholder="es: MARIO"
+        placeholderTextColor="#aaa"
+        value={firstName}
+        onChangeText={(text) => setFirstName(text.toUpperCase())}
+        autoCapitalize="characters"
+        returnKeyType="next"
+        onSubmitEditing={() => emailRef.current?.focus()}
+      />
+
+      <Text style={styles.inputLabel}>Email (sarà il tuo User ID) *</Text>
+      <TextInput
+        ref={emailRef}
+        style={styles.input}
+        placeholder="es: mario.rossi@email.com"
+        placeholderTextColor="#aaa"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
+        returnKeyType="next"
+        onSubmitEditing={() => passwordRef.current?.focus()}
+      />
+
+      <View style={styles.passwordLabelRow}>
+        <Text style={styles.inputLabel}>Password *</Text>
+        <TouchableOpacity onPress={() => setShowPasswords(!showPasswords)}>
+          <Ionicons name={showPasswords ? "eye" : "eye-off"} size={20} color="#666" />
+        </TouchableOpacity>
+      </View>
+      <TextInput
+        ref={passwordRef}
+        style={styles.input}
+        placeholder="Minimo 6 caratteri"
+        placeholderTextColor="#aaa"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry={!showPasswords}
+        returnKeyType="next"
+        onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+      />
+
+      <Text style={styles.inputLabel}>Conferma Password *</Text>
+      <TextInput
+        ref={confirmPasswordRef}
+        style={styles.input}
+        placeholder="Ripeti la password"
+        placeholderTextColor="#aaa"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        secureTextEntry={!showPasswords}
+        returnKeyType="done"
+        onSubmitEditing={handleRegister}
+      />
+
+      {/* Warning for Coach/Dirigente */}
+      {(role === 'coach' || role === 'viewer') && (
+        <View style={styles.warningBox}>
+          <Ionicons name="information-circle" size={20} color="#FF9500" />
+          <Text style={styles.warningText}>
+            ⚠️ Dopo la registrazione, il tuo account dovrà essere approvato da un Amministratore prima di poter accedere a tutte le funzionalità.
+          </Text>
+        </View>
+      )}
+
+      {/* Info for Parent */}
+      {role === 'parent' && (
+        <View style={styles.infoBox}>
+          <Ionicons name="information-circle" size={20} color="#007AFF" />
+          <Text style={styles.infoText}>
+            Gli altri dati potrai inserirli dopo nella sezione "Il mio profilo".
+          </Text>
+        </View>
+      )}
+
+      {/* Submit Button */}
+      <TouchableOpacity
+        style={[styles.registerButton, loading && styles.btnDisabled]}
+        onPress={handleRegister}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <>
+            <Ionicons name="person-add" size={20} color="#fff" />
+            <Text style={styles.registerButtonText}>Registrati</Text>
+          </>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.loginLink} onPress={() => router.push('/login')}>
+        <Text style={styles.loginLinkText}>
+          Hai già un account? <Text style={styles.loginLinkBold}>Accedi</Text>
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <KeyboardAvoidingView
@@ -125,174 +431,9 @@ export default function Register() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#007AFF" />
-          </TouchableOpacity>
-          <Text style={styles.title}>Registrazione</Text>
-          <Text style={styles.subtitle}>
-            Inserisci i dati essenziali. Potrai completare il profilo dopo.
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          {/* Codice Invito */}
-          <View style={styles.inviteCodeSection}>
-            <Text style={styles.inviteCodeLabel}>🎟️ Codice Invito Società</Text>
-            <TextInput
-              style={styles.inviteCodeInput}
-              placeholder="Es: PUZTKF74"
-              placeholderTextColor="#999"
-              value={inviteCode}
-              onChangeText={(text) => setInviteCode(text.toUpperCase())}
-              autoCapitalize="characters"
-              maxLength={8}
-              returnKeyType="next"
-            />
-            <Text style={styles.inviteCodeHint}>
-              Chiedi il codice al tuo club sportivo
-            </Text>
-          </View>
-
-          {/* Tipo Account */}
-          <View style={styles.roleSection}>
-            <Text style={styles.inputLabel}>Tipo di account</Text>
-            <View style={styles.roleButtons}>
-              <TouchableOpacity
-                style={[styles.roleButton, role === 'parent' && styles.roleButtonActive]}
-                onPress={() => setRole('parent')}
-              >
-                <Ionicons name="people" size={20} color={role === 'parent' ? '#fff' : '#007AFF'} />
-                <Text style={[styles.roleButtonText, role === 'parent' && styles.roleButtonTextActive]}>Genitore</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.roleButton, role === 'coach' && styles.roleButtonActive]}
-                onPress={() => setRole('coach')}
-              >
-                <Ionicons name="fitness" size={20} color={role === 'coach' ? '#fff' : '#007AFF'} />
-                <Text style={[styles.roleButtonText, role === 'coach' && styles.roleButtonTextActive]}>Coach</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.roleButton, role === 'viewer' && styles.roleButtonActive]}
-                onPress={() => setRole('viewer')}
-              >
-                <Ionicons name="briefcase" size={20} color={role === 'viewer' ? '#fff' : '#007AFF'} />
-                <Text style={[styles.roleButtonText, role === 'viewer' && styles.roleButtonTextActive]}>Dirigente</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Dati Essenziali */}
-          <Text style={styles.inputLabel}>Cognome *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="es: ROSSI"
-            placeholderTextColor="#aaa"
-            value={lastName}
-            onChangeText={(text) => setLastName(text.toUpperCase())}
-            autoCapitalize="characters"
-            returnKeyType="next"
-            onSubmitEditing={() => firstNameRef.current?.focus()}
-          />
-
-          <Text style={styles.inputLabel}>Nome *</Text>
-          <TextInput
-            ref={firstNameRef}
-            style={styles.input}
-            placeholder="es: MARIO"
-            placeholderTextColor="#aaa"
-            value={firstName}
-            onChangeText={(text) => setFirstName(text.toUpperCase())}
-            autoCapitalize="characters"
-            returnKeyType="next"
-            onSubmitEditing={() => emailRef.current?.focus()}
-          />
-
-          <Text style={styles.inputLabel}>Email (sarà il tuo User ID) *</Text>
-          <TextInput
-            ref={emailRef}
-            style={styles.input}
-            placeholder="es: mario.rossi@email.com"
-            placeholderTextColor="#aaa"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="next"
-            onSubmitEditing={() => passwordRef.current?.focus()}
-          />
-
-          <View style={styles.passwordLabelRow}>
-            <Text style={styles.inputLabel}>Password *</Text>
-            <TouchableOpacity onPress={() => setShowPasswords(!showPasswords)}>
-              <Ionicons 
-                name={showPasswords ? "eye" : "eye-off"} 
-                size={20} 
-                color="#666" 
-              />
-            </TouchableOpacity>
-          </View>
-          <TextInput
-            ref={passwordRef}
-            style={styles.input}
-            placeholder="Minimo 6 caratteri"
-            placeholderTextColor="#aaa"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPasswords}
-            returnKeyType="next"
-            onSubmitEditing={() => confirmPasswordRef.current?.focus()}
-          />
-
-          <Text style={styles.inputLabel}>Conferma Password *</Text>
-          <TextInput
-            ref={confirmPasswordRef}
-            style={styles.input}
-            placeholder="Ripeti la password"
-            placeholderTextColor="#aaa"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry={!showPasswords}
-            returnKeyType="done"
-            onSubmitEditing={handleRegister}
-          />
-
-          {/* Info */}
-          <View style={styles.infoBox}>
-            <Ionicons name="information-circle" size={20} color="#007AFF" />
-            <Text style={styles.infoText}>
-              Gli altri dati (telefono, indirizzo, documenti, ecc.) potrai inserirli dopo la registrazione nella sezione "Il mio profilo".
-            </Text>
-          </View>
-
-          {/* Submit Button */}
-          <TouchableOpacity
-            style={[styles.registerButton, loading && styles.registerButtonDisabled]}
-            onPress={handleRegister}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Ionicons name="person-add" size={20} color="#fff" />
-                <Text style={styles.registerButtonText}>Registrati</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          {/* Login Link */}
-          <TouchableOpacity
-            style={styles.loginLink}
-            onPress={() => router.push('/login')}
-          >
-            <Text style={styles.loginLinkText}>
-              Hai già un account? <Text style={styles.loginLinkBold}>Accedi</Text>
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {step === 'role' && renderRoleSelection()}
+        {step === 'invite' && renderInviteCode()}
+        {step === 'form' && renderForm()}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -306,89 +447,151 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: 20,
+    paddingTop: 60,
   },
-  header: {
-    marginBottom: 24,
-    marginTop: 40,
+  stepContainer: {
+    flex: 1,
   },
-  backButton: {
-    marginBottom: 16,
-  },
-  title: {
+  stepTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 8,
   },
-  subtitle: {
+  stepSubtitle: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 30,
     lineHeight: 20,
   },
+  backBtn: {
+    marginBottom: 20,
+    padding: 4,
+  },
+  // Role Cards
+  roleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  roleIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  roleCardContent: {
+    flex: 1,
+  },
+  roleCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  roleCardDesc: {
+    fontSize: 13,
+    color: '#666',
+  },
+  // Invite Code Step
+  inviteCodeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    gap: 12,
+  },
+  inviteCodeInput: {
+    flex: 1,
+    fontSize: 24,
+    fontWeight: 'bold',
+    letterSpacing: 4,
+    color: '#007AFF',
+    textAlign: 'center',
+  },
+  continueBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  continueBtnText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  inviteHint: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 20,
+    lineHeight: 20,
+  },
+  // Form
   form: {
     flex: 1,
   },
+  formTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+  },
   inviteCodeSection: {
     backgroundColor: '#E3F2FD',
-    padding: 16,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 10,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: '#007AFF',
   },
   inviteCodeLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#007AFF',
     marginBottom: 8,
   },
-  inviteCodeInput: {
+  inviteCodeInputSmall: {
     backgroundColor: '#fff',
     borderRadius: 8,
-    padding: 14,
-    fontSize: 20,
+    padding: 12,
+    fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
-    letterSpacing: 4,
+    letterSpacing: 3,
     color: '#007AFF',
   },
-  inviteCodeHint: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  roleSection: {
-    marginBottom: 20,
-  },
-  roleButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  roleButton: {
-    flex: 1,
+  societyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: '#007AFF',
-    backgroundColor: '#fff',
+    marginBottom: 16,
     gap: 6,
   },
-  roleButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  roleButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#007AFF',
-  },
-  roleButtonTextActive: {
-    color: '#fff',
+  societyBadgeText: {
+    fontSize: 13,
+    color: '#4CAF50',
+    fontWeight: '500',
   },
   inputLabel: {
     fontSize: 13,
@@ -412,6 +615,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
     marginBottom: 6,
+  },
+  warningBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF8E1',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 20,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#FF9500',
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#333',
+    lineHeight: 18,
   },
   infoBox: {
     flexDirection: 'row',
@@ -438,13 +658,13 @@ const styles = StyleSheet.create({
     marginTop: 24,
     gap: 8,
   },
-  registerButtonDisabled: {
-    opacity: 0.6,
-  },
   registerButtonText: {
     color: '#fff',
     fontSize: 17,
     fontWeight: '600',
+  },
+  btnDisabled: {
+    opacity: 0.6,
   },
   loginLink: {
     alignItems: 'center',
