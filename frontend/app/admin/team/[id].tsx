@@ -584,8 +584,9 @@ export default function TeamDetail() {
                           style={styles.coachPhotoSmall}
                         />
                       ) : (
-                        <View style={styles.coachPhotoPlaceholder}>
-                          <Ionicons name="person" size={24} color="#999" />
+                        <View style={styles.coachPhotoPlaceholderWithText}>
+                          <Ionicons name="camera-outline" size={20} color="#999" />
+                          <Text style={styles.noPhotoText}>Foto non{'\n'}caricata</Text>
                         </View>
                       )}
                     </TouchableOpacity>
