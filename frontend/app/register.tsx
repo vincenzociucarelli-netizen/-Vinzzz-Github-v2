@@ -9,32 +9,30 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import api from '../src/services/api';
-import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Register() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   
-  // Form fields
+  // Form fields - SOLO i campi essenziali
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
-  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [role, setRole] = useState('parent');
   const [loading, setLoading] = useState(false);
-  const [showPasswords, setShowPasswords] = useState(true); // Passwords visible by default
+  const [showPasswords, setShowPasswords] = useState(true); // Password visibili di default
 
-  // Refs for field navigation
+  // Refs per navigazione campi
   const firstNameRef = useRef<TextInput>(null);
-  const phoneRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
@@ -49,19 +47,7 @@ export default function Register() {
   };
 
   const handleRegister = async () => {
-    // If coach, redirect to specific registration page
-    if (role === 'coach') {
-      router.push('/register-coach');
-      return;
-    }
-    
-    // If dirigente (viewer), redirect to specific registration page
-    if (role === 'viewer') {
-      router.push('/register-dirigente');
-      return;
-    }
-
-    // Validation
+    // Validazione
     if (!lastName.trim() || !firstName.trim()) {
       showAlert('Errore', 'Inserisci cognome e nome');
       return;
@@ -100,19 +86,26 @@ export default function Register() {
         full_name: `${lastName.trim().toUpperCase()} ${firstName.trim()}`,
         first_name: firstName.trim(),
         last_name: lastName.trim().toUpperCase(),
-        phone: phone.trim() || null,
-        role,
-        invite_code: inviteCode.toUpperCase(),
+        role: role,
+        invite_code: inviteCode.trim().toUpperCase(),
       });
-      
-      await setUser(response.data.user, response.data.token);
-      
-      // Navigate based on role
-      if (role === 'parent') {
-        router.replace('/parent');
+
+      if (response.data.token) {
+        setUser({ ...response.data.user, token: response.data.token });
+        showAlert(
+          '✅ Registrazione completata!',
+          'Benvenuto! Completa il tuo profilo nella sezione dedicata.',
+          () => {
+            // Redirect based on role
+            if (role === 'parent') router.replace('/parent');
+            else if (role === 'coach') router.replace('/coach');
+            else if (role === 'viewer') router.replace('/dirigente');
+          }
+        );
       }
     } catch (error: any) {
-      showAlert('Errore', error.response?.data?.detail || 'Errore durante la registrazione');
+      const message = error.response?.data?.detail || 'Errore durante la registrazione';
+      showAlert('Errore', message);
     } finally {
       setLoading(false);
     }
@@ -120,15 +113,27 @@ export default function Register() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>👋 Registrazione</Text>
-        <Text style={styles.subtitle}>Crea il tuo account in pochi secondi</Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Registrazione</Text>
+          <Text style={styles.subtitle}>
+            Inserisci i dati essenziali. Potrai completare il profilo dopo.
+          </Text>
+        </View>
 
         <View style={styles.form}>
-          {/* Invite Code Section */}
+          {/* Codice Invito */}
           <View style={styles.inviteCodeSection}>
             <Text style={styles.inviteCodeLabel}>🎟️ Codice Invito Società</Text>
             <TextInput
@@ -146,7 +151,7 @@ export default function Register() {
             </Text>
           </View>
 
-          {/* Role Selector */}
+          {/* Tipo Account */}
           <View style={styles.roleSection}>
             <Text style={styles.inputLabel}>Tipo di account</Text>
             <View style={styles.roleButtons}>
@@ -174,124 +179,114 @@ export default function Register() {
             </View>
           </View>
 
-          {/* Personal Info - Only for parent role */}
-          {role === 'parent' && (
-            <>
-              <Text style={styles.inputLabel}>Cognome</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="es: ROSSI"
-                placeholderTextColor="#aaa"
-                value={lastName}
-                onChangeText={(text) => setLastName(text.toUpperCase())}
-                autoCapitalize="characters"
-                returnKeyType="next"
-                onSubmitEditing={() => firstNameRef.current?.focus()}
+          {/* Dati Essenziali */}
+          <Text style={styles.inputLabel}>Cognome *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="es: ROSSI"
+            placeholderTextColor="#aaa"
+            value={lastName}
+            onChangeText={(text) => setLastName(text.toUpperCase())}
+            autoCapitalize="characters"
+            returnKeyType="next"
+            onSubmitEditing={() => firstNameRef.current?.focus()}
+          />
+
+          <Text style={styles.inputLabel}>Nome *</Text>
+          <TextInput
+            ref={firstNameRef}
+            style={styles.input}
+            placeholder="es: MARIO"
+            placeholderTextColor="#aaa"
+            value={firstName}
+            onChangeText={(text) => setFirstName(text.toUpperCase())}
+            autoCapitalize="characters"
+            returnKeyType="next"
+            onSubmitEditing={() => emailRef.current?.focus()}
+          />
+
+          <Text style={styles.inputLabel}>Email (sarà il tuo User ID) *</Text>
+          <TextInput
+            ref={emailRef}
+            style={styles.input}
+            placeholder="es: mario.rossi@email.com"
+            placeholderTextColor="#aaa"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+          />
+
+          <View style={styles.passwordLabelRow}>
+            <Text style={styles.inputLabel}>Password *</Text>
+            <TouchableOpacity onPress={() => setShowPasswords(!showPasswords)}>
+              <Ionicons 
+                name={showPasswords ? "eye" : "eye-off"} 
+                size={20} 
+                color="#666" 
               />
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            ref={passwordRef}
+            style={styles.input}
+            placeholder="Minimo 6 caratteri"
+            placeholderTextColor="#aaa"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPasswords}
+            returnKeyType="next"
+            onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+          />
 
-              <Text style={styles.inputLabel}>Nome</Text>
-              <TextInput
-                ref={firstNameRef}
-                style={styles.input}
-                placeholder="es: MARIO"
-                placeholderTextColor="#aaa"
-                value={firstName}
-                onChangeText={(text) => setFirstName(text.toUpperCase())}
-                autoCapitalize="characters"
-                returnKeyType="next"
-                onSubmitEditing={() => phoneRef.current?.focus()}
-              />
+          <Text style={styles.inputLabel}>Conferma Password *</Text>
+          <TextInput
+            ref={confirmPasswordRef}
+            style={styles.input}
+            placeholder="Ripeti la password"
+            placeholderTextColor="#aaa"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry={!showPasswords}
+            returnKeyType="done"
+            onSubmitEditing={handleRegister}
+          />
 
-              <Text style={styles.inputLabel}>Telefono</Text>
-              <TextInput
-                ref={phoneRef}
-                style={styles.input}
-                placeholder="es: 333 1234567"
-                placeholderTextColor="#aaa"
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                returnKeyType="next"
-                onSubmitEditing={() => emailRef.current?.focus()}
-              />
+          {/* Info */}
+          <View style={styles.infoBox}>
+            <Ionicons name="information-circle" size={20} color="#007AFF" />
+            <Text style={styles.infoText}>
+              Gli altri dati (telefono, indirizzo, documenti, ecc.) potrai inserirli dopo la registrazione nella sezione "Il mio profilo".
+            </Text>
+          </View>
 
-              <Text style={styles.inputLabel}>Email (sarà il tuo User ID)</Text>
-              <TextInput
-                ref={emailRef}
-                style={styles.input}
-                placeholder="esempio@email.com"
-                placeholderTextColor="#aaa"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="next"
-                onSubmitEditing={() => passwordRef.current?.focus()}
-              />
-
-              <View style={styles.passwordSection}>
-                <View style={styles.passwordHeader}>
-                  <Text style={styles.inputLabel}>Password</Text>
-                  <TouchableOpacity 
-                    style={styles.togglePasswordBtn}
-                    onPress={() => setShowPasswords(!showPasswords)}
-                  >
-                    <Ionicons 
-                      name={showPasswords ? "eye-off" : "eye"} 
-                      size={18} 
-                      color="#666" 
-                    />
-                    <Text style={styles.togglePasswordText}>
-                      {showPasswords ? 'Nascondi' : 'Mostra'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                <TextInput
-                  ref={passwordRef}
-                  style={styles.input}
-                  placeholder="Minimo 6 caratteri"
-                  placeholderTextColor="#aaa"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPasswords}
-                  autoCapitalize="none"
-                  returnKeyType="next"
-                  onSubmitEditing={() => confirmPasswordRef.current?.focus()}
-                />
-
-                <Text style={styles.inputLabel}>Conferma Password</Text>
-                <TextInput
-                  ref={confirmPasswordRef}
-                  style={styles.input}
-                  placeholder="Ripeti la password"
-                  placeholderTextColor="#aaa"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showPasswords}
-                  autoCapitalize="none"
-                  returnKeyType="done"
-                  onSubmitEditing={handleRegister}
-                />
-              </View>
-            </>
-          )}
-
+          {/* Submit Button */}
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[styles.registerButton, loading && styles.registerButtonDisabled]}
             onPress={handleRegister}
             disabled={loading}
           >
-            <Text style={styles.buttonText}>
-              {loading ? 'Registrazione...' : role === 'parent' ? 'Registrati' : 'Continua →'}
-            </Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="person-add" size={20} color="#fff" />
+                <Text style={styles.registerButtonText}>Registrati</Text>
+              </>
+            )}
           </TouchableOpacity>
 
+          {/* Login Link */}
           <TouchableOpacity
-            style={styles.linkButton}
-            onPress={() => router.back()}
+            style={styles.loginLink}
+            onPress={() => router.push('/login')}
           >
-            <Text style={styles.linkText}>Hai già un account? Accedi</Text>
+            <Text style={styles.loginLinkText}>
+              Hai già un account? <Text style={styles.loginLinkBold}>Accedi</Text>
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -302,69 +297,69 @@ export default function Register() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
+    padding: 20,
+  },
+  header: {
+    marginBottom: 24,
+    marginTop: 40,
+  },
+  backButton: {
+    marginBottom: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
-    textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
-    textAlign: 'center',
-    marginBottom: 24,
+    lineHeight: 20,
   },
   form: {
-    width: '100%',
+    flex: 1,
   },
   inviteCodeSection: {
     backgroundColor: '#E3F2FD',
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#007AFF',
   },
   inviteCodeLabel: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#007AFF',
     marginBottom: 8,
   },
   inviteCodeInput: {
     backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
     borderRadius: 8,
+    padding: 14,
     fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
     letterSpacing: 4,
-    borderWidth: 1,
-    borderColor: '#007AFF',
+    color: '#007AFF',
   },
   inviteCodeHint: {
     fontSize: 12,
     color: '#666',
-    textAlign: 'center',
     marginTop: 8,
+    textAlign: 'center',
   },
   roleSection: {
     marginBottom: 20,
   },
   roleButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginTop: 8,
+    gap: 10,
   },
   roleButton: {
     flex: 1,
@@ -373,79 +368,91 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 8,
-    borderRadius: 10,
-    borderWidth: 2,
+    borderRadius: 8,
+    borderWidth: 1.5,
     borderColor: '#007AFF',
     backgroundColor: '#fff',
     gap: 6,
   },
   roleButtonActive: {
     backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
   },
   roleButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#007AFF',
   },
   roleButtonTextActive: {
     color: '#fff',
   },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 6,
+    marginTop: 12,
+  },
   input: {
     backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 10,
-    fontSize: 16,
-    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
+    color: '#333',
   },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#555',
-    marginBottom: 6,
-  },
-  passwordSection: {
-    marginTop: 8,
-  },
-  passwordHeader: {
+  passwordLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 12,
     marginBottom: 6,
   },
-  togglePasswordBtn: {
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#E3F2FD',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 20,
+    gap: 10,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#333',
+    lineHeight: 18,
+  },
+  registerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 4,
-  },
-  togglePasswordText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 4,
-  },
-  button: {
+    justifyContent: 'center',
     backgroundColor: '#007AFF',
     paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 8,
+    borderRadius: 12,
+    marginTop: 24,
+    gap: 8,
   },
-  buttonDisabled: {
+  registerButtonDisabled: {
     opacity: 0.6,
   },
-  buttonText: {
+  registerButtonText: {
     color: '#fff',
     fontSize: 17,
     fontWeight: '600',
   },
-  linkButton: {
-    marginTop: 20,
+  loginLink: {
     alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 30,
   },
-  linkText: {
+  loginLinkText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  loginLinkBold: {
     color: '#007AFF',
-    fontSize: 15,
+    fontWeight: '600',
   },
 });
