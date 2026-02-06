@@ -713,6 +713,15 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
   },
+  infoBox: {
+    fontSize: 12,
+    color: '#007AFF',
+    backgroundColor: '#E3F2FD',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    marginBottom: 8,
+  },
   protectionNote: {
     fontSize: 13,
     color: '#666',
