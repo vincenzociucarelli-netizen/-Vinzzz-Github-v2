@@ -116,6 +116,18 @@ export default function AthleteDetail() {
       setAthletePhoto(athleteRes.data.athlete_photo || null);
       setAthletePhotoArtistic(athleteRes.data.athlete_photo_artistic || null);
 
+      // Load coach info for the athlete's team
+      if (athleteRes.data.team_id) {
+        try {
+          const teamRes = await api.get(`/teams/${athleteRes.data.team_id}`);
+          if (teamRes.data.coach_info && teamRes.data.coach_info.length > 0) {
+            setCoachInfo(teamRes.data.coach_info[0]);
+          }
+        } catch (e) {
+          console.log('Could not load coach info');
+        }
+      }
+
       // Check if athlete has data password
       try {
         const passwordRes = await api.get(`/athletes/${id}/has-password`);
