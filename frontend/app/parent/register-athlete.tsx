@@ -157,10 +157,7 @@ export default function RegisterAthlete() {
       return;
     }
     
-    if (!teamId) {
-      showAlert('Errore', 'Seleziona una squadra');
-      return;
-    }
+    // Team is OPTIONAL - parent may not know the team yet
 
     // Valida formato data GG/MM/AAAA
     const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
