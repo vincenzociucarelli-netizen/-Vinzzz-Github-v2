@@ -496,6 +496,203 @@ export default function AdminProfile() {
           {renderField('Codice Fiscale', profileData.fiscal_code, 'fiscal_code')}
         </View>
 
+        {/* Document Section */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>📄 Documento d'Identità</Text>
+            {!editingBank && (
+              <TouchableOpacity onPress={() => setEditingBank(true)}>
+                <Ionicons name="pencil" size={20} color="#007AFF" />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {editingBank ? (
+            <>
+              <Text style={styles.inputLabel}>Tipo Documento</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={editData.id_type}
+                  onValueChange={(v) => setEditData({...editData, id_type: v})}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Seleziona tipo..." value="" />
+                  <Picker.Item label="Carta d'Identità" value="Carta d'Identità" />
+                  <Picker.Item label="Patente" value="Patente" />
+                  <Picker.Item label="Passaporto" value="Passaporto" />
+                </Picker>
+              </View>
+
+              <Text style={styles.inputLabel}>Fronte Documento</Text>
+              <TouchableOpacity style={styles.docUploadBtn} onPress={() => pickDocImage('front')}>
+                {docFrontImage || editData.doc_front_image ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${docFrontImage || editData.doc_front_image}` }} 
+                    style={styles.docPreview} 
+                  />
+                ) : (
+                  <View style={styles.docPlaceholder}>
+                    <Ionicons name="camera" size={32} color="#999" />
+                    <Text style={styles.docPlaceholderText}>Carica fronte</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <Text style={styles.inputLabel}>Retro Documento</Text>
+              <TouchableOpacity style={styles.docUploadBtn} onPress={() => pickDocImage('back')}>
+                {docBackImage || editData.doc_back_image ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${docBackImage || editData.doc_back_image}` }} 
+                    style={styles.docPreview} 
+                  />
+                ) : (
+                  <View style={styles.docPlaceholder}>
+                    <Ionicons name="camera" size={32} color="#999" />
+                    <Text style={styles.docPlaceholderText}>Carica retro</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Tipo Documento</Text>
+                <Text style={styles.fieldValue}>{profileData.id_type || '-'}</Text>
+              </View>
+              {profileData.doc_front_image && (
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Fronte</Text>
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${profileData.doc_front_image}` }} 
+                    style={styles.docPreviewSmall} 
+                  />
+                </View>
+              )}
+              {profileData.doc_back_image && (
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Retro</Text>
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${profileData.doc_back_image}` }} 
+                    style={styles.docPreviewSmall} 
+                  />
+                </View>
+              )}
+            </>
+          )}
+        </View>
+
+        {/* Bank Details Section */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
+          </View>
+          
+          {editingBank ? (
+            <>
+              <Text style={styles.inputLabel}>IBAN</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.iban}
+                onChangeText={(t) => setEditData({...editData, iban: t.toUpperCase()})}
+                placeholder="IT..."
+                autoCapitalize="characters"
+              />
+
+              <Text style={styles.inputLabel}>Intestatario Conto</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.account_holder}
+                onChangeText={(t) => setEditData({...editData, account_holder: t.toUpperCase()})}
+                placeholder="Nome e Cognome"
+                autoCapitalize="characters"
+              />
+
+              <Text style={styles.inputLabel}>Nome Banca</Text>
+              <TextInput
+                style={styles.input}
+                value={editData.bank_name}
+                onChangeText={(t) => setEditData({...editData, bank_name: t})}
+                placeholder="Nome della banca"
+              />
+
+              <View style={styles.bankButtonsRow}>
+                <TouchableOpacity 
+                  style={styles.cancelBankBtn}
+                  onPress={() => {
+                    setEditingBank(false);
+                    setEditData({...editData, 
+                      id_type: profileData.id_type,
+                      iban: profileData.iban,
+                      account_holder: profileData.account_holder,
+                      bank_name: profileData.bank_name,
+                      doc_front_image: profileData.doc_front_image,
+                      doc_back_image: profileData.doc_back_image,
+                    });
+                    setDocFrontImage(profileData.doc_front_image || null);
+                    setDocBackImage(profileData.doc_back_image || null);
+                  }}
+                >
+                  <Text style={styles.cancelBankBtnText}>Annulla</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.saveBankBtn, savingBank && styles.buttonDisabled]}
+                  disabled={savingBank}
+                  onPress={async () => {
+                    setSavingBank(true);
+                    try {
+                      await api.patch('/users/me/bank-details', {
+                        id_type: editData.id_type,
+                        iban: editData.iban,
+                        account_holder: editData.account_holder,
+                        bank_name: editData.bank_name,
+                        doc_front_image: docFrontImage || editData.doc_front_image,
+                        doc_back_image: docBackImage || editData.doc_back_image,
+                      });
+                      setProfileData({
+                        ...profileData,
+                        id_type: editData.id_type,
+                        iban: editData.iban,
+                        account_holder: editData.account_holder,
+                        bank_name: editData.bank_name,
+                        doc_front_image: docFrontImage || editData.doc_front_image || '',
+                        doc_back_image: docBackImage || editData.doc_back_image || '',
+                      });
+                      setEditingBank(false);
+                      showAlert('Salvato', 'Dati documento e bancari aggiornati');
+                    } catch (error: any) {
+                      showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
+                    } finally {
+                      setSavingBank(false);
+                    }
+                  }}
+                >
+                  {savingBank ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.saveBankBtnText}>Salva</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>IBAN</Text>
+                <Text style={styles.fieldValue}>{profileData.iban || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Intestatario</Text>
+                <Text style={styles.fieldValue}>{profileData.account_holder || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Banca</Text>
+                <Text style={styles.fieldValue}>{profileData.bank_name || '-'}</Text>
+              </View>
+            </>
+          )}
+        </View>
+
         {/* Compensation Info - Solo se ha un compenso */}
         {profileData.monthly_compensation > 0 && (
           <>
