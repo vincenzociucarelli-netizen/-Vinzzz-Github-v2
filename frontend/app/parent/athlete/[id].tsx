@@ -1390,6 +1390,36 @@ export default function AthleteDetail() {
         </View>
       </Modal>
 
+      {/* Coach Photo Modal */}
+      <Modal
+        visible={coachPhotoModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setCoachPhotoModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.coachPhotoModalOverlay}
+          activeOpacity={1}
+          onPress={() => setCoachPhotoModalVisible(false)}
+        >
+          <View style={styles.coachPhotoModalContent}>
+            <Text style={styles.coachPhotoModalName}>{coachInfo?.full_name}</Text>
+            {coachInfo && (coachInfo.profile_photo_artistic || coachInfo.profile_photo) && (
+              <Image 
+                source={{ uri: `data:image/jpeg;base64,${coachInfo.profile_photo_artistic || coachInfo.profile_photo}` }}
+                style={styles.coachPhotoLarge}
+              />
+            )}
+            <TouchableOpacity 
+              style={styles.closeCoachPhotoBtn}
+              onPress={() => setCoachPhotoModalVisible(false)}
+            >
+              <Text style={styles.closeCoachPhotoBtnText}>Chiudi</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Privacy Modal */}
       <Modal
         visible={privacyModalVisible}
