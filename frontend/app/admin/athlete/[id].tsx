@@ -1166,11 +1166,11 @@ export default function AdminAthleteDetail() {
               placeholder="Es: 150"
             />
             
-            <Text style={styles.inputLabel}>Data Pagamento (gg/mm/aaaa) *</Text>
+            <Text style={styles.inputLabel}>Data Pagamento (GG/MM/AAAA) *</Text>
             <TextInput
               style={styles.input}
               value={newPayment.paid_date}
-              onChangeText={(t) => setNewPayment({...newPayment, paid_date: formatDateInput(t)})}
+              onChangeText={(t) => setNewPayment({...newPayment, paid_date: formatDateInputAuto(t)})}
               placeholder="Es: 15/01/2025"
               keyboardType="number-pad"
               maxLength={10}
