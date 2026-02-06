@@ -188,6 +188,37 @@ export default function AdminProfile() {
     }
   };
 
+  // Pick document image
+  const pickDocImage = async (side: 'front' | 'back') => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        showAlert('Permesso negato', 'È necessario concedere il permesso per accedere alla galleria');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        if (side === 'front') {
+          setDocFrontImage(result.assets[0].base64);
+          setEditData({...editData, doc_front_image: result.assets[0].base64});
+        } else {
+          setDocBackImage(result.assets[0].base64);
+          setEditData({...editData, doc_back_image: result.assets[0].base64});
+        }
+      }
+    } catch (error) {
+      showAlert('Errore', 'Impossibile selezionare l\'immagine');
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
