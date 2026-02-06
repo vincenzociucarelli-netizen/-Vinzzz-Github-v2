@@ -93,6 +93,20 @@ export default function AdminAthleteDetail() {
   
   // Certificate viewer modal
   const [certViewerVisible, setCertViewerVisible] = useState(false);
+  
+  // Athlete photo states
+  const [athletePhoto, setAthletePhoto] = useState<string | null>(null);
+  const [athletePhotoArtistic, setAthletePhotoArtistic] = useState<string | null>(null);
+  const [transformingPhoto, setTransformingPhoto] = useState(false);
+  
+  // Technical data
+  const [athleteRole, setAthleteRole] = useState('');
+  const [athleteHeight, setAthleteHeight] = useState('');
+  const [athleteWeight, setAthleteWeight] = useState('');
+  const [athleteCharacteristics, setAthleteCharacteristics] = useState<string[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+  const [availableCharacteristics, setAvailableCharacteristics] = useState<string[]>([]);
+  const [photoModalVisible, setPhotoModalVisible] = useState(false);
 
   const pickCertImage = async () => {
     // Show action sheet to choose camera or gallery
