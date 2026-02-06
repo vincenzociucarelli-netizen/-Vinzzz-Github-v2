@@ -266,6 +266,35 @@ export default function AdminAthleteDetail() {
     }
   };
 
+  // Format date for input field (ISO to dd/mm/yyyy)
+  const formatDateForInput = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return '';
+    }
+  };
+
+  // Auto-format date input as dd/mm/yyyy
+  const formatDateInputAuto = (text: string) => {
+    const numbers = text.replace(/\D/g, '');
+    let formatted = '';
+    if (numbers.length > 0) {
+      formatted = numbers.substring(0, 2);
+    }
+    if (numbers.length > 2) {
+      formatted += '/' + numbers.substring(2, 4);
+    }
+    if (numbers.length > 4) {
+      formatted += '/' + numbers.substring(4, 8);
+    }
+    return formatted;
+  };
+
   const handleSaveData = async () => {
     try {
       const updatePayload: any = {
