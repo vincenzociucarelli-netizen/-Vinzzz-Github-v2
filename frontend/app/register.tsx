@@ -47,6 +47,8 @@ export default function Register() {
   };
 
   const handleRegister = async () => {
+    console.log('handleRegister called', { lastName, firstName, email, password, confirmPassword, inviteCode, role });
+    
     // Validazione
     if (!lastName.trim() || !firstName.trim()) {
       showAlert('Errore', 'Inserisci cognome e nome');
@@ -78,6 +80,7 @@ export default function Register() {
       return;
     }
 
+    console.log('Validation passed, calling API...');
     setLoading(true);
     try {
       const response = await api.post('/auth/register', {
@@ -89,6 +92,7 @@ export default function Register() {
         role: role,
         invite_code: inviteCode.trim().toUpperCase(),
       });
+      console.log('Registration response:', response.data);
 
       if (response.data.token) {
         setUser({ ...response.data.user, token: response.data.token });
