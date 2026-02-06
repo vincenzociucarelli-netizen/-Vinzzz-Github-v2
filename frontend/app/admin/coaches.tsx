@@ -38,6 +38,9 @@ interface Coach {
   compensation_accepted?: boolean;
   contract_start_date?: string;
   contract_end_date?: string;
+  // Photo
+  profile_photo?: string;
+  profile_photo_artistic?: string;
 }
 
 export default function CoachesScreen() {
