@@ -260,7 +260,14 @@ export default function CoachesScreen() {
       onLongPress={() => openActionModal(item)}
     >
       <View style={styles.userAvatar}>
-        <Ionicons name="fitness" size={24} color="#FF9500" />
+        {item.profile_photo_artistic || item.profile_photo ? (
+          <Image 
+            source={{ uri: `data:image/jpeg;base64,${item.profile_photo_artistic || item.profile_photo}` }}
+            style={styles.coachPhoto}
+          />
+        ) : (
+          <Ionicons name="fitness" size={24} color="#FF9500" />
+        )}
       </View>
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{item.full_name}</Text>
