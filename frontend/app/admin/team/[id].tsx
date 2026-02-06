@@ -1410,6 +1410,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  coachPhotoPlaceholderWithText: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderStyle: 'dashed',
+  },
+  noPhotoText: {
+    fontSize: 9,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 2,
+  },
   coachInfo: {
     flex: 1,
   },
