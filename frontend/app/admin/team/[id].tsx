@@ -37,6 +37,12 @@ export default function TeamDetail() {
   const [editing, setEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   
+  // Coach info
+  const [coachInfo, setCoachInfo] = useState<CoachInfo[]>([]);
+  const [coachPhotoModal, setCoachPhotoModal] = useState(false);
+  const [selectedCoachPhoto, setSelectedCoachPhoto] = useState<string | null>(null);
+  const [selectedCoachName, setSelectedCoachName] = useState<string>('');
+  
   // Form fields - basic info
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
