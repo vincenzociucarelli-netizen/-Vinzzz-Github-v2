@@ -1281,4 +1281,90 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  // Coach section styles
+  coachSection: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  coachCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 12,
+  },
+  coachPhotoSmall: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f0f0f0',
+  },
+  coachPhotoPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  coachInfo: {
+    flex: 1,
+  },
+  coachName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  coachContactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  coachPhone: {
+    fontSize: 13,
+    color: '#007AFF',
+  },
+  // Photo modal
+  photoModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoModalContent: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  photoModalName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 16,
+  },
+  coachPhotoLarge: {
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: '#333',
+  },
+  closePhotoBtn: {
+    marginTop: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    backgroundColor: '#fff',
+    borderRadius: 25,
+  },
+  closePhotoBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
 });
