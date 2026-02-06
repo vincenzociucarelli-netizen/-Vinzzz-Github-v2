@@ -141,6 +141,19 @@ export default function TeamDetail() {
     setTrainingSessions([...trainingSessions, { day: 'Giovedì', timeStart: '', timeEnd: '', venue: '' }]);
   };
 
+  // Auto-format time as HH:MM
+  const formatTimeInput = (text: string) => {
+    const numbers = text.replace(/\D/g, '');
+    let formatted = '';
+    if (numbers.length > 0) {
+      formatted = numbers.substring(0, 2);
+    }
+    if (numbers.length > 2) {
+      formatted += ':' + numbers.substring(2, 4);
+    }
+    return formatted;
+  };
+
   const removeTrainingSession = (index: number) => {
     if (trainingSessions.length <= 2) {
       showAlert('Limite minimo', 'Minimo 2 allenamenti settimanali');
