@@ -1433,6 +1433,53 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     paddingVertical: 8,
   },
+  // Coach selection styles (edit mode)
+  coachSelectionList: {
+    gap: 8,
+  },
+  coachSelectionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    gap: 10,
+  },
+  coachSelectionItemSelected: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#007AFF',
+  },
+  coachSelectionPhoto: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+  },
+  coachSelectionPhotoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  coachSelectionName: {
+    flex: 1,
+    fontSize: 15,
+    color: '#333',
+  },
+  coachSelectionNameSelected: {
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
   // Photo modal
   photoModalOverlay: {
     flex: 1,
