@@ -1682,6 +1682,35 @@ export default function AdminAthleteDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Photo Enlargement Modal */}
+      <Modal
+        visible={photoModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setPhotoModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.photoModalOverlay}
+          activeOpacity={1}
+          onPress={() => setPhotoModalVisible(false)}
+        >
+          <View style={styles.photoModalContent}>
+            {(athletePhotoArtistic || athletePhoto) && (
+              <Image 
+                source={{ uri: `data:image/jpeg;base64,${athletePhotoArtistic || athletePhoto}` }}
+                style={styles.photoModalImage}
+              />
+            )}
+            <TouchableOpacity 
+              style={styles.closePhotoBtn}
+              onPress={() => setPhotoModalVisible(false)}
+            >
+              <Text style={styles.closePhotoBtnText}>Chiudi</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
