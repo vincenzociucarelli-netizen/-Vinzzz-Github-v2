@@ -449,8 +449,9 @@ export default function TeamDetail() {
                     <TextInput
                       style={styles.miniInput}
                       value={matchDay.time}
-                      onChangeText={(v) => setMatchDay({...matchDay, time: v})}
+                      onChangeText={(v) => setMatchDay({...matchDay, time: formatTimeInput(v)})}
                       placeholder="17:00"
+                      keyboardType="numeric"
                       maxLength={5}
                     />
                   </View>
