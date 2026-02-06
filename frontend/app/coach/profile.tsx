@@ -936,9 +936,10 @@ export default function CoachProfile() {
               <TextInput
                 style={styles.input}
                 value={editData.id_front}
-                onChangeText={(v) => setEditData({...editData, id_front: v})}
+                onChangeText={(v) => setEditData({...editData, id_front: v.toUpperCase()})}
                 placeholder="es. AX1234567"
                 placeholderTextColor="#ccc"
+                autoCapitalize="characters"
               />
               
               <Text style={styles.inputLabel}>Scadenza Documento</Text>
