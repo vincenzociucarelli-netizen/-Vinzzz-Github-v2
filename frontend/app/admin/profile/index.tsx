@@ -107,6 +107,15 @@ export default function AdminProfile() {
         phone: data.phone || '',
         monthly_compensation: data.monthly_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
+        // Document and Bank details
+        id_type: data.id_type || '',
+        id_front: data.id_front || '',
+        id_back: data.id_back || '',
+        iban: data.iban || '',
+        account_holder: data.account_holder || '',
+        bank_name: data.bank_name || '',
+        doc_front_image: data.doc_front_image || '',
+        doc_back_image: data.doc_back_image || '',
       });
       setEditData({
         email: data.email || '',
@@ -123,7 +132,19 @@ export default function AdminProfile() {
         phone: data.phone || '',
         monthly_compensation: data.monthly_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
+        // Document and Bank details
+        id_type: data.id_type || '',
+        id_front: data.id_front || '',
+        id_back: data.id_back || '',
+        iban: data.iban || '',
+        account_holder: data.account_holder || '',
+        bank_name: data.bank_name || '',
+        doc_front_image: data.doc_front_image || '',
+        doc_back_image: data.doc_back_image || '',
       });
+      // Load document images
+      setDocFrontImage(data.doc_front_image || null);
+      setDocBackImage(data.doc_back_image || null);
       setCompensationHistory(data.compensation_history || {});
       setOver5000Limit(data.over_5000_limit || {});
       const exceeded = data.over_5000_limit && Object.values(data.over_5000_limit).some((v: any) => v === true);
