@@ -509,9 +509,17 @@ export default function TeamDetail() {
                       {coach.phone && (
                         <TouchableOpacity 
                           style={styles.coachContactRow}
-                          onPress={() => Linking.openURL(`tel:${coach.phone}`)}
+                          onPress={() => {
+                            // Format phone for WhatsApp (remove spaces and add country code if needed)
+                            let phone = coach.phone.replace(/\s+/g, '').replace(/^0/, '39');
+                            if (!phone.startsWith('+') && !phone.startsWith('39')) {
+                              phone = '39' + phone;
+                            }
+                            phone = phone.replace('+', '');
+                            Linking.openURL(`https://wa.me/${phone}`);
+                          }}
                         >
-                          <Ionicons name="call" size={14} color="#007AFF" />
+                          <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
                           <Text style={styles.coachPhone}>{coach.phone}</Text>
                         </TouchableOpacity>
                       )}
