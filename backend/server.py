@@ -1752,6 +1752,31 @@ async def update_team(team_id: str, team_data: TeamUpdate, current_user = Depend
     clean_mongo_doc(team)
     return Team(**team)
 
+@api_router.post("/teams/{team_id}/assign-coaches")
+async def assign_coaches_to_team(team_id: str, coach_ids: List[str], current_user = Depends(get_current_user)):
+    """Assign coaches to a team - updates coach.assigned_teams field"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può assegnare coach")
+    
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    # First, remove this team from all coaches who had it assigned
+    await db.users.update_many(
+        {"role": "coach", "assigned_teams": team_id},
+        {"$pull": {"assigned_teams": team_id}}
+    )
+    
+    # Then, add this team to the selected coaches
+    if coach_ids:
+        await db.users.update_many(
+            {"id": {"$in": coach_ids}, "role": "coach"},
+            {"$addToSet": {"assigned_teams": team_id}}
+        )
+    
+    return {"success": True, "message": f"Coach assegnati alla squadra {team.get('name')}"}
+
 @api_router.get("/teams/{team_id}/payment-info")
 async def get_team_payment_info(team_id: str, current_user = Depends(get_current_user)):
     """Get payment information for a specific team"""
