@@ -320,6 +320,43 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Qualifiche Dirigenti */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>👔 Qualifiche Dirigenti</Text>
+          <Text style={styles.sectionDesc}>
+            Definisci le qualifiche per i dirigenti (es: Presidente, Vice Presidente, Segretario, ecc.)
+          </Text>
+          
+          <View style={styles.tagInputRow}>
+            <TextInput
+              style={styles.tagInput}
+              value={newQualification}
+              onChangeText={setNewQualification}
+              placeholder="Aggiungi qualifica..."
+              onSubmitEditing={addQualification}
+              returnKeyType="done"
+            />
+            <TouchableOpacity style={[styles.addTagBtn, { backgroundColor: '#34C759' }]} onPress={addQualification}>
+              <Ionicons name="add" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.tagsContainer}>
+            {dirigenteQualifications.length === 0 ? (
+              <Text style={styles.noTagsText}>Nessuna qualifica definita</Text>
+            ) : (
+              dirigenteQualifications.map((qual, index) => (
+                <View key={index} style={[styles.tag, { backgroundColor: '#E8F9EE', borderColor: '#34C759' }]}>
+                  <Text style={[styles.tagText, { color: '#34C759' }]}>{qual}</Text>
+                  <TouchableOpacity onPress={() => removeQualification(qual)}>
+                    <Ionicons name="close-circle" size={18} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </View>
+        </View>
+
         <TouchableOpacity 
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
           onPress={handleSave}
