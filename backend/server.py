@@ -1795,7 +1795,7 @@ async def update_team(team_id: str, team_data: TeamUpdate, current_user = Depend
     return Team(**team)
 
 @api_router.post("/teams/{team_id}/assign-coaches")
-async def assign_coaches_to_team(team_id: str, coach_ids: List[str], current_user = Depends(get_current_user)):
+async def assign_coaches_to_team(team_id: str, request: AssignmentRequest, current_user = Depends(get_current_user)):
     """Assign coaches to a team - updates coach.assigned_teams field"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può assegnare coach")
@@ -1803,6 +1803,8 @@ async def assign_coaches_to_team(team_id: str, coach_ids: List[str], current_use
     team = await db.teams.find_one({"id": team_id})
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    coach_ids = request.ids
     
     # First, remove this team from all coaches who had it assigned
     await db.users.update_many(
