@@ -3617,8 +3617,15 @@ async def mark_compensation_received(
     
     # If exceeded €5000, notify admin
     if exceeded_5000:
-        # Create notification for admin (we can implement this later)
-        pass
+        # Create notification for admin
+        notification = AdminNotification(
+            type="coach_exceeded_5000",
+            title="⚠️ Coach ha superato €5.000",
+            message=f"Il coach {coach.get('full_name', 'Sconosciuto')} ha dichiarato di aver superato il limite di €5.000 annuali di compensi sportivi dilettantistici.",
+            related_user_id=coach_id,
+            related_user_name=coach.get('full_name', '')
+        )
+        await db.admin_notifications.insert_one(notification.dict())
     
     return {"message": "Compenso confermato", "exceeded_5000": exceeded_5000}
 
