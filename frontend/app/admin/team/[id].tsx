@@ -1004,6 +1004,16 @@ export default function TeamDetail() {
         )}
       </ScrollView>
 
+      {/* Floating Save Button - only visible in edit mode */}
+      {editing && (
+        <View style={styles.floatingSaveContainer}>
+          <TouchableOpacity style={styles.floatingSaveButton} onPress={handleSave}>
+            <Ionicons name="checkmark" size={24} color="#fff" />
+            <Text style={styles.floatingSaveButtonText}>Salva Modifiche</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Training Edit Modal */}
       <Modal
         visible={trainingModalVisible}
