@@ -1411,6 +1411,12 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 4,
   },
+  tapToEnlarge: {
+    fontSize: 10,
+    color: '#007AFF',
+    marginTop: 4,
+    textAlign: 'center',
+  },
   statusBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
