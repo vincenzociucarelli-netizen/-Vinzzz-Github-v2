@@ -1089,7 +1089,17 @@ export default function CoachProfile() {
               
               {/* Document Images */}
               <View style={styles.docImagesContainer}>
-                <View style={styles.docImageWrapper}>
+                <TouchableOpacity 
+                  style={styles.docImageWrapper}
+                  onPress={() => {
+                    if (profileData.doc_front_image) {
+                      setSelectedPhoto(profileData.doc_front_image);
+                      setSelectedPhotoTitle('Fronte Documento');
+                      setPhotoViewerVisible(true);
+                    }
+                  }}
+                  disabled={!profileData.doc_front_image}
+                >
                   <Text style={styles.docImageLabel}>Fronte Documento</Text>
                   {profileData.doc_front_image ? (
                     <Image 
@@ -1103,8 +1113,21 @@ export default function CoachProfile() {
                       <Text style={styles.docImagePlaceholderText}>Non caricato</Text>
                     </View>
                   )}
-                </View>
-                <View style={styles.docImageWrapper}>
+                  {profileData.doc_front_image && (
+                    <Text style={styles.tapToEnlarge}>Tocca per ingrandire</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.docImageWrapper}
+                  onPress={() => {
+                    if (profileData.doc_back_image) {
+                      setSelectedPhoto(profileData.doc_back_image);
+                      setSelectedPhotoTitle('Retro Documento');
+                      setPhotoViewerVisible(true);
+                    }
+                  }}
+                  disabled={!profileData.doc_back_image}
+                >
                   <Text style={styles.docImageLabel}>Retro Documento</Text>
                   {profileData.doc_back_image ? (
                     <Image 
@@ -1118,7 +1141,10 @@ export default function CoachProfile() {
                       <Text style={styles.docImagePlaceholderText}>Non caricato</Text>
                     </View>
                   )}
-                </View>
+                  {profileData.doc_back_image && (
+                    <Text style={styles.tapToEnlarge}>Tocca per ingrandire</Text>
+                  )}
+                </TouchableOpacity>
               </View>
 
               <View style={styles.fieldContainer}>
