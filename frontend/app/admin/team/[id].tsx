@@ -316,6 +316,37 @@ export default function TeamDetail() {
         {editing ? (
           // EDIT MODE
           <View style={styles.editForm}>
+            {/* Team Photo Upload Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>📸 Foto Squadra</Text>
+              <TouchableOpacity 
+                style={styles.teamPhotoUploadContainer}
+                onPress={pickTeamPhoto}
+              >
+                {teamPhoto ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${teamPhoto}` }}
+                    style={styles.teamPhotoEditPreview}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.teamPhotoUploadPlaceholder}>
+                    <Ionicons name="camera" size={32} color="#007AFF" />
+                    <Text style={styles.teamPhotoUploadText}>Tocca per caricare foto squadra</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              {teamPhoto && (
+                <TouchableOpacity 
+                  style={styles.removePhotoBtn}
+                  onPress={() => setTeamPhoto(null)}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+                  <Text style={styles.removePhotoBtnText}>Rimuovi foto</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>📝 Informazioni Base</Text>
               <Text style={styles.inputLabel}>Nome Squadra *</Text>
