@@ -1178,6 +1178,27 @@ export default function CoachProfile() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Floating Save Button when editing */}
+      {editing && (
+        <View style={styles.floatingSaveContainer}>
+          <TouchableOpacity
+            style={[styles.floatingSaveButton, saving && styles.floatingSaveButtonDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                <Text style={styles.floatingSaveText}>SALVA MODIFICHE</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Photo Viewer for documents */}
       <PhotoViewer
