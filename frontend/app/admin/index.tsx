@@ -216,6 +216,20 @@ export default function AdminDashboard() {
           <Text style={styles.headerTitle}>{society.name}</Text>
         </View>
         <View style={styles.headerButtons}>
+          {/* Notifications Bell */}
+          <TouchableOpacity 
+            onPress={() => router.push('/admin/notifications')} 
+            style={styles.headerBtn}
+          >
+            <Ionicons name="notifications-outline" size={24} color="#fff" />
+            {unreadNotifications > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
           {/* Switch to Dirigente button */}
           <TouchableOpacity 
             onPress={() => router.replace('/dirigente')} 
