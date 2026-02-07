@@ -145,10 +145,6 @@ export default function SettingsScreen() {
     setDirigenteQualifications(dirigenteQualifications.filter(q => q !== qual));
   };
 
-  const removeCharacteristic = (char: string) => {
-    setAthleteCharacteristics(athleteCharacteristics.filter(c => c !== char));
-  };
-
   if (loading) {
     return (
       <View style={styles.container}>
