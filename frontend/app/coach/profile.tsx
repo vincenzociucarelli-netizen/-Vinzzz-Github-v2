@@ -44,6 +44,7 @@ export default function CoachProfile() {
     last_name: '',
     date_of_birth: '',
     place_of_birth: '',
+    province_of_birth: '',
     fiscal_code: '',
     address: '',
     city: '',
