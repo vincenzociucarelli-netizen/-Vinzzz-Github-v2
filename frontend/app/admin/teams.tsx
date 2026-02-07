@@ -488,7 +488,9 @@ export default function TeamsScreen() {
                       style={styles.miniInput}
                       placeholder="17:00"
                       value={matchDay.time}
-                      onChangeText={(v) => setMatchDay({...matchDay, time: v})}
+                      onChangeText={(v) => setMatchDay({...matchDay, time: formatTimeInput(v)})}
+                      keyboardType="number-pad"
+                      maxLength={5}
                     />
                   </View>
                 </View>
