@@ -250,6 +250,7 @@ class TeamCreate(BaseModel):
 class TeamUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    team_photo: Optional[str] = None
     total_amount: Optional[float] = None
     installment_1_amount: Optional[float] = None
     installment_2_amount: Optional[float] = None
