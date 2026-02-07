@@ -491,13 +491,7 @@ export default function TeamsScreen() {
                     <View style={styles.pickerContainer}>
                       <TouchableOpacity 
                         style={styles.pickerButton}
-                        onPress={() => {
-                          if (Platform.OS === 'web') {
-                            const currentIdx = daysOfWeek.indexOf(matchDay.day);
-                            const nextIdx = (currentIdx + 1) % daysOfWeek.length;
-                            setMatchDay({...matchDay, day: daysOfWeek[nextIdx]});
-                          }
-                        }}
+                        onPress={() => openDayPickerForMatch()}
                       >
                         <Text style={matchDay.day ? styles.pickerText : styles.pickerPlaceholder}>
                           {matchDay.day || 'Seleziona'}
