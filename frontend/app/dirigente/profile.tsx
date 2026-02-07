@@ -177,9 +177,11 @@ export default function DirigenteProfile() {
       // Load compensation history
       setCompensationHistory(data.compensation_history || {});
       setOver5000Limit(data.over_5000_limit || {});
-      // Check if any month has exceeded €5000
-      const exceeded = data.over_5000_limit && Object.values(data.over_5000_limit).some((v: any) => v === true);
-      setHasExceeded5000(exceeded || false);
+      // Check if exceeded €5000 or €15000
+      const exceeded5000 = data.over_5000_limit && (data.over_5000_limit.exceeded_5000 === true || Object.values(data.over_5000_limit).some((v: any) => v === true && typeof v === 'boolean'));
+      const exceeded15000 = data.over_5000_limit && data.over_5000_limit.exceeded_15000 === true;
+      setHasExceeded5000(exceeded5000 || false);
+      setHasExceeded15000(exceeded15000 || false);
       // Load profile photo
       setProfilePhoto(data.profile_photo || null);
       setProfilePhotoArtistic(data.profile_photo_artistic || null);
