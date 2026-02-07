@@ -745,6 +745,7 @@ export default function CoachProfile() {
           {renderField('Cognome', profileData.last_name, 'last_name')}
           {renderField('Data di Nascita', profileData.date_of_birth, 'date_of_birth')}
           {renderField('Luogo di Nascita', profileData.place_of_birth, 'place_of_birth')}
+          {renderField('Provincia di Nascita', profileData.province_of_birth, 'province_of_birth')}
           {renderField('Indirizzo', profileData.address, 'address')}
           {renderField('Città', profileData.city, 'city')}
           {renderField('Provincia', profileData.province, 'province')}
