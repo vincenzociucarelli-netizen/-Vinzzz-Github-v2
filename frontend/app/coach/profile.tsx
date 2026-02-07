@@ -1165,6 +1165,14 @@ export default function CoachProfile() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Photo Viewer for documents */}
+      <PhotoViewer
+        visible={photoViewerVisible}
+        photo={selectedPhoto}
+        title={selectedPhotoTitle}
+        onClose={() => setPhotoViewerVisible(false)}
+      />
     </View>
   );
 }
