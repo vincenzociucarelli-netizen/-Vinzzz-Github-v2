@@ -950,6 +950,32 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
         update_dict["compensation_history"] = data.compensation_history
     if data.over_5000_limit is not None:
         update_dict["over_5000_limit"] = data.over_5000_limit
+        
+        # Check if coach is declaring they exceeded limits
+        old_limit = current_user.get("over_5000_limit", {})
+        new_limit = data.over_5000_limit
+        
+        # Notify admin if newly exceeded €5.000
+        if new_limit.get("exceeded_5000") and not old_limit.get("exceeded_5000"):
+            notification = AdminNotification(
+                type="coach_exceeded_5000",
+                title="⚠️ Coach ha superato €5.000",
+                message=f"Il coach {current_user.get('full_name', 'Sconosciuto')} ha dichiarato di aver superato il limite di €5.000 annuali di compensi sportivi dilettantistici.",
+                related_user_id=current_user["id"],
+                related_user_name=current_user.get('full_name', '')
+            )
+            await db.admin_notifications.insert_one(notification.dict())
+        
+        # Notify admin if newly exceeded €15.000
+        if new_limit.get("exceeded_15000") and not old_limit.get("exceeded_15000"):
+            notification = AdminNotification(
+                type="coach_exceeded_15000",
+                title="🚨 URGENTE: Coach ha superato €15.000",
+                message=f"ATTENZIONE: Il coach {current_user.get('full_name', 'Sconosciuto')} ha dichiarato di aver superato il limite di €15.000 annuali. Questo comporta obblighi fiscali e contributivi aggiuntivi!",
+                related_user_id=current_user["id"],
+                related_user_name=current_user.get('full_name', '')
+            )
+            await db.admin_notifications.insert_one(notification.dict())
     
     if update_dict:
         await db.users.update_one(
