@@ -662,7 +662,7 @@ export default function TeamDetail() {
                 </View>
               ))}
               
-              {trainingSessions.length < 4 && (
+              {trainingSessions.length < 5 && (
                 <TouchableOpacity style={styles.addTrainingBtn} onPress={addTrainingSession}>
                   <Ionicons name="add-circle" size={20} color="#007AFF" />
                   <Text style={styles.addTrainingText}>Aggiungi Allenamento</Text>
@@ -1089,7 +1089,7 @@ export default function TeamDetail() {
                 </View>
               ))}
               
-              {trainingSessions.length < 4 && (
+              {trainingSessions.length < 5 && (
                 <TouchableOpacity style={styles.addTrainingBtn} onPress={addTrainingSession}>
                   <Ionicons name="add-circle" size={20} color="#007AFF" />
                   <Text style={styles.addTrainingText}>Aggiungi Allenamento</Text>
