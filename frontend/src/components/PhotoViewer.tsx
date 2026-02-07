@@ -11,23 +11,11 @@ import {
   Platform,
   Alert,
   StatusBar,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import {
-  GestureHandlerRootView,
-  PinchGestureHandler,
-  PanGestureHandler,
-  GestureHandlerStateChangeEvent,
-  State,
-} from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  runOnJS,
-} from 'react-native-reanimated';
 
 interface PhotoViewerProps {
   visible: boolean;
@@ -40,61 +28,6 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function PhotoViewer({ visible, photo, title, onClose }: PhotoViewerProps) {
   const [isLandscape, setIsLandscape] = useState(false);
-  const scale = useSharedValue(1);
-  const savedScale = useSharedValue(1);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const savedTranslateX = useSharedValue(0);
-  const savedTranslateY = useSharedValue(0);
-
-  const resetTransform = () => {
-    scale.value = withSpring(1);
-    savedScale.value = 1;
-    translateX.value = withSpring(0);
-    translateY.value = withSpring(0);
-    savedTranslateX.value = 0;
-    savedTranslateY.value = 0;
-  };
-
-  const onPinchGestureEvent = (event: any) => {
-    scale.value = savedScale.value * event.nativeEvent.scale;
-  };
-
-  const onPinchHandlerStateChange = (event: GestureHandlerStateChangeEvent) => {
-    if (event.nativeEvent.state === State.END) {
-      savedScale.value = scale.value;
-      // Limit scale
-      if (scale.value < 1) {
-        scale.value = withSpring(1);
-        savedScale.value = 1;
-      } else if (scale.value > 5) {
-        scale.value = withSpring(5);
-        savedScale.value = 5;
-      }
-    }
-  };
-
-  const onPanGestureEvent = (event: any) => {
-    translateX.value = savedTranslateX.value + event.nativeEvent.translationX;
-    translateY.value = savedTranslateY.value + event.nativeEvent.translationY;
-  };
-
-  const onPanHandlerStateChange = (event: GestureHandlerStateChangeEvent) => {
-    if (event.nativeEvent.state === State.END) {
-      savedTranslateX.value = translateX.value;
-      savedTranslateY.value = translateY.value;
-    }
-  };
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
-        { scale: scale.value },
-      ],
-    };
-  });
 
   const handleShare = async () => {
     if (!photo) return;
@@ -143,7 +76,6 @@ export default function PhotoViewer({ visible, photo, title, onClose }: PhotoVie
 
   const toggleFullscreen = () => {
     setIsLandscape(!isLandscape);
-    resetTransform();
   };
 
   const getImageSource = () => {
@@ -170,7 +102,7 @@ export default function PhotoViewer({ visible, photo, title, onClose }: PhotoVie
       statusBarTranslucent
     >
       <StatusBar hidden={isLandscape} />
-      <GestureHandlerRootView style={[styles.container, isLandscape && styles.containerLandscape]}>
+      <View style={[styles.container, isLandscape && styles.containerLandscape]}>
         {/* Header */}
         {!isLandscape && (
           <View style={styles.header}>
@@ -191,30 +123,26 @@ export default function PhotoViewer({ visible, photo, title, onClose }: PhotoVie
           </View>
         )}
 
-        {/* Image with gestures */}
-        <PanGestureHandler
-          onGestureEvent={onPanGestureEvent}
-          onHandlerStateChange={onPanHandlerStateChange}
-          minDist={10}
+        {/* Image with ScrollView for zoom */}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          maximumZoomScale={5}
+          minimumZoomScale={1}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          centerContent={true}
+          bouncesZoom={true}
         >
-          <Animated.View style={styles.imageWrapper}>
-            <PinchGestureHandler
-              onGestureEvent={onPinchGestureEvent}
-              onHandlerStateChange={onPinchHandlerStateChange}
-            >
-              <Animated.View style={[styles.imageContainer, animatedStyle]}>
-                <Image
-                  source={getImageSource()}
-                  style={[
-                    styles.image,
-                    isLandscape && styles.imageLandscape
-                  ]}
-                  resizeMode="contain"
-                />
-              </Animated.View>
-            </PinchGestureHandler>
-          </Animated.View>
-        </PanGestureHandler>
+          <Image
+            source={getImageSource()}
+            style={[
+              styles.image,
+              isLandscape && styles.imageLandscape
+            ]}
+            resizeMode="contain"
+          />
+        </ScrollView>
 
         {/* Fullscreen controls */}
         {isLandscape && (
@@ -235,19 +163,11 @@ export default function PhotoViewer({ visible, photo, title, onClose }: PhotoVie
         {!isLandscape && (
           <View style={styles.instructions}>
             <Text style={styles.instructionText}>
-              📌 Pizzica per zoomare • Trascina per spostare • Tocca 🔲 per schermo intero
+              📌 Pizzica per zoomare • Tocca 🔲 per schermo intero
             </Text>
           </View>
         )}
-
-        {/* Double tap to reset */}
-        <TouchableOpacity
-          style={styles.resetButton}
-          onPress={resetTransform}
-        >
-          <Ionicons name="refresh" size={20} color="#fff" />
-        </TouchableOpacity>
-      </GestureHandlerRootView>
+      </View>
     </Modal>
   );
 }
@@ -284,20 +204,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  imageWrapper: {
+  scrollView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  imageContainer: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT - 150,
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   image: {
-    width: '100%',
-    height: '100%',
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT - 150,
   },
   imageLandscape: {
     width: SCREEN_HEIGHT,
@@ -326,13 +243,5 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 12,
     textAlign: 'center',
-  },
-  resetButton: {
-    position: 'absolute',
-    bottom: 80,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 10,
-    borderRadius: 20,
   },
 });
