@@ -164,6 +164,8 @@ class CoachCompensation(BaseModel):
     received_date: Optional[datetime] = None
     exceeded_5000: bool = False  # Flag superamento €5.000 annuali
     exceeded_5000_date: Optional[datetime] = None
+    exceeded_15000: bool = False  # Flag superamento €15.000 annuali
+    exceeded_15000_date: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class AdminNotification(BaseModel):
