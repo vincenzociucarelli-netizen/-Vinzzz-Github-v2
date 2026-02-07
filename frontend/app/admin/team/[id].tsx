@@ -837,7 +837,7 @@ export default function TeamDetail() {
                   </View>
                 ))
               ) : (
-                <Text style={styles.noCoachText}>Nessun dirigente registrato</Text>
+                <Text style={styles.noCoachText}>Nessun dirigente assegnato a questa squadra</Text>
               )}
             </View>
 
