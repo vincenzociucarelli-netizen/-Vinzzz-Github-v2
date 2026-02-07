@@ -576,19 +576,21 @@ export default function TeamDetail() {
 
               <Text style={styles.inputLabel}>Coordinate Bancarie</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.input, styles.textArea, { textTransform: 'uppercase' }]}
                 value={bankInfo}
-                onChangeText={setBankInfo}
+                onChangeText={(text) => setBankInfo(text.toUpperCase())}
+                autoCapitalize="characters"
                 multiline
                 placeholder="IBAN e intestatario"
               />
 
               <Text style={styles.inputLabel}>Email PayPal</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { textTransform: 'lowercase' }]}
                 value={paypalEmail}
-                onChangeText={setPaypalEmail}
+                onChangeText={(text) => setPaypalEmail(text.toLowerCase())}
                 keyboardType="email-address"
+                autoCapitalize="none"
                 placeholder="paypal@email.com"
               />
             </View>
