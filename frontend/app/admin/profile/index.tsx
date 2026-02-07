@@ -32,6 +32,10 @@ export default function AdminProfile() {
   const [profilePhotoArtistic, setProfilePhotoArtistic] = useState<string | null>(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
   
+  // Qualifications and teams
+  const [dirigenteQualifications, setDirigenteQualifications] = useState<string[]>([]);
+  const [assignedTeamNames, setAssignedTeamNames] = useState<string[]>([]);
+  
   // Profile data
   const [profileData, setProfileData] = useState({
     email: '',
@@ -46,6 +50,7 @@ export default function AdminProfile() {
     postal_code: '',
     province: '',
     phone: '',
+    qualification: '',
     monthly_compensation: 0,
     compensation_accepted: false,
     // Document and Bank details
