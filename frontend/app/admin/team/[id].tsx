@@ -102,6 +102,13 @@ export default function TeamDetail() {
         setSelectedCoachIds(teamData.coach_info.map((c: CoachInfo) => c.id));
       }
 
+      // Set dirigenti info
+      if (teamData.dirigenti_info) {
+        setDirigentiInfo(teamData.dirigenti_info);
+        // Set selected dirigente IDs for editing
+        setSelectedDirigenteIds(teamData.dirigenti_info.map((d: CoachInfo) => d.id));
+      }
+
       // Set team photo
       if (teamData.team_photo) {
         setTeamPhoto(teamData.team_photo);
