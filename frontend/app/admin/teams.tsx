@@ -427,14 +427,7 @@ export default function TeamsScreen() {
                         <View style={styles.pickerContainer}>
                           <TouchableOpacity 
                             style={styles.pickerButton}
-                            onPress={() => {
-                              if (Platform.OS === 'web') {
-                                // For web, use a simple prompt or cycle through days
-                                const currentIdx = daysOfWeek.indexOf(training.day);
-                                const nextIdx = (currentIdx + 1) % daysOfWeek.length;
-                                updateTraining(index, 'day', daysOfWeek[nextIdx]);
-                              }
-                            }}
+                            onPress={() => openDayPickerForTraining(index)}
                           >
                             <Text style={training.day ? styles.pickerText : styles.pickerPlaceholder}>
                               {training.day || 'Seleziona'}
