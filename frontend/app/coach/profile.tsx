@@ -525,29 +525,36 @@ export default function CoachProfile() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {/* Edit/Save Buttons */}
-        <View style={styles.actionButtons}>
-          {editing ? (
-            <>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.cancelButton]}
-                onPress={() => {
-                  setEditing(false);
-                  setEditData({ ...profileData });
-                }}
-              >
-                <Ionicons name="close" size={20} color="#666" />
-                <Text style={styles.cancelButtonText}>Annulla</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.saveButton]}
-                onPress={handleSave}
-                disabled={saving}
-              >
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={{ paddingBottom: editing ? 100 : 20 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Edit/Save Buttons */}
+          <View style={styles.actionButtons}>
+            {editing ? (
+              <>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.cancelButton]}
+                  onPress={() => {
+                    setEditing(false);
+                    setEditData({ ...profileData });
+                  }}
+                >
+                  <Ionicons name="close" size={20} color="#666" />
+                  <Text style={styles.cancelButtonText}>Annulla</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.saveButton]}
+                  onPress={handleSave}
+                  disabled={saving}
+                >
                 <Ionicons name="checkmark" size={20} color="#fff" />
                 <Text style={styles.saveButtonText}>
                   {saving ? 'Salvataggio...' : 'Salva'}
