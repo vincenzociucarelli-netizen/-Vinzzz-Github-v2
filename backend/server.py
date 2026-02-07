@@ -1249,19 +1249,21 @@ class SocietySettingsUpdate(BaseModel):
     logo_size: Optional[int] = None  # Logo size in pixels
     athlete_roles: Optional[List[str]] = None  # Custom roles for athletes
     athlete_characteristics: Optional[List[str]] = None  # Custom characteristics for athletes
+    dirigente_qualifications: Optional[List[str]] = None  # Custom qualifications for dirigenti
 
 @api_router.get("/settings/society")
 async def get_society_settings():
     """Get society settings (public endpoint - no auth required for logo display)"""
     settings = await db.settings.find_one({"type": "society"})
     if not settings:
-        return {"name": "Società Sportiva", "logo": None, "logo_size": 50, "athlete_roles": [], "athlete_characteristics": []}
+        return {"name": "Società Sportiva", "logo": None, "logo_size": 50, "athlete_roles": [], "athlete_characteristics": [], "dirigente_qualifications": []}
     return {
         "name": settings.get("name", "Società Sportiva"),
         "logo": settings.get("logo"),
         "logo_size": settings.get("logo_size", 50),
         "athlete_roles": settings.get("athlete_roles", []),
-        "athlete_characteristics": settings.get("athlete_characteristics", [])
+        "athlete_characteristics": settings.get("athlete_characteristics", []),
+        "dirigente_qualifications": settings.get("dirigente_qualifications", [])
     }
 
 @api_router.patch("/settings/society")
@@ -1281,6 +1283,8 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
         update_dict["athlete_roles"] = data.athlete_roles
     if data.athlete_characteristics is not None:
         update_dict["athlete_characteristics"] = data.athlete_characteristics
+    if data.dirigente_qualifications is not None:
+        update_dict["dirigente_qualifications"] = data.dirigente_qualifications
     
     if update_dict:
         await db.settings.update_one(
