@@ -31,6 +31,10 @@ export default function SettingsScreen() {
   const [newRole, setNewRole] = useState('');
   const [newCharacteristic, setNewCharacteristic] = useState('');
 
+  // Dirigente qualifications
+  const [dirigenteQualifications, setDirigenteQualifications] = useState<string[]>([]);
+  const [newQualification, setNewQualification] = useState('');
+
   const loadSettings = async () => {
     try {
       const response = await api.get('/settings/society');
@@ -39,6 +43,7 @@ export default function SettingsScreen() {
       setLogoSize(response.data.logo_size || 50);
       setAthleteRoles(response.data.athlete_roles || []);
       setAthleteCharacteristics(response.data.athlete_characteristics || []);
+      setDirigenteQualifications(response.data.dirigente_qualifications || []);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
