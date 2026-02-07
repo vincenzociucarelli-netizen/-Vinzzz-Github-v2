@@ -249,6 +249,7 @@ export default function CoachProfile() {
         full_name: `${editData.last_name} ${editData.first_name}`,
         date_of_birth: isoDate,
         place_of_birth: editData.place_of_birth,
+        province_of_birth: editData.province_of_birth,
         fiscal_code: editData.fiscal_code,
         address: editData.address,
         city: editData.city,
