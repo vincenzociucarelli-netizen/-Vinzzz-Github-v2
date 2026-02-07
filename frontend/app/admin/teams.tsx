@@ -47,7 +47,34 @@ export default function TeamsScreen() {
   ]);
   const [matchDay, setMatchDay] = useState({ day: '', time: '', venue: '' });
   
+  // Day picker modal state
+  const [dayPickerVisible, setDayPickerVisible] = useState(false);
+  const [dayPickerTarget, setDayPickerTarget] = useState<{type: 'training' | 'match', index?: number} | null>(null);
+  
   const daysOfWeek = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+  
+  // Open day picker for training
+  const openDayPickerForTraining = (index: number) => {
+    setDayPickerTarget({ type: 'training', index });
+    setDayPickerVisible(true);
+  };
+  
+  // Open day picker for match day
+  const openDayPickerForMatch = () => {
+    setDayPickerTarget({ type: 'match' });
+    setDayPickerVisible(true);
+  };
+  
+  // Handle day selection
+  const handleDaySelect = (day: string) => {
+    if (dayPickerTarget?.type === 'training' && dayPickerTarget.index !== undefined) {
+      updateTraining(dayPickerTarget.index, 'day', day);
+    } else if (dayPickerTarget?.type === 'match') {
+      setMatchDay({...matchDay, day: day});
+    }
+    setDayPickerVisible(false);
+    setDayPickerTarget(null);
+  };
   
   const addTraining = () => {
     if (trainings.length < 4) {
