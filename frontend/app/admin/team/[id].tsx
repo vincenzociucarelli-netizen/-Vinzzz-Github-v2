@@ -216,8 +216,8 @@ export default function TeamDetail() {
   };
 
   const addTrainingSession = () => {
-    if (trainingSessions.length >= 4) {
-      showAlert('Limite raggiunto', 'Massimo 4 allenamenti settimanali');
+    if (trainingSessions.length >= 5) {
+      showAlert('Limite raggiunto', 'Massimo 5 allenamenti settimanali');
       return;
     }
     setTrainingSessions([...trainingSessions, { day: 'Giovedì', timeStart: '', timeEnd: '', venue: '' }]);
