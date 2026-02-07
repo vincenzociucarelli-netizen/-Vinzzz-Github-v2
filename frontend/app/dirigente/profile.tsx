@@ -474,16 +474,6 @@ export default function DirigenteProfile() {
                 <Ionicons name="close" size={20} color="#666" />
                 <Text style={styles.cancelButtonText}>Annulla</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.saveButton]}
-                onPress={handleSave}
-                disabled={saving}
-              >
-                <Ionicons name="checkmark" size={20} color="#fff" />
-                <Text style={styles.saveButtonText}>
-                  {saving ? 'Salvataggio...' : 'Salva'}
-                </Text>
-              </TouchableOpacity>
             </>
           ) : (
             <View style={styles.headerButtonsRow}>
