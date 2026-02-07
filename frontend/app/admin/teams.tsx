@@ -672,6 +672,43 @@ export default function TeamsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Day Picker Modal */}
+      <Modal
+        visible={dayPickerVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setDayPickerVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.dayPickerOverlay}
+          activeOpacity={1}
+          onPress={() => setDayPickerVisible(false)}
+        >
+          <View style={styles.dayPickerContent}>
+            <Text style={styles.dayPickerTitle}>Seleziona Giorno</Text>
+            {daysOfWeek.map((day) => (
+              <TouchableOpacity
+                key={day}
+                style={styles.dayPickerItem}
+                onPress={() => handleDaySelect(day)}
+              >
+                <Text style={styles.dayPickerItemText}>{day}</Text>
+                {((dayPickerTarget?.type === 'training' && dayPickerTarget.index !== undefined && trainings[dayPickerTarget.index]?.day === day) ||
+                  (dayPickerTarget?.type === 'match' && matchDay.day === day)) && (
+                  <Ionicons name="checkmark" size={20} color="#007AFF" />
+                )}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.dayPickerCancel}
+              onPress={() => setDayPickerVisible(false)}
+            >
+              <Text style={styles.dayPickerCancelText}>Annulla</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
