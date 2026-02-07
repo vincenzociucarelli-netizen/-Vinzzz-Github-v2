@@ -276,6 +276,9 @@ export default function TeamDetail() {
       // Assign coaches to team
       await api.post(`/teams/${id}/assign-coaches`, selectedCoachIds);
       
+      // Assign dirigenti to team
+      await api.post(`/teams/${id}/assign-dirigenti`, selectedDirigenteIds);
+      
       setEditing(false);
       setTrainingModalVisible(false);
       await loadTeam();
