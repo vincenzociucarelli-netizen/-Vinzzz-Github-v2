@@ -102,6 +102,7 @@ export default function SettingsScreen() {
         logo_size: logoSize,
         athlete_roles: athleteRoles,
         athlete_characteristics: athleteCharacteristics,
+        dirigente_qualifications: dirigenteQualifications,
       });
       showAlert('Successo', 'Impostazioni salvate con successo');
     } catch (error: any) {
@@ -127,6 +128,21 @@ export default function SettingsScreen() {
       setAthleteCharacteristics([...athleteCharacteristics, newCharacteristic.trim().toUpperCase()]);
       setNewCharacteristic('');
     }
+  };
+
+  const removeCharacteristic = (char: string) => {
+    setAthleteCharacteristics(athleteCharacteristics.filter(c => c !== char));
+  };
+
+  const addQualification = () => {
+    if (newQualification.trim() && !dirigenteQualifications.includes(newQualification.trim())) {
+      setDirigenteQualifications([...dirigenteQualifications, newQualification.trim()]);
+      setNewQualification('');
+    }
+  };
+
+  const removeQualification = (qual: string) => {
+    setDirigenteQualifications(dirigenteQualifications.filter(q => q !== qual));
   };
 
   const removeCharacteristic = (char: string) => {
