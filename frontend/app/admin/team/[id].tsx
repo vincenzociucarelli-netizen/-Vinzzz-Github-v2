@@ -729,11 +729,6 @@ export default function TeamDetail() {
                 placeholder="https://..."
               />
             </View>
-
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Ionicons name="checkmark" size={24} color="#fff" />
-              <Text style={styles.saveButtonText}>Salva Modifiche</Text>
-            </TouchableOpacity>
           </View>
         ) : (
           // VIEW MODE
