@@ -2560,4 +2560,88 @@ const styles = StyleSheet.create({
   uploadPhotoButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   photoHint: { color: '#888', fontSize: 12, marginTop: 12, textAlign: 'center', fontStyle: 'italic' },
   buttonDisabled: { opacity: 0.5 },
+  // Coach info styles
+  coachInfoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  coachInfoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  coachInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  coachPhotoSmall: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f0f0f0',
+  },
+  coachPhotoPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  coachInfoDetails: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  coachName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  coachContactHint: {
+    fontSize: 12,
+    color: '#888',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  coachPhotoModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  coachPhotoModalContent: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  coachPhotoModalName: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  coachPhotoLarge: {
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+  },
+  closeCoachPhotoBtn: {
+    marginTop: 20,
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    backgroundColor: '#333',
+    borderRadius: 25,
+  },
+  closeCoachPhotoBtnText: {
+    color: '#fff',
+    fontSize: 16,
+  },
 });
