@@ -956,11 +956,6 @@ export default function AdminAthleteDetail() {
                       />
                     </View>
                   </View>
-                  
-                  <TouchableOpacity style={styles.saveBtn} onPress={handleSaveData}>
-                    <Ionicons name="checkmark" size={20} color="#fff" />
-                    <Text style={styles.saveBtnText}>Salva Modifiche</Text>
-                  </TouchableOpacity>
                 </>
               ) : (
                 <>
