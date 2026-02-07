@@ -630,6 +630,60 @@ export default function TeamDetail() {
               )}
             </View>
 
+            {/* Dirigenti Section */}
+            <View style={styles.coachSection}>
+              <Text style={styles.sectionTitle}>👔 Dirigenti</Text>
+              {dirigentiInfo.length > 0 ? (
+                dirigentiInfo.map((dirigente, index) => (
+                  <View key={dirigente.id || index} style={styles.coachCard}>
+                    <TouchableOpacity 
+                      onPress={() => {
+                        const photo = dirigente.profile_photo_artistic || dirigente.profile_photo;
+                        if (photo) {
+                          setSelectedCoachPhoto(photo);
+                          setSelectedCoachName(dirigente.full_name);
+                          setCoachPhotoModal(true);
+                        }
+                      }}
+                    >
+                      {dirigente.profile_photo_artistic || dirigente.profile_photo ? (
+                        <Image 
+                          source={{ uri: `data:image/jpeg;base64,${dirigente.profile_photo_artistic || dirigente.profile_photo}` }}
+                          style={styles.coachPhotoSmall}
+                        />
+                      ) : (
+                        <View style={styles.coachPhotoPlaceholderWithText}>
+                          <Ionicons name="camera-outline" size={20} color="#999" />
+                          <Text style={styles.noPhotoText}>Foto non{'\n'}caricata</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                    <View style={styles.coachInfo}>
+                      <Text style={styles.coachName}>{dirigente.full_name}</Text>
+                      {dirigente.phone && (
+                        <TouchableOpacity 
+                          style={styles.coachContactRow}
+                          onPress={() => {
+                            let phone = dirigente.phone.replace(/\s+/g, '').replace(/^0/, '39');
+                            if (!phone.startsWith('+') && !phone.startsWith('39')) {
+                              phone = '39' + phone;
+                            }
+                            phone = phone.replace('+', '');
+                            Linking.openURL(`https://wa.me/${phone}`);
+                          }}
+                        >
+                          <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                          <Text style={styles.coachPhone}>{dirigente.phone}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noCoachText}>Nessun dirigente registrato</Text>
+              )}
+            </View>
+
             {/* Training Schedule Card */}
             <View style={styles.trainingCard}>
               <View style={styles.trainingHeader}>
