@@ -1320,6 +1320,9 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
             "status": d.get("status", UserStatus.APPROVED),
             "created_at": d.get("created_at"),
             "approved_at": d.get("approved_at"),
+            "phone": d.get("phone", ""),
+            "profile_photo": d.get("profile_photo", ""),
+            "profile_photo_artistic": d.get("profile_photo_artistic", ""),
         })
     
     return result
