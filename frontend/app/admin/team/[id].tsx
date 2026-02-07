@@ -166,6 +166,31 @@ export default function TeamDetail() {
     }
   };
 
+  const pickTeamPhoto = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        showAlert('Permesso negato', 'È necessario il permesso per accedere alla galleria');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        setTeamPhoto(result.assets[0].base64);
+      }
+    } catch (error) {
+      console.error('Error picking team photo:', error);
+      showAlert('Errore', 'Impossibile selezionare la foto');
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadTeam();
