@@ -1030,6 +1030,37 @@ export default function TeamDetail() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Team Photo Modal */}
+      <Modal
+        visible={teamPhotoModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setTeamPhotoModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.photoModalOverlay}
+          activeOpacity={1}
+          onPress={() => setTeamPhotoModal(false)}
+        >
+          <View style={styles.photoModalContent}>
+            <Text style={styles.photoModalName}>Foto Squadra - {name}</Text>
+            {teamPhoto && (
+              <Image 
+                source={{ uri: `data:image/jpeg;base64,${teamPhoto}` }}
+                style={styles.teamPhotoLarge}
+                resizeMode="contain"
+              />
+            )}
+            <TouchableOpacity 
+              style={styles.closePhotoBtn}
+              onPress={() => setTeamPhotoModal(false)}
+            >
+              <Text style={styles.closePhotoBtnText}>Chiudi</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
