@@ -432,6 +432,56 @@ export default function TeamDetail() {
               </Text>
             </View>
 
+            {/* Dirigenti Assignment Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>👔 Assegna Dirigenti</Text>
+              {availableDirigenti.length > 0 ? (
+                <View style={styles.coachSelectionList}>
+                  {availableDirigenti.map((dirigente) => (
+                    <TouchableOpacity
+                      key={dirigente.id}
+                      style={[
+                        styles.coachSelectionItem,
+                        selectedDirigenteIds.includes(dirigente.id) && styles.coachSelectionItemSelected
+                      ]}
+                      onPress={() => {
+                        if (selectedDirigenteIds.includes(dirigente.id)) {
+                          setSelectedDirigenteIds(selectedDirigenteIds.filter(dId => dId !== dirigente.id));
+                        } else {
+                          setSelectedDirigenteIds([...selectedDirigenteIds, dirigente.id]);
+                        }
+                      }}
+                    >
+                      {dirigente.profile_photo_artistic || dirigente.profile_photo ? (
+                        <Image 
+                          source={{ uri: `data:image/jpeg;base64,${dirigente.profile_photo_artistic || dirigente.profile_photo}` }}
+                          style={styles.coachSelectionPhoto}
+                        />
+                      ) : (
+                        <View style={styles.coachSelectionPhotoPlaceholder}>
+                          <Ionicons name="person" size={18} color="#999" />
+                        </View>
+                      )}
+                      <Text style={[
+                        styles.coachSelectionName,
+                        selectedDirigenteIds.includes(dirigente.id) && styles.coachSelectionNameSelected
+                      ]}>
+                        {dirigente.full_name}
+                      </Text>
+                      {selectedDirigenteIds.includes(dirigente.id) && (
+                        <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.noCoachText}>Nessun dirigente disponibile nel sistema</Text>
+              )}
+              <Text style={styles.helperText}>
+                Seleziona uno o più dirigenti da assegnare a questa squadra
+              </Text>
+            </View>
+
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>💰 Quote e Pagamenti</Text>
               <Text style={styles.inputLabel}>Quota Totale (€)</Text>
