@@ -3634,6 +3634,7 @@ async def mark_compensation_received(
     year: int, 
     month: int, 
     exceeded_5000: bool = False,
+    exceeded_15000: bool = False,
     current_user = Depends(get_current_user)
 ):
     """Coach marks compensation as received for a specific month"""
@@ -3664,7 +3665,9 @@ async def mark_compensation_received(
                 "received": True,
                 "received_date": now,
                 "exceeded_5000": exceeded_5000,
-                "exceeded_5000_date": now if exceeded_5000 else None
+                "exceeded_5000_date": now if exceeded_5000 else None,
+                "exceeded_15000": exceeded_15000,
+                "exceeded_15000_date": now if exceeded_15000 else None
             }}
         )
     else:
@@ -3677,7 +3680,9 @@ async def mark_compensation_received(
             received=True,
             received_date=now,
             exceeded_5000=exceeded_5000,
-            exceeded_5000_date=now if exceeded_5000 else None
+            exceeded_5000_date=now if exceeded_5000 else None,
+            exceeded_15000=exceeded_15000,
+            exceeded_15000_date=now if exceeded_15000 else None
         )
         await db.coach_compensations.insert_one(record.dict())
     
@@ -3693,7 +3698,18 @@ async def mark_compensation_received(
         )
         await db.admin_notifications.insert_one(notification.dict())
     
-    return {"message": "Compenso confermato", "exceeded_5000": exceeded_5000}
+    # If exceeded €15000, notify admin (more urgent!)
+    if exceeded_15000:
+        notification = AdminNotification(
+            type="coach_exceeded_15000",
+            title="🚨 URGENTE: Coach ha superato €15.000",
+            message=f"ATTENZIONE: Il coach {coach.get('full_name', 'Sconosciuto')} ha dichiarato di aver superato il limite di €15.000 annuali. Questo comporta obblighi fiscali e contributivi aggiuntivi!",
+            related_user_id=coach_id,
+            related_user_name=coach.get('full_name', '')
+        )
+        await db.admin_notifications.insert_one(notification.dict())
+    
+    return {"message": "Compenso confermato", "exceeded_5000": exceeded_5000, "exceeded_15000": exceeded_15000}
 
 @api_router.get("/coach/{coach_id}/compensation/annual/{year}")
 async def get_annual_compensation_summary(coach_id: str, year: int, current_user = Depends(get_current_user)):
