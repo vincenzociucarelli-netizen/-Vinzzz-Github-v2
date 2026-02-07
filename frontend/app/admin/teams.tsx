@@ -407,7 +407,7 @@ export default function TeamsScreen() {
               />
 
               <Text style={styles.sectionTitle}>🏟️ Allenamenti Settimanali</Text>
-              <Text style={styles.hint}>Minimo 2, massimo 4 allenamenti</Text>
+              <Text style={styles.hint}>Minimo 2, massimo 5 allenamenti</Text>
 
               {trainings.map((training, index) => (
                 <View key={index} style={styles.trainingRow}>
