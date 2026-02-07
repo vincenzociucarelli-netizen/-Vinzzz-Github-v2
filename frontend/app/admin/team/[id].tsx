@@ -257,6 +257,7 @@ export default function TeamDetail() {
     }
 
     try {
+      // Step 1: Save team data WITHOUT photo first
       const updateData: any = {
         name,
         description: description || null,
@@ -275,11 +276,18 @@ export default function TeamDetail() {
       if (installment3Date) updateData.installment_3_due_date = installment3Date;
       if (bankInfo) updateData.bank_info = bankInfo;
       if (paypalEmail) updateData.paypal_email = paypalEmail;
-      
-      // Include team photo (can be null to remove it)
-      updateData.team_photo = teamPhoto;
 
       await api.patch(`/teams/${id}`, updateData);
+      
+      // Step 2: Save team photo separately (if changed)
+      if (teamPhoto !== team?.team_photo) {
+        try {
+          await api.patch(`/teams/${id}`, { team_photo: teamPhoto });
+        } catch (photoError) {
+          console.error('Error saving team photo:', photoError);
+          // Don't fail the whole save, just log it
+        }
+      }
       
       // Assign coaches to team (send as JSON array in request body)
       try {
