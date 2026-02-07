@@ -276,17 +276,30 @@ export default function TeamDetail() {
 
       await api.patch(`/teams/${id}`, updateData);
       
-      // Assign coaches to team
-      await api.post(`/teams/${id}/assign-coaches`, selectedCoachIds);
+      // Assign coaches to team (send as JSON array in request body)
+      try {
+        await api.post(`/teams/${id}/assign-coaches`, selectedCoachIds, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (coachError) {
+        console.error('Error assigning coaches:', coachError);
+      }
       
-      // Assign dirigenti to team
-      await api.post(`/teams/${id}/assign-dirigenti`, selectedDirigenteIds);
+      // Assign dirigenti to team (send as JSON array in request body)
+      try {
+        await api.post(`/teams/${id}/assign-dirigenti`, selectedDirigenteIds, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (dirigenteError) {
+        console.error('Error assigning dirigenti:', dirigenteError);
+      }
       
       setEditing(false);
       setTrainingModalVisible(false);
       await loadTeam();
       showAlert('Successo', 'Squadra aggiornata con successo');
     } catch (error: any) {
+      console.error('Save error:', error);
       showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'aggiornamento');
     }
   };
