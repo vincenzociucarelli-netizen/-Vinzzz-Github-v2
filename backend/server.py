@@ -1317,8 +1317,15 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
         "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]}
     }).to_list(1000)
     
+    # Get all teams to resolve team names
+    teams = await db.teams.find({}).to_list(1000)
+    team_dict = {t["id"]: t["name"] for t in teams}
+    
     result = []
     for d in dirigenti:
+        assigned_teams = d.get("assigned_teams", [])
+        assigned_team_names = [team_dict.get(tid, "Squadra sconosciuta") for tid in assigned_teams if tid in team_dict]
+        
         result.append({
             "id": d["id"],
             "email": d["email"],
@@ -1330,6 +1337,9 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
             "phone": d.get("phone", ""),
             "profile_photo": d.get("profile_photo", ""),
             "profile_photo_artistic": d.get("profile_photo_artistic", ""),
+            "qualification": d.get("qualification", ""),
+            "assigned_teams": assigned_teams,
+            "assigned_team_names": assigned_team_names,
         })
     
     return result
