@@ -1788,6 +1788,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#25D366',
   },
+  qualificationText: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginBottom: 2,
+  },
   noCoachText: {
     fontSize: 14,
     color: '#888',
