@@ -190,11 +190,16 @@ export default function TeamDetail() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [16, 9],
-        quality: 0.7,
+        quality: 0.5, // Reduced quality to prevent crashes
         base64: true,
       });
 
       if (!result.canceled && result.assets[0].base64) {
+        // Check size - if too large, warn user
+        const base64Size = result.assets[0].base64.length;
+        if (base64Size > 500000) { // ~500KB
+          showAlert('Attenzione', 'La foto è molto grande. Potrebbe richiedere più tempo per il caricamento.');
+        }
         setTeamPhoto(result.assets[0].base64);
       }
     } catch (error) {
