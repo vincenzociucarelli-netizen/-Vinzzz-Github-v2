@@ -629,7 +629,7 @@ export default function TeamsScreen() {
 
               <Text style={styles.label}>Dati Bonifico Bancario *</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.input, styles.textArea, { textTransform: 'uppercase' }]}
                 placeholder="IBAN: IT00..."
                 value={bankInfo}
                 onChangeText={(text) => setBankInfo(text.toUpperCase())}
@@ -640,7 +640,7 @@ export default function TeamsScreen() {
 
               <Text style={styles.label}>Email PayPal *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { textTransform: 'lowercase' }]}
                 placeholder="paypal@societa.it"
                 value={paypalEmail}
                 onChangeText={(text) => setPaypalEmail(text.toLowerCase())}
