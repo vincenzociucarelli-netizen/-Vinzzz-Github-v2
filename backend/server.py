@@ -1706,7 +1706,7 @@ async def get_teams(current_user = Depends(get_current_user)):
     clean_mongo_docs(teams)
     return [Team(**team) for team in teams]
 
-@api_router.get("/teams/{team_id}", response_model=Team)
+@api_router.get("/teams/{team_id}", response_model=None)
 async def get_team(team_id: str, current_user = Depends(get_current_user)):
     team = await db.teams.find_one({"id": team_id})
     if not team:
@@ -1718,6 +1718,8 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
         "role": "coach",
         "assigned_teams": team_id
     }).to_list(10)
+    
+    print(f"DEBUG: Found {len(coaches)} coaches for team {team_id}")
     
     coach_info = []
     for coach in coaches:
@@ -1732,9 +1734,11 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
     
     # Get assigned dirigenti for this team
     dirigenti = await db.users.find({
-        "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]},
+        "role": {"$in": ["admin", "viewer"]},
         "assigned_teams": team_id
     }).to_list(10)
+    
+    print(f"DEBUG: Found {len(dirigenti)} dirigenti for team {team_id}")
     
     dirigenti_info = []
     for dirigente in dirigenti:
