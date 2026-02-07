@@ -1309,6 +1309,70 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
     
     return {"message": "Impostazioni aggiornate con successo"}
 
+# ==================== ADMIN NOTIFICATIONS ====================
+
+@api_router.get("/admin/notifications")
+async def get_admin_notifications(current_user = Depends(get_current_user)):
+    """Get all admin notifications"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere le notifiche")
+    
+    notifications = await db.admin_notifications.find({}).sort("created_at", -1).to_list(100)
+    for n in notifications:
+        clean_mongo_doc(n)
+    return notifications
+
+@api_router.get("/admin/notifications/unread-count")
+async def get_unread_notifications_count(current_user = Depends(get_current_user)):
+    """Get count of unread notifications"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere le notifiche")
+    
+    count = await db.admin_notifications.count_documents({"read": False})
+    return {"count": count}
+
+@api_router.patch("/admin/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, current_user = Depends(get_current_user)):
+    """Mark a notification as read"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può gestire le notifiche")
+    
+    result = await db.admin_notifications.update_one(
+        {"id": notification_id},
+        {"$set": {"read": True}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Notifica non trovata")
+    
+    return {"message": "Notifica segnata come letta"}
+
+@api_router.patch("/admin/notifications/mark-all-read")
+async def mark_all_notifications_read(current_user = Depends(get_current_user)):
+    """Mark all notifications as read"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può gestire le notifiche")
+    
+    await db.admin_notifications.update_many(
+        {"read": False},
+        {"$set": {"read": True}}
+    )
+    
+    return {"message": "Tutte le notifiche segnate come lette"}
+
+@api_router.delete("/admin/notifications/{notification_id}")
+async def delete_notification(notification_id: str, current_user = Depends(get_current_user)):
+    """Delete a notification"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può gestire le notifiche")
+    
+    result = await db.admin_notifications.delete_one({"id": notification_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Notifica non trovata")
+    
+    return {"message": "Notifica eliminata"}
+
 # ==================== USER MANAGEMENT ENDPOINTS (ADMIN) ====================
 
 class UserUpdateRole(BaseModel):
