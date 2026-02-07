@@ -1333,6 +1333,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
+  // Document images styles for view mode
+  docImagesContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginVertical: 16,
+  },
+  docImageWrapper: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  docImageLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  docImagePreview: {
+    width: '100%',
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  docImagePlaceholder: {
+    width: '100%',
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  docImagePlaceholderText: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 4,
+  },
   statusBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
