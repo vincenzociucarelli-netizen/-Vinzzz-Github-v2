@@ -817,6 +817,9 @@ export default function TeamDetail() {
                     </TouchableOpacity>
                     <View style={styles.coachInfo}>
                       <Text style={styles.coachName}>{dirigente.full_name}</Text>
+                      {dirigente.qualification && (
+                        <Text style={styles.qualificationText}>{dirigente.qualification}</Text>
+                      )}
                       {dirigente.phone && (
                         <TouchableOpacity 
                           style={styles.coachContactRow}
