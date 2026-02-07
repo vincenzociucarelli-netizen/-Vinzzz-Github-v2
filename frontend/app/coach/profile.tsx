@@ -18,6 +18,7 @@ import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
+import PhotoViewer from '../../src/components/PhotoViewer';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
@@ -28,6 +29,11 @@ export default function CoachProfile() {
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState(false);
+  
+  // Photo viewer state
+  const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [selectedPhotoTitle, setSelectedPhotoTitle] = useState('');
   
   // Profile data
   const [profileData, setProfileData] = useState({
