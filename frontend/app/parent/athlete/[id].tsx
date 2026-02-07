@@ -1002,22 +1002,8 @@ export default function AthleteDetail() {
                 </TouchableOpacity>
                 <View style={styles.coachInfoDetails}>
                   <Text style={styles.coachName}>{coachInfo.full_name}</Text>
-                  {coachInfo.phone && (
-                    <TouchableOpacity 
-                      style={styles.whatsappButton}
-                      onPress={() => {
-                        let phone = coachInfo.phone.replace(/\s+/g, '').replace(/^0/, '39');
-                        if (!phone.startsWith('+') && !phone.startsWith('39')) {
-                          phone = '39' + phone;
-                        }
-                        phone = phone.replace('+', '');
-                        Linking.openURL(`https://wa.me/${phone}`);
-                      }}
-                    >
-                      <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
-                      <Text style={styles.whatsappText}>Messaggio WhatsApp</Text>
-                    </TouchableOpacity>
-                  )}
+                  {/* WhatsApp button hidden for parents - only visible to staff */}
+                  <Text style={styles.coachContactHint}>Per contattare il coach, rivolgersi alla segreteria</Text>
                 </View>
               </View>
             </View>
