@@ -1279,8 +1279,28 @@ export default function AdminAthleteDetail() {
           </View>
         )}
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: editing ? 100 : 40 }} />
       </ScrollView>
+
+      {/* Floating Save Button */}
+      {editing && (
+        <View style={styles.floatingSaveContainer}>
+          <TouchableOpacity
+            style={[styles.floatingSaveButton, saving && styles.floatingSaveButtonDisabled]}
+            onPress={handleSaveData}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Ionicons name="checkmark" size={24} color="#fff" />
+                <Text style={styles.floatingSaveText}>SALVA MODIFICHE</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Add/Edit Payment Modal */}
       <Modal
