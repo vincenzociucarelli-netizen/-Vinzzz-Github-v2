@@ -62,8 +62,28 @@ export default function TeamsScreen() {
     }
   };
   
+  // Helper function to format time as HH:mm
+  const formatTimeInput = (text: string): string => {
+    // Remove all non-numeric characters
+    let cleaned = text.replace(/[^0-9]/g, '');
+    
+    // Limit to 4 digits
+    cleaned = cleaned.slice(0, 4);
+    
+    // Add : after first 2 digits if we have more than 2
+    if (cleaned.length > 2) {
+      cleaned = cleaned.slice(0, 2) + ':' + cleaned.slice(2);
+    }
+    
+    return cleaned;
+  };
+
   const updateTraining = (index: number, field: string, value: string) => {
     const newTrainings = [...trainings];
+    // Apply time formatting for time fields
+    if (field === 'timeStart' || field === 'timeEnd') {
+      value = formatTimeInput(value);
+    }
     newTrainings[index] = { ...newTrainings[index], [field]: value };
     setTrainings(newTrainings);
   };
