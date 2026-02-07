@@ -1782,6 +1782,31 @@ async def assign_coaches_to_team(team_id: str, coach_ids: List[str], current_use
     
     return {"success": True, "message": f"Coach assegnati alla squadra {team.get('name')}"}
 
+@api_router.post("/teams/{team_id}/assign-dirigenti")
+async def assign_dirigenti_to_team(team_id: str, dirigente_ids: List[str], current_user = Depends(get_current_user)):
+    """Assign dirigenti to a team - updates dirigente.assigned_teams field"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può assegnare dirigenti")
+    
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    # First, remove this team from all dirigenti who had it assigned
+    await db.users.update_many(
+        {"role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]}, "assigned_teams": team_id},
+        {"$pull": {"assigned_teams": team_id}}
+    )
+    
+    # Then, add this team to the selected dirigenti
+    if dirigente_ids:
+        await db.users.update_many(
+            {"id": {"$in": dirigente_ids}, "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]}},
+            {"$addToSet": {"assigned_teams": team_id}}
+        )
+    
+    return {"success": True, "message": f"Dirigenti assegnati alla squadra {team.get('name')}"}
+
 @api_router.get("/teams/{team_id}/payment-info")
 async def get_team_payment_info(team_id: str, current_user = Depends(get_current_user)):
     """Get payment information for a specific team"""
