@@ -1712,10 +1712,28 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
             "profile_photo_artistic": coach.get("profile_photo_artistic", ""),
         })
     
+    # Get assigned dirigenti for this team
+    dirigenti = await db.users.find({
+        "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]},
+        "assigned_teams": team_id
+    }).to_list(10)
+    
+    dirigenti_info = []
+    for dirigente in dirigenti:
+        dirigenti_info.append({
+            "id": dirigente.get("id"),
+            "full_name": dirigente.get("full_name", ""),
+            "email": dirigente.get("email", ""),
+            "phone": dirigente.get("phone", ""),
+            "profile_photo": dirigente.get("profile_photo", ""),
+            "profile_photo_artistic": dirigente.get("profile_photo_artistic", ""),
+        })
+    
     team_obj = Team(**team)
-    # Add coach_info as extra field
+    # Add coach_info and dirigenti_info as extra fields
     team_dict = team_obj.dict()
     team_dict["coach_info"] = coach_info
+    team_dict["dirigenti_info"] = dirigenti_info
     
     return team_dict
 
