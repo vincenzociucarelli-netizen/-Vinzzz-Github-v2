@@ -133,9 +133,19 @@ export default function TeamDetail() {
     }
   };
 
+  const loadDirigenti = async () => {
+    try {
+      const response = await api.get('/users/dirigenti');
+      setDirigentiInfo(response.data);
+    } catch (error) {
+      console.error('Error loading dirigenti:', error);
+    }
+  };
+
   useEffect(() => {
     loadTeam();
     loadAvailableCoaches();
+    loadDirigenti();
   }, [id]);
 
   const showAlert = (title: string, message: string) => {
