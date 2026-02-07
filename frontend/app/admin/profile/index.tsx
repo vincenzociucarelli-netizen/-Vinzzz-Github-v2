@@ -111,6 +111,7 @@ export default function AdminProfile() {
         postal_code: data.postal_code || '',
         province: data.province || '',
         phone: data.phone || '',
+        qualification: data.qualification || '',
         monthly_compensation: data.monthly_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
         // Document and Bank details
@@ -136,6 +137,7 @@ export default function AdminProfile() {
         postal_code: data.postal_code || '',
         province: data.province || '',
         phone: data.phone || '',
+        qualification: data.qualification || '',
         monthly_compensation: data.monthly_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
         // Document and Bank details
