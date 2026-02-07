@@ -166,6 +166,16 @@ class CoachCompensation(BaseModel):
     exceeded_5000_date: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+class AdminNotification(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: str  # "coach_exceeded_5000", "coach_exceeded_15000", etc.
+    title: str
+    message: str
+    related_user_id: Optional[str] = None
+    related_user_name: Optional[str] = None
+    read: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
