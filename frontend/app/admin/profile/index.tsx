@@ -158,6 +158,29 @@ export default function AdminProfile() {
       // Load profile photos
       setProfilePhoto(data.profile_photo || null);
       setProfilePhotoArtistic(data.profile_photo_artistic || null);
+      
+      // Load assigned team names
+      if (data.assigned_teams && data.assigned_teams.length > 0) {
+        try {
+          const teamsResponse = await api.get('/teams');
+          const teams = teamsResponse.data;
+          const teamNames = data.assigned_teams.map((teamId: string) => {
+            const team = teams.find((t: any) => t.id === teamId);
+            return team ? team.name : 'Squadra sconosciuta';
+          });
+          setAssignedTeamNames(teamNames);
+        } catch (err) {
+          console.error('Error loading teams:', err);
+        }
+      }
+      
+      // Load society settings for qualifications
+      try {
+        const settingsResponse = await api.get('/settings/society');
+        setDirigenteQualifications(settingsResponse.data.dirigente_qualifications || []);
+      } catch (err) {
+        console.error('Error loading settings:', err);
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
