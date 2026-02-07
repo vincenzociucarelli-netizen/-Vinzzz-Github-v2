@@ -98,6 +98,11 @@ export default function TeamDetail() {
         // Set selected coach IDs for editing
         setSelectedCoachIds(teamData.coach_info.map((c: CoachInfo) => c.id));
       }
+
+      // Set team photo
+      if (teamData.team_photo) {
+        setTeamPhoto(teamData.team_photo);
+      }
       
       // Populate form
       setName(teamData.name);
