@@ -27,6 +27,9 @@ interface CoachInfo {
   phone: string;
   profile_photo?: string;
   profile_photo_artistic?: string;
+  qualification?: string;
+  assigned_teams?: string[];
+  assigned_team_names?: string[];
 }
 
 const DAYS_OF_WEEK = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
