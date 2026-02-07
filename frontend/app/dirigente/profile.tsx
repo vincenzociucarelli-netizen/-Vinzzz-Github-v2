@@ -1369,6 +1369,27 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: 'italic',
   },
+  // Styles for €15.000 section
+  limitSection15k: {
+    backgroundColor: '#FFF5F5',
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF3B30',
+  },
+  limitCheckbox15kActive: {
+    backgroundColor: '#FFEBEB',
+    borderColor: '#FF3B30',
+  },
+  checkbox15kActive: {
+    backgroundColor: '#FF3B30',
+    borderColor: '#FF3B30',
+  },
+  declarationDate15k: {
+    fontSize: 12,
+    color: '#FF3B30',
+    marginTop: 8,
+    fontStyle: 'italic',
+    fontWeight: '600',
+  },
   changePasswordHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
