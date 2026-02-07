@@ -354,6 +354,7 @@ export default function TeamDetail() {
 
       <ScrollView
         style={styles.content}
+        contentContainerStyle={editing ? { paddingBottom: 100 } : undefined}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
