@@ -597,7 +597,7 @@ export default function TeamDetail() {
 
             {/* Sezione Allenamenti */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🏋️ Allenamenti Settimanali (min 2, max 4)</Text>
+              <Text style={styles.sectionTitle}>🏋️ Allenamenti Settimanali (min 2, max 5)</Text>
               
               {trainingSessions.map((session, index) => (
                 <View key={index} style={styles.trainingEditRow}>
