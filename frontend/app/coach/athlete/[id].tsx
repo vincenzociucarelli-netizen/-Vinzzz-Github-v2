@@ -461,9 +461,13 @@ export default function CoachAthleteDetail() {
           </Text>
         </View>
 
-        {/* Save Button */}
+        <View style={{ height: 100 }} />
+      </ScrollView>
+
+      {/* Floating Save Button */}
+      <View style={styles.floatingSaveContainer}>
         <TouchableOpacity
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          style={[styles.floatingSaveButton, saving && styles.floatingSaveButtonDisabled]}
           onPress={handleSave}
           disabled={saving}
         >
@@ -472,11 +476,11 @@ export default function CoachAthleteDetail() {
           ) : (
             <>
               <Ionicons name="checkmark-circle" size={24} color="#fff" />
-              <Text style={styles.saveButtonText}>Salva Dati Tecnici</Text>
+              <Text style={styles.floatingSaveText}>SALVA DATI TECNICI</Text>
             </>
           )}
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     </View>
   );
 }
