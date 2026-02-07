@@ -378,6 +378,9 @@ export default function AthleteDetail() {
   const printQRCode = async () => {
     if (!athlete) return;
     
+    // Remove data:image/png;base64, prefix if present
+    const qrCodeBase64 = athlete.qr_code?.replace(/^data:image\/\w+;base64,/, '') || '';
+    
     const html = `
       <html>
         <head>
@@ -396,7 +399,7 @@ export default function AthleteDetail() {
         <body>
           <h1>${athlete.full_name}</h1>
           <h2>QR Code Atleta</h2>
-          <img src="data:image/png;base64,${athlete.qr_code}" />
+          <img src="data:image/png;base64,${qrCodeBase64}" />
           <p>Presentare questo codice all'allenatore per registrare la presenza</p>
         </body>
       </html>
