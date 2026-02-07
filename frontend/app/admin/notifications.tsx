@@ -110,8 +110,10 @@ export default function AdminNotifications() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'coach_exceeded_5000':
+      case 'dirigente_exceeded_5000':
         return { name: 'warning', color: '#FF9500' };
       case 'coach_exceeded_15000':
+      case 'dirigente_exceeded_15000':
         return { name: 'alert-circle', color: '#FF3B30' };
       default:
         return { name: 'notifications', color: '#007AFF' };
