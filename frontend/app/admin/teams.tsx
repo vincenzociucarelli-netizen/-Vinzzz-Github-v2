@@ -475,7 +475,7 @@ export default function TeamsScreen() {
                 </View>
               ))}
 
-              {trainings.length < 4 && (
+              {trainings.length < 5 && (
                 <TouchableOpacity style={styles.addButton} onPress={addTraining}>
                   <Ionicons name="add-circle" size={20} color="#007AFF" />
                   <Text style={styles.addButtonText}>Aggiungi Allenamento</Text>
