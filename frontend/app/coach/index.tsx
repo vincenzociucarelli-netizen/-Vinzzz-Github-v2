@@ -458,7 +458,24 @@ export default function CoachScreen() {
               </TouchableOpacity>
             </>
           ) : (
-            <TouchableOpacity style={styles.button} onPress={() => setScanning(true)}>
+            <TouchableOpacity 
+              style={styles.button} 
+              onPress={async () => {
+                if (Platform.OS !== 'web') {
+                  // Request camera permission first if not granted
+                  if (!permission?.granted) {
+                    const result = await requestPermission();
+                    if (result.granted) {
+                      setScanning(true);
+                    }
+                  } else {
+                    setScanning(true);
+                  }
+                } else {
+                  startWebScanner();
+                }
+              }}
+            >
               <Ionicons name="scan" size={24} color="#fff" />
               <Text style={styles.buttonText}>Scansiona QR Code</Text>
             </TouchableOpacity>
