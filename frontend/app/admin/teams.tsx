@@ -632,7 +632,8 @@ export default function TeamsScreen() {
                 style={[styles.input, styles.textArea]}
                 placeholder="IBAN: IT00..."
                 value={bankInfo}
-                onChangeText={setBankInfo}
+                onChangeText={(text) => setBankInfo(text.toUpperCase())}
+                autoCapitalize="characters"
                 multiline
                 numberOfLines={3}
               />
@@ -642,7 +643,7 @@ export default function TeamsScreen() {
                 style={styles.input}
                 placeholder="paypal@societa.it"
                 value={paypalEmail}
-                onChangeText={setPaypalEmail}
+                onChangeText={(text) => setPaypalEmail(text.toLowerCase())}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
