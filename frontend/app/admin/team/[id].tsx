@@ -584,6 +584,32 @@ export default function TeamDetail() {
         ) : (
           // VIEW MODE
           <>
+            {/* Team Photo Section */}
+            <View style={styles.teamPhotoSection}>
+              <Text style={styles.sectionTitle}>📸 Foto Squadra</Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  if (teamPhoto) {
+                    setTeamPhotoModal(true);
+                  }
+                }}
+                style={styles.teamPhotoContainer}
+              >
+                {teamPhoto ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${teamPhoto}` }}
+                    style={styles.teamPhotoImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.teamPhotoPlaceholder}>
+                    <Ionicons name="people-outline" size={40} color="#999" />
+                    <Text style={styles.teamPhotoPlaceholderText}>Foto squadra non caricata</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+
             {/* Coach Section */}
             <View style={styles.coachSection}>
               <Text style={styles.sectionTitle}>👨‍🏫 Coach</Text>
