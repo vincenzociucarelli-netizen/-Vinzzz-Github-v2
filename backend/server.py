@@ -1742,6 +1742,7 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
             "phone": dirigente.get("phone", ""),
             "profile_photo": dirigente.get("profile_photo", ""),
             "profile_photo_artistic": dirigente.get("profile_photo_artistic", ""),
+            "qualification": dirigente.get("qualification", ""),
         })
     
     team_obj = Team(**team)
