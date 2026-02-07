@@ -1822,7 +1822,7 @@ async def assign_coaches_to_team(team_id: str, request: AssignmentRequest, curre
     return {"success": True, "message": f"Coach assegnati alla squadra {team.get('name')}"}
 
 @api_router.post("/teams/{team_id}/assign-dirigenti")
-async def assign_dirigenti_to_team(team_id: str, dirigente_ids: List[str], current_user = Depends(get_current_user)):
+async def assign_dirigenti_to_team(team_id: str, request: AssignmentRequest, current_user = Depends(get_current_user)):
     """Assign dirigenti to a team - updates dirigente.assigned_teams field"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può assegnare dirigenti")
@@ -1830,6 +1830,8 @@ async def assign_dirigenti_to_team(team_id: str, dirigente_ids: List[str], curre
     team = await db.teams.find_one({"id": team_id})
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    dirigente_ids = request.ids
     
     # First, remove this team from all dirigenti who had it assigned
     await db.users.update_many(
