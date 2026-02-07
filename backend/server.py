@@ -2513,7 +2513,7 @@ async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, 
             response = await client.images.edit(
                 model="gpt-image-1",
                 image=image_bytes,
-                prompt="Convert this photo into a traditional GRAPHITE PENCIL PORTRAIT SKETCH. Style: classic pencil drawing on white paper. Requirements: 1) STRICTLY BLACK AND WHITE with gray shading only - absolutely NO color, 2) Visible pencil strokes and hatching lines for shading, 3) Softer, slightly blurred edges like real pencil work, 4) Clean white or very light gray background, 5) Emphasis on facial features with detailed pencil shading around eyes and hair, 6) The texture should look like real graphite on paper. Make it look like a skilled artist drew this portrait by hand with a pencil.",
+                prompt="Transform into a BLACK AND WHITE PENCIL SKETCH drawing. Remove ALL colors. Only use black, white and gray tones. Add visible pencil strokes and cross-hatching. Make it look hand-drawn on white paper.",
                 n=1,
                 size="1024x1024"
             )
