@@ -290,18 +290,18 @@ export default function TeamDetail() {
         }
       }
       
-      // Assign coaches to team (send as JSON array in request body)
+      // Assign coaches to team (send as JSON object with ids array)
       try {
-        await api.post(`/teams/${id}/assign-coaches`, selectedCoachIds, {
+        await api.post(`/teams/${id}/assign-coaches`, { ids: selectedCoachIds }, {
           headers: { 'Content-Type': 'application/json' }
         });
       } catch (coachError) {
         console.error('Error assigning coaches:', coachError);
       }
       
-      // Assign dirigenti to team (send as JSON array in request body)
+      // Assign dirigenti to team (send as JSON object with ids array)
       try {
-        await api.post(`/teams/${id}/assign-dirigenti`, selectedDirigenteIds, {
+        await api.post(`/teams/${id}/assign-dirigenti`, { ids: selectedDirigenteIds }, {
           headers: { 'Content-Type': 'application/json' }
         });
       } catch (dirigenteError) {
