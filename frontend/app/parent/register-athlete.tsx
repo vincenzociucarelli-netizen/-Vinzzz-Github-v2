@@ -568,7 +568,8 @@ export default function RegisterAthlete() {
             </Text>
           </TouchableOpacity>
 
-          <View style={{ height: 40 }} />
+          {/* Extra space for keyboard */}
+          <View style={{ height: 150 }} />
         </ScrollView>
       </KeyboardAvoidingView>
       
