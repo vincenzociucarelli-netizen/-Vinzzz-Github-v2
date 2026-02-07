@@ -122,11 +122,12 @@ class User(BaseModel):
     role: str  # admin, viewer, coach, parent, athlete
     full_name: str
     status: str = UserStatus.PENDING  # pending, approved, rejected, suspended
-    assigned_teams: List[str] = []  # For coaches - team IDs they can manage
+    assigned_teams: List[str] = []  # For coaches and dirigenti - team IDs they can manage
     created_at: datetime = Field(default_factory=datetime.utcnow)
     approved_at: Optional[datetime] = None
     approved_by: Optional[str] = None  # Admin ID who approved
     is_scorekeeper: bool = False  # For dirigenti - segnapunti
+    qualification: Optional[str] = None  # For dirigenti - qualifica (es: Presidente, Vice Presidente)
     
     # Coach specific fields - Dati Anagrafici
     first_name: Optional[str] = None
