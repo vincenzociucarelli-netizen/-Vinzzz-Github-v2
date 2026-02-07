@@ -49,6 +49,10 @@ export default function TeamDetail() {
 
   // Dirigenti info
   const [dirigentiInfo, setDirigentiInfo] = useState<CoachInfo[]>([]);
+
+  // Team photo
+  const [teamPhoto, setTeamPhoto] = useState<string | null>(null);
+  const [teamPhotoModal, setTeamPhotoModal] = useState(false);
   
   // Form fields - basic info
   const [name, setName] = useState('');
