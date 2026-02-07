@@ -99,19 +99,15 @@ export default function TeamDetail() {
       const teamData = response.data;
       setTeam(teamData);
       
-      // Set coach info
-      if (teamData.coach_info) {
-        setCoachInfo(teamData.coach_info);
-        // Set selected coach IDs for editing
-        setSelectedCoachIds(teamData.coach_info.map((c: CoachInfo) => c.id));
-      }
+      // Set coach info (with fallback to empty array)
+      const coaches = teamData.coach_info || [];
+      setCoachInfo(coaches);
+      setSelectedCoachIds(coaches.map((c: CoachInfo) => c.id).filter(Boolean));
 
-      // Set dirigenti info
-      if (teamData.dirigenti_info) {
-        setDirigentiInfo(teamData.dirigenti_info);
-        // Set selected dirigente IDs for editing
-        setSelectedDirigenteIds(teamData.dirigenti_info.map((d: CoachInfo) => d.id));
-      }
+      // Set dirigenti info (with fallback to empty array)
+      const dirigenti = teamData.dirigenti_info || [];
+      setDirigentiInfo(dirigenti);
+      setSelectedDirigenteIds(dirigenti.map((d: CoachInfo) => d.id).filter(Boolean));
 
       // Set team photo
       if (teamData.team_photo) {
