@@ -836,6 +836,32 @@ export default function DirigenteProfile() {
                 return null;
               })()}
             </View>
+
+            {/* €15000 Limit Declaration */}
+            <View style={[styles.limitSection, styles.limitSection15k]}>
+              <Text style={styles.limitTitle}>🚨 Dichiarazione Superamento €15.000</Text>
+              <Text style={styles.limitDescription}>
+                Se il totale dei compensi ricevuti nell'anno SOLARE supera €15.000, 
+                oltre ai contributi INPS sarà dovuta anche l'IRPEF sulla parte eccedente.
+              </Text>
+              <TouchableOpacity
+                style={[styles.limitCheckbox, hasExceeded15000 && styles.limitCheckbox15kActive]}
+                onPress={handleToggle15000Limit}
+              >
+                <View style={[styles.checkbox, hasExceeded15000 && styles.checkbox15kActive]}>
+                  {hasExceeded15000 && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+                <Text style={styles.limitCheckboxText}>
+                  Dichiaro di aver superato il limite di €15.000 annui
+                </Text>
+              </TouchableOpacity>
+              {/* Mostra la data di dichiarazione se presente */}
+              {over5000Limit.exceeded_15000_date && (
+                <Text style={styles.declarationDate15k}>
+                  📅 Data dichiarazione: {new Date(over5000Limit.exceeded_15000_date).toLocaleDateString('it-IT')}
+                </Text>
+              )}
+            </View>
           </View>
         )}
 
