@@ -983,8 +983,28 @@ export default function DirigenteProfile() {
           )}
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Floating Save Button */}
+      {editing && (
+        <View style={styles.floatingSaveContainer}>
+          <TouchableOpacity
+            style={[styles.floatingSaveButton, saving && styles.floatingSaveButtonDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Ionicons name="checkmark" size={24} color="#fff" />
+                <Text style={styles.floatingSaveText}>SALVA MODIFICHE</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
