@@ -1080,6 +1080,41 @@ export default function CoachProfile() {
                 <Text style={styles.fieldLabel}>Scadenza</Text>
                 <Text style={styles.fieldValue}>{profileData.id_back || '-'}</Text>
               </View>
+              
+              {/* Document Images */}
+              <View style={styles.docImagesContainer}>
+                <View style={styles.docImageWrapper}>
+                  <Text style={styles.docImageLabel}>Fronte Documento</Text>
+                  {profileData.doc_front_image ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${profileData.doc_front_image}` }}
+                      style={styles.docImagePreview}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.docImagePlaceholder}>
+                      <Ionicons name="id-card-outline" size={32} color="#ccc" />
+                      <Text style={styles.docImagePlaceholderText}>Non caricato</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.docImageWrapper}>
+                  <Text style={styles.docImageLabel}>Retro Documento</Text>
+                  {profileData.doc_back_image ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${profileData.doc_back_image}` }}
+                      style={styles.docImagePreview}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.docImagePlaceholder}>
+                      <Ionicons name="id-card-outline" size={32} color="#ccc" />
+                      <Text style={styles.docImagePlaceholderText}>Non caricato</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>IBAN</Text>
                 <Text style={styles.fieldValue}>{profileData.iban || '-'}</Text>
