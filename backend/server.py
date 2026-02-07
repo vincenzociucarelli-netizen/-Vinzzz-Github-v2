@@ -516,6 +516,9 @@ class PaymentUpdate(BaseModel):
     paid: bool
     payment_method: Optional[str] = None
 
+class AssignmentRequest(BaseModel):
+    ids: List[str] = []
+
 class Attendance(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     athlete_id: str
