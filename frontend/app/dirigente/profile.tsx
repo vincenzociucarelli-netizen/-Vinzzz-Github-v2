@@ -351,6 +351,64 @@ export default function DirigenteProfile() {
     }
   };
 
+  const handleToggle15000Limit = async () => {
+    const newValue = !hasExceeded15000;
+    
+    // Se si sta attivando, chiedi conferma
+    if (newValue) {
+      const now = new Date();
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      
+      const confirmMsg = `ATTENZIONE: Stai dichiarando di aver superato il limite di €15.000 nell'anno solare.\n\nLa data di oggi (${dateStr}) verrà memorizzata e rimarrà visibile all'amministratore.\n\nOltre ai contributi INPS, sarà dovuta anche l'IRPEF sulla parte eccedente.\n\nConfermi?`;
+      
+      const confirmAction = Platform.OS === 'web'
+        ? window.confirm(confirmMsg)
+        : await new Promise((resolve) => {
+            Alert.alert(
+              'Conferma Dichiarazione',
+              confirmMsg,
+              [
+                { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Confermo', style: 'destructive', onPress: () => resolve(true) },
+              ]
+            );
+          });
+      
+      if (!confirmAction) return;
+    }
+    
+    setHasExceeded15000(newValue);
+    
+    const now = new Date();
+    const newLimit: any = { ...over5000Limit };
+    
+    if (newValue) {
+      newLimit.exceeded_15000 = true;
+      newLimit.exceeded_15000_date = now.toISOString();
+      // Se supera 15k, automaticamente ha superato anche 5k
+      if (!newLimit.exceeded_5000) {
+        newLimit.exceeded_5000 = true;
+        newLimit.exceeded_5000_date = now.toISOString();
+        setHasExceeded5000(true);
+      }
+    } else {
+      newLimit.exceeded_15000 = false;
+    }
+    
+    setOver5000Limit(newLimit);
+    
+    try {
+      await api.patch('/auth/me', { over_5000_limit: newLimit });
+      if (newValue) {
+        showAlert('Registrato', 'La tua dichiarazione è stata memorizzata. Sarà dovuta IRPEF sulla parte eccedente i €15.000. L\'amministratore riceverà una notifica urgente.');
+      }
+    } catch (error) {
+      setHasExceeded15000(!newValue);
+      setOver5000Limit(over5000Limit);
+      showAlert('Errore', 'Errore durante il salvataggio');
+    }
+  };
+
   const handleChangePassword = async () => {
     // Validations
     if (!currentPassword) {
