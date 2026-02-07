@@ -207,6 +207,7 @@ class Team(BaseModel):
     society_id: Optional[str] = None  # ID della società (multi-tenancy)
     name: str
     description: Optional[str] = None
+    team_photo: Optional[str] = None  # Foto squadra (base64)
     created_by_admin_id: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     # Payment settings per team
