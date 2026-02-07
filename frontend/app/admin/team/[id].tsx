@@ -50,6 +50,8 @@ export default function TeamDetail() {
 
   // Dirigenti info
   const [dirigentiInfo, setDirigentiInfo] = useState<CoachInfo[]>([]);
+  const [availableDirigenti, setAvailableDirigenti] = useState<CoachInfo[]>([]);
+  const [selectedDirigenteIds, setSelectedDirigenteIds] = useState<string[]>([]);
 
   // Team photo
   const [teamPhoto, setTeamPhoto] = useState<string | null>(null);
