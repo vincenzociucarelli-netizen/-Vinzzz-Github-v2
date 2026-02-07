@@ -435,6 +435,8 @@ export default function TeamsScreen() {
                           placeholder="18:00"
                           value={training.timeStart}
                           onChangeText={(v) => updateTraining(index, 'timeStart', v)}
+                          keyboardType="number-pad"
+                          maxLength={5}
                         />
                       </View>
                       <View style={styles.fieldHalf}>
@@ -444,6 +446,8 @@ export default function TeamsScreen() {
                           placeholder="20:00"
                           value={training.timeEnd}
                           onChangeText={(v) => updateTraining(index, 'timeEnd', v)}
+                          keyboardType="number-pad"
+                          maxLength={5}
                         />
                       </View>
                     </View>
