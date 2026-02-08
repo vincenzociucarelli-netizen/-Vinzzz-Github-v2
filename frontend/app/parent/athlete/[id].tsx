@@ -1360,7 +1360,7 @@ export default function AthleteDetail() {
           {paymentSettings && (
             <View style={styles.paymentSummary}>
               <View style={styles.paymentSummaryRow}>
-                <Text style={styles.paymentSummaryLabel}>Quota Totale Annua:</Text>
+                <Text style={styles.paymentSummaryLabel}>Quota Stagionale:</Text>
                 <Text style={styles.paymentSummaryValue}>
                   € {(
                     (paymentSettings.installment_1_amount || 0) + 
@@ -1371,7 +1371,9 @@ export default function AthleteDetail() {
               </View>
               {athlete?.discount_amount && athlete.discount_amount > 0 && (
                 <View style={styles.paymentSummaryRow}>
-                  <Text style={[styles.paymentSummaryLabel, { color: '#34C759' }]}>Sconto Applicato:</Text>
+                  <Text style={[styles.paymentSummaryLabel, { color: '#34C759', flex: 1 }]}>
+                    Sconto applicato per: {athlete.discount_reason || 'Non specificato'}
+                  </Text>
                   <Text style={[styles.paymentSummaryValue, { color: '#34C759' }]}>
                     - € {athlete.discount_amount.toFixed(2)}
                   </Text>
@@ -1386,10 +1388,10 @@ export default function AthleteDetail() {
             <>
               {payments.map((payment) => {
                 const rataName = payment.installment_number === 1 
-                  ? 'Rata all\'iscrizione' 
+                  ? 'Pagamento Rata Iscrizione' 
                   : payment.installment_number === 2 
-                    ? '1ª Rata' 
-                    : '2ª Rata';
+                    ? 'Pagamento 1ª Rata' 
+                    : 'Pagamento 2ª Rata';
                 const isOverdue = !payment.paid && new Date(payment.due_date) < new Date();
                 
                 return (
