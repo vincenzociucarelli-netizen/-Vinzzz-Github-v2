@@ -95,12 +95,15 @@ export interface Certificate {
 export interface Payment {
   id: string;
   athlete_id: string;
-  installment_number: number;
+  installment_number?: number;
+  description?: string;
   amount: number;
   due_date: string;
   paid: boolean;
   paid_date?: string;
   payment_method?: string;
+  is_cash?: boolean;
+  notes?: string;
   created_at: string;
 }
 
