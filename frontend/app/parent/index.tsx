@@ -26,6 +26,11 @@ export default function ParentDashboard() {
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [commitments, setCommitments] = useState<{
+    today: any[];
+    tomorrow: any[];
+    day_after: any[];
+  }>({ today: [], tomorrow: [], day_after: [] });
 
   const loadAthletes = async () => {
     try {
@@ -36,13 +41,23 @@ export default function ParentDashboard() {
     }
   };
 
+  const loadCommitments = async () => {
+    try {
+      const response = await api.get('/parent/commitments');
+      setCommitments(response.data);
+    } catch (error) {
+      console.error('Error loading commitments:', error);
+    }
+  };
+
   useEffect(() => {
     loadAthletes();
+    loadCommitments();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadAthletes();
+    await Promise.all([loadAthletes(), loadCommitments()]);
     setRefreshing(false);
   };
 
