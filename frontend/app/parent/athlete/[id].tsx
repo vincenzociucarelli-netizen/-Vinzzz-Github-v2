@@ -1430,7 +1430,12 @@ export default function AthleteDetail() {
                 {allRates.map((rate) => {
                   const dueDate = rate.due_date ? new Date(rate.due_date) : null;
                   const isValidDate = dueDate && dueDate.getFullYear() > 1971;
-                  const isOverdue = !rate.paid && dueDate && isValidDate && dueDate < new Date();
+                  // Rata iscrizione (1): scaduta se non pagata (doveva essere pagata all'iscrizione)
+                  // Altre rate: scadute se la data è passata
+                  const isOverdue = !rate.paid && (
+                    rate.installment_number === 1 || 
+                    (dueDate && isValidDate && dueDate < new Date())
+                  );
                   
                   return (
                     <View key={rate.id} style={[
@@ -1445,7 +1450,7 @@ export default function AthleteDetail() {
                           isOverdue && { color: '#FF3B30', fontWeight: '600' }
                         ]}>
                           {rate.installment_number === 1 
-                            ? 'Scadenza: All\'iscrizione'
+                            ? `Scadenza: All'iscrizione${isOverdue ? ' ⚠️ SCADUTA' : ''}`
                             : isValidDate 
                               ? `Scadenza: ${format(dueDate!, 'dd/MM/yyyy', { locale: it })}${isOverdue ? ' ⚠️ SCADUTA' : ''}`
                               : 'Scadenza: Da definire'
@@ -1456,13 +1461,13 @@ export default function AthleteDetail() {
                         <Ionicons
                           name={rate.paid ? 'checkmark-circle' : 'time-outline'}
                           size={28}
-                          color={rate.paid ? '#34C759' : '#FF9500'}
+                          color={rate.paid ? '#34C759' : isOverdue ? '#FF3B30' : '#FF9500'}
                         />
                         <Text style={[
                           styles.paymentStatusText,
-                          { color: rate.paid ? '#34C759' : '#FF9500' }
+                          { color: rate.paid ? '#34C759' : isOverdue ? '#FF3B30' : '#FF9500' }
                         ]}>
-                          {rate.paid ? 'Pagata' : 'Da pagare'}
+                          {rate.paid ? 'Pagata' : isOverdue ? 'Scaduta' : 'Da pagare'}
                         </Text>
                       </View>
                     </View>
