@@ -3668,6 +3668,103 @@ async def get_coach_teams(current_user = Depends(get_current_user)):
     clean_mongo_docs(teams)
     return [Team(**team) for team in teams]
 
+@api_router.get("/coach/commitments")
+async def get_coach_commitments(current_user = Depends(get_current_user)):
+    """Get commitments (trainings + matches) for coach's teams"""
+    if current_user["role"] != UserRole.COACH:
+        raise HTTPException(status_code=403, detail="Solo coach può vedere gli impegni")
+    
+    # Get coach's assigned teams
+    team_ids = current_user.get("assigned_teams", [])
+    
+    if not team_ids:
+        return {"today": [], "tomorrow": [], "day_after": []}
+    
+    # Get teams info (for training schedules)
+    teams = await db.teams.find({"id": {"$in": team_ids}}).to_list(20)
+    teams_dict = {t["id"]: t for t in teams}
+    
+    # Get current date info
+    now = datetime.utcnow()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow = today + timedelta(days=1)
+    day_after = today + timedelta(days=2)
+    end_of_day_after = day_after + timedelta(days=1)
+    
+    # Day of week mapping (Italian)
+    days_map = {
+        0: "Lunedì", 1: "Martedì", 2: "Mercoledì", 
+        3: "Giovedì", 4: "Venerdì", 5: "Sabato", 6: "Domenica"
+    }
+    
+    def get_day_name(date):
+        return days_map[date.weekday()]
+    
+    # Build commitments for each day
+    result = {"today": [], "tomorrow": [], "day_after": []}
+    
+    for day_key, target_date in [("today", today), ("tomorrow", tomorrow), ("day_after", day_after)]:
+        day_name = get_day_name(target_date)
+        
+        # Check trainings for this day
+        for team_id in team_ids:
+            team = teams_dict.get(team_id, {})
+            team_name = team.get("name", "Squadra")
+            training_sessions = team.get("training_sessions", [])
+            
+            for session in training_sessions:
+                if session.get("day") == day_name:
+                    result[day_key].append({
+                        "type": "training",
+                        "team_id": team_id,
+                        "team_name": team_name,
+                        "time_start": session.get("timeStart", ""),
+                        "time_end": session.get("timeEnd", ""),
+                        "venue": session.get("venue", ""),
+                        "title": f"Allenamento {team_name}"
+                    })
+    
+    # Get matches for these 3 days
+    matches = await db.matches.find({
+        "team_id": {"$in": team_ids},
+        "date": {"$gte": today, "$lt": end_of_day_after}
+    }).to_list(50)
+    
+    for match in matches:
+        match_date = match.get("date")
+        if isinstance(match_date, str):
+            match_date = datetime.fromisoformat(match_date.replace("Z", ""))
+        
+        if today <= match_date < tomorrow:
+            day_key = "today"
+        elif tomorrow <= match_date < day_after:
+            day_key = "tomorrow"
+        elif day_after <= match_date < end_of_day_after:
+            day_key = "day_after"
+        else:
+            continue
+        
+        result[day_key].append({
+            "type": "match",
+            "team_id": match.get("team_id"),
+            "team_name": match.get("team_name", ""),
+            "time": match_date.strftime("%H:%M"),
+            "venue": match.get("venue", ""),
+            "city": match.get("city", ""),
+            "address": match.get("address", ""),
+            "opponent": match.get("opponent", ""),
+            "home_away": match.get("home_away", "home"),
+            "meeting_time": match.get("meeting_time"),
+            "notes": match.get("notes"),
+            "title": f"Gara {match.get('team_name', '')} vs {match.get('opponent', '')}"
+        })
+    
+    # Sort by time
+    for day_key in result:
+        result[day_key].sort(key=lambda x: x.get("time_start", x.get("time", "00:00")))
+    
+    return result
+
 @api_router.get("/coach/team/{team_id}/athletes")
 async def get_coach_team_athletes(team_id: str, current_user = Depends(get_current_user)):
     """Get athletes for a team (coach view - limited info)"""
