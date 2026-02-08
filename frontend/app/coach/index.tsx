@@ -100,6 +100,7 @@ export default function CoachScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     await loadTeams();
+    await loadCommitments();
     if (selectedTeam) {
       await loadAthletes(selectedTeam.id);
     }
