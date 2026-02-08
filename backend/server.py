@@ -2838,6 +2838,8 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
     # Sconto
     if update_data.discount_amount is not None:
         update_dict["discount_amount"] = update_data.discount_amount
+    if update_data.discount_reason is not None:
+        update_dict["discount_reason"] = update_data.discount_reason
     if update_data.discount_note is not None:
         update_dict["discount_note"] = update_data.discount_note
     
