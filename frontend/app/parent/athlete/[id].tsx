@@ -583,33 +583,57 @@ export default function AthleteDetail() {
 
       let certData = certificate.pdf_data;
       let extension = 'jpg';
+      let mimeType = 'image/jpeg';
       
-      // Detect file type from data URI
+      // Detect file type and extract base64 data
       if (certData.startsWith('data:')) {
         if (certData.includes('image/png')) {
           extension = 'png';
+          mimeType = 'image/png';
         } else if (certData.includes('application/pdf')) {
           extension = 'pdf';
+          mimeType = 'application/pdf';
+        } else if (certData.includes('image/jpeg') || certData.includes('image/jpg')) {
+          extension = 'jpg';
+          mimeType = 'image/jpeg';
         }
-        certData = certData.split(',')[1] || certData;
+        // Remove data URI prefix
+        const base64Index = certData.indexOf(',');
+        if (base64Index !== -1) {
+          certData = certData.substring(base64Index + 1);
+        }
+      }
+
+      // Validate base64 data
+      if (!certData || certData.length < 100) {
+        Alert.alert('Errore', 'Dati del certificato non validi');
+        return;
       }
 
       // Save to temp file
-      const fileName = `certificato_${athlete?.full_name?.replace(/\s+/g, '_') || 'atleta'}.${extension}`;
+      const fileName = `certificato_${athlete?.full_name?.replace(/\s+/g, '_') || 'atleta'}_${Date.now()}.${extension}`;
       const fileUri = FileSystem.cacheDirectory + fileName;
       
       await FileSystem.writeAsStringAsync(fileUri, certData, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
+      // Verify file was created
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (!fileInfo.exists) {
+        Alert.alert('Errore', 'Impossibile creare il file temporaneo');
+        return;
+      }
+
       // Share the file
       await Sharing.shareAsync(fileUri, {
-        mimeType: extension === 'pdf' ? 'application/pdf' : `image/${extension}`,
+        mimeType: mimeType,
         dialogTitle: `Certificato Medico - ${athlete?.full_name}`,
+        UTI: extension === 'pdf' ? 'com.adobe.pdf' : `public.${extension}`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Errore condivisione certificato:', error);
-      Alert.alert('Errore', 'Impossibile condividere il certificato. Riprova.');
+      Alert.alert('Errore', `Impossibile condividere il certificato: ${error.message || 'Riprova.'}`);
     }
   };
 
