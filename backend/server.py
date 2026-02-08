@@ -2821,6 +2821,10 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
         update_dict["province"] = update_data.province
     if update_data.tax_payer_name is not None:
         update_dict["tax_payer_name"] = update_data.tax_payer_name
+    if update_data.tax_payer_last_name is not None:
+        update_dict["tax_payer_last_name"] = update_data.tax_payer_last_name
+    if update_data.tax_payer_first_name is not None:
+        update_dict["tax_payer_first_name"] = update_data.tax_payer_first_name
     if update_data.tax_payer_fiscal_code is not None:
         update_dict["tax_payer_fiscal_code"] = update_data.tax_payer_fiscal_code
     if update_data.team_id is not None:
