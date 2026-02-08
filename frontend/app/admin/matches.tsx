@@ -380,7 +380,7 @@ export default function AdminMatches() {
       <View style={styles.instructionCard}>
         <Ionicons name="information-circle" size={20} color="#007AFF" />
         <Text style={styles.instructionText}>
-          Usa il pulsante ☁️ per importare gare da Excel. Colonne richieste: Squadra, Data, Ora, Avversario, Luogo
+          Usa il pulsante ☁️ per importare da Excel. Colonne supportate: CAMPIONATONOME, DATA, SQUADRAOSPITENOME, IMPIANTO, IMPIANTO INDIRIZZO
         </Text>
       </View>
 
