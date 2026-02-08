@@ -1369,7 +1369,7 @@ export default function AthleteDetail() {
                   ).toFixed(2)}
                 </Text>
               </View>
-              {athlete?.discount_amount && athlete.discount_amount > 0 && (
+              {athlete && athlete.discount_amount && athlete.discount_amount > 0 ? (
                 <View style={styles.paymentSummaryRow}>
                   <Text style={[styles.paymentSummaryLabel, { color: '#34C759', flex: 1 }]}>
                     Sconto applicato per: {athlete.discount_reason || 'Non specificato'}
@@ -1378,7 +1378,7 @@ export default function AthleteDetail() {
                     - € {athlete.discount_amount.toFixed(2)}
                   </Text>
                 </View>
-              )}
+              ) : null}
             </View>
           )}
           
