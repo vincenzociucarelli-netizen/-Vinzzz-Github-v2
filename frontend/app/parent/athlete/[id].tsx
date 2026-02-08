@@ -1389,18 +1389,20 @@ export default function AthleteDetail() {
               {payments
                 .sort((a, b) => (a.installment_number || 0) - (b.installment_number || 0))
                 .map((payment, index) => {
-                // Determina il nome della rata basandosi su description, installment_number o indice
+                // Determina il nome della rata basandosi su installment_number
+                const installNum = payment.installment_number || (index + 1);
                 let rataName = '';
-                if (payment.description) {
-                  // Usa la description se presente (es. "Rata Iscrizione", "1ª Rata", "2ª Rata")
-                  rataName = `Pagamento ${payment.description}`;
+                
+                // Usa sempre l'installment_number per determinare il nome corretto
+                if (installNum === 1) {
+                  rataName = 'Pagamento Rata Iscrizione';
+                } else if (installNum === 2) {
+                  rataName = 'Pagamento 1ª Rata';
+                } else if (installNum === 3) {
+                  rataName = 'Pagamento 2ª Rata';
                 } else {
-                  const installNum = payment.installment_number || (index + 1);
-                  rataName = installNum === 1 
-                    ? 'Pagamento Rata Iscrizione' 
-                    : installNum === 2 
-                      ? 'Pagamento 1ª Rata' 
-                      : 'Pagamento 2ª Rata';
+                  // Fallback per rate extra o manuali
+                  rataName = payment.description || `Pagamento Rata ${installNum}`;
                 }
                 
                 // Gestisce date invalide (epoch o null)
