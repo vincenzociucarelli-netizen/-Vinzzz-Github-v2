@@ -1672,18 +1672,16 @@ export default function AthleteDetail() {
             <Text style={styles.modalTitle}>Modifica Dati</Text>
             
             <ScrollView style={styles.editScroll} showsVerticalScrollIndicator={false}>
+              {/* Squadra - sola lettura per genitori */}
               <Text style={styles.inputLabel}>Squadra</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={editData.team_id}
-                  onValueChange={(value) => setEditData({...editData, team_id: value})}
-                  style={styles.picker}
-                >
-                  {teams.map((team) => (
-                    <Picker.Item key={team.id} label={team.name} value={team.id} />
-                  ))}
-                </Picker>
+              <View style={[styles.pickerContainer, { backgroundColor: '#f5f5f5' }]}>
+                <Text style={{ padding: 15, color: '#333', fontSize: 16 }}>
+                  🏐 {getTeamName(editData.team_id)}
+                </Text>
               </View>
+              <Text style={{ fontSize: 12, color: '#666', marginBottom: 16, marginTop: 4 }}>
+                Per cambiare squadra contattare la segreteria
+              </Text>
 
               <Text style={styles.inputLabel}>Cognome</Text>
               <TextInput
