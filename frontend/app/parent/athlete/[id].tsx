@@ -489,6 +489,58 @@ export default function AthleteDetail() {
     }
   };
 
+  // Print certificate function (works on mobile and web)
+  const printCertificate = async () => {
+    if (!certificate?.pdf_data) {
+      Alert.alert('Errore', 'Certificato non disponibile');
+      return;
+    }
+
+    try {
+      let certBase64 = certificate.pdf_data;
+      if (certBase64.startsWith('data:')) {
+        certBase64 = certBase64.split(',')[1];
+      }
+
+      const expiryFormatted = certificate?.expiry_date 
+        ? format(new Date(certificate.expiry_date), 'dd/MM/yyyy', { locale: it })
+        : 'N/D';
+
+      const html = `
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { 
+                margin: 0; 
+                padding: 20px; 
+                font-family: Arial, sans-serif; 
+                text-align: center; 
+              }
+              h1 { font-size: 20px; margin-bottom: 10px; }
+              p { font-size: 14px; color: #666; margin-bottom: 20px; }
+              img { 
+                max-width: 100%; 
+                max-height: 80vh; 
+                object-fit: contain; 
+              }
+            </style>
+          </head>
+          <body>
+            <h1>Certificato Medico - ${athlete?.full_name}</h1>
+            <p>Scadenza: ${expiryFormatted}</p>
+            <img src="data:image/jpeg;base64,${certBase64}" />
+          </body>
+        </html>
+      `;
+
+      await Print.printAsync({ html });
+    } catch (error) {
+      console.error('Errore stampa certificato:', error);
+      Alert.alert('Errore', 'Impossibile stampare il certificato');
+    }
+  };
+
   // Helper function to get team name by id
   const getTeamName = (teamId: string) => {
     const team = teams.find(t => t.id === teamId);
