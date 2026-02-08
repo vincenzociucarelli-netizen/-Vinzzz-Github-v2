@@ -68,6 +68,15 @@ export default function CoachScreen() {
     }
   };
 
+  const loadCommitments = async () => {
+    try {
+      const response = await api.get('/coach/commitments');
+      setCommitments(response.data);
+    } catch (error) {
+      console.error('Error loading commitments:', error);
+    }
+  };
+
   const loadAthletes = async (teamId: string) => {
     try {
       const response = await api.get(`/coach/team/${teamId}/athletes`);
