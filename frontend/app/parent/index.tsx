@@ -249,11 +249,13 @@ export default function ParentDashboard() {
                       {item.type === 'training' 
                         ? `Allenamento ${item.team_name}` 
                         : `Gara ${item.team_name} vs ${item.opponent}`}
+                      {item.athlete_names ? ` (${item.athlete_names})` : ''}
                     </Text>
                     <Text style={styles.commitmentItemDetails}>
                       {item.type === 'training' 
                         ? `${item.time_start} - ${item.time_end}` 
                         : `ore ${item.time}`} • {item.venue}
+                      {item.city ? ` - ${item.city}` : ''}
                     </Text>
                     {item.meeting_time && (
                       <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
