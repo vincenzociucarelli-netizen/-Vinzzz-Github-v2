@@ -285,7 +285,7 @@ export default function ParentDashboard() {
                 <View style={styles.athleteIcon}>
                   <Ionicons 
                     name={athlete.status === 'pending' ? "time" : "person"} 
-                    size={32} 
+                    size={24} 
                     color={athlete.status === 'pending' ? "#FF9500" : "#007AFF"} 
                   />
                 </View>
