@@ -1917,9 +1917,12 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
     
     for i, row in enumerate(matches_data):
         try:
+            # Log per debug
+            logging.info(f"Import row {i}: {row}")
+            
             # Validate required fields
             if not row.get("team_id") or not row.get("date") or not row.get("opponent"):
-                errors.append(f"Riga {i+1}: dati mancanti (team_id, date, opponent richiesti)")
+                errors.append(f"Riga {i+1}: dati mancanti (team_id={row.get('team_id')}, date={row.get('date')}, opponent={row.get('opponent')})")
                 continue
             
             # Get team name
@@ -1928,16 +1931,19 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
             
             # Parse date
             date_str = row.get("date")
+            match_date = None
             if isinstance(date_str, str):
                 # Try different date formats (including HH:MM:SS for federation files)
-                for fmt in ["%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S", "%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M", "%Y-%m-%dT%H:%M"]:
+                for fmt in ["%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S", "%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M", "%Y-%m-%dT%H:%M", "%d/%m/%Y", "%Y-%m-%d"]:
                     try:
-                        match_date = datetime.strptime(date_str, fmt)
+                        match_date = datetime.strptime(date_str.strip(), fmt)
+                        logging.info(f"Date parsed with format {fmt}: {match_date}")
                         break
                     except:
                         continue
-                else:
-                    errors.append(f"Riga {i+1}: formato data non valido")
+                
+                if not match_date:
+                    errors.append(f"Riga {i+1}: formato data non valido '{date_str}'")
                     continue
             else:
                 match_date = date_str
@@ -1947,7 +1953,7 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
                 team_name=team_name,
                 date=match_date,
                 opponent=row["opponent"],
-                venue=row.get("venue", ""),
+                venue=row.get("venue", "") or "",
                 address=row.get("address"),
                 city=row.get("city"),
                 home_away=row.get("home_away", "away"),  # Default to away for federation imports
@@ -1957,8 +1963,10 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
             
             await db.matches.insert_one(match.dict())
             imported_count += 1
+            logging.info(f"Match imported: {match.team_name} vs {match.opponent} on {match.date}")
             
         except Exception as e:
+            logging.error(f"Error importing row {i}: {e}")
             errors.append(f"Riga {i+1}: {str(e)}")
     
     return {
