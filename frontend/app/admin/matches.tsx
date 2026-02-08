@@ -937,6 +937,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
   },
+  matchDateTime: {
+    fontSize: 13,
+    color: '#E53935',
+    fontWeight: 'bold',
+  },
   matchNotes: {
     fontSize: 12,
     color: '#999',
