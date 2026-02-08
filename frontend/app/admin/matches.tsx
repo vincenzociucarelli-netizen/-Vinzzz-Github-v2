@@ -336,8 +336,12 @@ export default function AdminMatches() {
           city = parts.slice(1).join(', ').trim();
         }
         
-        // Casa/Trasferta - default "away" per gare federazione
-        const homeAway = (row['Casa/Trasferta'] || row['home_away'] || 'away').toLowerCase().includes('casa') ? 'home' : 'away';
+        // Casa/Trasferta - usa isHome calcolato da SQUADRACASANOME, altrimenti fallback
+        let homeAway = isHome ? 'home' : 'away';
+        // Override se c'è un campo esplicito
+        if (row['Casa/Trasferta'] || row['home_away']) {
+          homeAway = (row['Casa/Trasferta'] || row['home_away']).toLowerCase().includes('casa') ? 'home' : 'away';
+        }
         
         return {
           team_id: team?.id || '',
