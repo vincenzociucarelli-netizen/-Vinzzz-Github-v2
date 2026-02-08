@@ -215,6 +215,31 @@ class MatchDay(BaseModel):
     time: str  # es: "18:00"
     venue: str  # es: "Palestra Liceo Alessi"
 
+class Match(BaseModel):
+    """Gara/Partita del calendario"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    society_id: Optional[str] = None
+    team_id: str  # ID della squadra
+    team_name: Optional[str] = None  # Nome squadra (denormalizzato per comodità)
+    date: datetime  # Data e ora della gara
+    opponent: str  # Avversario
+    venue: str  # Luogo della gara
+    home_away: str = "home"  # "home" o "away"
+    meeting_time: Optional[str] = None  # Orario ritrovo (es: "1 ora prima")
+    notes: Optional[str] = None  # Note aggiuntive
+    result: Optional[str] = None  # Risultato (es: "3-1")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+
+class MatchCreate(BaseModel):
+    team_id: str
+    date: datetime
+    opponent: str
+    venue: str
+    home_away: str = "home"
+    meeting_time: Optional[str] = None
+    notes: Optional[str] = None
+
 class Team(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     society_id: Optional[str] = None  # ID della società (multi-tenancy)
