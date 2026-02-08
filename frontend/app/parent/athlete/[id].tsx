@@ -378,38 +378,62 @@ export default function AthleteDetail() {
   const printQRCode = async () => {
     if (!athlete) return;
     
-    // Remove data:image/png;base64, prefix if present
-    const qrCodeBase64 = athlete.qr_code?.replace(/^data:image\/\w+;base64,/, '') || '';
-    
-    const html = `
-      <html>
-        <head>
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              text-align: center; 
-              padding: 40px;
-            }
-            h1 { font-size: 24px; margin-bottom: 10px; }
-            h2 { font-size: 18px; color: #666; margin-bottom: 30px; }
-            img { width: 300px; height: 300px; }
-            p { margin-top: 20px; font-size: 14px; color: #888; }
-          </style>
-        </head>
-        <body>
-          <h1>${athlete.full_name}</h1>
-          <h2>QR Code Atleta</h2>
-          <img src="data:image/png;base64,${qrCodeBase64}" />
-          <p>Presentare questo codice all'allenatore per registrare la presenza</p>
-        </body>
-      </html>
-    `;
-    
     try {
+      // Get QR code - handle both data URI and base64
+      let qrCodeBase64 = athlete.qr_code || '';
+      
+      // If it's a data URI, extract the base64 part
+      if (qrCodeBase64.startsWith('data:')) {
+        qrCodeBase64 = qrCodeBase64.split(',')[1] || '';
+      }
+      
+      // If still empty, show error
+      if (!qrCodeBase64) {
+        Alert.alert('Errore', 'QR Code non disponibile');
+        return;
+      }
+      
+      const html = `
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { 
+                font-family: Arial, sans-serif; 
+                text-align: center; 
+                padding: 40px;
+                margin: 0;
+              }
+              h1 { font-size: 24px; margin-bottom: 10px; }
+              h2 { font-size: 18px; color: #666; margin-bottom: 30px; }
+              .qr-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+              }
+              img { 
+                width: 250px; 
+                height: 250px; 
+                object-fit: contain;
+              }
+              p { margin-top: 20px; font-size: 14px; color: #888; }
+            </style>
+          </head>
+          <body>
+            <h1>${athlete.full_name}</h1>
+            <h2>QR Code Atleta</h2>
+            <div class="qr-container">
+              <img src="data:image/png;base64,${qrCodeBase64}" />
+            </div>
+            <p>Presentare questo codice all'allenatore per registrare la presenza</p>
+          </body>
+        </html>
+      `;
+      
       await Print.printAsync({ html });
     } catch (error) {
       console.error('Errore stampa:', error);
-      Alert.alert('Errore', 'Impossibile stampare il QR code');
+      Alert.alert('Errore', 'Impossibile stampare il QR code. Riprova.');
     }
   };
 
@@ -424,22 +448,44 @@ export default function AthleteDetail() {
         return;
       }
       
-      // Capture the QR code view as an image
+      // Try to capture the QR code view
       if (qrCodeRef.current) {
-        const uri = await captureRef(qrCodeRef.current, {
-          format: 'png',
-          quality: 1,
-        });
-        
-        // Share the captured image
-        await Sharing.shareAsync(uri, {
-          mimeType: 'image/png',
-          dialogTitle: `QR Code - ${athlete.full_name}`,
-        });
+        try {
+          const uri = await captureRef(qrCodeRef.current, {
+            format: 'png',
+            quality: 1,
+          });
+          
+          // Share the captured image
+          await Sharing.shareAsync(uri, {
+            mimeType: 'image/png',
+            dialogTitle: `QR Code - ${athlete.full_name}`,
+          });
+        } catch (captureError) {
+          console.error('Errore cattura:', captureError);
+          
+          // Fallback: try to save and share the QR code directly
+          if (athlete.qr_code) {
+            let base64Data = athlete.qr_code;
+            if (base64Data.startsWith('data:')) {
+              base64Data = base64Data.split(',')[1];
+            }
+            
+            const fileUri = FileSystem.cacheDirectory + `qr_${athlete.id}.png`;
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            
+            await Sharing.shareAsync(fileUri, {
+              mimeType: 'image/png',
+              dialogTitle: `QR Code - ${athlete.full_name}`,
+            });
+          }
+        }
       }
     } catch (error) {
       console.error('Errore condivisione:', error);
-      Alert.alert('Errore', 'Impossibile condividere il QR code');
+      Alert.alert('Errore', 'Impossibile condividere il QR code. Riprova.');
     }
   };
 
