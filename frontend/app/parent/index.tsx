@@ -96,14 +96,30 @@ export default function ParentDashboard() {
     }
   };
 
+  const [teams, setTeams] = useState<{[key: string]: string}>({});
+  
+  const loadTeams = async () => {
+    try {
+      const response = await api.get('/teams');
+      const teamsMap: {[key: string]: string} = {};
+      response.data.forEach((team: any) => {
+        teamsMap[team.id] = team.name;
+      });
+      setTeams(teamsMap);
+    } catch (error) {
+      console.error('Error loading teams:', error);
+    }
+  };
+
   useEffect(() => {
     loadAthletes();
     loadCommitments();
+    loadTeams();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadAthletes(), loadCommitments()]);
+    await Promise.all([loadAthletes(), loadCommitments(), loadTeams()]);
     setRefreshing(false);
   };
 
