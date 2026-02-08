@@ -2312,6 +2312,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
   },
+  paymentStatusContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paymentStatusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  residuoRow: {
+    backgroundColor: '#f0f0f0',
+    marginTop: 8,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    borderBottomWidth: 0,
+  },
+  residuoAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
   paymentInfo: {
     flex: 1,
   },
