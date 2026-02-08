@@ -43,6 +43,11 @@ export default function CoachScreen() {
   const [athletes, setAthletes] = useState<AthleteWithCert[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [commitments, setCommitments] = useState<{
+    today: any[];
+    tomorrow: any[];
+    day_after: any[];
+  }>({ today: [], tomorrow: [], day_after: [] });
   
   // Web scanner states
   const [webScannerActive, setWebScannerActive] = useState(false);
