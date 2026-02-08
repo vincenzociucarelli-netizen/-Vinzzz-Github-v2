@@ -2119,6 +2119,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  paymentSummary: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  paymentSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  paymentSummaryLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  paymentSummaryValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  paymentSummaryTotal: {
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    marginTop: 8,
+    paddingTop: 12,
+  },
+  paymentSummaryLabelBold: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+  },
+  paymentSummaryValueBold: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+    marginTop: 8,
+  },
   paymentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2126,6 +2169,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+  },
+  paymentOverdue: {
+    backgroundColor: '#FFF5F5',
+    marginHorizontal: -12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
   paymentInfo: {
     flex: 1,
