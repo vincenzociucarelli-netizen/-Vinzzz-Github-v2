@@ -1290,6 +1290,68 @@ export default function AthleteDetail() {
           </View>
         </View>
 
+        {/* Team Schedule Card - Allenamenti e Gare Interne */}
+        {teamSchedule && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🏐 Calendario Squadra</Text>
+            
+            {/* Allenamenti */}
+            {teamSchedule.training_sessions && teamSchedule.training_sessions.length > 0 && (
+              <View style={styles.scheduleSection}>
+                <Text style={styles.scheduleSectionTitle}>📅 Allenamenti Settimanali</Text>
+                {teamSchedule.training_sessions.map((session: any, idx: number) => (
+                  <View key={idx} style={styles.scheduleItem}>
+                    <View style={styles.scheduleDay}>
+                      <Ionicons name="calendar-outline" size={16} color="#007AFF" />
+                      <Text style={styles.scheduleDayText}>{session.day}</Text>
+                    </View>
+                    <View style={styles.scheduleDetails}>
+                      <Text style={styles.scheduleTime}>
+                        🕐 {session.timeStart} - {session.timeEnd}
+                      </Text>
+                      {session.venue && (
+                        <Text style={styles.scheduleVenue}>
+                          📍 {session.venue}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+            
+            {/* Gare Interne */}
+            {teamSchedule.match_day && teamSchedule.match_day.day && (
+              <View style={[styles.scheduleSection, { marginTop: 16 }]}>
+                <Text style={styles.scheduleSectionTitle}>🏆 Gare Interne</Text>
+                <View style={styles.scheduleItem}>
+                  <View style={styles.scheduleDay}>
+                    <Ionicons name="trophy-outline" size={16} color="#FF9500" />
+                    <Text style={[styles.scheduleDayText, { color: '#FF9500' }]}>
+                      {teamSchedule.match_day.day}
+                    </Text>
+                  </View>
+                  <View style={styles.scheduleDetails}>
+                    <Text style={styles.scheduleTime}>
+                      🕐 {teamSchedule.match_day.time || 'Orario da definire'}
+                    </Text>
+                    {teamSchedule.match_day.venue && (
+                      <Text style={styles.scheduleVenue}>
+                        📍 {teamSchedule.match_day.venue}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+            )}
+            
+            {(!teamSchedule.training_sessions || teamSchedule.training_sessions.length === 0) && 
+             (!teamSchedule.match_day || !teamSchedule.match_day.day) && (
+              <Text style={styles.noDataText}>Calendario non ancora definito</Text>
+            )}
+          </View>
+        )}
+
         {/* Payments Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>💰 Pagamenti</Text>
