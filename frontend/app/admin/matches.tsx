@@ -259,16 +259,21 @@ export default function AdminMatches() {
       setImportModalVisible(true);
       
       // Map Excel data to matches format
-      // Supporto per formato Federazione: CAMPIONATONOME, DATA (con ora), SQUADRAOSPITENOME, IMPIANTO, IMPIANTO INDIRIZZO
+      // Supporto per formato Federazione: CAMPIONATONOME, DATA, SQUADRACASANOME, SQUADRAOSPITENOME, IMPIANTO, IMPIANTO INDIRIZZO
       const matchesData = jsonData.map((row: any) => {
         console.log('Processing row:', row); // Debug
         
         // CAMPIONATONOME contiene l'identificativo della squadra (es. "U14 Maschile Campionato")
         const campionato = row['CAMPIONATONOME'] || row['Campionato'] || row['campionato'] || '';
         
+        // SQUADRACASANOME - nome della squadra di casa (può essere la nostra)
+        const squadraCasa = row['SQUADRACASANOME'] || row['SquadraCasaNome'] || row['Squadra Casa'] || '';
+        
         // Fallback al vecchio formato per compatibilità
         const teamNameLegacy = row['Squadra'] || row['squadra'] || row['Team'] || row['team'] || '';
-        const teamSearchKey = campionato || teamNameLegacy;
+        
+        // Usa CAMPIONATONOME, poi SQUADRACASANOME, poi fallback legacy
+        const teamSearchKey = campionato || squadraCasa || teamNameLegacy;
         
         // Cerca la squadra che contiene l'identificativo del campionato nel nome
         const team = teams.find(t => {
@@ -280,6 +285,15 @@ export default function AdminMatches() {
                  tName.includes(searchLower) || 
                  searchLower.includes(tName);
         });
+        
+        // Determina se siamo in casa o in trasferta basandosi su SQUADRACASANOME
+        let isHome = false;
+        if (squadraCasa && team) {
+          // Se SQUADRACASANOME contiene il nome della nostra squadra, siamo in casa
+          const casaLower = squadraCasa.toLowerCase();
+          const teamNameLower = team.name.toLowerCase();
+          isHome = casaLower.includes(teamNameLower) || teamNameLower.includes(casaLower);
+        }
         
         // DATA - può contenere data e ora insieme (es. "15/06/2025 18:30:00")
         let dateTimeStr = row['DATA'] || row['Data'] || row['data'] || '';
