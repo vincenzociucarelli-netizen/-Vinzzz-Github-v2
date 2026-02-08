@@ -446,7 +446,7 @@ export default function AdminMatches() {
       <View style={styles.instructionCard}>
         <Ionicons name="information-circle" size={20} color="#007AFF" />
         <Text style={styles.instructionText}>
-          Importa da Excel con: CAMPIONATONOME, DATA, SQUADRACASANOME, SQUADRAOSPITENOME, IMPIANTO, IMPIANTO INDIRIZZO
+          Importa da Excel con: CampionatoNome, GaraDataOra, SquadraCasaNome, SquadraOspiteNome, Impianto, ImpiantoIndirizzo
         </Text>
       </View>
 
