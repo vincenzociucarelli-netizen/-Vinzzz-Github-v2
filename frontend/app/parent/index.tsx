@@ -340,21 +340,36 @@ export default function ParentDashboard() {
           </View>
         ) : (
           <View style={styles.athletesList}>
-            {athletes.map((athlete) => (
+            {athletes.map((athlete) => {
+              // Determina colore bordo in base allo stato
+              const borderColor = athlete.status === 'pending' 
+                ? '#FFE082' 
+                : athlete.status === 'trial' 
+                  ? '#FF9500' // Arancione per prova
+                  : '#34C759'; // Verde per attivo
+              
+              const iconColor = athlete.status === 'pending' 
+                ? '#FF9500' 
+                : athlete.status === 'trial' 
+                  ? '#FF9500' 
+                  : '#34C759';
+              
+              return (
               <TouchableOpacity
                 key={athlete.id}
                 style={[
                   styles.athleteCard,
+                  { borderLeftWidth: 4, borderLeftColor: borderColor },
                   athlete.status === 'pending' && styles.athleteCardPending
                 ]}
                 onPress={() => athlete.status !== 'pending' && router.push(`/parent/athlete/${athlete.id}`)}
                 disabled={athlete.status === 'pending'}
               >
-                <View style={styles.athleteIcon}>
+                <View style={[styles.athleteIcon, { backgroundColor: `${iconColor}15` }]}>
                   <Ionicons 
                     name={athlete.status === 'pending' ? "time" : "person"} 
                     size={24} 
-                    color={athlete.status === 'pending' ? "#FF9500" : "#007AFF"} 
+                    color={iconColor} 
                   />
                 </View>
                 <View style={styles.athleteInfo}>
@@ -364,20 +379,21 @@ export default function ParentDashboard() {
                   )}
                   <Text style={[
                     styles.athleteStatus,
-                    athlete.status === 'pending' && styles.athleteStatusPending
+                    { color: iconColor, fontWeight: '600' }
                   ]}>
                     {athlete.status === 'pending' 
                       ? '⏳ In attesa di approvazione' 
                       : athlete.status === 'trial' 
-                        ? 'Periodo di prova' 
-                        : 'Attivo'}
+                        ? '🔶 Periodo di prova' 
+                        : '✓ Attivo'}
                   </Text>
                 </View>
                 {athlete.status !== 'pending' && (
                   <Ionicons name="chevron-forward" size={24} color="#999" />
                 )}
               </TouchableOpacity>
-            ))}
+            );
+            })}
           </View>
         )}
 
