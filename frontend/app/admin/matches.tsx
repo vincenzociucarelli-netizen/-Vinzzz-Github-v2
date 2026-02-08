@@ -494,8 +494,8 @@ export default function AdminMatches() {
                   <Text style={styles.matchVs}>vs {match.opponent}</Text>
                   <View style={styles.matchDetails}>
                     <View style={styles.matchDetailItem}>
-                      <Ionicons name="calendar-outline" size={14} color="#666" />
-                      <Text style={styles.matchDetailText}>{formatDate(match.date)}</Text>
+                      <Ionicons name="calendar-outline" size={14} color="#E53935" />
+                      <Text style={styles.matchDateTime}>{formatDate(match.date)}</Text>
                     </View>
                     <View style={styles.matchDetailItem}>
                       <Ionicons name="location-outline" size={14} color="#666" />
