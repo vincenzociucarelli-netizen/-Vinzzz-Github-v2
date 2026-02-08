@@ -1386,13 +1386,21 @@ export default function AthleteDetail() {
           <Text style={styles.sectionSubtitle}>📅 Dettaglio Rate</Text>
           {payments.length > 0 ? (
             <>
-              {payments.map((payment) => {
-                const rataName = payment.installment_number === 1 
+              {payments
+                .sort((a, b) => (a.installment_number || 0) - (b.installment_number || 0))
+                .map((payment, index) => {
+                // Determina il nome della rata basandosi su installment_number o sull'indice
+                const installNum = payment.installment_number || (index + 1);
+                const rataName = installNum === 1 
                   ? 'Pagamento Rata Iscrizione' 
-                  : payment.installment_number === 2 
+                  : installNum === 2 
                     ? 'Pagamento 1ª Rata' 
                     : 'Pagamento 2ª Rata';
-                const isOverdue = !payment.paid && new Date(payment.due_date) < new Date();
+                
+                // Gestisce date invalide (epoch o null)
+                const dueDate = payment.due_date ? new Date(payment.due_date) : null;
+                const isValidDate = dueDate && dueDate.getFullYear() > 1971;
+                const isOverdue = !payment.paid && dueDate && isValidDate && dueDate < new Date();
                 
                 return (
                   <View key={payment.id} style={[
@@ -1406,13 +1414,15 @@ export default function AthleteDetail() {
                         styles.paymentDue,
                         isOverdue && { color: '#FF3B30', fontWeight: '600' }
                       ]}>
-                        Scadenza: {format(new Date(payment.due_date), 'dd/MM/yyyy', { locale: it })}
-                        {isOverdue && ' ⚠️ SCADUTA'}
+                        {isValidDate 
+                          ? `Scadenza: ${format(dueDate!, 'dd/MM/yyyy', { locale: it })}${isOverdue ? ' ⚠️ SCADUTA' : ''}`
+                          : 'Scadenza: Da definire'
+                        }
                       </Text>
                     </View>
                     <View style={styles.paymentStatusContainer}>
                       <Ionicons
-                        name={payment.paid ? 'checkmark-circle' : 'alert-circle'}
+                        name={payment.paid ? 'checkmark-circle' : 'time-outline'}
                         size={28}
                         color={payment.paid ? '#34C759' : '#FF9500'}
                       />
