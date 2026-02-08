@@ -1976,8 +1976,18 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
     # Get parent's athletes
     athletes = await db.athletes.find({"parent_id": current_user["id"]}).to_list(20)
     
+    # Crea un dizionario per mappare team_id -> lista di nomi atleti
+    team_athletes = {}
+    for a in athletes:
+        team_id = a.get("team_id")
+        if team_id:
+            athlete_name = a.get("first_name", a.get("full_name", "").split()[0] if a.get("full_name") else "")
+            if team_id not in team_athletes:
+                team_athletes[team_id] = []
+            team_athletes[team_id].append(athlete_name)
+    
     # Get unique team IDs from athletes
-    team_ids = list(set([a.get("team_id") for a in athletes if a.get("team_id")]))
+    team_ids = list(team_athletes.keys())
     
     if not team_ids:
         return {"today": [], "tomorrow": [], "day_after": []}
@@ -2013,6 +2023,9 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
             team = teams_dict.get(team_id, {})
             team_name = team.get("name", "Squadra")
             training_sessions = team.get("training_sessions", [])
+            # Nomi degli atleti in questa squadra
+            athlete_names = team_athletes.get(team_id, [])
+            athlete_names_str = ", ".join(athlete_names) if athlete_names else ""
             
             for session in training_sessions:
                 if session.get("day") == day_name:
@@ -2020,6 +2033,7 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
                         "type": "training",
                         "team_id": team_id,
                         "team_name": team_name,
+                        "athlete_names": athlete_names_str,
                         "time_start": session.get("timeStart", ""),
                         "time_end": session.get("timeEnd", ""),
                         "venue": session.get("venue", ""),
