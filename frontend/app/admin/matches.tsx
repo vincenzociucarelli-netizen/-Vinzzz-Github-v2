@@ -259,20 +259,20 @@ export default function AdminMatches() {
       setImportModalVisible(true);
       
       // Map Excel data to matches format
-      // Supporto per formato Federazione: CAMPIONATONOME, DATA, SQUADRACASANOME, SQUADRAOSPITENOME, IMPIANTO, IMPIANTO INDIRIZZO
+      // Colonne file federazione: CampionatoNome, GaraDataOra, SquadraCasaNome, SquadraOspiteNome, Impianto, ImpiantoIndirizzo
       const matchesData = jsonData.map((row: any) => {
         console.log('Processing row:', row); // Debug
         
-        // CAMPIONATONOME contiene l'identificativo della squadra (es. "U14 Maschile Campionato")
-        const campionato = row['CAMPIONATONOME'] || row['Campionato'] || row['campionato'] || '';
+        // CampionatoNome - identificativo della squadra (es. "U14 Maschile Campionato")
+        const campionato = row['CampionatoNome'] || row['CAMPIONATONOME'] || row['Campionato'] || '';
         
-        // SQUADRACASANOME - nome della squadra di casa (può essere la nostra)
-        const squadraCasa = row['SQUADRACASANOME'] || row['SquadraCasaNome'] || row['Squadra Casa'] || '';
+        // SquadraCasaNome - nome della squadra di casa
+        const squadraCasa = row['SquadraCasaNome'] || row['SQUADRACASANOME'] || row['Squadra Casa'] || '';
         
         // Fallback al vecchio formato per compatibilità
-        const teamNameLegacy = row['Squadra'] || row['squadra'] || row['Team'] || row['team'] || '';
+        const teamNameLegacy = row['Squadra'] || row['Team'] || '';
         
-        // Usa CAMPIONATONOME, poi SQUADRACASANOME, poi fallback legacy
+        // Usa CampionatoNome, poi SquadraCasaNome, poi fallback legacy
         const teamSearchKey = campionato || squadraCasa || teamNameLegacy;
         
         // Cerca la squadra che contiene l'identificativo del campionato nel nome
@@ -286,17 +286,17 @@ export default function AdminMatches() {
                  searchLower.includes(tName);
         });
         
-        // Determina se siamo in casa o in trasferta basandosi su SQUADRACASANOME
+        // Determina se siamo in casa o in trasferta basandosi su SquadraCasaNome
         let isHome = false;
         if (squadraCasa && team) {
-          // Se SQUADRACASANOME contiene il nome della nostra squadra, siamo in casa
+          // Se SquadraCasaNome contiene il nome della nostra squadra, siamo in casa
           const casaLower = squadraCasa.toLowerCase();
           const teamNameLower = team.name.toLowerCase();
           isHome = casaLower.includes(teamNameLower) || teamNameLower.includes(casaLower);
         }
         
-        // DATA - può contenere data e ora insieme (es. "15/06/2025 18:30:00")
-        let dateTimeStr = row['DATA'] || row['Data'] || row['data'] || '';
+        // GaraDataOra - data e ora della gara
+        let dateTimeStr = row['GaraDataOra'] || row['DATA'] || row['Data'] || '';
         
         // Se è un oggetto Date (da Excel), convertilo in stringa
         if (dateTimeStr instanceof Date) {
@@ -304,26 +304,21 @@ export default function AdminMatches() {
           dateTimeStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
         }
         
-        // Fallback al vecchio formato con colonne separate
-        if (!dateTimeStr && (row['Data e Ora'] || row['Ora'])) {
-          dateTimeStr = row['Data e Ora'] || `${row['Data'] || ''} ${row['Ora'] || '00:00'}`;
-        }
-        
         // Rimuovi secondi se presenti (HH:MM:SS → HH:MM)
         if (dateTimeStr && typeof dateTimeStr === 'string') {
           dateTimeStr = dateTimeStr.trim();
         }
         
-        // SQUADRAOSPITENOME - avversario
-        const opponent = row['SQUADRAOSPITENOME'] || row['Avversario'] || row['avversario'] || row['Opponent'] || '';
+        // SquadraOspiteNome - avversario
+        const opponent = row['SquadraOspiteNome'] || row['SQUADRAOSPITENOME'] || row['Avversario'] || '';
         
-        // IMPIANTO - nome palestra (può contenere anche la città)
-        const impianto = row['IMPIANTO'] || row['Impianto'] || row['Luogo'] || row['luogo'] || row['Venue'] || '';
+        // Impianto - nome palestra
+        const impianto = row['Impianto'] || row['IMPIANTO'] || row['Luogo'] || '';
         
-        // IMPIANTO INDIRIZZO - indirizzo completo
-        const indirizzo = row['IMPIANTO INDIRIZZO'] || row['Indirizzo'] || row['indirizzo'] || '';
+        // ImpiantoIndirizzo - indirizzo completo
+        const indirizzo = row['ImpiantoIndirizzo'] || row['IMPIANTO INDIRIZZO'] || row['Indirizzo'] || '';
         
-        // Estrai città dall'impianto se contiene un trattino o virgola (es. "Palestra XYZ - Perugia")
+        // Estrai città dall'impianto o dall'indirizzo se contiene un trattino o virgola
         let venue = impianto;
         let city = '';
         if (impianto && impianto.includes(' - ')) {
@@ -336,12 +331,8 @@ export default function AdminMatches() {
           city = parts.slice(1).join(', ').trim();
         }
         
-        // Casa/Trasferta - usa isHome calcolato da SQUADRACASANOME, altrimenti fallback
-        let homeAway = isHome ? 'home' : 'away';
-        // Override se c'è un campo esplicito
-        if (row['Casa/Trasferta'] || row['home_away']) {
-          homeAway = (row['Casa/Trasferta'] || row['home_away']).toLowerCase().includes('casa') ? 'home' : 'away';
-        }
+        // Casa/Trasferta - usa isHome calcolato da SquadraCasaNome
+        const homeAway = isHome ? 'home' : 'away';
         
         return {
           team_id: team?.id || '',
@@ -352,8 +343,8 @@ export default function AdminMatches() {
           address: indirizzo,
           city: city,
           home_away: homeAway,
-          meeting_time: row['Ritrovo'] || row['meeting_time'] || '',
-          notes: row['Note'] || row['notes'] || '',
+          meeting_time: row['Ritrovo'] || '',
+          notes: row['Note'] || '',
         };
       });
 
