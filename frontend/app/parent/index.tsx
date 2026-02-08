@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,18 @@ import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { Athlete } from '../../src/types';
 
+// Colori vivaci per distinguere i figli
+const ATHLETE_COLORS = [
+  '#E91E63', // Rosa
+  '#2196F3', // Blu
+  '#4CAF50', // Verde
+  '#FF9800', // Arancione
+  '#9C27B0', // Viola
+  '#00BCD4', // Ciano
+  '#F44336', // Rosso
+  '#3F51B5', // Indaco
+];
+
 export default function ParentDashboard() {
   const router = useRouter();
   const { user, logout, updateUser } = useAuthStore();
@@ -31,6 +43,40 @@ export default function ParentDashboard() {
     tomorrow: any[];
     day_after: any[];
   }>({ today: [], tomorrow: [], day_after: [] });
+
+  // Mappa nome atleta -> colore
+  const athleteColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    athletes.forEach((athlete, index) => {
+      const name = athlete.first_name || (athlete.full_name?.split(' ')[0] || '');
+      if (name && !map[name]) {
+        map[name] = ATHLETE_COLORS[index % ATHLETE_COLORS.length];
+      }
+    });
+    return map;
+  }, [athletes]);
+
+  // Funzione per renderizzare i nomi degli atleti colorati
+  const renderAthleteNames = (namesStr: string) => {
+    if (!namesStr) return null;
+    const names = namesStr.split(', ').filter(n => n.trim());
+    if (names.length === 0) return null;
+    
+    return (
+      <Text style={styles.athleteNamesContainer}>
+        {' ('}
+        {names.map((name, idx) => (
+          <Text key={idx}>
+            <Text style={[styles.athleteName, { color: athleteColorMap[name] || '#007AFF' }]}>
+              {name}
+            </Text>
+            {idx < names.length - 1 ? ', ' : ''}
+          </Text>
+        ))}
+        {')'}
+      </Text>
+    );
+  };
 
   const loadAthletes = async () => {
     try {
