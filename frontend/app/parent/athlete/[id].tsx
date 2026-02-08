@@ -497,47 +497,119 @@ export default function AthleteDetail() {
     }
 
     try {
-      let certBase64 = certificate.pdf_data;
-      if (certBase64.startsWith('data:')) {
-        certBase64 = certBase64.split(',')[1];
+      let certData = certificate.pdf_data;
+      let mimeType = 'image/jpeg';
+      
+      // Detect mime type from data URI
+      if (certData.startsWith('data:')) {
+        const match = certData.match(/^data:([^;]+);base64,/);
+        if (match) {
+          mimeType = match[1];
+        }
+        certData = certData.split(',')[1] || certData;
       }
 
       const expiryFormatted = certificate?.expiry_date 
         ? format(new Date(certificate.expiry_date), 'dd/MM/yyyy', { locale: it })
         : 'N/D';
 
+      // Create HTML for printing
       const html = `
+        <!DOCTYPE html>
         <html>
           <head>
+            <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Certificato Medico - ${athlete?.full_name}</title>
             <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
               body { 
-                margin: 0; 
-                padding: 20px; 
                 font-family: Arial, sans-serif; 
-                text-align: center; 
+                text-align: center;
+                padding: 15px;
               }
-              h1 { font-size: 20px; margin-bottom: 10px; }
-              p { font-size: 14px; color: #666; margin-bottom: 20px; }
-              img { 
+              h1 { font-size: 18px; margin-bottom: 8px; color: #333; }
+              .info { font-size: 12px; color: #666; margin-bottom: 15px; }
+              .cert-image { 
                 max-width: 100%; 
-                max-height: 80vh; 
-                object-fit: contain; 
+                max-height: 85vh;
+                border: 1px solid #ddd;
+              }
+              @media print {
+                body { padding: 0; }
+                .cert-image { max-height: 95vh; }
               }
             </style>
           </head>
           <body>
-            <h1>Certificato Medico - ${athlete?.full_name}</h1>
-            <p>Scadenza: ${expiryFormatted}</p>
-            <img src="data:image/jpeg;base64,${certBase64}" />
+            <h1>Certificato Medico</h1>
+            <p class="info">${athlete?.full_name} - Scadenza: ${expiryFormatted}</p>
+            <img class="cert-image" src="data:${mimeType};base64,${certData}" />
           </body>
         </html>
       `;
 
-      await Print.printAsync({ html });
+      if (Platform.OS === 'web') {
+        // Web: open in new window and print
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.onload = () => printWindow.print();
+        }
+      } else {
+        // Mobile: use expo-print
+        await Print.printAsync({ html });
+      }
     } catch (error) {
       console.error('Errore stampa certificato:', error);
-      Alert.alert('Errore', 'Impossibile stampare il certificato');
+      Alert.alert('Errore', 'Impossibile stampare il certificato. Riprova.');
+    }
+  };
+
+  // Share certificate function
+  const shareCertificate = async () => {
+    if (!certificate?.pdf_data) {
+      Alert.alert('Errore', 'Certificato non disponibile');
+      return;
+    }
+
+    try {
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Errore', 'La condivisione non è disponibile su questo dispositivo');
+        return;
+      }
+
+      let certData = certificate.pdf_data;
+      let extension = 'jpg';
+      
+      // Detect file type from data URI
+      if (certData.startsWith('data:')) {
+        if (certData.includes('image/png')) {
+          extension = 'png';
+        } else if (certData.includes('application/pdf')) {
+          extension = 'pdf';
+        }
+        certData = certData.split(',')[1] || certData;
+      }
+
+      // Save to temp file
+      const fileName = `certificato_${athlete?.full_name?.replace(/\s+/g, '_') || 'atleta'}.${extension}`;
+      const fileUri = FileSystem.cacheDirectory + fileName;
+      
+      await FileSystem.writeAsStringAsync(fileUri, certData, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Share the file
+      await Sharing.shareAsync(fileUri, {
+        mimeType: extension === 'pdf' ? 'application/pdf' : `image/${extension}`,
+        dialogTitle: `Certificato Medico - ${athlete?.full_name}`,
+      });
+    } catch (error) {
+      console.error('Errore condivisione certificato:', error);
+      Alert.alert('Errore', 'Impossibile condividere il certificato. Riprova.');
     }
   };
 
