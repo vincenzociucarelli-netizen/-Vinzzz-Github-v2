@@ -475,6 +475,19 @@ export default function AdminMatches() {
                 </TouchableOpacity>
               </View>
 
+              {/* Campo Città visibile solo per trasferte */}
+              {formData.home_away === 'away' && (
+                <>
+                  <Text style={styles.label}>Città (trasferta)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.city}
+                    onChangeText={(v) => setFormData({ ...formData, city: v })}
+                    placeholder="es: Terni, Foligno, Città di Castello..."
+                  />
+                </>
+              )}
+
               <Text style={styles.label}>Orario Ritrovo</Text>
               <TextInput
                 style={styles.input}
