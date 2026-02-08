@@ -732,6 +732,67 @@ export default function AdminMatches() {
           <Text style={styles.importText}>Importazione in corso...</Text>
         </View>
       )}
+
+      {/* Home Team Name Modal for Excel Import */}
+      <Modal visible={homeTeamModalVisible} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.homeTeamModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>🏐 Identifica Gare in Casa</Text>
+              <TouchableOpacity onPress={() => {
+                setHomeTeamModalVisible(false);
+                setPendingImportData([]);
+              }}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.homeTeamModalBody}>
+              <Text style={styles.homeTeamDescription}>
+                Inserisci il nome (o parte del nome) della tua società come appare nella colonna "SquadraCasaNome" del file Excel.
+              </Text>
+              <Text style={styles.homeTeamExample}>
+                Esempio: "Pallavolo Perugia", "Perugia", "PGS Perugia"
+              </Text>
+              
+              <TextInput
+                style={styles.homeTeamInput}
+                value={homeTeamName}
+                onChangeText={setHomeTeamName}
+                placeholder="Nome squadra di casa..."
+                placeholderTextColor="#999"
+                autoFocus
+              />
+              
+              <Text style={styles.homeTeamHint}>
+                Le gare dove "SquadraCasaNome" contiene questo testo saranno marcate come 🏠 Casa, le altre come ✈️ Trasferta.
+              </Text>
+
+              <View style={styles.homeTeamButtons}>
+                <TouchableOpacity 
+                  style={styles.homeTeamCancelBtn}
+                  onPress={() => {
+                    setHomeTeamModalVisible(false);
+                    setPendingImportData([]);
+                    setHomeTeamName('');
+                  }}
+                >
+                  <Text style={styles.homeTeamCancelText}>Annulla</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.homeTeamConfirmBtn, !homeTeamName.trim() && styles.homeTeamConfirmDisabled]}
+                  onPress={processImportWithHomeTeam}
+                  disabled={!homeTeamName.trim()}
+                >
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                  <Text style={styles.homeTeamConfirmText}>Importa Gare</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
