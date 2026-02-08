@@ -240,8 +240,9 @@ export default function AdminMatches() {
         fileContent = await response.arrayBuffer();
       } else {
         // Mobile: read as base64 and convert
+        // Use string 'base64' instead of FileSystem.EncodingType.Base64 for compatibility
         const base64 = await FileSystem.readAsStringAsync(file.uri, {
-          encoding: FileSystem.EncodingType.Base64,
+          encoding: 'base64' as any,
         });
         // Convert base64 to ArrayBuffer
         const binaryString = atob(base64);
