@@ -1396,35 +1396,11 @@ export default function AthleteDetail() {
               <Ionicons name="arrow-back" size={24} color="#333" />
             </TouchableOpacity>
             <Text style={styles.certViewerTitle}>📋 Certificato Medico</Text>
-            {/* Print Button - Web only */}
-            {Platform.OS === 'web' && certificate?.pdf_data && (
+            {/* Print Button - Now works on both web and mobile */}
+            {certificate?.pdf_data && (
               <TouchableOpacity 
                 style={styles.printBtn}
-                onPress={() => {
-                  const printWindow = window.open('', '_blank');
-                  if (printWindow) {
-                    printWindow.document.write(`
-                      <html>
-                        <head>
-                          <title>Certificato Medico - ${athlete?.full_name}</title>
-                          <style>
-                            body { margin: 0; padding: 20px; font-family: Arial; text-align: center; }
-                            h1 { font-size: 18px; margin-bottom: 10px; }
-                            p { font-size: 14px; color: #666; margin-bottom: 20px; }
-                            img { max-width: 100%; max-height: 90vh; object-fit: contain; }
-                          </style>
-                        </head>
-                        <body>
-                          <h1>Certificato Medico - ${athlete?.full_name}</h1>
-                          <p>Scadenza: ${certificate ? format(new Date(certificate.expiry_date), 'dd/MM/yyyy', { locale: it }) : 'N/D'}</p>
-                          <img src="data:image/jpeg;base64,${certificate.pdf_data}" />
-                          <script>window.onload = function() { window.print(); }</script>
-                        </body>
-                      </html>
-                    `);
-                    printWindow.document.close();
-                  }
-                }}
+                onPress={printCertificate}
               >
                 <Ionicons name="print" size={22} color="#007AFF" />
                 <Text style={styles.printBtnText}>Stampa</Text>
