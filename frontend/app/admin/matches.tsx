@@ -517,6 +517,7 @@ export default function AdminMatches() {
                   key={match.id}
                   style={styles.matchCard}
                   onPress={() => openEditModal(match)}
+                  activeOpacity={0.7}
                 >
                   <View style={styles.matchHeader}>
                     <View style={[styles.homeAwayBadge, match.home_away === 'away' && styles.awayBadge]}>
@@ -526,7 +527,11 @@ export default function AdminMatches() {
                     </View>
                     <TouchableOpacity
                       style={styles.deleteBtn}
-                      onPress={() => handleDelete(match.id)}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleDelete(match.id);
+                      }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
                       <Ionicons name="trash-outline" size={18} color="#FF3B30" />
                     </TouchableOpacity>
