@@ -336,8 +336,19 @@ export default function AdminMatches() {
       // Filter out invalid rows
       const validMatches = matchesData.filter((m: any) => m.team_id && m.opponent);
       
+      // Log per debugging
+      const invalidMatches = matchesData.filter((m: any) => !m.team_id || !m.opponent);
+      if (invalidMatches.length > 0) {
+        console.log('Invalid matches (missing team_id or opponent):', invalidMatches.slice(0, 3));
+      }
+      
       if (validMatches.length === 0) {
-        Alert.alert('Errore', 'Nessuna gara valida trovata nel file. Assicurati che le colonne siano: CAMPIONATONOME, DATA, SQUADRAOSPITENOME, IMPIANTO, IMPIANTO INDIRIZZO. CAMPIONATONOME deve corrispondere al nome di una squadra nel sistema.');
+        const firstRow = matchesData[0];
+        const columnNames = firstRow ? Object.keys(firstRow).join(', ') : 'nessuna';
+        Alert.alert(
+          'Errore Import', 
+          `Nessuna gara valida trovata.\n\nColonne trovate: ${columnNames}\n\nColonne richieste: CAMPIONATONOME (o Squadra), DATA, SQUADRAOSPITENOME (o Avversario).\n\nCAMPIONATONOME deve corrispondere al nome di una squadra nel sistema.`
+        );
         setImporting(false);
         return;
       }
@@ -353,7 +364,8 @@ export default function AdminMatches() {
       loadData();
     } catch (error: any) {
       console.error('Import error:', error);
-      Alert.alert('Errore', 'Errore durante l\'importazione del file');
+      const errorMsg = error.response?.data?.detail || error.message || 'Errore durante l\'importazione del file';
+      Alert.alert('Errore Import', errorMsg);
     } finally {
       setImporting(false);
       setImportModalVisible(false);
