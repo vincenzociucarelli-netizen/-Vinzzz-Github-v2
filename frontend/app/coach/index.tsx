@@ -88,6 +88,7 @@ export default function CoachScreen() {
 
   useEffect(() => {
     loadTeams();
+    loadCommitments();
   }, []);
 
   useEffect(() => {
