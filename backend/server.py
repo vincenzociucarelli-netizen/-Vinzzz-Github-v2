@@ -360,6 +360,7 @@ class Athlete(BaseModel):
     approved_by: Optional[str] = None
     # Sconto personalizzato dall'admin
     discount_amount: float = 0.0  # Sconto in euro da detrarre dall'ultima rata
+    discount_reason: Optional[str] = None  # Motivo dello sconto
     discount_note: Optional[str] = None  # Nota sullo sconto
     # Password protezione dati sensibili (hash)
     data_password_hash: Optional[str] = None  # Password per accesso/modifica dati sensibili
