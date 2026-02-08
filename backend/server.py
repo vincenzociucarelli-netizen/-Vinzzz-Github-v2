@@ -1803,6 +1803,259 @@ async def update_user_bank_details(user_id: str, data: dict, current_user = Depe
     
     return {"message": "Dati bancari aggiornati con successo"}
 
+# ==================== MATCHES/GARE ENDPOINTS ====================
+
+@api_router.get("/matches")
+async def get_matches(current_user = Depends(get_current_user)):
+    """Get all matches for admin"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere tutte le gare")
+    
+    matches = await db.matches.find({}).sort("date", 1).to_list(500)
+    for m in matches:
+        clean_mongo_doc(m)
+    return matches
+
+@api_router.get("/matches/upcoming")
+async def get_upcoming_matches(days: int = 7, current_user = Depends(get_current_user)):
+    """Get upcoming matches for next N days"""
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    end_date = today + timedelta(days=days)
+    
+    matches = await db.matches.find({
+        "date": {"$gte": today, "$lte": end_date}
+    }).sort("date", 1).to_list(100)
+    
+    for m in matches:
+        clean_mongo_doc(m)
+    return matches
+
+@api_router.get("/matches/team/{team_id}")
+async def get_team_matches(team_id: str, current_user = Depends(get_current_user)):
+    """Get all matches for a specific team"""
+    matches = await db.matches.find({"team_id": team_id}).sort("date", 1).to_list(100)
+    for m in matches:
+        clean_mongo_doc(m)
+    return matches
+
+@api_router.post("/matches")
+async def create_match(match_data: MatchCreate, current_user = Depends(get_current_user)):
+    """Create a new match"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può creare gare")
+    
+    # Get team name
+    team = await db.teams.find_one({"id": match_data.team_id})
+    team_name = team.get("name", "") if team else ""
+    
+    match = Match(
+        team_id=match_data.team_id,
+        team_name=team_name,
+        date=match_data.date,
+        opponent=match_data.opponent,
+        venue=match_data.venue,
+        home_away=match_data.home_away,
+        meeting_time=match_data.meeting_time,
+        notes=match_data.notes
+    )
+    
+    await db.matches.insert_one(match.dict())
+    return match.dict()
+
+@api_router.patch("/matches/{match_id}")
+async def update_match(match_id: str, match_data: dict, current_user = Depends(get_current_user)):
+    """Update a match"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare gare")
+    
+    match_data["updated_at"] = datetime.utcnow()
+    
+    # If team_id is being updated, also update team_name
+    if "team_id" in match_data:
+        team = await db.teams.find_one({"id": match_data["team_id"]})
+        match_data["team_name"] = team.get("name", "") if team else ""
+    
+    result = await db.matches.update_one(
+        {"id": match_id},
+        {"$set": match_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Gara non trovata")
+    
+    return {"message": "Gara aggiornata"}
+
+@api_router.delete("/matches/{match_id}")
+async def delete_match(match_id: str, current_user = Depends(get_current_user)):
+    """Delete a match"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare gare")
+    
+    result = await db.matches.delete_one({"id": match_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Gara non trovata")
+    
+    return {"message": "Gara eliminata"}
+
+@api_router.post("/matches/import")
+async def import_matches_from_excel(file_data: dict, current_user = Depends(get_current_user)):
+    """Import matches from Excel data (parsed on frontend)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può importare gare")
+    
+    matches_data = file_data.get("matches", [])
+    imported_count = 0
+    errors = []
+    
+    for i, row in enumerate(matches_data):
+        try:
+            # Validate required fields
+            if not row.get("team_id") or not row.get("date") or not row.get("opponent"):
+                errors.append(f"Riga {i+1}: dati mancanti (team_id, date, opponent richiesti)")
+                continue
+            
+            # Get team name
+            team = await db.teams.find_one({"id": row["team_id"]})
+            team_name = team.get("name", "") if team else ""
+            
+            # Parse date
+            date_str = row.get("date")
+            if isinstance(date_str, str):
+                # Try different date formats
+                for fmt in ["%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M", "%Y-%m-%dT%H:%M"]:
+                    try:
+                        match_date = datetime.strptime(date_str, fmt)
+                        break
+                    except:
+                        continue
+                else:
+                    errors.append(f"Riga {i+1}: formato data non valido")
+                    continue
+            else:
+                match_date = date_str
+            
+            match = Match(
+                team_id=row["team_id"],
+                team_name=team_name,
+                date=match_date,
+                opponent=row["opponent"],
+                venue=row.get("venue", ""),
+                home_away=row.get("home_away", "home"),
+                meeting_time=row.get("meeting_time"),
+                notes=row.get("notes")
+            )
+            
+            await db.matches.insert_one(match.dict())
+            imported_count += 1
+            
+        except Exception as e:
+            errors.append(f"Riga {i+1}: {str(e)}")
+    
+    return {
+        "message": f"Importate {imported_count} gare",
+        "imported": imported_count,
+        "errors": errors
+    }
+
+@api_router.get("/parent/commitments")
+async def get_parent_commitments(current_user = Depends(get_current_user)):
+    """Get commitments (trainings + matches) for parent's children"""
+    if current_user["role"] != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo genitori possono vedere gli impegni")
+    
+    # Get parent's athletes
+    athletes = await db.athletes.find({"parent_id": current_user["id"]}).to_list(20)
+    
+    # Get unique team IDs from athletes
+    team_ids = list(set([a.get("team_id") for a in athletes if a.get("team_id")]))
+    
+    if not team_ids:
+        return {"today": [], "tomorrow": [], "day_after": []}
+    
+    # Get teams info (for training schedules)
+    teams = await db.teams.find({"id": {"$in": team_ids}}).to_list(20)
+    teams_dict = {t["id"]: t for t in teams}
+    
+    # Get current date info
+    now = datetime.utcnow()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow = today + timedelta(days=1)
+    day_after = today + timedelta(days=2)
+    end_of_day_after = day_after + timedelta(days=1)
+    
+    # Day of week mapping (Italian)
+    days_map = {
+        0: "Lunedì", 1: "Martedì", 2: "Mercoledì", 
+        3: "Giovedì", 4: "Venerdì", 5: "Sabato", 6: "Domenica"
+    }
+    
+    def get_day_name(date):
+        return days_map[date.weekday()]
+    
+    # Build commitments for each day
+    result = {"today": [], "tomorrow": [], "day_after": []}
+    
+    for day_key, target_date in [("today", today), ("tomorrow", tomorrow), ("day_after", day_after)]:
+        day_name = get_day_name(target_date)
+        
+        # Check trainings for this day
+        for team_id in team_ids:
+            team = teams_dict.get(team_id, {})
+            team_name = team.get("name", "Squadra")
+            training_sessions = team.get("training_sessions", [])
+            
+            for session in training_sessions:
+                if session.get("day") == day_name:
+                    result[day_key].append({
+                        "type": "training",
+                        "team_id": team_id,
+                        "team_name": team_name,
+                        "time_start": session.get("timeStart", ""),
+                        "time_end": session.get("timeEnd", ""),
+                        "venue": session.get("venue", ""),
+                        "title": f"Allenamento {team_name}"
+                    })
+    
+    # Get matches for these 3 days
+    matches = await db.matches.find({
+        "team_id": {"$in": team_ids},
+        "date": {"$gte": today, "$lt": end_of_day_after}
+    }).to_list(50)
+    
+    for match in matches:
+        match_date = match.get("date")
+        if isinstance(match_date, str):
+            match_date = datetime.fromisoformat(match_date.replace("Z", ""))
+        
+        if today <= match_date < tomorrow:
+            day_key = "today"
+        elif tomorrow <= match_date < day_after:
+            day_key = "tomorrow"
+        elif day_after <= match_date < end_of_day_after:
+            day_key = "day_after"
+        else:
+            continue
+        
+        result[day_key].append({
+            "type": "match",
+            "team_id": match.get("team_id"),
+            "team_name": match.get("team_name", ""),
+            "time": match_date.strftime("%H:%M"),
+            "venue": match.get("venue", ""),
+            "opponent": match.get("opponent", ""),
+            "home_away": match.get("home_away", "home"),
+            "meeting_time": match.get("meeting_time"),
+            "notes": match.get("notes"),
+            "title": f"Gara {match.get('team_name', '')} vs {match.get('opponent', '')}"
+        })
+    
+    # Sort by time
+    for day_key in result:
+        result[day_key].sort(key=lambda x: x.get("time_start", x.get("time", "00:00")))
+    
+    return result
+
 # ==================== TEAM ENDPOINTS (ADMIN) ====================
 
 @api_router.post("/teams", response_model=Team)
