@@ -98,6 +98,7 @@ export default function AdminMatches() {
       time: '',
       opponent: '',
       venue: '',
+      address: '',
       city: '',
       home_away: 'home',
       meeting_time: '',
