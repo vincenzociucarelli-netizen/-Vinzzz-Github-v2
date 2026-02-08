@@ -2241,6 +2241,44 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 8,
   },
+  scheduleSection: {
+    marginBottom: 8,
+  },
+  scheduleSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 12,
+  },
+  scheduleItem: {
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  scheduleDay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  scheduleDayText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#007AFF',
+    marginLeft: 8,
+  },
+  scheduleDetails: {
+    marginLeft: 24,
+  },
+  scheduleTime: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 4,
+  },
+  scheduleVenue: {
+    fontSize: 13,
+    color: '#666',
+  },
   paymentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
