@@ -27,6 +27,8 @@ interface Match {
   date: string;
   opponent: string;
   venue: string;
+  address?: string;
+  city?: string;
   home_away: string;
   meeting_time?: string;
   notes?: string;
