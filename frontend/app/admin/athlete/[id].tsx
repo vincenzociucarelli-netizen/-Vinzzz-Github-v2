@@ -62,6 +62,7 @@ export default function AdminAthleteDetail() {
   // Edit mode
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<any>({});
+  const [saving, setSaving] = useState(false);
   
   // Withdraw modal
   const [withdrawModalVisible, setWithdrawModalVisible] = useState(false);
