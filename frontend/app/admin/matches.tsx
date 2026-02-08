@@ -345,7 +345,13 @@ export default function AdminMatches() {
           Object.entries(groupedMatches).map(([month, monthMatches]) => (
             <View key={month}>
               <Text style={styles.monthHeader}>{month.charAt(0).toUpperCase() + month.slice(1)}</Text>
-              {monthMatches.map(match => (
+              {monthMatches.map(match => {
+                // Formatta il luogo: Casa = solo palestra, Trasferta = palestra - città
+                const venueDisplay = match.home_away === 'away' && (match as any).city
+                  ? `${match.venue || 'Da definire'} - ${(match as any).city}`
+                  : match.venue || 'Da definire';
+                  
+                return (
                 <TouchableOpacity
                   key={match.id}
                   style={styles.matchCard}
@@ -373,7 +379,7 @@ export default function AdminMatches() {
                     </View>
                     <View style={styles.matchDetailItem}>
                       <Ionicons name="location-outline" size={14} color="#666" />
-                      <Text style={styles.matchDetailText}>{match.venue || 'Da definire'}</Text>
+                      <Text style={styles.matchDetailText}>{venueDisplay}</Text>
                     </View>
                     {match.meeting_time && (
                       <View style={styles.matchDetailItem}>
