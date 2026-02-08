@@ -1460,6 +1460,72 @@ export default function AthleteDetail() {
                 </Text>
               </View>
             </>
+          ) : paymentSettings ? (
+            // Se non ci sono pagamenti, mostra la configurazione dalla squadra
+            <>
+              {paymentSettings.installment_1_amount > 0 && (
+                <View style={styles.paymentRow}>
+                  <View style={styles.paymentInfo}>
+                    <Text style={styles.paymentTitle}>Pagamento Rata Iscrizione</Text>
+                    <Text style={styles.paymentAmount}>€ {paymentSettings.installment_1_amount.toFixed(2)}</Text>
+                    <Text style={styles.paymentDue}>Scadenza: All'iscrizione</Text>
+                  </View>
+                  <View style={styles.paymentStatusContainer}>
+                    <Ionicons name="time-outline" size={28} color="#FF9500" />
+                    <Text style={[styles.paymentStatusText, { color: '#FF9500' }]}>Da pagare</Text>
+                  </View>
+                </View>
+              )}
+              {paymentSettings.installment_2_amount > 0 && (
+                <View style={styles.paymentRow}>
+                  <View style={styles.paymentInfo}>
+                    <Text style={styles.paymentTitle}>Pagamento 1ª Rata</Text>
+                    <Text style={styles.paymentAmount}>€ {paymentSettings.installment_2_amount.toFixed(2)}</Text>
+                    <Text style={styles.paymentDue}>
+                      Scadenza: {paymentSettings.installment_2_due_date 
+                        ? format(new Date(paymentSettings.installment_2_due_date), 'dd/MM/yyyy', { locale: it })
+                        : 'Da definire'}
+                    </Text>
+                  </View>
+                  <View style={styles.paymentStatusContainer}>
+                    <Ionicons name="time-outline" size={28} color="#FF9500" />
+                    <Text style={[styles.paymentStatusText, { color: '#FF9500' }]}>Da pagare</Text>
+                  </View>
+                </View>
+              )}
+              {paymentSettings.installment_3_amount > 0 && (
+                <View style={styles.paymentRow}>
+                  <View style={styles.paymentInfo}>
+                    <Text style={styles.paymentTitle}>Pagamento 2ª Rata</Text>
+                    <Text style={styles.paymentAmount}>€ {paymentSettings.installment_3_amount.toFixed(2)}</Text>
+                    <Text style={styles.paymentDue}>
+                      Scadenza: {paymentSettings.installment_3_due_date 
+                        ? format(new Date(paymentSettings.installment_3_due_date), 'dd/MM/yyyy', { locale: it })
+                        : 'Da definire'}
+                    </Text>
+                  </View>
+                  <View style={styles.paymentStatusContainer}>
+                    <Ionicons name="time-outline" size={28} color="#FF9500" />
+                    <Text style={[styles.paymentStatusText, { color: '#FF9500' }]}>Da pagare</Text>
+                  </View>
+                </View>
+              )}
+              <View style={[styles.paymentRow, styles.residuoRow]}>
+                <View style={styles.paymentInfo}>
+                  <Text style={[styles.paymentTitle, { fontWeight: '700', fontSize: 16 }]}>
+                    Residuo Dovuto
+                  </Text>
+                </View>
+                <Text style={[styles.residuoAmount, { color: '#FF3B30' }]}>
+                  € {(
+                    (paymentSettings.installment_1_amount || 0) + 
+                    (paymentSettings.installment_2_amount || 0) + 
+                    (paymentSettings.installment_3_amount || 0) -
+                    (athlete?.discount_amount || 0)
+                  ).toFixed(2)}
+                </Text>
+              </View>
+            </>
           ) : (
             <Text style={styles.noDataText}>Nessun pagamento disponibile</Text>
           )}
