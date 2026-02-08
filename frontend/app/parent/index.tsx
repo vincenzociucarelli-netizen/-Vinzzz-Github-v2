@@ -692,6 +692,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '600',
   },
+  athleteNamesContainer: {
+    fontSize: 14,
+  },
+  athleteName: {
+    fontWeight: '700',
+    fontSize: 14,
+  },
   athletesSectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
