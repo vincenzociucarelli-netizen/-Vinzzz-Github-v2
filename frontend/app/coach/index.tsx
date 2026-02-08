@@ -587,6 +587,122 @@ export default function CoachScreen() {
           </Text>
         </View>
 
+        {/* IMPEGNI Section */}
+        <View style={styles.commitmentsSection}>
+          <Text style={styles.commitmentsSectionTitle}>📅 Impegni</Text>
+          
+          {/* OGGI */}
+          <View style={styles.commitmentDay}>
+            <View style={styles.commitmentDayHeader}>
+              <View style={[styles.commitmentDot, { backgroundColor: '#007AFF' }]} />
+              <Text style={styles.commitmentDayTitle}>OGGI</Text>
+            </View>
+            {commitments.today.length === 0 ? (
+              <Text style={styles.noCommitments}>Nulla in programma</Text>
+            ) : (
+              commitments.today.map((item, idx) => (
+                <View key={idx} style={styles.commitmentItem}>
+                  <Ionicons 
+                    name={item.type === 'training' ? 'fitness' : 'trophy'} 
+                    size={16} 
+                    color={item.type === 'training' ? '#007AFF' : '#FF9500'} 
+                  />
+                  <View style={styles.commitmentItemContent}>
+                    <Text style={styles.commitmentItemTitle}>
+                      {item.type === 'training' 
+                        ? `Allenamento ${item.team_name}` 
+                        : `Gara ${item.team_name} vs ${item.opponent}`}
+                    </Text>
+                    <Text style={styles.commitmentItemDetails}>
+                      {item.type === 'training' 
+                        ? `${item.time_start} - ${item.time_end}` 
+                        : `ore ${item.time}`} • {item.venue}
+                      {item.city ? ` - ${item.city}` : ''}
+                    </Text>
+                    {item.meeting_time && (
+                      <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
+                    )}
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+
+          {/* DOMANI */}
+          <View style={styles.commitmentDay}>
+            <View style={styles.commitmentDayHeader}>
+              <View style={[styles.commitmentDot, { backgroundColor: '#FF9500' }]} />
+              <Text style={styles.commitmentDayTitle}>DOMANI</Text>
+            </View>
+            {commitments.tomorrow.length === 0 ? (
+              <Text style={styles.noCommitments}>Nulla in programma</Text>
+            ) : (
+              commitments.tomorrow.map((item, idx) => (
+                <View key={idx} style={styles.commitmentItem}>
+                  <Ionicons 
+                    name={item.type === 'training' ? 'fitness' : 'trophy'} 
+                    size={16} 
+                    color={item.type === 'training' ? '#007AFF' : '#FF9500'} 
+                  />
+                  <View style={styles.commitmentItemContent}>
+                    <Text style={styles.commitmentItemTitle}>
+                      {item.type === 'training' 
+                        ? `Allenamento ${item.team_name}` 
+                        : `Gara ${item.team_name} vs ${item.opponent}`}
+                    </Text>
+                    <Text style={styles.commitmentItemDetails}>
+                      {item.type === 'training' 
+                        ? `${item.time_start} - ${item.time_end}` 
+                        : `ore ${item.time}`} • {item.venue}
+                      {item.city ? ` - ${item.city}` : ''}
+                    </Text>
+                    {item.meeting_time && (
+                      <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
+                    )}
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+
+          {/* DOPODOMANI */}
+          <View style={styles.commitmentDay}>
+            <View style={styles.commitmentDayHeader}>
+              <View style={[styles.commitmentDot, { backgroundColor: '#34C759' }]} />
+              <Text style={styles.commitmentDayTitle}>DOPODOMANI</Text>
+            </View>
+            {commitments.day_after.length === 0 ? (
+              <Text style={styles.noCommitments}>Nulla in programma</Text>
+            ) : (
+              commitments.day_after.map((item, idx) => (
+                <View key={idx} style={styles.commitmentItem}>
+                  <Ionicons 
+                    name={item.type === 'training' ? 'fitness' : 'trophy'} 
+                    size={16} 
+                    color={item.type === 'training' ? '#007AFF' : '#FF9500'} 
+                  />
+                  <View style={styles.commitmentItemContent}>
+                    <Text style={styles.commitmentItemTitle}>
+                      {item.type === 'training' 
+                        ? `Allenamento ${item.team_name}` 
+                        : `Gara ${item.team_name} vs ${item.opponent}`}
+                    </Text>
+                    <Text style={styles.commitmentItemDetails}>
+                      {item.type === 'training' 
+                        ? `${item.time_start} - ${item.time_end}` 
+                        : `ore ${item.time}`} • {item.venue}
+                      {item.city ? ` - ${item.city}` : ''}
+                    </Text>
+                    {item.meeting_time && (
+                      <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
+                    )}
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        </View>
+
         {/* Teams List */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🏐 Squadre Assegnate</Text>
