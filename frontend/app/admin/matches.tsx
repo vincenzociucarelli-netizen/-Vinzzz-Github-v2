@@ -394,7 +394,7 @@ export default function AdminMatches() {
                     <Text style={styles.matchNotes}>📝 {match.notes}</Text>
                   )}
                 </TouchableOpacity>
-              ))}
+              )})}
             </View>
           ))
         )}
