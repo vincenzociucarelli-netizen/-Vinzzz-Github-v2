@@ -1676,8 +1676,8 @@ export default function AthleteDetail() {
             <ScrollView style={styles.editScroll} showsVerticalScrollIndicator={false}>
               {/* Squadra - sola lettura per genitori */}
               <Text style={styles.inputLabel}>Squadra</Text>
-              <View style={[styles.pickerContainer, { backgroundColor: '#f5f5f5' }]}>
-                <Text style={{ padding: 15, color: '#333', fontSize: 16 }}>
+              <View style={[styles.pickerContainer, { backgroundColor: '#FFF5F5', borderColor: '#E53935', borderWidth: 1 }]}>
+                <Text style={{ padding: 15, color: '#E53935', fontSize: 16, fontWeight: '700' }}>
                   🏐 {getTeamName(editData.team_id)}
                 </Text>
               </View>
