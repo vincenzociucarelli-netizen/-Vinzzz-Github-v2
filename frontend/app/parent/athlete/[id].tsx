@@ -1384,80 +1384,108 @@ export default function AthleteDetail() {
           
           {/* Rate Dettagliate */}
           <Text style={styles.sectionSubtitle}>📅 Dettaglio Rate</Text>
-          {payments.length > 0 ? (
-            <>
-              {payments
-                .sort((a, b) => (a.installment_number || 0) - (b.installment_number || 0))
-                .map((payment, index) => {
-                // Determina il nome della rata basandosi su installment_number
-                const installNum = payment.installment_number || (index + 1);
-                let rataName = '';
-                
-                // Usa sempre l'installment_number per determinare il nome corretto
-                if (installNum === 1) {
-                  rataName = 'Pagamento Rata Iscrizione';
-                } else if (installNum === 2) {
-                  rataName = 'Pagamento 1ª Rata';
-                } else if (installNum === 3) {
-                  rataName = 'Pagamento 2ª Rata';
-                } else {
-                  // Fallback per rate extra o manuali
-                  rataName = payment.description || `Pagamento Rata ${installNum}`;
-                }
-                
-                // Gestisce date invalide (epoch o null)
-                const dueDate = payment.due_date ? new Date(payment.due_date) : null;
-                const isValidDate = dueDate && dueDate.getFullYear() > 1971;
-                const isOverdue = !payment.paid && dueDate && isValidDate && dueDate < new Date();
-                
-                return (
-                  <View key={payment.id} style={[
-                    styles.paymentRow,
-                    isOverdue && styles.paymentOverdue
-                  ]}>
-                    <View style={styles.paymentInfo}>
-                      <Text style={styles.paymentTitle}>{rataName}</Text>
-                      <Text style={styles.paymentAmount}>€ {payment.amount.toFixed(2)}</Text>
-                      <Text style={[
-                        styles.paymentDue,
-                        isOverdue && { color: '#FF3B30', fontWeight: '600' }
-                      ]}>
-                        {isValidDate 
-                          ? `Scadenza: ${format(dueDate!, 'dd/MM/yyyy', { locale: it })}${isOverdue ? ' ⚠️ SCADUTA' : ''}`
-                          : 'Scadenza: Da definire'
-                        }
-                      </Text>
+          {(() => {
+            // Crea un array di tutte le rate (dal database + dalla configurazione)
+            const rateConfig = [
+              { installment_number: 1, name: 'Pagamento Rata Iscrizione', amount: paymentSettings?.installment_1_amount || 0, due_date: null },
+              { installment_number: 2, name: 'Pagamento 1ª Rata', amount: paymentSettings?.installment_2_amount || 0, due_date: paymentSettings?.installment_2_due_date },
+              { installment_number: 3, name: 'Pagamento 2ª Rata', amount: paymentSettings?.installment_3_amount || 0, due_date: paymentSettings?.installment_3_due_date },
+            ].filter(r => r.amount > 0);
+            
+            // Mappa i pagamenti dal database per installment_number
+            const paymentsMap: { [key: number]: any } = {};
+            payments.forEach(p => {
+              const num = p.installment_number || 0;
+              if (num > 0) paymentsMap[num] = p;
+            });
+            
+            // Se non abbiamo rate dalla configurazione e nemmeno pagamenti, mostra messaggio
+            if (rateConfig.length === 0 && payments.length === 0) {
+              return <Text style={styles.noDataText}>Nessun pagamento disponibile</Text>;
+            }
+            
+            // Unisce le rate: usa i dati dal database se disponibili, altrimenti dalla configurazione
+            const allRates = rateConfig.map(config => {
+              const dbPayment = paymentsMap[config.installment_number];
+              if (dbPayment) {
+                return {
+                  ...dbPayment,
+                  name: config.name,
+                  fromDb: true
+                };
+              }
+              return {
+                id: `config-${config.installment_number}`,
+                installment_number: config.installment_number,
+                name: config.name,
+                amount: config.amount,
+                due_date: config.due_date,
+                paid: false,
+                fromDb: false
+              };
+            });
+            
+            return (
+              <>
+                {allRates.map((rate) => {
+                  const dueDate = rate.due_date ? new Date(rate.due_date) : null;
+                  const isValidDate = dueDate && dueDate.getFullYear() > 1971;
+                  const isOverdue = !rate.paid && dueDate && isValidDate && dueDate < new Date();
+                  
+                  return (
+                    <View key={rate.id} style={[
+                      styles.paymentRow,
+                      isOverdue && styles.paymentOverdue
+                    ]}>
+                      <View style={styles.paymentInfo}>
+                        <Text style={styles.paymentTitle}>{rate.name}</Text>
+                        <Text style={styles.paymentAmount}>€ {rate.amount.toFixed(2)}</Text>
+                        <Text style={[
+                          styles.paymentDue,
+                          isOverdue && { color: '#FF3B30', fontWeight: '600' }
+                        ]}>
+                          {rate.installment_number === 1 
+                            ? 'Scadenza: All\'iscrizione'
+                            : isValidDate 
+                              ? `Scadenza: ${format(dueDate!, 'dd/MM/yyyy', { locale: it })}${isOverdue ? ' ⚠️ SCADUTA' : ''}`
+                              : 'Scadenza: Da definire'
+                          }
+                        </Text>
+                      </View>
+                      <View style={styles.paymentStatusContainer}>
+                        <Ionicons
+                          name={rate.paid ? 'checkmark-circle' : 'time-outline'}
+                          size={28}
+                          color={rate.paid ? '#34C759' : '#FF9500'}
+                        />
+                        <Text style={[
+                          styles.paymentStatusText,
+                          { color: rate.paid ? '#34C759' : '#FF9500' }
+                        ]}>
+                          {rate.paid ? 'Pagata' : 'Da pagare'}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.paymentStatusContainer}>
-                      <Ionicons
-                        name={payment.paid ? 'checkmark-circle' : 'time-outline'}
-                        size={28}
-                        color={payment.paid ? '#34C759' : '#FF9500'}
-                      />
-                      <Text style={[
-                        styles.paymentStatusText,
-                        { color: payment.paid ? '#34C759' : '#FF9500' }
-                      ]}>
-                        {payment.paid ? 'Pagata' : 'Da pagare'}
-                      </Text>
-                    </View>
+                  );
+                })}
+                
+                {/* Residuo Dovuto */}
+                <View style={[styles.paymentRow, styles.residuoRow]}>
+                  <View style={styles.paymentInfo}>
+                    <Text style={[styles.paymentTitle, { fontWeight: '700', fontSize: 16 }]}>
+                      Residuo Dovuto
+                    </Text>
                   </View>
-                );
-              })}
-              
-              {/* Residuo Dovuto */}
-              <View style={[styles.paymentRow, styles.residuoRow]}>
-                <View style={styles.paymentInfo}>
-                  <Text style={[styles.paymentTitle, { fontWeight: '700', fontSize: 16 }]}>
-                    Residuo Dovuto
+                  <Text style={[
+                    styles.residuoAmount,
+                    { color: allRates.filter(r => !r.paid).reduce((sum, r) => sum + r.amount, 0) > 0 ? '#FF3B30' : '#34C759' }
+                  ]}>
+                    € {allRates.filter(r => !r.paid).reduce((sum, r) => sum + r.amount, 0).toFixed(2)}
                   </Text>
                 </View>
-                <Text style={[
-                  styles.residuoAmount,
-                  { color: payments.filter(p => !p.paid).reduce((sum, p) => sum + p.amount, 0) > 0 ? '#FF3B30' : '#34C759' }
-                ]}>
-                  € {payments.filter(p => !p.paid).reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
-                </Text>
+              </>
+            );
+          })()}
               </View>
             </>
           ) : paymentSettings ? (
