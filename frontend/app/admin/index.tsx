@@ -481,6 +481,20 @@ export default function AdminDashboard() {
 
         {/* 4 Main Sections */}
         <View style={styles.menuContainer}>
+          {/* Calendario Gare - PRIMA ICONA */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/matches')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#FFF5EB' }]}>
+              <Ionicons name="calendar" size={28} color="#FF9500" />
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Calendario Gare</Text>
+              <Text style={styles.menuCardSubtitle}>Gestisci partite e impegni</Text>
+            </View>
+          </TouchableOpacity>
+
           {/* Dirigenti */}
           <TouchableOpacity
             style={styles.menuCard}
