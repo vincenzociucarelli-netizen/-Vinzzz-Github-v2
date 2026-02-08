@@ -432,6 +432,7 @@ class AthleteUpdate(BaseModel):
     team_id: Optional[str] = None
     team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
     discount_amount: Optional[float] = None
+    discount_reason: Optional[str] = None
     discount_note: Optional[str] = None
     status: Optional[str] = None  # trial, active, blocked
     data_password: Optional[str] = None  # Nuova password protezione dati
