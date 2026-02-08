@@ -2610,32 +2610,40 @@ async def update_athlete_approval(athlete_id: str, data: AthleteApprovalUpdate, 
             team = await db.teams.find_one({"id": athlete["team_id"]})
             if team and team.get("installment_1_amount", 0) > 0:
                 trial_end = update_data.get("trial_end_date", datetime.utcnow())
-                # Installment 1
+                # Installment 1 - Rata Iscrizione
                 payment1 = Payment(
                     athlete_id=athlete_id,
                     installment_number=1,
+                    description="Rata Iscrizione",
                     amount=team["installment_1_amount"],
-                    due_date=trial_end
+                    due_date=trial_end,
+                    paid=False
                 )
                 await db.payments.insert_one(payment1.dict())
                 
-                # Installment 2
-                if team.get("installment_2_amount", 0) > 0 and team.get("installment_2_due_date"):
+                # Installment 2 - Prima Rata
+                if team.get("installment_2_amount", 0) > 0:
+                    due_date_2 = team.get("installment_2_due_date") or datetime.utcnow()
                     payment2 = Payment(
                         athlete_id=athlete_id,
                         installment_number=2,
+                        description="1ª Rata",
                         amount=team["installment_2_amount"],
-                        due_date=team["installment_2_due_date"]
+                        due_date=due_date_2,
+                        paid=False
                     )
                     await db.payments.insert_one(payment2.dict())
                 
-                # Installment 3
-                if team.get("installment_3_amount", 0) > 0 and team.get("installment_3_due_date"):
+                # Installment 3 - Seconda Rata
+                if team.get("installment_3_amount", 0) > 0:
+                    due_date_3 = team.get("installment_3_due_date") or datetime.utcnow()
                     payment3 = Payment(
                         athlete_id=athlete_id,
                         installment_number=3,
+                        description="2ª Rata",
                         amount=team["installment_3_amount"],
-                        due_date=team["installment_3_due_date"]
+                        due_date=due_date_3,
+                        paid=False
                     )
                     await db.payments.insert_one(payment3.dict())
     
