@@ -295,7 +295,7 @@ export default function ParentDashboard() {
                       {item.type === 'training' 
                         ? `Allenamento ${item.team_name}` 
                         : `Gara ${item.team_name} vs ${item.opponent}`}
-                      {item.athlete_names ? ` (${item.athlete_names})` : ''}
+                      {renderAthleteNames(item.athlete_names)}
                     </Text>
                     <Text style={styles.commitmentItemDetails}>
                       {item.type === 'training' 
