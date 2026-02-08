@@ -301,7 +301,7 @@ export default function AdminMatches() {
       const validMatches = matchesData.filter((m: any) => m.team_id && m.opponent);
       
       if (validMatches.length === 0) {
-        Alert.alert('Errore', 'Nessuna gara valida trovata nel file. Assicurati che le colonne siano: Squadra, Data, Ora, Avversario, Luogo, Casa/Trasferta, Ritrovo, Note');
+        Alert.alert('Errore', 'Nessuna gara valida trovata nel file. Assicurati che le colonne siano: CAMPIONATONOME, DATA, SQUADRAOSPITENOME, IMPIANTO, IMPIANTO INDIRIZZO. CAMPIONATONOME deve corrispondere al nome di una squadra nel sistema.');
         setImporting(false);
         return;
       }
