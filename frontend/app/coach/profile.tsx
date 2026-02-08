@@ -1050,16 +1050,27 @@ export default function CoachProfile() {
                 onPress={async () => {
                   setSavingBank(true);
                   try {
-                    await api.patch('/users/me/bank-details', {
+                    const payload: any = {
                       id_type: editData.id_type,
                       id_front: editData.id_front,
                       id_back: editData.id_back,
                       iban: editData.iban,
                       account_holder: editData.account_holder,
                       bank_name: editData.bank_name,
-                      doc_front_image: docFrontImage || editData.doc_front_image,
-                      doc_back_image: docBackImage || editData.doc_back_image,
-                    });
+                    };
+                    // Add images only if they exist and are not too large
+                    if (docFrontImage) {
+                      payload.doc_front_image = docFrontImage;
+                    } else if (editData.doc_front_image) {
+                      payload.doc_front_image = editData.doc_front_image;
+                    }
+                    if (docBackImage) {
+                      payload.doc_back_image = docBackImage;
+                    } else if (editData.doc_back_image) {
+                      payload.doc_back_image = editData.doc_back_image;
+                    }
+                    
+                    await api.patch('/users/me/bank-details', payload);
                     setProfileData({
                       ...profileData,
                       id_type: editData.id_type,
@@ -1073,8 +1084,9 @@ export default function CoachProfile() {
                     });
                     setEditingBank(false);
                     showAlert('Salvato', 'Dati bancari aggiornati');
-                  } catch (error) {
-                    showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
+                  } catch (error: any) {
+                    console.error('Error saving bank details:', error);
+                    showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio. Riprova.');
                   } finally {
                     setSavingBank(false);
                   }
