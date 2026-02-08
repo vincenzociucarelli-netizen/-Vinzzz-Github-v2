@@ -1377,47 +1377,72 @@ export default function AthleteDetail() {
                   </Text>
                 </View>
               )}
-              <View style={styles.paymentSummaryRow}>
-                <Text style={styles.paymentSummaryLabel}>Già Pagato:</Text>
-                <Text style={[styles.paymentSummaryValue, { color: '#34C759' }]}>
-                  € {payments.filter(p => p.paid).reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
-                </Text>
-              </View>
-              <View style={[styles.paymentSummaryRow, styles.paymentSummaryTotal]}>
-                <Text style={styles.paymentSummaryLabelBold}>Saldo Dovuto:</Text>
+            </View>
+          )}
+          
+          {/* Rate Dettagliate */}
+          <Text style={styles.sectionSubtitle}>📅 Dettaglio Rate</Text>
+          {payments.length > 0 ? (
+            <>
+              {payments.map((payment) => {
+                const rataName = payment.installment_number === 1 
+                  ? 'Rata all\'iscrizione' 
+                  : payment.installment_number === 2 
+                    ? '1ª Rata' 
+                    : '2ª Rata';
+                const isOverdue = !payment.paid && new Date(payment.due_date) < new Date();
+                
+                return (
+                  <View key={payment.id} style={[
+                    styles.paymentRow,
+                    isOverdue && styles.paymentOverdue
+                  ]}>
+                    <View style={styles.paymentInfo}>
+                      <Text style={styles.paymentTitle}>{rataName}</Text>
+                      <Text style={styles.paymentAmount}>€ {payment.amount.toFixed(2)}</Text>
+                      <Text style={[
+                        styles.paymentDue,
+                        isOverdue && { color: '#FF3B30', fontWeight: '600' }
+                      ]}>
+                        Scadenza: {format(new Date(payment.due_date), 'dd/MM/yyyy', { locale: it })}
+                        {isOverdue && ' ⚠️ SCADUTA'}
+                      </Text>
+                    </View>
+                    <View style={styles.paymentStatusContainer}>
+                      <Ionicons
+                        name={payment.paid ? 'checkmark-circle' : 'alert-circle'}
+                        size={28}
+                        color={payment.paid ? '#34C759' : '#FF9500'}
+                      />
+                      <Text style={[
+                        styles.paymentStatusText,
+                        { color: payment.paid ? '#34C759' : '#FF9500' }
+                      ]}>
+                        {payment.paid ? 'Pagata' : 'Da pagare'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+              
+              {/* Residuo Dovuto */}
+              <View style={[styles.paymentRow, styles.residuoRow]}>
+                <View style={styles.paymentInfo}>
+                  <Text style={[styles.paymentTitle, { fontWeight: '700', fontSize: 16 }]}>
+                    Residuo Dovuto
+                  </Text>
+                </View>
                 <Text style={[
-                  styles.paymentSummaryValueBold,
+                  styles.residuoAmount,
                   { color: payments.filter(p => !p.paid).reduce((sum, p) => sum + p.amount, 0) > 0 ? '#FF3B30' : '#34C759' }
                 ]}>
                   € {payments.filter(p => !p.paid).reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
                 </Text>
               </View>
-            </View>
+            </>
+          ) : (
+            <Text style={styles.noDataText}>Nessun pagamento disponibile</Text>
           )}
-          
-          {/* Rate */}
-          <Text style={styles.sectionSubtitle}>📅 Rate</Text>
-          {payments.length > 0 ? (
-            payments.map((payment) => (
-              <View key={payment.id} style={[
-                styles.paymentRow,
-                !payment.paid && new Date(payment.due_date) < new Date() && styles.paymentOverdue
-              ]}>
-                <View style={styles.paymentInfo}>
-                  <Text style={styles.paymentTitle}>Rata {payment.installment_number}</Text>
-                  <Text style={styles.paymentAmount}>€ {payment.amount.toFixed(2)}</Text>
-                  <Text style={[
-                    styles.paymentDue,
-                    !payment.paid && new Date(payment.due_date) < new Date() && { color: '#FF3B30', fontWeight: '600' }
-                  ]}>
-                    Scadenza: {format(new Date(payment.due_date), 'dd/MM/yyyy', { locale: it })}
-                    {!payment.paid && new Date(payment.due_date) < new Date() && ' ⚠️ SCADUTA'}
-                  </Text>
-                </View>
-                <Ionicons
-                  name={payment.paid ? 'checkmark-circle' : 'alert-circle'}
-                  size={32}
-                  color={payment.paid ? '#34C759' : '#FF9500'}
                 />
               </View>
             ))
