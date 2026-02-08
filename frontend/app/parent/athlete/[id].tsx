@@ -1443,12 +1443,6 @@ export default function AthleteDetail() {
           ) : (
             <Text style={styles.noDataText}>Nessun pagamento disponibile</Text>
           )}
-                />
-              </View>
-            ))
-          ) : (
-            <Text style={styles.noDataText}>Nessun pagamento disponibile</Text>
-          )}
           
           {paymentSettings && (
             <View style={styles.paymentInstructions}>
