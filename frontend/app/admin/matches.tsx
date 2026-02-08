@@ -140,6 +140,7 @@ export default function AdminMatches() {
         date: dateTime.toISOString(),
         opponent: formData.opponent,
         venue: formData.venue,
+        city: formData.home_away === 'away' ? formData.city : null,
         home_away: formData.home_away,
         meeting_time: formData.meeting_time || null,
         notes: formData.notes || null,
