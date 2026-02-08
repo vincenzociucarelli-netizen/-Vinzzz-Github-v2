@@ -542,16 +542,37 @@ export default function AdminMatches() {
               <TextInput
                 style={styles.input}
                 value={formData.date}
-                onChangeText={(v) => setFormData({ ...formData, date: v })}
-                placeholder="YYYY-MM-DD"
+                onChangeText={(v) => {
+                  // Auto-format: inserisce "/" dopo giorno e mese
+                  let formatted = v.replace(/[^0-9]/g, '');
+                  if (formatted.length > 2) {
+                    formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
+                  }
+                  if (formatted.length > 5) {
+                    formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
+                  }
+                  setFormData({ ...formData, date: formatted });
+                }}
+                placeholder="gg/mm/aaaa"
+                keyboardType="numeric"
+                maxLength={10}
               />
 
               <Text style={styles.label}>Ora</Text>
               <TextInput
                 style={styles.input}
                 value={formData.time}
-                onChangeText={(v) => setFormData({ ...formData, time: v })}
-                placeholder="HH:MM"
+                onChangeText={(v) => {
+                  // Auto-format: inserisce ":" dopo le ore
+                  let formatted = v.replace(/[^0-9]/g, '');
+                  if (formatted.length > 2) {
+                    formatted = formatted.slice(0, 2) + ':' + formatted.slice(2, 4);
+                  }
+                  setFormData({ ...formData, time: formatted });
+                }}
+                placeholder="HH:mm"
+                keyboardType="numeric"
+                maxLength={5}
               />
 
               <Text style={styles.label}>Avversario *</Text>
