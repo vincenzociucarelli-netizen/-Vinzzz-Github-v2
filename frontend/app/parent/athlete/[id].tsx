@@ -170,6 +170,19 @@ export default function AthleteDetail() {
       } catch (error) {
         setPaymentSettings(null);
       }
+      
+      // Load team schedule (trainings and match day) from team data
+      try {
+        const teamData = teamsRes.data.find((t: any) => t.id === athleteRes.data.team_id);
+        if (teamData) {
+          setTeamSchedule({
+            training_sessions: teamData.training_sessions || [],
+            match_day: teamData.match_day || null,
+          });
+        }
+      } catch (error) {
+        setTeamSchedule(null);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       Alert.alert('Errore', 'Impossibile caricare i dati dell\'atleta');
