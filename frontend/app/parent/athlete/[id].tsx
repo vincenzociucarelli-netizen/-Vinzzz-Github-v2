@@ -2643,13 +2643,25 @@ const styles = StyleSheet.create({
     fontWeight: '600', 
     color: '#333',
   },
-  printBtn: {
+  certActionButtons: {
     flexDirection: 'row',
+    gap: 8,
+  },
+  printBtn: {
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#E3F2FD',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  shareBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F5E9',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   printBtnText: {
     color: '#007AFF',
