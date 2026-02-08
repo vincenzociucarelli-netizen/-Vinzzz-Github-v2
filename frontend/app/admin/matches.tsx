@@ -260,9 +260,33 @@ export default function AdminMatches() {
       
       console.log('Excel data parsed:', jsonData.slice(0, 2)); // Debug
 
-      // Show preview modal
-      setImportModalVisible(true);
+      // Store parsed data and show home team modal
+      setPendingImportData(jsonData);
+      setImporting(false);
+      setHomeTeamModalVisible(true);
       
+    } catch (error: any) {
+      console.error('Import error:', error);
+      const errorMsg = error.response?.data?.detail || error.message || 'Errore durante la lettura del file';
+      Alert.alert('Errore Import', errorMsg);
+      setImporting(false);
+    }
+  };
+
+  // Process import after home team name is provided
+  const processImportWithHomeTeam = async () => {
+    if (!homeTeamName.trim()) {
+      Alert.alert('Errore', 'Inserisci il nome della squadra di casa per identificare le gare in casa');
+      return;
+    }
+
+    setHomeTeamModalVisible(false);
+    setImporting(true);
+
+    try {
+      const jsonData = pendingImportData;
+      const homeTeamLower = homeTeamName.trim().toLowerCase();
+
       // Map Excel data to matches format
       // Colonne file federazione: CampionatoNome, GaraDataOra, SquadraCasaNome, SquadraOspiteNome, Impianto, ImpiantoIndirizzo
       const matchesData = jsonData.map((row: any) => {
@@ -273,6 +297,9 @@ export default function AdminMatches() {
         
         // SquadraCasaNome - nome della squadra di casa
         const squadraCasa = row['SquadraCasaNome'] || row['SQUADRACASANOME'] || row['Squadra Casa'] || '';
+        
+        // SquadraOspiteNome - avversario
+        const squadraOspite = row['SquadraOspiteNome'] || row['SQUADRAOSPITENOME'] || row['Avversario'] || '';
         
         // Fallback al vecchio formato per compatibilità
         const teamNameLegacy = row['Squadra'] || row['Team'] || '';
@@ -291,13 +318,12 @@ export default function AdminMatches() {
                  searchLower.includes(tName);
         });
         
-        // Determina se siamo in casa o in trasferta basandosi su SquadraCasaNome
+        // Determina se siamo in casa o in trasferta basandosi su SquadraCasaNome e il nome inserito dall'utente
         let isHome = false;
-        if (squadraCasa && team) {
-          // Se SquadraCasaNome contiene il nome della nostra squadra, siamo in casa
+        if (squadraCasa) {
           const casaLower = squadraCasa.toLowerCase();
-          const teamNameLower = team.name.toLowerCase();
-          isHome = casaLower.includes(teamNameLower) || teamNameLower.includes(casaLower);
+          // Controlla se il nome della squadra di casa contiene il nome inserito dall'utente
+          isHome = casaLower.includes(homeTeamLower) || homeTeamLower.includes(casaLower);
         }
         
         // GaraDataOra - data e ora della gara
@@ -314,8 +340,10 @@ export default function AdminMatches() {
           dateTimeStr = dateTimeStr.trim();
         }
         
-        // SquadraOspiteNome - avversario
-        const opponent = row['SquadraOspiteNome'] || row['SQUADRAOSPITENOME'] || row['Avversario'] || '';
+        // Determina l'avversario in base a casa/trasferta
+        // Se siamo in casa, l'avversario è SquadraOspiteNome
+        // Se siamo in trasferta, l'avversario è SquadraCasaNome
+        const opponent = isHome ? squadraOspite : squadraCasa;
         
         // Impianto - nome palestra
         const impianto = row['Impianto'] || row['IMPIANTO'] || row['Luogo'] || '';
@@ -336,7 +364,7 @@ export default function AdminMatches() {
           city = parts.slice(1).join(', ').trim();
         }
         
-        // Casa/Trasferta - usa isHome calcolato da SquadraCasaNome
+        // Casa/Trasferta - usa isHome calcolato
         const homeAway = isHome ? 'home' : 'away';
         
         return {
@@ -363,6 +391,10 @@ export default function AdminMatches() {
         console.log('Available teams:', teams.map(t => t.name));
       }
       
+      // Count home/away for feedback
+      const homeCount = validMatches.filter((m: any) => m.home_away === 'home').length;
+      const awayCount = validMatches.filter((m: any) => m.home_away === 'away').length;
+      
       if (validMatches.length === 0) {
         const firstRow = matchesData[0];
         const columnNames = firstRow ? Object.keys(firstRow).join(', ') : 'nessuna';
@@ -381,8 +413,12 @@ export default function AdminMatches() {
       
       Alert.alert(
         'Import Completato',
-        `Importate ${response.data.imported} gare${response.data.errors?.length > 0 ? `\n\nErrori: ${response.data.errors.join('\n')}` : ''}`
+        `Importate ${response.data.imported} gare\n\n🏠 Casa: ${homeCount}\n✈️ Trasferta: ${awayCount}${response.data.errors?.length > 0 ? `\n\nErrori: ${response.data.errors.join('\n')}` : ''}`
       );
+      
+      // Clear pending data and home team name
+      setPendingImportData([]);
+      setHomeTeamName('');
       
       loadData();
     } catch (error: any) {
