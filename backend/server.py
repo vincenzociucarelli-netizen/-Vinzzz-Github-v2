@@ -1858,6 +1858,7 @@ async def create_match(match_data: MatchCreate, current_user = Depends(get_curre
         date=match_data.date,
         opponent=match_data.opponent,
         venue=match_data.venue,
+        address=match_data.address,
         city=match_data.city,
         home_away=match_data.home_away,
         meeting_time=match_data.meeting_time,
