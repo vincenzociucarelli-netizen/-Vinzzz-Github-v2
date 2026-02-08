@@ -138,13 +138,30 @@ export default function AdminMatches() {
 
     setSaving(true);
     try {
-      const dateTime = new Date(`${formData.date}T${formData.time || '00:00'}`);
+      // Parse date - supporta sia YYYY-MM-DD che DD/MM/YYYY
+      let dateStr = formData.date;
+      if (dateStr.includes('/')) {
+        // Formato DD/MM/YYYY -> YYYY-MM-DD
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+          dateStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+      }
+      
+      const dateTime = new Date(`${dateStr}T${formData.time || '00:00'}`);
+      
+      // Verifica che la data sia valida
+      if (isNaN(dateTime.getTime())) {
+        Alert.alert('Errore', 'Formato data non valido. Usa YYYY-MM-DD o DD/MM/YYYY');
+        setSaving(false);
+        return;
+      }
       
       const payload = {
         team_id: formData.team_id,
         date: dateTime.toISOString(),
         opponent: formData.opponent,
-        venue: formData.venue,
+        venue: formData.venue || "",
         address: formData.address || null,
         city: formData.city || null,
         home_away: formData.home_away,
@@ -162,6 +179,7 @@ export default function AdminMatches() {
       resetForm();
       loadData();
     } catch (error: any) {
+      console.error('Error saving match:', error);
       Alert.alert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
     } finally {
       setSaving(false);
