@@ -1,271 +1,334 @@
 <analysis>
+**original_problem_statement**: The user initially wanted to fix a broken Expo Go preview, address bugs, and add new features. During the session, the priority shifted to implementing a large number of UI/UX improvements and bug fixes on the Admin and Parent sides of the application, as the user found a workaround for the Expo Go issue by performing new deploys.
 
-**original_problem_statement**: The user wants to add several new features and fix a series of bugs in their sports club management app. The main goals are: simplifying registration flows, fixing data persistence/UI update issues, implementing an AI-powered photo transformation feature, adding a coach-accessible technical data section for athletes while respecting privacy, and adding advanced filtering for admins.
-
-In this session, the user requested adding time formatting, improving the team details page to show and manage staff (coaches/dirigenti), adding a team photo, fixing bugs with QR code scanning and printing, and improving the photo handling experience (zoom, crop, share). A major blocker emerged where the Expo Go preview stopped working for the user, preventing them from testing any mobile-specific changes.
-
-**PRODUCT REQUIREMENTS (User Requests from this session):**
-- **AI Photo Style:** Change the AI-generated photo style to a black and white pencil sketch. The user is still not satisfied with the results.
-- **Time Formatting:** Add automatic HH:mm formatting for the game time on the team details page.
-- **Team Page - Coach Info:** On the team details page, show the assigned coach's name and photo. If no photo, show a placeholder.
-- **Team Page - Admin Assign Coach:** Allow the Admin to assign/remove coaches from the team edit page.
-- **Team Page - Dirigenti Info:** Add a Dirigenti (Managers) section to the team page, similar to the coach section. Initially, it showed all dirigenti, but the user requested it be changed to show only assigned dirigenti.
-- **Team Page - Admin Assign Dirigenti:** Allow the Admin to assign/remove dirigenti from the team edit page.
-- **Team Page - Team Photo:** Add a section for a main Team Photo, which the admin can upload, and all users can view (and enlarge).
-- **Admin/Dirigente Unification:** The user requested clarification on why there are separate info sections, leading to making Dirigenti assignable to teams just like coaches.
-- **Dirigente Qualifications:** Add a new Qualifica (Qualification) field for Dirigenti, configurable by the Admin in the settings page.
-- **Bug - Coach QR Scanner:** The coach's QR code scanner for attendance was not opening the camera.
-- **Bug - Parent QR Print:** The QR code printed by a parent for their child was not visible (blank).
-- **Bug - Crash on Team Edit:** The user reported the app crashes when the Admin tries to save changes to a team, especially when assigning coaches and dirigenti.
-- **Photo Experience Improvements:**
-    - (a) Allow zooming with fingers during photo upload/cropping.
-    - (c) Allow zooming and rotating photos when viewing them.
-    - (d) Allow sharing photos.
-    - (e) The crop photo function (native OS) is not intuitive.
-- **Bug - Coach Profile Documents:** The uploaded ID document photos were not visible on the coach's profile page (view mode).
-- **Bug - Keyboard Obscuring Fields:** In the athlete registration and coach profile pages, the keyboard covers the input fields when editing.
-- **Floating Save Button:** Add a floating/sticky save button on long forms (like the coach profile) so it's always visible.
-- **Privacy - Hide WhatsApp:** Hide the WhatsApp contact button for coaches/dirigenti from Parents to prevent unsolicited contact.
+The main requests implemented in this session were:
+- **Team Management Forms ( & ):**
+    - Add HH:mm time formatting for training/game times.
+    - Fix broken day-of-the-week selection.
+    - Enforce uppercase for IBAN and lowercase for email.
+    - Increase the maximum number of weekly training sessions from 4 to 5.
+    - Fix a critical bug where assigned Coaches/Dirigenti were saved but not displayed.
+    - Add a floating save button on the long edit form.
+- **Floating Save Buttons:** Add floating save buttons to the Dirigente profile, Admin athlete edit page, and Coach athlete edit page for better usability.
+- **Admin Alerts:** Implement a full notification system (backend and frontend) to alert Admins when a Coach or a Dirigente declares they have exceeded the €5,000 or €15,000 compensation thresholds.
+- **Impegni (Schedule) Feature:** A major new feature for Parents.
+    - Create a new Impegni section on the parent dashboard showing upcoming practices and games for Today, Tomorrow, and The Day After Tomorrow.
+    - Practices are pulled automatically from team schedules.
+    - Games can be managed by the Admin via a new Matches page, which supports manual entry and bulk import from an Excel file.
+    - The location for away games includes a City field.
+- **Bug Fixes:**
+    - **Coach Profile:** Fix Province of Birth not saving due to a field name mismatch. Add robust error handling for the bank details save function to prevent crashes.
+    - **Parent Dashboard:** Reduce the size of the athlete cards to prevent overflow on smaller screens.
+    - **Parent Athlete Page:** Fix bugs with printing and sharing QR codes and medical certificates on mobile. Add a Share Certificate button.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application is a full-stack Expo/FastAPI app.
-- **Team Page ()**: Has been significantly enhanced. It now displays assigned Coaches and Dirigenti, including their photos and qualifications. Admins can enter an edit mode to assign/unassign coaches and dirigenti via a multi-select list. It also features a dedicated, uploadable Team Photo.
-- **Coach/Dirigente Management**: The backend has new endpoints to assign/unassign coaches and dirigenti to specific teams. The user schema for  now supports qualifications.
-- **Photo Viewing**: A new reusable component  has been created and integrated. It supports zooming, rotating, and sharing images. It's used for viewing coach photos, team photos, and ID documents.
-- **Coach Profile ()**: Has been improved with a  and a floating Save button to improve usability on long forms. It now correctly displays uploaded ID document photos, which are also zoomable. A Province of Birth field was added.
-- **Parent View ()**: The WhatsApp contact button for the coach has been removed to respect privacy, as requested. The fix for printing the athlete's QR code has been implemented.
-- **Bug Fixes**: Fixes were implemented for the coach's QR scanner (camera permissions), parent's QR code printing (double base64 prefix), and crashes during team editing (by splitting API calls). However, the crash fix has not been verified by the user due to the Expo Go issue.
+The application has been significantly enhanced with a new Impegni (Schedule) feature for parents, which is fed by a new Admin-managed Matches section with Excel import capabilities. A complete notification system is now in place for Admins to track when staff exceed compensation limits. Numerous UI/UX improvements and critical bug fixes have been applied across the team management, coach profile, dirigente profile, and parent-facing pages, including floating save buttons, input formatting, and corrected data persistence logic.
 
 **Last working item**:
-    - Last item agent was working: The user reported that after all the agent's attempts to fix it, the Expo Go preview QR code still results in an error, preventing them from testing on their mobile device. The agent had just finished a major effort to resolve this by removing dependencies and cleaning the project but was unsuccessful.
-    - Status: BLOCKED
+    - Last item agent was working: The user requested an enhancement to the new Impegni (Schedule) feature: to display the child's first name next to each practice or game listed, to help parents with multiple children.
+    - Status: NOT STARTED
     - Agent Testing Done: N
-    - Which testing method agent to use? troubleshoot_agent. This is a critical infrastructure or build-tooling issue that is preventing all further mobile testing by the user. The agent has failed multiple times to resolve it.
+    - Which testing method agent to use? both. The backend endpoint  needs to be modified to include the athlete's name, and the frontend component in  needs to be updated to display it.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Expo Go Preview QR Code is Broken (P0)
-  - Issue 2: AI Photo Transformation to Pencil Sketch is not working (P1)
-  - Issue 3: Crash on Team Edit with Coach/Dirigente assignment (P1)
-  - Issue 4: Admin Alert for Coach Compensation is not implemented (P2)
-  - Issue 5: QR Code Scanner for Registration is broken (P2)
+  - Issue 1: Expo Go Preview QR Code is Broken (P0, RECURRING)
+  - Issue 2: AI Photo Transformation to Pencil Sketch is not satisfactory (P1)
+  - Issue 3: Crash on Team Edit with Coach/Dirigente assignment (P1, VERIFICATION PENDING)
+  - Issue 4: QR Code Scanner for Registration is broken (P2)
+  - Issue 5: Photo Experience on Coach Profile is incomplete (P2)
+  - Issue 6: Crash on saving Coach Bank Details (P2, PARTIALLY ADDRESSED)
   
   **Issues Detail**:
   - **Issue 1: Expo Go Preview QR Code is Broken**
-     - **Description**: The user consistently gets an error (Packager is not running) when scanning the Expo Go QR code from the preview page, even after force-quitting the app. This blocks all mobile testing. The web preview works, but mobile-specific features (like camera) cannot be tested.
-     - **Attempted fixes**: The agent identified a potential cause related to  being added. The agent then:
-        1. Simplified the  component to remove the  dependency.
-        2. Uninstalled  and .
-        3. Removed  and  and ran yarn install v1.22.22
-[1/4] Resolving packages...
-success Already up-to-date.
-Done in 0.59s..
-        4. Restarted the expo service multiple times.
-        None of these attempts resolved the issue for the user. The error logs suggest a lingering reference to a babel plugin ().
+     - **Description**: A critical, recurring environment issue. The user cannot use the Expo Go QR code preview, receiving an  error or a generic Packager is not running message. This blocks all mobile testing. The user's current workaround is to request a new deploy to test changes.
+     - **Attempted fixes**: The agent tried cleaning cache, restarting services, and even running expo start manually. The issue was identified as a problem with the  tunnel, likely a conflicting process from a previous deployment. This is an environment-level problem.
      - **Next debug checklist**:
-        1. Invoke  immediately. This is a critical environment/build issue.
-        2. Manually inspect  to ensure no plugins from uninstalled packages remain. (Agent failed to find this file, it may be generated).
-        3. Check all  files in the monorepo for stray dependencies.
-        4. If all else fails, consider resetting the frontend project to a last known good state and re-applying the changes carefully, without adding complex libraries until the base is stable.
-     - **Why fix this issue and what will be achieved with the fix?**: This is a **BLOCKER**. The user cannot test any of the implemented features on their mobile device. Fixing this will unblock the entire development and testing workflow.
+        1. This is a platform/environment issue. The  should be called to diagnose persistent  or 
+  Usage: expo [command] [options]
+
+  Options:
+  
+    -V, --version                     output the version number
+    --non-interactive                 Fail, if an interactive prompt would be required to continue.
+    -h, --help                        output usage information
+  
+  Commands:
+
+    init [name]                       Create a new Expo project
+    start [path]                      Start a local dev server for the app
+    start:web [path]                  Start a Webpack dev server for the web app
+    export [path]                     Export the static files of the app for hosting it on a web server
+    install [packages...]             Install a module or other package to a project
+    run:android [path]                Run the Android app binary locally
+    run:ios [path]                    Run the iOS app binary locally
+    send [path]                       Share the project's URL to an email address
+
+    login                             Login to an Expo account
+    logout                            Logout of an Expo account
+    register                          Sign up for a new Expo account
+    whoami                            Return the currently authenticated account
+
+    client:install:ios                Install Expo Go for iOS on the simulator
+    client:install:android            Install Expo Go for Android on a connected device or emulator
+
+    config [path]                     Show the project config
+    doctor [path]                     Diagnose issues with the project
+    upgrade [sdk-version]             Upgrade the project packages and config for the given SDK version
+
+    customize:web [path]              Eject the default web files for customization
+    prebuild [path]                   Create native iOS and Android project files before building natively.
+                                      Learn more: https://docs.expo.dev/workflow/customizing/
+
+    build:web [path]                  Build the web app for production
+
+    credentials:manager [path]        Superseded by eas credentials in eas-cli
+
+    url [path]                        Log a URL for opening the project in Expo Go
+    url:ipa [path]                    Log the download URL for the standalone iOS binary
+    url:apk [path]                    Log the download URL for the standalone Android binary
+
+    webhooks [path]                   List all webhooks for a project
+    webhooks:add [path]               Add a webhook to a project
+    webhooks:remove [path]            Delete a webhook
+    webhooks:update [path]            Update an existing webhook
+
+    build:ios [path]                  Superseded by eas build in eas-cli
+    build:android [path]              Superseded by eas build in eas-cli
+    build:status [path]               Superseded by eas build:list in eas-cli
+    eject [path]                      Superseded by expo prebuild
+    fetch:ios:certs [path]            Superseded by eas credentials in eas-cli
+    fetch:android:keystore [path]     Superseded by eas credentials in eas-cli
+    fetch:android:hashes [path]       Superseded by eas credentials in eas-cli
+    fetch:android:upload-cert [path]  Superseded by eas credentials in eas-cli
+    publish [path]                    Superseded by eas update in eas-cli
+    publish:set [path]                Superseded by eas update:republish in eas-cli
+    publish:rollback [path]           Superseded by eas update:republish in eas-cli
+    publish:history [path]            Superseded by eas update:list in eas-cli
+    publish:details [path]            Superseded by eas update:view in eas-cli
+    push:android:upload [path]        Superseded by eas credentials in eas-cli
+    push:android:show [path]          Superseded by eas credentials in eas-cli
+    push:android:clear [path]         Superseded by eas credentials in eas-cli
+    upload:android [path]             Superseded by eas submit in eas-cli
+    upload:ios [path]                 Superseded by eas submit in eas-cli
+    client:ios [path]                 Superseded by Expo Dev Clients
+
+[08:10:17]   Run a command with --help for more info 💡
+[08:10:17]     $ expo start --help
+[08:10:17] process conflicts.
+        2. Investigate if there are stale  processes running in the container that need to be killed.
+     - **Why fix this issue and what will be achieved with the fix?**: This is a **BLOCKER** for an efficient development cycle. Fixing it would allow the user to test changes instantly without needing a full redeployment.
      - **Status**:  IN PROGRESS
      - **Is recurring issue?**: Y
-     - **Should Test frontend/backend/both after fix?**: Frontend (specifically, the QR code scan)
-     - **Blocked on other issue**: No, this is the blocking issue.
+     - **Should Test frontend/backend/both after fix?**: Frontend
+     - **Blocked on other issue**: No, this is a blocking issue.
 
   - **Issue 2: AI Photo Transformation to Pencil Sketch is not working**
-     - **Description**: The user is unsatisfied with the AI photo style, which should be a black and white pencil sketch. The results are still in color. This is the user's last artistic request.
-     - **Attempted fixes**: The agent modified the prompt in  multiple times, making it progressively more specific (e.g., A hyper-realistic, highly detailed, professional black and white pencil sketch portrait...). The API returns a 200 OK status, but the visual result is incorrect.
+     - **Description**: A feature request from a previous session. The user is unsatisfied with the AI-generated photo style, which should be a black and white pencil sketch but still appears in color.
+     - **Attempted fixes**: None in this session. The agent in the previous session modified the prompt multiple times without success.
      - **Next debug checklist**:
-        1. Verify the exact OpenAI model being used ( for ). This model might not be suitable for stylistic edits.
-        2. Consider switching the API call from  to  (using DALL-E 3 or 4), providing the original image and a detailed prompt to re-draw it. This might offer better stylistic control but would be a more significant change.
-        3. Test the prompt directly in OpenAI's playground to see if the issue is with the prompt or the API usage.
+        1. Review the implementation in  at the  endpoint.
+        2. Test the prompt directly in the OpenAI Playground to isolate the issue.
+        3. Consider switching the API from  to  with DALL-E 3/4 for better stylistic control.
      - **Why fix this issue and what will be achieved with the fix?**: Fulfills a key user feature request and improves user satisfaction.
-     - **Status**:  IN PROGRESS
+     - **Status**:  NOT STARTED
      - **Is recurring issue?**: Y
      - **Should Test frontend/backend/both after fix?**: Backend
-     - **Blocked on other issue**: No
+     - **Blocked on other issue**: No.
 
   - **Issue 3: Crash on Team Edit with Coach/Dirigente assignment**
-     - **Description**: The user reported that the app crashes when saving team modifications, especially when assigning coaches or dirigenti.
-     - **Attempted fixes**: The agent identified that large base64 photo strings and multiple API calls in  could be the cause. The agent refactored  in  to:
-        1. Separate the main team data update from the coach/dirigente assignment calls.
-        2. Wrap API calls in  blocks.
-        3. Pass the payload to the assignment endpoints as an object () instead of a raw array.
+     - **Description**: The user reported the app crashes when saving team modifications after assigning coaches/dirigenti.
+     - **Attempted fixes**: The agent implemented two fixes:
+        1. A backend fix to the MongoDB query for fetching users (using string role names instead of Python constants).
+        2. A frontend fix in  to add defensive fallbacks () when setting state for  and , to prevent crashes from  values.
      - **Why fix this issue and what will be achieved with the fix?**: Critical for app stability and core admin functionality.
      - **Status**:  USER VERIFICATION PENDING (Blocked by Issue 1)
      - **Is recurring issue?**: Y
      - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on other issue**: Issue 1: Expo Go Preview QR Code is Broken
+     - **Blocked on other issue**: Issue 1: Expo Go Preview QR Code is Broken.
 
-  - **Issue 4: Create Admin Alert for Coach Compensation**
-     - **Description**: When a coach reports exceeding the €5,000 or €15,000 compensation limit, the admin does not receive any alert or notification. This was requested in the previous session and missed.
-     - **Attempted fixes**: None.
-     - **Next debug checklist**:
-        1. In , locate the endpoint that updates the coach's profile/compensation status.
-        2. Add logic to create a notification (e.g., a new DB collection ) when the relevant flags are set to .
-        3. Create a new API endpoint for the admin to fetch unread notifications.
-        4. Implement a UI element (e.g., a badge on a bell icon) in the admin layout to show these alerts.
-     - **Why fix this issue and what will be achieved with the fix?**: This is a critical business logic requirement for the admin.
-     - **Status**:  NOT STARTED
-     - **Is recurring issue?**: N
-     - **Should Test frontend/backend/both after fix?**: Both
-     - **Blocked on other issue**: No
-
-  - **Issue 5: Fix broken QR Code Scanner for registration**
-     - **Description**: The initial summary mentioned lo scanner per il QR non funziona during registration. The agent fixed the coach's attendance scanner, but not the one on the public registration page ().
-     - **Attempted fixes**: None for the registration page.
-     - **Next debug checklist**:
-        1. Inspect  to find the QR scanner button/logic.
-        2. Ensure  is used correctly and camera permissions are requested upon press.
-     - **Why fix this issue and what will be achieved with the fix?**: Improves the user experience for new users joining a society.
+  - **Issue 4: Fix broken QR Code Scanner for registration**
+     - **Description**: From a previous session. The QR scanner on the public registration page () is reported as not working.
+     - **Attempted fixes**: None in this session.
+     - **Next debug checklist**: Inspect  and ensure camera permissions are correctly requested and  is properly implemented.
+     - **Why fix this issue and what will be achieved with the fix?**: Improves the onboarding experience for new users.
      - **Status**: NOT STARTED
      - **Is recurring issue?**: N
      - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on other issue**: No
+     - **Blocked on other issue**: No.
+  
+  - **Issue 5: Photo Experience on Coach Profile is incomplete**
+     - **Description**: User reported la foto non si capovolge un and la foto non si zoomare (photo can't be rotated/zoomed) in the Coach profile. This refers to the photo *viewing* experience. This was meant to be solved by the  component from the previous session, but it seems it's either not working as expected or not integrated everywhere.
+     - **Attempted fixes**: None in this session.
+     - **Next debug checklist**:
+        1. Verify that  is used when tapping on photos in the coach profile ().
+        2. Ensure the  library inside  is configured to allow rotation and zoom.
+     - **Why fix this issue and what will be achieved with the fix?**: Improves user experience and fulfills a user request.
+     - **Status**: NOT STARTED
+     - **Is recurring issue?**: Y
+     - **Should Test frontend/backend/both after fix?**: Frontend
+     - **Blocked on other issue**: No.
+
+  - **Issue 6: Crash on saving Coach Bank Details**
+     - **Description**: User reported that saving bank details in the coach profile causes a crash.
+     - **Attempted fixes**: The agent wrapped the API call in  inside a  block to show an  instead of crashing. This is a workaround, not a root cause fix. The crash is likely due to a large payload (base64 images) overwhelming the server or proxy.
+     - **Next debug checklist**: Investigate methods for image compression on the client-side *before* uploading to reduce the base64 payload size.
+     - **Why fix this issue and what will be achieved with the fix?**: Improves app stability. The current fix just masks the crash.
+     - **Status**:  IN PROGRESS
+     - **Is recurring issue?**: N
+     - **Should Test frontend/backend/both after fix?**: Frontend
+     - **Blocked on other issue**: No.
 
 **In progress Task List**:
-  - **Task 1: Integrate Custom Image Cropper (P1)**
-     - **Description**: The user requested better zoom/crop functionality for photo uploads. The agent created a new component  but has not integrated it into any of the image upload flows (e.g., coach profile, admin profile, team photo upload).
+  - **Task 1: Add Child's First Name to Impegni List (P0)**
      - **Where to resume**:
-        1. Identify all places where  is called for profile/team photos.
-        2. Instead of calling it directly, open a modal containing the new  component.
-        3. Pass the selected image URI to the cropper.
-        4. On crop confirmation, the component should return the new cropped (and possibly compressed) base64 image data to the parent page to be saved.
-     - **What will be achieved with this?**: It will resolve user requests 'a' (zoom during insert) and 'e' (better crop UI).
-     - **Status**:  IN PROGRESS
-     - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on something**: Blocked by Issue 1 (Expo Go bug) for proper testing.
+        1. **Backend**: Modify the  endpoint in . When fetching practices and matches, also retrieve the first name () of the athlete associated with the event.
+        2. **Frontend**: In , update the rendering logic for the Impegni section to display the athlete's first name next to each event entry.
+     - **What will be achieved with this?**: Improves usability for parents with multiple children, allowing them to quickly see which child has which commitment.
+     - **Status**:  NOT STARTED
+     - **Should Test frontend/backend/both after fix?**: Both
+     - **Blocked on something**: No.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - (P2) Publish the application to the Google Play Store (user mentioned this is the next major step).
+    - (P1) Prepare the application for publication on the Google Play Store. The user has explicitly mentioned this as the next major goal. This involves configuring , generating icons, and creating a production build.
 - **Future Tasks**:
-    - (P3) Implement the Professional Athletes with Compensation feature.
-    - (P4) Stripe Integration for payments.
+    - (P2) Implement the Professional Athletes with Compensation feature.
+    - (P3) Stripe Integration for payments.
 
 **Completed work in this session**
-- **Team Page Overhaul**:
-  - Implemented assignable Coaches and Dirigenti sections on the team page ().
-  - Added backend endpoints for assigning/unassigning staff to teams.
-  - Admins can now manage team staff directly from the team's edit view.
-- **Team Photo Feature**: Added functionality for an Admin to upload a dedicated Team Photo, which is displayed on the team page.
-- **Dirigente Qualifications**: Added a Qualifiche setting for Admins and display this information on the team page.
-- **Profile Page UX Improvements**:
-  - **Coach Profile ()**:
-    - Added a  to prevent the keyboard from hiding fields.
-    - Added a floating/sticky Save button for better usability on a long form.
-    - Added Provincia di Nascita (Province of Birth) field.
-    - Fixed a bug where uploaded ID document photos were not displayed in view mode.
-  - **Athlete Registration ()**:
-    - Improved  to prevent the keyboard from hiding fields.
-- **Photo Experience (Viewing)**:
-  - Created and integrated a reusable  component for an improved experience with zoom, rotation, and sharing. This resolves user requests 'c' and 'd'.
-  - Made coach document photos clickable to open in the new viewer.
+- **Feature: Impegni (Schedule) for Parents**:
+  - New Impegni section on parent dashboard () showing Today/Tomorrow/Day After events.
+  - New Admin page () to manage games, including manual CRUD and bulk import from Excel ( library).
+  - New backend models and API endpoints (, , ) to support the feature ().
+  - Added City field for away games.
+- **Feature: Admin Notification System**:
+  - Created a full backend system (models, endpoints) to generate, fetch, and mark notifications as read.
+  - Implemented notifications for when Coaches or Dirigenti exceed €5k/€15k compensation thresholds.
+  - Added a notification bell icon with an unread count badge on the Admin dashboard ().
+  - Created a new page () to view all notifications.
+- **Team Form Enhancements ( & )**:
+  - Implemented HH:mm time formatting, fixed day selection, enforced IBAN/email casing, and increased training sessions to 5.
+  - Fixed a critical bug preventing assigned Coaches/Dirigenti from being displayed. The fix involved using Pydantic models on the backend and sending the correct payload from the frontend.
+- **Floating Save Buttons**: Implemented floating save buttons for improved UX on long forms in:
+  - Team Edit ()
+  - Dirigente Profile ()
+  - Admin Athlete Edit ()
+  - Coach Athlete Edit ()
 - **Bug Fixes**:
-  - **Coach QR Scanner**: Fixed by adding an explicit camera permission request on button press ().
-  - **Parent QR Print**: Fixed a bug where the printed QR code was blank due to a double  prefix ().
-- **Privacy**: Removed the WhatsApp contact button from the parent's view of the coach, as requested.
-- **UI Formatting**: Added automatic  time formatting for the game time input on the team page.
+  - **Coach Profile**: Corrected saving of Province of Birth. Added error handling to prevent crashes when saving bank details.
+  - **Parent View**: Fixed mobile printing/sharing for QR codes and medical certificates (). Added a Share Certificate button. Reduced athlete card size on the parent dashboard.
 
 **Earlier issues found/mentioned but not fixed**
-   - **Issue 1: Admin Alert for Coach Compensation**
-     - **Why to solve this issue and what will be achieved with this?**: Fulfills a critical business process for the admin to track coach payment thresholds.
-     - **Should Test frontend/backend/both after fix**: Both
-     - **Is recurring issue?**: N
+   - **Issue 1: AI Photo Transformation to Pencil Sketch**
+     - Why to solve this issue and what will be achieved with this?: Fulfills an outstanding user feature request.
+     - Should Test frontend/backend/both after fix: Backend
+     - Is recurring issue?: Y
    - **Issue 2: Broken QR Code Scanner on Registration Page**
-     - **Why to solve this issue and what will be achieved with this?**: Improves the onboarding experience for new users.
-     - **Should Test frontend/backend/both after fix**: Frontend
-     - **Is recurring issue?**: N
+     - Why to solve this issue and what will be achieved with this?: Fixes a broken part of the new user onboarding flow.
+     - Should Test frontend/backend/both after fix: Frontend
+     - Is recurring issue?: N
+   - **Issue 3: Photo Zoom/Rotate on Coach Profile**
+     - Why to solve this issue and what will be achieved with this?: Fulfills a user request for a better photo viewing experience.
+     - Should Test frontend/backend/both after fix: Frontend
+     - Is recurring issue?: Y
 
 **Known issue recurrence from previous fork**
-  - **Issue recurrence in previous fork**: The Expo Go QR code not working is the major new recurring issue of this fork.
-  - **Recurrence count**: High (the user has reported it multiple times at the end of the session).
-  - **Status**: IN PROGRESS. This is the top priority blocker.
+  - **Issue recurrence in previous fork**: The Expo Go QR code preview not working is a major recurring issue that started in the previous session and persists. It is an environment/tooling problem.
+  - **Recurrence count**: High. The user has accepted a workaround (new deploys) but the issue itself is unresolved.
+  - **Status**: IN PROGRESS.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **State Management**: Heavy use of  for managing complex forms, modal visibility, and fetched data.
-- **API Integration**: Refactoring of  handlers to orchestrate multiple  and  requests, including error handling with . Introduction of new endpoints for relational data (assigning users to teams).
-- **Componentization**: Creation of reusable components like  to encapsulate complex UI/logic and reduce duplication.  was created but is pending integration.
-- **UX/UI for Mobile**: Implementation of  and a floating action button ( with absolute positioning) to solve common mobile form usability problems.
-- **Dependency Management**: Encountered and attempted to debug a critical build issue related to babel plugins () after installing and then removing . This highlights the fragility of the JS ecosystem.
+- **New Feature Development**: Full-stack implementation of Engagements (Schedule) and Notifications features.
+- **Excel Parsing**: Use of the  library in the frontend to parse uploaded Excel files for bulk data import.
+- **Defensive Programming**: Added  blocks for API calls to prevent app crashes and provide user-friendly alerts. Used  fallbacks to handle potentially null arrays from APIs.
+- **Mobile UX**: Widespread implementation of floating action buttons for long forms.
+- **Input Formatting**: Use of  handlers to automatically format user input (e.g., HH:mm, uppercase IBAN).
+- **Environment Debugging**: Encountered and identified  tunnel conflicts and  system limits, indicating fragility in the development environment.
 
 **key DB schema**
-- **users**: The schema (implicitly, via FastAPI models) was updated to include  and  for users with the  role.
-- **teams**: The schema was updated to include . The documents in the collection now also have  to store assigned managers.
+  - **notifications**: (New Collection) 
+  - **matches**: (New Collection) 
+  - **users**: Updated to consistently use . The  field was also added for Dirigenti.
 
 **changes in tech stack**
-- : Installed and used in .
-- : Was installed, caused critical build errors, and was then uninstalled. The root cause of the error (lingering babel plugin) appears to persist.
+  - : Added to frontend for parsing Excel files.
 
 **All files of reference**
-- : The most heavily modified file, containing the logic for team view, edit, and staff assignment.
-- : Significantly refactored for better UX (keyboard handling, floating save button).
-- : New component for viewing images.
-- : New component for cropping images, not yet used.
-- : Contains the new endpoints for staff assignment (, ) and updated models.
-- : File where the parent-facing QR code print and privacy changes were made.
+- : Core logic for all new features and major bug fixes resides here.
+- : Was the source of many bugs and received numerous fixes and UX improvements.
+- : Location of the new Impegni feature UI.
+- : New admin page for the Matches feature.
+- : New admin page for the Notifications feature.
+- : File containing fixes for printing and sharing on mobile.
 
 **Areas that need refactoring**:
--  is now extremely large (over 1200 lines). The view logic, edit logic, state management, and styles should be broken down into smaller, more manageable components.
-- The various profile pages (, , ) share a lot of duplicated code for handling document uploads and personal data. This should be extracted into common components and hooks.
+- The crash on saving coach bank details was patched with a  but not fully resolved. The root cause (likely large base64 image payloads) should be addressed, possibly by implementing client-side image compression before upload.
+- The  file remains very large and complex and would benefit from being broken down into smaller components.
 
 **key api endpoints**
-- ****: New endpoint to assign a list of coach IDs to a team.
-- ****: New endpoint to assign a list of dirigente IDs to a team.
-- ****: Modified to return  and  populated with user details.
-- ****: Modified to accept a  (base64 string).
-- ****: Modified to return  and .
-- ****: Prompt was modified again to attempt a better pencil sketch style.
+- ****: Create a new match.
+- ****: Get all matches.
+- ****: Update a match.
+- ****: Delete a match.
+- ****: Bulk import matches from an Excel file.
+- ****: Get personalized schedule for the logged-in parent.
+- ****: Get all notifications for an admin.
+- ****: Get count of unread notifications.
+- ****: Mark a notification as read.
+- ****: Modified to create notifications when compensation limits are exceeded by Coaches or Dirigenti.
 
 **Critical Info for New Agent**
-- **EXPO GO IS BROKEN (P0 BLOCKER)**: The user cannot test on their mobile device. They will get a Packager is not running error. Do not ask them to test on mobile until you have fixed this. Your immediate first task is to use the  to diagnose and fix this build/environment issue. The web preview at  is the only working test surface for now.
-- **User Frustration**: The user is patient but clearly frustrated with the recurring Expo Go issue. Resolving this is key to regaining their trust.
-- **Photo Features Cluster**: The user has multiple pending requests related to photos (AI style, zoom/crop on upload). These should be tackled as a group after the Expo Go blocker is fixed. The  component is created but needs to be integrated.
-- **Verify Crash Fix**: The agent implemented a fix for crashes during team editing. Once the Expo Go issue is resolved, you must guide the user to test this specific scenario to confirm the fix.
+- **FOCUS ON THE IMPEGNI FEATURE FIRST**: Your immediate task is to add the child's first name to the Impegni list on the parent's dashboard. This requires a small change to the backend () and the frontend ().
+- **EXPO GO PREVIEW IS UNRELIABLE**: The user cannot test on their mobile device via the QR code. They are aware of this and have been using new deploys as a workaround. Do not ask them to test on mobile until the underlying  issue is resolved. This is a persistent environment problem.
+- **USER WANTS TO PUBLISH TO PLAY STORE**: After the current list of tasks is complete, the user's next major goal is to prepare the app for the Google Play Store. Be prepared to shift focus to this.
+- **VERIFY PENDING FIXES**: The fix for the app crash when editing a team () has been implemented but not verified by the user due to the preview issue. This needs to be checked after the next deploy.
 
 **documents created in this job**
-- None.
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - 10.  Asks if the agent is having problems with the pencil sketch transformation. (PENDING)
- - 9.  Reports the WhatsApp button should only be visible between coaches and dirigenti, not for parents. (Completed)
- - 8.  Reports 3 issues with the coach profile: province of birth is missing, keyboard covers form fields, and requests a floating save button. (Completed)
- - 7.  Abandons testing due to the Expo Go error, says they will provide more feedback later. (Acknowledged)
- - 6.  Confirms the Expo Go error is still happening even after force-quitting and re-scanning. (Acknowledged, P0 Issue)
- - 5.  Reports that the Expo Go QR code is giving an error, with screenshots. (Acknowledged, P0 Issue)
- - 4.  Asks the agent to proceed with the final 3 photo-related requests. (In Progress)
- - 3.  Reports two new issues: 1) ID document photos are not visible on the coach profile, and 2) keyboard covers fields during athlete registration. (Completed)
- - 2.  Expresses confusion about photo cropping and asks for multiple photo experience improvements (zoom, rotation, sharing, better crop UI). (Partially Completed, In Progress)
- - 1.  Reports that team modification crashes, especially when assigning coaches/dirigenti. (Fix Attempted, User Verification Pending)
+ - 10.  Requests to add the child's first name next to the event in the Impegni section. (PENDING - This is the current task)
+ - 9.  Reports issues with the Coach profile (province not saving, photo issues, bank details crash) and the Parent dashboard (athlete icons too big). (Completed/Partially Addressed)
+ - 8.  Provides clarification on how the location field for matches should work (include city for away games). (Completed)
+ - 7.  Confirms they want the Impegni feature with Excel import for games and provides a screenshot for desired placement on the Parent home screen. (Completed)
+ - 6.  Asks for clarification on the implementation options for the Impegni feature. (Clarified)
+ - 5.  Chooses Impegni as the name, confirms it should be personalized, and outlines the pros/cons of different game data sources, preferring a bulk-upload model. (Decision Made)
+ - 4.  Proposes the new Impegni (Schedule) feature for parents. (In Progress)
+ - 3.  Requests the same €5k/€15k compensation alerts for Dirigenti. (Completed)
+ - 2.  Requests the same compensation alert for the €15,000 threshold. (Completed)
+ - 1.  Reports that the admin alert for a coach exceeding €5,000 is missing. (Completed)
 
 **Project Health Check:**
 - **Broken**:
-  - **Expo Go Preview**: Critically broken. The user cannot scan the QR code to test on a mobile device. This is the highest priority issue.
+  - **Expo Go Preview / ngrok Tunnel**: Critically unreliable. Prevents real-time mobile testing. This is an environment-level issue.
 - **Mocked**: None.
 
 **3rd Party Integrations**
 - **SendGrid**: For emails, requires a User API Key.
-- **OpenAI**: Used for image editing (). Uses the Emergent LLM Key.
-- ****: Used for the in-app photo viewer component.
+- **OpenAI**: For image editing, uses the Emergent LLM Key.
+- ****: Used for in-app photo viewing.
+- ****: (New) For parsing Excel files on the frontend.
 - **Stripe**: Planned for the future.
 
 **Testing status**
   - Testing agent used after significant changes: NO
-  - Troubleshoot agent used after agent stuck in loop: YES (Used for the Expo Go issue, identified a CORS problem, but the recommended fix was ineffective and the root cause appears to be a lingering babel plugin).
+  - Troubleshoot agent used after agent stuck in loop: NO (but probably should have been for the ngrok issue).
   - Test files created: None.
-  - Known regressions: The Expo Go preview functionality, which was working previously, is now broken.
+  - Known regressions: Expo Go preview functionality is broken.
 
 **Credentials to test flow:**
 -   Admin:  / 
 
 **What agent forgot to execute**
-- **Admin Alert for Coach Compensation**: This feature, requested in the previous session, was completely overlooked again. It involves creating a notification system for the admin when a coach's earnings exceed a certain threshold.
-- **Fix QR Code Scanner on Registration Page**: The agent fixed the coach's attendance scanner but ignored the initial bug report about the scanner on the main user registration page ().
+- **AI Photo Style Change**: This was a P1 issue from the previous fork's summary and was not addressed at all in this session.
+- **Registration Page QR Scanner**: Another issue from the previous fork that was not addressed.
+- **Photo Zoom/Rotate**: Mentioned by the user again in this session but not fixed. The  component might need review.
 
 </analysis>
