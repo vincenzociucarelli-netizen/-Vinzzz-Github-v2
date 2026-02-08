@@ -237,7 +237,7 @@ class MatchCreate(BaseModel):
     team_id: str
     date: datetime
     opponent: str
-    venue: str
+    venue: Optional[str] = ""
     address: Optional[str] = None
     city: Optional[str] = None
     home_away: str = "home"
