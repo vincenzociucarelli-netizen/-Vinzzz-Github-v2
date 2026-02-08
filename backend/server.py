@@ -224,6 +224,7 @@ class Match(BaseModel):
     date: datetime  # Data e ora della gara
     opponent: str  # Avversario
     venue: str  # Luogo della gara (Palestra)
+    address: Optional[str] = None  # Indirizzo palestra
     city: Optional[str] = None  # Città (solo per trasferte)
     home_away: str = "home"  # "home" o "away"
     meeting_time: Optional[str] = None  # Orario ritrovo (es: "1 ora prima")
@@ -237,6 +238,7 @@ class MatchCreate(BaseModel):
     date: datetime
     opponent: str
     venue: str
+    address: Optional[str] = None
     city: Optional[str] = None
     home_away: str = "home"
     meeting_time: Optional[str] = None
