@@ -114,10 +114,16 @@ export default function AdminMatches() {
 
   const openEditModal = (match: Match) => {
     const matchDate = new Date(match.date);
+    // Formatta la data in formato italiano gg/mm/aaaa
+    const day = matchDate.getDate().toString().padStart(2, '0');
+    const month = (matchDate.getMonth() + 1).toString().padStart(2, '0');
+    const year = matchDate.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+    
     setEditingMatch(match);
     setFormData({
       team_id: match.team_id,
-      date: matchDate.toISOString().split('T')[0],
+      date: formattedDate,
       time: matchDate.toTimeString().slice(0, 5),
       opponent: match.opponent,
       venue: match.venue,
