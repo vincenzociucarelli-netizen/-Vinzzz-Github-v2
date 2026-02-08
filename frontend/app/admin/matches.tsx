@@ -51,6 +51,11 @@ export default function AdminMatches() {
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  
+  // Home team modal state
+  const [homeTeamModalVisible, setHomeTeamModalVisible] = useState(false);
+  const [homeTeamName, setHomeTeamName] = useState('');
+  const [pendingImportData, setPendingImportData] = useState<any[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
