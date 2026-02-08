@@ -568,4 +568,82 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
+  // Commitments Section Styles
+  commitmentsSection: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  commitmentsSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+  },
+  commitmentDay: {
+    marginBottom: 16,
+  },
+  commitmentDayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  commitmentDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  commitmentDayTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  noCommitments: {
+    fontSize: 13,
+    color: '#999',
+    fontStyle: 'italic',
+    marginLeft: 20,
+  },
+  commitmentItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    marginLeft: 20,
+  },
+  commitmentItemContent: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  commitmentItemTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  commitmentItemDetails: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  commitmentMeeting: {
+    fontSize: 12,
+    color: '#FF9500',
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  athletesSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
 });
