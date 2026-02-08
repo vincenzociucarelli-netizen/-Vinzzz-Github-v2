@@ -364,14 +364,17 @@ export default function AdminMatches() {
       const invalidMatches = matchesData.filter((m: any) => !m.team_id || !m.opponent);
       if (invalidMatches.length > 0) {
         console.log('Invalid matches (missing team_id or opponent):', invalidMatches.slice(0, 3));
+        console.log('Available teams:', teams.map(t => t.name));
       }
       
       if (validMatches.length === 0) {
         const firstRow = matchesData[0];
         const columnNames = firstRow ? Object.keys(firstRow).join(', ') : 'nessuna';
+        const searchedTeams = matchesData.slice(0, 3).map((m: any) => m.team_name || 'N/A').join(', ');
+        const availableTeams = teams.map(t => t.name).join(', ');
         Alert.alert(
           'Errore Import', 
-          `Nessuna gara valida trovata.\n\nColonne trovate: ${columnNames}\n\nColonne richieste: CAMPIONATONOME (o Squadra), DATA, SQUADRAOSPITENOME (o Avversario).\n\nCAMPIONATONOME deve corrispondere al nome di una squadra nel sistema.`
+          `Nessuna gara valida trovata.\n\nColonne nel file: ${columnNames}\n\nSquadre cercate nel file: ${searchedTeams}\n\nSquadre disponibili nel sistema: ${availableTeams}\n\nAssicurati che CAMPIONATONOME o SQUADRACASANOME contenga parte del nome di una squadra.`
         );
         setImporting(false);
         return;
