@@ -401,10 +401,11 @@ export default function AdminMatches() {
             <View key={month}>
               <Text style={styles.monthHeader}>{month.charAt(0).toUpperCase() + month.slice(1)}</Text>
               {monthMatches.map(match => {
-                // Formatta il luogo: Casa = solo palestra, Trasferta = palestra - città
-                const venueDisplay = match.home_away === 'away' && (match as any).city
-                  ? `${match.venue || 'Da definire'} - ${(match as any).city}`
-                  : match.venue || 'Da definire';
+                // Formatta il luogo: mostra palestra, città e indirizzo
+                let venueDisplay = match.venue || 'Da definire';
+                if (match.city) {
+                  venueDisplay += ` - ${match.city}`;
+                }
                   
                 return (
                 <TouchableOpacity
@@ -436,6 +437,12 @@ export default function AdminMatches() {
                       <Ionicons name="location-outline" size={14} color="#666" />
                       <Text style={styles.matchDetailText}>{venueDisplay}</Text>
                     </View>
+                    {match.address && (
+                      <View style={styles.matchDetailItem}>
+                        <Ionicons name="map-outline" size={14} color="#888" />
+                        <Text style={[styles.matchDetailText, { color: '#888', fontSize: 12 }]}>{match.address}</Text>
+                      </View>
+                    )}
                     {match.meeting_time && (
                       <View style={styles.matchDetailItem}>
                         <Ionicons name="time-outline" size={14} color="#FF9500" />
