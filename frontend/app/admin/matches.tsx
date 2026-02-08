@@ -227,18 +227,71 @@ export default function AdminMatches() {
       setImportModalVisible(true);
       
       // Map Excel data to matches format
+      // Supporto per formato Federazione: CAMPIONATONOME, DATA (con ora), SQUADRAOSPITENOME, IMPIANTO, IMPIANTO INDIRIZZO
       const matchesData = jsonData.map((row: any) => {
-        // Find team by name
-        const teamName = row['Squadra'] || row['squadra'] || row['Team'] || row['team'];
-        const team = teams.find(t => t.name.toLowerCase() === teamName?.toLowerCase());
+        // CAMPIONATONOME contiene l'identificativo della squadra (es. "U14 Maschile Campionato")
+        const campionato = row['CAMPIONATONOME'] || row['Campionato'] || row['campionato'] || '';
+        
+        // Fallback al vecchio formato per compatibilità
+        const teamNameLegacy = row['Squadra'] || row['squadra'] || row['Team'] || row['team'] || '';
+        const teamSearchKey = campionato || teamNameLegacy;
+        
+        // Cerca la squadra che contiene l'identificativo del campionato nel nome
+        const team = teams.find(t => {
+          const tName = t.name.toLowerCase();
+          const searchLower = teamSearchKey.toLowerCase();
+          // Match esatto o parziale
+          return tName === searchLower || 
+                 tName.includes(searchLower) || 
+                 searchLower.includes(tName);
+        });
+        
+        // DATA - può contenere data e ora insieme (es. "15/06/2025 18:30:00")
+        let dateTimeStr = row['DATA'] || row['Data'] || row['data'] || '';
+        // Fallback al vecchio formato con colonne separate
+        if (!dateTimeStr && (row['Data e Ora'] || row['Ora'])) {
+          dateTimeStr = row['Data e Ora'] || `${row['Data'] || ''} ${row['Ora'] || '00:00'}`;
+        }
+        // Rimuovi secondi se presenti (HH:MM:SS → HH:MM)
+        if (dateTimeStr && typeof dateTimeStr === 'string') {
+          // Se contiene :SS alla fine, rimuovilo per la visualizzazione ma tienilo per il parsing
+          dateTimeStr = dateTimeStr.trim();
+        }
+        
+        // SQUADRAOSPITENOME - avversario
+        const opponent = row['SQUADRAOSPITENOME'] || row['Avversario'] || row['avversario'] || row['Opponent'] || '';
+        
+        // IMPIANTO - nome palestra (può contenere anche la città)
+        const impianto = row['IMPIANTO'] || row['Impianto'] || row['Luogo'] || row['luogo'] || row['Venue'] || '';
+        
+        // IMPIANTO INDIRIZZO - indirizzo completo
+        const indirizzo = row['IMPIANTO INDIRIZZO'] || row['Indirizzo'] || row['indirizzo'] || '';
+        
+        // Estrai città dall'impianto se contiene un trattino o virgola (es. "Palestra XYZ - Perugia")
+        let venue = impianto;
+        let city = '';
+        if (impianto.includes(' - ')) {
+          const parts = impianto.split(' - ');
+          venue = parts[0].trim();
+          city = parts.slice(1).join(' - ').trim();
+        } else if (impianto.includes(', ')) {
+          const parts = impianto.split(', ');
+          venue = parts[0].trim();
+          city = parts.slice(1).join(', ').trim();
+        }
+        
+        // Casa/Trasferta - default "away" per gare federazione
+        const homeAway = (row['Casa/Trasferta'] || row['home_away'] || 'away').toLowerCase().includes('casa') ? 'home' : 'away';
         
         return {
           team_id: team?.id || '',
-          team_name: teamName,
-          date: row['Data e Ora'] || row['data'] || row['Data'] || `${row['Data']} ${row['Ora'] || '00:00'}`,
-          opponent: row['Avversario'] || row['avversario'] || row['Opponent'] || '',
-          venue: row['Luogo'] || row['luogo'] || row['Venue'] || '',
-          home_away: (row['Casa/Trasferta'] || row['home_away'] || 'home').toLowerCase().includes('casa') ? 'home' : 'away',
+          team_name: team?.name || teamSearchKey,
+          date: dateTimeStr,
+          opponent: opponent,
+          venue: venue,
+          address: indirizzo,
+          city: city,
+          home_away: homeAway,
           meeting_time: row['Ritrovo'] || row['meeting_time'] || '',
           notes: row['Note'] || row['notes'] || '',
         };
