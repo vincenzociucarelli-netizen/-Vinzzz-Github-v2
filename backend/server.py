@@ -2060,12 +2060,20 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
         else:
             continue
         
+        # Nomi degli atleti per questa squadra
+        match_team_id = match.get("team_id")
+        athlete_names = team_athletes.get(match_team_id, [])
+        athlete_names_str = ", ".join(athlete_names) if athlete_names else ""
+        
         result[day_key].append({
             "type": "match",
-            "team_id": match.get("team_id"),
+            "team_id": match_team_id,
             "team_name": match.get("team_name", ""),
+            "athlete_names": athlete_names_str,
             "time": match_date.strftime("%H:%M"),
             "venue": match.get("venue", ""),
+            "city": match.get("city", ""),
+            "address": match.get("address", ""),
             "opponent": match.get("opponent", ""),
             "home_away": match.get("home_away", "home"),
             "meeting_time": match.get("meeting_time"),
