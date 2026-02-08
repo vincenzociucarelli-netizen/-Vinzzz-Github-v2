@@ -1468,15 +1468,22 @@ export default function AthleteDetail() {
               <Ionicons name="arrow-back" size={24} color="#333" />
             </TouchableOpacity>
             <Text style={styles.certViewerTitle}>📋 Certificato Medico</Text>
-            {/* Print Button - Now works on both web and mobile */}
+            {/* Print and Share Buttons */}
             {certificate?.pdf_data && (
-              <TouchableOpacity 
-                style={styles.printBtn}
-                onPress={printCertificate}
-              >
-                <Ionicons name="print" size={22} color="#007AFF" />
-                <Text style={styles.printBtnText}>Stampa</Text>
-              </TouchableOpacity>
+              <View style={styles.certActionButtons}>
+                <TouchableOpacity 
+                  style={styles.printBtn}
+                  onPress={printCertificate}
+                >
+                  <Ionicons name="print" size={20} color="#007AFF" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.shareBtn}
+                  onPress={shareCertificate}
+                >
+                  <Ionicons name="share-outline" size={20} color="#34C759" />
+                </TouchableOpacity>
+              </View>
             )}
           </View>
           
