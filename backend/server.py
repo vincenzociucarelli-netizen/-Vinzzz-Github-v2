@@ -1928,8 +1928,8 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
             # Parse date
             date_str = row.get("date")
             if isinstance(date_str, str):
-                # Try different date formats
-                for fmt in ["%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M", "%Y-%m-%dT%H:%M"]:
+                # Try different date formats (including HH:MM:SS for federation files)
+                for fmt in ["%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S", "%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M", "%Y-%m-%dT%H:%M"]:
                     try:
                         match_date = datetime.strptime(date_str, fmt)
                         break
@@ -1947,7 +1947,9 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
                 date=match_date,
                 opponent=row["opponent"],
                 venue=row.get("venue", ""),
-                home_away=row.get("home_away", "home"),
+                address=row.get("address"),
+                city=row.get("city"),
+                home_away=row.get("home_away", "away"),  # Default to away for federation imports
                 meeting_time=row.get("meeting_time"),
                 notes=row.get("notes")
             )
