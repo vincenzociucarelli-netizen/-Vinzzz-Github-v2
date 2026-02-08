@@ -605,6 +605,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
+  athleteTeam: {
+    fontSize: 13,
+    color: '#007AFF',
+    marginTop: 2,
+    fontWeight: '500',
+  },
   athleteStatus: {
     fontSize: 12,
     color: '#666',
