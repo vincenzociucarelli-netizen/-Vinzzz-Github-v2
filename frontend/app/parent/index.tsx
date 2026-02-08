@@ -359,6 +359,9 @@ export default function ParentDashboard() {
                 </View>
                 <View style={styles.athleteInfo}>
                   <Text style={styles.athleteName}>{athlete.full_name}</Text>
+                  {athlete.team_id && teams[athlete.team_id] && (
+                    <Text style={styles.athleteTeam}>🏐 {teams[athlete.team_id]}</Text>
+                  )}
                   <Text style={[
                     styles.athleteStatus,
                     athlete.status === 'pending' && styles.athleteStatusPending
