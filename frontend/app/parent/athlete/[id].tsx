@@ -35,6 +35,10 @@ export default function AthleteDetail() {
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
+  const [teamSchedule, setTeamSchedule] = useState<{
+    training_sessions: any[];
+    match_day: any;
+  } | null>(null);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
   const [privacyConfirmed, setPrivacyConfirmed] = useState(false);
