@@ -1275,15 +1275,64 @@ export default function AthleteDetail() {
 
         {/* Payments Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Pagamenti</Text>
+          <Text style={styles.cardTitle}>💰 Pagamenti</Text>
+          
+          {/* Riepilogo Quota */}
+          {paymentSettings && (
+            <View style={styles.paymentSummary}>
+              <View style={styles.paymentSummaryRow}>
+                <Text style={styles.paymentSummaryLabel}>Quota Totale Annua:</Text>
+                <Text style={styles.paymentSummaryValue}>
+                  € {(
+                    (paymentSettings.installment_1_amount || 0) + 
+                    (paymentSettings.installment_2_amount || 0) + 
+                    (paymentSettings.installment_3_amount || 0)
+                  ).toFixed(2)}
+                </Text>
+              </View>
+              {athlete?.discount_amount && athlete.discount_amount > 0 && (
+                <View style={styles.paymentSummaryRow}>
+                  <Text style={[styles.paymentSummaryLabel, { color: '#34C759' }]}>Sconto Applicato:</Text>
+                  <Text style={[styles.paymentSummaryValue, { color: '#34C759' }]}>
+                    - € {athlete.discount_amount.toFixed(2)}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.paymentSummaryRow}>
+                <Text style={styles.paymentSummaryLabel}>Già Pagato:</Text>
+                <Text style={[styles.paymentSummaryValue, { color: '#34C759' }]}>
+                  € {payments.filter(p => p.paid).reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                </Text>
+              </View>
+              <View style={[styles.paymentSummaryRow, styles.paymentSummaryTotal]}>
+                <Text style={styles.paymentSummaryLabelBold}>Saldo Dovuto:</Text>
+                <Text style={[
+                  styles.paymentSummaryValueBold,
+                  { color: payments.filter(p => !p.paid).reduce((sum, p) => sum + p.amount, 0) > 0 ? '#FF3B30' : '#34C759' }
+                ]}>
+                  € {payments.filter(p => !p.paid).reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                </Text>
+              </View>
+            </View>
+          )}
+          
+          {/* Rate */}
+          <Text style={styles.sectionSubtitle}>📅 Rate</Text>
           {payments.length > 0 ? (
             payments.map((payment) => (
-              <View key={payment.id} style={styles.paymentRow}>
+              <View key={payment.id} style={[
+                styles.paymentRow,
+                !payment.paid && new Date(payment.due_date) < new Date() && styles.paymentOverdue
+              ]}>
                 <View style={styles.paymentInfo}>
                   <Text style={styles.paymentTitle}>Rata {payment.installment_number}</Text>
                   <Text style={styles.paymentAmount}>€ {payment.amount.toFixed(2)}</Text>
-                  <Text style={styles.paymentDue}>
+                  <Text style={[
+                    styles.paymentDue,
+                    !payment.paid && new Date(payment.due_date) < new Date() && { color: '#FF3B30', fontWeight: '600' }
+                  ]}>
                     Scadenza: {format(new Date(payment.due_date), 'dd/MM/yyyy', { locale: it })}
+                    {!payment.paid && new Date(payment.due_date) < new Date() && ' ⚠️ SCADUTA'}
                   </Text>
                 </View>
                 <Ionicons
@@ -1299,15 +1348,19 @@ export default function AthleteDetail() {
           
           {paymentSettings && (
             <View style={styles.paymentInstructions}>
-              <Text style={styles.instructionsTitle}>Modalità di pagamento:</Text>
-              <Text style={styles.instructionsText}>
-                <Text style={styles.bold}>Bonifico Bancario:</Text>
-                {'\n'}{paymentSettings.bank_info}
-              </Text>
-              <Text style={styles.instructionsText}>
-                <Text style={styles.bold}>PayPal:</Text>
-                {'\n'}{paymentSettings.paypal_email}
-              </Text>
+              <Text style={styles.instructionsTitle}>💳 Modalità di pagamento:</Text>
+              {paymentSettings.bank_info && (
+                <Text style={styles.instructionsText}>
+                  <Text style={styles.bold}>🏦 Bonifico Bancario:</Text>
+                  {'\n'}{paymentSettings.bank_info}
+                </Text>
+              )}
+              {paymentSettings.paypal_email && (
+                <Text style={styles.instructionsText}>
+                  <Text style={styles.bold}>📧 PayPal:</Text>
+                  {'\n'}{paymentSettings.paypal_email}
+                </Text>
+              )}
             </View>
           )}
         </View>
