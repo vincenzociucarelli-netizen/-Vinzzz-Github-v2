@@ -242,10 +242,12 @@ export default function AdminMatches() {
       }
 
       // Parse Excel
-      const workbook = XLSX.read(fileContent, { type: 'array' });
+      const workbook = XLSX.read(fileContent, { type: 'array', cellDates: true });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false, dateNF: 'dd/mm/yyyy hh:mm:ss' });
+      
+      console.log('Excel data parsed:', jsonData.slice(0, 2)); // Debug
 
       // Show preview modal
       setImportModalVisible(true);
@@ -253,6 +255,8 @@ export default function AdminMatches() {
       // Map Excel data to matches format
       // Supporto per formato Federazione: CAMPIONATONOME, DATA (con ora), SQUADRAOSPITENOME, IMPIANTO, IMPIANTO INDIRIZZO
       const matchesData = jsonData.map((row: any) => {
+        console.log('Processing row:', row); // Debug
+        
         // CAMPIONATONOME contiene l'identificativo della squadra (es. "U14 Maschile Campionato")
         const campionato = row['CAMPIONATONOME'] || row['Campionato'] || row['campionato'] || '';
         
@@ -262,6 +266,7 @@ export default function AdminMatches() {
         
         // Cerca la squadra che contiene l'identificativo del campionato nel nome
         const team = teams.find(t => {
+          if (!teamSearchKey) return false;
           const tName = t.name.toLowerCase();
           const searchLower = teamSearchKey.toLowerCase();
           // Match esatto o parziale
@@ -272,13 +277,20 @@ export default function AdminMatches() {
         
         // DATA - può contenere data e ora insieme (es. "15/06/2025 18:30:00")
         let dateTimeStr = row['DATA'] || row['Data'] || row['data'] || '';
+        
+        // Se è un oggetto Date (da Excel), convertilo in stringa
+        if (dateTimeStr instanceof Date) {
+          const d = dateTimeStr;
+          dateTimeStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        }
+        
         // Fallback al vecchio formato con colonne separate
         if (!dateTimeStr && (row['Data e Ora'] || row['Ora'])) {
           dateTimeStr = row['Data e Ora'] || `${row['Data'] || ''} ${row['Ora'] || '00:00'}`;
         }
+        
         // Rimuovi secondi se presenti (HH:MM:SS → HH:MM)
         if (dateTimeStr && typeof dateTimeStr === 'string') {
-          // Se contiene :SS alla fine, rimuovilo per la visualizzazione ma tienilo per il parsing
           dateTimeStr = dateTimeStr.trim();
         }
         
@@ -294,11 +306,11 @@ export default function AdminMatches() {
         // Estrai città dall'impianto se contiene un trattino o virgola (es. "Palestra XYZ - Perugia")
         let venue = impianto;
         let city = '';
-        if (impianto.includes(' - ')) {
+        if (impianto && impianto.includes(' - ')) {
           const parts = impianto.split(' - ');
           venue = parts[0].trim();
           city = parts.slice(1).join(' - ').trim();
-        } else if (impianto.includes(', ')) {
+        } else if (impianto && impianto.includes(', ')) {
           const parts = impianto.split(', ');
           venue = parts[0].trim();
           city = parts.slice(1).join(', ').trim();
@@ -312,7 +324,7 @@ export default function AdminMatches() {
           team_name: team?.name || teamSearchKey,
           date: dateTimeStr,
           opponent: opponent,
-          venue: venue,
+          venue: venue || '',
           address: indirizzo,
           city: city,
           home_away: homeAway,
