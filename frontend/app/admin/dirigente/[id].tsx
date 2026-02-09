@@ -76,6 +76,8 @@ export default function AdminDirigenteDetail() {
   
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
+  const [qualification, setQualification] = useState('');
+  const [availableQualifications, setAvailableQualifications] = useState<string[]>([]);
   // Bank details
   const [documentType, setDocumentType] = useState('');
   const [documentFront, setDocumentFront] = useState('');
