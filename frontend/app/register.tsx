@@ -552,6 +552,7 @@ const styles = StyleSheet.create({
   // Form
   form: {
     flex: 1,
+    width: '100%',
   },
   formTitle: {
     fontSize: 24,
