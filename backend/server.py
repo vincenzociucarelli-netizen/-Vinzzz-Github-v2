@@ -3707,7 +3707,7 @@ async def get_coach_teams(current_user = Depends(get_current_user)):
 
 @api_router.get("/coach/commitments")
 async def get_coach_commitments(current_user = Depends(get_current_user)):
-    """Get commitments (trainings + matches) for coach's teams"""
+    """Get commitments (trainings + matches) for coach's teams - 7 days"""
     if current_user["role"] != UserRole.COACH:
         raise HTTPException(status_code=403, detail="Solo coach può vedere gli impegni")
     
@@ -3715,7 +3715,7 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
     team_ids = current_user.get("assigned_teams", [])
     
     if not team_ids:
-        return {"today": [], "tomorrow": [], "day_after": []}
+        return {"today": [], "tomorrow": [], "day_after": [], "upcoming": []}
     
     # Get teams info (for training schedules)
     teams = await db.teams.find({"id": {"$in": team_ids}}).to_list(20)
@@ -3726,7 +3726,7 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow = today + timedelta(days=1)
     day_after = today + timedelta(days=2)
-    end_of_day_after = day_after + timedelta(days=1)
+    end_of_week = today + timedelta(days=7)  # Extended to 7 days
     
     # Day of week mapping (Italian)
     days_map = {
@@ -3738,7 +3738,7 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
         return days_map[date.weekday()]
     
     # Build commitments for each day
-    result = {"today": [], "tomorrow": [], "day_after": []}
+    result = {"today": [], "tomorrow": [], "day_after": [], "upcoming": []}
     
     for day_key, target_date in [("today", today), ("tomorrow", tomorrow), ("day_after", day_after)]:
         day_name = get_day_name(target_date)
@@ -3761,10 +3761,34 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
                         "title": f"Allenamento {team_name}"
                     })
     
-    # Get matches for these 3 days
+    # Check trainings for upcoming days (days 4-7)
+    for day_offset in range(3, 7):
+        target_date = today + timedelta(days=day_offset)
+        day_name = get_day_name(target_date)
+        
+        for team_id in team_ids:
+            team = teams_dict.get(team_id, {})
+            team_name = team.get("name", "Squadra")
+            training_sessions = team.get("training_sessions", [])
+            
+            for session in training_sessions:
+                if session.get("day") == day_name:
+                    result["upcoming"].append({
+                        "type": "training",
+                        "team_id": team_id,
+                        "team_name": team_name,
+                        "date": target_date.strftime("%d/%m"),
+                        "day_name": day_name,
+                        "time_start": session.get("timeStart", ""),
+                        "time_end": session.get("timeEnd", ""),
+                        "venue": session.get("venue", ""),
+                        "title": f"Allenamento {team_name}"
+                    })
+    
+    # Get matches for 7 days
     matches = await db.matches.find({
         "team_id": {"$in": team_ids},
-        "date": {"$gte": today, "$lt": end_of_day_after}
+        "date": {"$gte": today, "$lt": end_of_week}
     }).to_list(50)
     
     for match in matches:
@@ -3776,12 +3800,14 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
             day_key = "today"
         elif tomorrow <= match_date < day_after:
             day_key = "tomorrow"
-        elif day_after <= match_date < end_of_day_after:
+        elif day_after <= match_date < (day_after + timedelta(days=1)):
             day_key = "day_after"
+        elif match_date < end_of_week:
+            day_key = "upcoming"
         else:
             continue
         
-        result[day_key].append({
+        match_item = {
             "type": "match",
             "team_id": match.get("team_id"),
             "team_name": match.get("team_name", ""),
@@ -3794,11 +3820,20 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
             "meeting_time": match.get("meeting_time"),
             "notes": match.get("notes"),
             "title": f"Gara {match.get('team_name', '')} vs {match.get('opponent', '')}"
-        })
+        }
+        
+        if day_key == "upcoming":
+            match_item["date"] = match_date.strftime("%d/%m")
+            match_item["day_name"] = get_day_name(match_date)
+        
+        result[day_key].append(match_item)
     
     # Sort by time
-    for day_key in result:
+    for day_key in ["today", "tomorrow", "day_after"]:
         result[day_key].sort(key=lambda x: x.get("time_start", x.get("time", "00:00")))
+    
+    # Sort upcoming by date and time
+    result["upcoming"].sort(key=lambda x: (x.get("date", ""), x.get("time_start", x.get("time", "00:00"))))
     
     return result
 
