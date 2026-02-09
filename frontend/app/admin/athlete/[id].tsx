@@ -338,6 +338,7 @@ export default function AdminAthleteDetail() {
   };
 
   const handleSaveData = async () => {
+    setSaving(true);
     try {
       // Convert date_of_birth from dd/mm/yyyy to ISO
       let dateOfBirthISO = null;
@@ -371,14 +372,39 @@ export default function AdminAthleteDetail() {
         province: editData.province || null,
         discount_amount: parseFloat(editData.discount_amount) || 0,
         discount_note: editData.discount_note || null,
+        // Technical data
+        athlete_role: editData.athlete_role || null,
+        athlete_height: editData.athlete_height ? parseInt(editData.athlete_height) : null,
+        athlete_weight: editData.athlete_weight ? parseInt(editData.athlete_weight) : null,
+        // Team change
+        team_id: editData.team_id || athlete?.team_id || null,
       };
 
       await api.patch(`/athletes/${id}`, updatePayload);
+      
+      // Save photo separately if it was changed (to avoid document too large error)
+      if (athletePhoto && athletePhoto !== athlete?.athlete_photo) {
+        try {
+          await api.patch(`/athletes/${id}`, {
+            athlete_photo: athletePhoto,
+            athlete_photo_artistic: athletePhotoArtistic || athletePhoto,
+          });
+        } catch (photoError: any) {
+          console.error('Photo save error:', photoError);
+          // If photo is too large, try to compress or skip
+          if (photoError.response?.status === 413 || photoError.message?.includes('too large')) {
+            showAlert('Attenzione', 'Foto troppo grande. I dati sono stati salvati ma la foto potrebbe non essere stata aggiornata.');
+          }
+        }
+      }
+      
       showAlert('Successo', 'Dati salvati con successo');
       setEditing(false);
       await loadData();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
+    } finally {
+      setSaving(false);
     }
   };
 
