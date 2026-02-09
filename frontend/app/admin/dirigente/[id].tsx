@@ -344,28 +344,17 @@ export default function AdminDirigenteDetail() {
           {/* Contact Buttons */}
           <View style={styles.contactButtons}>
             {dirigente.phone && (
-              <>
-                <TouchableOpacity
-                  style={styles.whatsappBtn}
-                  onPress={() => {
-                    const phone = dirigente.phone?.replace(/\D/g, '');
-                    const phoneWithCountry = phone?.startsWith('39') ? phone : `39${phone}`;
-                    Linking.openURL(`https://wa.me/${phoneWithCountry}`);
-                  }}
-                >
-                  <Ionicons name="logo-whatsapp" size={20} color="#fff" />
-                  <Text style={styles.whatsappBtnText}>WhatsApp</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.callBtn}
-                  onPress={() => {
-                    Linking.openURL(`tel:${dirigente.phone}`);
-                  }}
-                >
-                  <Ionicons name="call" size={20} color="#fff" />
-                  <Text style={styles.callBtnText}>Chiama</Text>
-                </TouchableOpacity>
-              </>
+              <TouchableOpacity
+                style={styles.whatsappBtn}
+                onPress={() => {
+                  const phone = dirigente.phone?.replace(/\D/g, '');
+                  const phoneWithCountry = phone?.startsWith('39') ? phone : `39${phone}`;
+                  Linking.openURL(`https://wa.me/${phoneWithCountry}`);
+                }}
+              >
+                <Ionicons name="logo-whatsapp" size={20} color="#fff" />
+                <Text style={styles.whatsappBtnText}>WhatsApp</Text>
+              </TouchableOpacity>
             )}
           </View>
         </View>
