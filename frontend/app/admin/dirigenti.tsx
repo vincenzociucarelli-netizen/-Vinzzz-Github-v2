@@ -28,6 +28,7 @@ interface Dirigente {
   is_scorekeeper?: boolean;  // Segnapunti
   profile_photo?: string;
   profile_photo_artistic?: string;
+  qualification?: string;  // Carica nella società
 }
 
 export default function DirigentiScreen() {
