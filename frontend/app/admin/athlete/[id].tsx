@@ -221,6 +221,14 @@ export default function AdminAthleteDetail() {
         console.log('Could not load settings');
       }
       
+      // Load all teams for team change dropdown
+      try {
+        const teamsRes = await api.get('/teams');
+        setAllTeams(teamsRes.data);
+      } catch (e) {
+        console.log('Could not load teams');
+      }
+      
       // Populate edit data
       setEditData({
         federal_code: athleteData.federal_code || '',
