@@ -878,38 +878,31 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   // Qualification selector styles
-  qualificationSelector: {
+  qualificationContainer: {
     gap: 8,
   },
-  qualificationOption: {
+  selectBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 8,
+    justifyContent: 'space-between',
     backgroundColor: '#f9f9f9',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    gap: 10,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
-  qualificationOptionSelected: {
-    backgroundColor: '#F3E5F5',
-    borderColor: '#8E44AD',
-  },
-  qualificationOptionText: {
+  selectBoxText: {
     fontSize: 15,
     color: '#333',
   },
-  qualificationOptionTextSelected: {
-    color: '#8E44AD',
-    fontWeight: '600',
+  selectBoxPlaceholder: {
+    color: '#999',
   },
   clearQualificationBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 8,
-    paddingVertical: 8,
   },
   clearQualificationText: {
     fontSize: 13,
@@ -928,21 +921,62 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#F57C00',
   },
-  currentQualificationBox: {
+  // Qualification Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  qualificationModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+  },
+  qualificationModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  qualificationModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  qualificationModalList: {
+    padding: 8,
+  },
+  qualificationModalItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-    padding: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    marginTop: 12,
-    gap: 8,
+    gap: 12,
   },
-  currentQualificationText: {
-    fontSize: 13,
-    color: '#2E7D32',
+  qualificationModalItemSelected: {
+    backgroundColor: '#F3E5F5',
   },
-  currentQualificationValue: {
-    fontWeight: 'bold',
+  qualificationModalItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  qualificationModalItemTextSelected: {
+    color: '#8E44AD',
+    fontWeight: '600',
+  },
+  qualificationModalCancelBtn: {
+    padding: 16,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  qualificationModalCancelText: {
+    fontSize: 16,
+    color: '#666',
   },
   card: { 
     backgroundColor: '#fff', 
