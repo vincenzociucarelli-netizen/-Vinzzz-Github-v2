@@ -1810,6 +1810,34 @@ async def update_user_bank_details(user_id: str, data: dict, current_user = Depe
     
     return {"message": "Dati bancari aggiornati con successo"}
 
+@api_router.patch("/users/{user_id}")
+async def update_user(user_id: str, data: dict, current_user = Depends(get_current_user)):
+    """Update user data (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare gli utenti")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    update_data = {}
+    
+    # Qualification for dirigenti
+    if "qualification" in data:
+        update_data["qualification"] = data["qualification"]
+    
+    # Other fields that admin can update
+    if "monthly_compensation" in data:
+        update_data["monthly_compensation"] = data["monthly_compensation"]
+    
+    if update_data:
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": update_data}
+        )
+    
+    return {"message": "Utente aggiornato con successo"}
+
 # ==================== MATCHES/GARE ENDPOINTS ====================
 
 @api_router.get("/matches")
