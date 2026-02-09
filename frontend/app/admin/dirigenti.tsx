@@ -220,11 +220,18 @@ export default function DirigentiScreen() {
       onLongPress={() => openActionModal(item)}
     >
       <View style={styles.userAvatar}>
-        <Ionicons 
-          name={item.role === 'admin' ? 'shield-checkmark' : 'briefcase'} 
-          size={24} 
-          color={item.role === 'admin' ? '#007AFF' : '#8E44AD'} 
-        />
+        {item.profile_photo_artistic || item.profile_photo ? (
+          <Image
+            source={{ uri: `data:image/jpeg;base64,${item.profile_photo_artistic || item.profile_photo}` }}
+            style={styles.userAvatarImage}
+          />
+        ) : (
+          <Ionicons 
+            name={item.role === 'admin' ? 'shield-checkmark' : 'briefcase'} 
+            size={24} 
+            color={item.role === 'admin' ? '#007AFF' : '#8E44AD'} 
+          />
+        )}
       </View>
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{item.full_name}</Text>
