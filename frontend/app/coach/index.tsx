@@ -47,7 +47,8 @@ export default function CoachScreen() {
     today: any[];
     tomorrow: any[];
     day_after: any[];
-  }>({ today: [], tomorrow: [], day_after: [] });
+    upcoming: any[];
+  }>({ today: [], tomorrow: [], day_after: [], upcoming: [] });
   
   // Web scanner states
   const [webScannerActive, setWebScannerActive] = useState(false);
