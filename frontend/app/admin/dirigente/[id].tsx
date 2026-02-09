@@ -845,6 +845,73 @@ const styles = StyleSheet.create({
     color: '#8E44AD',
     marginTop: 4,
   },
+  // Qualification selector styles
+  qualificationSelector: {
+    gap: 8,
+  },
+  qualificationOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    gap: 10,
+  },
+  qualificationOptionSelected: {
+    backgroundColor: '#F3E5F5',
+    borderColor: '#8E44AD',
+  },
+  qualificationOptionText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  qualificationOptionTextSelected: {
+    color: '#8E44AD',
+    fontWeight: '600',
+  },
+  clearQualificationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 8,
+  },
+  clearQualificationText: {
+    fontSize: 13,
+    color: '#FF3B30',
+  },
+  noQualificationsBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    padding: 12,
+    borderRadius: 8,
+    gap: 10,
+  },
+  noQualificationsText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#F57C00',
+  },
+  currentQualificationBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 12,
+    gap: 8,
+  },
+  currentQualificationText: {
+    fontSize: 13,
+    color: '#2E7D32',
+  },
+  currentQualificationValue: {
+    fontWeight: 'bold',
+  },
   card: { 
     backgroundColor: '#fff', 
     margin: 16, 
