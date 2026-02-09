@@ -751,7 +751,7 @@ export default function AdminAthleteDetail() {
                           mediaTypes: ImagePicker.MediaTypeOptions.Images,
                           allowsEditing: true,
                           aspect: [1, 1],
-                          quality: 0.7,
+                          quality: 0.3, // Reduced quality to avoid "Document too large" error
                           base64: true,
                         });
 
@@ -767,13 +767,28 @@ export default function AdminAthleteDetail() {
                             
                             if (response.data.success && response.data.artistic_photo) {
                               setAthletePhotoArtistic(response.data.artistic_photo);
-                              showAlert('Successo', 'Foto trasformata con successo!');
+                              showAlert('Successo', 'Foto salvata con successo!');
+                            } else {
+                              // Photo saved without transformation
+                              showAlert('Successo', 'Foto salvata!');
                             }
-                          } catch (err) {
-                            console.error('Transform error:', err);
-                            setAthletePhotoArtistic(photo);
+                          } catch (err: any) {
+                            console.error('Transform/save error:', err);
+                            // Try saving photo directly without transformation
+                            try {
+                              await api.patch(`/athletes/${id}`, {
+                                athlete_photo: photo,
+                                athlete_photo_artistic: photo
+                              });
+                              showAlert('Successo', 'Foto salvata!');
+                            } catch (saveErr) {
+                              console.error('Direct save error:', saveErr);
+                              showAlert('Errore', 'Foto troppo grande. Prova con una foto più piccola.');
+                            }
                           } finally {
                             setTransformingPhoto(false);
+                            // Reload data to show saved photo
+                            await loadData();
                           }
                         }
                       } catch (err) {
