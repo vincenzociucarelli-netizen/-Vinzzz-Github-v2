@@ -1762,6 +1762,11 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         # Fiscal
         "fiscal_code": user.get("fiscal_code"),
         "coach_license_number": user.get("coach_license_number"),
+        # Qualification (for dirigenti)
+        "qualification": user.get("qualification"),
+        # Photo
+        "profile_photo": user.get("profile_photo"),
+        "profile_photo_artistic": user.get("profile_photo_artistic"),
         # Compensation
         "monthly_compensation": user.get("monthly_compensation", 0),
         "compensation_accepted": user.get("compensation_accepted", False),
