@@ -292,6 +292,42 @@ export default function AdminDirigenteDetail() {
           </Text>
         </View>
 
+        {/* Profile Photo */}
+        <View style={styles.photoSection}>
+          <TouchableOpacity 
+            style={styles.photoContainer}
+            onPress={() => {
+              const photo = dirigente.profile_photo_artistic || dirigente.profile_photo;
+              if (photo) {
+                setViewingImage(photo);
+                setViewingImageTitle('Foto Profilo');
+                setImageViewerVisible(true);
+              }
+            }}
+            disabled={!dirigente.profile_photo && !dirigente.profile_photo_artistic}
+          >
+            {dirigente.profile_photo_artistic || dirigente.profile_photo ? (
+              <Image
+                source={{ uri: `data:image/jpeg;base64,${dirigente.profile_photo_artistic || dirigente.profile_photo}` }}
+                style={styles.profilePhoto}
+              />
+            ) : (
+              <View style={styles.photoPlaceholder}>
+                <Ionicons name="person" size={60} color="#ccc" />
+              </View>
+            )}
+            {(dirigente.profile_photo || dirigente.profile_photo_artistic) && (
+              <View style={styles.photoZoomHint}>
+                <Ionicons name="expand" size={16} color="#fff" />
+              </View>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.photoName}>{dirigente.full_name}</Text>
+          <Text style={styles.photoRole}>
+            {dirigente.role === 'admin' ? '👑 Amministratore' : '👔 Dirigente'}
+          </Text>
+        </View>
+
         {/* €5000 Alert */}
         {hasExceeded5000 && (
           <View style={styles.alertBanner}>
