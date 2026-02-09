@@ -249,6 +249,12 @@ export default function AdminAthleteDetail() {
         province: athleteData.province || '',
         discount_amount: athleteData.discount_amount?.toString() || '0',
         discount_note: athleteData.discount_note || '',
+        // Technical data
+        athlete_role: athleteData.athlete_role || '',
+        athlete_height: athleteData.athlete_height?.toString() || '',
+        athlete_weight: athleteData.athlete_weight?.toString() || '',
+        // Team
+        team_id: athleteData.team_id || '',
       });
 
       // Load team info
