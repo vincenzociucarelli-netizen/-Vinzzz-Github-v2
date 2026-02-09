@@ -170,10 +170,10 @@ export default function AdminDashboard() {
     setRefreshing(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (Platform.OS === 'web') {
       if (window.confirm('Sei sicuro di voler uscire?')) {
-        logout();
+        await logout();
         router.replace('/login');
       }
     } else {
@@ -184,12 +184,20 @@ export default function AdminDashboard() {
           { text: 'Annulla', style: 'cancel' },
           {
             text: 'Esci',
+            style: 'destructive',
             onPress: async () => {
-              await logout();
-              router.replace('/login');
+              try {
+                await logout();
+                router.replace('/login');
+              } catch (error) {
+                console.error('Logout error:', error);
+                // Force logout anyway
+                router.replace('/login');
+              }
             },
           },
-        ]
+        ],
+        { cancelable: true }
       );
     }
   };
