@@ -1,70 +1,84 @@
 <analysis>
 
-**original_problem_statement**: The user's primary goal for this session was to enhance the application with several new features and bug fixes, mainly focusing on the Admin and Parent roles.
+**original_problem_statement**: The user, an admin for a volleyball club, has a wide range of feature requests and bug fixes to improve the application's usability for Admins, Coaches, and Parents. Key initial requests included enhancing the Excel match import with home/away logic, fixing various crashes, and overhauling the UI for parents.
 
-The initial task from the previous session was to add the athlete's name to the parent's Impegni (schedule). However, the scope expanded significantly to include:
-- **Enhanced Excel Import for Matches:** The user wanted to import a schedule from a federation-provided Excel file. This required updating the import logic to match specific column names (, , , , , ).
-- **Fixes for Match Management:** The user reported crashes during manual match creation and issues with the Excel import not displaying the imported games.
-- **Parent-Facing UI/UX Overhaul:**
-    - **Athlete Card:** Add the team name, and use specific colors (green for 'active', orange for 'in prova').
-    - **Athlete Profile:** Show the team name (in red), fix a bug where the tax-paying parent's details weren't saving, and add a comprehensive view for payments and the team's schedule.
-    - **Payments Section:** This was a major focus. The user requested a detailed breakdown including Quota Stagionale (Seasonal Fee), Sconto applicato per (Discount applied for), and a list of all installments (Rata Iscrizione, 1ª Rata, 2ª Rata) showing their status (paid, to be paid, overdue). This required multiple iterations to get the labels, logic, and display correct.
-    - **Share Certificate:** Fix a bug preventing parents from sharing the medical certificate.
-- **Coach Dashboard:** Add the Impegni (schedule) section, similar to the parent's view but without athlete names.
+Throughout the session, the user's focus shifted to iterative improvements and bug fixes for the Admin role, including:
+- Fixing photo saving and adding technical data fields for athletes.
+- Allowing admins to change an athlete's team.
+- Filtering past events from calendars.
+- Ensuring profile photos are visible for all user roles (Dirigenti, Coach).
+- Extending the coach's schedule view.
+- Fixing UI/UX issues like non-working buttons, misaligned forms, and adding functionality like printing certificates.
+- Adding the ability to assign a carica (qualification/role) to a Dirigente.
+- Adding a WhatsApp contact button to user profiles.
+
+A recurring theme was the user's confusion and frustration with the difference between the live preview environment (with test data) and the deployed Expo Go application (with production data), which required significant explanation of the standard development-to-production workflow.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application now features a significantly improved Matches management system for Admins, with an Excel import function tailored to the local federation's file format. The Parent-facing side of the app has been massively enhanced: the athlete's profile page now includes a detailed payment section with a full breakdown of fees, installments, and statuses, as well as the team's fixed schedule (practices and home games). The parent dashboard's athlete cards have been improved with status colors and team names. The Coach dashboard now also includes a schedule of upcoming events. Numerous bugs related to manual data entry, data saving, and file sharing have been fixed.
+The application has received a significant number of enhancements and bug fixes, primarily for the Admin role. The admin can now:
+- Edit an athlete's technical data (role, height, weight) and change their team.
+- Assign a carica (qualification) to a Dirigente via a dropdown selector, and this is visible on the Dirigente's list card.
+- View profile photos for coaches and dirigenti in their respective lists and detail pages, with an option to view them enlarged.
+- Print/download/share an athlete's medical certificate.
+- The Admin's match calendar now correctly filters out past games.
+- The Coach's dashboard now shows a 7-day schedule (instead of 3) with the day of the week displayed, and correctly includes matches.
+- Several bugs have been fixed, including the match deletion button, mobile Excel import, a crash on the athlete edit page, and the admin logout function.
+- A comprehensive User Manual and an App Presentation document have been created and are available in the  directory.
 
 **Last working item**:
-    - Last item agent was working: The user requested a 3-part enhancement for the Admin's Excel match import feature on the  page.
-        1.  Highlight the date and time of matches in bold and red. (Partially done, style was added but needs verification).
-        2.  Correctly identify home games, as currently all are being marked as away.
-        3.  Implement a modal that appears during the import process, asking the Admin to define the criteria for a home game (e.g., by specifying the home team's name or the home gym's name).
+    - Last item agent was working: Add a WhatsApp contact button to the profiles of Dirigente and Coach when viewed by an Admin. The user specifically requested a button for messaging, not calling.
     - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? both. The frontend needs a new modal and logic in . The backend's  endpoint may need adjustments to receive and process the home criteria. Frontend testing agent should be used to verify the new modal flow.
+    - Which testing method agent to use? screenshot tool. The next agent should verify the button appears correctly on the Dirigente detail page () and Coach detail page () and that only the WhatsApp button is present, not the Chiama (Call) button.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Enhance Excel Match Import with Home Game Logic (P0)
-  - Issue 2: Excel Import doesn't show imported games (P1, VERIFICATION PENDING)
-  - Issue 3: Expo Go Preview QR Code is Broken (P1, RECURRING)
-  - Issue 4: AI Photo Transformation to Pencil Sketch is not satisfactory (P2)
-  - Issue 5: QR Code Scanner for Registration is broken (P2)
-  - Issue 6: Photo Experience on Coach Profile is incomplete (P2)
+  - Issue 1: Add WhatsApp contact button to Dirigente and Coach profiles (P0)
+  - Issue 2: Athlete photo saving and visibility of technical data after saving (P1, USER VERIFICATION PENDING)
+  - Issue 3: Excel Import on mobile fails due to Base64 encoding (P1, USER VERIFICATION PENDING)
+  - Issue 4: Expo Go Preview QR Code is Broken (P2, RECURRING)
 
   **Issues Detail**:
-  - **Issue 1: Enhance Excel Match Import with Home Game Logic**
-     - **Description**: The user's latest request. The current Excel import marks all games as away. The agent needs to implement a modal that allows the admin to specify which SquadraCasaNome or Impianto signifies a home game during the import process. The date/time should also be red and bold.
-     - **Attempted fixes**: The agent added a style to make the date/time red and bold in . The core logic for the modal and home/away detection has not been started.
+  - **Issue 1: Add WhatsApp contact button to Dirigente and Coach profiles**
+     - **Attempted fixes**: The agent added a Contatti section with both Chiama (Call) and WhatsApp buttons. The user clarified they only wanted the WhatsApp button. The agent then removed the Chiama button from both  and  and added the necessary styles.
      - **Next debug checklist**:
-        1.  In , create a new  component.
-        2.  Trigger this modal after the Excel file is parsed but before the data is sent to the backend.
-        3.  The modal should allow the admin to input a string (either a team name or a gym name) to identify home games.
-        4.  Modify the  function to use this input to set the  flag for each match before sending the payload to .
-        5.  Verify the red/bold style for the date and time is applied correctly in the match list.
-     - **Why fix this issue and what will be achieved with the fix?**: This is a direct user request to make the bulk import feature fully functional and accurate.
+        1. Restart the frontend (expo: ERROR (not running)
+expo: ERROR (abnormal termination)).
+        2. Take a screenshot of an admin viewing a coach's profile () to verify only the WhatsApp button is visible.
+        3. Take a screenshot of an admin viewing a dirigente's profile () for the same verification.
+        4. Confirm with the user that this implementation is correct. The  logic to open  is already in place.
+     - **Why fix this issue and what will be achieved with the fix?**: Direct user request to facilitate quick communication with staff.
      - **Status**:  IN PROGRESS
      - **Is recurring issue?**: N
      - **Should Test frontend/backend/both after fix?**: Frontend
      - **Blocked on other issue**: None
 
-  - **Issue 2: Excel Import doesn't show imported games**
-     - **Description**: The user reported that after a successful import message, the games did not appear in the list. This appears to have been an intermittent issue.
-     - **Attempted fixes**: The agent added extensive logging to both the frontend () and backend ( in ) to trace the data flow and identify parsing errors, especially with dates and team name matching. The column names for the import were also corrected based on user feedback. The user later confirmed the import worked, but this issue may resurface.
-     - **Next debug checklist**: If the issue reappears, check the backend logs for the  messages to see the exact payload being received and if any errors occur during date parsing or database insertion.
-     - **Why fix this issue and what will be achieved with the fix?**: Core functionality for admins.
+  - **Issue 2: Athlete photo saving and visibility of technical data after saving**
+     - **Description**: User reported that the athlete's photo does not save and the newly saved technical data (role, height) is not visible after saving.
+     - **Attempted fixes**: The agent identified that the backend  endpoint was not processing the new technical fields and added them. To address potential photo size issues ( error), the agent also reduced the image quality on the frontend () before upload.
+     - **Next debug checklist**: This requires user testing on the deployed application with real data. The user needs to deploy the latest changes and re-test the entire flow: upload a photo, edit technical data, save, and then reload the page to check if the photo and data persist.
+     - **Why fix this issue and what will be achieved with the fix?**: Core functionality for athlete management.
      - **Status**:  USER VERIFICATION PENDING
      - **Is recurring issue?**: Y
      - **Should Test frontend/backend/both after fix?**: Both
      - **Blocked on other issue**: None
 
-  - **Issue 3: Expo Go Preview QR Code is Broken**
-     - **Description**: A critical, recurring environment issue from the previous session. The user cannot use the Expo Go QR code preview. This blocks all mobile testing. The workaround is to test on the web preview and request new deploys.
-     - **Attempted fixes**: None in this session. The previous agent identified it as a problem with .
-     - **Next debug checklist**: The  should be called to diagnose persistent  or 
+  - **Issue 3: Excel Import on mobile fails due to Base64 encoding**
+     - **Description**: The user reported that the Excel import, which works in the web preview, fails on the deployed Expo Go app with a Base64 encoding error.
+     - **Attempted fixes**: The agent replaced  with the hardcoded string  in .
+     - **Next debug checklist**: This fix requires a new deployment to be tested by the user on their mobile device.
+     - **Why fix this issue and what will be achieved with the fix?**: Fixes a critical admin feature on the mobile platform.
+     - **Status**:  USER VERIFICATION PENDING
+     - **Is recurring issue?**: N
+     - **Should Test frontend/backend/both after fix?**: Frontend
+     - **Blocked on other issue**: None
+
+  - **Issue 4: Expo Go Preview QR Code is Broken**
+     - **Description**: A recurring environment issue where the user cannot use the Expo Go QR code preview, blocking mobile testing. The workaround is testing on the web preview and then deploying.
+     - **Attempted fixes**: None in this session.
+     - **Next debug checklist**: Call the  to diagnose persistent  or 
   Usage: expo [command] [options]
 
   Options:
@@ -133,50 +147,48 @@ The application now features a significantly improved Matches management system 
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[21:36:05]   Run a command with --help for more info 💡
-[21:36:05]     $ expo start --help
-[21:36:05] process conflicts.
-     - **Why fix this issue and what will be achieved with the fix?**: This is a major blocker for an efficient development cycle. Fixing it would allow instant mobile testing.
-     - **Status**:  IN PROGRESS
+[22:09:33]   Run a command with --help for more info 💡
+[22:09:33]     $ expo start --help
+[22:09:33] process conflicts.
+     - **Why fix this issue and what will be achieved with the fix?**: A major blocker to an efficient development cycle.
+     - **Status**:  NOT STARTED
      - **Is recurring issue?**: Y
-     - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on other issue**: No. This is a blocking issue.
-
-  - **Issue 4, 5, 6**: These are older issues from the previous fork that were not addressed in this session. See Earlier issues found/mentioned but not fixed section for details.
+     - **Should Test frontend/backend/both after fix?**: NA (Environment issue)
+     - **Blocked on other issue**: No.
 
 **In progress Task List**:
-- **Task 1: Complete the Impegni (Schedule) Feature** (P0)
-    - **Description**: This task was the initial goal but was expanded. The final remaining piece is adding the child's name to the schedule items.
-    - **Where to resume**: The agent already implemented this. It was confirmed as stupendo!! by the user. The subsequent request was to make the names bold and colored, which was also completed. This task can be considered finished.
-    - **Status**: FINISHED
+- None. All work was broken down into smaller issues/features.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - (P1) Prepare the application for publication on the Google Play Store. The user has explicitly mentioned this as a major goal in the past. This involves configuring , generating icons, and creating a production build.
+    - (P1) Prepare the application for publication on the Google Play Store. The user has expressed a desire to start this process.
 - **Future Tasks**:
     - (P2) Implement the Professional Athletes with Compensation feature.
     - (P3) Stripe Integration for payments.
 
 **Completed work in this session**
-- **Feature: Enhanced Excel Match Import (, )**:
-    - Updated parsing logic to use exact column names provided by the user (, , etc.).
-    - Added an  field to the  model and throughout the CRUD and import flow.
-    - Improved date parsing to handle various formats.
-- **Feature: Parent Payment & Schedule View ()**:
-    - Reworked the payment section to show a detailed summary: Quota Stagionale, Sconto applicato per, Residuo dovuto.
-    - Created a dynamic list of installments (Rata Iscrizione, 1ª Rata, 2ª Rata) that merges data from the database with the team's default settings, showing all expected payments.
-    - Implemented logic to correctly label installments and mark them as SCADUTA (Overdue) if not paid on time.
-    - Added a new section to display the athlete's team's fixed schedule (training days/times and home match day/time).
-- **Feature: Impegni (Schedule) Enhancements**:
-    - Added the child's first name to each event in the parent's Impegni list ().
-    - Styled the child's name to be bold and assigned a unique, consistent color per child.
-    - Added the entire Impegni section to the Coach dashboard ( and a new  endpoint).
-- **UI/UX Improvements & Bug Fixes**:
-    - **Parent Dashboard ()**: Athlete cards are now colored based on status (green for active, orange for trial) and display the team name.
-    - **Manual Match Creation ()**: Fixed a  caused by a missing  import in . Added placeholders (, ) and auto-formatting for date/time inputs.
-    - **Tax Payer Info (, )**: Fixed a bug where the tax-paying parent's first and last name were not being saved to the database.
-    - **Share Certificate ()**: Fixed a bug with base64 string manipulation that was preventing parents from sharing the medical certificate file.
-    - **Backend Models ()**: Added  to the  model. Made  optional in the  model to prevent crashes.
+- **Feature: Admin-Athlete Management (, )**:
+  - Added editable fields for an athlete's technical data (Role, Height, Weight, Characteristics).
+  - Added a dropdown selector to change an athlete's team.
+  - Fixed the backend  endpoint to correctly save this new data.
+- **Feature: Dirigente Qualification (, , )**:
+  - Implemented functionality for an admin to assign a carica (qualification) to a Dirigente from a list defined in the settings.
+  - The UI was updated from a long list to a more compact selectbox/modal.
+  - The assigned qualification is now visible on the Dirigente's list card.
+  - Created a new generic  endpoint and fixed the  endpoint to support this.
+- **Feature: Enhanced Coach Dashboard (, )**:
+  - Extended the schedule view from 3 to 7 days.
+  - Added the day of the week next to OGGI, DOMANI, etc.
+  - Fixed a bug where matches were not appearing in the schedule.
+- **Feature: Photo Visibility (, , , )**:
+  - Added profile photos to the list views for both Coaches and Dirigenti.
+  - Added a clickable, zoomable profile photo to the detail pages for both Coaches and Dirigenti.
+- **Bug Fix: Match Deletion ()**: Fixed non-working delete button by adding  to prevent nested  conflicts.
+- **Bug Fix: Filter Past Matches ()**: The Admin's match calendar now hides games that occurred before the current day.
+- **Bug Fix: Admin Logout ()**: Improved the logout function to be more reliable.
+- **Bug Fix: Registration Form Alignment ()**: Fixed CSS to correctly center the multi-step registration forms.
+- **Bug Fix: Certificate Sharing/Printing ()**: Corrected the modal for viewing an athlete's certificate, removing a duplicate Print button and adding Share and Download buttons that work on web and mobile.
+- **Documentation: Created  and **: Generated detailed user manual and promotional material as requested by the user.
 
 **Earlier issues found/mentioned but not fixed**
    - **Issue 1: AI Photo Transformation to Pencil Sketch**
@@ -188,7 +200,7 @@ The application now features a significantly improved Matches management system 
      - Should Test frontend/backend/both after fix: Frontend
      - Is recurring issue?: N
    - **Issue 3: Photo Zoom/Rotate on Coach Profile**
-     - Why to solve this issue and what will be achieved with this?: Fulfills a user request for a better photo viewing experience.
+     - Why to solve this issue and what will be achieved with this?: Fulfills a user request for a better photo viewing experience on their own profile.
      - Should Test frontend/backend/both after fix: Frontend
      - Is recurring issue?: Y
 
@@ -198,65 +210,66 @@ The application now features a significantly improved Matches management system 
   - **Status**: NOT STARTED (in this session).
 
 **Code Architecture**
-description
+
 
 **Key Technical Concepts**
-- **Full-Stack Feature Development**: Implemented Coach Engagements feature from backend to frontend.
-- **Complex UI State Management**: The parent's payment section in  involves merging data from multiple sources (athlete's payments, team's payment settings) and calculating derived state (totals, overdue status) on the client side.
-- **Dynamic Styling**: Used conditional styles extensively for payment statuses (paid/overdue), athlete status (active/trial), and coloring children's names.
-- **Data Parsing & Manipulation**: Advanced Excel parsing on the frontend () and robust date/string parsing on both frontend and backend.
-- **Iterative Refinement**: The agent performed multiple, rapid iterations on the Parent's payment UI based on user feedback and screenshots.
-- **Defensive Programming**: Made model fields optional ( in ) to prevent crashes from incomplete form data. Added fallback logic in the frontend to handle missing data from the DB.
+- **Full-Stack Debugging**: Traced issues from frontend UI (e.g., data not showing) to backend API responses (e.g.,  endpoint missing fields) and fixed them at the source.
+- **Iterative UI/UX Refinement**: Acted on user feedback to change UI elements, such as replacing a long list of qualifications with a compact selectbox modal.
+- **State Management**: Added and corrected the use of React state variables () to fix crashes (e.g., ) and manage new UI components (modals, editable data).
+- **API Endpoint Modification**: Created a new generic  endpoint and modified several existing , , and  endpoints to add missing data fields or fix bugs.
+- **Cross-Platform Compatibility**: Addressed web-specific vs. mobile-specific issues, such as adding a Download button for web certificate viewing and fixing a  issue for mobile Excel imports.
+- **Event Handling**: Solved a UI bug by using  to prevent event bubbling in nested touchable components.
 
 **key DB schema**
-  - **users (athletes)**: Added , , .
-  - **matches**: Added .
-  - **payments**: Added  during creation to clarify the installment type.
+  - **users**: The model was updated to include and save , , , and . The  field is now consistently returned by API endpoints.
 
 **changes in tech stack**
-  - No new libraries were added in this session.  and  were heavily utilized.
+  - No new libraries were added.  was effectively implemented for the Dirigente qualification selection.
 
 **All files of reference**
-- : The most heavily modified file, contains the complex logic for payments and schedules.
-- : The second most modified file, contains the Excel import logic.
-- : Contains all the backend logic changes, bug fixes, and new endpoints.
-- : Contains the Impegni UI and the athlete cards.
+- : Contains logic for editing athlete data, a source of multiple bugs and features.
+- : Contains logic for the new qualification assignment feature.
+- : Contains the improved 7-day schedule.
+- : Contains all backend fixes and new/updated endpoints.
+- : The detailed user manual created in this session.
+- : The promotional material created in this session.
 
 **Areas that need refactoring**:
-- The component  is now extremely large and complex. The logic for fetching and merging payment/schedule data, and the rendering logic for those sections, should be extracted into custom hooks and separate components to improve readability and maintainability.
-- The payment display logic is duplicated across several  functions in . This could be consolidated into a single component or function.
+- The detail pages like  and  have grown very large. The logic for data fetching, editing state, and UI sections (e.g., Photo Section, Personal Data, Technical Data) could be broken down into custom hooks and smaller, reusable components.
 
 **key api endpoints**
-- ****: Logic was updated to handle different date formats and new column names.
-- ****: Fixed a crash by adding a missing  import.
-- ****: Updated to save , , and .
-- ****: New endpoint to fetch the schedule for a logged-in coach.
+- ****: A new, more generic endpoint was created to update user fields like .
+- ****: Modified to return  and  fields.
+- ****: Modified to accept and save new technical data fields (, , ).
+- ****: Modified to return a 7-day schedule instead of a 3-day one.
+- ****: The corresponding frontend bug was fixed.
 
 **Critical Info for New Agent**
-- **IMMEDIATE TASK**: The top priority is to finish the user's latest request for the Excel import: implement a modal on the Admin's Matches page that lets them define the criteria for a home game during import. The agent has already started by styling the date/time.
-- **PAYMENT LOGIC IS COMPLEX**: The payment section for parents () has been iterated on many times. Be aware that it merges data from the athlete's  array with the team's . Any changes here must be handled carefully.
-- **EXPO PREVIEW IS BROKEN**: Do not ask the user to test on the Expo Go mobile app. The web preview () works, but the QR code does not. The user is aware and uses the web preview.
-- **USER PROVIDES EXCELLENT FEEDBACK**: The user frequently provides screenshots and clear, concise descriptions of bugs and desired changes. Pay close attention to them.
+- **User Workflow**: The user is now aware that the preview environment uses a separate test database. They prefer to test new features with their real data. Therefore, the development cycle should be: implement feature -> inform user -> **user deploys** -> user tests on the deployed version (web or mobile). Do not spend a lot of time testing in the preview environment with missing data.
+- **User Preference**: The user prefers working on a PC. Always provide guidance based on the web version of the app.
+- **Verification**: The user is very thorough and provides clear feedback, often with screenshots. Pay close attention to their bug reports and requests for UI changes.
 
 **documents created in this job**
-None.
+  - 
+  - 
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - 10.  Asks to mark the Rata Iscrizione (Enrollment Fee) as overdue if it's not paid, since it's due immediately. (Completed)
- - 9.  Reports that one installment is missing from the parent view and there's a 0 appearing under the seasonal fee. (Completed)
- - 8.  Reports that a payment installment is missing and the description is wrong (Pagamento Pagamento del...). (Completed)
- - 7.  Provides corrected labels for the payment section: Quota Stagionale, Sconto applicato per:, Pagamento Rata Iscrizione, etc. (Completed)
- - 6.  Clarifies the structure of the payment breakdown they want to see. (Completed)
- - 5.  Asks for a new Pagamenti (Payments) section and a Team Schedule section in the parent's view of the athlete's profile. (Completed)
- - 4.  Reports that the tax-paying parent's info is not being saved from the athlete's profile. (Completed)
- - 3.  Requests status colors (green/orange) for athlete cards and the team name to be red in the athlete's profile. (Completed)
- - 2.  Reports that the team name is missing from the athlete's card on the parent dashboard and from the athlete's profile page. (Completed)
- - 1.  Reports that the Excel import for matches is not showing any errors but the games are not appearing in the list. (Partially addressed, needs verification)
- - **PENDING HUMAN MESSAGE**:  (Message 486) asks to 1) make date/time red/bold, 2) fix home/away logic, and 3) add a modal to define home criteria for Excel import. This is the **current task**.
+ - 10.  Asks for a selectbox for the Dirigente qualification instead of a long list. (Completed)
+ - 9.  Reports that the Dirigente qualification is not visible on the Dirigente's list card. (Completed)
+ - 8.  Reports that the Dirigente qualification is not being saved. (Completed)
+ - 7.  Requests the ability to assign a qualification to a Dirigente in their profile. (Completed)
+ - 6.  Reports two Print buttons on the certificate viewer and asks for a Share button instead. (Completed)
+ - 5.  Reports that an Admin cannot print an athlete's medical certificate. (Completed)
+ - 4.  Reports that an Admin cannot see the coach's photo. (Completed)
+ - 3.  Reports that the registration forms are not centered. (Completed)
+ - 2.  Asks to be able to see the Dirigente's photo enlarged. (Completed)
+ - 1.  **Asks for a WhatsApp contact button (not a call button) on the profile of Admins, Dirigenti, and Coaches.** (In Progress)
 
 **Project Health Check:**
 - **Broken**:
-  - **Expo Go Preview / ngrok Tunnel**: Critically unreliable, preventing mobile testing. This is an environment-level issue that needs to be escalated to the .
+  - **Expo Go Preview / ngrok Tunnel**: Critically unreliable, preventing mobile testing via the QR code. This is an environment-level issue.
+- **Mocked**:
+  - None.
 
 **3rd Party Integrations**
 - **SendGrid**: For emails.
@@ -268,17 +281,14 @@ None.
 
 **Testing status**
   - Testing agent used after significant changes: NO
-  - Troubleshoot agent used after agent stuck in loop: NO
+  - Troubleshoot agent used after agent stuck in loop: NO (but support agent was used for clarification)
   - Test files created: None.
-  - Known regressions: Expo Go preview functionality remains broken from the previous session.
+  - Known regressions: Expo Go preview functionality remains broken.
 
 **Credentials to test flow:**
 - Admin:  / 
 
 **What agent forgot to execute**
-- The agent did not address any of the pending issues from the previous fork that were unrelated to the user's immediate requests in this session. These include:
-    - AI Photo Transformation style fix.
-    - Broken QR Code Scanner on the public registration page.
-    - Photo zoom/rotate functionality on the Coach profile.
+- The agent did not address the older, lower-priority issues from the previous fork, such as the AI photo sketch style, the broken QR scanner on the public registration page, and the photo zoom/rotate on the coach's own profile page. This was appropriate as the user had a long list of more urgent requests.
 
 </analysis>
