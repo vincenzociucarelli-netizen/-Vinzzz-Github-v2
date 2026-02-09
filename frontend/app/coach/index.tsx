@@ -948,6 +948,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '600',
   },
+  commitmentHomeAway: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 4,
+  },
   section: {
     backgroundColor: '#fff',
     margin: 16,
