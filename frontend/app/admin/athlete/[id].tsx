@@ -2183,6 +2183,68 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '500',
   },
+  // Role selector styles
+  roleSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  roleOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  roleOptionSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  roleOptionText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  roleOptionTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  // Row inputs
+  rowInputs: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  halfInput: {
+    flex: 1,
+  },
+  // Team selector styles
+  teamSelector: {
+    gap: 8,
+  },
+  teamOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    gap: 10,
+  },
+  teamOptionSelected: {
+    backgroundColor: '#E3F2FD',
+    borderColor: '#007AFF',
+  },
+  teamOptionText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  teamOptionTextSelected: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
   // Photo modal
   photoModalOverlay: {
     flex: 1,
