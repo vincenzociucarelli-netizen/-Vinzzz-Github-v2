@@ -503,6 +503,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
+  userQualification: {
+    fontSize: 13,
+    color: '#8E44AD',
+    fontWeight: '500',
+    marginTop: 2,
+  },
   userEmail: {
     fontSize: 13,
     color: '#666',
