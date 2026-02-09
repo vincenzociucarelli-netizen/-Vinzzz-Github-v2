@@ -1739,60 +1739,58 @@ export default function AdminAthleteDetail() {
               </Text>
             </View>
             <View style={styles.certViewerButtons}>
-              {/* Download/Print for Web */}
+              {/* Download for Web */}
               {Platform.OS === 'web' && certificate?.pdf_data && (
-                <>
-                  <TouchableOpacity 
-                    style={styles.shareBtn}
-                    onPress={() => {
-                      // Download image
-                      const link = document.createElement('a');
-                      link.href = `data:image/jpeg;base64,${certificate.pdf_data}`;
-                      link.download = `certificato_${athlete?.full_name?.replace(/\s+/g, '_')}.jpg`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
-                  >
-                    <Ionicons name="download-outline" size={20} color="#007AFF" />
-                    <Text style={styles.shareBtnText}>Scarica</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.shareBtn}
-                    onPress={() => {
-                      // Open print dialog
-                      const printWindow = window.open('', '_blank');
-                      if (printWindow) {
-                        printWindow.document.write(`
-                          <html>
-                            <head>
-                              <title>Certificato Medico - ${athlete?.full_name}</title>
-                              <style>
-                                body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-                                img { max-width: 100%; max-height: 100vh; }
-                                @media print { body { margin: 0; } img { width: 100%; } }
-                              </style>
-                            </head>
-                            <body>
-                              <img src="data:image/jpeg;base64,${certificate.pdf_data}" onload="window.print();" />
-                            </body>
-                          </html>
-                        `);
-                        printWindow.document.close();
-                      }
-                    }}
-                  >
-                    <Ionicons name="print-outline" size={20} color="#007AFF" />
-                    <Text style={styles.shareBtnText}>Stampa</Text>
-                  </TouchableOpacity>
-                </>
+                <TouchableOpacity 
+                  style={styles.shareBtn}
+                  onPress={() => {
+                    // Download image
+                    const link = document.createElement('a');
+                    link.href = `data:image/jpeg;base64,${certificate.pdf_data}`;
+                    link.download = `certificato_${athlete?.full_name?.replace(/\s+/g, '_')}.jpg`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                >
+                  <Ionicons name="download-outline" size={20} color="#007AFF" />
+                  <Text style={styles.shareBtnText}>Scarica</Text>
+                </TouchableOpacity>
               )}
-              {/* Share for Mobile */}
-              {Platform.OS !== 'web' && (
+              {/* Share - Works on all platforms */}
+              {certificate?.pdf_data && (
                 <TouchableOpacity 
                   style={styles.shareBtn}
                   onPress={async () => {
-                    if (certificate?.pdf_data) {
+                    if (Platform.OS === 'web') {
+                      // Web Share API
+                      try {
+                        // Convert base64 to blob
+                        const byteCharacters = atob(certificate.pdf_data);
+                        const byteNumbers = new Array(byteCharacters.length);
+                        for (let i = 0; i < byteCharacters.length; i++) {
+                          byteNumbers[i] = byteCharacters.charCodeAt(i);
+                        }
+                        const byteArray = new Uint8Array(byteNumbers);
+                        const blob = new Blob([byteArray], { type: 'image/jpeg' });
+                        const file = new File([blob], `certificato_${athlete?.full_name?.replace(/\s+/g, '_')}.jpg`, { type: 'image/jpeg' });
+                        
+                        if (navigator.share && navigator.canShare({ files: [file] })) {
+                          await navigator.share({
+                            title: `Certificato Medico - ${athlete?.full_name}`,
+                            files: [file],
+                          });
+                        } else {
+                          // Fallback: open in new tab
+                          window.open(`data:image/jpeg;base64,${certificate.pdf_data}`, '_blank');
+                        }
+                      } catch (error) {
+                        console.error('Share error:', error);
+                        // Fallback: open in new tab
+                        window.open(`data:image/jpeg;base64,${certificate.pdf_data}`, '_blank');
+                      }
+                    } else {
+                      // Mobile share
                       try {
                         const Sharing = require('expo-sharing');
                         const FileSystem = require('expo-file-system');
