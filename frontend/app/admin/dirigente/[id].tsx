@@ -412,6 +412,79 @@ export default function AdminDirigenteDetail() {
           </View>
         </View>
 
+        {/* Carica nella Società */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🏅 Carica nella Società</Text>
+          {availableQualifications.length > 0 ? (
+            <View style={styles.qualificationSelector}>
+              {availableQualifications.map((q) => (
+                <TouchableOpacity
+                  key={q}
+                  style={[
+                    styles.qualificationOption,
+                    qualification === q && styles.qualificationOptionSelected
+                  ]}
+                  onPress={async () => {
+                    setQualification(q);
+                    try {
+                      await api.patch(`/users/${id}`, { qualification: q });
+                      showAlert('Successo', `Carica aggiornata a "${q}"`);
+                      loadData();
+                    } catch (error) {
+                      console.error('Error saving qualification:', error);
+                      showAlert('Errore', 'Impossibile salvare la carica');
+                    }
+                  }}
+                >
+                  <Ionicons 
+                    name={qualification === q ? "radio-button-on" : "radio-button-off"} 
+                    size={20} 
+                    color={qualification === q ? "#8E44AD" : "#999"} 
+                  />
+                  <Text style={[
+                    styles.qualificationOptionText,
+                    qualification === q && styles.qualificationOptionTextSelected
+                  ]}>{q}</Text>
+                </TouchableOpacity>
+              ))}
+              {/* Option to clear */}
+              {qualification && (
+                <TouchableOpacity
+                  style={styles.clearQualificationBtn}
+                  onPress={async () => {
+                    setQualification('');
+                    try {
+                      await api.patch(`/users/${id}`, { qualification: '' });
+                      showAlert('Successo', 'Carica rimossa');
+                      loadData();
+                    } catch (error) {
+                      console.error('Error clearing qualification:', error);
+                    }
+                  }}
+                >
+                  <Ionicons name="close-circle" size={18} color="#FF3B30" />
+                  <Text style={styles.clearQualificationText}>Rimuovi carica</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <View style={styles.noQualificationsBox}>
+              <Ionicons name="information-circle" size={20} color="#FF9500" />
+              <Text style={styles.noQualificationsText}>
+                Nessuna carica definita. Vai in Impostazioni → Cariche Dirigenti per aggiungerne.
+              </Text>
+            </View>
+          )}
+          {qualification && (
+            <View style={styles.currentQualificationBox}>
+              <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+              <Text style={styles.currentQualificationText}>
+                Carica attuale: <Text style={styles.currentQualificationValue}>{qualification}</Text>
+              </Text>
+            </View>
+          )}
+        </View>
+
         {/* Compenso */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
