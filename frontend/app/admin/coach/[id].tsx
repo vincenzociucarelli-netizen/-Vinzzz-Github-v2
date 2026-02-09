@@ -302,6 +302,40 @@ export default function AdminCoachDetail() {
           </View>
         )}
 
+        {/* Profile Photo */}
+        <View style={styles.photoSection}>
+          <TouchableOpacity 
+            style={styles.photoContainer}
+            onPress={() => {
+              const photo = coach.profile_photo_artistic || coach.profile_photo;
+              if (photo) {
+                setViewingImage(photo);
+                setViewingImageTitle('Foto Profilo');
+                setImageViewerVisible(true);
+              }
+            }}
+            disabled={!coach.profile_photo && !coach.profile_photo_artistic}
+          >
+            {coach.profile_photo_artistic || coach.profile_photo ? (
+              <Image
+                source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
+                style={styles.profilePhoto}
+              />
+            ) : (
+              <View style={styles.photoPlaceholder}>
+                <Ionicons name="fitness" size={60} color="#FF9500" />
+              </View>
+            )}
+            {(coach.profile_photo || coach.profile_photo_artistic) && (
+              <View style={styles.photoZoomHint}>
+                <Ionicons name="expand" size={16} color="#fff" />
+              </View>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.photoName}>{coach.full_name}</Text>
+          <Text style={styles.photoRole}>🏃 Coach</Text>
+        </View>
+
         {/* Dati Personali */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>👤 Dati Personali</Text>
