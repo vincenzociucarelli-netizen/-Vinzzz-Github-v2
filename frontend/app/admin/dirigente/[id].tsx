@@ -46,6 +46,8 @@ interface Dirigente {
   // Photo fields
   profile_photo?: string;
   profile_photo_artistic?: string;
+  // Qualification/Position in society
+  qualification?: string;
   // Document fields
   id_type?: string;
   id_front?: string;
