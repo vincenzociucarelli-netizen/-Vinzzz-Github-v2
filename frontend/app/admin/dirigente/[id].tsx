@@ -416,38 +416,19 @@ export default function AdminDirigenteDetail() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🏅 Carica nella Società</Text>
           {availableQualifications.length > 0 ? (
-            <View style={styles.qualificationSelector}>
-              {availableQualifications.map((q) => (
-                <TouchableOpacity
-                  key={q}
-                  style={[
-                    styles.qualificationOption,
-                    qualification === q && styles.qualificationOptionSelected
-                  ]}
-                  onPress={async () => {
-                    setQualification(q);
-                    try {
-                      await api.patch(`/users/${id}`, { qualification: q });
-                      showAlert('Successo', `Carica aggiornata a "${q}"`);
-                      loadData();
-                    } catch (error) {
-                      console.error('Error saving qualification:', error);
-                      showAlert('Errore', 'Impossibile salvare la carica');
-                    }
-                  }}
-                >
-                  <Ionicons 
-                    name={qualification === q ? "radio-button-on" : "radio-button-off"} 
-                    size={20} 
-                    color={qualification === q ? "#8E44AD" : "#999"} 
-                  />
-                  <Text style={[
-                    styles.qualificationOptionText,
-                    qualification === q && styles.qualificationOptionTextSelected
-                  ]}>{q}</Text>
-                </TouchableOpacity>
-              ))}
-              {/* Option to clear */}
+            <View style={styles.qualificationContainer}>
+              <TouchableOpacity
+                style={styles.selectBox}
+                onPress={() => setQualificationModalVisible(true)}
+              >
+                <Text style={[
+                  styles.selectBoxText,
+                  !qualification && styles.selectBoxPlaceholder
+                ]}>
+                  {qualification || 'Seleziona carica...'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#666" />
+              </TouchableOpacity>
               {qualification && (
                 <TouchableOpacity
                   style={styles.clearQualificationBtn}
@@ -458,6 +439,15 @@ export default function AdminDirigenteDetail() {
                       showAlert('Successo', 'Carica rimossa');
                       loadData();
                     } catch (error) {
+                      console.error('Error clearing qualification:', error);
+                    }
+                  }}
+                >
+                  <Ionicons name="close-circle" size={18} color="#FF3B30" />
+                  <Text style={styles.clearQualificationText}>Rimuovi</Text>
+                </TouchableOpacity>
+              )}
+            </View>
                       console.error('Error clearing qualification:', error);
                     }
                   }}
