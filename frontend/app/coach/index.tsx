@@ -595,7 +595,9 @@ export default function CoachScreen() {
           <View style={styles.commitmentDay}>
             <View style={styles.commitmentDayHeader}>
               <View style={[styles.commitmentDot, { backgroundColor: '#007AFF' }]} />
-              <Text style={styles.commitmentDayTitle}>OGGI</Text>
+              <Text style={styles.commitmentDayTitle}>
+                OGGI - {format(new Date(), 'EEEE', { locale: it }).toUpperCase()}
+              </Text>
             </View>
             {commitments.today.length === 0 ? (
               <Text style={styles.noCommitments}>Nulla in programma</Text>
@@ -611,7 +613,7 @@ export default function CoachScreen() {
                     <Text style={styles.commitmentItemTitle}>
                       {item.type === 'training' 
                         ? `Allenamento ${item.team_name}` 
-                        : `Gara ${item.team_name} vs ${item.opponent}`}
+                        : `🏐 Gara ${item.team_name} vs ${item.opponent}`}
                     </Text>
                     <Text style={styles.commitmentItemDetails}>
                       {item.type === 'training' 
@@ -619,6 +621,11 @@ export default function CoachScreen() {
                         : `ore ${item.time}`} • {item.venue}
                       {item.city ? ` - ${item.city}` : ''}
                     </Text>
+                    {item.type === 'match' && item.home_away && (
+                      <Text style={[styles.commitmentHomeAway, { color: item.home_away === 'home' ? '#007AFF' : '#FF9500' }]}>
+                        {item.home_away === 'home' ? '🏠 Casa' : '✈️ Trasferta'}
+                      </Text>
+                    )}
                     {item.meeting_time && (
                       <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
                     )}
@@ -632,7 +639,9 @@ export default function CoachScreen() {
           <View style={styles.commitmentDay}>
             <View style={styles.commitmentDayHeader}>
               <View style={[styles.commitmentDot, { backgroundColor: '#FF9500' }]} />
-              <Text style={styles.commitmentDayTitle}>DOMANI</Text>
+              <Text style={styles.commitmentDayTitle}>
+                DOMANI - {format(new Date(Date.now() + 86400000), 'EEEE', { locale: it }).toUpperCase()}
+              </Text>
             </View>
             {commitments.tomorrow.length === 0 ? (
               <Text style={styles.noCommitments}>Nulla in programma</Text>
@@ -648,7 +657,7 @@ export default function CoachScreen() {
                     <Text style={styles.commitmentItemTitle}>
                       {item.type === 'training' 
                         ? `Allenamento ${item.team_name}` 
-                        : `Gara ${item.team_name} vs ${item.opponent}`}
+                        : `🏐 Gara ${item.team_name} vs ${item.opponent}`}
                     </Text>
                     <Text style={styles.commitmentItemDetails}>
                       {item.type === 'training' 
@@ -656,6 +665,11 @@ export default function CoachScreen() {
                         : `ore ${item.time}`} • {item.venue}
                       {item.city ? ` - ${item.city}` : ''}
                     </Text>
+                    {item.type === 'match' && item.home_away && (
+                      <Text style={[styles.commitmentHomeAway, { color: item.home_away === 'home' ? '#007AFF' : '#FF9500' }]}>
+                        {item.home_away === 'home' ? '🏠 Casa' : '✈️ Trasferta'}
+                      </Text>
+                    )}
                     {item.meeting_time && (
                       <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
                     )}
@@ -669,7 +683,9 @@ export default function CoachScreen() {
           <View style={styles.commitmentDay}>
             <View style={styles.commitmentDayHeader}>
               <View style={[styles.commitmentDot, { backgroundColor: '#34C759' }]} />
-              <Text style={styles.commitmentDayTitle}>DOPODOMANI</Text>
+              <Text style={styles.commitmentDayTitle}>
+                DOPODOMANI - {format(new Date(Date.now() + 2*86400000), 'EEEE', { locale: it }).toUpperCase()}
+              </Text>
             </View>
             {commitments.day_after.length === 0 ? (
               <Text style={styles.noCommitments}>Nulla in programma</Text>
@@ -685,7 +701,7 @@ export default function CoachScreen() {
                     <Text style={styles.commitmentItemTitle}>
                       {item.type === 'training' 
                         ? `Allenamento ${item.team_name}` 
-                        : `Gara ${item.team_name} vs ${item.opponent}`}
+                        : `🏐 Gara ${item.team_name} vs ${item.opponent}`}
                     </Text>
                     <Text style={styles.commitmentItemDetails}>
                       {item.type === 'training' 
@@ -693,6 +709,11 @@ export default function CoachScreen() {
                         : `ore ${item.time}`} • {item.venue}
                       {item.city ? ` - ${item.city}` : ''}
                     </Text>
+                    {item.type === 'match' && item.home_away && (
+                      <Text style={[styles.commitmentHomeAway, { color: item.home_away === 'home' ? '#007AFF' : '#FF9500' }]}>
+                        {item.home_away === 'home' ? '🏠 Casa' : '✈️ Trasferta'}
+                      </Text>
+                    )}
                     {item.meeting_time && (
                       <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
                     )}
