@@ -448,9 +448,14 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 20,
     paddingTop: 60,
+    justifyContent: 'center',
+    maxWidth: 500,
+    width: '100%',
+    alignSelf: 'center',
   },
   stepContainer: {
     flex: 1,
+    width: '100%',
   },
   stepTitle: {
     fontSize: 28,
