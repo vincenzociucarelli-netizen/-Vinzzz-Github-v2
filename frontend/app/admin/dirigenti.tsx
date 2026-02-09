@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
@@ -25,6 +26,8 @@ interface Dirigente {
   created_at: string;
   approved_at?: string;
   is_scorekeeper?: boolean;  // Segnapunti
+  profile_photo?: string;
+  profile_photo_artistic?: string;
 }
 
 export default function DirigentiScreen() {
