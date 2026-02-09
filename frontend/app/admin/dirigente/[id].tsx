@@ -43,6 +43,9 @@ interface Dirigente {
   compensation_accepted?: boolean;
   compensation_history?: { [key: string]: boolean };
   over_5000_limit?: { [key: string]: boolean };
+  // Photo fields
+  profile_photo?: string;
+  profile_photo_artistic?: string;
   // Document fields
   id_type?: string;
   id_front?: string;
