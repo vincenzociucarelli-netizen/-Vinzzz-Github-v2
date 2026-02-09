@@ -727,6 +727,64 @@ export default function AdminDirigenteDetail() {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      {/* Qualification Selection Modal */}
+      <Modal
+        visible={qualificationModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setQualificationModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.qualificationModalContent}>
+            <View style={styles.qualificationModalHeader}>
+              <Text style={styles.qualificationModalTitle}>🏅 Seleziona Carica</Text>
+              <TouchableOpacity onPress={() => setQualificationModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.qualificationModalList}>
+              {availableQualifications.map((q) => (
+                <TouchableOpacity
+                  key={q}
+                  style={[
+                    styles.qualificationModalItem,
+                    qualification === q && styles.qualificationModalItemSelected
+                  ]}
+                  onPress={async () => {
+                    setQualification(q);
+                    setQualificationModalVisible(false);
+                    try {
+                      await api.patch(`/users/${id}`, { qualification: q });
+                      showAlert('Successo', `Carica aggiornata a "${q}"`);
+                      loadData();
+                    } catch (error) {
+                      console.error('Error saving qualification:', error);
+                      showAlert('Errore', 'Impossibile salvare la carica');
+                    }
+                  }}
+                >
+                  <Ionicons 
+                    name={qualification === q ? "checkmark-circle" : "ellipse-outline"} 
+                    size={22} 
+                    color={qualification === q ? "#8E44AD" : "#999"} 
+                  />
+                  <Text style={[
+                    styles.qualificationModalItemText,
+                    qualification === q && styles.qualificationModalItemTextSelected
+                  ]}>{q}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.qualificationModalCancelBtn}
+              onPress={() => setQualificationModalVisible(false)}
+            >
+              <Text style={styles.qualificationModalCancelText}>Annulla</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
