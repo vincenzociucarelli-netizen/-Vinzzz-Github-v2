@@ -997,6 +997,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
   },
+  commitmentItemDate: {
+    fontSize: 12,
+    color: '#8E44AD',
+    fontWeight: '600',
+    marginTop: 2,
+  },
   section: {
     backgroundColor: '#fff',
     margin: 16,
