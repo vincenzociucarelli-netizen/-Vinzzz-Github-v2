@@ -446,7 +446,19 @@ export default function AdminMatches() {
 
   const groupMatchesByMonth = () => {
     const grouped: { [key: string]: Match[] } = {};
-    matches.forEach(match => {
+    
+    // Get today at midnight for comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Filter only future matches (from today onwards)
+    const futureMatches = matches.filter(match => {
+      const matchDate = new Date(match.date);
+      matchDate.setHours(0, 0, 0, 0);
+      return matchDate >= today;
+    });
+    
+    futureMatches.forEach(match => {
       const date = new Date(match.date);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       const monthName = date.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
