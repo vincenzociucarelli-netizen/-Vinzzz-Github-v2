@@ -94,15 +94,23 @@ export default function AdminDirigenteDetail() {
 
   const loadData = async () => {
     try {
-      const response = await api.get(`/users/${id}`);
-      setDirigente(response.data);
-      setMonthlyCompensation(response.data.monthly_compensation?.toString() || '0');
-      setDocumentType(response.data.document_type || '');
-      setDocumentFront(response.data.document_front || '');
-      setDocumentBack(response.data.document_back || '');
-      setIban(response.data.iban || '');
-      setIbanHolder(response.data.iban_holder || '');
-      setBankName(response.data.bank_name || '');
+      const [userResponse, settingsResponse] = await Promise.all([
+        api.get(`/users/${id}`),
+        api.get('/settings/society'),
+      ]);
+      
+      setDirigente(userResponse.data);
+      setMonthlyCompensation(userResponse.data.monthly_compensation?.toString() || '0');
+      setQualification(userResponse.data.qualification || '');
+      setDocumentType(userResponse.data.document_type || '');
+      setDocumentFront(userResponse.data.document_front || '');
+      setDocumentBack(userResponse.data.document_back || '');
+      setIban(userResponse.data.iban || '');
+      setIbanHolder(userResponse.data.iban_holder || '');
+      setBankName(userResponse.data.bank_name || '');
+      
+      // Load available qualifications from settings
+      setAvailableQualifications(settingsResponse.data.dirigente_qualifications || []);
     } catch (error) {
       console.error('Error loading dirigente data:', error);
     } finally {
