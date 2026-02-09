@@ -335,6 +335,34 @@ export default function AdminCoachDetail() {
           </TouchableOpacity>
           <Text style={styles.photoName}>{coach.full_name}</Text>
           <Text style={styles.photoRole}>🏃 Coach</Text>
+          
+          {/* Contact Buttons */}
+          <View style={styles.contactButtons}>
+            {coach.phone && (
+              <>
+                <TouchableOpacity
+                  style={styles.whatsappBtn}
+                  onPress={() => {
+                    const phone = coach.phone?.replace(/\D/g, '');
+                    const phoneWithCountry = phone?.startsWith('39') ? phone : `39${phone}`;
+                    Linking.openURL(`https://wa.me/${phoneWithCountry}`);
+                  }}
+                >
+                  <Ionicons name="logo-whatsapp" size={20} color="#fff" />
+                  <Text style={styles.whatsappBtnText}>WhatsApp</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.callBtn}
+                  onPress={() => {
+                    Linking.openURL(`tel:${coach.phone}`);
+                  }}
+                >
+                  <Ionicons name="call" size={20} color="#fff" />
+                  <Text style={styles.callBtnText}>Chiama</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         </View>
 
         {/* Dati Personali */}
