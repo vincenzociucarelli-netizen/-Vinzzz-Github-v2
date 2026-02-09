@@ -236,6 +236,9 @@ export default function DirigentiScreen() {
       </View>
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{item.full_name}</Text>
+        {item.qualification && (
+          <Text style={styles.userQualification}>🏅 {item.qualification}</Text>
+        )}
         <Text style={styles.userEmail}>{item.email}</Text>
         <View style={styles.userMeta}>
           <View style={[styles.roleBadge, item.role === 'admin' && styles.adminBadge]}>
