@@ -723,6 +723,49 @@ export default function CoachScreen() {
               ))
             )}
           </View>
+
+          {/* PROSSIMI GIORNI (day 4-7) */}
+          {commitments.upcoming && commitments.upcoming.length > 0 && (
+            <View style={styles.commitmentDay}>
+              <View style={styles.commitmentDayHeader}>
+                <View style={[styles.commitmentDot, { backgroundColor: '#8E44AD' }]} />
+                <Text style={styles.commitmentDayTitle}>PROSSIMI GIORNI</Text>
+              </View>
+              {commitments.upcoming.map((item, idx) => (
+                <View key={idx} style={styles.commitmentItem}>
+                  <Ionicons 
+                    name={item.type === 'training' ? 'fitness' : 'trophy'} 
+                    size={16} 
+                    color={item.type === 'training' ? '#007AFF' : '#FF9500'} 
+                  />
+                  <View style={styles.commitmentItemContent}>
+                    <Text style={styles.commitmentItemTitle}>
+                      {item.type === 'training' 
+                        ? `Allenamento ${item.team_name}` 
+                        : `🏐 Gara ${item.team_name} vs ${item.opponent}`}
+                    </Text>
+                    <Text style={styles.commitmentItemDate}>
+                      📅 {item.date} - {item.day_name}
+                    </Text>
+                    <Text style={styles.commitmentItemDetails}>
+                      {item.type === 'training' 
+                        ? `${item.time_start} - ${item.time_end}` 
+                        : `ore ${item.time}`} • {item.venue}
+                      {item.city ? ` - ${item.city}` : ''}
+                    </Text>
+                    {item.type === 'match' && item.home_away && (
+                      <Text style={[styles.commitmentHomeAway, { color: item.home_away === 'home' ? '#007AFF' : '#FF9500' }]}>
+                        {item.home_away === 'home' ? '🏠 Casa' : '✈️ Trasferta'}
+                      </Text>
+                    )}
+                    {item.meeting_time && (
+                      <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Teams List */}
