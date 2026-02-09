@@ -448,28 +448,11 @@ export default function AdminDirigenteDetail() {
                 </TouchableOpacity>
               )}
             </View>
-                      console.error('Error clearing qualification:', error);
-                    }
-                  }}
-                >
-                  <Ionicons name="close-circle" size={18} color="#FF3B30" />
-                  <Text style={styles.clearQualificationText}>Rimuovi carica</Text>
-                </TouchableOpacity>
-              )}
-            </View>
           ) : (
             <View style={styles.noQualificationsBox}>
               <Ionicons name="information-circle" size={20} color="#FF9500" />
               <Text style={styles.noQualificationsText}>
                 Nessuna carica definita. Vai in Impostazioni → Cariche Dirigenti per aggiungerne.
-              </Text>
-            </View>
-          )}
-          {qualification && (
-            <View style={styles.currentQualificationBox}>
-              <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
-              <Text style={styles.currentQualificationText}>
-                Carica attuale: <Text style={styles.currentQualificationValue}>{qualification}</Text>
               </Text>
             </View>
           )}
