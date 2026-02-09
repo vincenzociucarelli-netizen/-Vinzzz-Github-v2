@@ -809,30 +809,125 @@ export default function AdminAthleteDetail() {
             {/* Dati Tecnici */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>📊 Dati Tecnici</Text>
-              <View style={styles.techDataGrid}>
-                <View style={styles.techDataItem}>
-                  <Text style={styles.techDataLabel}>Ruolo</Text>
-                  <Text style={styles.techDataValue}>{athleteRole || '-'}</Text>
-                </View>
-                <View style={styles.techDataItem}>
-                  <Text style={styles.techDataLabel}>Altezza</Text>
-                  <Text style={styles.techDataValue}>{athleteHeight ? `${athleteHeight} cm` : '-'}</Text>
-                </View>
-                <View style={styles.techDataItem}>
-                  <Text style={styles.techDataLabel}>Peso</Text>
-                  <Text style={styles.techDataValue}>{athleteWeight ? `${athleteWeight} kg` : '-'}</Text>
-                </View>
-              </View>
-              {athleteCharacteristics.length > 0 && (
-                <View style={styles.characteristicsSection}>
-                  <Text style={styles.techDataLabel}>Caratteristiche</Text>
-                  <View style={styles.characteristicsTags}>
-                    {athleteCharacteristics.map((char, idx) => (
-                      <View key={idx} style={styles.characteristicTag}>
-                        <Text style={styles.characteristicTagText}>{char}</Text>
+              {editing ? (
+                <>
+                  <Text style={styles.inputLabel}>Ruolo</Text>
+                  {availableRoles.length > 0 ? (
+                    <View style={styles.roleSelector}>
+                      {availableRoles.map((role) => (
+                        <TouchableOpacity
+                          key={role}
+                          style={[
+                            styles.roleOption,
+                            editData.athlete_role === role && styles.roleOptionSelected
+                          ]}
+                          onPress={() => setEditData({...editData, athlete_role: role})}
+                        >
+                          <Text style={[
+                            styles.roleOptionText,
+                            editData.athlete_role === role && styles.roleOptionTextSelected
+                          ]}>{role}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      value={editData.athlete_role}
+                      onChangeText={(t) => setEditData({...editData, athlete_role: t})}
+                      placeholder="Es. Palleggiatore, Schiacciatore..."
+                    />
+                  )}
+                  <View style={styles.rowInputs}>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.inputLabel}>Altezza (cm)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={editData.athlete_height}
+                        onChangeText={(t) => setEditData({...editData, athlete_height: t.replace(/\D/g, '')})}
+                        placeholder="Es. 175"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.inputLabel}>Peso (kg)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={editData.athlete_weight}
+                        onChangeText={(t) => setEditData({...editData, athlete_weight: t.replace(/\D/g, '')})}
+                        placeholder="Es. 65"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.techDataGrid}>
+                    <View style={styles.techDataItem}>
+                      <Text style={styles.techDataLabel}>Ruolo</Text>
+                      <Text style={styles.techDataValue}>{athleteRole || '-'}</Text>
+                    </View>
+                    <View style={styles.techDataItem}>
+                      <Text style={styles.techDataLabel}>Altezza</Text>
+                      <Text style={styles.techDataValue}>{athleteHeight ? `${athleteHeight} cm` : '-'}</Text>
+                    </View>
+                    <View style={styles.techDataItem}>
+                      <Text style={styles.techDataLabel}>Peso</Text>
+                      <Text style={styles.techDataValue}>{athleteWeight ? `${athleteWeight} kg` : '-'}</Text>
+                    </View>
+                  </View>
+                  {athleteCharacteristics.length > 0 && (
+                    <View style={styles.characteristicsSection}>
+                      <Text style={styles.techDataLabel}>Caratteristiche</Text>
+                      <View style={styles.characteristicsTags}>
+                        {athleteCharacteristics.map((char, idx) => (
+                          <View key={idx} style={styles.characteristicTag}>
+                            <Text style={styles.characteristicTagText}>{char}</Text>
+                          </View>
+                        ))}
                       </View>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+
+            {/* Squadra */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>🏐 Squadra</Text>
+              {editing ? (
+                <>
+                  <Text style={styles.inputLabel}>Squadra Assegnata</Text>
+                  <View style={styles.teamSelector}>
+                    {allTeams.map((t) => (
+                      <TouchableOpacity
+                        key={t.id}
+                        style={[
+                          styles.teamOption,
+                          editData.team_id === t.id && styles.teamOptionSelected
+                        ]}
+                        onPress={() => setEditData({...editData, team_id: t.id})}
+                      >
+                        <Ionicons 
+                          name={editData.team_id === t.id ? "radio-button-on" : "radio-button-off"} 
+                          size={20} 
+                          color={editData.team_id === t.id ? "#007AFF" : "#999"} 
+                        />
+                        <Text style={[
+                          styles.teamOptionText,
+                          editData.team_id === t.id && styles.teamOptionTextSelected
+                        ]}>{t.name}</Text>
+                      </TouchableOpacity>
                     ))}
                   </View>
+                </>
+              ) : (
+                <View style={styles.infoRow}>
+                  <Text style={styles.label}>Squadra</Text>
+                  <Text style={[styles.value, { color: '#E53935', fontWeight: 'bold' }]}>
+                    {team?.name || '-'}
+                  </Text>
                 </View>
               )}
             </View>
