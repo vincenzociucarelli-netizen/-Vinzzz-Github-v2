@@ -483,6 +483,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F4FD',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  userAvatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   userInfo: {
     flex: 1,
