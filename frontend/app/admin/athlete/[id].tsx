@@ -1787,6 +1787,55 @@ export default function AdminAthleteDetail() {
               </Text>
             </View>
             <View style={styles.certViewerButtons}>
+              {/* Download/Print for Web */}
+              {Platform.OS === 'web' && certificate?.pdf_data && (
+                <>
+                  <TouchableOpacity 
+                    style={styles.shareBtn}
+                    onPress={() => {
+                      // Download image
+                      const link = document.createElement('a');
+                      link.href = `data:image/jpeg;base64,${certificate.pdf_data}`;
+                      link.download = `certificato_${athlete?.full_name?.replace(/\s+/g, '_')}.jpg`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                  >
+                    <Ionicons name="download-outline" size={20} color="#007AFF" />
+                    <Text style={styles.shareBtnText}>Scarica</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.shareBtn}
+                    onPress={() => {
+                      // Open print dialog
+                      const printWindow = window.open('', '_blank');
+                      if (printWindow) {
+                        printWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>Certificato Medico - ${athlete?.full_name}</title>
+                              <style>
+                                body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+                                img { max-width: 100%; max-height: 100vh; }
+                                @media print { body { margin: 0; } img { width: 100%; } }
+                              </style>
+                            </head>
+                            <body>
+                              <img src="data:image/jpeg;base64,${certificate.pdf_data}" onload="window.print();" />
+                            </body>
+                          </html>
+                        `);
+                        printWindow.document.close();
+                      }
+                    }}
+                  >
+                    <Ionicons name="print-outline" size={20} color="#007AFF" />
+                    <Text style={styles.shareBtnText}>Stampa</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              {/* Share for Mobile */}
               {Platform.OS !== 'web' && (
                 <TouchableOpacity 
                   style={styles.shareBtn}
@@ -1800,7 +1849,7 @@ export default function AdminAthleteDetail() {
                         const fileUri = FileSystem.documentDirectory + filename;
                         
                         await FileSystem.writeAsStringAsync(fileUri, certificate.pdf_data, {
-                          encoding: FileSystem.EncodingType.Base64,
+                          encoding: 'base64' as any,
                         });
                         
                         if (await Sharing.isAvailableAsync()) {
