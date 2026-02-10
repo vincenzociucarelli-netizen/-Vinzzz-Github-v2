@@ -283,7 +283,16 @@ export default function CoachesScreen() {
           )}
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#999" />
+      <TouchableOpacity 
+        style={styles.menuButton}
+        onPress={(e) => {
+          e.stopPropagation();
+          openActionModal(item);
+        }}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Ionicons name="ellipsis-vertical" size={20} color="#666" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
