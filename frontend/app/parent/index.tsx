@@ -883,7 +883,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   athleteNameColored: {
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   commitmentItemDate: {
     fontSize: 12,
