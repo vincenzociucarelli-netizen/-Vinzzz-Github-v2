@@ -69,7 +69,7 @@ export default function ParentDashboard() {
         {' ('}
         {names.map((name, idx) => (
           <Text key={idx}>
-            <Text style={[styles.athleteName, { color: athleteColorMap[name] || '#007AFF' }]}>
+            <Text style={[styles.athleteNameColored, { color: athleteColorMap[name] || '#007AFF' }]}>
               {name}
             </Text>
             {idx < names.length - 1 ? ', ' : ''}
@@ -77,6 +77,38 @@ export default function ParentDashboard() {
         ))}
         {')'}
       </Text>
+    );
+  };
+
+  // Funzione per abbreviare il nome della squadra (es: "Under 16" -> "U. 16")
+  const abbreviateTeamName = (name: string) => {
+    if (!name) return '';
+    return name
+      .replace(/Under\s*/i, 'U. ')
+      .replace(/Prima\s*/i, '1ª ')
+      .replace(/Seconda\s*/i, '2ª ')
+      .replace(/Serie\s*/i, 'S. ');
+  };
+
+  // Funzione per formattare il titolo della gara
+  const formatMatchTitle = (item: any) => {
+    const teamAbbrev = abbreviateTeamName(item.team_name);
+    const athleteNames = item.athlete_names || '';
+    const names = athleteNames.split(', ').filter((n: string) => n.trim());
+    
+    // Mostra solo il primo nome se c'è un solo atleta
+    const displayNames = names.map((n: string) => n.split(' ')[0]).join(', ');
+    
+    return (
+      <>
+        <Text style={styles.matchTitleMain}>
+          Gara {teamAbbrev}
+          {displayNames && (
+            <Text style={styles.matchTitleAthlete}> ({displayNames})</Text>
+          )}
+        </Text>
+        <Text style={styles.matchTitleVs}>Vs. {item.opponent}</Text>
+      </>
     );
   };
 
