@@ -3759,7 +3759,6 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow = today + timedelta(days=1)
     day_after = today + timedelta(days=2)
-    end_of_week = today + timedelta(days=7)  # Extended to 7 days
     
     # Day of week mapping (Italian)
     days_map = {
