@@ -428,6 +428,7 @@ export default function ParentDashboard() {
             </View>
           )}
         </View>
+        </View>
 
         {/* ATLETI Section */}
         <Text style={styles.athletesSectionTitle}>👨‍👩‍👧‍👦 I Miei Figli</Text>
