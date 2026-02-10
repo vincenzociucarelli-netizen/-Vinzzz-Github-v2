@@ -100,9 +100,19 @@ export default function CoachScreen() {
     }
   };
 
+  const loadDirigenti = async () => {
+    try {
+      const response = await api.get('/users/dirigenti');
+      setDirigenti(response.data);
+    } catch (error) {
+      console.error('Error loading dirigenti:', error);
+    }
+  };
+
   useEffect(() => {
     loadTeams();
     loadCommitments();
+    loadDirigenti();
   }, []);
 
   useEffect(() => {
