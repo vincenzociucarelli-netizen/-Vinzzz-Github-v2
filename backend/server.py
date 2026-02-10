@@ -983,13 +983,31 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
     if data.compensation_history is not None:
         update_dict["compensation_history"] = data.compensation_history
     if data.over_5000_limit is not None:
-        update_dict["over_5000_limit"] = data.over_5000_limit
-        
         # Check if user is declaring they exceeded limits
         old_limit = current_user.get("over_5000_limit", {})
-        new_limit = data.over_5000_limit
+        new_limit = data.over_5000_limit.copy() if isinstance(data.over_5000_limit, dict) else {}
         user_role = current_user.get("role", "")
         user_name = current_user.get('full_name', 'Sconosciuto')
+        
+        # Add timestamp when declaring exceeded limits
+        now = datetime.utcnow()
+        if new_limit.get("exceeded_5000") and not old_limit.get("exceeded_5000"):
+            new_limit["exceeded_5000_date"] = now.isoformat()
+        elif not new_limit.get("exceeded_5000"):
+            new_limit["exceeded_5000_date"] = None
+        else:
+            # Keep existing date if already set
+            new_limit["exceeded_5000_date"] = old_limit.get("exceeded_5000_date")
+            
+        if new_limit.get("exceeded_15000") and not old_limit.get("exceeded_15000"):
+            new_limit["exceeded_15000_date"] = now.isoformat()
+        elif not new_limit.get("exceeded_15000"):
+            new_limit["exceeded_15000_date"] = None
+        else:
+            # Keep existing date if already set
+            new_limit["exceeded_15000_date"] = old_limit.get("exceeded_15000_date")
+        
+        update_dict["over_5000_limit"] = new_limit
         
         # Determine user type label for notifications
         if user_role == "coach":
@@ -1010,7 +1028,7 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
             notification = AdminNotification(
                 type=notif_type_5k,
                 title=f"⚠️ {user_type} ha superato €5.000",
-                message=f"Il {user_type.lower()} {user_name} ha dichiarato di aver superato il limite di €5.000 annuali di compensi sportivi dilettantistici.",
+                message=f"Il {user_type.lower()} {user_name} ha dichiarato di aver superato il limite di €5.000 annuali di compensi sportivi dilettantistici. Data dichiarazione: {now.strftime('%d/%m/%Y %H:%M')}",
                 related_user_id=current_user["id"],
                 related_user_name=user_name
             )
@@ -1021,7 +1039,7 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
             notification = AdminNotification(
                 type=notif_type_15k,
                 title=f"🚨 URGENTE: {user_type} ha superato €15.000",
-                message=f"ATTENZIONE: Il {user_type.lower()} {user_name} ha dichiarato di aver superato il limite di €15.000 annuali. Questo comporta obblighi fiscali e contributivi aggiuntivi!",
+                message=f"ATTENZIONE: Il {user_type.lower()} {user_name} ha dichiarato di aver superato il limite di €15.000 annuali. Data dichiarazione: {now.strftime('%d/%m/%Y %H:%M')}. Questo comporta obblighi fiscali e contributivi aggiuntivi!",
                 related_user_id=current_user["id"],
                 related_user_name=user_name
             )
