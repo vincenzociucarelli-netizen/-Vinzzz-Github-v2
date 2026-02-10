@@ -271,7 +271,9 @@ export default function AdminDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Text style={styles.welcomeText}>Benvenuto, {user?.full_name}</Text>
+        <Text style={styles.welcomeText}>
+          Benvenuto, {user?.full_name?.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+        </Text>
 
         {/* Quick Stats */}
         {stats && (
