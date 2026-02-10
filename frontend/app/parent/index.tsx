@@ -307,12 +307,16 @@ export default function ParentDashboard() {
                     color={item.type === 'training' ? '#007AFF' : '#FF9500'} 
                   />
                   <View style={styles.commitmentItemContent}>
-                    <Text style={styles.commitmentItemTitle}>
-                      {item.type === 'training' 
-                        ? `Allenamento ${item.team_name}` 
-                        : `Gara ${item.team_name} vs ${item.opponent}`}
-                      {renderAthleteNames(item.athlete_names)}
-                    </Text>
+                    {item.type === 'training' ? (
+                      <Text style={styles.commitmentItemTitle}>
+                        Allenamento {abbreviateTeamName(item.team_name)}
+                        {renderAthleteNames(item.athlete_names)}
+                      </Text>
+                    ) : (
+                      <View style={styles.matchTitleContainer}>
+                        {formatMatchTitle(item)}
+                      </View>
+                    )}
                     <Text style={styles.commitmentItemDetails}>
                       {item.type === 'training' 
                         ? `${item.time_start} - ${item.time_end}` 
