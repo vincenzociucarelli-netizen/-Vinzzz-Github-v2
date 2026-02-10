@@ -272,7 +272,7 @@ export default function Register() {
     <View style={styles.form}>
       <TouchableOpacity 
         style={styles.backBtn} 
-        onPress={() => setStep(role === 'parent' ? 'role' : 'invite')}
+        onPress={() => setStep('role')}
       >
         <Ionicons name="arrow-back" size={24} color="#007AFF" />
       </TouchableOpacity>
@@ -281,21 +281,19 @@ export default function Register() {
         Registrazione {role === 'parent' ? 'Genitore' : role === 'coach' ? 'Coach' : 'Dirigente'}
       </Text>
 
-      {/* Invite code for parent (inline) */}
-      {role === 'parent' && (
-        <View style={styles.inviteCodeSection}>
-          <Text style={styles.inviteCodeLabel}>🎟️ Codice Invito Società</Text>
-          <TextInput
-            style={styles.inviteCodeInputSmall}
-            placeholder="Es: ABCD1234"
-            placeholderTextColor="#999"
-            value={inviteCode}
-            onChangeText={(text) => setInviteCode(text.toUpperCase())}
-            autoCapitalize="characters"
-            maxLength={8}
-          />
-        </View>
-      )}
+      {/* Invite code for all roles (inline) */}
+      <View style={styles.inviteCodeSection}>
+        <Text style={styles.inviteCodeLabel}>🎟️ Codice Invito Società</Text>
+        <TextInput
+          style={styles.inviteCodeInputSmall}
+          placeholder="Es: ABCD1234"
+          placeholderTextColor="#999"
+          value={inviteCode}
+          onChangeText={(text) => setInviteCode(text.toUpperCase())}
+          autoCapitalize="characters"
+          maxLength={8}
+        />
+      </View>
 
       {/* Show society name if validated */}
       {societyName && (
