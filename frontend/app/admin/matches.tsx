@@ -974,10 +974,30 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 8,
   },
+  instructionContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   instructionText: {
     flex: 1,
     fontSize: 12,
     color: '#007AFF',
+  },
+  templateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#34C759',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 4,
+  },
+  templateBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   content: {
     flex: 1,
