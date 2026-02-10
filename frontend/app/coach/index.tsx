@@ -952,6 +952,7 @@ export default function CoachScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      )}
     </View>
   );
 }
