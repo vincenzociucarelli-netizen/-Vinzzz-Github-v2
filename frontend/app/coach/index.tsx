@@ -596,7 +596,7 @@ export default function CoachScreen() {
           {/* OGGI */}
           <View style={styles.commitmentDay}>
             <View style={styles.commitmentDayHeader}>
-              <View style={[styles.commitmentDot, { backgroundColor: '#007AFF' }]} />
+              <View style={[styles.commitmentDot, { backgroundColor: '#FF3B30' }]} />
               <Text style={styles.commitmentDayTitle}>
                 OGGI - {format(new Date(), 'EEEE', { locale: it }).toUpperCase()}
               </Text>
