@@ -539,7 +539,7 @@ export default function AthleteDetail() {
         ? format(new Date(certificate.expiry_date), 'dd/MM/yyyy', { locale: it })
         : 'N/D';
 
-      // Create HTML for printing
+      // Create HTML for printing - single page, no extra margins
       const html = `
         <!DOCTYPE html>
         <html>
@@ -548,29 +548,59 @@ export default function AthleteDetail() {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Certificato Medico - ${athlete?.full_name}</title>
             <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
+              @page { 
+                margin: 10mm; 
+                size: A4;
+              }
+              * { 
+                margin: 0; 
+                padding: 0; 
+                box-sizing: border-box; 
+              }
+              html, body { 
+                height: 100%;
+                width: 100%;
+              }
               body { 
                 font-family: Arial, sans-serif; 
                 text-align: center;
-                padding: 15px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: flex-start;
+                padding: 5mm;
               }
-              h1 { font-size: 18px; margin-bottom: 8px; color: #333; }
-              .info { font-size: 12px; color: #666; margin-bottom: 15px; }
+              h1 { 
+                font-size: 16px; 
+                margin-bottom: 5px; 
+                color: #333; 
+              }
+              .info { 
+                font-size: 11px; 
+                color: #666; 
+                margin-bottom: 10px; 
+              }
+              .cert-container {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+              }
               .cert-image { 
                 max-width: 100%; 
-                max-height: 85vh;
+                max-height: 250mm;
+                object-fit: contain;
                 border: 1px solid #ddd;
-              }
-              @media print {
-                body { padding: 0; }
-                .cert-image { max-height: 95vh; }
               }
             </style>
           </head>
           <body>
             <h1>Certificato Medico</h1>
             <p class="info">${athlete?.full_name} - Scadenza: ${expiryFormatted}</p>
-            <img class="cert-image" src="data:${mimeType};base64,${certData}" />
+            <div class="cert-container">
+              <img class="cert-image" src="data:${mimeType};base64,${certData}" />
+            </div>
           </body>
         </html>
       `;
