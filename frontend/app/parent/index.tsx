@@ -869,10 +869,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
-  matchTitleAthlete: {
+  matchTitleAthleteWrapper: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#007AFF',
+  },
+  matchTitleAthlete: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   matchTitleVs: {
     fontSize: 13,
