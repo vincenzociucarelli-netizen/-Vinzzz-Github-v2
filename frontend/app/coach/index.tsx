@@ -733,7 +733,7 @@ export default function CoachScreen() {
                 onPress={() => setShowUpcoming(!showUpcoming)}
               >
                 <View style={styles.commitmentDayHeader}>
-                  <View style={[styles.commitmentDot, { backgroundColor: '#8E44AD' }]} />
+                  <View style={[styles.commitmentDot, { backgroundColor: '#007AFF' }]} />
                   <Text style={styles.commitmentDayTitle}>IMPEGNI SUCCESSIVI ({commitments.upcoming.length})</Text>
                 </View>
                 <Ionicons 
