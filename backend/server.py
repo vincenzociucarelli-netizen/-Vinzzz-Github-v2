@@ -3118,6 +3118,29 @@ async def check_has_password(athlete_id: str, current_user = Depends(get_current
     
     return {"has_password": bool(athlete.get("data_password_hash"))}
 
+class AdminResetDataPassword(BaseModel):
+    new_password: str
+
+@api_router.patch("/athletes/{athlete_id}/reset-data-password")
+async def admin_reset_data_password(athlete_id: str, data: AdminResetDataPassword, current_user = Depends(get_current_user)):
+    """Admin can reset an athlete's data password (used to protect minor's data)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può resettare la password dati")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Hash the new password
+    password_hash = hash_password(data.new_password)
+    
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {"data_password_hash": password_hash}}
+    )
+    
+    return {"message": f"Password dati resettata per {athlete.get('first_name', '')} {athlete.get('last_name', '')}"}
+
 @api_router.post("/athletes/{athlete_id}/transform-photo")
 async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, current_user = Depends(get_current_user)):
     """Transform athlete photo to artistic style using AI"""
