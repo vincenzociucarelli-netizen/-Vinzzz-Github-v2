@@ -612,6 +612,10 @@ const styles = StyleSheet.create({
     color: '#FF9500',
     fontWeight: '500',
   },
+  menuButton: {
+    padding: 8,
+    marginLeft: 4,
+  },
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: 60,
