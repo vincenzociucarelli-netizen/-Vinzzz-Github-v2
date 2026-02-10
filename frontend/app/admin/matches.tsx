@@ -386,9 +386,13 @@ export default function AdminMatches() {
         // Casa/Trasferta - usa isHome calcolato
         const homeAway = isHome ? 'home' : 'away';
         
+        // GaraNumero - numero univoco della gara
+        const garaNumero = row['GaraNumero'] || row['GARANUMERO'] || row['Gara Numero'] || row['NumeroGara'] || '';
+        
         return {
           team_id: team?.id || '',
           team_name: team?.name || teamSearchKey,
+          match_number: garaNumero ? String(garaNumero) : '',
           date: dateTimeStr,
           opponent: opponent,
           venue: venue || '',
