@@ -1246,6 +1246,23 @@ export default function AdminAthleteDetail() {
               )}
             </View>
 
+            {/* Password Modifiche (for minors) */}
+            {hasDataPassword && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>🔐 Password Modifiche</Text>
+                <Text style={styles.cardSubtitle}>
+                  Questo atleta ha una password per proteggere i dati sensibili (minorenne)
+                </Text>
+                <TouchableOpacity
+                  style={styles.resetDataPasswordBtn}
+                  onPress={() => setResetDataPasswordVisible(true)}
+                >
+                  <Ionicons name="key-outline" size={20} color="#fff" />
+                  <Text style={styles.resetDataPasswordBtnText}>Reset Password Modifiche</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Withdraw Athlete Button */}
             {!athlete.is_withdrawn && (
               <TouchableOpacity
