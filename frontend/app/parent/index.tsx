@@ -42,7 +42,9 @@ export default function ParentDashboard() {
     today: any[];
     tomorrow: any[];
     day_after: any[];
-  }>({ today: [], tomorrow: [], day_after: [] });
+    upcoming: any[];
+  }>({ today: [], tomorrow: [], day_after: [], upcoming: [] });
+  const [showUpcoming, setShowUpcoming] = useState(false);
 
   // Mappa nome atleta -> colore
   const athleteColorMap = useMemo(() => {
