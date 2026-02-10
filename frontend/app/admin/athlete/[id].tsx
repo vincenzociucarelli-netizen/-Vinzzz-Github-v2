@@ -1913,6 +1913,55 @@ export default function AdminAthleteDetail() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Reset Data Password Modal */}
+      <Modal
+        visible={resetDataPasswordVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setResetDataPasswordVisible(false)}
+      >
+        <View style={styles.modalOverlayPassword}>
+          <View style={styles.modalContentPassword}>
+            <Text style={styles.modalTitlePassword}>🔑 Reset Password Modifiche</Text>
+            <Text style={styles.modalSubtitlePassword}>
+              Imposta una nuova password per {athlete?.first_name} {athlete?.last_name}.
+              {'\n'}Questa password protegge i dati sensibili dell'atleta minorenne.
+            </Text>
+            <TextInput
+              style={styles.modalInputPassword}
+              placeholder="Nuova password (min 4 caratteri)"
+              placeholderTextColor="#999"
+              value={newDataPassword}
+              onChangeText={setNewDataPassword}
+              secureTextEntry={false}
+              autoCapitalize="none"
+            />
+            <View style={styles.modalButtonsPassword}>
+              <TouchableOpacity
+                style={styles.modalCancelBtnPassword}
+                onPress={() => {
+                  setResetDataPasswordVisible(false);
+                  setNewDataPassword('');
+                }}
+              >
+                <Text style={styles.modalCancelBtnTextPassword}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalConfirmBtnPassword, resettingDataPassword && styles.disabledBtnPassword]}
+                onPress={handleResetDataPassword}
+                disabled={resettingDataPassword}
+              >
+                {resettingDataPassword ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalConfirmBtnTextPassword}>Conferma</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
