@@ -329,6 +329,56 @@ export default function ParentDashboard() {
               ))
             )}
           </View>
+
+          {/* IMPEGNI SUCCESSIVI - Collapsible */}
+          {commitments.upcoming && commitments.upcoming.length > 0 && (
+            <View style={styles.commitmentDay}>
+              <TouchableOpacity 
+                style={styles.upcomingToggle}
+                onPress={() => setShowUpcoming(!showUpcoming)}
+              >
+                <View style={styles.commitmentDayHeader}>
+                  <View style={[styles.commitmentDot, { backgroundColor: '#007AFF' }]} />
+                  <Text style={styles.commitmentDayTitle}>IMPEGNI SUCCESSIVI ({commitments.upcoming.length})</Text>
+                </View>
+                <Ionicons 
+                  name={showUpcoming ? "chevron-up" : "chevron-down"} 
+                  size={20} 
+                  color="#007AFF" 
+                />
+              </TouchableOpacity>
+              
+              {showUpcoming && commitments.upcoming.map((item, idx) => (
+                <View key={idx} style={styles.commitmentItem}>
+                  <Ionicons 
+                    name={item.type === 'training' ? 'fitness' : 'trophy'} 
+                    size={16} 
+                    color={item.type === 'training' ? '#007AFF' : '#FF9500'} 
+                  />
+                  <View style={styles.commitmentItemContent}>
+                    <Text style={styles.commitmentItemTitle}>
+                      {item.type === 'training' 
+                        ? `Allenamento ${item.team_name}` 
+                        : `Gara ${item.team_name} vs ${item.opponent}`}
+                      {renderAthleteNames(item.athlete_names)}
+                    </Text>
+                    <Text style={styles.commitmentItemDate}>
+                      📅 {item.date} - {item.day_name}
+                    </Text>
+                    <Text style={styles.commitmentItemDetails}>
+                      {item.type === 'training' 
+                        ? `${item.time_start} - ${item.time_end}` 
+                        : `ore ${item.time}`} • {item.venue}
+                      {item.city ? ` - ${item.city}` : ''}
+                    </Text>
+                    {item.meeting_time && (
+                      <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* ATLETI Section */}
