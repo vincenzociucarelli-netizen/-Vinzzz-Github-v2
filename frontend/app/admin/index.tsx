@@ -165,6 +165,13 @@ export default function AdminDashboard() {
     loadStats();
   }, []);
 
+  // Reload stats when screen comes into focus (after approving/rejecting users)
+  useFocusEffect(
+    useCallback(() => {
+      loadStats();
+    }, [])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadStats();
