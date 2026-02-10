@@ -99,6 +99,27 @@ export default function AdminDirigenteDetail() {
     setImageViewerVisible(true);
   };
 
+  const handleResetPassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      showAlert('Errore', 'La password deve essere di almeno 6 caratteri');
+      return;
+    }
+    
+    setResettingPassword(true);
+    try {
+      await api.patch(`/users/${id}/reset-password`, {
+        new_password: newPassword
+      });
+      showAlert('Successo', `Password resettata per ${dirigente?.full_name}`);
+      setResetPasswordVisible(false);
+      setNewPassword('');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Impossibile resettare la password');
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
   const loadData = async () => {
     try {
       const [userResponse, settingsResponse] = await Promise.all([
