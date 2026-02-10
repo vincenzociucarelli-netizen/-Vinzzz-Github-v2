@@ -631,12 +631,6 @@ export default function AthleteDetail() {
     }
 
     try {
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (!isAvailable) {
-        Alert.alert('Errore', 'La condivisione non è disponibile su questo dispositivo');
-        return;
-      }
-
       let certData = certificate.pdf_data;
       let extension = 'jpg';
       let mimeType = 'image/jpeg';
@@ -666,27 +660,57 @@ export default function AthleteDetail() {
         return;
       }
 
-      // Save to temp file
-      const fileName = `certificato_${athlete?.full_name?.replace(/\s+/g, '_') || 'atleta'}_${Date.now()}.${extension}`;
-      const fileUri = FileSystem.cacheDirectory + fileName;
-      
-      await FileSystem.writeAsStringAsync(fileUri, certData, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      if (Platform.OS === 'web') {
+        // Web: download file
+        try {
+          const byteCharacters = atob(certData);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `certificato_${athlete?.full_name?.replace(/\s+/g, '_') || 'atleta'}.${extension}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          Alert.alert('Errore', 'Impossibile scaricare il certificato');
+        }
+      } else {
+        // Mobile: use expo-sharing
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (!isAvailable) {
+          Alert.alert('Errore', 'La condivisione non è disponibile su questo dispositivo');
+          return;
+        }
 
-      // Verify file was created
-      const fileInfo = await FileSystem.getInfoAsync(fileUri);
-      if (!fileInfo.exists) {
-        Alert.alert('Errore', 'Impossibile creare il file temporaneo');
-        return;
+        // Save to temp file
+        const fileName = `certificato_${athlete?.full_name?.replace(/\s+/g, '_') || 'atleta'}_${Date.now()}.${extension}`;
+        const fileUri = FileSystem.cacheDirectory + fileName;
+        
+        await FileSystem.writeAsStringAsync(fileUri, certData, {
+          encoding: 'base64' as any,
+        });
+
+        // Verify file was created
+        const fileInfo = await FileSystem.getInfoAsync(fileUri);
+        if (!fileInfo.exists) {
+          Alert.alert('Errore', 'Impossibile creare il file temporaneo');
+          return;
+        }
+
+        // Share the file
+        await Sharing.shareAsync(fileUri, {
+          mimeType: mimeType,
+          dialogTitle: `Certificato Medico - ${athlete?.full_name}`,
+          UTI: extension === 'pdf' ? 'com.adobe.pdf' : `public.${extension}`,
+        });
       }
-
-      // Share the file
-      await Sharing.shareAsync(fileUri, {
-        mimeType: mimeType,
-        dialogTitle: `Certificato Medico - ${athlete?.full_name}`,
-        UTI: extension === 'pdf' ? 'com.adobe.pdf' : `public.${extension}`,
-      });
     } catch (error: any) {
       console.error('Errore condivisione certificato:', error);
       Alert.alert('Errore', `Impossibile condividere il certificato: ${error.message || 'Riprova.'}`);
