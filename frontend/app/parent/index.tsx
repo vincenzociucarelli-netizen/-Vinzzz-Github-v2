@@ -861,4 +861,23 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 12,
   },
+  matchTitleContainer: {
+    flexDirection: 'column',
+  },
+  matchTitleMain: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  matchTitleAthlete: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#666',
+  },
+  matchTitleVs: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#FF9500',
+    marginTop: 2,
+  },
 });
