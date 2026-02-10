@@ -833,6 +833,27 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '600',
   },
+  matchTitleContainer: {
+    marginBottom: 2,
+  },
+  matchTitleMain: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  matchTitleAthlete: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  matchTitleVs: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  athleteNameColored: {
+    fontWeight: '600',
+  },
   commitmentItemDate: {
     fontSize: 12,
     color: '#007AFF',
