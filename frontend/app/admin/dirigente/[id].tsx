@@ -836,6 +836,54 @@ export default function AdminDirigenteDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Reset Password Modal */}
+      <Modal
+        visible={resetPasswordVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setResetPasswordVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>🔑 Reset Password</Text>
+            <Text style={styles.modalSubtitle}>
+              Imposta una nuova password per {dirigente?.full_name}
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Nuova password (min 6 caratteri)"
+              placeholderTextColor="#999"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry={false}
+              autoCapitalize="none"
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => {
+                  setResetPasswordVisible(false);
+                  setNewPassword('');
+                }}
+              >
+                <Text style={styles.modalCancelBtnText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalConfirmBtn, resettingPassword && styles.disabledBtn]}
+                onPress={handleResetPassword}
+                disabled={resettingPassword}
+              >
+                {resettingPassword ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalConfirmBtnText}>Conferma</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
