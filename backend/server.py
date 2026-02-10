@@ -1953,25 +1953,39 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
     deleted_count = 0
     errors = []
     
-    # Get all unique team_ids from the import data
-    team_ids_to_import = set()
+    # Collect all match_numbers from the import to decide what to delete/update
+    match_numbers_to_import = set()
     for row in matches_data:
-        if row.get("team_id"):
-            team_ids_to_import.add(row["team_id"])
+        if row.get("match_number"):
+            match_numbers_to_import.add(row["match_number"])
     
-    # Delete existing future matches for these teams (to avoid duplicates)
-    if team_ids_to_import:
-        now = datetime.utcnow()
-        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    # If we have match_numbers, delete only those specific matches (upsert logic)
+    # Otherwise, fall back to deleting all future matches for those teams
+    if match_numbers_to_import:
+        # Delete existing matches with same match_number
+        result = await db.matches.delete_many({
+            "match_number": {"$in": list(match_numbers_to_import)}
+        })
+        deleted_count = result.deleted_count
+        logging.info(f"Deleted {deleted_count} existing matches with match_numbers: {match_numbers_to_import}")
+    else:
+        # Fallback: delete future matches for teams (old behavior)
+        team_ids_to_import = set()
+        for row in matches_data:
+            if row.get("team_id"):
+                team_ids_to_import.add(row["team_id"])
         
-        for team_id in team_ids_to_import:
-            # Delete future matches for this team
-            result = await db.matches.delete_many({
-                "team_id": team_id,
-                "date": {"$gte": today}
-            })
-            deleted_count += result.deleted_count
-            logging.info(f"Deleted {result.deleted_count} existing future matches for team {team_id}")
+        if team_ids_to_import:
+            now = datetime.utcnow()
+            today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            for team_id in team_ids_to_import:
+                result = await db.matches.delete_many({
+                    "team_id": team_id,
+                    "date": {"$gte": today}
+                })
+                deleted_count += result.deleted_count
+                logging.info(f"Deleted {result.deleted_count} existing future matches for team {team_id}")
     
     for i, row in enumerate(matches_data):
         try:
@@ -2009,6 +2023,7 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
             match = Match(
                 team_id=row["team_id"],
                 team_name=team_name,
+                match_number=row.get("match_number"),  # Numero gara univoco
                 date=match_date,
                 opponent=row["opponent"],
                 venue=row.get("venue", "") or "",
@@ -2021,7 +2036,7 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
             
             await db.matches.insert_one(match.dict())
             imported_count += 1
-            logging.info(f"Match imported: {match.team_name} vs {match.opponent} on {match.date}")
+            logging.info(f"Match imported: {match.team_name} ({match.match_number}) vs {match.opponent} on {match.date}")
             
         except Exception as e:
             logging.error(f"Error importing row {i}: {e}")
