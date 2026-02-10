@@ -725,14 +725,25 @@ export default function CoachScreen() {
             )}
           </View>
 
-          {/* PROSSIMI GIORNI (day 4-7) */}
+          {/* PROSSIMI GIORNI (day 4-7) - Collapsible */}
           {commitments.upcoming && commitments.upcoming.length > 0 && (
             <View style={styles.commitmentDay}>
-              <View style={styles.commitmentDayHeader}>
-                <View style={[styles.commitmentDot, { backgroundColor: '#8E44AD' }]} />
-                <Text style={styles.commitmentDayTitle}>PROSSIMI GIORNI</Text>
-              </View>
-              {commitments.upcoming.map((item, idx) => (
+              <TouchableOpacity 
+                style={styles.upcomingToggle}
+                onPress={() => setShowUpcoming(!showUpcoming)}
+              >
+                <View style={styles.commitmentDayHeader}>
+                  <View style={[styles.commitmentDot, { backgroundColor: '#8E44AD' }]} />
+                  <Text style={styles.commitmentDayTitle}>IMPEGNI SUCCESSIVI ({commitments.upcoming.length})</Text>
+                </View>
+                <Ionicons 
+                  name={showUpcoming ? "chevron-up" : "chevron-down"} 
+                  size={20} 
+                  color="#8E44AD" 
+                />
+              </TouchableOpacity>
+              
+              {showUpcoming && commitments.upcoming.map((item, idx) => (
                 <View key={idx} style={styles.commitmentItem}>
                   <Ionicons 
                     name={item.type === 'training' ? 'fitness' : 'trophy'} 
