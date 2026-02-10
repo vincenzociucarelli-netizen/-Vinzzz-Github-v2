@@ -345,7 +345,7 @@ export default function ParentsScreen() {
         <Text style={styles.searchResultType}>Genitore</Text>
         {item.athletes && item.athletes.length > 0 && (
           <Text style={styles.searchResultChildren}>
-            Figli: {item.athletes.map(a => a.full_name).join(', ')}
+            Figli: {item.athletes.map(a => `${a.full_name}${a.team_name ? ` (${a.team_name})` : ''}`).join(', ')}
           </Text>
         )}
       </View>
