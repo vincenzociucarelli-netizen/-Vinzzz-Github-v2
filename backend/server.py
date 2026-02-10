@@ -3770,6 +3770,32 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
     def get_day_name(date):
         return days_map[date.weekday()]
     
+    # Get matches for 7 days FIRST (to know which teams have home matches on which days)
+    end_of_week = today + timedelta(days=7)
+    matches = await db.matches.find({
+        "team_id": {"$in": team_ids},
+        "date": {"$gte": today, "$lt": end_of_week}
+    }).to_list(50)
+    
+    # Build a set of (team_id, day_key) for home matches - these will skip training
+    home_match_days = set()
+    for match in matches:
+        match_date = match.get("date")
+        if isinstance(match_date, str):
+            match_date = datetime.fromisoformat(match_date.replace("Z", ""))
+        
+        # Only home matches hide training
+        if match.get("home_away") == "home":
+            if today <= match_date < tomorrow:
+                home_match_days.add((match.get("team_id"), "today"))
+            elif tomorrow <= match_date < day_after:
+                home_match_days.add((match.get("team_id"), "tomorrow"))
+            elif day_after <= match_date < (day_after + timedelta(days=1)):
+                home_match_days.add((match.get("team_id"), "day_after"))
+            else:
+                # For upcoming, we need to track by date
+                home_match_days.add((match.get("team_id"), match_date.strftime("%d/%m")))
+    
     # Build commitments for each day
     result = {"today": [], "tomorrow": [], "day_after": [], "upcoming": []}
     
@@ -3778,6 +3804,10 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
         
         # Check trainings for this day
         for team_id in team_ids:
+            # Skip training if there's a home match for this team on this day
+            if (team_id, day_key) in home_match_days:
+                continue
+            
             team = teams_dict.get(team_id, {})
             team_name = team.get("name", "Squadra")
             training_sessions = team.get("training_sessions", [])
@@ -3798,8 +3828,13 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
     for day_offset in range(3, 7):
         target_date = today + timedelta(days=day_offset)
         day_name = get_day_name(target_date)
+        date_str = target_date.strftime("%d/%m")
         
         for team_id in team_ids:
+            # Skip training if there's a home match for this team on this day
+            if (team_id, date_str) in home_match_days:
+                continue
+            
             team = teams_dict.get(team_id, {})
             team_name = team.get("name", "Squadra")
             training_sessions = team.get("training_sessions", [])
@@ -3810,19 +3845,13 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
                         "type": "training",
                         "team_id": team_id,
                         "team_name": team_name,
-                        "date": target_date.strftime("%d/%m"),
+                        "date": date_str,
                         "day_name": day_name,
                         "time_start": session.get("timeStart", ""),
                         "time_end": session.get("timeEnd", ""),
                         "venue": session.get("venue", ""),
                         "title": f"Allenamento {team_name}"
                     })
-    
-    # Get matches for 7 days
-    matches = await db.matches.find({
-        "team_id": {"$in": team_ids},
-        "date": {"$gte": today, "$lt": end_of_week}
-    }).to_list(50)
     
     for match in matches:
         match_date = match.get("date")
