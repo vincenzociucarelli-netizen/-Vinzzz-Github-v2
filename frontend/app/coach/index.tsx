@@ -249,6 +249,16 @@ export default function CoachScreen() {
     setManualQrInput('');
   };
 
+  // Funzione per abbreviare il nome della squadra (es: "Under 16" -> "U. 16")
+  const abbreviateTeamName = (name: string) => {
+    if (!name) return '';
+    return name
+      .replace(/Under\s*/i, 'U. ')
+      .replace(/Prima\s*/i, '1ª ')
+      .replace(/Seconda\s*/i, '2ª ')
+      .replace(/Serie\s*/i, 'S. ');
+  };
+
   // Cleanup web scanner on unmount
   useEffect(() => {
     return () => {
