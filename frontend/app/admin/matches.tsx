@@ -24,6 +24,7 @@ interface Match {
   id: string;
   team_id: string;
   team_name: string;
+  match_number?: string;
   date: string;
   opponent: string;
   venue: string;
