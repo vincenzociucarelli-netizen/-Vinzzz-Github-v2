@@ -182,7 +182,7 @@ export default function Register() {
         style={styles.roleCard}
         onPress={() => {
           setRole('coach');
-          setStep('invite'); // Coach needs invite code first
+          setStep('form'); // Coach goes directly to form
         }}
       >
         <View style={[styles.roleIcon, { backgroundColor: '#E8F5E9' }]}>
@@ -199,7 +199,7 @@ export default function Register() {
         style={styles.roleCard}
         onPress={() => {
           setRole('viewer');
-          setStep('invite'); // Dirigente needs invite code first
+          setStep('form'); // Dirigente goes directly to form
         }}
       >
         <View style={[styles.roleIcon, { backgroundColor: '#F3E5F5' }]}>
