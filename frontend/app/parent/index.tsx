@@ -588,15 +588,28 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  welcomeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  welcomeLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  welcomeName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 4,
+  },
   welcomeText: {
     fontSize: 18,
     color: '#333',
     fontWeight: '600',
   },
   profileSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: 20,
     paddingBottom: 10,
   },
