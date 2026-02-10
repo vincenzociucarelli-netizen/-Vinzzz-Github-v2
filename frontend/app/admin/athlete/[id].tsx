@@ -108,6 +108,12 @@ export default function AdminAthleteDetail() {
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
   const [availableCharacteristics, setAvailableCharacteristics] = useState<string[]>([]);
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
+  
+  // Reset data password modal
+  const [resetDataPasswordVisible, setResetDataPasswordVisible] = useState(false);
+  const [newDataPassword, setNewDataPassword] = useState('');
+  const [resettingDataPassword, setResettingDataPassword] = useState(false);
+  const [hasDataPassword, setHasDataPassword] = useState(false);
 
   const pickCertImage = async () => {
     // Show action sheet to choose camera or gallery
