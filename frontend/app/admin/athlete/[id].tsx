@@ -320,6 +320,28 @@ export default function AdminAthleteDetail() {
     }
   };
 
+  const handleResetDataPassword = async () => {
+    if (!newDataPassword || newDataPassword.length < 4) {
+      showAlert('Errore', 'La password deve essere di almeno 4 caratteri');
+      return;
+    }
+    
+    setResettingDataPassword(true);
+    try {
+      await api.patch(`/athletes/${id}/reset-data-password`, {
+        new_password: newDataPassword
+      });
+      showAlert('Successo', `Password modifiche resettata per ${athlete?.first_name} ${athlete?.last_name}`);
+      setResetDataPasswordVisible(false);
+      setNewDataPassword('');
+      setHasDataPassword(true);
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Impossibile resettare la password');
+    } finally {
+      setResettingDataPassword(false);
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     try {
       return format(new Date(dateStr), 'dd/MM/yyyy', { locale: it });
