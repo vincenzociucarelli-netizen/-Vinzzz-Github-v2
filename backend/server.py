@@ -1612,6 +1612,29 @@ async def update_user_role(user_id: str, data: UserUpdateRole, current_user = De
     
     return {"message": "Ruolo aggiornato con successo"}
 
+class AdminResetPassword(BaseModel):
+    new_password: str
+
+@api_router.patch("/users/{user_id}/reset-password")
+async def admin_reset_password(user_id: str, data: AdminResetPassword, current_user = Depends(get_current_user)):
+    """Admin can reset any user's password"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può resettare le password")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    # Hash the new password
+    password_hash = hash_password(data.new_password)
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"password_hash": password_hash}}
+    )
+    
+    return {"message": f"Password resettata per {user.get('full_name', user.get('email'))}"}
+
 @api_router.patch("/users/{user_id}/status")
 async def update_user_status(user_id: str, data: UserUpdateStatus, current_user = Depends(get_current_user)):
     """Approve, reject or suspend a user"""
