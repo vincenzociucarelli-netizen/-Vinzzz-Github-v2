@@ -593,12 +593,18 @@ export default function AdminMatches() {
         </TouchableOpacity>
       </View>
 
-      {/* Instructions Card */}
+      {/* Instructions Card with Template Download */}
       <View style={styles.instructionCard}>
-        <Ionicons name="information-circle" size={20} color="#007AFF" />
-        <Text style={styles.instructionText}>
-          Importa da Excel con: CampionatoNome, GaraDataOra, SquadraCasaNome, SquadraOspiteNome, Impianto, ImpiantoIndirizzo
-        </Text>
+        <View style={styles.instructionContent}>
+          <Ionicons name="information-circle" size={20} color="#007AFF" />
+          <Text style={styles.instructionText}>
+            Importa da Excel: CampionatoNome, GaraNumero, GaraDataOra, SquadraCasaNome, SquadraOspiteNome...
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.templateBtn} onPress={downloadTemplate}>
+          <Ionicons name="download-outline" size={16} color="#fff" />
+          <Text style={styles.templateBtnText}>Template</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
