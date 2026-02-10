@@ -1,84 +1,98 @@
 <analysis>
 
-**original_problem_statement**: The user, an admin for a volleyball club, has a wide range of feature requests and bug fixes to improve the application's usability for Admins, Coaches, and Parents. Key initial requests included enhancing the Excel match import with home/away logic, fixing various crashes, and overhauling the UI for parents.
+**original_problem_statement**: The user, an admin for a volleyball club, is continuing to add features and fix bugs across the application for Admin, Coach, and Parent roles.
 
-Throughout the session, the user's focus shifted to iterative improvements and bug fixes for the Admin role, including:
-- Fixing photo saving and adding technical data fields for athletes.
-- Allowing admins to change an athlete's team.
-- Filtering past events from calendars.
-- Ensuring profile photos are visible for all user roles (Dirigenti, Coach).
-- Extending the coach's schedule view.
-- Fixing UI/UX issues like non-working buttons, misaligned forms, and adding functionality like printing certificates.
-- Adding the ability to assign a carica (qualification/role) to a Dirigente.
-- Adding a WhatsApp contact button to user profiles.
+Initial requests in this session included:
+- Fixing a failing Excel match import for Admins.
+- Modifying the Coach's schedule to be collapsible, showing only the next 3 days by default.
+- Preventing training sessions from appearing on the same day as a home match for a given team.
 
-A recurring theme was the user's confusion and frustration with the difference between the live preview environment (with test data) and the deployed Expo Go application (with production data), which required significant explanation of the standard development-to-production workflow.
+Throughout the session, the user added numerous follow-up requests, including:
+- Replicating the collapsible schedule for the Parent view.
+- Simplifying the registration flow for Coaches and Dirigenti to a single page.
+- Improving the Excel import to use a unique GaraNumero (Match Number) to update existing matches instead of creating duplicates.
+- Creating a downloadable Excel template for match imports.
+- Fixing a bug where the admin's pending registration notification badge did not disappear after approving a user.
+- Adding an admin feature to reset passwords for Coaches/Dirigenti and a separate data modification password for Athletes.
+- Numerous UI/UX refinements for the Admin and Parent dashboards, such as name formatting, layout adjustments, and adding team names to lists.
+- Adding a new Società (Society) tab for Coaches to view and contact Dirigenti.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application has received a significant number of enhancements and bug fixes, primarily for the Admin role. The admin can now:
-- Edit an athlete's technical data (role, height, weight) and change their team.
-- Assign a carica (qualification) to a Dirigente via a dropdown selector, and this is visible on the Dirigente's list card.
-- View profile photos for coaches and dirigenti in their respective lists and detail pages, with an option to view them enlarged.
-- Print/download/share an athlete's medical certificate.
-- The Admin's match calendar now correctly filters out past games.
-- The Coach's dashboard now shows a 7-day schedule (instead of 3) with the day of the week displayed, and correctly includes matches.
-- Several bugs have been fixed, including the match deletion button, mobile Excel import, a crash on the athlete edit page, and the admin logout function.
-- A comprehensive User Manual and an App Presentation document have been created and are available in the  directory.
+The application has received a large number of iterative fixes and new features in this session.
+- **Coach & Parent Dashboards:** The schedule view for both roles is now collapsed, showing only Today, Tomorrow, and Day After Tomorrow by default, with a button to expand and see future commitments. The backend logic correctly hides training sessions if a home match is scheduled for the same team on the same day.
+- **Match Import (Admin):** The Excel import feature has been significantly overhauled. It now uses a unique  to update existing matches, preventing duplicates. A Download Template button has been added, which generates and allows sharing of a standardized Excel file. The initial mobile-specific crash ( error) has been fixed.
+- **Registration:** The registration flow for Coaches and Dirigenti has been simplified to a single page, matching the Parent flow.
+- **Admin Features:**
+    - The pending registration notification badge on the dashboard now correctly updates when the screen is focused.
+    - Admins can now reset the main password for Coaches and Dirigenti directly from their profile pages.
+    - Admins can reset the data modification password for an Athlete from the athlete's profile page.
+    - The Admin dashboard header layout has been improved to prevent the society name from being truncated.
+- **Parent View:** The list of parents now shows the team name next to each child. The match display format has been updated to be more descriptive and highlights the specific child's name. Several bugs related to privacy acceptance and certificate sharing/printing have been fixed.
+- **Coach View:** A new Società tab has been added to the coach's dashboard, intended to list all Dirigenti with their contact information. The WhatsApp button on the coach profile page has been fixed to always be visible and correctly styled.
 
 **Last working item**:
-    - Last item agent was working: Add a WhatsApp contact button to the profiles of Dirigente and Coach when viewed by an Admin. The user specifically requested a button for messaging, not calling.
+    - Last item agent was working: Reformatting the Coach's schedule to display matches in the same style as the Parent's view (e.g., Gara U16 vs. Opponent).
     - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? screenshot tool. The next agent should verify the button appears correctly on the Dirigente detail page () and Coach detail page () and that only the WhatsApp button is present, not the Chiama (Call) button.
+    - Which testing method agent to use? screenshot tool. After fixing the related backend permission issue (see Issue 1 below), the agent should take a screenshot of the coach's dashboard () to verify the new match format is displayed correctly.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Add WhatsApp contact button to Dirigente and Coach profiles (P0)
-  - Issue 2: Athlete photo saving and visibility of technical data after saving (P1, USER VERIFICATION PENDING)
-  - Issue 3: Excel Import on mobile fails due to Base64 encoding (P1, USER VERIFICATION PENDING)
-  - Issue 4: Expo Go Preview QR Code is Broken (P2, RECURRING)
+  - Issue 1: Coach cannot view Dirigenti in the Società tab (P0)
+  - Issue 2: Complete and test the new match display format for the Coach view (P0)
+  - Issue 3: WhatsApp button on Dirigente/Coach profiles requires user verification (P1)
+  - Issue 4: Recurring Expo Go/preview environment instability (P2)
 
   **Issues Detail**:
-  - **Issue 1: Add WhatsApp contact button to Dirigente and Coach profiles**
-     - **Attempted fixes**: The agent added a Contatti section with both Chiama (Call) and WhatsApp buttons. The user clarified they only wanted the WhatsApp button. The agent then removed the Chiama button from both  and  and added the necessary styles.
+  - **Issue 1: Coach cannot view Dirigenti in the Società tab**
+     - **Description**: While implementing the Società tab for coaches, the agent noted that the backend endpoint  returns a  error for users with the 'coach' role. This prevents the list of Dirigenti from being loaded.
+     - **Attempted fixes**: None. The agent noted the issue but moved on to another task.
      - **Next debug checklist**:
-        1. Restart the frontend (expo: ERROR (not running)
-expo: ERROR (abnormal termination)).
-        2. Take a screenshot of an admin viewing a coach's profile () to verify only the WhatsApp button is visible.
-        3. Take a screenshot of an admin viewing a dirigente's profile () for the same verification.
-        4. Confirm with the user that this implementation is correct. The  logic to open  is already in place.
-     - **Why fix this issue and what will be achieved with the fix?**: Direct user request to facilitate quick communication with staff.
+        1.  Open .
+        2.  Locate the  endpoint (around line 1483).
+        3.  Inspect the  dependency and any role checks within the endpoint.
+        4.  Modify the logic to allow users with the  to also access this endpoint.
+        5.  Restart the backend: backend: ERROR (not running)
+backend: ERROR (abnormal termination).
+     - **Why fix this issue and what will be achieved with the fix?**: This is a blocker for the newly requested Società tab feature for coaches. Fixing it will allow coaches to see the list of company directors.
+     - **Status**:  NOT STARTED
+     - **Is recurring issue?**: N
+     - **Should Test frontend/backend/both after fix?**: Backend (initially), then Frontend (to confirm the list loads).
+     - **Blocked on other issue**: None.
+
+  - **Issue 2: Complete and test the new match display format for the Coach view**
+     - **Description**: The user wants the match display in the coach's schedule to be similar to the parent's view. The agent has added the frontend logic and was in the process of adding the required styles (, , ) to .
+     - **Attempted fixes**: The agent added the rendering logic to the JSX and started to add the styles.
+     - **Next debug checklist**:
+        1.  Open .
+        2.  Add the missing styles for , , and  to the  at the end of the file.
+        3.  Ensure the backend permission issue (Issue 1) is resolved.
+        4.  Restart the frontend: expo: ERROR (not running)
+expo: started.
+        5.  Take a screenshot of the coach dashboard to verify the new format.
+     - **Why fix this issue and what will be achieved with the fix?**: Fulfills a direct user request for a more consistent and readable UI.
      - **Status**:  IN PROGRESS
      - **Is recurring issue?**: N
      - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on other issue**: None
+     - **Blocked on other issue**: Issue 1 (Coach cannot view Dirigenti in the Società tab) is not a direct blocker for the UI change itself, but the page might not load correctly without it. It's best to fix Issue 1 first.
 
-  - **Issue 2: Athlete photo saving and visibility of technical data after saving**
-     - **Description**: User reported that the athlete's photo does not save and the newly saved technical data (role, height) is not visible after saving.
-     - **Attempted fixes**: The agent identified that the backend  endpoint was not processing the new technical fields and added them. To address potential photo size issues ( error), the agent also reduced the image quality on the frontend () before upload.
-     - **Next debug checklist**: This requires user testing on the deployed application with real data. The user needs to deploy the latest changes and re-test the entire flow: upload a photo, edit technical data, save, and then reload the page to check if the photo and data persist.
-     - **Why fix this issue and what will be achieved with the fix?**: Core functionality for athlete management.
-     - **Status**:  USER VERIFICATION PENDING
-     - **Is recurring issue?**: Y
-     - **Should Test frontend/backend/both after fix?**: Both
-     - **Blocked on other issue**: None
-
-  - **Issue 3: Excel Import on mobile fails due to Base64 encoding**
-     - **Description**: The user reported that the Excel import, which works in the web preview, fails on the deployed Expo Go app with a Base64 encoding error.
-     - **Attempted fixes**: The agent replaced  with the hardcoded string  in .
-     - **Next debug checklist**: This fix requires a new deployment to be tested by the user on their mobile device.
-     - **Why fix this issue and what will be achieved with the fix?**: Fixes a critical admin feature on the mobile platform.
+  - **Issue 3: WhatsApp button on Dirigente/Coach profiles requires user verification**
+     - **Description**: The agent implemented the WhatsApp button but could not visually test it due to persistent preview environment issues. The code was verified manually, but the final result has not been confirmed.
+     - **Attempted fixes**: The agent read the code in  and  to confirm the logic was correct.
+     - **Next debug checklist**: This requires the user to deploy the changes and test on their device.
+     - **Why fix this issue and what will be achieved with the fix?**: This was the first task of the session, and it needs final user confirmation.
      - **Status**:  USER VERIFICATION PENDING
      - **Is recurring issue?**: N
      - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on other issue**: None
+     - **Blocked on other issue**: None.
 
-  - **Issue 4: Expo Go Preview QR Code is Broken**
-     - **Description**: A recurring environment issue where the user cannot use the Expo Go QR code preview, blocking mobile testing. The workaround is testing on the web preview and then deploying.
-     - **Attempted fixes**: None in this session.
-     - **Next debug checklist**: Call the  to diagnose persistent  or 
+  - **Issue 4: Recurring Expo Go/preview environment instability**
+     - **Description**: Throughout the session, the agent repeatedly struggled with the local preview server ([23:58:06] Starting project at /app/frontend) being slow to start or unresponsive, preventing the use of the .
+     - **Attempted fixes**: Multiple restarts (expo: stopped
+expo: started).
+     - **Next debug checklist**: Call the  to diagnose persistent , 
   Usage: expo [command] [options]
 
   Options:
@@ -147,127 +161,133 @@ expo: ERROR (abnormal termination)).
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[22:09:33]   Run a command with --help for more info 💡
-[22:09:33]     $ expo start --help
-[22:09:33] process conflicts.
-     - **Why fix this issue and what will be achieved with the fix?**: A major blocker to an efficient development cycle.
+[23:58:09]   Run a command with --help for more info 💡
+[23:58:09]     $ expo start --help
+[23:58:09], or networking issues.
+     - **Why fix this issue and what will be achieved with the fix?**: This is a major development blocker, making it impossible to quickly verify UI changes.
      - **Status**:  NOT STARTED
      - **Is recurring issue?**: Y
      - **Should Test frontend/backend/both after fix?**: NA (Environment issue)
-     - **Blocked on other issue**: No.
+     - **Blocked on other issue**: None.
 
 **In progress Task List**:
-- None. All work was broken down into smaller issues/features.
+  - **Task 1: Implement Società Tab for Coaches**
+     - **Description**: Add a new tab to the coach's dashboard to display a list of all company Dirigenti and allow contacting them via WhatsApp.
+     - **Where to resume**: The frontend UI is mostly complete in . The task is blocked by a backend permission issue.
+     - **What will be achieved with this?**: Fulfills a user request for better communication channels for coaches.
+     - **Status**:  BLOCKED
+     - **Should Test frontend/backend/both after fix?**: Both
+     - **Blocked on something**: Issue 1: Coach cannot view Dirigenti in the Società tab.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - (P1) Prepare the application for publication on the Google Play Store. The user has expressed a desire to start this process.
+    - (P1) Prepare the application for publication on the Google Play Store.
 - **Future Tasks**:
     - (P2) Implement the Professional Athletes with Compensation feature.
     - (P3) Stripe Integration for payments.
+    - (P4) AI Photo Transformation to Pencil Sketch.
+    - (P5) Fix broken QR Code Scanner on Registration Page.
 
 **Completed work in this session**
-- **Feature: Admin-Athlete Management (, )**:
-  - Added editable fields for an athlete's technical data (Role, Height, Weight, Characteristics).
-  - Added a dropdown selector to change an athlete's team.
-  - Fixed the backend  endpoint to correctly save this new data.
-- **Feature: Dirigente Qualification (, , )**:
-  - Implemented functionality for an admin to assign a carica (qualification) to a Dirigente from a list defined in the settings.
-  - The UI was updated from a long list to a more compact selectbox/modal.
-  - The assigned qualification is now visible on the Dirigente's list card.
-  - Created a new generic  endpoint and fixed the  endpoint to support this.
-- **Feature: Enhanced Coach Dashboard (, )**:
-  - Extended the schedule view from 3 to 7 days.
-  - Added the day of the week next to OGGI, DOMANI, etc.
-  - Fixed a bug where matches were not appearing in the schedule.
-- **Feature: Photo Visibility (, , , )**:
-  - Added profile photos to the list views for both Coaches and Dirigenti.
-  - Added a clickable, zoomable profile photo to the detail pages for both Coaches and Dirigenti.
-- **Bug Fix: Match Deletion ()**: Fixed non-working delete button by adding  to prevent nested  conflicts.
-- **Bug Fix: Filter Past Matches ()**: The Admin's match calendar now hides games that occurred before the current day.
-- **Bug Fix: Admin Logout ()**: Improved the logout function to be more reliable.
-- **Bug Fix: Registration Form Alignment ()**: Fixed CSS to correctly center the multi-step registration forms.
-- **Bug Fix: Certificate Sharing/Printing ()**: Corrected the modal for viewing an athlete's certificate, removing a duplicate Print button and adding Share and Download buttons that work on web and mobile.
-- **Documentation: Created  and **: Generated detailed user manual and promotional material as requested by the user.
+- **Schedule Logic (Coach & Parent)**:
+    - Implemented a collapsible schedule view to show only the next 3 days by default in  and .
+    - Updated backend ( &  in ) to prevent trainings from showing on home match days.
+    - Customized indicator dot colors for the coach's schedule.
+- **Excel Match Import (Admin)**:
+    - Reworked the import logic in  to use a new  field for updating () matches, preventing duplicates.
+    - Added a Download Template button and functionality in  to generate and share a standard Excel file.
+    - Fixed a mobile crash by updating deprecated  API calls.
+- **Password Reset Feature (Admin)**:
+    - Created backend endpoints for admins to reset a user's main password () and an athlete's data password ().
+    - Added UI buttons and modals for these functions in , , and .
+- **Registration Flow**:
+    - Simplified the Coach and Dirigente registration process in  to a single page, similar to the parent flow.
+- **UI/UX Enhancements**:
+    - **Admin Dashboard**: Fixed the notification badge to update on screen focus ( in ). Adjusted header layout and formatted the welcome message name to Title Case.
+    - **Admin Parent List**: Added the athlete's team name next to their name in .
+    - **Parent Dashboard**: Redesigned the header layout and updated the match display format to be more descriptive ().
+    - **Coach List (Admin)**: Replaced the navigation arrow with a 3-dot action menu on coach cards in .
+- **Bug Fixes**:
+    - Fixed  error in .
+    - Corrected certificate sharing and printing functionality for parents.
+    - Ensured WhatsApp button on coach profiles is always visible and correctly styled.
+    - Fixed various syntax errors and incorrect closing tags introduced during development.
 
 **Earlier issues found/mentioned but not fixed**
-   - **Issue 1: AI Photo Transformation to Pencil Sketch**
-     - Why to solve this issue and what will be achieved with this?: Fulfills an outstanding user feature request from a previous session.
-     - Should Test frontend/backend/both after fix: Backend
-     - Is recurring issue?: Y
-   - **Issue 2: Broken QR Code Scanner on Registration Page**
-     - Why to solve this issue and what will be achieved with this?: Fixes a broken part of the new user onboarding flow.
-     - Should Test frontend/backend/both after fix: Frontend
-     - Is recurring issue?: N
-   - **Issue 3: Photo Zoom/Rotate on Coach Profile**
-     - Why to solve this issue and what will be achieved with this?: Fulfills a user request for a better photo viewing experience on their own profile.
-     - Should Test frontend/backend/both after fix: Frontend
-     - Is recurring issue?: Y
+   - **Issue 1: Backend permission for **
+     - **Debug checklist**: Check role permissions in the  dependency or directly in the endpoint definition in  and add  to the allowed roles.
+     - **Why to solve this issue and what will be achieved with this?**: It is a blocker for the Società tab feature requested by the user.
+     - **Should Test frontend/backend/both after fix**: Both
+     - **Is recurring issue?**: N
 
 **Known issue recurrence from previous fork**
-  - **Issue recurrence in previous fork**: The Expo Go QR code preview not working is a major recurring issue that blocks mobile testing.
+  - **Issue recurrence in previous fork**: The Expo Go preview QR code /  tunnel not working reliably.
   - **Recurrence count**: High.
-  - **Status**: NOT STARTED (in this session).
+  - **Status**: NOT STARTED.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Full-Stack Debugging**: Traced issues from frontend UI (e.g., data not showing) to backend API responses (e.g.,  endpoint missing fields) and fixed them at the source.
-- **Iterative UI/UX Refinement**: Acted on user feedback to change UI elements, such as replacing a long list of qualifications with a compact selectbox modal.
-- **State Management**: Added and corrected the use of React state variables () to fix crashes (e.g., ) and manage new UI components (modals, editable data).
-- **API Endpoint Modification**: Created a new generic  endpoint and modified several existing , , and  endpoints to add missing data fields or fix bugs.
-- **Cross-Platform Compatibility**: Addressed web-specific vs. mobile-specific issues, such as adding a Download button for web certificate viewing and fixing a  issue for mobile Excel imports.
-- **Event Handling**: Solved a UI bug by using  to prevent event bubbling in nested touchable components.
+- **Focused State Reloading**: Used  from React Navigation to refetch data and update UI when a screen comes into focus, solving the stale notification badge issue.
+- **Robust Data Import**: Migrated from a delete-then-add import strategy to an  with  logic in MongoDB, using a unique business key () for idempotency.
+- **Dynamic Template Generation**: Used  and / on the frontend to dynamically create and offer a downloadable/shareable Excel template.
+- **Conditional UI Rendering**: Extensive use of conditional rendering to show/hide UI elements based on user role, data availability (e.g., phone number), and state (e.g., ).
+- **Admin-Specific Functionality**: Added secure, admin-only backend endpoints for sensitive operations like resetting user passwords.
+- **Component Refactoring**: Iteratively improved UI components based on user feedback (e.g., changing coach card from  to a 3-dot menu, redesigning parent dashboard header).
 
 **key DB schema**
-  - **users**: The model was updated to include and save , , , and . The  field is now consistently returned by API endpoints.
+  - **users**: The model logic was updated to add a  when  flags are set. The password field is hashed.
+  - **matches**: Added a  field to serve as a unique identifier for imports.
+  - **athletes**: The  field is used to protect athlete data modifications by parents.
 
 **changes in tech stack**
-  - No new libraries were added.  was effectively implemented for the Dirigente qualification selection.
+  - The  library was added as a polyfill for  during an early (and incorrect) debugging attempt on the Excel import issue. It might still be in .
 
 **All files of reference**
-- : Contains logic for editing athlete data, a source of multiple bugs and features.
-- : Contains logic for the new qualification assignment feature.
-- : Contains the improved 7-day schedule.
-- : Contains all backend fixes and new/updated endpoints.
-- : The detailed user manual created in this session.
-- : The promotional material created in this session.
+- : Contains all new backend logic for imports, password resets, and schedule generation.
+- : Contains the new Società tab and the updated schedule logic/format.
+- : Contains the updated schedule logic and multiple UI layout fixes.
+- : Contains the new Excel template download and import UI logic.
+- : Contains the UI for resetting the athlete's data modification password.
+- : Contains the UI for resetting a coach's password.
 
 **Areas that need refactoring**:
-- The detail pages like  and  have grown very large. The logic for data fetching, editing state, and UI sections (e.g., Photo Section, Personal Data, Technical Data) could be broken down into custom hooks and smaller, reusable components.
+- The  and  files are becoming very large and contain significant duplicated logic for rendering the schedule (Oggi, Domani, etc.). This could be extracted into a reusable  component.
+- The  file is now extremely long. Splitting the API routes into multiple files based on domain (e.g., , , ) would improve maintainability.
 
 **key api endpoints**
-- ****: A new, more generic endpoint was created to update user fields like .
-- ****: Modified to return  and  fields.
-- ****: Modified to accept and save new technical data fields (, , ).
-- ****: Modified to return a 7-day schedule instead of a 3-day one.
-- ****: The corresponding frontend bug was fixed.
+- ****: (New) Admin-only endpoint to reset a user's password.
+- ****: (New) Admin-only endpoint to reset an athlete's data modification password.
+- ****: (Modified) Logic completely rewritten to use  and  for idempotent imports.
+- ****: (Modified) Logic updated to hide trainings on home match days.
+- ****: (Modified) Logic updated to hide trainings on home match days.
+- ****: (Needs Fix) Currently returns 403 for coaches, blocking the Società tab.
 
 **Critical Info for New Agent**
-- **User Workflow**: The user is now aware that the preview environment uses a separate test database. They prefer to test new features with their real data. Therefore, the development cycle should be: implement feature -> inform user -> **user deploys** -> user tests on the deployed version (web or mobile). Do not spend a lot of time testing in the preview environment with missing data.
-- **User Preference**: The user prefers working on a PC. Always provide guidance based on the web version of the app.
-- **Verification**: The user is very thorough and provides clear feedback, often with screenshots. Pay close attention to their bug reports and requests for UI changes.
+- **Backend Permissions**: Be aware that the agent identified a  error when a coach tries to access . This is a blocker for the Società tab and must be fixed first.
+- **Environment Instability**: The local preview environment is highly unreliable. Do not depend on the . Manually verifying code and restarting services is the current workaround. Inform the user that a feature is ready for them to deploy and test, as testing in the preview environment is often not possible.
+- **User Workflow**: The user is hands-on and tests features on their deployed app. The development cycle is: implement, inform user, user deploys and tests, user gives feedback.
 
 **documents created in this job**
-  - 
-  - 
+  - No new documents were created in this session.
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - 10.  Asks for a selectbox for the Dirigente qualification instead of a long list. (Completed)
- - 9.  Reports that the Dirigente qualification is not visible on the Dirigente's list card. (Completed)
- - 8.  Reports that the Dirigente qualification is not being saved. (Completed)
- - 7.  Requests the ability to assign a qualification to a Dirigente in their profile. (Completed)
- - 6.  Reports two Print buttons on the certificate viewer and asks for a Share button instead. (Completed)
- - 5.  Reports that an Admin cannot print an athlete's medical certificate. (Completed)
- - 4.  Reports that an Admin cannot see the coach's photo. (Completed)
- - 3.  Reports that the registration forms are not centered. (Completed)
- - 2.  Asks to be able to see the Dirigente's photo enlarged. (Completed)
- - 1.  **Asks for a WhatsApp contact button (not a call button) on the profile of Admins, Dirigenti, and Coaches.** (In Progress)
+ - 10.  Requests to make athlete names bold in the parent view and record the date for a Dirigente's compensation declaration. (Completed)
+ - 9.  Reports that sharing a medical certificate from the parent view doesn't work and printing has extra blank pages. (Completed)
+ - 8.  Reports an error () when a parent accepts the privacy policy. (Completed)
+ - 7.  Requests a new layout for the parent dashboard header and wants the child's name in match titles to be bold and colored. (Completed)
+ - 6.  Reports syntax errors in the parent view after a previous change. (Completed)
+ - 5.  Requests the parent's match view be reformatted to . (Completed)
+ - 4.  Requests to show the team name next to each child in the admin's view of parents. (Completed)
+ - 3.  Requests to format the Benvenuto name on the admin dashboard to Title Case. (Completed)
+ - 2.  Requests to move header icons on the admin dashboard to a new line to prevent truncating the society name. (Completed)
+ - 1.  **Requests the coach's match schedule to be formatted like the parent's view.** (In Progress)
 
 **Project Health Check:**
 - **Broken**:
-  - **Expo Go Preview / ngrok Tunnel**: Critically unreliable, preventing mobile testing via the QR code. This is an environment-level issue.
+  - **Expo Go Preview / ngrok Tunnel**: Critically unreliable, preventing efficient UI testing.
+  - **Coach Società Tab**: Blocked due to a backend  permission error.
 - **Mocked**:
   - None.
 
@@ -275,13 +295,14 @@ expo: ERROR (abnormal termination)).
 - **SendGrid**: For emails.
 - **OpenAI**: For image editing.
 - ****: For photo viewing.
-- ****: For parsing Excel files on the frontend.
+- ****: For parsing and creating Excel files on the frontend.
 - ****: For date formatting and manipulation.
+- ****: Added as a polyfill.
 - **Stripe**: Planned for the future.
 
 **Testing status**
   - Testing agent used after significant changes: NO
-  - Troubleshoot agent used after agent stuck in loop: NO (but support agent was used for clarification)
+  - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None.
   - Known regressions: Expo Go preview functionality remains broken.
 
@@ -289,6 +310,6 @@ expo: ERROR (abnormal termination)).
 - Admin:  / 
 
 **What agent forgot to execute**
-- The agent did not address the older, lower-priority issues from the previous fork, such as the AI photo sketch style, the broken QR scanner on the public registration page, and the photo zoom/rotate on the coach's own profile page. This was appropriate as the user had a long list of more urgent requests.
+- The agent identified the  error for coaches trying to access  but did not fix it. It moved on to another task instead. This needs to be addressed to complete the Società tab feature.
 
 </analysis>
