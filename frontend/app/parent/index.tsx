@@ -493,8 +493,7 @@ export default function ParentDashboard() {
                   <Ionicons name="chevron-forward" size={24} color="#999" />
                 )}
               </TouchableOpacity>
-            );
-            })}
+            )}
           </View>
         )}
 
