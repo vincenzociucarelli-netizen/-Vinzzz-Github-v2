@@ -104,6 +104,15 @@ export default function AthleteDetail() {
   // QR Code ref for sharing
   const qrCodeRef = useRef<View>(null);
 
+  // Helper function for alerts
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const loadData = async () => {
     try {
       const [athleteRes, paymentsRes, teamsRes] = await Promise.all([
