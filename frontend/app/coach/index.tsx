@@ -49,6 +49,7 @@ export default function CoachScreen() {
     day_after: any[];
     upcoming: any[];
   }>({ today: [], tomorrow: [], day_after: [], upcoming: [] });
+  const [showUpcoming, setShowUpcoming] = useState(false);
   
   // Web scanner states
   const [webScannerActive, setWebScannerActive] = useState(false);
