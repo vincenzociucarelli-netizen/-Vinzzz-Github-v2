@@ -1525,6 +1525,11 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
   },
+  dirigentePhone: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 2,
+  },
   whatsappBtn: {
     flexDirection: 'row',
     alignItems: 'center',
