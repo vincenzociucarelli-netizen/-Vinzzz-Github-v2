@@ -1015,6 +1015,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
+  upcomingToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F5F0FA',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
   section: {
     backgroundColor: '#fff',
     margin: 16,
