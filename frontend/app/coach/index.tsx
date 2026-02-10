@@ -819,11 +819,16 @@ export default function CoachScreen() {
                     color={item.type === 'training' ? '#007AFF' : '#FF9500'} 
                   />
                   <View style={styles.commitmentItemContent}>
-                    <Text style={styles.commitmentItemTitle}>
-                      {item.type === 'training' 
-                        ? `Allenamento ${item.team_name}` 
-                        : `🏐 Gara ${item.team_name} vs ${item.opponent}`}
-                    </Text>
+                    {item.type === 'training' ? (
+                      <Text style={styles.commitmentItemTitle}>
+                        Allenamento {abbreviateTeamName(item.team_name)}
+                      </Text>
+                    ) : (
+                      <View style={styles.matchTitleContainer}>
+                        <Text style={styles.matchTitleMain}>Gara {abbreviateTeamName(item.team_name)}</Text>
+                        <Text style={styles.matchTitleVs}>Vs. {item.opponent}</Text>
+                      </View>
+                    )}
                     <Text style={styles.commitmentItemDetails}>
                       {item.type === 'training' 
                         ? `${item.time_start} - ${item.time_end}` 
@@ -858,7 +863,7 @@ export default function CoachScreen() {
                 <Ionicons 
                   name={showUpcoming ? "chevron-up" : "chevron-down"} 
                   size={20} 
-                  color="#8E44AD" 
+                  color="#007AFF" 
                 />
               </TouchableOpacity>
               
@@ -870,11 +875,16 @@ export default function CoachScreen() {
                     color={item.type === 'training' ? '#007AFF' : '#FF9500'} 
                   />
                   <View style={styles.commitmentItemContent}>
-                    <Text style={styles.commitmentItemTitle}>
-                      {item.type === 'training' 
-                        ? `Allenamento ${item.team_name}` 
-                        : `🏐 Gara ${item.team_name} vs ${item.opponent}`}
-                    </Text>
+                    {item.type === 'training' ? (
+                      <Text style={styles.commitmentItemTitle}>
+                        Allenamento {abbreviateTeamName(item.team_name)}
+                      </Text>
+                    ) : (
+                      <View style={styles.matchTitleContainer}>
+                        <Text style={styles.matchTitleMain}>Gara {abbreviateTeamName(item.team_name)}</Text>
+                        <Text style={styles.matchTitleVs}>Vs. {item.opponent}</Text>
+                      </View>
+                    )}
                     <Text style={styles.commitmentItemDate}>
                       📅 {item.date} - {item.day_name}
                     </Text>
