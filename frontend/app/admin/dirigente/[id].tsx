@@ -401,6 +401,24 @@ export default function AdminDirigenteDetail() {
               <Text style={styles.alertText}>
                 Il dirigente ha dichiarato di aver superato il limite di €5.000 annui.
               </Text>
+              {dirigente?.over_5000_limit?.exceeded_5000_date && (
+                <Text style={styles.alertDate}>
+                  📅 Dichiarazione: {new Date(dirigente.over_5000_limit.exceeded_5000_date).toLocaleString('it-IT')}
+                </Text>
+              )}
+              {dirigente?.over_5000_limit?.exceeded_15000 && (
+                <>
+                  <Text style={[styles.alertTitle, { marginTop: 8 }]}>🚨 SUPERAMENTO €15.000</Text>
+                  <Text style={styles.alertText}>
+                    Superato anche il limite di €15.000 - obblighi fiscali aggiuntivi!
+                  </Text>
+                  {dirigente?.over_5000_limit?.exceeded_15000_date && (
+                    <Text style={styles.alertDate}>
+                      📅 Dichiarazione: {new Date(dirigente.over_5000_limit.exceeded_15000_date).toLocaleString('it-IT')}
+                    </Text>
+                  )}
+                </>
+              )}
             </View>
           </View>
         )}
