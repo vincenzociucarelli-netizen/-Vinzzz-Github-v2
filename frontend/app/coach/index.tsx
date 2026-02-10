@@ -650,6 +650,9 @@ export default function CoachScreen() {
                         <Text style={styles.dirigenteRole}>📋 {dir.qualification}</Text>
                       )}
                       <Text style={styles.dirigenteEmail}>{dir.email}</Text>
+                      {dir.phone && (
+                        <Text style={styles.dirigentePhone}>📞 {dir.phone}</Text>
+                      )}
                     </View>
                   </View>
                   <TouchableOpacity
