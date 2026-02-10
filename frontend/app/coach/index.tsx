@@ -590,16 +590,89 @@ export default function CoachScreen() {
       </View>
       
       <View style={styles.tabBar}>
-        <TouchableOpacity style={[styles.tab, styles.tabActive]} onPress={() => setActiveTab('teams')}>
-          <Ionicons name="people" size={20} color="#007AFF" />
-          <Text style={[styles.tabText, styles.tabTextActive]}>Squadre</Text>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'teams' && styles.tabActive]} 
+          onPress={() => setActiveTab('teams')}
+        >
+          <Ionicons name="people" size={20} color={activeTab === 'teams' ? '#007AFF' : '#666'} />
+          <Text style={[styles.tabText, activeTab === 'teams' && styles.tabTextActive]}>Squadre</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tab} onPress={() => setActiveTab('scanner')}>
-          <Ionicons name="qr-code" size={20} color="#666" />
-          <Text style={styles.tabText}>Scanner</Text>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'scanner' && styles.tabActive]} 
+          onPress={() => setActiveTab('scanner')}
+        >
+          <Ionicons name="qr-code" size={20} color={activeTab === 'scanner' ? '#007AFF' : '#666'} />
+          <Text style={[styles.tabText, activeTab === 'scanner' && styles.tabTextActive]}>Scanner</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'society' && styles.tabActive]} 
+          onPress={() => setActiveTab('society')}
+        >
+          <Ionicons name="business" size={20} color={activeTab === 'society' ? '#007AFF' : '#666'} />
+          <Text style={[styles.tabText, activeTab === 'society' && styles.tabTextActive]}>Società</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Society Tab Content */}
+      {activeTab === 'society' ? (
+        <ScrollView
+          style={styles.scrollContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
+          <View style={styles.societySection}>
+            <Text style={styles.sectionTitle}>🏢 Dirigenti della Società</Text>
+            <Text style={styles.sectionSubtitle}>
+              Contatta i dirigenti tramite WhatsApp
+            </Text>
+            
+            {dirigenti.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="people-outline" size={48} color="#ccc" />
+                <Text style={styles.emptyText}>Nessun dirigente trovato</Text>
+              </View>
+            ) : (
+              dirigenti.map((dir) => (
+                <View key={dir.id} style={styles.dirigenteCard}>
+                  <View style={styles.dirigenteInfo}>
+                    {dir.profile_photo ? (
+                      <Image 
+                        source={{ uri: `data:image/jpeg;base64,${dir.profile_photo}` }}
+                        style={styles.dirigentePhoto}
+                      />
+                    ) : (
+                      <View style={styles.dirigentePhotoPlaceholder}>
+                        <Ionicons name="person" size={24} color="#999" />
+                      </View>
+                    )}
+                    <View style={styles.dirigenteDetails}>
+                      <Text style={styles.dirigenteName}>{dir.full_name}</Text>
+                      {dir.qualification && (
+                        <Text style={styles.dirigenteRole}>📋 {dir.qualification}</Text>
+                      )}
+                      <Text style={styles.dirigenteEmail}>{dir.email}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.whatsappBtn, !dir.phone && styles.whatsappBtnDisabled]}
+                    onPress={() => {
+                      if (!dir.phone) {
+                        Alert.alert('Telefono non disponibile', 'Questo dirigente non ha un numero registrato');
+                        return;
+                      }
+                      const phone = dir.phone.replace(/\D/g, '');
+                      const phoneWithCountry = phone.startsWith('39') ? phone : `39${phone}`;
+                      Linking.openURL(`https://wa.me/${phoneWithCountry}`);
+                    }}
+                  >
+                    <Ionicons name="logo-whatsapp" size={20} color="#fff" />
+                    <Text style={styles.whatsappBtnText}>WhatsApp</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </View>
+        </ScrollView>
+      ) : (
       <ScrollView
         style={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
