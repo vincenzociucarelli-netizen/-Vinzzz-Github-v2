@@ -75,6 +75,11 @@ export default function AdminDirigenteDetail() {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [viewingImageTitle, setViewingImageTitle] = useState('');
   
+  // Reset password modal
+  const [resetPasswordVisible, setResetPasswordVisible] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
+  
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
   const [qualification, setQualification] = useState('');
