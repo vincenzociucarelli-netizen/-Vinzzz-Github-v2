@@ -846,6 +846,30 @@ const styles = StyleSheet.create({
     color: '#FF9500',
     marginTop: 4,
   },
+  contactButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  whatsappBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#25D366',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  whatsappBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  disabledBtn: {
+    opacity: 0.5,
+  },
   resetPasswordBtn: {
     flexDirection: 'row',
     alignItems: 'center',
