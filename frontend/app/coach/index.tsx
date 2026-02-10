@@ -125,6 +125,7 @@ export default function CoachScreen() {
     setRefreshing(true);
     await loadTeams();
     await loadCommitments();
+    await loadDirigenti();
     if (selectedTeam) {
       await loadAthletes(selectedTeam.id);
     }
