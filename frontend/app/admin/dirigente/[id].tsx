@@ -945,6 +945,7 @@ const styles = StyleSheet.create({
   alertContent: { flex: 1, marginLeft: 12 },
   alertTitle: { fontSize: 14, fontWeight: 'bold', color: '#FF3B30' },
   alertText: { fontSize: 12, color: '#666', marginTop: 4 },
+  alertDate: { fontSize: 11, color: '#007AFF', marginTop: 4, fontStyle: 'italic' },
   // Photo section styles
   photoSection: {
     alignItems: 'center',
