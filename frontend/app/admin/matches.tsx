@@ -572,7 +572,9 @@ export default function AdminMatches() {
                       <Ionicons name="trash-outline" size={18} color="#FF3B30" />
                     </TouchableOpacity>
                   </View>
-                  <Text style={styles.matchTeam}>{match.team_name}</Text>
+                  <Text style={styles.matchTeam}>
+                    {match.team_name}{match.match_number ? ` - gara ${match.match_number}` : ''}
+                  </Text>
                   <Text style={styles.matchVs}>vs {match.opponent}</Text>
                   <View style={styles.matchDetails}>
                     <View style={styles.matchDetailItem}>
