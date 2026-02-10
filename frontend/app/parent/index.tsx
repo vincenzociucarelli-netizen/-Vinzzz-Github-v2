@@ -785,6 +785,21 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '600',
   },
+  commitmentItemDate: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  upcomingToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#E8F4FD',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
   athleteNamesContainer: {
     fontSize: 14,
   },
