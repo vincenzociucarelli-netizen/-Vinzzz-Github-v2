@@ -15,7 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import api from '../../src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import * as XLSX from 'xlsx';
