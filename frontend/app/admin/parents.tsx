@@ -281,12 +281,12 @@ export default function ParentsScreen() {
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{item.full_name}</Text>
         <Text style={styles.userEmail}>{item.email}</Text>
-        {/* Show athletes inline */}
+        {/* Show athletes inline with team name */}
         {item.athletes && item.athletes.length > 0 && (
           <View style={styles.inlineAthletes}>
             <Ionicons name="person" size={12} color="#666" />
             <Text style={styles.inlineAthletesText}>
-              {item.athletes.map(a => a.full_name).join(', ')}
+              {item.athletes.map(a => `${a.full_name}${a.team_name ? ` (${a.team_name})` : ''}`).join(', ')}
             </Text>
           </View>
         )}
