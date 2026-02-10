@@ -244,11 +244,29 @@ export default function AdminMatches() {
         const base64 = await FileSystem.readAsStringAsync(file.uri, {
           encoding: 'base64' as any,
         });
-        // Convert base64 to ArrayBuffer
-        const binaryString = atob(base64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        // Convert base64 to ArrayBuffer using a polyfill approach
+        // React Native doesn't have native atob, so we decode manually
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        let bufferLength = base64.length * 0.75;
+        if (base64[base64.length - 1] === '=') bufferLength--;
+        if (base64[base64.length - 2] === '=') bufferLength--;
+        
+        const bytes = new Uint8Array(bufferLength);
+        let p = 0;
+        
+        for (let i = 0; i < base64.length; i += 4) {
+          const encoded1 = chars.indexOf(base64[i]);
+          const encoded2 = chars.indexOf(base64[i + 1]);
+          const encoded3 = chars.indexOf(base64[i + 2]);
+          const encoded4 = chars.indexOf(base64[i + 3]);
+          
+          bytes[p++] = (encoded1 << 2) | (encoded2 >> 4);
+          if (encoded3 !== -1 && base64[i + 2] !== '=') {
+            bytes[p++] = ((encoded2 & 15) << 4) | (encoded3 >> 2);
+          }
+          if (encoded4 !== -1 && base64[i + 3] !== '=') {
+            bytes[p++] = ((encoded3 & 3) << 6) | encoded4;
+          }
         }
         fileContent = bytes.buffer;
       }
