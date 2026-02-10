@@ -222,6 +222,7 @@ class Match(BaseModel):
     society_id: Optional[str] = None
     team_id: str  # ID della squadra
     team_name: Optional[str] = None  # Nome squadra (denormalizzato per comodità)
+    match_number: Optional[str] = None  # Numero gara univoco (es: "2713")
     date: datetime  # Data e ora della gara
     opponent: str  # Avversario
     venue: Optional[str] = ""  # Luogo della gara (Palestra)
@@ -244,6 +245,7 @@ class MatchCreate(BaseModel):
     home_away: str = "home"
     meeting_time: Optional[str] = None
     notes: Optional[str] = None
+    match_number: Optional[str] = None
 
 class Team(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
