@@ -221,7 +221,8 @@ export default function AdminDashboard() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
+        {/* Society Name Row */}
+        <View style={styles.headerTopRow}>
           {society.logo && (
             <Image
               source={{ uri: `data:image/jpeg;base64,${society.logo}` }}
@@ -229,8 +230,10 @@ export default function AdminDashboard() {
               resizeMode="cover"
             />
           )}
-          <Text style={styles.headerTitle}>{society.name}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{society.name}</Text>
         </View>
+        
+        {/* Icons Row */}
         <View style={styles.headerButtons}>
           {/* Notifications Bell */}
           <TouchableOpacity 
