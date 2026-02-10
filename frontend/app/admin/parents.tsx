@@ -249,7 +249,9 @@ export default function ParentsScreen() {
           <View style={styles.athletesList}>
             <Text style={styles.athletesLabel}>👶 Figli registrati:</Text>
             {item.athletes.map((a, idx) => (
-              <Text key={idx} style={styles.athleteName}>• {a.full_name}</Text>
+              <Text key={idx} style={styles.athleteName}>
+                • {a.full_name}{a.team_name ? ` - ${a.team_name}` : ''}
+              </Text>
             ))}
           </View>
         )}
