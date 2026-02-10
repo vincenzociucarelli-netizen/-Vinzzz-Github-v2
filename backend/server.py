@@ -1948,7 +1948,28 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
     
     matches_data = file_data.get("matches", [])
     imported_count = 0
+    deleted_count = 0
     errors = []
+    
+    # Get all unique team_ids from the import data
+    team_ids_to_import = set()
+    for row in matches_data:
+        if row.get("team_id"):
+            team_ids_to_import.add(row["team_id"])
+    
+    # Delete existing future matches for these teams (to avoid duplicates)
+    if team_ids_to_import:
+        now = datetime.utcnow()
+        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        for team_id in team_ids_to_import:
+            # Delete future matches for this team
+            result = await db.matches.delete_many({
+                "team_id": team_id,
+                "date": {"$gte": today}
+            })
+            deleted_count += result.deleted_count
+            logging.info(f"Deleted {result.deleted_count} existing future matches for team {team_id}")
     
     for i, row in enumerate(matches_data):
         try:
@@ -2005,8 +2026,9 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
             errors.append(f"Riga {i+1}: {str(e)}")
     
     return {
-        "message": f"Importate {imported_count} gare",
+        "message": f"Sostituite {deleted_count} gare esistenti. Importate {imported_count} nuove gare.",
         "imported": imported_count,
+        "deleted": deleted_count,
         "errors": errors
     }
 
