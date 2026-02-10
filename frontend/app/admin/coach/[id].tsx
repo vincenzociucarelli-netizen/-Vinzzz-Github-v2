@@ -364,19 +364,21 @@ export default function AdminCoachDetail() {
           
           {/* Contact Buttons */}
           <View style={styles.contactButtons}>
-            {coach.phone && (
-              <TouchableOpacity
-                style={styles.whatsappBtn}
-                onPress={() => {
-                  const phone = coach.phone?.replace(/\D/g, '');
-                  const phoneWithCountry = phone?.startsWith('39') ? phone : `39${phone}`;
-                  Linking.openURL(`https://wa.me/${phoneWithCountry}`);
-                }}
-              >
-                <Ionicons name="logo-whatsapp" size={20} color="#fff" />
-                <Text style={styles.whatsappBtnText}>WhatsApp</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={[styles.whatsappBtn, !coach.phone && styles.disabledBtn]}
+              onPress={() => {
+                if (!coach.phone) {
+                  Alert.alert('Telefono non disponibile', 'Questo coach non ha un numero di telefono registrato');
+                  return;
+                }
+                const phone = coach.phone?.replace(/\D/g, '');
+                const phoneWithCountry = phone?.startsWith('39') ? phone : `39${phone}`;
+                Linking.openURL(`https://wa.me/${phoneWithCountry}`);
+              }}
+            >
+              <Ionicons name="logo-whatsapp" size={20} color="#fff" />
+              <Text style={styles.whatsappBtnText}>WhatsApp</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.resetPasswordBtn}
               onPress={() => setResetPasswordVisible(true)}
