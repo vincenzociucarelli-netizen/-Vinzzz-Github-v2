@@ -1145,6 +1145,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
+  matchTitleContainer: {
+    marginBottom: 2,
+  },
+  matchTitleMain: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  matchTitleVs: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
   upcomingToggle: {
     flexDirection: 'row',
     justifyContent: 'space-between',
