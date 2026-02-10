@@ -96,15 +96,25 @@ export default function ParentDashboard() {
     const athleteNames = item.athlete_names || '';
     const names = athleteNames.split(', ').filter((n: string) => n.trim());
     
-    // Mostra solo il primo nome se c'è un solo atleta
-    const displayNames = names.map((n: string) => n.split(' ')[0]).join(', ');
-    
     return (
       <>
         <Text style={styles.matchTitleMain}>
           Gara {teamAbbrev}
-          {displayNames && (
-            <Text style={styles.matchTitleAthlete}> ({displayNames})</Text>
+          {names.length > 0 && (
+            <Text style={styles.matchTitleAthleteWrapper}>
+              {' ('}
+              {names.map((fullName: string, idx: number) => {
+                const firstName = fullName.split(' ')[0];
+                const color = athleteColorMap[fullName] || '#007AFF';
+                return (
+                  <Text key={idx}>
+                    <Text style={[styles.matchTitleAthlete, { color }]}>{firstName}</Text>
+                    {idx < names.length - 1 ? ', ' : ''}
+                  </Text>
+                );
+              })}
+              {')'}
+            </Text>
           )}
         </Text>
         <Text style={styles.matchTitleVs}>Vs. {item.opponent}</Text>
