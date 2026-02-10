@@ -287,6 +287,14 @@ export default function AdminAthleteDetail() {
           console.log('Could not load attendance stats');
         }
       }
+      
+      // Check if athlete has data password
+      try {
+        const hasPassRes = await api.get(`/athletes/${id}/has-password`);
+        setHasDataPassword(hasPassRes.data.has_password);
+      } catch (e) {
+        console.log('Could not check data password');
+      }
     } catch (error) {
       console.error('Error loading athlete data:', error);
     } finally {
