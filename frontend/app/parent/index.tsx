@@ -237,11 +237,16 @@ export default function ParentDashboard() {
         }
       >
         <View style={styles.profileSection}>
-          <Text style={styles.welcomeText}>Benvenuto, {user?.full_name}</Text>
-          <TouchableOpacity onPress={openEditProfile} style={styles.editProfileBtn}>
-            <Ionicons name="create-outline" size={18} color="#007AFF" />
-            <Text style={styles.editProfileText}>Modifica nome</Text>
-          </TouchableOpacity>
+          <View style={styles.welcomeRow}>
+            <Text style={styles.welcomeLabel}>Benvenuto</Text>
+            <TouchableOpacity onPress={openEditProfile} style={styles.editProfileBtn}>
+              <Ionicons name="create-outline" size={18} color="#007AFF" />
+              <Text style={styles.editProfileText}>Modifica nome</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.welcomeName}>
+            {user?.full_name?.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+          </Text>
         </View>
 
         {/* IMPEGNI Section */}
