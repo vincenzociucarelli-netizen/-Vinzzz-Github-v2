@@ -223,6 +223,79 @@ export default function AdminMatches() {
     }
   };
 
+  // Download template Excel con formato standard
+  const downloadTemplate = async () => {
+    try {
+      // Crea il template con le colonne nel nostro formato standard
+      const templateData = [
+        {
+          'CampionatoNome': 'Under 16 Maschile',
+          'GaraNumero': '2713',
+          'GaraDataOra': '15/03/2026 18:30:00',
+          'SquadraCasaNome': 'PALLAVOLO PERUGIA',
+          'SquadraOspiteNome': 'AVVERSARIO ASD',
+          'Impianto': 'PALESTRA LICEO ALESSI',
+          'ImpiantoIndirizzo': 'Via Roma 123, Perugia (PG)',
+          'Ritrovo': '17:30',
+          'Note': ''
+        },
+        {
+          'CampionatoNome': 'Under 16 Maschile',
+          'GaraNumero': '2714',
+          'GaraDataOra': '22/03/2026 16:00:00',
+          'SquadraCasaNome': 'ALTRA SQUADRA',
+          'SquadraOspiteNome': 'PALLAVOLO PERUGIA',
+          'Impianto': 'PALAZZETTO DELLO SPORT',
+          'ImpiantoIndirizzo': 'Via Verdi 45, Terni (TR)',
+          'Ritrovo': '14:30',
+          'Note': 'Trasferta'
+        }
+      ];
+
+      // Crea workbook
+      const ws = XLSX.utils.json_to_sheet(templateData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Calendario Gare');
+
+      // Imposta larghezza colonne
+      ws['!cols'] = [
+        { wch: 20 }, // CampionatoNome
+        { wch: 12 }, // GaraNumero
+        { wch: 20 }, // GaraDataOra
+        { wch: 25 }, // SquadraCasaNome
+        { wch: 25 }, // SquadraOspiteNome
+        { wch: 25 }, // Impianto
+        { wch: 35 }, // ImpiantoIndirizzo
+        { wch: 10 }, // Ritrovo
+        { wch: 20 }, // Note
+      ];
+
+      if (Platform.OS === 'web') {
+        // Web: download diretto
+        XLSX.writeFile(wb, 'template_calendario_gare.xlsx');
+      } else {
+        // Mobile: salva e condividi
+        const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+        const fileUri = FileSystem.documentDirectory + 'template_calendario_gare.xlsx';
+        await FileSystem.writeAsStringAsync(fileUri, wbout, {
+          encoding: 'base64' as any,
+        });
+        
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            dialogTitle: 'Scarica Template Calendario',
+          });
+        } else {
+          Alert.alert('Errore', 'Condivisione non disponibile');
+        }
+      }
+    } catch (error) {
+      console.error('Error creating template:', error);
+      Alert.alert('Errore', 'Impossibile creare il template');
+    }
+  };
+
   const handleImportExcel = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
