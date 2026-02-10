@@ -11,6 +11,8 @@ import {
   FlatList,
   TextInput,
   Modal,
+  Linking,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -32,17 +34,27 @@ interface AthleteWithCert extends Athlete {
   is_expired?: boolean;
 }
 
+interface Dirigente {
+  id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  qualification?: string;
+  profile_photo?: string;
+}
+
 export default function CoachScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
-  const [activeTab, setActiveTab] = useState<'teams' | 'scanner'>('teams');
+  const [activeTab, setActiveTab] = useState<'teams' | 'scanner' | 'society'>('teams');
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [athletes, setAthletes] = useState<AthleteWithCert[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [dirigenti, setDirigenti] = useState<Dirigente[]>([]);
   const [commitments, setCommitments] = useState<{
     today: any[];
     tomorrow: any[];
