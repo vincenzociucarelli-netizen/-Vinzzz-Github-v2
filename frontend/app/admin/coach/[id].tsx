@@ -377,6 +377,13 @@ export default function AdminCoachDetail() {
                 <Text style={styles.whatsappBtnText}>WhatsApp</Text>
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              style={styles.resetPasswordBtn}
+              onPress={() => setResetPasswordVisible(true)}
+            >
+              <Ionicons name="key-outline" size={20} color="#fff" />
+              <Text style={styles.resetPasswordBtnText}>Reset Password</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
