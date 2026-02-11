@@ -11,6 +11,7 @@ import {
   Platform,
   TextInput,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
