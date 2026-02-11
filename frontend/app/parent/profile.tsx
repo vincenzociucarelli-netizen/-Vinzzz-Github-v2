@@ -453,20 +453,11 @@ export default function ParentProfile() {
 
           {/* Personal Data */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📋 Dati Anagrafici</Text>
-            {renderField('Nome', profileData.first_name, 'first_name')}
+            <Text style={styles.cardTitle}>📋 I Miei Dati</Text>
             {renderField('Cognome', profileData.last_name, 'last_name')}
+            {renderField('Nome', profileData.first_name, 'first_name')}
             {renderField('Telefono', profileData.phone, 'phone')}
-            {renderField('Codice Fiscale', profileData.fiscal_code, 'fiscal_code')}
-          </View>
-
-          {/* Address */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>🏠 Indirizzo</Text>
-            {renderField('Via/Piazza', profileData.address, 'address')}
-            {renderField('Città', profileData.city, 'city')}
-            {renderField('Provincia', profileData.province, 'province')}
-            {renderField('CAP', profileData.postal_code, 'postal_code')}
+            <Text style={styles.phoneHint}>📱 Il telefono è necessario per comunicazioni urgenti dalla società</Text>
           </View>
 
           <View style={{ height: 40 }} />
