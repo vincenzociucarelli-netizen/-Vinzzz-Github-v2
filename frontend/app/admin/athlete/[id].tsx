@@ -939,7 +939,17 @@ export default function AdminAthleteDetail() {
                       <Text style={styles.techDataLabel}>Peso</Text>
                       <Text style={styles.techDataValue}>{athleteWeight ? `${athleteWeight} kg` : '-'}</Text>
                     </View>
+                    <View style={styles.techDataItem}>
+                      <Text style={styles.techDataLabel}>Elevazione</Text>
+                      <Text style={styles.techDataValue}>{athleteElevation ? `${athleteElevation} cm` : '-'}</Text>
+                    </View>
                   </View>
+                  {athleteNotes ? (
+                    <View style={styles.notesSection}>
+                      <Text style={styles.techDataLabel}>Note</Text>
+                      <Text style={styles.notesText}>{athleteNotes}</Text>
+                    </View>
+                  ) : null}
                   {athleteCharacteristics.length > 0 && (
                     <View style={styles.characteristicsSection}>
                       <Text style={styles.techDataLabel}>Caratteristiche</Text>
