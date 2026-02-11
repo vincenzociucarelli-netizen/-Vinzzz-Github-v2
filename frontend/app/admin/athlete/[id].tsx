@@ -265,6 +265,8 @@ export default function AdminAthleteDetail() {
         athlete_weight: athleteData.athlete_weight?.toString() || '',
         athlete_elevation: athleteData.athlete_elevation?.toString() || '',
         athlete_notes: athleteData.athlete_notes || '',
+        // Second parent
+        second_parent_email: athleteData.second_parent_email || '',
         // Team
         team_id: athleteData.team_id || '',
       });
