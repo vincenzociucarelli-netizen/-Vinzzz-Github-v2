@@ -91,6 +91,11 @@ export default function Register() {
       return;
     }
 
+    if (!phone.trim()) {
+      showAlert('Errore', 'Inserisci il numero di telefono (necessario per contatti urgenti)');
+      return;
+    }
+
     if (!email.trim()) {
       showAlert('Errore', 'Inserisci la tua email');
       return;
@@ -124,6 +129,7 @@ export default function Register() {
         full_name: `${lastName.trim().toUpperCase()} ${firstName.trim()}`,
         first_name: firstName.trim(),
         last_name: lastName.trim().toUpperCase(),
+        phone: phone.trim(),
         role: role,
         invite_code: inviteCode.trim().toUpperCase(),
       });
