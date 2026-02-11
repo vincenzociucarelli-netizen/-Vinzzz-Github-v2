@@ -2536,4 +2536,21 @@ const styles = StyleSheet.create({
   disabledBtnPassword: {
     opacity: 0.6,
   },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  notesSection: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF9500',
+  },
+  notesText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+  },
 });
