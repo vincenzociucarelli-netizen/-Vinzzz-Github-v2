@@ -1044,4 +1044,28 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 16,
   },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  whatsappBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#25D366',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  whatsappBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  noPhoneText: {
+    fontSize: 16,
+    color: '#999',
+    fontStyle: 'italic',
+  },
 });
