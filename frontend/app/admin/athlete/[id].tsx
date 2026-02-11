@@ -428,6 +428,8 @@ export default function AdminAthleteDetail() {
         athlete_weight: editData.athlete_weight ? parseInt(editData.athlete_weight) : null,
         athlete_elevation: editData.athlete_elevation ? parseInt(editData.athlete_elevation) : null,
         athlete_notes: editData.athlete_notes || null,
+        // Second parent
+        second_parent_email: editData.second_parent_email?.toLowerCase().trim() || null,
         // Team change
         team_id: editData.team_id || athlete?.team_id || null,
       };
