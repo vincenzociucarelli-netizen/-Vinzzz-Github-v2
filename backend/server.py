@@ -873,6 +873,21 @@ async def register(user_data: UserCreate):
     
     await db.users.insert_one(user.dict())
     
+    # Se l'utente è un genitore, collega automaticamente gli atleti dove è secondo genitore
+    if user.role == UserRole.PARENT and society_id:
+        # Cerca atleti nella stessa società dove l'email è registrata come second_parent_email
+        athletes_to_link = await db.athletes.find({
+            "society_id": society_id,
+            "second_parent_email": user.email.lower()
+        }).to_list(100)
+        
+        # Per ogni atleta trovato, aggiungi l'ID del nuovo genitore come second_parent_id
+        for athlete in athletes_to_link:
+            await db.athletes.update_one(
+                {"id": athlete["id"]},
+                {"$set": {"second_parent_id": user.id}}
+            )
+    
     token = create_token(user.id, user.role)
     
     return TokenResponse(
