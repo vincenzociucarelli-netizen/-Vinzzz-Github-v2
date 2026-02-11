@@ -1566,6 +1566,7 @@ async def get_parents(current_user = Depends(get_current_user)):
             "athletes_count": counts_dict.get(p["id"], 0),
             "created_at": p.get("created_at"),
             "approved_at": p.get("approved_at"),
+            "phone": p.get("phone", ""),
         })
     
     return result
