@@ -2955,7 +2955,8 @@ async def update_athlete_technical_data(athlete_id: str, data: dict, current_use
     
     # Only allow updating technical fields
     allowed_fields = ["athlete_photo", "athlete_photo_artistic", "athlete_role", 
-                      "athlete_height", "athlete_weight", "athlete_characteristics"]
+                      "athlete_height", "athlete_weight", "athlete_elevation", 
+                      "athlete_notes", "athlete_characteristics"]
     
     update_dict = {k: v for k, v in data.items() if k in allowed_fields}
     
