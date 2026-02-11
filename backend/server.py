@@ -379,6 +379,7 @@ class Athlete(BaseModel):
     athlete_elevation: Optional[int] = None  # Elevazione in cm
     athlete_notes: Optional[str] = None  # Note sull'atleta
     athlete_characteristics: Optional[List[str]] = None  # Caratteristiche selezionate
+    second_parent_email: Optional[str] = None  # Email del secondo genitore
 
 class AthleteCreate(BaseModel):
     full_name: str
