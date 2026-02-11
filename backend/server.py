@@ -2931,6 +2931,8 @@ async def get_athlete_technical_data(athlete_id: str, current_user = Depends(get
         "athlete_role": athlete.get("athlete_role"),
         "athlete_height": athlete.get("athlete_height"),
         "athlete_weight": athlete.get("athlete_weight"),
+        "athlete_elevation": athlete.get("athlete_elevation"),
+        "athlete_notes": athlete.get("athlete_notes"),
         "athlete_characteristics": athlete.get("athlete_characteristics", []),
         # Certificate info (visible to all)
         "certificate_status": cert_status,
