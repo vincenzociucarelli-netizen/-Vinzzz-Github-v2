@@ -475,6 +475,29 @@ export default function ParentsScreen() {
                   <Text style={styles.detailValue}>{selectedParent.email}</Text>
                 </View>
                 
+                {/* Phone and WhatsApp */}
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Telefono</Text>
+                  {selectedParent.phone ? (
+                    <View style={styles.phoneRow}>
+                      <Text style={styles.detailValue}>{selectedParent.phone}</Text>
+                      <TouchableOpacity
+                        style={styles.whatsappBtn}
+                        onPress={() => {
+                          const phone = selectedParent.phone!.replace(/\D/g, '');
+                          const phoneWithCountry = phone.startsWith('39') ? phone : `39${phone}`;
+                          Linking.openURL(`https://wa.me/${phoneWithCountry}`);
+                        }}
+                      >
+                        <Ionicons name="logo-whatsapp" size={18} color="#fff" />
+                        <Text style={styles.whatsappBtnText}>WhatsApp</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <Text style={styles.noPhoneText}>Non disponibile</Text>
+                  )}
+                </View>
+                
                 <View style={styles.detailSection}>
                   <Text style={styles.detailLabel}>Stato</Text>
                   <View style={styles.statusRow}>
