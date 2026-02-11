@@ -448,6 +448,8 @@ class AthleteUpdate(BaseModel):
     athlete_role: Optional[str] = None
     athlete_height: Optional[int] = None
     athlete_weight: Optional[int] = None
+    athlete_elevation: Optional[int] = None
+    athlete_notes: Optional[str] = None
     athlete_characteristics: Optional[List[str]] = None
 
 class Certificate(BaseModel):
