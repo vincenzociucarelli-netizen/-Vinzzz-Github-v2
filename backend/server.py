@@ -2936,6 +2936,7 @@ async def get_athlete_technical_data(athlete_id: str, current_user = Depends(get
         "athlete_elevation": athlete.get("athlete_elevation"),
         "athlete_notes": athlete.get("athlete_notes"),
         "athlete_characteristics": athlete.get("athlete_characteristics", []),
+        "second_parent_email": athlete.get("second_parent_email"),
         # Certificate info (visible to all)
         "certificate_status": cert_status,
         "certificate_expiry": cert_expiry,
