@@ -2119,8 +2119,13 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.PARENT:
         raise HTTPException(status_code=403, detail="Solo genitori possono vedere gli impegni")
     
-    # Get parent's athletes
-    athletes = await db.athletes.find({"parent_id": current_user["id"]}).to_list(20)
+    # Get parent's athletes (include both primary and second parent)
+    athletes = await db.athletes.find({
+        "$or": [
+            {"parent_id": current_user["id"]},
+            {"second_parent_id": current_user["id"]}
+        ]
+    }).to_list(20)
     
     # Crea un dizionario per mappare team_id -> lista di nomi atleti
     team_athletes = {}
