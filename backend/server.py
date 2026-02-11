@@ -2720,7 +2720,13 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
 @api_router.get("/athletes/my", response_model=List[Athlete])
 async def get_my_athletes(current_user = Depends(get_current_user)):
     if current_user["role"] == UserRole.PARENT:
-        athletes = await db.athletes.find({"parent_id": current_user["id"]}).to_list(1000)
+        # Include both primary and second parent
+        athletes = await db.athletes.find({
+            "$or": [
+                {"parent_id": current_user["id"]},
+                {"second_parent_id": current_user["id"]}
+            ]
+        }).to_list(1000)
     elif current_user["role"] in [UserRole.ADMIN, UserRole.COACH]:
         athletes = await db.athletes.find().to_list(1000)
     else:
