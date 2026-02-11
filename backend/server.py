@@ -2908,9 +2908,12 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Check permissions
-    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Accesso negato")
+    # Check permissions - allow primary and second parent
+    if current_user["role"] == UserRole.PARENT:
+        is_primary_parent = athlete.get("parent_id") == current_user["id"]
+        is_second_parent = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary_parent and not is_second_parent:
+            raise HTTPException(status_code=403, detail="Accesso negato")
     
     return Athlete(**athlete)
 
