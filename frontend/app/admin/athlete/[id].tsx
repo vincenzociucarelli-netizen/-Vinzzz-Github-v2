@@ -218,6 +218,8 @@ export default function AdminAthleteDetail() {
       setAthleteRole(athleteData.athlete_role || '');
       setAthleteHeight(athleteData.athlete_height?.toString() || '');
       setAthleteWeight(athleteData.athlete_weight?.toString() || '');
+      setAthleteElevation(athleteData.athlete_elevation?.toString() || '');
+      setAthleteNotes(athleteData.athlete_notes || '');
       setAthleteCharacteristics(athleteData.athlete_characteristics || []);
       
       // Load available roles and characteristics from settings
