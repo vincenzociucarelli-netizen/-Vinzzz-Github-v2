@@ -3045,6 +3045,10 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
             update_dict["athlete_height"] = update_data.athlete_height
         if update_data.athlete_weight is not None:
             update_dict["athlete_weight"] = update_data.athlete_weight
+        if update_data.athlete_elevation is not None:
+            update_dict["athlete_elevation"] = update_data.athlete_elevation
+        if update_data.athlete_notes is not None:
+            update_dict["athlete_notes"] = update_data.athlete_notes
         if update_data.athlete_photo is not None:
             update_dict["athlete_photo"] = update_data.athlete_photo
         if update_data.athlete_photo_artistic is not None:
