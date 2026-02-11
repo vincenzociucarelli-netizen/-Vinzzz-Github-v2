@@ -34,6 +34,7 @@ interface Parent {
   athletes?: Athlete[];
   created_at: string;
   approved_at?: string;
+  phone?: string;
 }
 
 export default function ParentsScreen() {
