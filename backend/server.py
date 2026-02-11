@@ -1588,6 +1588,7 @@ async def get_pending_users(current_user = Depends(get_current_user)):
             "role": u["role"],
             "status": u.get("status", UserStatus.PENDING),
             "created_at": u.get("created_at"),
+            "phone": u.get("phone", ""),
         })
     
     return result
