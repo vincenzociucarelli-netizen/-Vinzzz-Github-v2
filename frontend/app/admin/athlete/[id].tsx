@@ -901,6 +901,28 @@ export default function AdminAthleteDetail() {
                       />
                     </View>
                   </View>
+                  <View style={styles.rowInputs}>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.inputLabel}>Elevazione (cm)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={editData.athlete_elevation}
+                        onChangeText={(t) => setEditData({...editData, athlete_elevation: t.replace(/\D/g, '')})}
+                        placeholder="Es. 45"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={styles.halfInput} />
+                  </View>
+                  <Text style={styles.inputLabel}>Note sull'atleta</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={editData.athlete_notes}
+                    onChangeText={(t) => setEditData({...editData, athlete_notes: t})}
+                    placeholder="Note, osservazioni, informazioni utili..."
+                    multiline
+                    numberOfLines={3}
+                  />
                 </>
               ) : (
                 <>
