@@ -1134,6 +1134,16 @@ export default function AdminAthleteDetail() {
                     onChangeText={(t) => setEditData({...editData, phone_father: t})}
                     keyboardType="phone-pad"
                   />
+                  <Text style={styles.inputLabel}>Email Secondo Genitore</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editData.second_parent_email}
+                    onChangeText={(t) => setEditData({...editData, second_parent_email: t.toLowerCase()})}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholder="email@esempio.com"
+                  />
+                  <Text style={styles.inputHint}>👨‍👩‍👧 Se il secondo genitore si registra con questa email, vedrà automaticamente questo atleta</Text>
                   <Text style={styles.inputLabel}>Indirizzo</Text>
                   <TextInput
                     style={styles.input}
