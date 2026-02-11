@@ -376,6 +376,8 @@ class Athlete(BaseModel):
     athlete_role: Optional[str] = None  # Ruolo dell'atleta
     athlete_height: Optional[int] = None  # Altezza in cm
     athlete_weight: Optional[int] = None  # Peso in kg
+    athlete_elevation: Optional[int] = None  # Elevazione in cm
+    athlete_notes: Optional[str] = None  # Note sull'atleta
     athlete_characteristics: Optional[List[str]] = None  # Caratteristiche selezionate
 
 class AthleteCreate(BaseModel):
