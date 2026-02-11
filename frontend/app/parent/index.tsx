@@ -249,9 +249,9 @@ export default function ParentDashboard() {
         <View style={styles.profileSection}>
           <View style={styles.welcomeRow}>
             <Text style={styles.welcomeLabel}>Benvenuto</Text>
-            <TouchableOpacity onPress={openEditProfile} style={styles.editProfileBtn}>
-              <Ionicons name="create-outline" size={18} color="#007AFF" />
-              <Text style={styles.editProfileText}>Modifica nome</Text>
+            <TouchableOpacity onPress={() => router.push('/parent/profile')} style={styles.editProfileBtn}>
+              <Ionicons name="person-circle-outline" size={18} color="#E91E63" />
+              <Text style={[styles.editProfileText, { color: '#E91E63' }]}>Il Mio Profilo</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.welcomeName}>
