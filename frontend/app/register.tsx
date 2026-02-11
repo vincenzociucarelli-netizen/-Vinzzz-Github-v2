@@ -26,6 +26,7 @@ export default function Register() {
   // Form fields
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -38,6 +39,7 @@ export default function Register() {
 
   // Refs
   const firstNameRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
