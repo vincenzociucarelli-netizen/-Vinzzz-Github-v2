@@ -603,6 +603,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
   },
+  phoneHint: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 8,
+    backgroundColor: '#FFF3E0',
+    padding: 10,
+    borderRadius: 8,
+  },
   // Profile photo styles
   profilePhotoContainer: {
     alignItems: 'center',
