@@ -2615,6 +2615,8 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
             "athlete_role": a.get("athlete_role"),
             "athlete_height": a.get("athlete_height"),
             "athlete_weight": a.get("athlete_weight"),
+            "athlete_elevation": a.get("athlete_elevation"),
+            "athlete_notes": a.get("athlete_notes"),
             "city": a.get("city"),
         })
     
