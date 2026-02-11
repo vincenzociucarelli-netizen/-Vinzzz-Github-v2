@@ -334,6 +334,19 @@ export default function Register() {
         onChangeText={(text) => setFirstName(text.toUpperCase())}
         autoCapitalize="characters"
         returnKeyType="next"
+        onSubmitEditing={() => phoneRef.current?.focus()}
+      />
+
+      <Text style={styles.inputLabel}>📱 Telefono * (per contatti urgenti)</Text>
+      <TextInput
+        ref={phoneRef}
+        style={styles.input}
+        placeholder="es: 333 1234567"
+        placeholderTextColor="#aaa"
+        value={phone}
+        onChangeText={setPhone}
+        keyboardType="phone-pad"
+        returnKeyType="next"
         onSubmitEditing={() => emailRef.current?.focus()}
       />
 
