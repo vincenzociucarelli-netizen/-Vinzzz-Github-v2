@@ -104,6 +104,8 @@ export default function AdminAthleteDetail() {
   const [athleteRole, setAthleteRole] = useState('');
   const [athleteHeight, setAthleteHeight] = useState('');
   const [athleteWeight, setAthleteWeight] = useState('');
+  const [athleteElevation, setAthleteElevation] = useState('');
+  const [athleteNotes, setAthleteNotes] = useState('');
   const [athleteCharacteristics, setAthleteCharacteristics] = useState<string[]>([]);
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
   const [availableCharacteristics, setAvailableCharacteristics] = useState<string[]>([]);
