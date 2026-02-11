@@ -452,6 +452,7 @@ class AthleteUpdate(BaseModel):
     athlete_elevation: Optional[int] = None
     athlete_notes: Optional[str] = None
     athlete_characteristics: Optional[List[str]] = None
+    second_parent_email: Optional[str] = None  # Email del secondo genitore
 
 class Certificate(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
