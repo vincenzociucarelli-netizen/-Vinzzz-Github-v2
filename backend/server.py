@@ -3006,6 +3006,8 @@ async def get_athlete_technical_data(athlete_id: str, current_user = Depends(get
         "date_of_birth": athlete.get("date_of_birth"),  # For age calculation only
         "team_id": athlete.get("team_id"),
         "team_id_2": athlete.get("team_id_2"),
+        # Athlete code
+        "athlete_code": athlete.get("athlete_code"),
         # Technical data
         "athlete_photo": athlete.get("athlete_photo"),
         "athlete_photo_artistic": athlete.get("athlete_photo_artistic"),
