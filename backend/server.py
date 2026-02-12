@@ -321,6 +321,8 @@ class Athlete(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     society_id: Optional[str] = None  # ID della società (multi-tenancy)
     parent_id: str  # User ID of parent/guardian
+    # Codice univoco atleta (auto-generato: COGNOME3+NOME3-SQUADRA)
+    athlete_code: Optional[str] = None  # Es: ROSMAR-U16
     # Tesseramento (gestito da Admin)
     federal_code: Optional[str] = None  # Codice Federale
     is_registered: bool = False  # Tesserato sì/no
