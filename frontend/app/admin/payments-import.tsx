@@ -330,7 +330,10 @@ export default function PaymentsImport() {
           </View>
           <View style={styles.formatItem}>
             <Text style={styles.formatLabel}>TipoPagamento</Text>
-            <Text style={styles.formatDesc}>Bonifico / POS / Contanti / Assegno</Text>
+            <Text style={styles.formatDesc}>B / P / C / A / O</Text>
+          </View>
+          <View style={styles.formatHint}>
+            <Text style={styles.formatHintText}>B=Bonifico, P=POS, C=Contanti, A=Assegno, O=Online</Text>
           </View>
           <View style={styles.formatItem}>
             <Text style={styles.formatLabel}>DataRegistrazione</Text>
