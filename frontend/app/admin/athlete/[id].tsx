@@ -2391,6 +2391,44 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 90,
   },
+  // Physical data display row
+  physicalDataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  physicalDataItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  physicalDataLabel: {
+    fontSize: 11,
+    color: '#666',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  physicalDataValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  roleDisplay: {
+    marginBottom: 12,
+  },
+  roleValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
   // Team selector styles
   teamSelector: {
     gap: 8,
