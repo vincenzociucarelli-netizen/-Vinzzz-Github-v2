@@ -402,31 +402,61 @@ export default function CoachAthleteDetail() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📏 Dati Fisici</Text>
           
-          <View style={styles.physicalRow}>
-            <View style={styles.physicalInput}>
-              <Text style={styles.inputLabel}>Altezza (cm)</Text>
+          <View style={styles.physicalRowThree}>
+            <View style={styles.physicalInputThird}>
+              <Text style={styles.inputLabel}>Altezza cm.</Text>
               <TextInput
                 style={styles.input}
                 value={height}
                 onChangeText={setHeight}
-                placeholder="es: 175"
+                placeholder="175"
                 keyboardType="numeric"
                 placeholderTextColor="#aaa"
+                maxLength={3}
               />
             </View>
             
-            <View style={styles.physicalInput}>
-              <Text style={styles.inputLabel}>Peso (kg)</Text>
+            <View style={styles.physicalInputThird}>
+              <Text style={styles.inputLabel}>Peso kg.</Text>
               <TextInput
                 style={styles.input}
                 value={weight}
                 onChangeText={setWeight}
-                placeholder="es: 65"
+                placeholder="65"
                 keyboardType="numeric"
                 placeholderTextColor="#aaa"
+                maxLength={3}
+              />
+            </View>
+            
+            <View style={styles.physicalInputThird}>
+              <Text style={styles.inputLabel}>Elevaz. cm.</Text>
+              <TextInput
+                style={styles.input}
+                value={elevation}
+                onChangeText={setElevation}
+                placeholder="45"
+                keyboardType="numeric"
+                placeholderTextColor="#aaa"
+                maxLength={3}
               />
             </View>
           </View>
+        </View>
+
+        {/* Notes Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📝 Note Allenatore</Text>
+          <TextInput
+            style={[styles.input, styles.notesInput]}
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Inserisci osservazioni, giudizi, note tecniche..."
+            placeholderTextColor="#aaa"
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
         </View>
 
         {/* Characteristics Section */}
