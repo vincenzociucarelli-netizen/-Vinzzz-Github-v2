@@ -58,6 +58,8 @@ export default function CoachAthleteDetail() {
   const [role, setRole] = useState<string>('');
   const [height, setHeight] = useState<string>('');
   const [weight, setWeight] = useState<string>('');
+  const [elevation, setElevation] = useState<string>('');
+  const [notes, setNotes] = useState<string>('');
   const [selectedCharacteristics, setSelectedCharacteristics] = useState<string[]>([]);
 
   useEffect(() => {
