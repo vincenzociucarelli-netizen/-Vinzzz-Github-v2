@@ -51,13 +51,13 @@ export default function PaymentsImport() {
 
   const downloadTemplate = async () => {
     try {
-      // Create template data
+      // Create template data with letter codes
       const templateData = [
         {
           CodiceAtleta: 'ROSMAR-U16',
           DataPagamento: '15/01/2025',
           Importo: 150.00,
-          TipoPagamento: 'Bonifico',
+          TipoPagamento: 'B',
           DataRegistrazione: '16/01/2025',
           Causale: 'Quota Gennaio-Febbraio'
         },
@@ -65,9 +65,17 @@ export default function PaymentsImport() {
           CodiceAtleta: 'BIAFED-SD',
           DataPagamento: '20/01/2025',
           Importo: 200.00,
-          TipoPagamento: 'POS',
+          TipoPagamento: 'P',
           DataRegistrazione: '',
           Causale: 'Quota Trimestrale'
+        },
+        {
+          CodiceAtleta: 'VERANA-U14',
+          DataPagamento: '22/01/2025',
+          Importo: 100.00,
+          TipoPagamento: 'C',
+          DataRegistrazione: '',
+          Causale: ''
         }
       ];
 
