@@ -710,10 +710,12 @@ async def update_athlete_code(athlete_id: str):
     team = await db.teams.find_one({"id": athlete.get("team_id")})
     team_name = team.get("name", "") if team else ""
     
-    code = generate_athlete_code(
+    code = await generate_unique_athlete_code(
         athlete.get("last_name", ""),
         athlete.get("first_name", ""),
-        team_name
+        team_name,
+        athlete.get("society_id", ""),
+        athlete_id  # Exclude current athlete from duplicate check
     )
     
     await db.athletes.update_one(
