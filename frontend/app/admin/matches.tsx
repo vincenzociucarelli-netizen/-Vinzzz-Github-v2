@@ -602,7 +602,7 @@ export default function AdminMatches() {
           </Text>
         </View>
         <TouchableOpacity style={styles.templateBtn} onPress={downloadTemplate}>
-          <Ionicons name="download-outline" size={16} color="#fff" />
+          <Ionicons name="share-outline" size={16} color="#fff" />
           <Text style={styles.templateBtnText}>Template</Text>
         </TouchableOpacity>
       </View>
