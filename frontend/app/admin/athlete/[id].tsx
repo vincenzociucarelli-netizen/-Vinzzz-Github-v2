@@ -932,24 +932,30 @@ export default function AdminAthleteDetail() {
                 </>
               ) : (
                 <>
-                  <View style={styles.techDataGrid}>
-                    <View style={styles.techDataItem}>
+                  {/* Ruolo */}
+                  {athleteRole ? (
+                    <View style={styles.roleDisplay}>
                       <Text style={styles.techDataLabel}>Ruolo</Text>
-                      <Text style={styles.techDataValue}>{athleteRole || '-'}</Text>
+                      <Text style={styles.roleValue}>{athleteRole}</Text>
                     </View>
-                    <View style={styles.techDataItem}>
-                      <Text style={styles.techDataLabel}>Altezza</Text>
-                      <Text style={styles.techDataValue}>{athleteHeight ? `${athleteHeight} cm` : '-'}</Text>
+                  ) : null}
+                  
+                  {/* Dati fisici in riga */}
+                  <View style={styles.physicalDataRow}>
+                    <View style={styles.physicalDataItem}>
+                      <Text style={styles.physicalDataLabel}>Altezza cm.</Text>
+                      <Text style={styles.physicalDataValue}>{athleteHeight || '-'}</Text>
                     </View>
-                    <View style={styles.techDataItem}>
-                      <Text style={styles.techDataLabel}>Peso</Text>
-                      <Text style={styles.techDataValue}>{athleteWeight ? `${athleteWeight} kg` : '-'}</Text>
+                    <View style={styles.physicalDataItem}>
+                      <Text style={styles.physicalDataLabel}>Peso kg.</Text>
+                      <Text style={styles.physicalDataValue}>{athleteWeight || '-'}</Text>
                     </View>
-                    <View style={styles.techDataItem}>
-                      <Text style={styles.techDataLabel}>Elevazione</Text>
-                      <Text style={styles.techDataValue}>{athleteElevation ? `${athleteElevation} cm` : '-'}</Text>
+                    <View style={styles.physicalDataItem}>
+                      <Text style={styles.physicalDataLabel}>Elevaz. cm.</Text>
+                      <Text style={styles.physicalDataValue}>{athleteElevation || '-'}</Text>
                     </View>
                   </View>
+                  
                   {athleteNotes ? (
                     <View style={styles.notesSection}>
                       <Text style={styles.techDataLabel}>Note</Text>
