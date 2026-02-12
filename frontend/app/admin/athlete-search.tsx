@@ -395,8 +395,8 @@ export default function AthleteSearchScreen() {
         </Text>
         {filteredAthletes.length > 0 && (
           <TouchableOpacity style={styles.exportButton} onPress={exportToXLS}>
-            <Ionicons name="download-outline" size={18} color="#fff" />
-            <Text style={styles.exportButtonText}>Esporta XLS</Text>
+            <Ionicons name="share-outline" size={18} color="#fff" />
+            <Text style={styles.exportButtonText}>Condividi XLS</Text>
           </TouchableOpacity>
         )}
       </View>
