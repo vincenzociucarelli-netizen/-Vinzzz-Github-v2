@@ -485,9 +485,11 @@ class Payment(BaseModel):
     due_date: Optional[datetime] = None
     paid: bool = False
     paid_date: Optional[datetime] = None
-    payment_method: Optional[str] = None  # 'bonifico', 'paypal', 'contanti'
+    payment_method: Optional[str] = None  # 'Bonifico', 'POS', 'Contanti', 'Assegno'
     is_cash: bool = False  # True se pagamento in contanti
     notes: Optional[str] = None  # Note aggiuntive
+    receipt_number: Optional[str] = None  # Numero ricevuta fiscale (es: RIC-2025-0001)
+    registration_date: Optional[datetime] = None  # Data registrazione nel sistema
     created_at: datetime = Field(default_factory=datetime.utcnow)
     created_by: Optional[str] = None  # Admin ID who created the payment
 
