@@ -653,6 +653,44 @@ def generate_qr_code(athlete_id: str) -> str:
     
     return f"data:image/png;base64,{img_str}"
 
+def generate_athlete_code(last_name: str, first_name: str, team_name: str) -> str:
+    """Generate unique athlete code: COGNOME(3)+NOME(3)-SQUADRA
+    Es: ROSMAR-U16, BIAFED-SD"""
+    import re
+    # Clean and get first 3 chars of last name and first name
+    ln = re.sub(r'[^A-Za-z]', '', (last_name or '').upper())[:3]
+    fn = re.sub(r'[^A-Za-z]', '', (first_name or '').upper())[:3]
+    
+    # Clean team name: keep only alphanumeric, remove spaces
+    tn = re.sub(r'[^A-Za-z0-9]', '', (team_name or '').upper())
+    # Shorten common patterns
+    tn = tn.replace('UNDER', 'U').replace('SERIE', 'S')
+    # Max 5 chars for team
+    tn = tn[:5] if len(tn) > 5 else tn
+    
+    return f"{ln}{fn}-{tn}" if tn else f"{ln}{fn}"
+
+async def update_athlete_code(athlete_id: str):
+    """Update athlete code based on current team"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        return None
+    
+    team = await db.teams.find_one({"id": athlete.get("team_id")})
+    team_name = team.get("name", "") if team else ""
+    
+    code = generate_athlete_code(
+        athlete.get("last_name", ""),
+        athlete.get("first_name", ""),
+        team_name
+    )
+    
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {"athlete_code": code}}
+    )
+    return code
+
 async def check_athlete_status(athlete_id: str):
     """Check if athlete can attend (certificate valid, payments up to date, privacy accepted)"""
     athlete = await db.athletes.find_one({"id": athlete_id})
