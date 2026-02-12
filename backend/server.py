@@ -3930,6 +3930,162 @@ async def update_payment(payment_id: str, update_data: PaymentUpdate, current_us
     
     return Payment(**payment)
 
+async def get_next_receipt_number(society_id: str) -> str:
+    """Generate next receipt number for the current year: RIC-2025-0001"""
+    current_year = datetime.utcnow().year
+    prefix = f"RIC-{current_year}-"
+    
+    # Find the highest receipt number for this year and society
+    last_payment = await db.payments.find_one(
+        {
+            "receipt_number": {"$regex": f"^{prefix}"},
+        },
+        sort=[("receipt_number", -1)]
+    )
+    
+    if last_payment and last_payment.get("receipt_number"):
+        # Extract the number and increment
+        try:
+            last_num = int(last_payment["receipt_number"].split("-")[-1])
+            next_num = last_num + 1
+        except:
+            next_num = 1
+    else:
+        next_num = 1
+    
+    return f"{prefix}{next_num:04d}"
+
+@api_router.post("/payments/import")
+async def import_payments(file: UploadFile = File(...), current_user = Depends(get_current_user)):
+    """Import payments from Excel file. Matches athletes by athlete_code."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può importare pagamenti")
+    
+    content = await file.read()
+    
+    try:
+        import pandas as pd
+        from io import BytesIO
+        
+        df = pd.read_excel(BytesIO(content))
+        
+        # Required columns
+        required_cols = ['CodiceAtleta', 'DataPagamento', 'Importo', 'TipoPagamento']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            raise HTTPException(status_code=400, detail=f"Colonne mancanti: {', '.join(missing_cols)}")
+        
+        society_id = current_user.get("society_id")
+        imported = 0
+        errors = []
+        
+        for idx, row in df.iterrows():
+            try:
+                athlete_code = str(row['CodiceAtleta']).strip().upper()
+                
+                # Find athlete by code
+                athlete = await db.athletes.find_one({
+                    "athlete_code": athlete_code,
+                    "society_id": society_id
+                })
+                
+                if not athlete:
+                    errors.append(f"Riga {idx+2}: Atleta {athlete_code} non trovato")
+                    continue
+                
+                # Parse dates
+                data_pagamento = row['DataPagamento']
+                if isinstance(data_pagamento, str):
+                    try:
+                        data_pagamento = datetime.strptime(data_pagamento, "%d/%m/%Y")
+                    except:
+                        data_pagamento = datetime.strptime(data_pagamento, "%Y-%m-%d")
+                
+                data_registrazione = None
+                if 'DataRegistrazione' in df.columns and pd.notna(row.get('DataRegistrazione')):
+                    dr = row['DataRegistrazione']
+                    if isinstance(dr, str):
+                        try:
+                            data_registrazione = datetime.strptime(dr, "%d/%m/%Y")
+                        except:
+                            data_registrazione = datetime.strptime(dr, "%Y-%m-%d")
+                    else:
+                        data_registrazione = dr
+                
+                # Get amount
+                importo = float(row['Importo'])
+                
+                # Get payment method
+                tipo = str(row['TipoPagamento']).strip().capitalize()
+                if tipo not in ['Bonifico', 'Pos', 'Contanti', 'Assegno']:
+                    tipo = 'Altro'
+                
+                # Causale (optional)
+                causale = str(row.get('Causale', '')).strip() if pd.notna(row.get('Causale')) else None
+                
+                # Generate receipt number
+                receipt_number = await get_next_receipt_number(society_id)
+                
+                # Create payment
+                payment = Payment(
+                    athlete_id=athlete["id"],
+                    description=causale or f"Pagamento importato - {tipo}",
+                    amount=importo,
+                    paid=True,
+                    paid_date=data_pagamento,
+                    payment_method=tipo,
+                    is_cash=(tipo == 'Contanti'),
+                    receipt_number=receipt_number,
+                    registration_date=data_registrazione or datetime.utcnow(),
+                    created_by=current_user["id"],
+                )
+                
+                await db.payments.insert_one(payment.dict())
+                imported += 1
+                
+            except Exception as e:
+                errors.append(f"Riga {idx+2}: {str(e)}")
+        
+        return {
+            "success": True,
+            "imported": imported,
+            "errors": errors,
+            "message": f"Importati {imported} pagamenti" + (f" con {len(errors)} errori" if errors else "")
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Errore lettura file: {str(e)}")
+
+@api_router.get("/payments/export-athletes-codes")
+async def export_athletes_with_codes(current_user = Depends(get_current_user)):
+    """Export list of athletes with their codes for payment reference"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    society_id = current_user.get("society_id")
+    
+    athletes = await db.athletes.find({"society_id": society_id, "status": "active"}).to_list(1000)
+    teams = await db.teams.find({"society_id": society_id}).to_list(100)
+    team_dict = {t["id"]: t["name"] for t in teams}
+    
+    result = []
+    for a in athletes:
+        # Generate code if missing
+        if not a.get("athlete_code"):
+            team_name = team_dict.get(a.get("team_id"), "")
+            code = generate_athlete_code(a.get("last_name", ""), a.get("first_name", ""), team_name)
+            await db.athletes.update_one({"id": a["id"]}, {"$set": {"athlete_code": code}})
+            a["athlete_code"] = code
+        
+        result.append({
+            "CodiceAtleta": a.get("athlete_code", ""),
+            "Cognome": a.get("last_name", ""),
+            "Nome": a.get("first_name", ""),
+            "Squadra": team_dict.get(a.get("team_id"), ""),
+        })
+    
+    return result
+
 # ==================== ATTENDANCE ENDPOINTS (COACH) ====================
 
 @api_router.post("/attendance/check", response_model=Attendance)
