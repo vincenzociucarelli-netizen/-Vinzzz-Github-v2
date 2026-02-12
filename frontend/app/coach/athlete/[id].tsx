@@ -86,6 +86,8 @@ export default function CoachAthleteDetail() {
       setRole(athleteData.athlete_role || '');
       setHeight(athleteData.athlete_height ? String(athleteData.athlete_height) : '');
       setWeight(athleteData.athlete_weight ? String(athleteData.athlete_weight) : '');
+      setElevation(athleteData.athlete_elevation ? String(athleteData.athlete_elevation) : '');
+      setNotes(athleteData.athlete_notes || '');
       setSelectedCharacteristics(athleteData.athlete_characteristics || []);
     } catch (error) {
       console.error('Error loading athlete:', error);
