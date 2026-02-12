@@ -2749,11 +2749,12 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
     parent_user = await db.users.find_one({"id": current_user["id"]})
     society_id = parent_user.get("society_id") if parent_user else None
     
-    # Generate athlete code
-    athlete_code = generate_athlete_code(
+    # Generate unique athlete code
+    athlete_code = await generate_unique_athlete_code(
         athlete_data.last_name,
         athlete_data.first_name,
-        team.get("name", "") if team else ""
+        team.get("name", "") if team else "",
+        society_id
     )
     
     athlete = Athlete(
