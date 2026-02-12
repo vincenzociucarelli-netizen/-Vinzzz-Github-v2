@@ -388,10 +388,25 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
+  athleteNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   athleteName: {
     fontSize: 15,
     fontWeight: '600',
     color: '#333',
+    flex: 1,
+  },
+  athleteCode: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#007AFF',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   athleteNameWithdrawn: {
     color: '#FF3B30',
