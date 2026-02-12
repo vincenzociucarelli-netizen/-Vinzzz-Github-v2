@@ -2712,16 +2712,24 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
     # Hash data password if provided (for minors - protects sensitive data)
     data_password_hash = None
     if athlete_data.data_password and is_minor:
-        data_password_hash = hash_password(athlete_data.data_password)
+        data_password_hash=hash_password(athlete_data.data_password)
     
     # Get society_id from the user's parent
     parent_user = await db.users.find_one({"id": current_user["id"]})
     society_id = parent_user.get("society_id") if parent_user else None
     
+    # Generate athlete code
+    athlete_code = generate_athlete_code(
+        athlete_data.last_name,
+        athlete_data.first_name,
+        team.get("name", "") if team else ""
+    )
+    
     athlete = Athlete(
         id=athlete_id,
         parent_id=current_user["id"],
         society_id=society_id,
+        athlete_code=athlete_code,
         full_name=athlete_data.full_name,
         first_name=athlete_data.first_name,
         last_name=athlete_data.last_name,
