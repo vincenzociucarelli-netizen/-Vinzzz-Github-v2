@@ -187,12 +187,17 @@ export default function AdminAthletes() {
       onPress={() => router.push(`/admin/athlete/${item.id}`)}
     >
       <View style={styles.athleteInfo}>
-        <Text style={[
-          styles.athleteName,
-          item.is_withdrawn && styles.athleteNameWithdrawn
-        ]} numberOfLines={1}>
-          {formatAthleteNameForDisplay(item)}
-        </Text>
+        <View style={styles.athleteNameRow}>
+          <Text style={[
+            styles.athleteName,
+            item.is_withdrawn && styles.athleteNameWithdrawn
+          ]} numberOfLines={1}>
+            {formatAthleteNameForDisplay(item)}
+          </Text>
+          {(item as any).athlete_code && (
+            <Text style={styles.athleteCode}>{(item as any).athlete_code}</Text>
+          )}
+        </View>
         <Text style={styles.teamName} numberOfLines={1}>
           {teams[item.team_id]?.name || '-'}
         </Text>
