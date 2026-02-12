@@ -4104,7 +4104,16 @@ async def export_athletes_with_codes(current_user = Depends(get_current_user)):
     
     society_id = current_user.get("society_id")
     
-    athletes = await db.athletes.find({"society_id": society_id, "status": "active"}).to_list(1000)
+    # Get all athletes (active or without status) - exclude only withdrawn
+    athletes = await db.athletes.find({
+        "society_id": society_id,
+        "$or": [
+            {"status": "active"},
+            {"status": {"$exists": False}},
+            {"status": None}
+        ],
+        "is_withdrawn": {"$ne": True}
+    }).to_list(1000)
     teams = await db.teams.find({"society_id": society_id}).to_list(100)
     team_dict = {t["id"]: t["name"] for t in teams}
     
