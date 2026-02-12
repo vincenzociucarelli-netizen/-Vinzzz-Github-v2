@@ -672,6 +672,35 @@ def generate_athlete_code(last_name: str, first_name: str, team_name: str) -> st
     
     return f"{ln}{fn}-{tn}" if tn else f"{ln}{fn}"
 
+async def generate_unique_athlete_code(last_name: str, first_name: str, team_name: str, society_id: str, exclude_athlete_id: str = None) -> str:
+    """Generate unique athlete code, adding suffix if duplicate exists.
+    Es: ROSMAR-U16, ROSMAR-U16-2, ROSMAR-U16-3"""
+    base_code = generate_athlete_code(last_name, first_name, team_name)
+    
+    # Check if code already exists
+    query = {"athlete_code": base_code, "society_id": society_id}
+    if exclude_athlete_id:
+        query["id"] = {"$ne": exclude_athlete_id}
+    
+    existing = await db.athletes.find_one(query)
+    
+    if not existing:
+        return base_code
+    
+    # Find next available suffix
+    suffix = 2
+    while True:
+        new_code = f"{base_code}-{suffix}"
+        query["athlete_code"] = new_code
+        existing = await db.athletes.find_one(query)
+        if not existing:
+            return new_code
+        suffix += 1
+        if suffix > 99:  # Safety limit
+            break
+    
+    return f"{base_code}-{suffix}"
+
 async def update_athlete_code(athlete_id: str):
     """Update athlete code based on current team"""
     athlete = await db.athletes.find_one({"id": athlete_id})
