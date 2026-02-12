@@ -2374,8 +2374,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  rowInputsThree: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   halfInput: {
     flex: 1,
+  },
+  thirdInput: {
+    flex: 1,
+    minWidth: 90,
   },
   // Team selector styles
   teamSelector: {
