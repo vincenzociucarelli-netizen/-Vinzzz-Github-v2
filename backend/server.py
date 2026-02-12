@@ -4049,10 +4049,16 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
                 # Get amount
                 importo = float(row['Importo'])
                 
-                # Get payment method
-                tipo = str(row['TipoPagamento']).strip().capitalize()
-                if tipo not in ['Bonifico', 'Pos', 'Contanti', 'Assegno']:
-                    tipo = 'Altro'
+                # Get payment method - support both letter and full name
+                tipo_raw = str(row['TipoPagamento']).strip().upper()
+                tipo_map = {
+                    'B': 'Bonifico', 'BONIFICO': 'Bonifico',
+                    'P': 'POS', 'POS': 'POS',
+                    'C': 'Contanti', 'CONTANTI': 'Contanti',
+                    'A': 'Assegno', 'ASSEGNO': 'Assegno',
+                    'O': 'Online', 'ONLINE': 'Online',
+                }
+                tipo = tipo_map.get(tipo_raw, 'Altro')
                 
                 # Causale (optional)
                 causale = str(row.get('Causale', '')).strip() if pd.notna(row.get('Causale')) else None
