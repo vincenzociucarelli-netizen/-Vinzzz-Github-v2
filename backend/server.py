@@ -4107,7 +4107,13 @@ async def export_athletes_with_codes(current_user = Depends(get_current_user)):
         # Generate code if missing
         if not a.get("athlete_code"):
             team_name = team_dict.get(a.get("team_id"), "")
-            code = generate_athlete_code(a.get("last_name", ""), a.get("first_name", ""), team_name)
+            code = await generate_unique_athlete_code(
+                a.get("last_name", ""), 
+                a.get("first_name", ""), 
+                team_name,
+                society_id,
+                a["id"]
+            )
             await db.athletes.update_one({"id": a["id"]}, {"$set": {"athlete_code": code}})
             a["athlete_code"] = code
         
