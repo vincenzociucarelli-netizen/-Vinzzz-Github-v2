@@ -739,8 +739,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  physicalRowThree: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   physicalInput: {
     flex: 1,
+  },
+  physicalInputThird: {
+    flex: 1,
+    minWidth: 80,
   },
   inputLabel: {
     fontSize: 13,
@@ -756,6 +764,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
     textAlign: 'center',
+  },
+  notesInput: {
+    minHeight: 100,
+    textAlign: 'left',
+    textAlignVertical: 'top',
   },
   characteristicsContainer: {
     flexDirection: 'row',
