@@ -307,7 +307,7 @@ export default function CoachesScreen() {
           {exporting ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Ionicons name="download-outline" size={24} color="#fff" />
+            <Ionicons name="share-outline" size={24} color="#fff" />
           )}
         </TouchableOpacity>
       </View>
