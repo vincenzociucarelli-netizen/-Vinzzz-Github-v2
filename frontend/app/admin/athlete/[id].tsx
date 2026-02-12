@@ -885,40 +885,40 @@ export default function AdminAthleteDetail() {
                       placeholder="Es. Palleggiatore, Schiacciatore..."
                     />
                   )}
-                  <View style={styles.rowInputs}>
-                    <View style={styles.halfInput}>
-                      <Text style={styles.inputLabel}>Altezza (cm)</Text>
+                  <View style={styles.rowInputsThree}>
+                    <View style={styles.thirdInput}>
+                      <Text style={styles.inputLabel}>Altezza cm.</Text>
                       <TextInput
                         style={styles.input}
                         value={editData.athlete_height}
                         onChangeText={(t) => setEditData({...editData, athlete_height: t.replace(/\D/g, '')})}
-                        placeholder="Es. 175"
+                        placeholder="175"
                         keyboardType="numeric"
+                        maxLength={3}
                       />
                     </View>
-                    <View style={styles.halfInput}>
-                      <Text style={styles.inputLabel}>Peso (kg)</Text>
+                    <View style={styles.thirdInput}>
+                      <Text style={styles.inputLabel}>Peso kg.</Text>
                       <TextInput
                         style={styles.input}
                         value={editData.athlete_weight}
                         onChangeText={(t) => setEditData({...editData, athlete_weight: t.replace(/\D/g, '')})}
-                        placeholder="Es. 65"
+                        placeholder="65"
                         keyboardType="numeric"
+                        maxLength={3}
                       />
                     </View>
-                  </View>
-                  <View style={styles.rowInputs}>
-                    <View style={styles.halfInput}>
-                      <Text style={styles.inputLabel}>Elevazione (cm)</Text>
+                    <View style={styles.thirdInput}>
+                      <Text style={styles.inputLabel}>Elevaz. cm.</Text>
                       <TextInput
                         style={styles.input}
                         value={editData.athlete_elevation}
                         onChangeText={(t) => setEditData({...editData, athlete_elevation: t.replace(/\D/g, '')})}
-                        placeholder="Es. 45"
+                        placeholder="45"
                         keyboardType="numeric"
+                        maxLength={3}
                       />
                     </View>
-                    <View style={styles.halfInput} />
                   </View>
                   <Text style={styles.inputLabel}>Note sull'atleta</Text>
                   <TextInput
