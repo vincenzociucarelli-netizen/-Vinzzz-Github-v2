@@ -531,4 +531,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
   },
+  formatHint: {
+    backgroundColor: '#E3F2FD',
+    padding: 8,
+    borderRadius: 6,
+    marginTop: -4,
+  },
+  formatHintText: {
+    fontSize: 11,
+    color: '#1565C0',
+    fontStyle: 'italic',
+  },
 });
