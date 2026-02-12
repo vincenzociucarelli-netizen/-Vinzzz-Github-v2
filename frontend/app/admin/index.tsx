@@ -651,6 +651,21 @@ export default function AdminDashboard() {
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
 
+          {/* Import Pagamenti */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/payments-import')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
+              <Ionicons name="card" size={28} color="#4CAF50" />
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>📥 Import Pagamenti</Text>
+              <Text style={styles.menuCardSubtitle}>Importa da Excel bonifici, POS, contanti</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+
           {/* Il Mio Profilo */}
           <TouchableOpacity
             style={styles.menuCard}
