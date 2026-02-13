@@ -414,6 +414,20 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 4,
   },
+  overpaymentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFE5E5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 3,
+  },
+  overpaymentBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FF3B30',
+  },
   athleteNameWithdrawn: {
     color: '#FF3B30',
     textDecorationLine: 'line-through',
