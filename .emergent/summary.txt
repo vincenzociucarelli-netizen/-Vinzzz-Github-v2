@@ -1,169 +1,80 @@
 <analysis>
+**original_problem_statement**: The user is continuing to add a wide range of features and UI improvements to the RegistraTEAM volleyball club management application.
 
-**original_problem_statement**: The user, an admin for a volleyball club, is continuing to add features and fix bugs across the application for Admin, Coach, and Parent roles.
-
-Initial requests in this session included:
-- Fixing a failing Excel match import for Admins.
-- Modifying the Coach's schedule to be collapsible, showing only the next 3 days by default.
-- Preventing training sessions from appearing on the same day as a home match for a given team.
-
-Throughout the session, the user added numerous follow-up requests, including:
-- Replicating the collapsible schedule for the Parent view.
-- Simplifying the registration flow for Coaches and Dirigenti to a single page.
-- Improving the Excel import to use a unique GaraNumero (Match Number) to update existing matches instead of creating duplicates.
-- Creating a downloadable Excel template for match imports.
-- Fixing a bug where the admin's pending registration notification badge did not disappear after approving a user.
-- Adding an admin feature to reset passwords for Coaches/Dirigenti and a separate data modification password for Athletes.
-- Numerous UI/UX refinements for the Admin and Parent dashboards, such as name formatting, layout adjustments, and adding team names to lists.
-- Adding a new Società (Society) tab for Coaches to view and contact Dirigenti.
+In this session, the user requested and the agent worked on:
+- Fixing backend permissions for the Coach's Società tab.
+- Adding a WhatsApp contact button for Admins to contact Parents.
+- Creating comprehensive marketing materials (feature list, brochure, social media kit) for the app.
+- Implementing a My Profile page for Parents to view and edit their own data.
+- A major new feature to allow a Second Parent to be linked to an athlete, allowing two separate accounts to manage the same children.
+- Adding new technical data fields (Elevation, Notes) for athletes, visible and editable by both Admins and Coaches.
+- A major new feature for Admins to bulk-import payments via an Excel template, which required creating a unique, auto-generated Athlete Code.
+- Numerous UI/UX improvements, including changing Download to Share buttons for mobile-friendliness, simplifying the parent registration form, and redesigning the layout of athlete technical data fields.
+- A business model discussion for future implementation, including freemium tiers based on team count and a Professional Athlete module as a paid add-on.
+- A bug where existing athletes were not appearing on the new Import Payments page.
+- A new request for a 7-day trial period for new users.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application has received a large number of iterative fixes and new features in this session.
-- **Coach & Parent Dashboards:** The schedule view for both roles is now collapsed, showing only Today, Tomorrow, and Day After Tomorrow by default, with a button to expand and see future commitments. The backend logic correctly hides training sessions if a home match is scheduled for the same team on the same day.
-- **Match Import (Admin):** The Excel import feature has been significantly overhauled. It now uses a unique  to update existing matches, preventing duplicates. A Download Template button has been added, which generates and allows sharing of a standardized Excel file. The initial mobile-specific crash ( error) has been fixed.
-- **Registration:** The registration flow for Coaches and Dirigenti has been simplified to a single page, matching the Parent flow.
-- **Admin Features:**
-    - The pending registration notification badge on the dashboard now correctly updates when the screen is focused.
-    - Admins can now reset the main password for Coaches and Dirigenti directly from their profile pages.
-    - Admins can reset the data modification password for an Athlete from the athlete's profile page.
-    - The Admin dashboard header layout has been improved to prevent the society name from being truncated.
-- **Parent View:** The list of parents now shows the team name next to each child. The match display format has been updated to be more descriptive and highlights the specific child's name. Several bugs related to privacy acceptance and certificate sharing/printing have been fixed.
-- **Coach View:** A new Società tab has been added to the coach's dashboard, intended to list all Dirigenti with their contact information. The WhatsApp button on the coach profile page has been fixed to always be visible and correctly styled.
+The application is significantly more feature-rich.
+- **Parent/Coach/Admin Roles**: All roles have received substantial updates.
+- **Parent Features**: Parents now have their own editable My Profile page. The backend logic supports a Second Parent being linked to children, allowing two guardians to manage the same athletes from separate accounts.
+- **Admin Features**:
+    - **Bulk Payment Import**: A new page  allows admins to download a list of athletes with unique codes, download a payment template, and upload a completed Excel file to bulk-create payments.
+    - **Athlete Code**: A unique code (e.g., ,  for duplicates) is now automatically generated for each athlete and displayed in the admin view.
+    - **UI Enhancements**: The athlete details page has been redesigned to show technical data (Height, Weight, Elevation) in a more compact single-row layout. All Download buttons have been replaced with mobile-friendly Share buttons.
+- **Coach Features**: The athlete detail view for coaches has been updated to match the admin view, including the new Elevation and Notes fields and the compact layout.
+- **Backend**: The  file has been heavily modified to support all new features, including athlete code generation, second parent linking logic, and the payment import endpoint.
+- **Marketing Documents**: The agent has created , , and .
 
 **Last working item**:
-    - Last item agent was working: Reformatting the Coach's schedule to display matches in the same style as the Parent's view (e.g., Gara U16 vs. Opponent).
+    - Last item agent was working: Debugging why the 8 existing athletes are not appearing on the new Import Pagamenti page ().
     - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? screenshot tool. After fixing the related backend permission issue (see Issue 1 below), the agent should take a screenshot of the coach's dashboard () to verify the new match format is displayed correctly.
+    - Which testing method agent to use? backend testing agent. The agent should verify that the  endpoint now returns all athletes, including those with .
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Coach cannot view Dirigenti in the Società tab (P0)
-  - Issue 2: Complete and test the new match display format for the Coach view (P0)
-  - Issue 3: WhatsApp button on Dirigente/Coach profiles requires user verification (P1)
-  - Issue 4: Recurring Expo Go/preview environment instability (P2)
+  - Issue 1: Import Pagamenti page is empty for Admin (P0)
+  - Issue 2: Implement 7-day trial period with notifications (P1)
+  - Issue 3: Recurring Expo Go/preview environment instability (P2)
 
   **Issues Detail**:
-  - **Issue 1: Coach cannot view Dirigenti in the Società tab**
-     - **Description**: While implementing the Società tab for coaches, the agent noted that the backend endpoint  returns a  error for users with the 'coach' role. This prevents the list of Dirigenti from being loaded.
-     - **Attempted fixes**: None. The agent noted the issue but moved on to another task.
+  - **Issue 1: Import Pagamenti page is empty for Admin**
+     - **Description**: The user reported that the new payment import page shows Nessun atleta trovato even though 8 athletes exist in the database. The agent correctly diagnosed that the existing athletes have  and the backend query at  in  is likely filtering by the current user's , thus excluding them. The agent had just started to modify the query.
+     - **Attempted fixes**: The agent correctly identified the root cause by inspecting the database contents and the backend code. The fix was in progress.
      - **Next debug checklist**:
-        1.  Open .
-        2.  Locate the  endpoint (around line 1483).
-        3.  Inspect the  dependency and any role checks within the endpoint.
-        4.  Modify the logic to allow users with the  to also access this endpoint.
-        5.  Restart the backend: backend: ERROR (not running)
+        1. Open .
+        2. Locate the  endpoint (around line 4100).
+        3. Modify the  query to correctly fetch all athletes for the society, potentially including those where  might be  or needs to be matched with the admin's society. The previous attempt was to remove the  filter, but the core issue is the  mismatch. The logic should probably be  but needs to handle legacy data. A better approach might be to ensure all athletes have a  upon creation or have a migration script. For now, a fix to the query is needed.
+        4. Restart the backend: backend: ERROR (not running)
 backend: ERROR (abnormal termination).
-     - **Why fix this issue and what will be achieved with the fix?**: This is a blocker for the newly requested Società tab feature for coaches. Fixing it will allow coaches to see the list of company directors.
-     - **Status**:  NOT STARTED
-     - **Is recurring issue?**: N
-     - **Should Test frontend/backend/both after fix?**: Backend (initially), then Frontend (to confirm the list loads).
-     - **Blocked on other issue**: None.
-
-  - **Issue 2: Complete and test the new match display format for the Coach view**
-     - **Description**: The user wants the match display in the coach's schedule to be similar to the parent's view. The agent has added the frontend logic and was in the process of adding the required styles (, , ) to .
-     - **Attempted fixes**: The agent added the rendering logic to the JSX and started to add the styles.
-     - **Next debug checklist**:
-        1.  Open .
-        2.  Add the missing styles for , , and  to the  at the end of the file.
-        3.  Ensure the backend permission issue (Issue 1) is resolved.
-        4.  Restart the frontend: expo: ERROR (not running)
-expo: started.
-        5.  Take a screenshot of the coach dashboard to verify the new format.
-     - **Why fix this issue and what will be achieved with the fix?**: Fulfills a direct user request for a more consistent and readable UI.
+        5. Test the endpoint to confirm it returns the 8 athletes.
+     - **Why fix this issue and what will be achieved with the fix?**: This is a blocker for the entire Bulk Payment Import feature, which was a major request in this session.
      - **Status**:  IN PROGRESS
      - **Is recurring issue?**: N
-     - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on other issue**: Issue 1 (Coach cannot view Dirigenti in the Società tab) is not a direct blocker for the UI change itself, but the page might not load correctly without it. It's best to fix Issue 1 first.
-
-  - **Issue 3: WhatsApp button on Dirigente/Coach profiles requires user verification**
-     - **Description**: The agent implemented the WhatsApp button but could not visually test it due to persistent preview environment issues. The code was verified manually, but the final result has not been confirmed.
-     - **Attempted fixes**: The agent read the code in  and  to confirm the logic was correct.
-     - **Next debug checklist**: This requires the user to deploy the changes and test on their device.
-     - **Why fix this issue and what will be achieved with the fix?**: This was the first task of the session, and it needs final user confirmation.
-     - **Status**:  USER VERIFICATION PENDING
-     - **Is recurring issue?**: N
-     - **Should Test frontend/backend/both after fix?**: Frontend
+     - **Should Test frontend/backend/both after fix?**: Backend
      - **Blocked on other issue**: None.
 
-  - **Issue 4: Recurring Expo Go/preview environment instability**
-     - **Description**: Throughout the session, the agent repeatedly struggled with the local preview server ([23:58:06] Starting project at /app/frontend) being slow to start or unresponsive, preventing the use of the .
-     - **Attempted fixes**: Multiple restarts (expo: stopped
-expo: started).
-     - **Next debug checklist**: Call the  to diagnose persistent , 
-  Usage: expo [command] [options]
+  - **Issue 2: Implement 7-day trial period with notifications**
+     - **Description**: The user requested that a new parent account has a 7-day trial period. After 7 days, they should be notified and required to confirm their subscription and accept the privacy policy to continue.
+     - **Attempted fixes**: None. The agent acknowledged the request but prioritized fixing the visible bug on the payment import page.
+     - **Next debug checklist**:
+        1.  Add  and  fields to the  collection in MongoDB.
+        2.  Update the user registration endpoint in  to set these fields.
+        3.  Create logic (e.g., in the  dependency or on parent login) to check if the trial has expired.
+        4.  If expired, the backend should return a specific status that the frontend can use to show a Confirm Subscription screen/modal.
+     - **Why fix this issue and what will be achieved with the fix?**: Fulfills a direct user requirement related to the user onboarding flow.
+     - **Status**:  NOT STARTED
+     - **Is recurring issue?**: N
+     - **Should Test frontend/backend/both after fix?**: Both
+     - **Blocked on other issue**: None.
 
-  Options:
-  
-    -V, --version                     output the version number
-    --non-interactive                 Fail, if an interactive prompt would be required to continue.
-    -h, --help                        output usage information
-  
-  Commands:
-
-    init [name]                       Create a new Expo project
-    start [path]                      Start a local dev server for the app
-    start:web [path]                  Start a Webpack dev server for the web app
-    export [path]                     Export the static files of the app for hosting it on a web server
-    install [packages...]             Install a module or other package to a project
-    run:android [path]                Run the Android app binary locally
-    run:ios [path]                    Run the iOS app binary locally
-    send [path]                       Share the project's URL to an email address
-
-    login                             Login to an Expo account
-    logout                            Logout of an Expo account
-    register                          Sign up for a new Expo account
-    whoami                            Return the currently authenticated account
-
-    client:install:ios                Install Expo Go for iOS on the simulator
-    client:install:android            Install Expo Go for Android on a connected device or emulator
-
-    config [path]                     Show the project config
-    doctor [path]                     Diagnose issues with the project
-    upgrade [sdk-version]             Upgrade the project packages and config for the given SDK version
-
-    customize:web [path]              Eject the default web files for customization
-    prebuild [path]                   Create native iOS and Android project files before building natively.
-                                      Learn more: https://docs.expo.dev/workflow/customizing/
-
-    build:web [path]                  Build the web app for production
-
-    credentials:manager [path]        Superseded by eas credentials in eas-cli
-
-    url [path]                        Log a URL for opening the project in Expo Go
-    url:ipa [path]                    Log the download URL for the standalone iOS binary
-    url:apk [path]                    Log the download URL for the standalone Android binary
-
-    webhooks [path]                   List all webhooks for a project
-    webhooks:add [path]               Add a webhook to a project
-    webhooks:remove [path]            Delete a webhook
-    webhooks:update [path]            Update an existing webhook
-
-    build:ios [path]                  Superseded by eas build in eas-cli
-    build:android [path]              Superseded by eas build in eas-cli
-    build:status [path]               Superseded by eas build:list in eas-cli
-    eject [path]                      Superseded by expo prebuild
-    fetch:ios:certs [path]            Superseded by eas credentials in eas-cli
-    fetch:android:keystore [path]     Superseded by eas credentials in eas-cli
-    fetch:android:hashes [path]       Superseded by eas credentials in eas-cli
-    fetch:android:upload-cert [path]  Superseded by eas credentials in eas-cli
-    publish [path]                    Superseded by eas update in eas-cli
-    publish:set [path]                Superseded by eas update:republish in eas-cli
-    publish:rollback [path]           Superseded by eas update:republish in eas-cli
-    publish:history [path]            Superseded by eas update:list in eas-cli
-    publish:details [path]            Superseded by eas update:view in eas-cli
-    push:android:upload [path]        Superseded by eas credentials in eas-cli
-    push:android:show [path]          Superseded by eas credentials in eas-cli
-    push:android:clear [path]         Superseded by eas credentials in eas-cli
-    upload:android [path]             Superseded by eas submit in eas-cli
-    upload:ios [path]                 Superseded by eas submit in eas-cli
-    client:ios [path]                 Superseded by Expo Dev Clients
-
-[23:58:09]   Run a command with --help for more info 💡
-[23:58:09]     $ expo start --help
-[23:58:09], or networking issues.
+  - **Issue 3: Recurring Expo Go/preview environment instability**
+     - **Description**: Throughout the session, the agent repeatedly struggled with the local preview server ([07:10:49] Starting project at /app/frontend) being unresponsive due to , indicating a stale or conflicting ngrok tunnel.
+     - **Attempted fixes**: Multiple restarts, calling . The issue appears to be at the ngrok account/infrastructure level, where a subdomain is locked by a previous session.
+     - **Next debug checklist**: This is an environmental issue. The primary workaround is to rely on user deployment for testing. The  could be called again to check for deeper network configuration problems.
      - **Why fix this issue and what will be achieved with the fix?**: This is a major development blocker, making it impossible to quickly verify UI changes.
      - **Status**:  NOT STARTED
      - **Is recurring issue?**: Y
@@ -171,57 +82,57 @@ expo: started).
      - **Blocked on other issue**: None.
 
 **In progress Task List**:
-  - **Task 1: Implement Società Tab for Coaches**
-     - **Description**: Add a new tab to the coach's dashboard to display a list of all company Dirigenti and allow contacting them via WhatsApp.
-     - **Where to resume**: The frontend UI is mostly complete in . The task is blocked by a backend permission issue.
-     - **What will be achieved with this?**: Fulfills a user request for better communication channels for coaches.
-     - **Status**:  BLOCKED
-     - **Should Test frontend/backend/both after fix?**: Both
-     - **Blocked on something**: Issue 1: Coach cannot view Dirigenti in the Società tab.
+- **Task 1: Finalize Bulk Payment Import Feature**
+    - **Description**: Complete the implementation of the Excel-based payment import feature.
+    - **Where to resume**: Fix the backend query in  in  to correctly retrieve all athletes for the admin's society, including legacy ones with .
+    - **What will be achieved with this?**: A key admin feature for efficient payment management will become fully functional.
+    - **Status**: IN PROGRESS
+    - **Should Test frontend/backend/both after fix?**: Backend first, then frontend to confirm the list populates.
+    - **Blocked on something**: Blocked by Issue 1.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - (P1) Prepare the application for publication on the Google Play Store.
+    - (P0) Implement 7-day trial period for new parent users (see Issue 2).
+    - (P1) Implement business model logic: Add a team limit to societies and a message to upgrade.
+    - (P2) Create a downloadable/shareable fiscal receipt for parents from the payments section.
 - **Future Tasks**:
-    - (P2) Implement the Professional Athletes with Compensation feature.
-    - (P3) Stripe Integration for payments.
-    - (P4) AI Photo Transformation to Pencil Sketch.
-    - (P5) Fix broken QR Code Scanner on Registration Page.
+    - (P3) Implement the Professional Athletes with Compensation module as a paid add-on.
+    - (P4) Integrate Stripe to handle subscription payments and allow parents to pay fees online.
 
 **Completed work in this session**
-- **Schedule Logic (Coach & Parent)**:
-    - Implemented a collapsible schedule view to show only the next 3 days by default in  and .
-    - Updated backend ( &  in ) to prevent trainings from showing on home match days.
-    - Customized indicator dot colors for the coach's schedule.
-- **Excel Match Import (Admin)**:
-    - Reworked the import logic in  to use a new  field for updating () matches, preventing duplicates.
-    - Added a Download Template button and functionality in  to generate and share a standard Excel file.
-    - Fixed a mobile crash by updating deprecated  API calls.
-- **Password Reset Feature (Admin)**:
-    - Created backend endpoints for admins to reset a user's main password () and an athlete's data password ().
-    - Added UI buttons and modals for these functions in , , and .
-- **Registration Flow**:
-    - Simplified the Coach and Dirigente registration process in  to a single page, similar to the parent flow.
+- **Bulk Payment Import (Admin)**:
+    - Created a new page  for importing payments.
+    - Implemented a unique, auto-generated  (e.g., ) with duplicate handling in .
+    - Created backend endpoint  to parse Excel data and create payment records.
+    - Added auto-generation of a  for each payment.
+    - Created shareable templates for the athlete list (with codes) and payment data.
+- **Second Parent Feature**:
+    - Added  and  to the  model in .
+    - Modified user registration so a new parent is automatically linked to children if their email was added as a second parent.
+    - Updated all relevant backend endpoints to grant access to both the primary and secondary parent.
+    - Added a field in the Admin/Parent athlete view to manage the second parent's email.
+- **Parent Profile**:
+    - Created a new page  allowing parents to view and edit their own simplified profile data.
+    - Simplified the parent registration form in  to use Phone as a mandatory field instead of Fiscal Code.
+- **Athlete Data Fields**:
+    - Added Elevation and Notes fields to the athlete model.
+    - Updated both the Admin () and Coach () views to include these new fields.
 - **UI/UX Enhancements**:
-    - **Admin Dashboard**: Fixed the notification badge to update on screen focus ( in ). Adjusted header layout and formatted the welcome message name to Title Case.
-    - **Admin Parent List**: Added the athlete's team name next to their name in .
-    - **Parent Dashboard**: Redesigned the header layout and updated the match display format to be more descriptive ().
-    - **Coach List (Admin)**: Replaced the navigation arrow with a 3-dot action menu on coach cards in .
-- **Bug Fixes**:
-    - Fixed  error in .
-    - Corrected certificate sharing and printing functionality for parents.
-    - Ensured WhatsApp button on coach profiles is always visible and correctly styled.
-    - Fixed various syntax errors and incorrect closing tags introduced during development.
+    - Redesigned the technical data section in Admin and Coach views to be a compact, single-row layout for Height, Weight, and Elevation.
+    - Replaced all Download buttons with mobile-friendly Share buttons across the admin panel (, , etc.).
+    - Fixed backend permissions to allow Coaches to view Dirigenti in the Società tab.
+- **Marketing & Documentation**:
+    - Created three marketing documents: , , and .
 
 **Earlier issues found/mentioned but not fixed**
-   - **Issue 1: Backend permission for **
-     - **Debug checklist**: Check role permissions in the  dependency or directly in the endpoint definition in  and add  to the allowed roles.
-     - **Why to solve this issue and what will be achieved with this?**: It is a blocker for the Società tab feature requested by the user.
+   - **Issue 1: 7-day trial period**
+     - **Debug checklist**: See Issue 2 in the **All Pending/In progress Issue list** section.
+     - **Why to solve this issue and what will be achieved with this?**: Fulfills a user requirement for the onboarding flow.
      - **Should Test frontend/backend/both after fix**: Both
      - **Is recurring issue?**: N
 
 **Known issue recurrence from previous fork**
-  - **Issue recurrence in previous fork**: The Expo Go preview QR code /  tunnel not working reliably.
+  - **Issue recurrence in previous fork**: The Expo Go preview / ngrok tunnel not working reliably.
   - **Recurrence count**: High.
   - **Status**: NOT STARTED.
 
@@ -229,80 +140,87 @@ expo: started).
 
 
 **Key Technical Concepts**
-- **Focused State Reloading**: Used  from React Navigation to refetch data and update UI when a screen comes into focus, solving the stale notification badge issue.
-- **Robust Data Import**: Migrated from a delete-then-add import strategy to an  with  logic in MongoDB, using a unique business key () for idempotency.
-- **Dynamic Template Generation**: Used  and / on the frontend to dynamically create and offer a downloadable/shareable Excel template.
-- **Conditional UI Rendering**: Extensive use of conditional rendering to show/hide UI elements based on user role, data availability (e.g., phone number), and state (e.g., ).
-- **Admin-Specific Functionality**: Added secure, admin-only backend endpoints for sensitive operations like resetting user passwords.
-- **Component Refactoring**: Iteratively improved UI components based on user feedback (e.g., changing coach card from  to a 3-dot menu, redesigning parent dashboard header).
+- **Bulk Data Import from Excel**: Using  and  on the frontend and  on the backend to create a flow for bulk data entry.
+- **Unique Code Generation**: Implemented a backend function to generate a unique, human-readable identifier () with a collision-handling mechanism (,  suffix).
+- **Multi-Parent Data Association**: Modified database schema and backend logic to link one data entity (athlete) to multiple parent entities ( and ), expanding the data model.
+- **Dynamic UI Layouts**: Refactored UI from multi-line displays to a compact single-row flexbox layout for technical data, improving information density.
+- **Mobile-First Export**: Replaced direct file downloads with the  API to provide a native sharing experience on mobile devices.
 
 **key DB schema**
-  - **users**: The model logic was updated to add a  when  flags are set. The password field is hashed.
-  - **matches**: Added a  field to serve as a unique identifier for imports.
-  - **athletes**: The  field is used to protect athlete data modifications by parents.
+  - **athletes**:
+    -  (New, e.g., ROSMAR-U16-2)
+    -  (New)
+    -  (New)
+    -  (New)
+    -  (New)
+  - **payments**:
+    -  (New, e.g., RIC-2025-0001)
+    - The  field logic was updated to accept single letters ('B', 'P', 'C', 'A').
+  - **users**:
+    - The registration logic was changed to prioritize  over .
 
 **changes in tech stack**
-  - The  library was added as a polyfill for  during an early (and incorrect) debugging attempt on the Excel import issue. It might still be in .
+  - No significant changes to the core stack.  is used in the backend for the Excel import.
 
 **All files of reference**
-- : Contains all new backend logic for imports, password resets, and schedule generation.
-- : Contains the new Società tab and the updated schedule logic/format.
-- : Contains the updated schedule logic and multiple UI layout fixes.
-- : Contains the new Excel template download and import UI logic.
-- : Contains the UI for resetting the athlete's data modification password.
-- : Contains the UI for resetting a coach's password.
+- : Contains all the new logic for payment imports, athlete codes, and the second parent feature.
+- : The new UI for the payment import feature.
+- : The primary admin view for an athlete, heavily modified.
+- : The coach's view, modified to match the admin view.
+- : The new parent profile page.
+- : The updated user registration form.
 
 **Areas that need refactoring**:
-- The  and  files are becoming very large and contain significant duplicated logic for rendering the schedule (Oggi, Domani, etc.). This could be extracted into a reusable  component.
-- The  file is now extremely long. Splitting the API routes into multiple files based on domain (e.g., , , ) would improve maintainability.
+- The  file has grown even larger and is now over 4,000 lines. It is critical to split the API routes into separate files (e.g., , , ) for maintainability.
+- The logic for generating unique athlete codes is now present in multiple places (, ). This should be consolidated into a single, reliable service/function.
 
 **key api endpoints**
-- ****: (New) Admin-only endpoint to reset a user's password.
-- ****: (New) Admin-only endpoint to reset an athlete's data modification password.
-- ****: (Modified) Logic completely rewritten to use  and  for idempotent imports.
-- ****: (Modified) Logic updated to hide trainings on home match days.
-- ****: (Modified) Logic updated to hide trainings on home match days.
-- ****: (Needs Fix) Currently returns 403 for coaches, blocking the Società tab.
+- ****: (New) Handles the Excel file upload for bulk payment creation.
+- ****: (New) Provides a list of athletes with their generated codes for the import page. **(Currently Bugged)**.
+- ****: (Modified) Logic updated to auto-link children to a second parent upon registration.
+- ****: (Modified) Updated to handle new fields like , , and .
+- ****: (Modified) Updated to return the new fields.
+- ****: (Modified) Query logic updated to include athletes where the user is the second parent.
 
 **Critical Info for New Agent**
-- **Backend Permissions**: Be aware that the agent identified a  error when a coach tries to access . This is a blocker for the Società tab and must be fixed first.
-- **Environment Instability**: The local preview environment is highly unreliable. Do not depend on the . Manually verifying code and restarting services is the current workaround. Inform the user that a feature is ready for them to deploy and test, as testing in the preview environment is often not possible.
-- **User Workflow**: The user is hands-on and tests features on their deployed app. The development cycle is: implement, inform user, user deploys and tests, user gives feedback.
+- **IMMEDIATE BUG**: The most urgent task is to fix the empty Import Pagamenti page. The root cause is that existing athletes have  and the query at  is filtering them out. You must adjust this query to include them.
+- **Environment Instability**: The local Expo preview () is extremely unreliable. Do not waste time trying to fix it if it fails repeatedly. The established workflow is to implement features, verify code manually, and inform the user that it's ready for them to test on a deployed environment.
+- **Future Roadmap**: The user has a clear vision for the product's business model, including freemium tiers, a Pro Athlete module, and Stripe integration. Keep this long-term vision in mind for future development.
 
 **documents created in this job**
-  - No new documents were created in this session.
+  - /app/RegistraTEAM_Funzionalita.md
+  - /app/RegistraTEAM_Brochure.html
+  - /app/RegistraTEAM_Social_Media.md
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - 10.  Requests to make athlete names bold in the parent view and record the date for a Dirigente's compensation declaration. (Completed)
- - 9.  Reports that sharing a medical certificate from the parent view doesn't work and printing has extra blank pages. (Completed)
- - 8.  Reports an error () when a parent accepts the privacy policy. (Completed)
- - 7.  Requests a new layout for the parent dashboard header and wants the child's name in match titles to be bold and colored. (Completed)
- - 6.  Reports syntax errors in the parent view after a previous change. (Completed)
- - 5.  Requests the parent's match view be reformatted to . (Completed)
- - 4.  Requests to show the team name next to each child in the admin's view of parents. (Completed)
- - 3.  Requests to format the Benvenuto name on the admin dashboard to Title Case. (Completed)
- - 2.  Requests to move header icons on the admin dashboard to a new line to prevent truncating the society name. (Completed)
- - 1.  **Requests the coach's match schedule to be formatted like the parent's view.** (In Progress)
+- 10.  Asks about simplifying payment types to single letters and how future Stripe integration will work. (Completed)
+- 9.  Points out a flaw in the athlete code generation (e.g., Rossi Maria vs Rossini Martina could create duplicates). (Completed, agent implemented a numeric suffix for duplicates)
+- 8.  Confirms the plan for the payment import feature. (Completed)
+- 7.  Discusses and decides on the format for the unique Athlete Code for payment imports. (Completed)
+- 6.  Proposes the major feature of importing payments via an Excel sheet. (In Progress)
+- 5.  Reports that the athlete list for payment import is empty. (In Progress - This is the current bug)
+- 4.  Reports that the technical data UI is correct for Admins but not for Coaches. (Completed, agent fixed the Coach view)
+- 3.  Provides UI feedback that the technical data fields are too narrow. (Completed)
+- 2.  Asks about the business model (freemium, paid modules). (Discussion complete, implementation is a future task).
+- 1.  Asks for a 7-day trial period and reports the empty athlete list bug again. (Pending, bug is the priority)
 
 **Project Health Check:**
 - **Broken**:
   - **Expo Go Preview / ngrok Tunnel**: Critically unreliable, preventing efficient UI testing.
-  - **Coach Società Tab**: Blocked due to a backend  permission error.
+  - **Admin Import Pagamenti Page**: Functionally broken. The backend endpoint  does not return existing athletes due to a query filter issue.
 - **Mocked**:
   - None.
 
 **3rd Party Integrations**
 - **SendGrid**: For emails.
 - **OpenAI**: For image editing.
-- ****: For photo viewing.
-- ****: For parsing and creating Excel files on the frontend.
-- ****: For date formatting and manipulation.
-- ****: Added as a polyfill.
+- ** / **: For parsing and creating Excel files for bulk imports.
+- ****: For mobile-friendly file sharing.
 - **Stripe**: Planned for the future.
 
 **Testing status**
   - Testing agent used after significant changes: NO
-  - Troubleshoot agent used after agent stuck in loop: NO
+  - Troubleshoot agent used after agent stuck in loop: YES (for ngrok issue)
   - Test files created: None.
   - Known regressions: Expo Go preview functionality remains broken.
 
@@ -310,6 +228,5 @@ expo: started).
 - Admin:  / 
 
 **What agent forgot to execute**
-- The agent identified the  error for coaches trying to access  but did not fix it. It moved on to another task instead. This needs to be addressed to complete the Società tab feature.
-
+- The agent acknowledged the user's request for a **7-day trial period** but did not implement it, prioritizing the bug fix for the payment import page. This remains a pending task.
 </analysis>
