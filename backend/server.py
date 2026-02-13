@@ -4066,10 +4066,16 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
             try:
                 athlete_code = str(row['CodiceAtleta']).strip().upper()
                 
-                # Find athlete by code
+                # Find athlete by code - include legacy athletes with null/None society_id
                 athlete = await db.athletes.find_one({
                     "athlete_code": athlete_code,
-                    "society_id": society_id
+                    "$or": [
+                        {"society_id": society_id},
+                        {"society_id": None},
+                        {"society_id": "None"},
+                        {"society_id": ""},
+                        {"society_id": {"$exists": False}}
+                    ]
                 })
                 
                 if not athlete:
