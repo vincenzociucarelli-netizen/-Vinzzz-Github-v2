@@ -2713,17 +2713,17 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
         athlete_payments = payments_by_athlete.get(a["id"], [])
         total_paid = sum(p.get("amount", 0) for p in athlete_payments)
         
-        # Get team-specific fee or use base fee
+        # Get team-specific total_amount (same as athlete detail page)
         team_id = a.get("team_id")
-        team_fee = base_fee
+        team_total = 0
         if team_id:
             team = next((t for t in teams if t["id"] == team_id), None)
-            if team and team.get("annual_fee"):
-                team_fee = team["annual_fee"]
+            if team:
+                team_total = team.get("total_amount", 0) or 0
         
-        # Apply discount if any
-        discount = a.get("discount_percentage", 0) or 0
-        total_due = team_fee * (1 - discount / 100) if team_fee else 0
+        # Apply discount_amount (not percentage) - same as athlete detail page
+        discount = a.get("discount_amount", 0) or 0
+        total_due = team_total - discount
         residual = total_due - total_paid
         
         result.append({
