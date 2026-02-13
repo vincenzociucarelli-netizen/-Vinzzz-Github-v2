@@ -4138,7 +4138,7 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
                 # Create payment
                 payment = Payment(
                     athlete_id=athlete["id"],
-                    description=causale or f"Pagamento importato - {tipo}",
+                    description=causale,
                     amount=importo,
                     paid=True,
                     paid_date=data_pagamento,
