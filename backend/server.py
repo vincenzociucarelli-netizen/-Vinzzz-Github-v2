@@ -3183,6 +3183,17 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
         team = await db.teams.find_one({"id": update_data.team_id})
         if team:
             update_dict["team_id"] = update_data.team_id
+            # Auto-update athlete code when team changes
+            athlete = await db.athletes.find_one({"id": athlete_id})
+            if athlete:
+                new_code = await generate_unique_athlete_code(
+                    athlete.get("last_name", ""),
+                    athlete.get("first_name", ""),
+                    team.get("name", ""),
+                    athlete.get("society_id", ""),
+                    athlete_id
+                )
+                update_dict["athlete_code"] = new_code
     
     # Sconto
     if update_data.discount_amount is not None:
