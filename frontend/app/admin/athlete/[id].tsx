@@ -83,6 +83,8 @@ export default function AdminAthleteDetail() {
     paid_date: '',
     is_cash: false,
     notes: '',
+    description: '',
+    payment_method: 'Bonifico',
   });
   const [savingPayment, setSavingPayment] = useState(false);
 
