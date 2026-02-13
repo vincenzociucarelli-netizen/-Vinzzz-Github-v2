@@ -3950,6 +3950,8 @@ class PaymentUpdate(BaseModel):
     paid_date: str
     is_cash: bool = False
     notes: Optional[str] = None
+    description: Optional[str] = None
+    payment_method: Optional[str] = None
 
 @api_router.put("/payments/manual/{payment_id}")
 async def update_manual_payment(payment_id: str, payment_data: PaymentUpdate, current_user = Depends(get_current_user)):
