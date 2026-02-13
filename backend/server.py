@@ -3968,13 +3968,19 @@ async def update_manual_payment(payment_id: str, payment_data: PaymentUpdate, cu
     except:
         raise HTTPException(status_code=400, detail="Formato data non valido. Usa gg/mm/aaaa")
     
+    # Use provided payment_method or derive from is_cash
+    payment_method = payment_data.payment_method if payment_data.payment_method else ("Contanti" if payment_data.is_cash else "Bonifico")
+    
+    # Use provided description or generate default
+    description = payment_data.description if payment_data.description else f"Pagamento del {payment_data.paid_date}"
+    
     update_data = {
         "amount": payment_data.amount,
         "paid_date": paid_date,
-        "is_cash": payment_data.is_cash,
-        "payment_method": "contanti" if payment_data.is_cash else "bonifico",
+        "is_cash": payment_data.is_cash or payment_method == "Contanti",
+        "payment_method": payment_method,
         "notes": payment_data.notes,
-        "description": f"Pagamento del {payment_data.paid_date}",
+        "description": description,
     }
     
     await db.payments.update_one({"id": payment_id}, {"$set": update_data})
