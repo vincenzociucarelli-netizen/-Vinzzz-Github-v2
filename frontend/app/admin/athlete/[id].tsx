@@ -1592,6 +1592,7 @@ export default function AdminAthleteDetail() {
         }}
       >
         <View style={styles.modalOverlay}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
               {editingPaymentId ? 'Modifica Pagamento' : 'Nuovo Pagamento'}
@@ -1616,12 +1617,31 @@ export default function AdminAthleteDetail() {
               maxLength={10}
             />
             
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Pagamento in Contanti</Text>
-              <Switch
-                value={newPayment.is_cash}
-                onValueChange={(v) => setNewPayment({...newPayment, is_cash: v})}
-              />
+            <Text style={styles.inputLabel}>Causale/Descrizione</Text>
+            <TextInput
+              style={styles.input}
+              value={newPayment.description}
+              onChangeText={(t) => setNewPayment({...newPayment, description: t})}
+              placeholder="Es: Quota Gennaio-Febbraio"
+            />
+            
+            <Text style={styles.inputLabel}>Metodo di Pagamento</Text>
+            <View style={styles.paymentMethodRow}>
+              {['Bonifico', 'POS', 'Contanti', 'Assegno'].map((method) => (
+                <TouchableOpacity
+                  key={method}
+                  style={[
+                    styles.paymentMethodBtn,
+                    newPayment.payment_method === method && styles.paymentMethodBtnActive
+                  ]}
+                  onPress={() => setNewPayment({...newPayment, payment_method: method, is_cash: method === 'Contanti'})}
+                >
+                  <Text style={[
+                    styles.paymentMethodBtnText,
+                    newPayment.payment_method === method && styles.paymentMethodBtnTextActive
+                  ]}>{method}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
             
             <Text style={styles.inputLabel}>Note</Text>
@@ -1653,6 +1673,7 @@ export default function AdminAthleteDetail() {
               </TouchableOpacity>
             </View>
           </View>
+          </ScrollView>
         </View>
       </Modal>
 
