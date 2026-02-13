@@ -1412,11 +1412,30 @@ export default function AdminAthleteDetail() {
                   <Text style={styles.residualValue}>€{paymentSummary.total_after_discount}</Text>
                 </View>
                 <View style={[styles.residualRow, styles.residualTotal]}>
-                  <Text style={styles.residualTotalLabel}>RESIDUO</Text>
-                  <Text style={[styles.residualTotalValue, paymentSummary.residual === 0 && styles.residualZero]}>
-                    €{paymentSummary.residual}
-                  </Text>
+                  {paymentSummary.residual < 0 ? (
+                    <>
+                      <Text style={styles.residualTotalLabel}>DA RESTITUIRE</Text>
+                      <Text style={[styles.residualTotalValue, styles.residualOverpaid]}>
+                        €{Math.abs(paymentSummary.residual)}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.residualTotalLabel}>RESIDUO</Text>
+                      <Text style={[styles.residualTotalValue, paymentSummary.residual === 0 && styles.residualZero]}>
+                        €{paymentSummary.residual}
+                      </Text>
+                    </>
+                  )}
                 </View>
+                {paymentSummary.residual < 0 && (
+                  <View style={styles.overpaidWarning}>
+                    <Ionicons name="warning" size={16} color="#FF3B30" />
+                    <Text style={styles.overpaidWarningText}>
+                      L'atleta ha versato €{Math.abs(paymentSummary.residual)} in più del dovuto
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
 
