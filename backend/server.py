@@ -4111,18 +4111,26 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
                     importo = float(importo_raw)
                 
                 # Get payment method - support both letter and full name
-                tipo_raw = str(row['TipoPagamento']).strip().upper()
-                tipo_map = {
-                    'B': 'Bonifico', 'BONIFICO': 'Bonifico',
-                    'P': 'POS', 'POS': 'POS',
-                    'C': 'Contanti', 'CONTANTI': 'Contanti',
-                    'A': 'Assegno', 'ASSEGNO': 'Assegno',
-                    'O': 'Online', 'ONLINE': 'Online',
-                }
-                tipo = tipo_map.get(tipo_raw, 'Altro')
+                tipo_raw = row.get('TipoPagamento', '')
+                if pd.isna(tipo_raw) or tipo_raw is None or str(tipo_raw).strip() == '':
+                    tipo = 'Altro'
+                else:
+                    tipo_raw = str(tipo_raw).strip().upper()
+                    tipo_map = {
+                        'B': 'Bonifico', 'BONIFICO': 'Bonifico',
+                        'P': 'POS', 'POS': 'POS',
+                        'C': 'Contanti', 'CONTANTI': 'Contanti',
+                        'A': 'Assegno', 'ASSEGNO': 'Assegno',
+                        'O': 'Online', 'ONLINE': 'Online',
+                    }
+                    tipo = tipo_map.get(tipo_raw, 'Altro')
                 
-                # Causale (optional)
-                causale = str(row.get('Causale', '')).strip() if pd.notna(row.get('Causale')) else None
+                # Causale (optional) - handle NaN, None, empty strings properly
+                causale_raw = row.get('Causale', '')
+                if pd.isna(causale_raw) or causale_raw is None or str(causale_raw).strip() in ['', 'nan', 'None']:
+                    causale = f"Pagamento importato - {tipo}"
+                else:
+                    causale = str(causale_raw).strip()
                 
                 # Generate receipt number
                 receipt_number = await get_next_receipt_number(society_id)
