@@ -3877,6 +3877,9 @@ async def export_athletes_with_codes(current_user = Depends(get_current_user)):
             "Squadra": team_dict.get(a.get("team_id"), ""),
         })
     
+    # Sort by Cognome alphabetically
+    result.sort(key=lambda x: (x.get("Cognome", "") or "").upper())
+    
     return result
 
 @api_router.get("/payments/{athlete_id}", response_model=List[Payment])
