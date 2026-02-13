@@ -51,49 +51,48 @@ export default function PaymentsImport() {
 
   const downloadTemplate = async () => {
     try {
-      // Create template data with letter codes
-      // Dates formatted as dd/mm/yyyy strings, amounts as numbers with € format
-      const templateData = [
-        {
-          CodiceAtleta: 'ROSMAR-U16',
-          DataPagamento: '15/01/2025',
-          Importo: '€ 150,00',
-          TipoPagamento: 'B',
-          DataRegistrazione: '16/01/2025',
-          Causale: 'Quota Gennaio-Febbraio'
-        },
-        {
-          CodiceAtleta: 'BIAFED-SD',
-          DataPagamento: '20/01/2025',
-          Importo: '€ 200,00',
-          TipoPagamento: 'P',
-          DataRegistrazione: '',
-          Causale: 'Quota Trimestrale'
-        },
-        {
-          CodiceAtleta: 'VERANA-U14',
-          DataPagamento: '22/01/2025',
-          Importo: '€ 100,00',
-          TipoPagamento: 'C',
-          DataRegistrazione: '',
-          Causale: ''
-        }
+      // Create header row with instructions
+      const headerRow = ['CodiceAtleta', 'DataPagamento', 'Importo', 'TipoPagamento', 'DataRegistrazione', 'Causale'];
+      
+      // Example data rows - dates as text in gg/mm/aaaa, amounts as text with €
+      const dataRows = [
+        ['ROSMAR-U16', '15/01/2025', '150,00', 'B', '16/01/2025', 'Quota Gennaio-Febbraio'],
+        ['BIAFED-SD', '20/01/2025', '200,00', 'P', '', 'Quota Trimestrale'],
+        ['VERANA-U14', '22/01/2025', '100,00', 'C', '', ''],
       ];
-
-      const ws = XLSX.utils.json_to_sheet(templateData);
+      
+      // Create worksheet with array of arrays
+      const wsData = [headerRow, ...dataRows];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
       
       // Set column widths
       ws['!cols'] = [
         { wch: 15 }, // CodiceAtleta
         { wch: 14 }, // DataPagamento (gg/mm/aaaa)
-        { wch: 12 }, // Importo (€)
+        { wch: 12 }, // Importo
         { wch: 14 }, // TipoPagamento
         { wch: 16 }, // DataRegistrazione (gg/mm/aaaa)
-        { wch: 25 }, // Causale
+        { wch: 30 }, // Causale
       ];
+      
+      // Create instructions sheet
+      const instructionsData = [
+        ['ISTRUZIONI PER LA COMPILAZIONE'],
+        [''],
+        ['Colonna', 'Formato', 'Esempio', 'Note'],
+        ['CodiceAtleta', 'Testo', 'ROSMAR-U16', 'Codice atleta dalla lista (maiuscolo/minuscolo indifferente)'],
+        ['DataPagamento', 'gg/mm/aaaa', '15/01/2025', 'Data del pagamento effettivo'],
+        ['Importo', 'Numero', '150,00', 'Importo in euro (senza simbolo €)'],
+        ['TipoPagamento', 'Lettera', 'B', 'B=Bonifico, P=POS, C=Contanti, A=Assegno'],
+        ['DataRegistrazione', 'gg/mm/aaaa', '16/01/2025', 'Opzionale - data registrazione contabile'],
+        ['Causale', 'Testo', 'Quota mensile', 'Opzionale - descrizione del pagamento'],
+      ];
+      const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
+      wsInstructions['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 15 }, { wch: 50 }];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Pagamenti');
+      XLSX.utils.book_append_sheet(wb, wsInstructions, 'Istruzioni');
 
       if (Platform.OS === 'web') {
         const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
