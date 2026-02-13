@@ -509,13 +509,15 @@ export default function AdminAthleteDetail() {
       paid_date: formattedDate,
       is_cash: payment.is_cash || false,
       notes: payment.notes || '',
+      description: payment.description || '',
+      payment_method: payment.payment_method || 'Bonifico',
     });
     setPaymentModalVisible(true);
   };
 
   const openNewPaymentModal = () => {
     setEditingPaymentId(null);
-    setNewPayment({ amount: '', paid_date: '', is_cash: false, notes: '' });
+    setNewPayment({ amount: '', paid_date: '', is_cash: false, notes: '', description: '', payment_method: 'Bonifico' });
     setPaymentModalVisible(true);
   };
 
