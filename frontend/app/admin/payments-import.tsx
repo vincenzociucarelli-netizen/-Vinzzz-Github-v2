@@ -52,11 +52,12 @@ export default function PaymentsImport() {
   const downloadTemplate = async () => {
     try {
       // Create template data with letter codes
+      // Dates formatted as dd/mm/yyyy strings, amounts as numbers with € format
       const templateData = [
         {
           CodiceAtleta: 'ROSMAR-U16',
           DataPagamento: '15/01/2025',
-          Importo: 150.00,
+          Importo: '€ 150,00',
           TipoPagamento: 'B',
           DataRegistrazione: '16/01/2025',
           Causale: 'Quota Gennaio-Febbraio'
@@ -64,7 +65,7 @@ export default function PaymentsImport() {
         {
           CodiceAtleta: 'BIAFED-SD',
           DataPagamento: '20/01/2025',
-          Importo: 200.00,
+          Importo: '€ 200,00',
           TipoPagamento: 'P',
           DataRegistrazione: '',
           Causale: 'Quota Trimestrale'
@@ -72,7 +73,7 @@ export default function PaymentsImport() {
         {
           CodiceAtleta: 'VERANA-U14',
           DataPagamento: '22/01/2025',
-          Importo: 100.00,
+          Importo: '€ 100,00',
           TipoPagamento: 'C',
           DataRegistrazione: '',
           Causale: ''
@@ -84,10 +85,10 @@ export default function PaymentsImport() {
       // Set column widths
       ws['!cols'] = [
         { wch: 15 }, // CodiceAtleta
-        { wch: 14 }, // DataPagamento
-        { wch: 10 }, // Importo
+        { wch: 14 }, // DataPagamento (gg/mm/aaaa)
+        { wch: 12 }, // Importo (€)
         { wch: 14 }, // TipoPagamento
-        { wch: 16 }, // DataRegistrazione
+        { wch: 16 }, // DataRegistrazione (gg/mm/aaaa)
         { wch: 25 }, // Causale
       ];
 
