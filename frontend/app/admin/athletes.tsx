@@ -197,6 +197,12 @@ export default function AdminAthletes() {
           {(item as any).athlete_code && (
             <Text style={styles.athleteCode}>{(item as any).athlete_code}</Text>
           )}
+          {(item as any).has_overpayment && (
+            <View style={styles.overpaymentBadge}>
+              <Ionicons name="alert-circle" size={14} color="#FF3B30" />
+              <Text style={styles.overpaymentBadgeText}>€{Math.abs((item as any).payment_residual)}</Text>
+            </View>
+          )}
         </View>
         <Text style={styles.teamName} numberOfLines={1}>
           {teams[item.team_id]?.name || '-'}
