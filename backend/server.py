@@ -4145,55 +4145,6 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Errore lettura file: {str(e)}")
 
-@api_router.get("/payments/export-athletes-codes")
-async def export_athletes_with_codes(current_user = Depends(get_current_user)):
-    """Export list of athletes with their codes for payment reference"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin")
-    
-    society_id = current_user.get("society_id")
-    
-    # Get all athletes - include those without society_id or with matching society_id
-    # Also include legacy data where society_id might be "None" string or empty string
-    query = {
-        "$or": [
-            {"society_id": society_id},
-            {"society_id": None},
-            {"society_id": {"$exists": False}},
-            {"society_id": "None"},  # Legacy: some athletes have "None" as string
-            {"society_id": ""}       # Legacy: some athletes have empty string
-        ],
-        "is_withdrawn": {"$ne": True}
-    }
-    
-    athletes = await db.athletes.find(query).to_list(1000)
-    teams = await db.teams.find({}).to_list(100)
-    team_dict = {t["id"]: t["name"] for t in teams}
-    
-    result = []
-    for a in athletes:
-        # Generate code if missing
-        if not a.get("athlete_code"):
-            team_name = team_dict.get(a.get("team_id"), "")
-            code = await generate_unique_athlete_code(
-                a.get("last_name", ""), 
-                a.get("first_name", ""), 
-                team_name,
-                society_id,
-                a["id"]
-            )
-            await db.athletes.update_one({"id": a["id"]}, {"$set": {"athlete_code": code}})
-            a["athlete_code"] = code
-        
-        result.append({
-            "CodiceAtleta": a.get("athlete_code", ""),
-            "Cognome": a.get("last_name", ""),
-            "Nome": a.get("first_name", ""),
-            "Squadra": team_dict.get(a.get("team_id"), ""),
-        })
-    
-    return result
-
 # ==================== ATTENDANCE ENDPOINTS (COACH) ====================
 
 @api_router.post("/attendance/check", response_model=Attendance)
