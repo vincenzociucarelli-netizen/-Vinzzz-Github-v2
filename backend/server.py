@@ -4105,11 +4105,14 @@ async def export_athletes_with_codes(current_user = Depends(get_current_user)):
     society_id = current_user.get("society_id")
     
     # Get all athletes - include those without society_id or with matching society_id
+    # Also include legacy data where society_id might be "None" string or empty string
     query = {
         "$or": [
             {"society_id": society_id},
             {"society_id": None},
-            {"society_id": {"$exists": False}}
+            {"society_id": {"$exists": False}},
+            {"society_id": "None"},  # Legacy: some athletes have "None" as string
+            {"society_id": ""}       # Legacy: some athletes have empty string
         ],
         "is_withdrawn": {"$ne": True}
     }
