@@ -463,6 +463,8 @@ export default function AdminAthleteDetail() {
           paid_date: newPayment.paid_date,
           is_cash: newPayment.is_cash,
           notes: newPayment.notes || null,
+          description: newPayment.description || null,
+          payment_method: newPayment.payment_method || 'Bonifico',
         });
         showAlert('Successo', 'Pagamento modificato');
       } else {
@@ -473,13 +475,15 @@ export default function AdminAthleteDetail() {
           paid_date: newPayment.paid_date,
           is_cash: newPayment.is_cash,
           notes: newPayment.notes || null,
+          description: newPayment.description || null,
+          payment_method: newPayment.payment_method || 'Bonifico',
         });
         showAlert('Successo', 'Pagamento registrato');
       }
 
       setPaymentModalVisible(false);
       setEditingPaymentId(null);
-      setNewPayment({ amount: '', paid_date: '', is_cash: false, notes: '' });
+      setNewPayment({ amount: '', paid_date: '', is_cash: false, notes: '', description: '', payment_method: 'Bonifico' });
       await loadData();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
