@@ -4017,7 +4017,8 @@ async def get_payment_summary(athlete_id: str, current_user = Depends(get_curren
     payments = await db.payments.find({"athlete_id": athlete_id, "paid": True}).to_list(100)
     total_paid = sum(p.get("amount", 0) for p in payments)
     
-    residual = max(0, total_after_discount - total_paid)
+    # Calculate residual - can be negative if overpaid
+    residual = total_after_discount - total_paid
     
     return {
         "total_due": total_due,
