@@ -1473,10 +1473,13 @@ export default function AdminAthleteDetail() {
                       <Text style={styles.paymentDate}>
                         {payment.paid_date ? formatDate(payment.paid_date) : '-'}
                       </Text>
-                      {payment.is_cash && (
-                        <View style={styles.cashBadge}>
-                          <Text style={styles.cashBadgeText}>CONTANTI</Text>
+                      {payment.payment_method && (
+                        <View style={[styles.cashBadge, { backgroundColor: payment.payment_method === 'Contanti' ? '#FF9500' : '#007AFF' }]}>
+                          <Text style={styles.cashBadgeText}>{payment.payment_method.toUpperCase()}</Text>
                         </View>
+                      )}
+                      {payment.description && (
+                        <Text style={styles.paymentDescription}>{payment.description}</Text>
                       )}
                       {payment.notes && (
                         <Text style={styles.paymentNotes}>{payment.notes}</Text>
