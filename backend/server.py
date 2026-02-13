@@ -666,7 +666,7 @@ def generate_athlete_code(last_name: str, first_name: str, team_name: str) -> st
     # Clean team name: keep only alphanumeric, remove spaces
     tn = re.sub(r'[^A-Za-z0-9]', '', (team_name or '').upper())
     # Shorten common patterns
-    tn = tn.replace('UNDER', 'U').replace('SERIE', 'S')
+    tn = tn.replace('MINIVOLLEY', 'MV').replace('UNDER', 'U').replace('SERIE', 'S').replace('STARTER', 'START')
     # Max 5 chars for team
     tn = tn[:5] if len(tn) > 5 else tn
     
