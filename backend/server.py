@@ -3195,6 +3195,17 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
                 )
                 update_dict["athlete_code"] = new_code
     
+    # Seconda squadra (opzionale)
+    if update_data.team_id_2 is not None:
+        if update_data.team_id_2 == "":
+            # Remove secondary team
+            update_dict["team_id_2"] = None
+        else:
+            # Verify team exists
+            team2 = await db.teams.find_one({"id": update_data.team_id_2})
+            if team2:
+                update_dict["team_id_2"] = update_data.team_id_2
+    
     # Sconto
     if update_data.discount_amount is not None:
         update_dict["discount_amount"] = update_data.discount_amount
