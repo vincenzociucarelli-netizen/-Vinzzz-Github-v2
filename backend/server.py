@@ -2688,12 +2688,43 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
     teams = await db.teams.find({"id": {"$in": team_ids}}).to_list(100)
     team_names = {t["id"]: t["name"] for t in teams}
     
+    # Get payment settings for calculating residuals
+    settings = await db.payment_settings.find_one()
+    base_fee = settings.get("annual_fee", 0) if settings else 0
+    
+    # Get all payments for all athletes at once for efficiency
+    athlete_ids = [a["id"] for a in athletes]
+    all_payments = await db.payments.find({"athlete_id": {"$in": athlete_ids}, "paid": True}).to_list(10000)
+    payments_by_athlete = {}
+    for p in all_payments:
+        aid = p["athlete_id"]
+        if aid not in payments_by_athlete:
+            payments_by_athlete[aid] = []
+        payments_by_athlete[aid].append(p)
+    
     result = []
     for a in athletes:
         # Build full_name from last_name + first_name if available
         full_name = a.get("full_name", "")
         if a.get("last_name") or a.get("first_name"):
             full_name = f"{a.get('last_name', '')} {a.get('first_name', '')}".strip()
+        
+        # Calculate payment residual
+        athlete_payments = payments_by_athlete.get(a["id"], [])
+        total_paid = sum(p.get("amount", 0) for p in athlete_payments)
+        
+        # Get team-specific fee or use base fee
+        team_id = a.get("team_id")
+        team_fee = base_fee
+        if team_id:
+            team = next((t for t in teams if t["id"] == team_id), None)
+            if team and team.get("annual_fee"):
+                team_fee = team["annual_fee"]
+        
+        # Apply discount if any
+        discount = a.get("discount_percentage", 0) or 0
+        total_due = team_fee * (1 - discount / 100) if team_fee else 0
+        residual = total_due - total_paid
         
         result.append({
             "id": a["id"],
@@ -2713,6 +2744,9 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
             "athlete_elevation": a.get("athlete_elevation"),
             "athlete_notes": a.get("athlete_notes"),
             "city": a.get("city"),
+            # Payment info
+            "payment_residual": residual,
+            "has_overpayment": residual < 0,
         })
     
     return result
