@@ -4095,8 +4095,14 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
                     else:
                         data_registrazione = dr
                 
-                # Get amount
-                importo = float(row['Importo'])
+                # Get amount - handle € format (e.g., "€ 150,00" or "150,00" or 150.00)
+                importo_raw = row['Importo']
+                if isinstance(importo_raw, str):
+                    # Remove € symbol, spaces, and convert comma to dot
+                    importo_clean = importo_raw.replace('€', '').replace(' ', '').replace('.', '').replace(',', '.')
+                    importo = float(importo_clean)
+                else:
+                    importo = float(importo_raw)
                 
                 # Get payment method - support both letter and full name
                 tipo_raw = str(row['TipoPagamento']).strip().upper()
