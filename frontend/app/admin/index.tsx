@@ -309,7 +309,7 @@ export default function AdminDashboard() {
               onPress={() => router.push('/admin/attendances')}
             >
               <Text style={styles.quickStatNumber}>{stats.today_attendances}</Text>
-              <Text style={styles.quickStatLabel}>Presenze Oggi</Text>
+              <Text style={styles.quickStatLabel}>Presenze</Text>
             </TouchableOpacity>
             <View style={styles.quickStatDivider} />
             <TouchableOpacity 
@@ -320,12 +320,12 @@ export default function AdminDashboard() {
               )}
             >
               <View style={styles.quickStatIconRow}>
-                <Text style={{ fontSize: 18 }}>🎂</Text>
+                <Text style={{ fontSize: 16 }}>🎂</Text>
                 <Text style={[styles.quickStatNumber, birthdays.length > 0 && { color: '#FF9500' }]}>
                   {birthdays.length}
                 </Text>
               </View>
-              <Text style={styles.quickStatLabel}>Compleanni</Text>
+              <Text style={styles.quickStatLabel}>Auguri</Text>
             </TouchableOpacity>
             <View style={styles.quickStatDivider} />
             <TouchableOpacity 
