@@ -252,13 +252,17 @@ export default function CoachesScreen() {
     </View>
   );
 
-  // Helper function to get compensation badge
-  const getCompensationBadge = (monthlyComp: number | undefined) => {
-    if (!monthlyComp || monthlyComp <= 0) return null;
-    const yearlyEstimate = monthlyComp * 12;
-    if (yearlyEstimate < 5000) {
+  // Helper function to get compensation badge based on TOTAL (this club + others)
+  const getCompensationBadge = (monthlyComp: number | undefined, otherAnnual: number | undefined) => {
+    const thisClubAnnual = (monthlyComp || 0) * 12;
+    const otherAnnualComp = otherAnnual || 0;
+    const totalAnnual = thisClubAnnual + otherAnnualComp;
+    
+    if (totalAnnual <= 0) return null;
+    
+    if (totalAnnual < 5000) {
       return { text: '<5K', color: '#34C759', bg: '#E8F5E9' };
-    } else if (yearlyEstimate < 15000) {
+    } else if (totalAnnual < 15000) {
       return { text: '<15K', color: '#FF9500', bg: '#FFF3E0' };
     } else {
       return { text: '>15K', color: '#FF3B30', bg: '#FFEBEE' };
@@ -266,7 +270,7 @@ export default function CoachesScreen() {
   };
 
   const renderCoachItem = ({ item }: { item: Coach }) => {
-    const compBadge = getCompensationBadge(item.monthly_compensation);
+    const compBadge = getCompensationBadge(item.monthly_compensation, (item as any).other_annual_compensation);
     
     return (
       <TouchableOpacity 
