@@ -715,6 +715,69 @@ export default function AdminAthleteDetail() {
     return '#34C759'; // Green
   };
 
+  // Generate payment statement (attestato di versamento)
+  const generatePaymentStatement = async () => {
+    if (!athlete || payments.length === 0) {
+      showAlert('Attenzione', 'Nessun pagamento da includere nell\'attestato');
+      return;
+    }
+
+    try {
+      // Get current season
+      const now = new Date();
+      const year = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+      const season = `${year}/${year + 1}`;
+
+      // Prepare receipt data
+      const receiptData: ReceiptData = {
+        athlete: {
+          first_name: (athlete as any).first_name || athlete.full_name?.split(' ').slice(1).join(' ') || '',
+          last_name: (athlete as any).last_name || athlete.full_name?.split(' ')[0] || '',
+          fiscal_code: (athlete as any).fiscal_code || '',
+          address: (athlete as any).address || '',
+          postal_code: (athlete as any).postal_code || '',
+          city: (athlete as any).city || '',
+          province: (athlete as any).province || '',
+          date_of_birth: (athlete as any).date_of_birth || '',
+          birth_place: (athlete as any).birth_place || '',
+          birth_province: (athlete as any).birth_province || '',
+        },
+        parent: {
+          first_name: '', // Admin view doesn't have parent data directly
+          last_name: '',
+        },
+        society: {
+          name: societyData?.society_name || societyData?.name || 'Società Sportiva',
+          address: societyData?.company_address || societyData?.address || '',
+          city: societyData?.company_city || '',
+          postal_code: societyData?.company_zip_code || '',
+          province: societyData?.company_province || '',
+          fiscal_code: societyData?.company_tax_code || societyData?.fiscal_code || '',
+          phone: societyData?.phone1 || '',
+          phone2: societyData?.phone2 || '',
+          president_name: societyData?.president_name || '',
+          logo: societyData?.company_logo_base64 || societyData?.logo || '',
+          stamp_signature: societyData?.stamp_signature_base64 || '',
+        },
+        payments: payments.map((p: any, index) => ({
+          date: p.paid_date || '',
+          receipt_number: `${index + 1}`,
+          amount: p.amount || 0,
+          description: p.description || p.notes || '',
+          payment_method: p.payment_method || (p.is_cash ? 'Contanti' : 'Bonifico'),
+        })),
+        season: season,
+        receipt_number: `ATT-${athlete.id?.slice(-6).toUpperCase()}`,
+        team_name: team?.name || '',
+      };
+
+      await downloadFiscalReceipt(receiptData);
+    } catch (error) {
+      console.error('Error generating payment statement:', error);
+      showAlert('Errore', 'Impossibile generare l\'attestato di versamento');
+    }
+  };
+
   // Print QR Code function
   const printQRCode = async () => {
     if (!athlete?.qr_code) {
