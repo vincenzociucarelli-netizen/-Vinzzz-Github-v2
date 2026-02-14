@@ -37,6 +37,7 @@ export default function SettingsScreen() {
 
   // Fiscal receipt data
   const [ragioneSociale, setRagioneSociale] = useState('');
+  const [sportPraticato, setSportPraticato] = useState('');
   const [address, setAddress] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [city, setCity] = useState('');
@@ -57,6 +58,7 @@ export default function SettingsScreen() {
       setDirigenteQualifications(response.data.dirigente_qualifications || []);
       // Load fiscal receipt data
       setRagioneSociale(response.data.ragione_sociale || '');
+      setSportPraticato(response.data.sport_praticato || '');
       setAddress(response.data.address || '');
       setPostalCode(response.data.postal_code || '');
       setCity(response.data.city || '');
