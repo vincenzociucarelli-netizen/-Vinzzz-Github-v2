@@ -31,6 +31,20 @@ Applicazione per la gestione di club di pallavolo. Permette agli amministratori 
 ## Pending/Backlog
 - P1: Verificare periodo prova 7 giorni genitori
 - P2: Limite team per società + upgrade message
-- P2: Integrazione Stripe pagamenti online
+- P2: **Integrazione Stripe pagamenti online** (vedi dettagli sotto)
 - P2: Modulo atleti professionisti con compenso
 - P3: Fix permanente icone (attualmente emoji workaround)
+
+## Dettagli Integrazione Stripe (P2)
+**Modello di business:** La società sportiva cliente configura il proprio account Stripe.
+
+**Da implementare:**
+1. Nuovi campi in Impostazioni Società: `stripe_publishable_key`, `stripe_secret_key`
+2. Pulsante "Paga Online" nella sezione pagamenti lato genitore
+3. Integrazione Stripe Checkout/Payment Intent
+4. Webhook per conferma pagamento e aggiornamento automatico stato pagamento
+
+**Flusso:**
+- Admin società → Crea account su stripe.com → Inserisce chiavi API nelle Impostazioni
+- Genitore → Vede rata da pagare → Clicca "Paga Online" → Stripe Checkout → Pagamento confermato
+- I soldi vanno direttamente sul conto Stripe della società sportiva
