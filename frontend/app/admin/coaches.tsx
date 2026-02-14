@@ -240,60 +240,84 @@ export default function CoachesScreen() {
           style={[styles.actionBtn, styles.approveBtn]}
           onPress={() => handleApprove(item)}
         >
-          <Ionicons name="checkmark" size={20} color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 16 }}>✓</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.actionBtn, styles.rejectBtn]}
           onPress={() => handleReject(item)}
         >
-          <Ionicons name="close" size={20} color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 16 }}>✕</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  const renderCoachItem = ({ item }: { item: Coach }) => (
-    <TouchableOpacity 
-      style={styles.userCard} 
-      onPress={() => router.push(`/admin/coach/${item.id}`)}
-      onLongPress={() => openActionModal(item)}
-    >
-      <View style={styles.userAvatar}>
-        {item.profile_photo_artistic || item.profile_photo ? (
-          <Image 
-            source={{ uri: `data:image/jpeg;base64,${item.profile_photo_artistic || item.profile_photo}` }}
-            style={styles.coachPhoto}
-          />
-        ) : (
-          <Ionicons name="fitness" size={24} color="#FF9500" />
-        )}
-      </View>
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>{item.full_name}</Text>
-        <Text style={styles.userEmail}>{item.email}</Text>
-        <Text style={styles.userTeams} numberOfLines={1}>
-          {getTeamNames(item.assigned_teams)}
-        </Text>
-        <View style={styles.userMeta}>
-          <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-          <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
-          {item.monthly_compensation && item.monthly_compensation > 0 && (
-            <Text style={styles.compensationText}> • €{item.monthly_compensation}/mese</Text>
+  // Helper function to get compensation badge
+  const getCompensationBadge = (monthlyComp: number | undefined) => {
+    if (!monthlyComp || monthlyComp <= 0) return null;
+    const yearlyEstimate = monthlyComp * 12;
+    if (yearlyEstimate < 5000) {
+      return { text: '<5K', color: '#34C759', bg: '#E8F5E9' };
+    } else if (yearlyEstimate < 15000) {
+      return { text: '<15K', color: '#FF9500', bg: '#FFF3E0' };
+    } else {
+      return { text: '>15K', color: '#FF3B30', bg: '#FFEBEE' };
+    }
+  };
+
+  const renderCoachItem = ({ item }: { item: Coach }) => {
+    const compBadge = getCompensationBadge(item.monthly_compensation);
+    
+    return (
+      <TouchableOpacity 
+        style={styles.userCard} 
+        onPress={() => router.push(`/admin/coach/${item.id}`)}
+        onLongPress={() => openActionModal(item)}
+      >
+        <View style={styles.userAvatar}>
+          {item.profile_photo_artistic || item.profile_photo ? (
+            <Image 
+              source={{ uri: `data:image/jpeg;base64,${item.profile_photo_artistic || item.profile_photo}` }}
+              style={styles.coachPhoto}
+            />
+          ) : (
+            <Text style={{ fontSize: 22 }}>🏋️</Text>
           )}
         </View>
-      </View>
-      <TouchableOpacity 
-        style={styles.menuButton}
-        onPress={(e) => {
-          e.stopPropagation();
-          openActionModal(item);
-        }}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <Ionicons name="ellipsis-vertical" size={20} color="#666" />
+        <View style={styles.userInfo}>
+          <View style={styles.nameRow}>
+            <Text style={styles.userName}>{item.full_name}</Text>
+            {compBadge && (
+              <View style={[styles.compBadge, { backgroundColor: compBadge.bg }]}>
+                <Text style={[styles.compBadgeText, { color: compBadge.color }]}>{compBadge.text}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.userEmail}>{item.email}</Text>
+          <Text style={styles.userTeams} numberOfLines={1}>
+            {getTeamNames(item.assigned_teams)}
+          </Text>
+          <View style={styles.userMeta}>
+            <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
+            <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
+            {item.monthly_compensation && item.monthly_compensation > 0 && (
+              <Text style={styles.compensationText}> • €{item.monthly_compensation}/mese</Text>
+            )}
+          </View>
+        </View>
+        <TouchableOpacity 
+          style={styles.menuButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            openActionModal(item);
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={{ fontSize: 18, color: '#666' }}>⋮</Text>
+        </TouchableOpacity>
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
