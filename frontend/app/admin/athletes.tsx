@@ -226,14 +226,14 @@ export default function AdminAthletes() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Text style={{ fontSize: 24, color: '#fff' }}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Atleti ({processedAthletes.length})</Text>
         <TouchableOpacity onPress={handleExport} disabled={exporting}>
           {exporting ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Ionicons name="share-outline" size={24} color="#fff" />
+            <Text style={{ fontSize: 22, color: '#fff' }}>📤</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -241,7 +241,7 @@ export default function AdminAthletes() {
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#999" />
+          <Text style={{ fontSize: 18, marginRight: 8 }}>🔍</Text>
           <TextInput
             style={styles.searchInput}
             placeholder="Cerca atleta o squadra..."
