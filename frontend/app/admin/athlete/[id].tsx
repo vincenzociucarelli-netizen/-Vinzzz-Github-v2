@@ -438,6 +438,8 @@ export default function AdminAthleteDetail() {
         // Team change
         team_id: editData.team_id || athlete?.team_id || null,
         team_id_2: editData.team_id_2 || null,
+        // Athlete code for payment import
+        athlete_code: editData.athlete_code?.toUpperCase().trim() || null,
       };
 
       await api.patch(`/athletes/${id}`, updatePayload);
