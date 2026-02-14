@@ -3265,25 +3265,36 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   // Attestato button styles
+  attestatoButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
   attestatoButton: {
-    backgroundColor: '#5856D6',
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: 10,
-    gap: 10,
+    gap: 8,
+  },
+  attestatoPrintBtn: {
+    backgroundColor: '#007AFF',
+  },
+  attestatoShareBtn: {
+    backgroundColor: '#34C759',
   },
   attestatoButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   attestatoHint: {
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
-    marginTop: 10,
+    marginTop: 12,
   },
 });
