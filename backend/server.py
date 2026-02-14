@@ -1458,6 +1458,7 @@ class SocietySettingsUpdate(BaseModel):
     dirigente_qualifications: Optional[List[str]] = None  # Custom qualifications for dirigenti
     # Fiscal receipt fields
     ragione_sociale: Optional[str] = None  # Company legal name
+    sport_praticato: Optional[str] = None  # Sport type (es: Pallavolo, Calcio)
     address: Optional[str] = None
     postal_code: Optional[str] = None
     city: Optional[str] = None
@@ -1481,6 +1482,7 @@ async def get_society_settings():
             "athlete_characteristics": [], 
             "dirigente_qualifications": [],
             "ragione_sociale": None,
+            "sport_praticato": None,
             "address": None,
             "postal_code": None,
             "city": None,
@@ -1499,6 +1501,7 @@ async def get_society_settings():
         "athlete_characteristics": settings.get("athlete_characteristics", []),
         "dirigente_qualifications": settings.get("dirigente_qualifications", []),
         "ragione_sociale": settings.get("ragione_sociale"),
+        "sport_praticato": settings.get("sport_praticato"),
         "address": settings.get("address"),
         "postal_code": settings.get("postal_code"),
         "city": settings.get("city"),
@@ -1532,6 +1535,8 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
     # Fiscal receipt fields
     if data.ragione_sociale is not None:
         update_dict["ragione_sociale"] = data.ragione_sociale
+    if data.sport_praticato is not None:
+        update_dict["sport_praticato"] = data.sport_praticato
     if data.address is not None:
         update_dict["address"] = data.address
     if data.postal_code is not None:
