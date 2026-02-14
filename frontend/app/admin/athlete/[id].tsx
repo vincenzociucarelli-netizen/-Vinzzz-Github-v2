@@ -2781,4 +2781,32 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 20,
   },
+  // QR Code styles
+  qrCodeContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  qrCodeImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+  },
+  qrCodeLabel: {
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  qrCodeHint: {
+    marginTop: 12,
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
 });
