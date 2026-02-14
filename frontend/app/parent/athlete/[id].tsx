@@ -3033,6 +3033,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     width: '100%',
   },
+  downloadReceiptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginTop: 16,
+    gap: 10,
+  },
+  downloadReceiptBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   deleteRequestButton: {
     flexDirection: 'row',
     alignItems: 'center',
