@@ -991,7 +991,7 @@ export default function AdminAthleteDetail() {
               <Text style={styles.cardTitle}>🏐 Squadra</Text>
               {editing ? (
                 <>
-                  <Text style={styles.inputLabel}>Squadra Assegnata</Text>
+                  <Text style={styles.inputLabel}>Squadra Principale (per Quote e Codice)</Text>
                   <View style={styles.teamSelector}>
                     {allTeams.map((t) => (
                       <TouchableOpacity
@@ -1014,14 +1014,65 @@ export default function AdminAthleteDetail() {
                       </TouchableOpacity>
                     ))}
                   </View>
+                  
+                  <Text style={[styles.inputLabel, { marginTop: 16 }]}>Squadra Secondaria (opzionale)</Text>
+                  <View style={styles.teamSelector}>
+                    <TouchableOpacity
+                      style={[
+                        styles.teamOption,
+                        !editData.team_id_2 && styles.teamOptionSelected
+                      ]}
+                      onPress={() => setEditData({...editData, team_id_2: ''})}
+                    >
+                      <Ionicons 
+                        name={!editData.team_id_2 ? "radio-button-on" : "radio-button-off"} 
+                        size={20} 
+                        color={!editData.team_id_2 ? "#007AFF" : "#999"} 
+                      />
+                      <Text style={[
+                        styles.teamOptionText,
+                        !editData.team_id_2 && styles.teamOptionTextSelected
+                      ]}>Nessuna</Text>
+                    </TouchableOpacity>
+                    {allTeams.filter(t => t.id !== editData.team_id).map((t) => (
+                      <TouchableOpacity
+                        key={t.id}
+                        style={[
+                          styles.teamOption,
+                          editData.team_id_2 === t.id && styles.teamOptionSelected
+                        ]}
+                        onPress={() => setEditData({...editData, team_id_2: t.id})}
+                      >
+                        <Ionicons 
+                          name={editData.team_id_2 === t.id ? "radio-button-on" : "radio-button-off"} 
+                          size={20} 
+                          color={editData.team_id_2 === t.id ? "#007AFF" : "#999"} 
+                        />
+                        <Text style={[
+                          styles.teamOptionText,
+                          editData.team_id_2 === t.id && styles.teamOptionTextSelected
+                        ]}>{t.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </>
               ) : (
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Squadra</Text>
-                  <Text style={[styles.value, { color: '#E53935', fontWeight: 'bold' }]}>
-                    {team?.name || '-'}
-                  </Text>
-                </View>
+                <>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Squadra Principale</Text>
+                    <Text style={[styles.value, { color: '#E53935', fontWeight: 'bold' }]}>
+                      {team?.name || '-'}
+                    </Text>
+                  </View>
+                  {athlete?.team_id_2 && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.label}>Squadra Secondaria</Text>
+                      <Text style={styles.value}>
+                        {allTeams.find(t => t.id === athlete?.team_id_2)?.name || '-'}
+                      </Text>
+                    </View>
+                  )}
+                </>
               )}
             </View>
 
