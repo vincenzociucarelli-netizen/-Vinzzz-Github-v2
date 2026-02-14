@@ -1456,6 +1456,17 @@ class SocietySettingsUpdate(BaseModel):
     athlete_roles: Optional[List[str]] = None  # Custom roles for athletes
     athlete_characteristics: Optional[List[str]] = None  # Custom characteristics for athletes
     dirigente_qualifications: Optional[List[str]] = None  # Custom qualifications for dirigenti
+    # Fiscal receipt fields
+    ragione_sociale: Optional[str] = None  # Company legal name
+    address: Optional[str] = None
+    postal_code: Optional[str] = None
+    city: Optional[str] = None
+    province: Optional[str] = None
+    fiscal_code: Optional[str] = None  # Cod. Fiscale
+    phone: Optional[str] = None
+    phone2: Optional[str] = None
+    president_name: Optional[str] = None
+    stamp_signature: Optional[str] = None  # Base64 encoded image of stamp and signature
 
 @api_router.get("/settings/society")
 async def get_society_settings():
