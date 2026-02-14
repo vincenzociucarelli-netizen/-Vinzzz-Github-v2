@@ -1529,6 +1529,27 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
         update_dict["athlete_characteristics"] = data.athlete_characteristics
     if data.dirigente_qualifications is not None:
         update_dict["dirigente_qualifications"] = data.dirigente_qualifications
+    # Fiscal receipt fields
+    if data.ragione_sociale is not None:
+        update_dict["ragione_sociale"] = data.ragione_sociale
+    if data.address is not None:
+        update_dict["address"] = data.address
+    if data.postal_code is not None:
+        update_dict["postal_code"] = data.postal_code
+    if data.city is not None:
+        update_dict["city"] = data.city
+    if data.province is not None:
+        update_dict["province"] = data.province
+    if data.fiscal_code is not None:
+        update_dict["fiscal_code"] = data.fiscal_code
+    if data.phone is not None:
+        update_dict["phone"] = data.phone
+    if data.phone2 is not None:
+        update_dict["phone2"] = data.phone2
+    if data.president_name is not None:
+        update_dict["president_name"] = data.president_name
+    if data.stamp_signature is not None:
+        update_dict["stamp_signature"] = data.stamp_signature
     
     if update_dict:
         await db.settings.update_one(
