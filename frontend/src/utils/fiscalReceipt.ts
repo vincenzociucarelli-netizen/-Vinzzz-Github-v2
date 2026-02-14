@@ -39,10 +39,13 @@ interface SocietyData {
   address?: string;
   city?: string;
   postal_code?: string;
+  province?: string;
   fiscal_code?: string;
   phone?: string;
   phone2?: string;
   president_name?: string;
+  logo?: string;
+  stamp_signature?: string;
 }
 
 export interface ReceiptData {
