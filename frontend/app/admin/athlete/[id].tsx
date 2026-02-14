@@ -797,19 +797,54 @@ export default function AdminAthleteDetail() {
         // Share action
         if (Platform.OS === 'web') {
           try {
-            // Create blob and download
-            const blob = new Blob([html], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename.replace('.pdf', '.html');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            showAlert('Download completato', 'Il file è stato scaricato');
+            // Create HTML blob
+            const htmlBlob = new Blob([html], { type: 'text/html' });
+            const htmlFile = new File([htmlBlob], filename.replace('.pdf', '.html'), { type: 'text/html' });
+            
+            // Check if Web Share API with files is available
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [htmlFile] })) {
+              await navigator.share({
+                title: `Attestato di Versamento - ${athlete.full_name}`,
+                text: `Attestato di versamento per ${athlete.full_name}`,
+                files: [htmlFile]
+              });
+            } else if (navigator.share) {
+              // Share without file (just text/link)
+              // First save the file, then share the message
+              const url = URL.createObjectURL(htmlBlob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = filename.replace('.pdf', '.html');
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+              
+              // Try to share text
+              try {
+                await navigator.share({
+                  title: `Attestato di Versamento - ${athlete.full_name}`,
+                  text: `Attestato di versamento per ${athlete.full_name} - Totale versato: €${payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0).toFixed(2)}`,
+                });
+              } catch (shareErr) {
+                // User cancelled or share failed, but file was downloaded
+                showAlert('File scaricato', 'Il documento è stato scaricato. Puoi condividerlo manualmente.');
+              }
+            } else {
+              // Fallback: just download
+              const url = URL.createObjectURL(htmlBlob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = filename.replace('.pdf', '.html');
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+              showAlert('File scaricato', 'Il documento è stato scaricato. Puoi condividerlo manualmente.');
+            }
           } catch (e) {
-            showAlert('Errore', 'Impossibile scaricare il documento');
+            console.error('Share error:', e);
+            showAlert('Errore', 'Impossibile condividere il documento');
           }
         } else {
           // Mobile: generate PDF and share
