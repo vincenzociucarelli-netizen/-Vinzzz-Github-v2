@@ -59,9 +59,26 @@ I tesserati includono: atleti, dirigenti e coach.
    - Opzione A: Accetta privacy e conferma iscrizione → status diventa "active"
    - Opzione B: Non resta, cancella tutti i dati → elimina atleta, pagamenti, certificati, presenze + notifica admin
 
+## Session Changes (15/02/2026)
+1. **Svuotamento collezione pagamenti**: Come richiesto dall'utente, la collezione `payments` è stata svuotata completamente
+2. **Fix Bug Critici Trial Period**: Corretti 3 endpoint che usavano erroneamente `parent_email` invece di `parent_id`:
+   - `/api/trial/check-pending`: ora cerca atleti tramite `parent_id` e `second_parent_id`
+   - `/api/trial/accept-privacy/{id}`: verifica genitore tramite `parent_id` e `second_parent_id`
+   - `/api/trial/request-deletion/{id}`: verifica genitore tramite `parent_id` e `second_parent_id`
+3. **Cancellazione Dati Completa**: L'endpoint `request-deletion` ora elimina correttamente:
+   - Tutti i pagamenti dell'atleta (`db.payments.delete_many`)
+   - Tutti i certificati (`db.certificates.delete_many`)
+   - Tutte le presenze (`db.attendances.delete_many`)
+   - L'atleta stesso (`db.athletes.delete_one`)
+   - Crea notifica per l'admin
+
+## Testing Status
+- Backend: 8/8 test passati (trial endpoints)
+- Test file: `/app/backend/tests/test_trial_endpoints.py`
+
 ## Pending/Backlog
 - P1: Implementare logica freemium (limite 50 tesserati gratuiti)
-- P1: Verificare periodo prova 7 giorni genitori
+- P1: Verificare periodo prova 7 giorni end-to-end con genitore reale
 - P2: Limite team per società + upgrade message
 - P2: **Integrazione Stripe pagamenti online** (vedi dettagli sotto)
 - P2: Modulo atleti professionisti con compenso
