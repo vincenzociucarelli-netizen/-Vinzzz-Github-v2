@@ -740,6 +740,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  betaBanner: {
+    backgroundColor: '#E8F5E9',
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+    padding: 12,
+    marginBottom: 16,
+    borderRadius: 8,
+  },
+  betaBannerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    marginBottom: 4,
+  },
+  betaBannerText: {
+    fontSize: 14,
+    color: '#388E3C',
+    fontWeight: '600',
+  },
+  betaBannerSubtext: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
   header: {
     backgroundColor: '#007AFF',
     paddingTop: 50,
