@@ -323,14 +323,14 @@ export default function CoachesScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Text style={{ fontSize: 24, color: '#fff' }}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Coach</Text>
         <TouchableOpacity onPress={handleExport} disabled={exporting}>
           {exporting ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Ionicons name="share-outline" size={24} color="#fff" />
+            <Text style={{ fontSize: 22, color: '#fff' }}>📤</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -344,7 +344,7 @@ export default function CoachesScreen() {
         ListHeaderComponent={
           pendingCoaches.length > 0 ? (
             <View style={styles.sectionHeader}>
-              <Ionicons name="time" size={18} color="#FF9500" />
+              <Text style={{ fontSize: 16 }}>⏳</Text>
               <Text style={styles.sectionTitle}>In attesa di approvazione ({pendingCoaches.length})</Text>
             </View>
           ) : null
@@ -357,7 +357,7 @@ export default function CoachesScreen() {
             return (
               <View>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="fitness" size={18} color="#FF9500" />
+                  <Text style={{ fontSize: 16 }}>🏋️</Text>
                   <Text style={styles.sectionTitle}>Coach attivi ({coaches.length})</Text>
                 </View>
                 {renderCoachItem({ item })}
