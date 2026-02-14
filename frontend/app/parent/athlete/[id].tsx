@@ -439,57 +439,96 @@ export default function AthleteDetail() {
     
     try {
       // Get QR code - handle both data URI and base64
-      let qrCodeBase64 = athlete.qr_code || '';
+      let qrCodeSrc = athlete.qr_code || '';
       
-      // If it's a data URI, extract the base64 part
-      if (qrCodeBase64.startsWith('data:')) {
-        qrCodeBase64 = qrCodeBase64.split(',')[1] || '';
-      }
-      
-      // If still empty, show error
-      if (!qrCodeBase64) {
+      // If QR code is empty, show error
+      if (!qrCodeSrc) {
         Alert.alert('Errore', 'QR Code non disponibile');
         return;
       }
       
+      // If it's already a data URI, use it directly
+      // If it's just base64, add the prefix
+      if (!qrCodeSrc.startsWith('data:')) {
+        qrCodeSrc = `data:image/png;base64,${qrCodeSrc}`;
+      }
+      
       const html = `
+        <!DOCTYPE html>
         <html>
           <head>
+            <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>QR Code - ${athlete.full_name}</title>
             <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
               body { 
                 font-family: Arial, sans-serif; 
                 text-align: center; 
                 padding: 40px;
-                margin: 0;
+                background: white;
               }
-              h1 { font-size: 24px; margin-bottom: 10px; }
+              h1 { font-size: 28px; margin-bottom: 10px; color: #333; }
               h2 { font-size: 18px; color: #666; margin-bottom: 30px; }
               .qr-container {
                 display: flex;
+                flex-direction: column;
                 justify-content: center;
                 align-items: center;
+                margin: 20px auto;
               }
-              img { 
-                width: 250px; 
-                height: 250px; 
-                object-fit: contain;
+              .qr-image { 
+                width: 280px; 
+                height: 280px; 
+                border: 2px solid #ddd;
+                padding: 10px;
+                background: white;
               }
-              p { margin-top: 20px; font-size: 14px; color: #888; }
+              .athlete-code {
+                margin-top: 15px;
+                font-size: 16px;
+                font-weight: bold;
+                color: #333;
+                background: #f5f5f5;
+                padding: 8px 16px;
+                border-radius: 4px;
+              }
+              p { margin-top: 25px; font-size: 14px; color: #666; }
+              @media print {
+                body { padding: 20px; }
+                .qr-image { width: 250px; height: 250px; }
+              }
             </style>
           </head>
           <body>
             <h1>${athlete.full_name}</h1>
             <h2>QR Code Atleta</h2>
             <div class="qr-container">
-              <img src="data:image/png;base64,${qrCodeBase64}" />
+              <img class="qr-image" src="${qrCodeSrc}" alt="QR Code" />
+              <div class="athlete-code">Codice: ${athlete.athlete_code || athlete.id}</div>
             </div>
             <p>Presentare questo codice all'allenatore per registrare la presenza</p>
           </body>
         </html>
       `;
       
-      await Print.printAsync({ html });
+      // On web, open print dialog directly
+      if (Platform.OS === 'web') {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.onload = () => {
+            printWindow.focus();
+            printWindow.print();
+          };
+        } else {
+          Alert.alert('Errore', 'Popup bloccato. Abilita i popup per stampare.');
+        }
+      } else {
+        // Mobile: use expo-print
+        await Print.printAsync({ html });
+      }
     } catch (error) {
       console.error('Errore stampa:', error);
       Alert.alert('Errore', 'Impossibile stampare il QR code. Riprova.');
