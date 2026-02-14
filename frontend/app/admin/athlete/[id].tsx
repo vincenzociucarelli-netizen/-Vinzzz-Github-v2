@@ -435,6 +435,7 @@ export default function AdminAthleteDetail() {
         second_parent_email: editData.second_parent_email?.toLowerCase().trim() || null,
         // Team change
         team_id: editData.team_id || athlete?.team_id || null,
+        team_id_2: editData.team_id_2 || null,
       };
 
       await api.patch(`/athletes/${id}`, updatePayload);
