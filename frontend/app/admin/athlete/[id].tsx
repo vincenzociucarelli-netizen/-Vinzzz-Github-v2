@@ -2080,6 +2080,17 @@ export default function AdminAthleteDetail() {
               {editingPaymentId ? 'Modifica Pagamento' : 'Nuovo Pagamento'}
             </Text>
             
+            {/* IMPORTANTE: Banner di conferma atleta */}
+            <View style={styles.athleteConfirmBanner} data-testid="payment-athlete-confirm-banner">
+              <Text style={styles.athleteConfirmLabel}>Pagamento per:</Text>
+              <Text style={styles.athleteConfirmName}>
+                {athlete?.last_name?.toUpperCase()} {athlete?.first_name?.toUpperCase()}
+              </Text>
+              <Text style={styles.athleteConfirmTeam}>
+                {athlete?.team_name || 'Squadra non assegnata'}
+              </Text>
+            </View>
+            
             <Text style={styles.inputLabel}>Importo (€) *</Text>
             <TextInput
               style={styles.input}
