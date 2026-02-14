@@ -5309,6 +5309,160 @@ async def get_season_archive(season_name: str, current_user = Depends(get_curren
 
 # ==================== ROOT ====================
 
+# === TRIAL PERIOD ENDPOINTS ===
+
+@api_router.get("/trial/status/{athlete_id}")
+async def get_trial_status(athlete_id: str, current_user = Depends(get_current_user)):
+    """Get trial period status for an athlete"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    trial_end_date = athlete.get("trial_end_date")
+    privacy_accepted = athlete.get("privacy_accepted", False)
+    
+    # Check if trial has ended
+    trial_ended = False
+    if trial_end_date:
+        if isinstance(trial_end_date, str):
+            trial_end_date = datetime.fromisoformat(trial_end_date.replace('Z', '+00:00'))
+        trial_ended = datetime.utcnow() > trial_end_date
+    
+    return {
+        "athlete_id": athlete_id,
+        "athlete_name": athlete.get("full_name"),
+        "trial_end_date": trial_end_date.isoformat() if trial_end_date else None,
+        "trial_ended": trial_ended,
+        "privacy_accepted": privacy_accepted,
+        "status": athlete.get("status"),
+        "requires_action": trial_ended and not privacy_accepted
+    }
+
+@api_router.post("/trial/accept-privacy/{athlete_id}")
+async def accept_privacy_and_continue(athlete_id: str, current_user = Depends(get_current_user)):
+    """Accept privacy and confirm to continue after trial period"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Verify user is the parent of this athlete or the athlete themselves
+    if current_user["role"] == "parent":
+        if athlete.get("parent_email") != current_user["email"] and athlete.get("second_parent_email") != current_user["email"]:
+            raise HTTPException(status_code=403, detail="Non sei autorizzato a modificare questo atleta")
+    elif current_user["role"] == "athlete":
+        if athlete.get("email") != current_user["email"]:
+            raise HTTPException(status_code=403, detail="Non sei autorizzato a modificare questo atleta")
+    elif current_user["role"] not in ["admin"]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    # Update athlete with privacy accepted
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "privacy_accepted": True,
+            "privacy_accepted_date": datetime.utcnow(),
+            "status": "active"
+        }}
+    )
+    
+    return {
+        "message": f"Privacy accettata per {athlete.get('full_name')}. L'atleta è ora attivo.",
+        "status": "active"
+    }
+
+@api_router.post("/trial/request-deletion/{athlete_id}")
+async def request_data_deletion(athlete_id: str, current_user = Depends(get_current_user)):
+    """Request deletion of all athlete data after trial period"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Verify user is the parent of this athlete or the athlete themselves
+    if current_user["role"] == "parent":
+        if athlete.get("parent_email") != current_user["email"] and athlete.get("second_parent_email") != current_user["email"]:
+            raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo atleta")
+    elif current_user["role"] == "athlete":
+        if athlete.get("email") != current_user["email"]:
+            raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo atleta")
+    elif current_user["role"] not in ["admin"]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    athlete_name = athlete.get("full_name")
+    athlete_email = athlete.get("email")
+    parent_email = athlete.get("parent_email")
+    
+    # Delete all related data
+    # 1. Delete payments
+    await db.payments.delete_many({"athlete_id": athlete_id})
+    
+    # 2. Delete certificates
+    await db.certificates.delete_many({"athlete_id": athlete_id})
+    
+    # 3. Delete attendances
+    await db.attendances.delete_many({"athlete_id": athlete_id})
+    
+    # 4. Delete the athlete
+    await db.athletes.delete_one({"id": athlete_id})
+    
+    # 5. Create notification for admin
+    notification = {
+        "id": str(uuid.uuid4()),
+        "type": "athlete_deleted",
+        "title": "Atleta cancellato",
+        "message": f"L'atleta {athlete_name} ha richiesto la cancellazione dei propri dati al termine del periodo di prova.",
+        "related_user_id": athlete_id,
+        "related_user_name": athlete_name,
+        "read": False,
+        "created_at": datetime.utcnow(),
+        "society_id": athlete.get("society_id")
+    }
+    await db.admin_notifications.insert_one(notification)
+    
+    return {
+        "message": f"Tutti i dati di {athlete_name} sono stati eliminati.",
+        "deleted_athlete": athlete_name
+    }
+
+@api_router.get("/trial/check-pending")
+async def check_pending_trials(current_user = Depends(get_current_user)):
+    """Check if current user has athletes with expired trial period requiring action"""
+    if current_user["role"] not in ["parent", "athlete"]:
+        return {"athletes_requiring_action": []}
+    
+    # Find athletes linked to this user
+    if current_user["role"] == "parent":
+        athletes = await db.athletes.find({
+            "$or": [
+                {"parent_email": current_user["email"]},
+                {"second_parent_email": current_user["email"]}
+            ]
+        }).to_list(100)
+    else:  # athlete
+        athletes = await db.athletes.find({
+            "email": current_user["email"]
+        }).to_list(100)
+    
+    athletes_requiring_action = []
+    for athlete in athletes:
+        trial_end_date = athlete.get("trial_end_date")
+        privacy_accepted = athlete.get("privacy_accepted", False)
+        
+        if trial_end_date:
+            if isinstance(trial_end_date, str):
+                trial_end_date = datetime.fromisoformat(trial_end_date.replace('Z', '+00:00'))
+            
+            trial_ended = datetime.utcnow() > trial_end_date
+            
+            if trial_ended and not privacy_accepted:
+                athletes_requiring_action.append({
+                    "id": athlete.get("id"),
+                    "full_name": athlete.get("full_name"),
+                    "team_name": athlete.get("team_name"),
+                    "trial_end_date": trial_end_date.isoformat()
+                })
+    
+    return {"athletes_requiring_action": athletes_requiring_action}
+
 @api_router.get("/")
 async def root():
     return {"message": "Athlete Attendance API"}
