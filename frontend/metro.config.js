@@ -11,6 +11,13 @@ config.cacheStores = [
   new FileStore({ root: path.join(root, 'cache') }),
 ];
 
+// Exclude jspdf node version - use ES module instead
+config.resolver.resolverMainFields = ['browser', 'main', 'module'];
+
+// Force jspdf to use the ES module version
+config.resolver.extraNodeModules = {
+  ...config.resolver.extraNodeModules,
+};
 
 // // Exclude unnecessary directories from file watching
 // config.watchFolders = [__dirname];
