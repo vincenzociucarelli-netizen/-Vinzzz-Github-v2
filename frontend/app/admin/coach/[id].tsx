@@ -526,15 +526,25 @@ export default function AdminCoachDetail() {
         {/* Compenso */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>💰 Compenso Mensile</Text>
-            <TouchableOpacity onPress={() => setEditing(!editing)}>
-              <Ionicons name={editing ? "close" : "create"} size={22} color="#FF9500" />
-            </TouchableOpacity>
+            <Text style={styles.cardTitle}>💰 Compensi</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {(() => {
+                const badge = getCompensationBadge();
+                return badge ? (
+                  <View style={[styles.compBadgeLarge, { backgroundColor: badge.bg }]}>
+                    <Text style={[styles.compBadgeLargeText, { color: badge.color }]}>{badge.text}</Text>
+                  </View>
+                ) : null;
+              })()}
+              <TouchableOpacity onPress={() => setEditing(!editing)}>
+                <Text style={{ fontSize: 22 }}>{editing ? '✕' : '✏️'}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           
           {editing ? (
             <>
-              <Text style={styles.inputLabel}>Importo Mensile (€)</Text>
+              <Text style={styles.inputLabel}>Compenso Mensile da questa ASD (€)</Text>
               <TextInput
                 style={styles.input}
                 value={monthlyCompensation}
@@ -542,26 +552,60 @@ export default function AdminCoachDetail() {
                 keyboardType="decimal-pad"
                 placeholder="0"
               />
+              
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>Compensi Annuali da altre ASD/SSD (€)</Text>
+              <TextInput
+                style={styles.input}
+                value={otherAnnualCompensation}
+                onChangeText={setOtherAnnualCompensation}
+                keyboardType="decimal-pad"
+                placeholder="0"
+              />
+              <Text style={styles.inputHint}>
+                Inserisci la somma dichiarata dal coach dei compensi ricevuti da altre associazioni sportive
+              </Text>
+              
+              <View style={styles.totalBox}>
+                <Text style={styles.totalLabel}>Totale Annuale Stimato</Text>
+                <Text style={styles.totalValue}>€{getTotalAnnualCompensation().toLocaleString()}</Text>
+              </View>
+              
               <TouchableOpacity
                 style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
                 onPress={handleSaveCompensation}
                 disabled={saving}
               >
                 <Text style={styles.saveBtnText}>
-                  {saving ? 'Salvataggio...' : 'Salva Compenso'}
+                  {saving ? 'Salvataggio...' : 'Salva Compensi'}
                 </Text>
               </TouchableOpacity>
             </>
           ) : (
-            <View style={styles.compensationDisplay}>
-              <Text style={styles.compensationAmount}>€{coach.monthly_compensation || 0}</Text>
-              <Text style={styles.compensationPeriod}>/mese</Text>
-            </View>
+            <>
+              <View style={styles.compensationDisplay}>
+                <Text style={styles.compensationAmount}>€{coach.monthly_compensation || 0}</Text>
+                <Text style={styles.compensationPeriod}>/mese (questa ASD)</Text>
+              </View>
+              {(coach.other_annual_compensation || 0) > 0 && (
+                <View style={[styles.compensationDisplay, { marginTop: 8 }]}>
+                  <Text style={[styles.compensationAmount, { fontSize: 18, color: '#666' }]}>
+                    €{coach.other_annual_compensation}
+                  </Text>
+                  <Text style={styles.compensationPeriod}>/anno (altre ASD)</Text>
+                </View>
+              )}
+              <View style={[styles.totalBox, { marginTop: 12 }]}>
+                <Text style={styles.totalLabel}>Totale Annuale</Text>
+                <Text style={styles.totalValue}>
+                  €{(((coach.monthly_compensation || 0) * 12) + (coach.other_annual_compensation || 0)).toLocaleString()}
+                </Text>
+              </View>
+            </>
           )}
 
           {coach.compensation_accepted && (
             <View style={styles.acceptedBadge}>
-              <Ionicons name="checkmark-circle" size={16} color="#34C759" />
+              <Text style={{ fontSize: 14 }}>✅</Text>
               <Text style={styles.acceptedText}>Accettato dal coach</Text>
             </View>
           )}
