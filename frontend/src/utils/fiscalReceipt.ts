@@ -101,6 +101,20 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
     `;
   }).join('');
 
+  // Build logo HTML if available
+  const logoHtml = data.society.logo 
+    ? `<img src="data:image/jpeg;base64,${data.society.logo}" style="max-height: 60px; max-width: 120px; object-fit: contain;" />`
+    : '';
+
+  // Build stamp/signature HTML if available
+  const stampSignatureHtml = data.society.stamp_signature
+    ? `<img src="data:image/png;base64,${data.society.stamp_signature}" style="max-height: 80px; max-width: 150px; object-fit: contain;" />`
+    : '';
+
+  // Build address line
+  const addressParts = [data.society.address, data.society.postal_code, data.society.city, data.society.province].filter(Boolean);
+  const addressLine = addressParts.join(' - ');
+
   return `
     <!DOCTYPE html>
     <html>
