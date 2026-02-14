@@ -354,7 +354,7 @@ export default function AdminDashboard() {
               }}
             >
               <View style={styles.quickStatIconRow}>
-                <Text style={{ fontSize: 18 }}>📄</Text>
+                <Text style={{ fontSize: 16 }}>📄</Text>
                 <Text style={[
                   styles.quickStatNumber, 
                   expiringCerts.count_today > 0 && { color: '#FF3B30' },
@@ -363,7 +363,7 @@ export default function AdminDashboard() {
                   {expiringCerts.count_today + expiringCerts.count_30_days}
                 </Text>
               </View>
-              <Text style={styles.quickStatLabel}>Cert. Scadenza</Text>
+              <Text style={styles.quickStatLabel}>Scadenze</Text>
             </TouchableOpacity>
           </View>
         )}
