@@ -1909,6 +1909,7 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "profile_photo_artistic": user.get("profile_photo_artistic"),
         # Compensation
         "monthly_compensation": user.get("monthly_compensation", 0),
+        "other_annual_compensation": user.get("other_annual_compensation", 0),  # Da altre ASD/SSD
         "compensation_accepted": user.get("compensation_accepted", False),
         "compensation_history": user.get("compensation_history", {}),
         "over_5000_limit": user.get("over_5000_limit", {}),
