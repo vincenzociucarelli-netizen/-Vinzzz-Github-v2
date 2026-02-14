@@ -263,9 +263,10 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
         <div class="signature">
           <p>${data.society.name || ''}</p>
           <p>Il Presidente</p>
-          <div class="signature-line">
-            ${data.society.president_name || ''}
-          </div>
+          ${stampSignatureHtml 
+            ? `<div style="margin-top: 10px;">${stampSignatureHtml}</div>` 
+            : `<div class="signature-line">${data.society.president_name || ''}</div>`
+          }
         </div>
       </div>
     </body>
