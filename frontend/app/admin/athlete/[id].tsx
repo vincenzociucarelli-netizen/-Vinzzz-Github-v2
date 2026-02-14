@@ -116,6 +116,10 @@ export default function AdminAthleteDetail() {
   const [availableCharacteristics, setAvailableCharacteristics] = useState<string[]>([]);
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
   
+  // QR Code modal
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const qrCodeRef = useRef<View>(null);
+  
   // Reset data password modal
   const [resetDataPasswordVisible, setResetDataPasswordVisible] = useState(false);
   const [newDataPassword, setNewDataPassword] = useState('');
