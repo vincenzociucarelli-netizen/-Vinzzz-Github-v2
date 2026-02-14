@@ -44,7 +44,12 @@ I tesserati includono: atleti, dirigenti e coach.
 2. Fix "Ionicons is not defined" in Calendario Gare
 3. QR code nell'header della scheda atleta con modal stampa/condividi
 
+## Current Session Changes (14/02/2026)
+1. **Bug Fix "Sport Praticato"**: Aggiunto campo al modello backend `SocietySettingsUpdate`, endpoint GET e PATCH
+2. **Pulsante Salva Floating**: Implementato pulsante fisso in basso nella pagina Impostazioni per migliore UX
+
 ## Pending/Backlog
+- P1: Implementare logica freemium (limite 50 tesserati gratuiti)
 - P1: Verificare periodo prova 7 giorni genitori
 - P2: Limite team per società + upgrade message
 - P2: **Integrazione Stripe pagamenti online** (vedi dettagli sotto)
