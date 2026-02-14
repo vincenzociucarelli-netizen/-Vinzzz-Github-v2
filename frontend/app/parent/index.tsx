@@ -1068,4 +1068,92 @@ const styles = StyleSheet.create({
     color: '#FF9500',
     marginTop: 2,
   },
+  // Trial Period Modal Styles
+  trialModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  trialModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 450,
+    maxHeight: '90%',
+  },
+  trialModalHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  trialModalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  trialModalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  trialAthleteCard: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  trialAthleteName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+  },
+  trialAthleteTeam: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  trialButtonsRow: {
+    gap: 10,
+  },
+  trialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  trialButtonAccept: {
+    backgroundColor: '#34C759',
+  },
+  trialButtonDelete: {
+    backgroundColor: '#FF3B30',
+  },
+  trialButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  trialProcessing: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  trialProcessingText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
 });
