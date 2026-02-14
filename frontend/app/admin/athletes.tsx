@@ -55,7 +55,7 @@ export default function AdminAthletes() {
   const loadData = async () => {
     try {
       const [athletesRes, teamsRes] = await Promise.all([
-        api.get('/athletes/my'),
+        api.get('/athletes'),
         api.get('/teams'),
       ]);
 
