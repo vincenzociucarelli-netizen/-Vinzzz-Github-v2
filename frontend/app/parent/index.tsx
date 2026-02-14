@@ -653,6 +653,61 @@ export default function ParentDashboard() {
           </View>
         </View>
       </Modal>
+
+      {/* Trial Period Expired Modal */}
+      <Modal
+        visible={trialModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => {}} // Cannot dismiss by back button
+      >
+        <View style={styles.trialModalOverlay}>
+          <View style={styles.trialModalContent}>
+            <View style={styles.trialModalHeader}>
+              <Ionicons name="time-outline" size={48} color="#FF9500" />
+              <Text style={styles.trialModalTitle}>Periodo di Prova Terminato</Text>
+              <Text style={styles.trialModalSubtitle}>
+                Il periodo di prova di 7 giorni è terminato. Per continuare, è necessario confermare l'iscrizione.
+              </Text>
+            </View>
+
+            {athletesRequiringAction.map((athlete) => (
+              <View key={athlete.id} style={styles.trialAthleteCard}>
+                <Text style={styles.trialAthleteName}>{athlete.full_name}</Text>
+                <Text style={styles.trialAthleteTeam}>{athlete.team_name || 'Squadra'}</Text>
+                
+                <View style={styles.trialButtonsRow}>
+                  <TouchableOpacity
+                    style={[styles.trialButton, styles.trialButtonAccept]}
+                    onPress={() => handleAcceptPrivacy(athlete.id, athlete.full_name)}
+                    disabled={processingTrial}
+                    data-testid={`accept-privacy-${athlete.id}`}
+                  >
+                    <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                    <Text style={styles.trialButtonText}>Confermo e Accetto Privacy</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.trialButton, styles.trialButtonDelete]}
+                    onPress={() => handleRequestDeletion(athlete.id, athlete.full_name)}
+                    disabled={processingTrial}
+                    data-testid={`delete-data-${athlete.id}`}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#fff" />
+                    <Text style={styles.trialButtonText}>Non Resto, Cancella Dati</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+
+            {processingTrial && (
+              <View style={styles.trialProcessing}>
+                <Text style={styles.trialProcessingText}>Elaborazione in corso...</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
