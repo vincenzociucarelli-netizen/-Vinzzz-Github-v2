@@ -309,7 +309,7 @@ export default function AdminDashboard() {
               )}
             >
               <View style={styles.quickStatIconRow}>
-                <Ionicons name="gift" size={20} color={birthdays.length > 0 ? '#FF9500' : '#007AFF'} />
+                <Text style={{ fontSize: 18 }}>🎂</Text>
                 <Text style={[styles.quickStatNumber, birthdays.length > 0 && { color: '#FF9500' }]}>
                   {birthdays.length}
                 </Text>
@@ -343,11 +343,7 @@ export default function AdminDashboard() {
               }}
             >
               <View style={styles.quickStatIconRow}>
-                <Ionicons 
-                  name="document-text" 
-                  size={20} 
-                  color={expiringCerts.count_today > 0 ? '#FF3B30' : (expiringCerts.count_30_days > 0 ? '#FF9500' : '#007AFF')} 
-                />
+                <Text style={{ fontSize: 18 }}>📄</Text>
                 <Text style={[
                   styles.quickStatNumber, 
                   expiringCerts.count_today > 0 && { color: '#FF3B30' },
