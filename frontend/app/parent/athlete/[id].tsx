@@ -98,6 +98,9 @@ export default function AthleteDetail() {
   
   // Athlete photo states
   const [athletePhoto, setAthletePhoto] = useState<string | null>(null);
+  
+  // Fiscal receipt state
+  const [generatingReceipt, setGeneratingReceipt] = useState(false);
   const [athletePhotoArtistic, setAthletePhotoArtistic] = useState<string | null>(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
   
