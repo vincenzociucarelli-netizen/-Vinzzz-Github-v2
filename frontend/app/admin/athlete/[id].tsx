@@ -2618,6 +2618,32 @@ const styles = StyleSheet.create({
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
   switchLabel: { fontSize: 14, color: '#333' },
   paymentMethodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  // Banner di conferma atleta nel modal pagamenti
+  athleteConfirmBanner: {
+    backgroundColor: '#E3F2FD',
+    borderWidth: 2,
+    borderColor: '#1976D2',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  athleteConfirmLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  athleteConfirmName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1976D2',
+    textAlign: 'center',
+  },
+  athleteConfirmTeam: {
+    fontSize: 13,
+    color: '#555',
+    marginTop: 4,
+  },
   paymentMethodBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: '#f0f0f0', borderWidth: 1, borderColor: '#e0e0e0' },
   paymentMethodBtnActive: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
   paymentMethodBtnText: { fontSize: 13, color: '#666' },
