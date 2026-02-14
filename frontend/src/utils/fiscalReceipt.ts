@@ -309,3 +309,4 @@ export const downloadFiscalReceipt = async (data: ReceiptData, filename?: string
     }
   }
 };
+// Modified Sat Feb 14 08:05:25 UTC 2026
