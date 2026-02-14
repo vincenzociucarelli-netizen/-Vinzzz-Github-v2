@@ -18,7 +18,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import api from '../../src/services/api';
-import { Ionicons } from '@expo/vector-icons';
+
 import * as XLSX from 'xlsx';
 
 interface Match {
@@ -582,14 +582,14 @@ export default function AdminMatches() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Text style={{ fontSize: 24, color: "#fff" }}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>🏐 Calendario Gare</Text>
         <TouchableOpacity onPress={handleImportExcel} style={styles.importBtn}>
           <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity onPress={openAddModal} style={styles.addBtn}>
-          <Ionicons name="add" size={24} color="#fff" />
+          <Text style={{ fontSize: 22, color: "#fff" }}>➕</Text>
         </TouchableOpacity>
       </View>
 
