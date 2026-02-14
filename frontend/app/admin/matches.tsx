@@ -18,6 +18,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import api from '../../src/services/api';
+import { Ionicons } from '../../src/components/Icon';
 
 import * as XLSX from 'xlsx';
 
