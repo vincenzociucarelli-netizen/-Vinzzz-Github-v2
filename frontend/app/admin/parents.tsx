@@ -87,11 +87,11 @@ export default function ParentsScreen() {
       const approvedParents = enrichedParents.filter((p: Parent) => p.status === 'approved');
       setParents(approvedParents);
       
-      // Filter pending parents and enrich them too
+      // Filter pending parents and enrich them too (include both primary and second parent)
       const pending = pendingRes.data.filter((u: Parent) => u.role === 'parent');
       const enrichedPending = pending.map((p: Parent) => ({
         ...p,
-        athletes: athletes.filter((a: any) => a.parent_id === p.id).map((a: any) => ({
+        athletes: athletes.filter((a: any) => a.parent_id === p.id || a.second_parent_id === p.id).map((a: any) => ({
           id: a.id,
           full_name: a.full_name,
           team_name: a.team_name,
