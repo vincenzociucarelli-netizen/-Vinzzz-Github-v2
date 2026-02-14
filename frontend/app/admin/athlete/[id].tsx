@@ -22,6 +22,7 @@ import { Athlete, Team, Payment, Certificate } from '../../../src/types';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import * as ImagePicker from 'expo-image-picker';
+import { downloadFiscalReceipt, ReceiptData } from '../../../src/utils/fiscalReceipt';
 
 interface PaymentSummary {
   total_due: number;
