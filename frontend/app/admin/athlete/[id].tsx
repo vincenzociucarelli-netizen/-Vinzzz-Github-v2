@@ -271,6 +271,7 @@ export default function AdminAthleteDetail() {
         second_parent_email: athleteData.second_parent_email || '',
         // Team
         team_id: athleteData.team_id || '',
+        team_id_2: athleteData.team_id_2 || '',
       });
 
       // Load team info
