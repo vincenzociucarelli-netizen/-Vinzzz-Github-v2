@@ -713,155 +713,183 @@ export default function AdminAthleteDetail() {
 
   // Print QR Code function
   const printQRCode = async () => {
-    if (!athlete?.qr_code) return;
+    if (!athlete?.qr_code) {
+      showAlert('Errore', 'QR Code non disponibile');
+      return;
+    }
     
     try {
-      const qrImageSrc = athlete.qr_code.startsWith('data:') 
-        ? athlete.qr_code 
-        : `data:image/png;base64,${athlete.qr_code}`;
+      // Get QR code - handle both data URI and base64
+      let qrCodeSrc = athlete.qr_code;
       
-      const htmlContent = `
+      // If it's just base64, add the prefix
+      if (!qrCodeSrc.startsWith('data:')) {
+        qrCodeSrc = `data:image/png;base64,${qrCodeSrc}`;
+      }
+      
+      const html = `
         <!DOCTYPE html>
         <html>
           <head>
-            <meta charset="utf-8">
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>QR Code - ${athlete.full_name}</title>
             <style>
-              body {
-                font-family: Arial, sans-serif;
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { 
+                font-family: Arial, sans-serif; 
+                text-align: center; 
+                padding: 40px;
+                background: white;
+              }
+              h1 { font-size: 28px; margin-bottom: 10px; color: #333; }
+              h2 { font-size: 18px; color: #666; margin-bottom: 30px; }
+              .qr-container {
                 display: flex;
                 flex-direction: column;
-                align-items: center;
                 justify-content: center;
-                min-height: 100vh;
-                margin: 0;
-                padding: 20px;
-                box-sizing: border-box;
+                align-items: center;
+                margin: 20px auto;
               }
-              .container {
-                text-align: center;
-                border: 2px solid #007AFF;
-                border-radius: 16px;
-                padding: 30px;
-                max-width: 400px;
+              .qr-image { 
+                width: 280px; 
+                height: 280px; 
+                border: 2px solid #ddd;
+                padding: 10px;
+                background: white;
               }
-              h1 {
-                color: #007AFF;
-                margin: 0 0 10px 0;
-                font-size: 24px;
-              }
-              .qr-image {
-                width: 250px;
-                height: 250px;
-                margin: 20px 0;
-              }
-              .code {
-                font-size: 14px;
-                color: #666;
-                margin-top: 10px;
-              }
-              .instructions {
-                font-size: 12px;
-                color: #999;
+              .athlete-code {
                 margin-top: 15px;
+                font-size: 16px;
+                font-weight: bold;
+                color: #333;
+                background: #f5f5f5;
+                padding: 8px 16px;
+                border-radius: 4px;
+              }
+              p { margin-top: 25px; font-size: 14px; color: #666; }
+              @media print {
+                body { padding: 20px; }
+                .qr-image { width: 250px; height: 250px; }
               }
             </style>
           </head>
           <body>
-            <div class="container">
-              <h1>${athlete.full_name}</h1>
-              <img src="${qrImageSrc}" class="qr-image" />
-              <div class="code">Codice: ${athlete.athlete_code || athlete.id}</div>
-              <div class="instructions">Mostra questo QR code al coach per registrare la presenza</div>
+            <h1>${athlete.full_name}</h1>
+            <h2>QR Code Atleta</h2>
+            <div class="qr-container">
+              <img class="qr-image" src="${qrCodeSrc}" alt="QR Code" />
+              <div class="athlete-code">Codice: ${(athlete as any).athlete_code || athlete.id}</div>
             </div>
+            <p>Presentare questo codice all'allenatore per registrare la presenza</p>
           </body>
         </html>
       `;
       
-      await Print.printAsync({ html: htmlContent });
+      // On web, open print dialog directly
+      if (Platform.OS === 'web') {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.onload = () => {
+            printWindow.focus();
+            printWindow.print();
+          };
+        } else {
+          showAlert('Errore', 'Popup bloccato. Abilita i popup per stampare.');
+        }
+      } else {
+        // Mobile: use expo-print
+        await Print.printAsync({ html });
+      }
     } catch (error) {
-      console.error('Print error:', error);
-      showAlert('Errore', 'Impossibile stampare il QR code');
+      console.error('Errore stampa:', error);
+      showAlert('Errore', 'Impossibile stampare il QR code. Riprova.');
     }
   };
 
   // Share QR Code function
   const shareQRCode = async () => {
-    if (!athlete?.qr_code) return;
+    if (!athlete?.qr_code) {
+      showAlert('Errore', 'QR Code non disponibile');
+      return;
+    }
     
     try {
-      const qrImageSrc = athlete.qr_code.startsWith('data:') 
-        ? athlete.qr_code 
-        : `data:image/png;base64,${athlete.qr_code}`;
+      // Get QR code source
+      let qrCodeSrc = athlete.qr_code;
       
-      // Create HTML content for sharing
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <title>QR Code - ${athlete.full_name}</title>
-            <style>
-              body {
-                font-family: Arial, sans-serif;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                min-height: 100vh;
-                margin: 0;
-                padding: 20px;
-                box-sizing: border-box;
-              }
-              .container {
-                text-align: center;
-                border: 2px solid #007AFF;
-                border-radius: 16px;
-                padding: 30px;
-                max-width: 400px;
-              }
-              h1 {
-                color: #007AFF;
-                margin: 0 0 10px 0;
-                font-size: 24px;
-              }
-              .qr-image {
-                width: 250px;
-                height: 250px;
-                margin: 20px 0;
-              }
-              .code {
-                font-size: 14px;
-                color: #666;
-                margin-top: 10px;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>${athlete.full_name}</h1>
-              <img src="${qrImageSrc}" class="qr-image" />
-              <div class="code">Codice: ${athlete.athlete_code || athlete.id}</div>
-            </div>
-          </body>
-        </html>
-      `;
-      
-      // Create PDF and share
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: `QR Code - ${athlete.full_name}`,
-          UTI: 'com.adobe.pdf'
-        });
-      } else {
-        showAlert('Info', 'Condivisione non disponibile su questo dispositivo');
+      // Ensure it's a proper data URI
+      if (!qrCodeSrc.startsWith('data:')) {
+        qrCodeSrc = `data:image/png;base64,${qrCodeSrc}`;
       }
+      
+      // On web, use different approach
+      if (Platform.OS === 'web') {
+        try {
+          // Convert data URI to blob
+          const response = await fetch(qrCodeSrc);
+          const blob = await response.blob();
+          const file = new File([blob], `qr_${athlete.full_name.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
+          
+          // Check if Web Share API is available
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: `QR Code - ${athlete.full_name}`,
+              text: `QR Code per ${athlete.full_name}`,
+              files: [file]
+            });
+          } else {
+            // Fallback: download the image
+            const link = document.createElement('a');
+            link.href = qrCodeSrc;
+            link.download = `qr_${athlete.full_name.replace(/\s+/g, '_')}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showAlert('Download completato', 'Il QR code è stato scaricato');
+          }
+        } catch (webError) {
+          console.error('Web share error:', webError);
+          // Fallback to download
+          const link = document.createElement('a');
+          link.href = qrCodeSrc;
+          link.download = `qr_${athlete.full_name.replace(/\s+/g, '_')}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          showAlert('Download completato', 'Il QR code è stato scaricato');
+        }
+        return;
+      }
+      
+      // Mobile: Check if sharing is available
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        showAlert('Errore', 'La condivisione non è disponibile su questo dispositivo');
+        return;
+      }
+      
+      // Save QR code to file and share
+      const FileSystem = require('expo-file-system/legacy');
+      let base64Data = qrCodeSrc;
+      if (base64Data.startsWith('data:')) {
+        base64Data = base64Data.split(',')[1];
+      }
+      
+      const fileUri = FileSystem.cacheDirectory + `qr_${athlete.id}.png`;
+      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'image/png',
+        dialogTitle: `QR Code - ${athlete.full_name}`,
+      });
     } catch (error) {
-      console.error('Share error:', error);
-      showAlert('Errore', 'Impossibile condividere il QR code');
+      console.error('Errore condivisione:', error);
+      showAlert('Errore', 'Impossibile condividere il QR code. Riprova.');
     }
   };
 
