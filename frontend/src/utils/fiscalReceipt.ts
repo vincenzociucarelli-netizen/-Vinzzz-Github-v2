@@ -107,9 +107,14 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
     : '';
 
   // Build stamp/signature HTML if available
-  const stampSignatureHtml = data.society.stamp_signature
-    ? `<img src="data:image/png;base64,${data.society.stamp_signature}" style="max-height: 80px; max-width: 150px; object-fit: contain;" />`
-    : '';
+  let stampSignatureHtml = '';
+  if (data.society.stamp_signature) {
+    // Check if it already has the data URI prefix
+    const imgSrc = data.society.stamp_signature.startsWith('data:') 
+      ? data.society.stamp_signature 
+      : `data:image/png;base64,${data.society.stamp_signature}`;
+    stampSignatureHtml = `<img src="${imgSrc}" style="max-height: 80px; max-width: 150px; object-fit: contain;" />`;
+  }
 
   // Build address line
   const addressParts = [data.society.address, data.society.postal_code, data.society.city, data.society.province].filter(Boolean);
