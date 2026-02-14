@@ -199,8 +199,7 @@ export default function AdminAthletes() {
           )}
           {(item as any).has_overpayment && (
             <View style={styles.overpaymentBadge}>
-              <Ionicons name="alert-circle" size={14} color="#FF3B30" />
-              <Text style={styles.overpaymentBadgeText}>€{Math.abs((item as any).payment_residual)}</Text>
+              <Text style={styles.overpaymentBadgeText}>⚠️ €{Math.abs((item as any).payment_residual)}</Text>
             </View>
           )}
         </View>
@@ -213,7 +212,7 @@ export default function AdminAthletes() {
           {getStatusText(item)}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color="#ccc" />
+      <Text style={{ fontSize: 18, color: '#ccc' }}>›</Text>
     </TouchableOpacity>
   );
 
