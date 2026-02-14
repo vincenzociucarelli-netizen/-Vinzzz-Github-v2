@@ -3134,9 +3134,12 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Check permissions
-    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Accesso negato")
+    # Check permissions - allow primary and second parent
+    if current_user["role"] == UserRole.PARENT:
+        is_primary = athlete.get("parent_id") == current_user["id"]
+        is_second = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary and not is_second:
+            raise HTTPException(status_code=403, detail="Accesso negato")
     
     update_dict = {}
     
@@ -3326,9 +3329,12 @@ async def verify_data_password(athlete_id: str, data: VerifyDataPassword, curren
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Check permissions (parent or admin can verify)
-    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Accesso negato")
+    # Check permissions (parent or admin can verify) - allow primary and second parent
+    if current_user["role"] == UserRole.PARENT:
+        is_primary = athlete.get("parent_id") == current_user["id"]
+        is_second = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary and not is_second:
+            raise HTTPException(status_code=403, detail="Accesso negato")
     
     # If no password is set, return special response
     if not athlete.get("data_password_hash"):
@@ -3345,8 +3351,12 @@ async def change_data_password(athlete_id: str, data: ChangeDataPassword, curren
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Only parent can change password
-    if current_user["role"] != UserRole.PARENT or athlete["parent_id"] != current_user["id"]:
+    # Only parent can change password - allow primary and second parent
+    if current_user["role"] != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo il genitore può modificare la password")
+    is_primary = athlete.get("parent_id") == current_user["id"]
+    is_second = athlete.get("second_parent_id") == current_user["id"]
+    if not is_primary and not is_second:
         raise HTTPException(status_code=403, detail="Solo il genitore può modificare la password")
     
     # If password exists, verify old password
@@ -3405,9 +3415,12 @@ async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, 
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Check permissions - admin, coach, or parent of athlete
-    if current_user["role"] == UserRole.PARENT and athlete.get("parent_id") != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Accesso negato")
+    # Check permissions - admin, coach, or parent of athlete (primary or second)
+    if current_user["role"] == UserRole.PARENT:
+        is_primary = athlete.get("parent_id") == current_user["id"]
+        is_second = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary and not is_second:
+            raise HTTPException(status_code=403, detail="Accesso negato")
     
     try:
         # Get API key
@@ -3501,9 +3514,12 @@ async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_c
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Check permissions - only parent of the athlete can request deletion
-    if current_user["role"] == UserRole.PARENT and athlete.get("parent_id") != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Accesso negato")
+    # Check permissions - only parent of the athlete can request deletion (primary or second)
+    if current_user["role"] == UserRole.PARENT:
+        is_primary = athlete.get("parent_id") == current_user["id"]
+        is_second = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary and not is_second:
+            raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Mark athlete for deletion request
     await db.athletes.update_one(
@@ -3566,9 +3582,12 @@ async def delete_athlete(athlete_id: str, current_user = Depends(get_current_use
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Check permissions - only parent of the athlete or admin can delete
-    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Accesso negato")
+    # Check permissions - only parent of the athlete or admin can delete (primary or second)
+    if current_user["role"] == UserRole.PARENT:
+        is_primary = athlete.get("parent_id") == current_user["id"]
+        is_second = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary and not is_second:
+            raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Delete all related data
     await db.certificates.delete_many({"athlete_id": athlete_id})
