@@ -757,7 +757,7 @@ export default function AdminAthleteDetail() {
           phone2: societyData?.phone2 || '',
           president_name: societyData?.president_name || '',
           logo: societyData?.company_logo_base64 || societyData?.logo || '',
-          stamp_signature: societyData?.stamp_signature_base64 || '',
+          stamp_signature: societyData?.stamp_signature_base64 || societyData?.stamp_signature || '',
         },
         payments: payments.map((p: any, index) => ({
           date: p.paid_date || '',
