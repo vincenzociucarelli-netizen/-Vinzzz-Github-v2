@@ -8,9 +8,16 @@ Applicazione per la gestione di club di pallavolo. Permette agli amministratori 
 - Accesso completo e gratuito per società amiche/tester
 - Tutte le funzionalità disponibili senza limitazioni
 
-### Dal 01/07/2026
-- **Versione FREE**: Piena funzionalità per 2-3 squadre (da definire)
-- **Versione Premium**: Upgrade per gestire più squadre (pricing da definire)
+### Dal 01/07/2026 - Modello a Tesserati
+I tesserati includono: atleti, dirigenti e coach.
+
+| Piano | Tesserati | Prezzo |
+|-------|-----------|--------|
+| **FREE** | 50 | Gratuito |
+| **Pack +50** | +50 (tot 100) | € X (da definire) |
+| **Pack +100** | +100 (tot 200) | € XY (da definire) |
+
+*I pack sono cumulabili per raggiungere il numero desiderato*
 
 ## User Personas
 - **Admin/Dirigente**: Gestisce la società sportiva, atleti, squadre, pagamenti
