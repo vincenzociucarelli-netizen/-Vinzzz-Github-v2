@@ -270,6 +270,17 @@ export default function AdminDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        {/* Beta Phase Banner */}
+        <View style={styles.betaBanner}>
+          <Text style={styles.betaBannerTitle}>🎉 Fase Beta Gratuita</Text>
+          <Text style={styles.betaBannerText}>
+            Accesso completo fino al 30/06/2026
+          </Text>
+          <Text style={styles.betaBannerSubtext}>
+            Dal 01/07/2026: versione FREE (2-3 squadre) + piani Premium per più squadre
+          </Text>
+        </View>
+
         <Text style={styles.welcomeText}>
           Benvenuto, {user?.full_name?.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
         </Text>
