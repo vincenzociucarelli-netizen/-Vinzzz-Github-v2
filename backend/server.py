@@ -3614,8 +3614,11 @@ async def upload_certificate(
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Accesso negato")
+    if current_user["role"] == UserRole.PARENT:
+        is_primary = athlete.get("parent_id") == current_user["id"]
+        is_second = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary and not is_second:
+            raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Read PDF and encode to base64
     pdf_data = await file.read()
@@ -3651,8 +3654,11 @@ async def upload_certificate_base64(
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Accesso negato")
+    if current_user["role"] == UserRole.PARENT:
+        is_primary = athlete.get("parent_id") == current_user["id"]
+        is_second = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary and not is_second:
+            raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Calculate expiry date: (issue_date + validity_months) - 1 day
     # Example: issue 15/12/2025 + 12 months - 1 day = 14/12/2026
@@ -3800,10 +3806,13 @@ async def get_certificate(athlete_id: str, current_user = Depends(get_current_us
     if not certificate:
         raise HTTPException(status_code=404, detail="Certificato non trovato")
     
-    # Check permissions
+    # Check permissions - allow primary and second parent
     athlete = await db.athletes.find_one({"id": athlete_id})
-    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Accesso negato")
+    if current_user["role"] == UserRole.PARENT:
+        is_primary = athlete.get("parent_id") == current_user["id"]
+        is_second = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary and not is_second:
+            raise HTTPException(status_code=403, detail="Accesso negato")
     
     return Certificate(**certificate)
 
@@ -3979,8 +3988,11 @@ async def get_athlete_payments(athlete_id: str, current_user = Depends(get_curre
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Accesso negato")
+    if current_user["role"] == UserRole.PARENT:
+        is_primary = athlete.get("parent_id") == current_user["id"]
+        is_second = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary and not is_second:
+            raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Return only PAID payments (manual payments registered by admin)
     payments = await db.payments.find({
@@ -4091,8 +4103,11 @@ async def get_payment_summary(athlete_id: str, current_user = Depends(get_curren
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Accesso negato")
+    if current_user["role"] == UserRole.PARENT:
+        is_primary = athlete.get("parent_id") == current_user["id"]
+        is_second = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary and not is_second:
+            raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Get team for quote amounts
     team = await db.teams.find_one({"id": athlete["team_id"]})
@@ -4213,10 +4228,13 @@ async def update_payment(payment_id: str, update_data: PaymentUpdate, current_us
     if not payment:
         raise HTTPException(status_code=404, detail="Pagamento non trovato")
     
-    # Check permissions
+    # Check permissions - allow primary and second parent
     athlete = await db.athletes.find_one({"id": payment["athlete_id"]})
-    if current_user["role"] == UserRole.PARENT and athlete["parent_id"] != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Accesso negato")
+    if current_user["role"] == UserRole.PARENT:
+        is_primary = athlete.get("parent_id") == current_user["id"]
+        is_second = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary and not is_second:
+            raise HTTPException(status_code=403, detail="Accesso negato")
     
     update_dict = {}
     if update_data.paid is not None:
