@@ -16,7 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '../../src/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
 import PhotoViewer from '../../src/components/PhotoViewer';

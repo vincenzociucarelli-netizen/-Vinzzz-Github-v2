@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '../../../src/components/Icon';
 import { Team, TrainingSession, MatchDay } from '../../../src/types';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
