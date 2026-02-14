@@ -125,6 +125,17 @@ export default function SettingsScreen() {
         athlete_roles: athleteRoles,
         athlete_characteristics: athleteCharacteristics,
         dirigente_qualifications: dirigenteQualifications,
+        // Fiscal receipt data
+        ragione_sociale: ragioneSociale,
+        address: address,
+        postal_code: postalCode,
+        city: city,
+        province: province,
+        fiscal_code: fiscalCode,
+        phone: phone,
+        phone2: phone2,
+        president_name: presidentName,
+        stamp_signature: stampSignature,
       });
       showAlert('Successo', 'Impostazioni salvate con successo');
     } catch (error: any) {
