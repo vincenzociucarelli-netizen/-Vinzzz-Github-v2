@@ -239,6 +239,7 @@ export default function ParentDashboard() {
     loadAthletes();
     loadCommitments();
     loadTeams();
+    checkTrialPeriods(); // Check for expired trial periods
   }, []);
 
   const onRefresh = async () => {
