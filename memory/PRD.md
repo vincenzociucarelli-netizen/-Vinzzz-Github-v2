@@ -1,98 +1,85 @@
-# RegistraTEAM - PRD (Product Requirements Document)
+# RegistraTEAM - Product Requirements Document
 
-## Original Problem Statement
-RegistraTEAM è un'applicazione di gestione club di pallavolo, progettata per essere pratica e snella per società medio-piccole focalizzate sui settori giovanili. L'obiettivo è gestire la relazione società/famiglie/coach senza le complessità di software enterprise come Golee.
+## Descrizione Progetto
+Applicazione per la gestione di club di pallavolo che permette a genitori, allenatori e amministratori di gestire atleti, presenze, pagamenti e certificati medici.
 
-## Target Audience
-- Società sportive di pallavolo di piccole/medie dimensioni
-- Settori giovanili
-- Famiglie degli atleti
-- Coach e dirigenti
+## Architettura
+- **Frontend**: React Native + Expo Web
+- **Backend**: FastAPI + MongoDB
+- **Autenticazione**: JWT
+- **Integrazioni**: SendGrid (email), OpenAI (trasformazione foto)
 
-## Core Features Implemented
+## Ruoli Utente
+1. **Admin**: Gestione completa società, squadre, atleti, pagamenti
+2. **Coach**: Scansione QR code presenze, visualizzazione squadre
+3. **Parent**: Visualizzazione figli, upload certificati, pagamenti, QR code
+
+## Funzionalità Implementate
 
 ### Gestione Atleti
-- Registrazione e profilo atleti completo
-- Dati tecnici (ruolo, altezza, peso, elevazione)
-- Foto atleta con upload e cropping
-- Assegnazione a squadre (primaria e secondaria)
-- **Codice atleta editabile manualmente** per import pagamenti (formato: COGNOME_NOME_TEAM_ABBR)
-- Badge overpayment visibile su lista e dettaglio atleta
-- **Periodo di prova 7 giorni** per nuovi atleti registrati dai genitori
+- ✅ Registrazione atleti con QR code unico
+- ✅ Doppio genitore (parent_id + second_parent_id)
+- ✅ Codice atleta manuale modificabile
+- ✅ Upload certificato medico
+- ✅ Trasformazione foto con AI
+
+### Gestione Presenze
+- ✅ Scansione QR code per registrare presenze
+- ✅ Statistiche presenze per squadra
 
 ### Gestione Pagamenti
-- Import pagamenti da Excel con template migliorato
-- Tracking pagamenti per atleta
-- Calcolo automatico dovuto/pagato
-- Export codici atleti per Excel
-- Ricevuta fiscale PDF scaricabile (per genitori)
+- ✅ Pagamenti manuali con ricevuta fiscale
+- ✅ Riepilogo pagamenti con sconti
+- ✅ Storico pagamenti per atleta
 
-### Gestione Coach
-- Profilo coach con squadre assegnate
-- Sistema compensi cumulativi con badge (<5K, <15K)
-- Tracking compensi esterni da altri club
-- Controllo soglie fiscali
+### Stampa e Condivisione
+- ✅ Stampa QR code (web + mobile)
+- ✅ Condivisione QR code (download su web)
+- ✅ Download ricevuta fiscale (parent)
 
-### Sistema Presenze
-- QR code per check-in
-- Statistiche presenze per squadra
-- Storico presenze atleta
+## Bug Risolti (Dicembre 2025)
 
-### Altre Funzionalità
-- Dashboard admin con statistiche
-- Gestione squadre e stagioni
-- Notifiche (compleanni, certificati in scadenza)
-- Calendario gare
-- Gestione dirigenti
-- Profilo genitore con accesso dati atleta
+### 10/12/2025
+- ✅ Fix critico build frontend (rimosso jspdf, usato expo-print)
+- ✅ Fix icone mancanti (workaround con emoji component)
+- ✅ Fix secondo genitore non vedeva figlia nella dashboard
+- ✅ Fix admin non vedeva figli secondo genitore
 
-## Technical Architecture
+### 11/12/2025
+- ✅ **CRITICO**: Fix 12 endpoint backend per autorizzazione second_parent_id
+- ✅ Fix stampa QR code su web (ora mostra QR code + codice atleta)
+- ✅ Fix condivisione QR code su web (fallback a download)
 
-### Stack
-- **Frontend**: React Native / Expo (Web + Mobile)
-- **Backend**: FastAPI (Python)
-- **Database**: MongoDB
-- **PDF Generation**: expo-print (HTML to PDF)
-- **Icons**: Custom Icon component with emoji mapping
+## Backlog
 
-### Key Technical Decisions
-- Icons: Sostituiti `@expo/vector-icons/Ionicons` con componente custom emoji-based per compatibilità Expo Web
-- PDF: Usato `expo-print` invece di `jspdf` per evitare problemi Metro bundler
+### P1 - Alta Priorità
+- [ ] Pulsante "Scarica Ricevuta Fiscale" nella vista admin atleta
 
-## Files of Reference
-- `/app/frontend/src/components/Icon.tsx` - Componente icone emoji-based
-- `/app/frontend/src/utils/fiscalReceipt.ts` - Generazione ricevuta PDF
-- `/app/backend/server.py` - Backend API
-- `/app/frontend/app/admin/index.tsx` - Dashboard admin
-- `/app/frontend/app/admin/athlete/[id].tsx` - Dettaglio atleta admin (con modifica codice)
-- `/app/frontend/app/parent/athlete/[id].tsx` - Dettaglio atleta (genitore)
-
-## What's Been Implemented (Feb 14, 2025)
-
-### Session 1 - Bug Fixes
-1. **Frontend Build Failure** - Risolto crash Metro bundler causato da jspdf, sostituito con expo-print
-2. **Icone Non Visibili** - Creato componente Icon con mapping emoji, aggiornati tutti i file
-3. **Ricevuta Fiscale** - Implementata generazione PDF via HTML/expo-print
-
-### Session 2 - P1 Features
-4. **Modifica Manuale Codice Atleta** - Admin può ora modificare il campo athlete_code dalla pagina dettaglio atleta
-   - Aggiunto campo editabile nella sezione Squadra
-   - Validazione unicità del codice all'interno della società
-   - Visualizzazione codice in modalità view e edit
-5. **Periodo di Prova 7 Giorni** - Già implementato nelle sessioni precedenti
-
----
-
-## Backlog / Upcoming Features (da ricordare all'utente)
-
-### P2 - Prossimi da implementare
-- [ ] **Modulo atleti che percepiscono compenso** (non professionisti) - Tracking compensi per atleti
-- [ ] **Limite team per società** con messaggio upgrade - Business model
-
-### P3 - Future
+### P2 - Media Priorità  
+- [ ] Periodo di prova 7 giorni per nuovi genitori
+- [ ] Limite squadre per società + messaggio upgrade
 - [ ] Integrazione Stripe per pagamenti online
-- [ ] PWA per installazione mobile
+- [ ] Modulo "Atleti Professionisti con Compenso"
 
-## Admin Credentials (Test)
-- Email: `pallavoloperugia@gmail.com`
-- Password: `11092012`
+### P3 - Bassa Priorità
+- [ ] Fix permanente icone (font loading Expo Web)
+
+## Credenziali Test
+- Admin: `pallavoloperugia@gmail.com` / `11092012`
+- Parent 1: `armida.raschi@gmail.com` / `test1234`
+- Parent 2: `genitore2@test.com` / `test1234`
+
+## Note Tecniche
+
+### Workaround Icone
+Le icone `@expo/vector-icons` non funzionano su Expo Web. È stato creato un componente `Icon.tsx` che mappa i nomi delle icone a emoji Unicode.
+
+### Autorizzazione Second Parent
+Tutti gli endpoint che controllano `parent_id` devono ora controllare anche `second_parent_id`:
+```python
+if current_user["role"] == UserRole.PARENT:
+    is_primary = athlete.get("parent_id") == current_user["id"]
+    is_second = athlete.get("second_parent_id") == current_user["id"]
+    if not is_primary and not is_second:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+```
