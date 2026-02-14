@@ -1813,28 +1813,57 @@ export default function AdminAthleteDetail() {
           </View>
         )}
 
-        {/* QR Code Section */}
-        {athlete?.qr_code && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>📱 QR Code Atleta</Text>
-            <View style={styles.qrCodeContainer}>
-              <Image
-                source={{ uri: athlete.qr_code.startsWith('data:') ? athlete.qr_code : `data:image/png;base64,${athlete.qr_code}` }}
-                style={styles.qrCodeImage}
-                resizeMode="contain"
-              />
-              <Text style={styles.qrCodeLabel}>
-                Codice: {athlete.athlete_code || athlete.id}
-              </Text>
-              <Text style={styles.qrCodeHint}>
-                Il coach può scansionare questo QR code per registrare la presenza
-              </Text>
-            </View>
-          </View>
-        )}
-
         <View style={{ height: editing ? 100 : 40 }} />
       </ScrollView>
+
+      {/* QR Code Modal */}
+      <Modal
+        visible={qrModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setQrModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.qrModalContent}>
+            <Text style={styles.qrModalTitle}>{athlete.full_name}</Text>
+            <View ref={qrCodeRef} collapsable={false} style={styles.qrModalImageContainer}>
+              <Image
+                source={{ uri: athlete.qr_code?.startsWith('data:') ? athlete.qr_code : `data:image/png;base64,${athlete.qr_code}` }}
+                style={styles.qrModalImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.qrModalCodeText}>Codice: {athlete.athlete_code || athlete.id}</Text>
+            </View>
+            <Text style={styles.qrModalInstructions}>
+              Mostra questo QR code al coach per registrare la presenza
+            </Text>
+            <View style={styles.qrButtonsRow}>
+              <TouchableOpacity
+                style={[styles.qrActionButton, styles.printButton]}
+                onPress={printQRCode}
+                data-testid="qr-print-button"
+              >
+                <Ionicons name="print" size={20} color="#fff" />
+                <Text style={styles.qrActionButtonText}>Stampa</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.qrActionButton, styles.shareButton]}
+                onPress={shareQRCode}
+                data-testid="qr-share-button"
+              >
+                <Ionicons name="share-outline" size={20} color="#fff" />
+                <Text style={styles.qrActionButtonText}>Condividi</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={styles.qrCloseButton}
+              onPress={() => setQrModalVisible(false)}
+            >
+              <Text style={styles.qrCloseButtonText}>Chiudi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Floating Save Button */}
       {editing && (
