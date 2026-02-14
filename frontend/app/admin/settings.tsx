@@ -35,6 +35,17 @@ export default function SettingsScreen() {
   const [dirigenteQualifications, setDirigenteQualifications] = useState<string[]>([]);
   const [newQualification, setNewQualification] = useState('');
 
+  // Fiscal receipt data
+  const [ragioneSociale, setRagioneSociale] = useState('');
+  const [address, setAddress] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [city, setCity] = useState('');
+  const [province, setProvince] = useState('');
+  const [fiscalCode, setFiscalCode] = useState('');
+  const [phone, setPhone] = useState('');
+  const [phone2, setPhone2] = useState('');
+  const [presidentName, setPresidentName] = useState('');
+  const [stampSignature, setStampSignature] = useState<string | null>(null);
   const loadSettings = async () => {
     try {
       const response = await api.get('/settings/society');
