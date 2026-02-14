@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,8 @@ import { Athlete, Team, Payment, Certificate } from '../../../src/types';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import * as ImagePicker from 'expo-image-picker';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { downloadFiscalReceipt, ReceiptData } from '../../../src/utils/fiscalReceipt';
 
 interface PaymentSummary {
