@@ -88,6 +88,7 @@ export default function AdminCoachDetail() {
   
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
+  const [otherAnnualCompensation, setOtherAnnualCompensation] = useState('0');
 
   const openImageViewer = (imageBase64: string, title: string) => {
     setViewingImage(imageBase64);
