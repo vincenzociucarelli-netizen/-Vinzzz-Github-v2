@@ -1875,6 +1875,14 @@ export default function AdminAthleteDetail() {
                 </TouchableOpacity>
               </View>
               
+              {/* Nota esplicativa */}
+              <View style={styles.paymentInfoNote}>
+                <Ionicons name="information-circle" size={16} color="#666" />
+                <Text style={styles.paymentInfoNoteText}>
+                  Ogni pagamento registrato scala automaticamente dal residuo. Puoi registrare più pagamenti parziali.
+                </Text>
+              </View>
+              
               {payments.length === 0 ? (
                 <View style={styles.emptyPayments}>
                   <Ionicons name="card-outline" size={32} color="#ccc" />
