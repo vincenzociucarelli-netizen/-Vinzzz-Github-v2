@@ -1847,6 +1847,23 @@ export default function AdminAthleteDetail() {
                 ))
               )}
             </View>
+
+            {/* Attestato di Versamento Button */}
+            {payments.length > 0 && (
+              <View style={styles.card}>
+                <TouchableOpacity 
+                  style={styles.attestatoButton}
+                  onPress={generatePaymentStatement}
+                  data-testid="generate-attestato-button"
+                >
+                  <Ionicons name="document-text" size={24} color="#fff" />
+                  <Text style={styles.attestatoButtonText}>Genera Attestato di Versamento</Text>
+                </TouchableOpacity>
+                <Text style={styles.attestatoHint}>
+                  Genera un documento PDF con il riepilogo di tutti i pagamenti effettuati
+                </Text>
+              </View>
+            )}
           </>
         )}
 
