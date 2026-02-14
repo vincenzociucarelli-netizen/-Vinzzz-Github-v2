@@ -322,6 +322,14 @@ export default function SettingsScreen() {
             placeholder="Es: ASD PALLAVOLO PERUGIA"
           />
           
+          <Text style={styles.inputLabel}>Sport Praticato</Text>
+          <TextInput
+            style={styles.input}
+            value={sportPraticato}
+            onChangeText={setSportPraticato}
+            placeholder="Es: Pallavolo, Calcio, Basket..."
+          />
+          
           <Text style={styles.inputLabel}>Indirizzo</Text>
           <TextInput
             style={styles.input}
