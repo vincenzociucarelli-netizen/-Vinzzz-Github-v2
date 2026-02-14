@@ -147,7 +147,8 @@ class User(BaseModel):
     coach_license_expiry: Optional[datetime] = None
     
     # Coach specific - Compensi
-    monthly_compensation: Optional[float] = None  # Compenso mensile
+    monthly_compensation: Optional[float] = None  # Compenso mensile da questa ASD
+    other_annual_compensation: Optional[float] = None  # Compensi annuali da altre ASD/SSD dichiarati
     compensation_accepted: bool = False  # Flag accettazione compenso
     compensation_accepted_date: Optional[datetime] = None
     contract_start_date: Optional[datetime] = None  # Data inizio contratto
