@@ -297,6 +297,12 @@ const iconMap: { [key: string]: string } = {
   'snow': '❄️',
   'snow-outline': '❄️',
   
+  // Expand/Contract
+  'expand': '⤢',
+  'expand-outline': '⤢',
+  'contract': '⤡',
+  'contract-outline': '⤡',
+  
   // Miscellaneous
   'grid': '⊞',
   'grid-outline': '⊞',
