@@ -456,6 +456,7 @@ class AthleteUpdate(BaseModel):
     athlete_notes: Optional[str] = None
     athlete_characteristics: Optional[List[str]] = None
     second_parent_email: Optional[str] = None  # Email del secondo genitore
+    athlete_code: Optional[str] = None  # Codice atleta per import pagamenti
 
 class Certificate(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
