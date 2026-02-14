@@ -4217,8 +4217,8 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
     # Get team
     team = await db.teams.find_one({"id": athlete.get("team_id")})
     
-    # Get society settings
-    society = await db.society_settings.find_one()
+    # Get society settings from correct collection
+    society = await db.settings.find_one({"type": "society"})
     
     # Get all payments for this athlete
     payments = await db.payments.find({"athlete_id": athlete_id, "paid": True}).sort("paid_date", 1).to_list(100)
@@ -4258,14 +4258,17 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
             "province": parent.get("province", "") if parent else "",
         },
         "society": {
-            "name": society.get("society_name", "SOCIETÀ SPORTIVA") if society else "SOCIETÀ SPORTIVA",
-            "address": society.get("society_address", "") if society else "",
-            "city": society.get("society_city", "") if society else "",
-            "postal_code": society.get("society_cap", "") if society else "",
-            "fiscal_code": society.get("society_fiscal_code", "") if society else "",
-            "phone": society.get("society_phone", "") if society else "",
-            "phone2": society.get("society_phone_2", "") if society else "",
+            "name": society.get("ragione_sociale") or society.get("name", "SOCIETÀ SPORTIVA") if society else "SOCIETÀ SPORTIVA",
+            "address": society.get("address", "") if society else "",
+            "city": society.get("city", "") if society else "",
+            "postal_code": society.get("postal_code", "") if society else "",
+            "province": society.get("province", "") if society else "",
+            "fiscal_code": society.get("fiscal_code", "") if society else "",
+            "phone": society.get("phone", "") if society else "",
+            "phone2": society.get("phone2", "") if society else "",
             "president_name": society.get("president_name", "") if society else "",
+            "logo": society.get("logo", "") if society else "",
+            "stamp_signature": society.get("stamp_signature", "") if society else "",
         },
         "team_name": team.get("name", "") if team else "",
         "season": season,
@@ -4275,7 +4278,8 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
                 "date": p.get("paid_date").isoformat() if p.get("paid_date") else "",
                 "receipt_number": p.get("receipt_number", ""),
                 "amount": p.get("amount", 0),
-                "description": p.get("description", "") or p.get("payment_method", ""),
+                "description": p.get("description", ""),
+                "payment_method": p.get("payment_method", ""),
             }
             for p in payments
         ],
