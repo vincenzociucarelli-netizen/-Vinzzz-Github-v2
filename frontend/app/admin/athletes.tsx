@@ -393,6 +393,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 52,
   },
+  miniQrCode: {
+    width: 36,
+    height: 36,
+    marginRight: 10,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+  },
   athleteCardWithdrawn: {
     backgroundColor: '#FFF5F5',
     borderLeftWidth: 3,
