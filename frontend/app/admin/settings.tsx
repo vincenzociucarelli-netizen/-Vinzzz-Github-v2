@@ -129,6 +129,7 @@ export default function SettingsScreen() {
         dirigente_qualifications: dirigenteQualifications,
         // Fiscal receipt data
         ragione_sociale: ragioneSociale,
+        sport_praticato: sportPraticato,
         address: address,
         postal_code: postalCode,
         city: city,
