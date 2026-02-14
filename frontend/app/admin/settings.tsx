@@ -304,6 +304,139 @@ export default function SettingsScreen() {
           />
         </View>
 
+        {/* Dati Anagrafici Società per Ricevuta Fiscale */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📄 Dati Società per Ricevuta Fiscale</Text>
+          <Text style={styles.sectionDesc}>
+            Questi dati verranno utilizzati nella generazione delle ricevute fiscali
+          </Text>
+          
+          <Text style={styles.inputLabel}>Ragione Sociale</Text>
+          <TextInput
+            style={styles.input}
+            value={ragioneSociale}
+            onChangeText={setRagioneSociale}
+            placeholder="Es: ASD PALLAVOLO PERUGIA"
+          />
+          
+          <Text style={styles.inputLabel}>Indirizzo</Text>
+          <TextInput
+            style={styles.input}
+            value={address}
+            onChangeText={setAddress}
+            placeholder="Es: Via Roma, 123"
+          />
+          
+          <View style={styles.row}>
+            <View style={styles.smallInputContainer}>
+              <Text style={styles.inputLabel}>CAP</Text>
+              <TextInput
+                style={styles.input}
+                value={postalCode}
+                onChangeText={setPostalCode}
+                placeholder="06100"
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={styles.mediumInputContainer}>
+              <Text style={styles.inputLabel}>Città</Text>
+              <TextInput
+                style={styles.input}
+                value={city}
+                onChangeText={setCity}
+                placeholder="Perugia"
+              />
+            </View>
+            <View style={styles.smallInputContainer}>
+              <Text style={styles.inputLabel}>Prov.</Text>
+              <TextInput
+                style={styles.input}
+                value={province}
+                onChangeText={setProvince}
+                placeholder="PG"
+                maxLength={2}
+              />
+            </View>
+          </View>
+          
+          <Text style={styles.inputLabel}>Codice Fiscale</Text>
+          <TextInput
+            style={styles.input}
+            value={fiscalCode}
+            onChangeText={setFiscalCode}
+            placeholder="Es: 12345678901"
+            autoCapitalize="characters"
+          />
+          
+          <View style={styles.row}>
+            <View style={styles.halfInputContainer}>
+              <Text style={styles.inputLabel}>Telefono 1</Text>
+              <TextInput
+                style={styles.input}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="Es: 075 1234567"
+                keyboardType="phone-pad"
+              />
+            </View>
+            <View style={styles.halfInputContainer}>
+              <Text style={styles.inputLabel}>Telefono 2</Text>
+              <TextInput
+                style={styles.input}
+                value={phone2}
+                onChangeText={setPhone2}
+                placeholder="Es: 333 1234567"
+                keyboardType="phone-pad"
+              />
+            </View>
+          </View>
+          
+          <Text style={styles.inputLabel}>Nome Presidente</Text>
+          <TextInput
+            style={styles.input}
+            value={presidentName}
+            onChangeText={setPresidentName}
+            placeholder="Es: Mario Rossi"
+          />
+        </View>
+
+        {/* Timbro e Firma */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🖊️ Timbro e Firma Presidente</Text>
+          <Text style={styles.sectionDesc}>
+            Carica un'immagine del timbro e firma per le ricevute fiscali (opzionale)
+          </Text>
+          
+          <View style={styles.logoContainer}>
+            {stampSignature ? (
+              <View style={styles.logoPreview}>
+                <Image
+                  source={{ uri: `data:image/png;base64,${stampSignature}` }}
+                  style={{ width: 150, height: 80, resizeMode: 'contain' }}
+                />
+                <TouchableOpacity 
+                  style={styles.removeLogoBtn}
+                  onPress={handleRemoveStampSignature}
+                >
+                  <Ionicons name="close-circle" size={28} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={[styles.logoPlaceholder, { width: 150, height: 80 }]}>
+                <Ionicons name="create-outline" size={32} color="#ccc" />
+                <Text style={styles.logoPlaceholderText}>Nessun timbro/firma</Text>
+              </View>
+            )}
+            
+            <TouchableOpacity style={styles.selectLogoBtn} onPress={handleSelectStampSignature}>
+              <Ionicons name="cloud-upload" size={20} color="#007AFF" />
+              <Text style={styles.selectLogoBtnText}>
+                {stampSignature ? 'Cambia Immagine' : 'Seleziona Immagine'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Ruoli Atleti */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🏐 Ruoli Atleti</Text>
