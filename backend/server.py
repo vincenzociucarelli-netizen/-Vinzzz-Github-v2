@@ -5379,7 +5379,9 @@ async def request_data_deletion(athlete_id: str, current_user = Depends(get_curr
     
     # Verify user is the parent of this athlete or the athlete themselves
     if current_user["role"] == "parent":
-        if athlete.get("parent_email") != current_user["email"] and athlete.get("second_parent_email") != current_user["email"]:
+        is_primary_parent = athlete.get("parent_id") == current_user["id"]
+        is_second_parent = athlete.get("second_parent_id") == current_user["id"]
+        if not is_primary_parent and not is_second_parent:
             raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo atleta")
     elif current_user["role"] == "athlete":
         if athlete.get("email") != current_user["email"]:
