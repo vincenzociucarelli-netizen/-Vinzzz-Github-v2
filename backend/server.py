@@ -3255,7 +3255,28 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
         if update_data.athlete_notes is not None:
             update_dict["athlete_notes"] = update_data.athlete_notes
         if update_data.second_parent_email is not None:
-            update_dict["second_parent_email"] = update_data.second_parent_email.lower().strip() if update_data.second_parent_email else None
+            new_email = update_data.second_parent_email.lower().strip() if update_data.second_parent_email else None
+            update_dict["second_parent_email"] = new_email
+            
+            # Se c'è un'email, cerca se esiste un utente con questa email e collegalo
+            if new_email:
+                # Trova l'atleta per ottenere la society_id
+                athlete = await db.athletes.find_one({"id": athlete_id})
+                if athlete:
+                    # Cerca l'utente genitore con questa email nella stessa società
+                    second_parent = await db.users.find_one({
+                        "email": new_email,
+                        "society_id": athlete.get("society_id"),
+                        "role": UserRole.PARENT
+                    })
+                    if second_parent:
+                        update_dict["second_parent_id"] = second_parent["id"]
+                    else:
+                        # Nessun utente trovato, rimuovi l'ID precedente
+                        update_dict["second_parent_id"] = None
+            else:
+                # Email rimossa, rimuovi anche l'ID
+                update_dict["second_parent_id"] = None
         if update_data.athlete_photo is not None:
             update_dict["athlete_photo"] = update_data.athlete_photo
         if update_data.athlete_photo_artistic is not None:
