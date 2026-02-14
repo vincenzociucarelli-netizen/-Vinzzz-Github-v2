@@ -366,7 +366,7 @@ export default function AdminDashboard() {
           <View style={styles.inviteCodeCard}>
             <View style={styles.inviteCodeRow}>
               <View style={styles.inviteCodeLeft}>
-                <Ionicons name="ticket-outline" size={14} color="#007AFF" />
+                <Text style={{ fontSize: 14 }}>🎟️</Text>
                 <Text style={styles.inviteCodeTitle}>Codice Invito</Text>
               </View>
               <View style={styles.inviteCodeRight}>
@@ -382,7 +382,7 @@ export default function AdminDashboard() {
                   }}
                   style={styles.copyIconButton}
                 >
-                  <Ionicons name="copy-outline" size={18} color="#007AFF" />
+                  <Text style={{ fontSize: 16 }}>📋</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -393,7 +393,7 @@ export default function AdminDashboard() {
         {pendingAthletes.length > 0 && (
           <View style={styles.pendingAthletesCard}>
             <View style={styles.pendingAthletesHeader}>
-              <Ionicons name="time" size={24} color="#FF9500" />
+              <Text style={{ fontSize: 22 }}>⏳</Text>
               <Text style={styles.pendingAthletesTitle}>
                 Atleti in Attesa di Approvazione ({pendingAthletes.length})
               </Text>
@@ -418,7 +418,7 @@ export default function AdminDashboard() {
                       }
                     }}
                   >
-                    <Ionicons name="checkmark" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 16 }}>✓</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.rejectButton}
@@ -437,7 +437,7 @@ export default function AdminDashboard() {
                       }
                     }}
                   >
-                    <Ionicons name="close" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 16 }}>✗</Text>
                   </TouchableOpacity>
                 </View>
               </View>
