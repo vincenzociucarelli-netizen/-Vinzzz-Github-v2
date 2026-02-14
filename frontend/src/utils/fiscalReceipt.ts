@@ -291,6 +291,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
           }
         </div>
       </div>
+      </div>
     </body>
     </html>
   `;
