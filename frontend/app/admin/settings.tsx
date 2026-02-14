@@ -559,21 +559,28 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Spacer for floating button */}
+        <View style={{ height: 80 }} />
+      </ScrollView>
+
+      {/* Floating Save Button */}
+      <View style={styles.floatingSaveContainer}>
         <TouchableOpacity 
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          style={[styles.floatingSaveButton, saving && styles.saveButtonDisabled]}
           onPress={handleSave}
           disabled={saving}
+          data-testid="floating-save-button"
         >
           {saving ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <>
               <Ionicons name="checkmark" size={24} color="#fff" />
-              <Text style={styles.saveButtonText}>Salva Impostazioni</Text>
+              <Text style={styles.saveButtonText}>Salva Modifiche</Text>
             </>
           )}
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -720,15 +727,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  saveButton: {
+  floatingSaveContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  floatingSaveButton: {
     backgroundColor: '#34C759',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
     borderRadius: 12,
-    marginTop: 8,
-    marginBottom: 40,
   },
   saveButtonDisabled: {
     opacity: 0.7,
