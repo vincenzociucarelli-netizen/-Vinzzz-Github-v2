@@ -2682,6 +2682,8 @@ const styles = StyleSheet.create({
   discountAppliedText: { fontSize: 13, color: '#34C759', marginLeft: 6 },
   addPaymentBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#34C759', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
   addPaymentBtnText: { color: '#fff', fontSize: 14, fontWeight: '600', marginLeft: 4 },
+  paymentInfoNote: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', padding: 10, borderRadius: 8, marginBottom: 12 },
+  paymentInfoNoteText: { fontSize: 12, color: '#666', marginLeft: 8, flex: 1 },
   emptyPayments: { alignItems: 'center', paddingVertical: 24 },
   emptyText: { fontSize: 14, color: '#999', marginTop: 8 },
   paymentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
