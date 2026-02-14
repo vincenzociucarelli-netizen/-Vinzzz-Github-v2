@@ -16,8 +16,9 @@ RegistraTEAM è un'applicazione di gestione club di pallavolo, progettata per es
 - Dati tecnici (ruolo, altezza, peso, elevazione)
 - Foto atleta con upload e cropping
 - Assegnazione a squadre (primaria e secondaria)
-- Codice atleta per import pagamenti (formato: COGNOME_NOME_TEAM_ABBR)
+- **Codice atleta editabile manualmente** per import pagamenti (formato: COGNOME_NOME_TEAM_ABBR)
 - Badge overpayment visibile su lista e dettaglio atleta
+- **Periodo di prova 7 giorni** per nuovi atleti registrati dai genitori
 
 ### Gestione Pagamenti
 - Import pagamenti da Excel con template migliorato
@@ -63,30 +64,33 @@ RegistraTEAM è un'applicazione di gestione club di pallavolo, progettata per es
 - `/app/frontend/src/utils/fiscalReceipt.ts` - Generazione ricevuta PDF
 - `/app/backend/server.py` - Backend API
 - `/app/frontend/app/admin/index.tsx` - Dashboard admin
+- `/app/frontend/app/admin/athlete/[id].tsx` - Dettaglio atleta admin (con modifica codice)
 - `/app/frontend/app/parent/athlete/[id].tsx` - Dettaglio atleta (genitore)
 
 ## What's Been Implemented (Feb 14, 2025)
 
-### Session Fixes
+### Session 1 - Bug Fixes
 1. **Frontend Build Failure** - Risolto crash Metro bundler causato da jspdf, sostituito con expo-print
 2. **Icone Non Visibili** - Creato componente Icon con mapping emoji, aggiornati tutti i file
 3. **Ricevuta Fiscale** - Implementata generazione PDF via HTML/expo-print
 
+### Session 2 - P1 Features
+4. **Modifica Manuale Codice Atleta** - Admin può ora modificare il campo athlete_code dalla pagina dettaglio atleta
+   - Aggiunto campo editabile nella sezione Squadra
+   - Validazione unicità del codice all'interno della società
+   - Visualizzazione codice in modalità view e edit
+5. **Periodo di Prova 7 Giorni** - Già implementato nelle sessioni precedenti
+
 ---
 
-## Backlog / Upcoming Features
+## Backlog / Upcoming Features (da ricordare all'utente)
 
-### P1 - Prossimi
-- [ ] Periodo di prova 7 giorni per nuovi genitori
-- [ ] Modifica manuale codice atleta
-- [ ] Modulo atleti che percepiscono compenso (non professionisti)
-
-### P2 - Miglioramenti
-- [ ] Limite team per società con messaggio upgrade
-- [ ] Integrazione Stripe per pagamenti online
+### P2 - Prossimi da implementare
+- [ ] **Modulo atleti che percepiscono compenso** (non professionisti) - Tracking compensi per atleti
+- [ ] **Limite team per società** con messaggio upgrade - Business model
 
 ### P3 - Future
-- [ ] Soluzione permanente icone (font invece di emoji)
+- [ ] Integrazione Stripe per pagamenti online
 - [ ] PWA per installazione mobile
 
 ## Admin Credentials (Test)
