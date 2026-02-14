@@ -2795,29 +2795,6 @@ const styles = StyleSheet.create({
   teamSelector: {
     gap: 8,
   },
-  teamOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    gap: 10,
-  },
-  teamOptionSelected: {
-    backgroundColor: '#E3F2FD',
-    borderColor: '#007AFF',
-  },
-  teamOptionText: {
-    fontSize: 15,
-    color: '#333',
-  },
-  teamOptionTextSelected: {
-    color: '#007AFF',
-    fontWeight: '600',
-  },
   // Photo modal
   photoModalOverlay: {
     flex: 1,
