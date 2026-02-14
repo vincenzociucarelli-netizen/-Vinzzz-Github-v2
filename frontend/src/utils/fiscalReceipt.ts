@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf';
+// jsPDF will be imported dynamically to avoid SSR issues
 
 interface PaymentData {
   date: string;
