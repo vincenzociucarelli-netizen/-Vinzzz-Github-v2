@@ -67,10 +67,10 @@ export default function ParentsScreen() {
       const athletes = athletesRes.data;
       setAllAthletes(athletes);
       
-      // Enrich parents with their athletes
+      // Enrich parents with their athletes (include both primary and second parent)
       const enrichedParents = allParents.map((p: Parent) => ({
         ...p,
-        athletes: athletes.filter((a: any) => a.parent_id === p.id).map((a: any) => ({
+        athletes: athletes.filter((a: any) => a.parent_id === p.id || a.second_parent_id === p.id).map((a: any) => ({
           id: a.id,
           full_name: a.full_name,
           team_name: a.team_name,
