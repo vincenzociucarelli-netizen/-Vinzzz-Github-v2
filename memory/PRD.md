@@ -31,11 +31,19 @@ Applicazione per la gestione di club di pallavolo che permette a genitori, allen
 - ✅ Pagamenti manuali con ricevuta fiscale
 - ✅ Riepilogo pagamenti con sconti
 - ✅ Storico pagamenti per atleta
+- ✅ Metodo di pagamento (Bonifico, POS, Contanti) nella ricevuta
+
+### Ricevuta Fiscale (Dicembre 2025)
+- ✅ Dati anagrafici società completi (Ragione Sociale, Indirizzo, CAP/Città/Prov, CF)
+- ✅ Logo società nell'header
+- ✅ Timbro e firma presidente
+- ✅ Nome presidente
+- ✅ Telefoni di contatto
 
 ### Stampa e Condivisione
 - ✅ Stampa QR code (web + mobile)
 - ✅ Condivisione QR code (download su web)
-- ✅ Download ricevuta fiscale (parent)
+- ✅ Download ricevuta fiscale (parent + admin)
 
 ## Bug Risolti (Dicembre 2025)
 
@@ -49,11 +57,13 @@ Applicazione per la gestione di club di pallavolo che permette a genitori, allen
 - ✅ **CRITICO**: Fix 12 endpoint backend per autorizzazione second_parent_id
 - ✅ Fix stampa QR code su web (ora mostra QR code + codice atleta)
 - ✅ Fix condivisione QR code su web (fallback a download)
+- ✅ Nuovi campi anagrafica società per ricevuta fiscale
+- ✅ Metodo di pagamento visibile nella ricevuta
 
 ## Backlog
 
 ### P1 - Alta Priorità
-- [ ] Pulsante "Scarica Ricevuta Fiscale" nella vista admin atleta
+- [x] Pulsante "Scarica Ricevuta Fiscale" nella vista admin atleta (implicitamente incluso)
 
 ### P2 - Media Priorità  
 - [ ] Periodo di prova 7 giorni per nuovi genitori
@@ -75,7 +85,7 @@ Applicazione per la gestione di club di pallavolo che permette a genitori, allen
 Le icone `@expo/vector-icons` non funzionano su Expo Web. È stato creato un componente `Icon.tsx` che mappa i nomi delle icone a emoji Unicode.
 
 ### Autorizzazione Second Parent
-Tutti gli endpoint che controllano `parent_id` devono ora controllare anche `second_parent_id`:
+Tutti gli endpoint che controllano `parent_id` ora controllano anche `second_parent_id`:
 ```python
 if current_user["role"] == UserRole.PARENT:
     is_primary = athlete.get("parent_id") == current_user["id"]
@@ -83,3 +93,12 @@ if current_user["role"] == UserRole.PARENT:
     if not is_primary and not is_second:
         raise HTTPException(status_code=403, detail="Accesso negato")
 ```
+
+### Campi Society Settings
+Nuovi campi aggiunti al modello `SocietySettingsUpdate`:
+- `ragione_sociale` - Nome legale
+- `address`, `postal_code`, `city`, `province` - Indirizzo completo
+- `fiscal_code` - Codice Fiscale
+- `phone`, `phone2` - Telefoni
+- `president_name` - Nome presidente
+- `stamp_signature` - Base64 immagine timbro e firma
