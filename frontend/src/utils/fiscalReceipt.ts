@@ -181,8 +181,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
       <div class="title-bar">ATTESTATO DI VERSAMENTO</div>
 
       <div class="receipt-info">
-        <span>N° ${data.receipt_number}</span>
-        <span>Data: ${dateStr}</span>
+        <span style="font-weight: bold;">alla data del: ${dateStr}</span>
       </div>
 
       <div class="box-title">Riceviamo da:</div>
