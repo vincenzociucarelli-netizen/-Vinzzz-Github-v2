@@ -1631,6 +1631,10 @@ async def get_coaches(current_user = Depends(get_current_user)):
             "assigned_teams": c.get("assigned_teams", []),
             "created_at": c.get("created_at"),
             "approved_at": c.get("approved_at"),
+            "monthly_compensation": c.get("monthly_compensation", 0),
+            "other_annual_compensation": c.get("other_annual_compensation", 0),
+            "profile_photo": c.get("profile_photo"),
+            "profile_photo_artistic": c.get("profile_photo_artistic"),
         })
     
     return result
