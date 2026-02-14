@@ -4065,6 +4065,89 @@ async def get_payment_summary(athlete_id: str, current_user = Depends(get_curren
         }
     }
 
+@api_router.get("/payments/{athlete_id}/fiscal-receipt")
+async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_current_user)):
+    """Get all data needed to generate a fiscal receipt for an athlete"""
+    # Get athlete
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Check permissions - parent can only access their children
+    if current_user["role"] == UserRole.PARENT:
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    # Get parent data
+    parent = await db.users.find_one({"id": athlete.get("parent_id")})
+    
+    # Get team
+    team = await db.teams.find_one({"id": athlete.get("team_id")})
+    
+    # Get society settings
+    society = await db.society_settings.find_one()
+    
+    # Get all payments for this athlete
+    payments = await db.payments.find({"athlete_id": athlete_id, "paid": True}).sort("paid_date", 1).to_list(100)
+    
+    # Generate receipt number based on date and athlete
+    from datetime import datetime
+    now = datetime.utcnow()
+    receipt_count = await db.payments.count_documents({"athlete_id": athlete_id, "paid": True})
+    receipt_number = f"RF-{now.year}-{str(receipt_count).zfill(4)}"
+    
+    # Determine season (July to June)
+    if now.month >= 7:
+        season = f"{now.year}/{now.year + 1}"
+    else:
+        season = f"{now.year - 1}/{now.year}"
+    
+    return {
+        "athlete": {
+            "first_name": athlete.get("first_name", ""),
+            "last_name": athlete.get("last_name", ""),
+            "fiscal_code": athlete.get("fiscal_code", ""),
+            "address": athlete.get("address", ""),
+            "postal_code": athlete.get("postal_code", ""),
+            "city": athlete.get("city", ""),
+            "province": athlete.get("province", ""),
+            "date_of_birth": athlete.get("date_of_birth"),
+            "birth_place": athlete.get("birth_place", ""),
+            "birth_province": athlete.get("birth_province", ""),
+        },
+        "parent": {
+            "first_name": parent.get("first_name", "") if parent else current_user.get("first_name", ""),
+            "last_name": parent.get("last_name", "") if parent else current_user.get("last_name", ""),
+            "fiscal_code": parent.get("tax_code", "") if parent else current_user.get("tax_code", ""),
+            "address": parent.get("address", "") if parent else "",
+            "postal_code": parent.get("postal_code", "") if parent else "",
+            "city": parent.get("city", "") if parent else "",
+            "province": parent.get("province", "") if parent else "",
+        },
+        "society": {
+            "name": society.get("society_name", "SOCIETÀ SPORTIVA") if society else "SOCIETÀ SPORTIVA",
+            "address": society.get("society_address", "") if society else "",
+            "city": society.get("society_city", "") if society else "",
+            "postal_code": society.get("society_cap", "") if society else "",
+            "fiscal_code": society.get("society_fiscal_code", "") if society else "",
+            "phone": society.get("society_phone", "") if society else "",
+            "phone2": society.get("society_phone_2", "") if society else "",
+            "president_name": society.get("president_name", "") if society else "",
+        },
+        "team_name": team.get("name", "") if team else "",
+        "season": season,
+        "receipt_number": receipt_number,
+        "payments": [
+            {
+                "date": p.get("paid_date").isoformat() if p.get("paid_date") else "",
+                "receipt_number": p.get("receipt_number", ""),
+                "amount": p.get("amount", 0),
+                "description": p.get("description", "") or p.get("payment_method", ""),
+            }
+            for p in payments
+        ],
+    }
+
 @api_router.patch("/payments/{payment_id}", response_model=Payment)
 async def update_payment(payment_id: str, update_data: PaymentUpdate, current_user = Depends(get_current_user)):
     payment = await db.payments.find_one({"id": payment_id})
