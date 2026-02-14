@@ -59,6 +59,8 @@ Applicazione per la gestione di club di pallavolo che permette a genitori, allen
 - ✅ Fix condivisione QR code su web (fallback a download)
 - ✅ Nuovi campi anagrafica società per ricevuta fiscale
 - ✅ Metodo di pagamento visibile nella ricevuta
+- ✅ Attestato di Versamento: rimosso numero ricevuta dall'header, aggiunto "alla data del:"
+- ✅ QR code atleta visibile per admin nella sezione statistiche
 
 ## Backlog
 
