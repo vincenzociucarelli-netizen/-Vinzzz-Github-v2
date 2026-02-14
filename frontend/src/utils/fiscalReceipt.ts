@@ -127,78 +127,66 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
       <meta charset="utf-8">
       <title>Attestato di Versamento</title>
       <style>
-        @page { margin: 15mm; size: A4; }
+        @page { margin: 8mm; size: A4; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-          height: 100%;
-          width: 100%;
-        }
+        html, body { height: 100%; width: 100%; }
         body { 
           font-family: Arial, Helvetica, sans-serif; 
-          padding: 25px;
-          font-size: 13px;
-          line-height: 1.5;
-          min-height: 297mm;
-          display: flex;
-          flex-direction: column;
+          padding: 8px 12px;
+          font-size: 11px;
+          line-height: 1.3;
         }
-        .content-wrapper {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-        }
-        .header { text-align: center; margin-bottom: 25px; }
-        .header h1 { color: #1a237e; font-size: 22px; margin-bottom: 8px; }
-        .header p { color: #666; font-size: 11px; }
+        .header { text-align: center; margin-bottom: 8px; }
+        .header h1 { color: #1a237e; font-size: 16px; margin-bottom: 2px; }
+        .header p { color: #666; font-size: 10px; margin: 1px 0; }
         .title-bar {
           background-color: #1a237e;
           color: white;
-          padding: 12px;
+          padding: 6px;
           text-align: center;
-          font-size: 16px;
+          font-size: 13px;
           font-weight: bold;
-          margin: 20px 0;
+          margin: 8px 0;
         }
-        .receipt-info { display: flex; justify-content: space-between; margin-bottom: 20px; color: #666; font-size: 11px; }
+        .receipt-info { margin-bottom: 6px; color: #666; font-size: 10px; }
         .box {
-          background-color: #f5f5f5;
+          background-color: #f8f8f8;
           border: 1px solid #ccc;
-          padding: 15px;
-          margin-bottom: 20px;
+          padding: 6px 8px;
+          margin-bottom: 6px;
         }
-        .box-title { font-weight: bold; color: #333; margin-bottom: 10px; font-size: 13px; }
-        .box-row { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; }
-        .box-row span { margin-right: 18px; }
-        .amount-section { display: flex; align-items: center; margin: 20px 0; gap: 12px; }
-        .amount-label { font-weight: bold; color: #333; font-size: 14px; }
-        .amount-value { font-size: 24px; font-weight: bold; color: #1a237e; }
-        .table-container { margin: 20px 0; flex: 1; }
-        .table-title { color: #1a237e; font-weight: bold; margin-bottom: 10px; font-size: 14px; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th { background-color: #1a237e; color: white; padding: 10px; text-align: left; }
-        td { padding: 10px; border-bottom: 1px solid #ddd; }
+        .box-title { font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; }
+        .box-row { display: flex; flex-wrap: wrap; gap: 6px; font-size: 10px; }
+        .box-row span { margin-right: 10px; }
+        .amount-section { display: flex; align-items: center; margin: 6px 0; gap: 8px; }
+        .amount-label { font-weight: bold; color: #333; font-size: 12px; }
+        .amount-value { font-size: 18px; font-weight: bold; color: #1a237e; }
+        .table-container { margin: 6px 0; }
+        .table-title { color: #1a237e; font-weight: bold; margin-bottom: 4px; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        th { background-color: #1a237e; color: white; padding: 4px 6px; text-align: left; }
+        td { padding: 4px 6px; border-bottom: 1px solid #ddd; }
         .total-row { background-color: #f0f0f0; font-weight: bold; }
-        .total-row td { padding: 12px; border: 2px solid #1a237e; }
-        .footer { margin-top: auto; padding-top: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
-        .bollo { border: 1px solid #999; padding: 12px; width: 90px; text-align: center; font-size: 9px; color: #666; }
-        .note { font-size: 9px; color: #666; flex: 1; padding-left: 25px; }
+        .total-row td { padding: 6px; border: 1px solid #1a237e; }
+        .footer { margin-top: 10px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .bollo { border: 1px solid #999; padding: 6px; width: 70px; text-align: center; font-size: 8px; color: #666; }
+        .note { font-size: 8px; color: #666; flex: 1; padding-left: 12px; }
         .signature { text-align: right; }
-        .signature-line { border-top: 1px solid #666; width: 180px; margin-top: 50px; padding-top: 8px; font-size: 11px; }
+        .signature p { font-size: 10px; margin: 1px 0; }
+        .signature-line { border-top: 1px solid #666; width: 140px; margin-top: 30px; padding-top: 4px; font-size: 10px; }
         @media print {
-          body { min-height: auto; }
-          .content-wrapper { min-height: 250mm; }
+          body { padding: 5mm; }
         }
       </style>
     </head>
     <body>
-      <div class="content-wrapper">
       <div class="header">
-        ${logoHtml ? `<div style="margin-bottom: 10px;">${logoHtml}</div>` : ''}
+        ${logoHtml ? `<div style="margin-bottom: 4px;">${logoHtml}</div>` : ''}
         <h1>${data.society.name || 'SOCIETÀ SPORTIVA'}</h1>
         <p>${addressLine || ''}</p>
         <p>Cod. Fiscale: ${data.society.fiscal_code || 'N/A'}</p>
         ${data.society.phone ? `<p>Tel: ${data.society.phone}${data.society.phone2 ? ' - ' + data.society.phone2 : ''}</p>` : ''}
-        ${data.team_name ? `<p style="font-weight: bold; color: #1a237e; margin-top: 5px;">${data.team_name}</p>` : ''}
+        ${data.team_name ? `<p style="font-weight: bold; color: #1a237e;">${data.team_name}</p>` : ''}
       </div>
 
       <div class="title-bar">ATTESTATO DI VERSAMENTO</div>
@@ -214,10 +202,8 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
           <span><b>Nome:</b> ${data.parent.first_name || ''}</span>
           <span><b>Cod. Fisc.:</b> ${data.parent.fiscal_code || ''}</span>
         </div>
-        <div class="box-row" style="margin-top: 5px;">
+        <div class="box-row" style="margin-top: 3px;">
           <span><b>Residente in:</b> ${data.parent.address || ''}</span>
-        </div>
-        <div class="box-row" style="margin-top: 5px;">
           <span><b>CAP:</b> ${data.parent.postal_code || ''}</span>
           <span><b>Città:</b> ${data.parent.city || ''}</span>
           <span><b>Prov.:</b> ${data.parent.province || ''}</span>
@@ -229,7 +215,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
         <span class="amount-value">${formatCurrency(totalPaid)}</span>
       </div>
 
-      <p style="margin-bottom: 10px;">per l'attività di PALLAVOLO nella stagione sportiva ${data.season} svolta da:</p>
+      <p style="margin-bottom: 6px; font-size: 10px;">per l'attività di PALLAVOLO nella stagione sportiva ${data.season} svolta da:</p>
 
       <div class="box">
         <div class="box-row">
@@ -237,15 +223,13 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
           <span><b>Nome:</b> ${data.athlete.first_name || ''}</span>
           <span><b>Cod. Fisc.:</b> ${data.athlete.fiscal_code || ''}</span>
         </div>
-        <div class="box-row" style="margin-top: 5px;">
+        <div class="box-row" style="margin-top: 3px;">
           <span><b>Residente in:</b> ${data.athlete.address || ''}</span>
-        </div>
-        <div class="box-row" style="margin-top: 5px;">
           <span><b>CAP:</b> ${data.athlete.postal_code || ''}</span>
           <span><b>Città:</b> ${data.athlete.city || ''}</span>
           <span><b>Prov.:</b> ${data.athlete.province || ''}</span>
         </div>
-        <div class="box-row" style="margin-top: 5px;">
+        <div class="box-row" style="margin-top: 3px;">
           <span><b>Data di nascita:</b> ${formatDateIT(data.athlete.date_of_birth || '')}</span>
           <span><b>Comune di nascita:</b> ${data.athlete.birth_place || ''}</span>
           <span><b>Prov.:</b> ${data.athlete.birth_province || ''}</span>
@@ -286,11 +270,10 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
           <p>${data.society.name || ''}</p>
           <p>Il Presidente</p>
           ${stampSignatureHtml 
-            ? `<div style="margin-top: 10px;">${stampSignatureHtml}</div>` 
+            ? `<div style="margin-top: 5px;">${stampSignatureHtml}</div>` 
             : `<div class="signature-line">${data.society.president_name || ''}</div>`
           }
         </div>
-      </div>
       </div>
     </body>
     </html>
