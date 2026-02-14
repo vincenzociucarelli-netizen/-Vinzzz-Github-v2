@@ -211,8 +211,9 @@ export default function AdminCoachDetail() {
     try {
       await api.patch(`/users/${id}/compensation`, {
         monthly_compensation: parseFloat(monthlyCompensation) || 0,
+        other_annual_compensation: parseFloat(otherAnnualCompensation) || 0,
       });
-      showAlert('Successo', 'Compenso aggiornato con successo');
+      showAlert('Successo', 'Compensi aggiornati con successo');
       setEditing(false);
       await loadData();
     } catch (error: any) {
@@ -220,6 +221,21 @@ export default function AdminCoachDetail() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Calculate total annual compensation
+  const getTotalAnnualCompensation = () => {
+    const thisClub = (parseFloat(monthlyCompensation) || 0) * 12;
+    const other = parseFloat(otherAnnualCompensation) || 0;
+    return thisClub + other;
+  };
+
+  const getCompensationBadge = () => {
+    const total = getTotalAnnualCompensation();
+    if (total <= 0) return null;
+    if (total < 5000) return { text: '<5K', color: '#34C759', bg: '#E8F5E9' };
+    if (total < 15000) return { text: '<15K', color: '#FF9500', bg: '#FFF3E0' };
+    return { text: '>15K', color: '#FF3B30', bg: '#FFEBEE' };
   };
 
   // Generate season months (July to June)
