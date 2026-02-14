@@ -716,7 +716,7 @@ export default function AdminAthleteDetail() {
   };
 
   // Generate payment statement (attestato di versamento)
-  const generatePaymentStatement = async () => {
+  const generatePaymentStatement = async (action: 'print' | 'share') => {
     if (!athlete || payments.length === 0) {
       showAlert('Attenzione', 'Nessun pagamento da includere nell\'attestato');
       return;
@@ -771,7 +771,60 @@ export default function AdminAthleteDetail() {
         team_name: team?.name || '',
       };
 
-      await downloadFiscalReceipt(receiptData);
+      // Import generateReceiptHTML from fiscalReceipt
+      const { generateReceiptHTML } = await import('../../../src/utils/fiscalReceipt');
+      const html = generateReceiptHTML(receiptData);
+      const filename = `Attestato_${(athlete as any).last_name || 'Atleta'}_${(athlete as any).first_name || ''}_${season.replace('/', '-')}.pdf`;
+
+      if (action === 'print') {
+        // Print action
+        if (Platform.OS === 'web') {
+          const printWindow = window.open('', '_blank');
+          if (printWindow) {
+            printWindow.document.write(html);
+            printWindow.document.close();
+            printWindow.onload = () => {
+              printWindow.focus();
+              printWindow.print();
+            };
+          } else {
+            showAlert('Errore', 'Popup bloccato. Abilita i popup per stampare.');
+          }
+        } else {
+          await Print.printAsync({ html });
+        }
+      } else {
+        // Share action
+        if (Platform.OS === 'web') {
+          try {
+            // Create blob and download
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename.replace('.pdf', '.html');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showAlert('Download completato', 'Il file è stato scaricato');
+          } catch (e) {
+            showAlert('Errore', 'Impossibile scaricare il documento');
+          }
+        } else {
+          // Mobile: generate PDF and share
+          const { uri } = await Print.printToFileAsync({ html });
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(uri, {
+              mimeType: 'application/pdf',
+              dialogTitle: 'Attestato di Versamento',
+              UTI: 'com.adobe.pdf',
+            });
+          } else {
+            showAlert('Errore', 'Condivisione non disponibile');
+          }
+        }
+      }
     } catch (error) {
       console.error('Error generating payment statement:', error);
       showAlert('Errore', 'Impossibile generare l\'attestato di versamento');
