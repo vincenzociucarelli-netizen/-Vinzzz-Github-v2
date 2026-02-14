@@ -778,4 +778,26 @@ const styles = StyleSheet.create({
     color: '#999',
     fontStyle: 'italic',
   },
+  // Row layout styles for form inputs
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+  },
+  smallInputContainer: {
+    width: 80,
+  },
+  mediumInputContainer: {
+    flex: 1,
+  },
+  halfInputContainer: {
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+    marginBottom: 6,
+    marginTop: 12,
+  },
 });
