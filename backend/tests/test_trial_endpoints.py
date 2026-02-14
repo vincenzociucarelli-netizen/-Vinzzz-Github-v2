@@ -393,8 +393,8 @@ class TestUnauthorizedAccess:
         session = requests.Session()
         session.headers.update({"Content-Type": "application/json"})
         
-        # Try another existing parent
-        for email in ["genitore2@test.com", "gino@test.com", "luca@test.com"]:
+        # Try another existing parent (with passwords reset to test1234)
+        for email in ["armida.raschi@gmail.com", "parent@sportsclub.com", "lidia@test.com"]:
             response = session.post(f"{BASE_URL}/api/auth/login", json={
                 "email": email,
                 "password": "test1234"
@@ -404,7 +404,7 @@ class TestUnauthorizedAccess:
                 session.headers.update({"Authorization": f"Bearer {data['token']}"})
                 return {"session": session, "user_id": data["user"]["id"], "email": email}
         
-        pytest.skip("Could not login as other parent")
+        pytest.skip("Could not login as other parent - password may not be test1234")
     
     def test_accept_privacy_unauthorized_for_other_parent(self, admin_session, other_parent_session):
         """Test that a parent cannot accept privacy for another parent's athlete"""
