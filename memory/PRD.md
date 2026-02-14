@@ -3,6 +3,15 @@
 ## Original Problem Statement
 Applicazione per la gestione di club di pallavolo. Permette agli amministratori di gestire atleti, squadre, allenatori, dirigenti, pagamenti, presenze e certificati medici. I genitori possono visualizzare i dati dei propri figli.
 
+## Business Model
+### Fase Beta (fino al 30/06/2026)
+- Accesso completo e gratuito per società amiche/tester
+- Tutte le funzionalità disponibili senza limitazioni
+
+### Dal 01/07/2026
+- **Versione FREE**: Piena funzionalità per 2-3 squadre (da definire)
+- **Versione Premium**: Upgrade per gestire più squadre (pricing da definire)
+
 ## User Personas
 - **Admin/Dirigente**: Gestisce la società sportiva, atleti, squadre, pagamenti
 - **Coach/Allenatore**: Registra presenze agli allenamenti tramite QR code
