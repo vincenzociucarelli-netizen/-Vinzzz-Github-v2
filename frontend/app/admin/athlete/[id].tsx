@@ -1904,16 +1904,27 @@ export default function AdminAthleteDetail() {
             {/* Attestato di Versamento Button */}
             {payments.length > 0 && (
               <View style={styles.card}>
-                <TouchableOpacity 
-                  style={styles.attestatoButton}
-                  onPress={generatePaymentStatement}
-                  data-testid="generate-attestato-button"
-                >
-                  <Ionicons name="document-text" size={24} color="#fff" />
-                  <Text style={styles.attestatoButtonText}>Genera Attestato di Versamento</Text>
-                </TouchableOpacity>
+                <Text style={styles.cardTitle}>📄 Attestato di Versamento</Text>
+                <View style={styles.attestatoButtonsRow}>
+                  <TouchableOpacity 
+                    style={[styles.attestatoButton, styles.attestatoPrintBtn]}
+                    onPress={() => generatePaymentStatement('print')}
+                    data-testid="print-attestato-button"
+                  >
+                    <Ionicons name="print" size={20} color="#fff" />
+                    <Text style={styles.attestatoButtonText}>Stampa</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.attestatoButton, styles.attestatoShareBtn]}
+                    onPress={() => generatePaymentStatement('share')}
+                    data-testid="share-attestato-button"
+                  >
+                    <Ionicons name="share-outline" size={20} color="#fff" />
+                    <Text style={styles.attestatoButtonText}>Condividi</Text>
+                  </TouchableOpacity>
+                </View>
                 <Text style={styles.attestatoHint}>
-                  Genera un documento PDF con il riepilogo di tutti i pagamenti effettuati
+                  Documento con riepilogo pagamenti, dati società e firma del presidente
                 </Text>
               </View>
             )}
