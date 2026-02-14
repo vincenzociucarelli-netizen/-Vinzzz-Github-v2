@@ -191,6 +191,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
       </style>
     </head>
     <body>
+      <div class="content-wrapper">
       <div class="header">
         ${logoHtml ? `<div style="margin-bottom: 10px;">${logoHtml}</div>` : ''}
         <h1>${data.society.name || 'SOCIETÀ SPORTIVA'}</h1>
