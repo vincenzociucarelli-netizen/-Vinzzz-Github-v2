@@ -273,7 +273,7 @@ export default function AdminAthletes() {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={48} color="#ccc" />
+              <Text style={{ fontSize: 48, color: '#ccc' }}>👥</Text>
               <Text style={styles.emptyText}>
                 {searchQuery ? 'Nessun risultato' : 'Nessun atleta registrato'}
               </Text>
