@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>RegistraTEAM - Presentazione</title>
+  <style>
+    @page { margin: 15mm; size: A4; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      padding: 40px;
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+    }
+    
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 30px 0;
+      border-bottom: 3px solid #007AFF;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      font-size: 42px;
+      color: #007AFF;
+      margin-bottom: 10px;
+    }
+    .header .tagline {
+      font-size: 18px;
+      color: #666;
+      font-style: italic;
+    }
+    
+    /* Sections */
+    .section {
+      margin-bottom: 35px;
+    }
+    .section h2 {
+      font-size: 24px;
+      color: #007AFF;
+      border-left: 4px solid #007AFF;
+      padding-left: 15px;
+      margin-bottom: 20px;
+    }
+    .section h3 {
+      font-size: 18px;
+      color: #333;
+      margin: 20px 0 10px 0;
+    }
+    
+    /* Intro */
+    .intro {
+      background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+    .intro p {
+      font-size: 16px;
+      color: #1565C0;
+    }
+    
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 14px;
+    }
+    th {
+      background: #007AFF;
+      color: white;
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+    }
+    td {
+      padding: 10px 15px;
+      border-bottom: 1px solid #E0E0E0;
+    }
+    tr:nth-child(even) {
+      background: #F5F5F5;
+    }
+    tr:hover {
+      background: #E3F2FD;
+    }
+    
+    /* Feature Grid */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .feature-card {
+      background: #F8F9FA;
+      border: 1px solid #E0E0E0;
+      border-radius: 10px;
+      padding: 20px;
+      border-left: 4px solid #007AFF;
+    }
+    .feature-card h4 {
+      color: #007AFF;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    .feature-card ul {
+      margin-left: 20px;
+      font-size: 14px;
+    }
+    .feature-card li {
+      margin: 5px 0;
+    }
+    
+    /* Status badges */
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-active {
+      background: #E8F5E9;
+      color: #2E7D32;
+    }
+    .badge-coming {
+      background: #FFF3E0;
+      color: #E65100;
+    }
+    
+    /* Business Model */
+    .pricing-table {
+      margin: 20px 0;
+    }
+    .pricing-table th {
+      background: #4CAF50;
+    }
+    .pricing-highlight {
+      background: #E8F5E9 !important;
+      font-weight: 600;
+    }
+    
+    /* Footer */
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px solid #E0E0E0;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+    }
+    
+    /* Highlights */
+    .highlights {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .highlight-item {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #007AFF 0%, #0056b3 100%);
+      color: white;
+      border-radius: 10px;
+    }
+    .highlight-item .number {
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .highlight-item .label {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    
+    /* Beta Banner */
+    .beta-banner {
+      background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .beta-banner h3 {
+      color: white;
+      margin-bottom: 5px;
+    }
+    
+    @media print {
+      body { padding: 20px; }
+      .feature-grid { grid-template-columns: repeat(2, 1fr); }
+      .highlights { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>RegistraTEAM</h1>
+    <p class="tagline">La piattaforma completa per la gestione delle societa sportive</p>
+  </div>
+
+  <div class="intro">
+    <p><strong>RegistraTEAM</strong> e un'applicazione web e mobile per la gestione completa di societa sportive (pallavolo, calcio, basket, ecc.). Permette di gestire atleti, squadre, staff, pagamenti, presenze e documenti in un'unica piattaforma semplice e intuitiva.</p>
+  </div>
+
+  <div class="highlights">
+    <div class="highlight-item">
+      <div class="number">100%</div>
+      <div class="label">Web + Mobile</div>
+    </div>
+    <div class="highlight-item">
+      <div class="number">Self-Service</div>
+      <div class="label">Gestione Autonoma</div>
+    </div>
+    <div class="highlight-item">
+      <div class="number">Scalabile</div>
+      <div class="label">Da 50 a 1000+ atleti</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Funzionalita Attive</h2>
+    
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h4>Gestione Persone</h4>
+        <ul>
+          <li>Anagrafica atleti completa con foto</li>
+          <li>Account genitori dedicati</li>
+          <li>Gestione allenatori e dirigenti</li>
+          <li>QR Code per ogni atleta</li>
+          <li>Secondo genitore automatico</li>
+        </ul>
+      </div>
+      
+      <div class="feature-card">
+        <h4>Gestione Squadre</h4>
+        <ul>
+          <li>Creazione squadre illimitate</li>
+          <li>Assegnazione atleti (principale + secondaria)</li>
+          <li>Quote personalizzate per squadra</li>
+          <li>Calendario gare con import Excel</li>
+        </ul>
+      </div>
+      
+      <div class="feature-card">
+        <h4>Gestione Pagamenti</h4>
+        <ul>
+          <li>Piano rateale personalizzabile (3 rate)</li>
+          <li>Registrazione manuale pagamenti</li>
+          <li>Sconti applicabili con motivazione</li>
+          <li>Import massivo da Excel</li>
+          <li>Attestato di Versamento per detrazioni</li>
+        </ul>
+      </div>
+      
+      <div class="feature-card">
+        <h4>Presenze & Allenamenti</h4>
+        <ul>
+          <li>Scansione QR da smartphone</li>
+          <li>Storico presenze automatico</li>
+          <li>Percentuali settimanali/mensili</li>
+          <li>Report visibile ai genitori</li>
+        </ul>
+      </div>
+      
+      <div class="feature-card">
+        <h4>Documenti & Certificati</h4>
+        <ul>
+          <li>Caricamento certificati medici</li>
+          <li>Alert scadenze (oggi + 30 giorni)</li>
+          <li>Gestione tesseramento federale</li>
+          <li>Export dati in Excel</li>
+        </ul>
+      </div>
+      
+      <div class="feature-card">
+        <h4>Area Genitori</h4>
+        <ul>
+          <li>Dashboard con tutti i figli</li>
+          <li>Visualizzazione pagamenti e residui</li>
+          <li>Storico presenze allenamenti</li>
+          <li>Documenti e certificati</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Funzionalita in Arrivo</h2>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Funzionalita</th>
+          <th>Descrizione</th>
+          <th>Stato</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Pagamenti Online (Stripe)</strong></td>
+          <td>I genitori potranno pagare le quote con carta di credito. Ogni societa configura il proprio account Stripe.</td>
+          <td><span class="badge badge-coming">Prossimamente</span></td>
+        </tr>
+        <tr>
+          <td><strong>Sistema Abbonamenti</strong></td>
+          <td>Gestione automatica dei limiti tesserati e acquisto pack aggiuntivi.</td>
+          <td><span class="badge badge-coming">Prossimamente</span></td>
+        </tr>
+        <tr>
+          <td><strong>Modulo Professionisti</strong></td>
+          <td>Gestione compensi per atleti professionisti con documentazione fiscale.</td>
+          <td><span class="badge badge-coming">Prossimamente</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="beta-banner">
+    <h3>Fase Beta Gratuita</h3>
+    <p>Accesso completo e illimitato fino al <strong>30 Giugno 2026</strong></p>
+  </div>
+
+  <div class="section">
+    <h2>Modello di Business (dal 01/07/2026)</h2>
+    
+    <table class="pricing-table">
+      <thead>
+        <tr>
+          <th>Piano</th>
+          <th>Tesserati Inclusi</th>
+          <th>Prezzo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="pricing-highlight">
+          <td><strong>FREE</strong></td>
+          <td>50 tesserati</td>
+          <td>Gratuito</td>
+        </tr>
+        <tr>
+          <td><strong>Pack +50</strong></td>
+          <td>+50 tesserati (tot. 100)</td>
+          <td>Da definire</td>
+        </tr>
+        <tr>
+          <td><strong>Pack +100</strong></td>
+          <td>+100 tesserati (tot. 200)</td>
+          <td>Da definire</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size: 13px; color: #666; margin-top: 10px;">
+      <em>* Tesserati = Atleti + Dirigenti + Coach. I pack sono cumulabili.</em>
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>Tecnologia</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Componente</th>
+          <th>Tecnologia</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Frontend</td>
+          <td>React Native / Expo (Web + Mobile iOS/Android)</td>
+        </tr>
+        <tr>
+          <td>Backend</td>
+          <td>FastAPI (Python)</td>
+        </tr>
+        <tr>
+          <td>Database</td>
+          <td>MongoDB (scalabile)</td>
+        </tr>
+        <tr>
+          <td>Email</td>
+          <td>SendGrid (inviti, notifiche)</td>
+        </tr>
+        <tr>
+          <td>AI</td>
+          <td>OpenAI (foto artistiche atleti)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Perche Scegliere RegistraTEAM</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h4>Tutto in Uno</h4>
+        <ul>
+          <li>Basta fogli Excel sparsi</li>
+          <li>Un'unica piattaforma per tutto</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <h4>Multi-Piattaforma</h4>
+        <ul>
+          <li>Funziona su Web, iOS e Android</li>
+          <li>Sempre sincronizzato</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <h4>Self-Service</h4>
+        <ul>
+          <li>Le societa gestiscono tutto da sole</li>
+          <li>Nessuna assistenza necessaria</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <h4>Conforme</h4>
+        <ul>
+          <li>Attestati per detrazioni fiscali</li>
+          <li>Documentazione completa</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p><strong>RegistraTEAM</strong> - La gestione sportiva semplificata</p>
+    <p style="margin-top: 10px;">Documento generato il 14 Febbraio 2026</p>
+  </div>
+
+</body>
+</html>
