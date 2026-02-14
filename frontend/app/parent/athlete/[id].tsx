@@ -240,6 +240,36 @@ export default function AthleteDetail() {
     }
   };
 
+  // Download Fiscal Receipt
+  const handleDownloadFiscalReceipt = async () => {
+    if (!athlete) return;
+    
+    setGeneratingReceipt(true);
+    try {
+      const response = await api.get(`/payments/${id}/fiscal-receipt`);
+      const receiptData = response.data;
+      
+      // Dynamic import for jspdf
+      const { downloadFiscalReceipt } = await import('../../../src/utils/fiscalReceipt');
+      
+      downloadFiscalReceipt(receiptData);
+      
+      if (Platform.OS !== 'web') {
+        Alert.alert('✅ Successo', 'Ricevuta fiscale scaricata');
+      }
+    } catch (error: any) {
+      console.error('Error generating receipt:', error);
+      const errorMessage = error.response?.data?.detail || 'Errore durante la generazione della ricevuta';
+      if (Platform.OS === 'web') {
+        alert(errorMessage);
+      } else {
+        Alert.alert('Errore', errorMessage);
+      }
+    } finally {
+      setGeneratingReceipt(false);
+    }
+  };
+
   // Logout function
   const handleLogout = async () => {
     if (Platform.OS === 'web') {
