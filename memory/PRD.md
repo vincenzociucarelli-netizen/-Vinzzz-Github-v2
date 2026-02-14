@@ -53,6 +53,11 @@ I tesserati includono: atleti, dirigenti e coach.
    - Aggiunta **conferma obbligatoria** prima di salvare ogni pagamento
    - Messaggi di successo ora includono nome atleta e importo
    - Aggiunta nota esplicativa nello Storico Pagamenti: "Ogni pagamento registrato scala automaticamente dal residuo. Puoi registrare più pagamenti parziali."
+4. **Periodo di Prova 7 Giorni** (NUOVO):
+   - Backend: Nuovi endpoint `/api/trial/check-pending`, `/api/trial/accept-privacy/{id}`, `/api/trial/request-deletion/{id}`, `/api/trial/status/{id}`
+   - Frontend: Modal bloccante nella dashboard genitore al termine dei 7 giorni
+   - Opzione A: Accetta privacy e conferma iscrizione → status diventa "active"
+   - Opzione B: Non resta, cancella tutti i dati → elimina atleta, pagamenti, certificati, presenze + notifica admin
 
 ## Pending/Backlog
 - P1: Implementare logica freemium (limite 50 tesserati gratuiti)
