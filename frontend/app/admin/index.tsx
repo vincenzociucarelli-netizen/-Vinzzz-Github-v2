@@ -239,7 +239,7 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/notifications')} 
             style={styles.headerBtn}
           >
-            <Ionicons name="notifications-outline" size={24} color="#fff" />
+            <Text style={{ fontSize: 22 }}>🔔</Text>
             {unreadNotifications > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
@@ -253,13 +253,13 @@ export default function AdminDashboard() {
             onPress={() => router.replace('/dirigente')} 
             style={[styles.headerBtn, styles.dirigenteSwitchBtn]}
           >
-            <Ionicons name="briefcase" size={18} color="#8E44AD" />
+            <Text style={{ fontSize: 16 }}>💼</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerBtn}>
-            <Ionicons name="settings-outline" size={24} color="#fff" />
+            <Text style={{ fontSize: 22 }}>⚙️</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleLogout} style={styles.headerBtn}>
-            <Ionicons name="log-out-outline" size={24} color="#fff" />
+            <Text style={{ fontSize: 22 }}>🚪</Text>
           </TouchableOpacity>
         </View>
       </View>
