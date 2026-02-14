@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
-import { Ionicons } from '@expo/vector-icons';
 import { Athlete, Team } from '../../src/types';
 import { exportToExcel } from '../../src/utils/excelExport';
 import { useAuthStore } from '../../src/store/authStore';
