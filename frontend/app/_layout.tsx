@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Stack } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import { useFonts } from 'expo-font';
-import { Ionicons } from '@expo/vector-icons';
 import * as SplashScreen from 'expo-splash-screen';
 import { View } from 'react-native';
 
@@ -13,9 +12,9 @@ export default function RootLayout() {
   const loadAuth = useAuthStore((state) => state.loadAuth);
   const [appIsReady, setAppIsReady] = useState(false);
 
-  // Load Ionicons font
+  // Load Ionicons font from local assets for reliable web support
   const [fontsLoaded] = useFonts({
-    ...Ionicons.font,
+    'Ionicons': require('../assets/fonts/Ionicons.ttf'),
   });
 
   useEffect(() => {
