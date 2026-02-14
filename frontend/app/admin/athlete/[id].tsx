@@ -1061,6 +1061,18 @@ export default function AdminAthleteDetail() {
                       </TouchableOpacity>
                     ))}
                   </View>
+                  
+                  <Text style={[styles.inputLabel, { marginTop: 16 }]}>Codice Atleta (per Import Pagamenti)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editData.athlete_code}
+                    onChangeText={(t) => setEditData({...editData, athlete_code: t.toUpperCase().replace(/[^A-Z0-9_-]/g, '')})}
+                    placeholder="Es: ROSSI_MARIO_U16"
+                    autoCapitalize="characters"
+                  />
+                  <Text style={{ fontSize: 11, color: '#666', marginTop: 4, marginBottom: 8 }}>
+                    Questo codice viene usato per abbinare i pagamenti importati da Excel
+                  </Text>
                 </>
               ) : (
                 <>
