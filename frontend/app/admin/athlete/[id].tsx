@@ -1078,6 +1078,12 @@ export default function AdminAthleteDetail() {
                       </Text>
                     </View>
                   )}
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Codice Atleta (Import)</Text>
+                    <Text style={[styles.valueCode, { color: '#007AFF' }]}>
+                      {athlete?.athlete_code || '-'}
+                    </Text>
+                  </View>
                 </>
               )}
             </View>
