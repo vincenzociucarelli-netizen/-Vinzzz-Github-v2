@@ -160,6 +160,81 @@ export default function ParentDashboard() {
     }
   };
 
+  // Check for expired trial periods
+  const checkTrialPeriods = async () => {
+    try {
+      const response = await api.get('/trial/check-pending');
+      if (response.data.athletes_requiring_action?.length > 0) {
+        setAthletesRequiringAction(response.data.athletes_requiring_action);
+        setTrialModalVisible(true);
+      }
+    } catch (error) {
+      console.error('Error checking trial periods:', error);
+    }
+  };
+
+  // Handle privacy acceptance and continue
+  const handleAcceptPrivacy = async (athleteId: string, athleteName: string) => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm(`Confermi di accettare l'informativa sulla privacy per ${athleteName} e di voler continuare con la società?`)) {
+        return;
+      }
+    }
+    
+    setProcessingTrial(true);
+    try {
+      await api.post(`/trial/accept-privacy/${athleteId}`);
+      Alert.alert('✅ Confermato', `${athleteName} è ora attivo nella società. Grazie per la fiducia!`);
+      
+      // Remove this athlete from the list
+      const remaining = athletesRequiringAction.filter(a => a.id !== athleteId);
+      setAthletesRequiringAction(remaining);
+      if (remaining.length === 0) {
+        setTrialModalVisible(false);
+      }
+      
+      // Reload athletes
+      await loadAthletes();
+    } catch (error: any) {
+      Alert.alert('Errore', error.response?.data?.detail || 'Impossibile completare l\'operazione');
+    } finally {
+      setProcessingTrial(false);
+    }
+  };
+
+  // Handle data deletion request
+  const handleRequestDeletion = async (athleteId: string, athleteName: string) => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm(`⚠️ ATTENZIONE: Stai per richiedere la CANCELLAZIONE DEFINITIVA di tutti i dati di ${athleteName}. Questa azione è IRREVERSIBILE.\n\nVuoi procedere?`)) {
+        return;
+      }
+      // Double confirmation
+      if (!window.confirm(`Conferma finale: sei sicuro di voler cancellare ${athleteName} dalla società?`)) {
+        return;
+      }
+    }
+    
+    setProcessingTrial(true);
+    try {
+      await api.post(`/trial/request-deletion/${athleteId}`);
+      Alert.alert('Cancellazione Completata', `Tutti i dati di ${athleteName} sono stati eliminati.`);
+      
+      // Remove this athlete from the list
+      const remaining = athletesRequiringAction.filter(a => a.id !== athleteId);
+      setAthletesRequiringAction(remaining);
+      if (remaining.length === 0) {
+        setTrialModalVisible(false);
+      }
+      
+      // Reload athletes
+      await loadAthletes();
+    } catch (error: any) {
+      Alert.alert('Errore', error.response?.data?.detail || 'Impossibile completare l\'operazione');
+    } finally {
+      setProcessingTrial(false);
+    }
+  };
+
   useEffect(() => {
     loadAthletes();
     loadCommitments();
