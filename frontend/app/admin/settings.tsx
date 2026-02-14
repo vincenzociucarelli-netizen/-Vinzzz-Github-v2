@@ -178,6 +178,35 @@ export default function SettingsScreen() {
     setDirigenteQualifications(dirigenteQualifications.filter(q => q !== qual));
   };
 
+  const handleSelectStampSignature = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        showAlert('Permesso negato', 'È necessario concedere il permesso per accedere alla galleria');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        setStampSignature(result.assets[0].base64);
+      }
+    } catch (error) {
+      console.error('Error selecting stamp/signature:', error);
+      showAlert('Errore', 'Impossibile selezionare l\'immagine');
+    }
+  };
+
+  const handleRemoveStampSignature = () => {
+    setStampSignature(null);
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
