@@ -1473,14 +1473,41 @@ async def get_society_settings():
     """Get society settings (public endpoint - no auth required for logo display)"""
     settings = await db.settings.find_one({"type": "society"})
     if not settings:
-        return {"name": "Società Sportiva", "logo": None, "logo_size": 50, "athlete_roles": [], "athlete_characteristics": [], "dirigente_qualifications": []}
+        return {
+            "name": "Società Sportiva", 
+            "logo": None, 
+            "logo_size": 50, 
+            "athlete_roles": [], 
+            "athlete_characteristics": [], 
+            "dirigente_qualifications": [],
+            "ragione_sociale": None,
+            "address": None,
+            "postal_code": None,
+            "city": None,
+            "province": None,
+            "fiscal_code": None,
+            "phone": None,
+            "phone2": None,
+            "president_name": None,
+            "stamp_signature": None
+        }
     return {
         "name": settings.get("name", "Società Sportiva"),
         "logo": settings.get("logo"),
         "logo_size": settings.get("logo_size", 50),
         "athlete_roles": settings.get("athlete_roles", []),
         "athlete_characteristics": settings.get("athlete_characteristics", []),
-        "dirigente_qualifications": settings.get("dirigente_qualifications", [])
+        "dirigente_qualifications": settings.get("dirigente_qualifications", []),
+        "ragione_sociale": settings.get("ragione_sociale"),
+        "address": settings.get("address"),
+        "postal_code": settings.get("postal_code"),
+        "city": settings.get("city"),
+        "province": settings.get("province"),
+        "fiscal_code": settings.get("fiscal_code"),
+        "phone": settings.get("phone"),
+        "phone2": settings.get("phone2"),
+        "president_name": settings.get("president_name"),
+        "stamp_signature": settings.get("stamp_signature")
     }
 
 @api_router.patch("/settings/society")
