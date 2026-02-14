@@ -157,7 +157,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
         .box-title { font-weight: bold; color: #333; margin-bottom: 8px; font-size: 11px; }
         .box-row { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; }
         .box-row span { margin-right: 15px; }
-        .amount-section { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; }
+        .amount-section { display: flex; align-items: center; margin: 15px 0; gap: 10px; }
         .amount-label { font-weight: bold; color: #333; }
         .amount-value { font-size: 20px; font-weight: bold; color: #1a237e; }
         .table-container { margin: 15px 0; }
