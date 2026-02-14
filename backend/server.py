@@ -4909,8 +4909,10 @@ async def get_today_birthdays(current_user = Depends(get_current_user)):
     
     birthdays = []
     
-    # Check athletes
-    athletes = await db.athletes.find({}).to_list(1000)
+    society_id = current_user.get("society_id")
+    
+    # Check athletes - filter by society
+    athletes = await db.athletes.find({"society_id": society_id}).to_list(1000)
     for athlete in athletes:
         dob = athlete.get("date_of_birth")
         if dob:
