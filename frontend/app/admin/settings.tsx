@@ -55,6 +55,17 @@ export default function SettingsScreen() {
       setAthleteRoles(response.data.athlete_roles || []);
       setAthleteCharacteristics(response.data.athlete_characteristics || []);
       setDirigenteQualifications(response.data.dirigente_qualifications || []);
+      // Load fiscal receipt data
+      setRagioneSociale(response.data.ragione_sociale || '');
+      setAddress(response.data.address || '');
+      setPostalCode(response.data.postal_code || '');
+      setCity(response.data.city || '');
+      setProvince(response.data.province || '');
+      setFiscalCode(response.data.fiscal_code || '');
+      setPhone(response.data.phone || '');
+      setPhone2(response.data.phone2 || '');
+      setPresidentName(response.data.president_name || '');
+      setStampSignature(response.data.stamp_signature || null);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
