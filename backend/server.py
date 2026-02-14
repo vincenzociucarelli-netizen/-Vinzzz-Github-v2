@@ -4794,17 +4794,19 @@ async def export_athletes(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può esportare")
     
-    athletes = await db.athletes.find({}).to_list(5000)
+    society_id = current_user.get("society_id")
+    athletes = await db.athletes.find({"society_id": society_id}).to_list(5000)
     clean_mongo_docs(athletes)
     
     # Batch fetch all related data to avoid N+1 queries
-    teams_list = await db.teams.find().to_list(1000)
+    teams_list = await db.teams.find({"society_id": society_id}).to_list(1000)
     teams_dict = {t["id"]: t for t in teams_list}
     
-    certs_list = await db.certificates.find().to_list(5000)
+    athlete_ids = [a["id"] for a in athletes]
+    certs_list = await db.certificates.find({"athlete_id": {"$in": athlete_ids}}).to_list(5000)
     certs_dict = {c["athlete_id"]: c for c in certs_list}
     
-    payments_list = await db.payments.find().to_list(10000)
+    payments_list = await db.payments.find({"athlete_id": {"$in": athlete_ids}}).to_list(10000)
     payments_by_athlete = {}
     for p in payments_list:
         athlete_id = p.get("athlete_id")
