@@ -471,31 +471,44 @@ export default function AdminAthleteDetail() {
       return;
     }
 
+    // CONFERMA OBBLIGATORIA prima di salvare
+    const athleteName = `${athlete?.last_name?.toUpperCase() || ''} ${athlete?.first_name?.toUpperCase() || ''}`.trim();
+    const amount = parseFloat(newPayment.amount);
+    const confirmMessage = editingPaymentId 
+      ? `Confermi la MODIFICA del pagamento?\n\nAtleta: ${athleteName}\nImporto: € ${amount.toFixed(2)}\nData: ${newPayment.paid_date}`
+      : `Confermi la REGISTRAZIONE del pagamento?\n\nAtleta: ${athleteName}\nImporto: € ${amount.toFixed(2)}\nData: ${newPayment.paid_date}\nMetodo: ${newPayment.payment_method || 'Bonifico'}`;
+    
+    if (Platform.OS === 'web') {
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+    }
+
     setSavingPayment(true);
     try {
       if (editingPaymentId) {
         // Update existing payment
         await api.put(`/payments/manual/${editingPaymentId}`, {
-          amount: parseFloat(newPayment.amount),
+          amount: amount,
           paid_date: newPayment.paid_date,
           is_cash: newPayment.is_cash,
           notes: newPayment.notes || null,
           description: newPayment.description || null,
           payment_method: newPayment.payment_method || 'Bonifico',
         });
-        showAlert('Successo', 'Pagamento modificato');
+        showAlert('Successo', `Pagamento per ${athleteName} modificato correttamente`);
       } else {
         // Create new payment
         await api.post('/payments/manual', {
           athlete_id: id,
-          amount: parseFloat(newPayment.amount),
+          amount: amount,
           paid_date: newPayment.paid_date,
           is_cash: newPayment.is_cash,
           notes: newPayment.notes || null,
           description: newPayment.description || null,
           payment_method: newPayment.payment_method || 'Bonifico',
         });
-        showAlert('Successo', 'Pagamento registrato');
+        showAlert('Successo', `Pagamento di € ${amount.toFixed(2)} registrato per ${athleteName}`);
       }
 
       setPaymentModalVisible(false);
