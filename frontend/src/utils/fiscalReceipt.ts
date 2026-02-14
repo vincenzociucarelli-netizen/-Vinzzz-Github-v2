@@ -170,8 +170,9 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
     </head>
     <body>
       <div class="header">
+        ${logoHtml ? `<div style="margin-bottom: 10px;">${logoHtml}</div>` : ''}
         <h1>${data.society.name || 'SOCIETÀ SPORTIVA'}</h1>
-        <p>${data.society.address || ''} - ${data.society.postal_code || ''} ${data.society.city || ''}</p>
+        <p>${addressLine || ''}</p>
         <p>Cod. Fiscale: ${data.society.fiscal_code || 'N/A'}</p>
         ${data.society.phone ? `<p>Tel: ${data.society.phone}${data.society.phone2 ? ' - ' + data.society.phone2 : ''}</p>` : ''}
         ${data.team_name ? `<p style="font-weight: bold; color: #1a237e; margin-top: 5px;">${data.team_name}</p>` : ''}
