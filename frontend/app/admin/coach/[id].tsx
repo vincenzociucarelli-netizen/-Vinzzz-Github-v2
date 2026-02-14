@@ -126,6 +126,7 @@ export default function AdminCoachDetail() {
       setCoach(coachRes.data);
       setTeams(teamsRes.data);
       setMonthlyCompensation(coachRes.data.monthly_compensation?.toString() || '0');
+      setOtherAnnualCompensation(coachRes.data.other_annual_compensation?.toString() || '0');
       setSelectedTeams(coachRes.data.assigned_teams || []);
     } catch (error) {
       console.error('Error loading coach data:', error);
