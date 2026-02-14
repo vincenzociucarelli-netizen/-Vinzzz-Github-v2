@@ -369,7 +369,7 @@ export default function CoachesScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="fitness-outline" size={48} color="#ccc" />
+            <Text style={{ fontSize: 48 }}>🏋️</Text>
             <Text style={styles.emptyText}>Nessun coach registrato</Text>
           </View>
         }
@@ -392,7 +392,7 @@ export default function CoachesScreen() {
                 style={styles.modalBtn}
                 onPress={() => selectedCoach && openTeamsModal(selectedCoach)}
               >
-                <Ionicons name="people" size={20} color="#007AFF" />
+                <Text style={{ fontSize: 18 }}>👥</Text>
                 <Text style={styles.modalBtnText}>Assegna Squadre</Text>
               </TouchableOpacity>
               
@@ -401,7 +401,7 @@ export default function CoachesScreen() {
                   style={styles.modalBtn}
                   onPress={() => selectedCoach && handleSuspend(selectedCoach)}
                 >
-                  <Ionicons name="pause-circle" size={20} color="#FF9500" />
+                  <Text style={{ fontSize: 18 }}>⏸️</Text>
                   <Text style={styles.modalBtnText}>Sospendi</Text>
                 </TouchableOpacity>
               )}
@@ -411,7 +411,7 @@ export default function CoachesScreen() {
                   style={styles.modalBtn}
                   onPress={() => selectedCoach && handleApprove(selectedCoach)}
                 >
-                  <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                  <Text style={{ fontSize: 18 }}>✅</Text>
                   <Text style={styles.modalBtnText}>Riattiva</Text>
                 </TouchableOpacity>
               )}
@@ -420,7 +420,7 @@ export default function CoachesScreen() {
                 style={[styles.modalBtn, styles.modalBtnDanger]}
                 onPress={() => selectedCoach && handleDelete(selectedCoach)}
               >
-                <Ionicons name="trash" size={20} color="#FF3B30" />
+                <Text style={{ fontSize: 18 }}>🗑️</Text>
                 <Text style={[styles.modalBtnText, styles.modalBtnTextDanger]}>Elimina</Text>
               </TouchableOpacity>
             </View>
