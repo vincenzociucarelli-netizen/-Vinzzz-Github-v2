@@ -1637,6 +1637,26 @@ export default function AdminAthleteDetail() {
           </View>
         )}
 
+        {/* QR Code Section */}
+        {athlete?.qr_code && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📱 QR Code Atleta</Text>
+            <View style={styles.qrCodeContainer}>
+              <Image
+                source={{ uri: athlete.qr_code.startsWith('data:') ? athlete.qr_code : `data:image/png;base64,${athlete.qr_code}` }}
+                style={styles.qrCodeImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.qrCodeLabel}>
+                Codice: {athlete.athlete_code || athlete.id}
+              </Text>
+              <Text style={styles.qrCodeHint}>
+                Il coach può scansionare questo QR code per registrare la presenza
+              </Text>
+            </View>
+          </View>
+        )}
+
         <View style={{ height: editing ? 100 : 40 }} />
       </ScrollView>
 
