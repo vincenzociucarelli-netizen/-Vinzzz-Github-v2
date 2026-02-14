@@ -708,7 +708,7 @@ export default function AdminDashboard() {
                 }
               }}
             >
-              <Ionicons name="refresh" size={16} color="#FF3B30" />
+              <Text style={{ fontSize: 14 }}>🔄</Text>
               <Text style={styles.regenButtonBottomText}>Rigenera Codice Invito</Text>
             </TouchableOpacity>
             <Text style={styles.regenWarning}>
