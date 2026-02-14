@@ -1605,6 +1605,24 @@ export default function AthleteDetail() {
               )}
             </View>
           )}
+          
+          {/* Download Fiscal Receipt Button */}
+          {payments.length > 0 && (
+            <TouchableOpacity
+              style={[styles.downloadReceiptBtn, generatingReceipt && { opacity: 0.6 }]}
+              onPress={handleDownloadFiscalReceipt}
+              disabled={generatingReceipt}
+            >
+              {generatingReceipt ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={{ fontSize: 20 }}>🧾</Text>
+              )}
+              <Text style={styles.downloadReceiptBtnText}>
+                {generatingReceipt ? 'Generazione...' : 'Scarica Ricevuta Fiscale'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Request Deletion Section - Only visible when data is unlocked */}
