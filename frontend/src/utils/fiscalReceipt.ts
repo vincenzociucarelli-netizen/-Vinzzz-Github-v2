@@ -198,7 +198,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
       <div class="box-title">Riceviamo da:</div>
       <div class="box" style="min-height: 50px;">
         <div class="box-row">
-          <span><b>Cognome:</b> ${data.parent.last_name || '<span style="display:inline-block;width:120px;border-bottom:1px solid #999;">&nbsp;</span>'}</span>
+          <span><b>Cognome:</b> ${data.parent.last_name || '<span style="display:inline-block;width:180px;border-bottom:1px solid #999;">&nbsp;</span>'}</span>
           <span><b>Nome:</b> ${data.parent.first_name || '<span style="display:inline-block;width:120px;border-bottom:1px solid #999;">&nbsp;</span>'}</span>
         </div>
         <div class="box-row" style="margin-top: 6px;">
@@ -209,7 +209,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
         </div>
         <div class="box-row" style="margin-top: 6px;">
           <span><b>CAP:</b> ${data.parent.postal_code || '<span style="display:inline-block;width:60px;border-bottom:1px solid #999;">&nbsp;</span>'}</span>
-          <span><b>Città:</b> ${data.parent.city || '<span style="display:inline-block;width:150px;border-bottom:1px solid #999;">&nbsp;</span>'}</span>
+          <span><b>Città:</b> ${data.parent.city || '<span style="display:inline-block;width:200px;border-bottom:1px solid #999;">&nbsp;</span>'}</span>
           <span><b>Prov.:</b> ${data.parent.province || '<span style="display:inline-block;width:30px;border-bottom:1px solid #999;">&nbsp;</span>'}</span>
         </div>
       </div>
