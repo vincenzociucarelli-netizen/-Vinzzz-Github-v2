@@ -458,11 +458,9 @@ export default function CoachesScreen() {
                   onPress={() => toggleTeamSelection(team.id)}
                 >
                   <View style={styles.teamItemContent}>
-                    <Ionicons 
-                      name={selectedTeamIds.includes(team.id) ? "checkbox" : "square-outline"} 
-                      size={24} 
-                      color={selectedTeamIds.includes(team.id) ? "#007AFF" : "#999"} 
-                    />
+                    <Text style={{ fontSize: 20 }}>
+                      {selectedTeamIds.includes(team.id) ? '☑️' : '⬜'}
+                    </Text>
                     <Text style={styles.teamItemName}>{team.name}</Text>
                   </View>
                 </TouchableOpacity>
