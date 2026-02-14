@@ -958,42 +958,43 @@ export default function AdminAthleteDetail() {
         qrCodeSrc = `data:image/png;base64,${qrCodeSrc}`;
       }
       
-      // On web, use different approach
+      // On web, generate HTML and download
       if (Platform.OS === 'web') {
-        try {
-          // Convert data URI to blob
-          const response = await fetch(qrCodeSrc);
-          const blob = await response.blob();
-          const file = new File([blob], `qr_${athlete.full_name.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
-          
-          // Check if Web Share API is available
-          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: `QR Code - ${athlete.full_name}`,
-              text: `QR Code per ${athlete.full_name}`,
-              files: [file]
-            });
-          } else {
-            // Fallback: download the image
-            const link = document.createElement('a');
-            link.href = qrCodeSrc;
-            link.download = `qr_${athlete.full_name.replace(/\s+/g, '_')}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showAlert('Download completato', 'Il QR code è stato scaricato');
-          }
-        } catch (webError) {
-          console.error('Web share error:', webError);
-          // Fallback to download
-          const link = document.createElement('a');
-          link.href = qrCodeSrc;
-          link.download = `qr_${athlete.full_name.replace(/\s+/g, '_')}.png`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          showAlert('Download completato', 'Il QR code è stato scaricato');
-        }
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>QR Code - ${athlete.full_name}</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
+    h1 { color: #333; margin-bottom: 10px; }
+    h2 { color: #666; font-weight: normal; margin-bottom: 30px; }
+    .qr-image { width: 250px; height: 250px; border: 2px solid #007AFF; padding: 10px; border-radius: 10px; }
+    .code { margin-top: 15px; font-size: 14px; color: #666; background: #f5f5f5; padding: 8px 16px; border-radius: 4px; display: inline-block; }
+    .footer { margin-top: 30px; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <h1>${athlete.full_name}</h1>
+  <h2>QR Code Atleta</h2>
+  <img class="qr-image" src="${qrCodeSrc}" alt="QR Code" />
+  <div class="code">Codice: ${(athlete as any).athlete_code || athlete.id}</div>
+  <p class="footer">Presentare questo codice all'allenatore per registrare la presenza</p>
+</body>
+</html>`;
+        
+        // Download HTML file
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `QRCode_${athlete.full_name.replace(/\s+/g, '_')}.html`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showAlert('Download completato', 'Il file HTML è stato scaricato. Aprilo e condividilo.');
         return;
       }
       
