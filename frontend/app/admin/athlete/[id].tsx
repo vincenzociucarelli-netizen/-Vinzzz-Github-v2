@@ -239,6 +239,7 @@ export default function AdminAthleteDetail() {
         const settingsRes = await api.get('/settings/society');
         setAvailableRoles(settingsRes.data.athlete_roles || []);
         setAvailableCharacteristics(settingsRes.data.athlete_characteristics || []);
+        setSocietyData(settingsRes.data); // Save full society data for receipt
       } catch (e) {
         console.log('Could not load settings');
       }
