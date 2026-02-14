@@ -252,7 +252,7 @@ export default function AdminAthletes() {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#999" />
+              <Text style={{ fontSize: 18, color: '#999' }}>✕</Text>
             </TouchableOpacity>
           )}
         </View>
