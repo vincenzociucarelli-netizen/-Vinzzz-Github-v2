@@ -445,9 +445,9 @@ export default function AdminDashboard() {
         {deletionRequests.length > 0 && (
           <View style={styles.deletionRequestsCard}>
             <View style={styles.deletionRequestsHeader}>
-              <Ionicons name="trash" size={20} color="#FF3B30" />
+              <Text style={{ fontSize: 18 }}>🗑️</Text>
               <Text style={styles.deletionRequestsTitle}>
-                🗑️ Richieste di Cancellazione ({deletionRequests.length})
+                Richieste di Cancellazione ({deletionRequests.length})
               </Text>
             </View>
             {deletionRequests.map((request) => {
@@ -474,7 +474,7 @@ export default function AdminDashboard() {
                       onPress={() => handleRejectDeletion(request.id, request.full_name)}
                       disabled={processingDeletion === request.id}
                     >
-                      <Ionicons name="close" size={16} color="#FF9500" />
+                      <Text style={{ fontSize: 14 }}>❌</Text>
                       <Text style={styles.rejectDeletionText}>Rifiuta</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -482,7 +482,7 @@ export default function AdminDashboard() {
                       onPress={() => handleApproveDeletion(request.id, request.full_name)}
                       disabled={processingDeletion === request.id}
                     >
-                      <Ionicons name="trash" size={16} color="#fff" />
+                      <Text style={{ fontSize: 14 }}>🗑️</Text>
                       <Text style={styles.approveDeletionText}>Elimina</Text>
                     </TouchableOpacity>
                   </View>
