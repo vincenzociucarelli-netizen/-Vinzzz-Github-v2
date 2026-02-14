@@ -3014,4 +3014,101 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
   },
+  // Header center styles for QR
+  headerCenter: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 10,
+  },
+  miniQrButton: {
+    marginRight: 10,
+    borderRadius: 6,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    padding: 2,
+  },
+  miniQrImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 4,
+  },
+  // QR Modal styles
+  qrModalContent: {
+    backgroundColor: '#fff',
+    margin: 20,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    maxWidth: 400,
+    width: '90%',
+    alignSelf: 'center',
+  },
+  qrModalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  qrModalImageContainer: {
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  qrModalImage: {
+    width: 200,
+    height: 200,
+  },
+  qrModalCodeText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  qrModalInstructions: {
+    marginTop: 16,
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    paddingHorizontal: 10,
+  },
+  qrButtonsRow: {
+    flexDirection: 'row',
+    marginTop: 20,
+    gap: 12,
+  },
+  qrActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  printButton: {
+    backgroundColor: '#007AFF',
+  },
+  shareButton: {
+    backgroundColor: '#34C759',
+  },
+  qrActionButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  qrCloseButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+  },
+  qrCloseButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
 });
