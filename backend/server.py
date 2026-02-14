@@ -5437,8 +5437,8 @@ async def check_pending_trials(current_user = Depends(get_current_user)):
     if current_user["role"] == "parent":
         athletes = await db.athletes.find({
             "$or": [
-                {"parent_email": current_user["email"]},
-                {"second_parent_email": current_user["email"]}
+                {"parent_id": current_user["id"]},
+                {"second_parent_id": current_user["id"]}
             ]
         }).to_list(100)
     else:  # athlete
