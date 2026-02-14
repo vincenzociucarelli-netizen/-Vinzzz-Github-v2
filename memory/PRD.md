@@ -47,6 +47,11 @@ I tesserati includono: atleti, dirigenti e coach.
 ## Current Session Changes (14/02/2026)
 1. **Bug Fix "Sport Praticato"**: Aggiunto campo al modello backend `SocietySettingsUpdate`, endpoint GET e PATCH
 2. **Pulsante Salva Floating**: Implementato pulsante fisso in basso nella pagina Impostazioni per migliore UX
+3. **CRITICO - Fix Pagamenti Errati**: 
+   - Eliminati pagamenti erroneamente associati a PEDANA LUIGIA, CERCHI TIZIANA, CERCHI SARA
+   - Aggiunto **banner di conferma atleta** nel modal pagamento (mostra nome e squadra)
+   - Aggiunta **conferma obbligatoria** prima di salvare ogni pagamento
+   - Messaggi di successo ora includono nome atleta e importo
 
 ## Pending/Backlog
 - P1: Implementare logica freemium (limite 50 tesserati gratuiti)
