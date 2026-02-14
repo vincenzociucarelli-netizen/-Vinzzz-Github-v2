@@ -3205,6 +3205,24 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
                 )
                 update_dict["athlete_code"] = new_code
     
+    # Manual athlete_code override (takes priority over auto-generated)
+    if update_data.athlete_code is not None:
+        if update_data.athlete_code.strip():
+            # Verify uniqueness within society
+            athlete = await db.athletes.find_one({"id": athlete_id})
+            if athlete:
+                existing = await db.athletes.find_one({
+                    "athlete_code": update_data.athlete_code.upper().strip(),
+                    "society_id": athlete.get("society_id"),
+                    "id": {"$ne": athlete_id}
+                })
+                if existing:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Codice atleta '{update_data.athlete_code}' già in uso da un altro atleta"
+                    )
+                update_dict["athlete_code"] = update_data.athlete_code.upper().strip()
+    
     # Seconda squadra (opzionale)
     if update_data.team_id_2 is not None:
         if update_data.team_id_2 == "":
