@@ -129,48 +129,65 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
       <style>
         @page { margin: 15mm; size: A4; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+          height: 100%;
+          width: 100%;
+        }
         body { 
           font-family: Arial, Helvetica, sans-serif; 
-          padding: 20px;
-          font-size: 12px;
-          line-height: 1.4;
+          padding: 25px;
+          font-size: 13px;
+          line-height: 1.5;
+          min-height: 297mm;
+          display: flex;
+          flex-direction: column;
         }
-        .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { color: #1a237e; font-size: 18px; margin-bottom: 5px; }
-        .header p { color: #666; font-size: 10px; }
+        .content-wrapper {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+        .header { text-align: center; margin-bottom: 25px; }
+        .header h1 { color: #1a237e; font-size: 22px; margin-bottom: 8px; }
+        .header p { color: #666; font-size: 11px; }
         .title-bar {
           background-color: #1a237e;
           color: white;
-          padding: 10px;
+          padding: 12px;
           text-align: center;
-          font-size: 14px;
+          font-size: 16px;
           font-weight: bold;
-          margin: 15px 0;
+          margin: 20px 0;
         }
-        .receipt-info { display: flex; justify-content: space-between; margin-bottom: 15px; color: #666; font-size: 10px; }
+        .receipt-info { display: flex; justify-content: space-between; margin-bottom: 20px; color: #666; font-size: 11px; }
         .box {
           background-color: #f5f5f5;
           border: 1px solid #ccc;
-          padding: 12px;
-          margin-bottom: 15px;
+          padding: 15px;
+          margin-bottom: 20px;
         }
-        .box-title { font-weight: bold; color: #333; margin-bottom: 8px; font-size: 11px; }
-        .box-row { display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; }
-        .box-row span { margin-right: 15px; }
-        .amount-section { display: flex; align-items: center; margin: 15px 0; gap: 10px; }
-        .amount-label { font-weight: bold; color: #333; }
-        .amount-value { font-size: 20px; font-weight: bold; color: #1a237e; }
-        .table-container { margin: 15px 0; }
-        .table-title { color: #1a237e; font-weight: bold; margin-bottom: 8px; }
-        table { width: 100%; border-collapse: collapse; font-size: 10px; }
-        th { background-color: #1a237e; color: white; padding: 8px; text-align: left; }
+        .box-title { font-weight: bold; color: #333; margin-bottom: 10px; font-size: 13px; }
+        .box-row { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; }
+        .box-row span { margin-right: 18px; }
+        .amount-section { display: flex; align-items: center; margin: 20px 0; gap: 12px; }
+        .amount-label { font-weight: bold; color: #333; font-size: 14px; }
+        .amount-value { font-size: 24px; font-weight: bold; color: #1a237e; }
+        .table-container { margin: 20px 0; flex: 1; }
+        .table-title { color: #1a237e; font-weight: bold; margin-bottom: 10px; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background-color: #1a237e; color: white; padding: 10px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #ddd; }
         .total-row { background-color: #f0f0f0; font-weight: bold; }
-        .total-row td { padding: 10px; border: 2px solid #1a237e; }
-        .footer { margin-top: 30px; display: flex; justify-content: space-between; }
-        .bollo { border: 1px solid #999; padding: 10px; width: 80px; text-align: center; font-size: 8px; color: #666; }
-        .note { font-size: 8px; color: #666; flex: 1; padding-left: 20px; }
+        .total-row td { padding: 12px; border: 2px solid #1a237e; }
+        .footer { margin-top: auto; padding-top: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .bollo { border: 1px solid #999; padding: 12px; width: 90px; text-align: center; font-size: 9px; color: #666; }
+        .note { font-size: 9px; color: #666; flex: 1; padding-left: 25px; }
         .signature { text-align: right; }
-        .signature-line { border-top: 1px solid #666; width: 150px; margin-top: 40px; padding-top: 5px; font-size: 10px; }
+        .signature-line { border-top: 1px solid #666; width: 180px; margin-top: 50px; padding-top: 8px; font-size: 11px; }
+        @media print {
+          body { min-height: auto; }
+          .content-wrapper { min-height: 250mm; }
+        }
       </style>
     </head>
     <body>
