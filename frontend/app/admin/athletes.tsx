@@ -185,7 +185,16 @@ export default function AdminAthletes() {
         item.is_withdrawn && styles.athleteCardWithdrawn
       ]}
       onPress={() => router.push(`/admin/athlete/${item.id}`)}
+      data-testid={`athlete-card-${item.id}`}
     >
+      {/* Small QR Code */}
+      {(item as any).qr_code && (
+        <Image
+          source={{ uri: (item as any).qr_code }}
+          style={styles.miniQrCode}
+          resizeMode="contain"
+        />
+      )}
       <View style={styles.athleteInfo}>
         <View style={styles.athleteNameRow}>
           <Text style={[
