@@ -539,7 +539,59 @@ export default function AthleteDetail() {
     if (!athlete) return;
     
     try {
-      // Check if sharing is available
+      // Get QR code source
+      let qrCodeSrc = athlete.qr_code || '';
+      
+      if (!qrCodeSrc) {
+        Alert.alert('Errore', 'QR Code non disponibile');
+        return;
+      }
+      
+      // Ensure it's a proper data URI
+      if (!qrCodeSrc.startsWith('data:')) {
+        qrCodeSrc = `data:image/png;base64,${qrCodeSrc}`;
+      }
+      
+      // On web, use different approach
+      if (Platform.OS === 'web') {
+        try {
+          // Convert data URI to blob
+          const response = await fetch(qrCodeSrc);
+          const blob = await response.blob();
+          const file = new File([blob], `qr_${athlete.full_name.replace(/\s+/g, '_')}.png`, { type: 'image/png' });
+          
+          // Check if Web Share API is available
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: `QR Code - ${athlete.full_name}`,
+              text: `QR Code per ${athlete.full_name}`,
+              files: [file]
+            });
+          } else {
+            // Fallback: download the image
+            const link = document.createElement('a');
+            link.href = qrCodeSrc;
+            link.download = `qr_${athlete.full_name.replace(/\s+/g, '_')}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            Alert.alert('Download completato', 'Il QR code è stato scaricato');
+          }
+        } catch (webError) {
+          console.error('Web share error:', webError);
+          // Fallback to download
+          const link = document.createElement('a');
+          link.href = qrCodeSrc;
+          link.download = `qr_${athlete.full_name.replace(/\s+/g, '_')}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          Alert.alert('Download completato', 'Il QR code è stato scaricato');
+        }
+        return;
+      }
+      
+      // Mobile: Check if sharing is available
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
         Alert.alert('Errore', 'La condivisione non è disponibile su questo dispositivo');
@@ -562,23 +614,21 @@ export default function AthleteDetail() {
         } catch (captureError) {
           console.error('Errore cattura:', captureError);
           
-          // Fallback: try to save and share the QR code directly
-          if (athlete.qr_code) {
-            let base64Data = athlete.qr_code;
-            if (base64Data.startsWith('data:')) {
-              base64Data = base64Data.split(',')[1];
-            }
-            
-            const fileUri = FileSystem.cacheDirectory + `qr_${athlete.id}.png`;
-            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-              encoding: FileSystem.EncodingType.Base64,
-            });
-            
-            await Sharing.shareAsync(fileUri, {
-              mimeType: 'image/png',
-              dialogTitle: `QR Code - ${athlete.full_name}`,
-            });
+          // Fallback: save and share the QR code directly
+          let base64Data = qrCodeSrc;
+          if (base64Data.startsWith('data:')) {
+            base64Data = base64Data.split(',')[1];
           }
+          
+          const fileUri = FileSystem.cacheDirectory + `qr_${athlete.id}.png`;
+          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'image/png',
+            dialogTitle: `QR Code - ${athlete.full_name}`,
+          });
         }
       }
     } catch (error) {
