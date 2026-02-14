@@ -1,7 +1,9 @@
 // Reliable Icon component using emoji fallback for web compatibility
 // This replaces @expo/vector-icons/Ionicons which doesn't work well on Expo Web
+// Usage: import { Icon } from '../../src/components/Icon';
+//        <Icon name="arrow-back" size={24} color="#fff" />
 import React from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { Text } from 'react-native';
 
 // Map Ionicons names to emoji equivalents
 const iconMap: { [key: string]: string } = {
@@ -36,8 +38,8 @@ const iconMap: { [key: string]: string } = {
   'checkmark-outline': '✓',
   'checkmark-circle': '✅',
   'checkmark-circle-outline': '☑',
-  'create': '✎',
-  'create-outline': '✎',
+  'create': '✏️',
+  'create-outline': '✏️',
   'pencil': '✏️',
   'pencil-outline': '✏️',
   'trash': '🗑️',
@@ -126,6 +128,8 @@ const iconMap: { [key: string]: string } = {
   // Files & Documents
   'document': '📄',
   'document-outline': '📄',
+  'document-text': '📄',
+  'document-text-outline': '📄',
   'documents': '📄',
   'documents-outline': '📄',
   'folder': '📁',
@@ -202,8 +206,8 @@ const iconMap: { [key: string]: string } = {
   // Search & Filter
   'search': '🔍',
   'search-outline': '🔍',
-  'filter': '🔍',
-  'filter-outline': '🔍',
+  'filter': '⚙️',
+  'filter-outline': '⚙️',
   
   // Favorites & Rating
   'star': '⭐',
@@ -319,13 +323,15 @@ const iconMap: { [key: string]: string } = {
   'earth-outline': '🌍',
   'link': '🔗',
   'link-outline': '🔗',
-  'unlink': '⛓',
+  'unlink': '⛓️',
   'wifi': '📶',
   'wifi-outline': '📶',
   'bluetooth': '📱',
   'battery-full': '🔋',
   'battery-charging': '🔋',
   'power': '⏻',
+  'exit': '🚪',
+  'exit-outline': '🚪',
   
   // Default fallback
   'default': '•',
@@ -338,14 +344,19 @@ interface IconProps {
   style?: any;
 }
 
+// Main Icon component - use this
 export const Icon: React.FC<IconProps> = ({ name, size = 24, color = '#000', style }) => {
   const emoji = iconMap[name] || iconMap['default'];
   
   return (
-    <Text style={[{ fontSize: size * 0.9, color, textAlign: 'center' }, style]}>
+    <Text style={[{ fontSize: size * 0.85, color, textAlign: 'center', lineHeight: size }, style]}>
       {emoji}
     </Text>
   );
 };
+
+// Ionicons-compatible wrapper for easy migration
+// This allows: <Ionicons name="arrow-back" size={24} color="#fff" />
+export const Ionicons: React.FC<IconProps> = Icon;
 
 export default Icon;
