@@ -1100,9 +1100,21 @@ const styles = StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  compensationDisplay: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', paddingVertical: 16 },
+  compensationDisplay: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', paddingVertical: 8 },
   compensationAmount: { fontSize: 36, fontWeight: 'bold', color: '#FF9500' },
-  compensationPeriod: { fontSize: 16, color: '#666', marginLeft: 4 },
+  compensationPeriod: { fontSize: 14, color: '#666', marginLeft: 4 },
+  inputHint: { fontSize: 12, color: '#999', marginTop: 4, fontStyle: 'italic' },
+  totalBox: { 
+    backgroundColor: '#F5F5F5', 
+    padding: 12, 
+    borderRadius: 8, 
+    marginTop: 16, 
+    alignItems: 'center' 
+  },
+  totalLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
+  totalValue: { fontSize: 24, fontWeight: 'bold', color: '#333' },
+  compBadgeLarge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
+  compBadgeLargeText: { fontSize: 14, fontWeight: 'bold' },
   acceptedBadge: { 
     flexDirection: 'row', 
     alignItems: 'center', 
