@@ -45,6 +45,11 @@ export default function ParentDashboard() {
     upcoming: any[];
   }>({ today: [], tomorrow: [], day_after: [], upcoming: [] });
   const [showUpcoming, setShowUpcoming] = useState(false);
+  
+  // Trial period modal state
+  const [trialModalVisible, setTrialModalVisible] = useState(false);
+  const [athletesRequiringAction, setAthletesRequiringAction] = useState<any[]>([]);
+  const [processingTrial, setProcessingTrial] = useState(false);
 
   // Mappa nome atleta -> colore
   const athleteColorMap = useMemo(() => {
