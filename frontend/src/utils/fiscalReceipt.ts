@@ -1,4 +1,5 @@
 // jsPDF will be imported dynamically to avoid SSR issues
+// Use: const { jsPDF } = await import('jspdf/dist/jspdf.umd.min.js');
 
 interface PaymentData {
   date: string;
@@ -43,7 +44,7 @@ interface SocietyData {
   president_name?: string;
 }
 
-interface ReceiptData {
+export interface ReceiptData {
   athlete: AthleteData;
   parent: ParentData;
   society: SocietyData;
@@ -53,7 +54,10 @@ interface ReceiptData {
   team_name?: string;
 }
 
-export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
+export const downloadFiscalReceipt = async (data: ReceiptData, filename?: string) => {
+  // Dynamic import for web compatibility
+  const { jsPDF } = await import('jspdf');
+  
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -63,11 +67,6 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
   const pageWidth = 210;
   const margin = 15;
   let y = 15;
-
-  // Colors
-  const primaryColor = '#1a237e';
-  const textColor = '#333333';
-  const lightGray = '#f5f5f5';
 
   // Helper function to draw a box
   const drawBox = (x: number, yPos: number, width: number, height: number, fill = false) => {
@@ -80,14 +79,12 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
   };
 
   // ===== HEADER =====
-  // Society name
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(26, 35, 126);
   doc.text(data.society.name || 'SOCIETÀ SPORTIVA', pageWidth / 2, y, { align: 'center' });
   y += 6;
 
-  // Society address
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
@@ -95,11 +92,9 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
   doc.text(addressLine, pageWidth / 2, y, { align: 'center' });
   y += 5;
 
-  // Fiscal code
   doc.text(`Cod. Fiscale: ${data.society.fiscal_code || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
   y += 5;
 
-  // Phone numbers
   if (data.society.phone) {
     const phones = data.society.phone2 
       ? `Tel: ${data.society.phone} - ${data.society.phone2}`
@@ -108,7 +103,6 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
     y += 5;
   }
 
-  // Team name
   if (data.team_name) {
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(26, 35, 126);
@@ -144,7 +138,6 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
   doc.text('Riceviamo da:', margin, y);
   y += 6;
 
-  // Parent info box
   drawBox(margin, y, pageWidth - 2 * margin, 25, true);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -202,7 +195,6 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
   doc.text(`Prov.: ${data.athlete.province || ''}`, margin + 100, yBox);
   yBox += 6;
   
-  // Format date of birth
   let dobFormatted = data.athlete.date_of_birth || '';
   if (dobFormatted && dobFormatted.includes('T')) {
     const dob = new Date(dobFormatted);
@@ -222,7 +214,6 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
   doc.text('Dettaglio versamenti:', margin, y);
   y += 5;
 
-  // Table header
   const colWidths = [35, 25, 30, 25, 30, 35];
   const tableWidth = colWidths.reduce((a, b) => a + b, 0);
   const tableX = margin;
@@ -245,7 +236,6 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
   doc.setTextColor(51, 51, 51);
   doc.setFont('helvetica', 'normal');
 
-  // Table rows
   data.payments.forEach((payment, index) => {
     const bgColor = index % 2 === 0 ? 255 : 245;
     doc.setFillColor(bgColor, bgColor, bgColor);
@@ -255,7 +245,6 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
     
     xPos = tableX + 2;
     
-    // Format payment date
     let payDateFormatted = payment.date || '';
     if (payDateFormatted && payDateFormatted.includes('T')) {
       const pd = new Date(payDateFormatted);
@@ -272,7 +261,6 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
     doc.text(`€ ${(payment.amount || 0).toFixed(2).replace('.', ',')}`, xPos, y + 5);
     xPos += colWidths[2];
     
-    // Payment type (shortened)
     const typeShort = payment.description?.includes('Bonifico') ? 'Bon.' 
       : payment.description?.includes('Contanti') ? 'Cont.'
       : payment.description?.includes('POS') ? 'POS'
@@ -280,7 +268,6 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
     doc.text(typeShort, xPos, y + 5);
     xPos += colWidths[3];
     
-    // Description (truncated)
     const desc = (payment.description || '').substring(0, 20);
     doc.text(desc, xPos, y + 5);
     
@@ -304,7 +291,6 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
   y += 15;
 
   // ===== BOLLO E NOTE =====
-  // Bollo box
   doc.setDrawColor(150, 150, 150);
   doc.setLineWidth(0.3);
   doc.rect(margin, y, 30, 20);
@@ -314,7 +300,6 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
   doc.text('Soggetta a bollo', margin + 3, y + 8);
   doc.text('vigente', margin + 3, y + 12);
   
-  // Note IVA
   doc.setFontSize(7);
   doc.text('* Somme non soggette ad IVA ai sensi del 4° comma del DPR 633/72', margin + 35, y + 10);
   doc.text('e successive modifiche ed integrazioni', margin + 35, y + 14);
@@ -330,7 +315,6 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
   doc.text('Il Presidente', pageWidth - margin - 50, y);
   y += 15;
   
-  // Signature line
   doc.setDrawColor(150, 150, 150);
   doc.line(pageWidth - margin - 60, y, pageWidth - margin, y);
   
@@ -339,11 +323,7 @@ export const generateFiscalReceipt = (data: ReceiptData): jsPDF => {
     doc.text(data.society.president_name, pageWidth - margin - 30, y + 5, { align: 'center' });
   }
 
-  return doc;
-};
-
-export const downloadFiscalReceipt = (data: ReceiptData, filename?: string) => {
-  const doc = generateFiscalReceipt(data);
+  // Save the PDF
   const defaultFilename = `Ricevuta_${data.athlete.last_name}_${data.athlete.first_name}_${data.season.replace('/', '-')}.pdf`;
   doc.save(filename || defaultFilename);
 };
