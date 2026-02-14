@@ -100,6 +100,9 @@ export default function AdminAthleteDetail() {
   // Certificate viewer modal
   const [certViewerVisible, setCertViewerVisible] = useState(false);
   
+  // Society data for receipt
+  const [societyData, setSocietyData] = useState<any>(null);
+  
   // Athlete photo states
   const [athletePhoto, setAthletePhoto] = useState<string | null>(null);
   const [athletePhotoArtistic, setAthletePhotoArtistic] = useState<string | null>(null);
