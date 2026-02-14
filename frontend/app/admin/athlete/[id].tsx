@@ -272,6 +272,8 @@ export default function AdminAthleteDetail() {
         // Team
         team_id: athleteData.team_id || '',
         team_id_2: athleteData.team_id_2 || '',
+        // Athlete code for payment import
+        athlete_code: athleteData.athlete_code || '',
       });
 
       // Load team info
