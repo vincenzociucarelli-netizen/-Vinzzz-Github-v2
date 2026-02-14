@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
-import { Ionicons } from '@expo/vector-icons';
+
 
 interface Notification {
   id: string;
@@ -190,7 +190,7 @@ export default function AdminNotifications() {
                   style={styles.deleteBtn}
                   onPress={() => deleteNotification(notification.id)}
                 >
-                  <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                  <Text style={{ fontSize: 18 }}>🗑️</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
             );
