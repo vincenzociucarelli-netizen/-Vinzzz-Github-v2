@@ -195,7 +195,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
         <span style="font-weight: bold;">alla data del: ${dateStr}</span>
       </div>
 
-      <div class="box-title">Riceviamo da:</div>
+      <div class="box-title">Abbiamo ricevuto da:</div>
       <div class="box" style="min-height: 50px;">
         <div class="box-row">
           <span><b>Cognome:</b> ${data.parent.last_name || '<span style="display:inline-block;width:180px;border-bottom:1px solid #999;">&nbsp;</span>'}</span>
@@ -219,7 +219,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
         <span class="amount-value">${formatCurrency(totalPaid)}</span>
       </div>
 
-      <p style="margin-bottom: 6px; font-size: 10px;">per l'attività di PALLAVOLO nella stagione sportiva ${data.season} svolta da:</p>
+      <p style="margin-bottom: 6px; font-size: 10px;">per l'attività di ${(data.society.sport_praticato || 'SPORT').toUpperCase()} nella stagione sportiva ${data.season} svolta da:</p>
 
       <div class="box">
         <div class="box-row">
