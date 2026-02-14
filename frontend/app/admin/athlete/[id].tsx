@@ -871,7 +871,23 @@ export default function AdminAthleteDetail() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{athlete.full_name}</Text>
+        <View style={styles.headerCenter}>
+          {/* Mini QR Code in header */}
+          {athlete.qr_code && (
+            <TouchableOpacity 
+              onPress={() => setQrModalVisible(true)}
+              style={styles.miniQrButton}
+              data-testid="mini-qr-button"
+            >
+              <Image
+                source={{ uri: athlete.qr_code.startsWith('data:') ? athlete.qr_code : `data:image/png;base64,${athlete.qr_code}` }}
+                style={styles.miniQrImage}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.headerTitle} numberOfLines={1}>{athlete.full_name}</Text>
+        </View>
         {activeTab === 'dati' && (
           <TouchableOpacity onPress={() => setEditing(!editing)}>
             <Ionicons name={editing ? "close" : "create"} size={24} color="#fff" />
