@@ -14,7 +14,6 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
-import { Ionicons } from '@expo/vector-icons';
 
 interface Stats {
   total_teams: number;
