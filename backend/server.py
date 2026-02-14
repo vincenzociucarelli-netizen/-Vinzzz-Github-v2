@@ -1842,6 +1842,9 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
         update_data["monthly_compensation"] = float(data["monthly_compensation"])
         update_data["compensation_accepted"] = False  # Reset acceptance when changed
     
+    if "other_annual_compensation" in data:
+        update_data["other_annual_compensation"] = float(data["other_annual_compensation"]) if data["other_annual_compensation"] else 0
+    
     if update_data:
         await db.users.update_one(
             {"id": user_id},
