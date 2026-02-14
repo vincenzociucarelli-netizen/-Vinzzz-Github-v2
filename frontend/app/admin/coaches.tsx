@@ -630,6 +630,20 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 4,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  compBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  compBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
   compensationText: {
     fontSize: 12,
     color: '#FF9500',
