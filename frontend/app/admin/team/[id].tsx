@@ -585,56 +585,78 @@ export default function TeamDetail() {
                 placeholder="Es: 450"
               />
 
-              <Text style={styles.inputLabel}>Prima Rata (€)</Text>
-              <TextInput
-                style={styles.input}
-                value={installment1}
-                onChangeText={setInstallment1}
-                keyboardType="decimal-pad"
-                placeholder="Es: 150"
-              />
-
-              <View style={styles.row}>
-                <View style={styles.halfInput}>
-                  <Text style={styles.inputLabel}>Seconda Rata (€)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={installment2}
-                    onChangeText={setInstallment2}
-                    keyboardType="decimal-pad"
-                  />
+              <Text style={styles.inputLabel}>Rate di Pagamento (max 12)</Text>
+              <Text style={styles.helperText}>
+                Definisci le rate. La prima è la "Quota iscrizione", le successive sono numerate.
+              </Text>
+              
+              {installments.map((installment, index) => (
+                <View key={index} style={styles.installmentRow}>
+                  <View style={styles.installmentHeader}>
+                    <Text style={styles.installmentLabel}>
+                      {index === 0 ? 'Quota iscrizione' : `Rata ${index}`}
+                    </Text>
+                    {index > 0 && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          const newInstallments = installments.filter((_, i) => i !== index);
+                          setInstallments(newInstallments);
+                        }}
+                        style={styles.removeInstallmentBtn}
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <View style={styles.row}>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.inputLabel}>Importo (€)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={installment.amount}
+                        onChangeText={(text) => {
+                          const newInstallments = [...installments];
+                          newInstallments[index] = { ...newInstallments[index], amount: text };
+                          setInstallments(newInstallments);
+                        }}
+                        keyboardType="decimal-pad"
+                        placeholder="Es: 150"
+                      />
+                    </View>
+                    {index > 0 && (
+                      <View style={styles.halfInput}>
+                        <Text style={styles.inputLabel}>Scadenza</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={installment.due_date}
+                          onChangeText={(text) => {
+                            const newInstallments = [...installments];
+                            newInstallments[index] = { ...newInstallments[index], due_date: text };
+                            setInstallments(newInstallments);
+                          }}
+                          placeholder="YYYY-MM-DD"
+                        />
+                      </View>
+                    )}
+                  </View>
                 </View>
-                <View style={styles.halfInput}>
-                  <Text style={styles.inputLabel}>Scadenza</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={installment2Date}
-                    onChangeText={setInstallment2Date}
-                    placeholder="YYYY-MM-DD"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.row}>
-                <View style={styles.halfInput}>
-                  <Text style={styles.inputLabel}>Terza Rata (€)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={installment3}
-                    onChangeText={setInstallment3}
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-                <View style={styles.halfInput}>
-                  <Text style={styles.inputLabel}>Scadenza</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={installment3Date}
-                    onChangeText={setInstallment3Date}
-                    placeholder="YYYY-MM-DD"
-                  />
-                </View>
-              </View>
+              ))}
+              
+              {installments.length < 12 && (
+                <TouchableOpacity
+                  style={styles.addInstallmentBtn}
+                  onPress={() => {
+                    const newIndex = installments.length;
+                    setInstallments([
+                      ...installments,
+                      { name: `Rata ${newIndex}`, amount: '', due_date: '' }
+                    ]);
+                  }}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color="#007AFF" />
+                  <Text style={styles.addInstallmentText}>Aggiungi Rata</Text>
+                </TouchableOpacity>
+              )}
 
               <Text style={styles.inputLabel}>Coordinate Bancarie</Text>
               <TextInput
