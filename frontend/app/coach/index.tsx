@@ -661,25 +661,32 @@ export default function CoachScreen() {
                       )}
                       <Text style={styles.dirigenteEmail}>{dir.email}</Text>
                       {dir.phone && (
-                        <Text style={styles.dirigentePhone}>📞 {dir.phone}</Text>
+                        <View style={styles.phoneRow}>
+                          <Text style={styles.dirigentePhone}>📞 {dir.phone}</Text>
+                          <TouchableOpacity
+                            style={styles.whatsappBtnSmall}
+                            onPress={() => {
+                              const phone = dir.phone.replace(/\D/g, '');
+                              const phoneWithCountry = phone.startsWith('39') ? phone : `39${phone}`;
+                              Linking.openURL(`https://wa.me/${phoneWithCountry}`);
+                            }}
+                          >
+                            <Ionicons name="logo-whatsapp" size={14} color="#fff" />
+                            <Text style={styles.whatsappBtnTextSmall}>WhatsApp</Text>
+                          </TouchableOpacity>
+                        </View>
                       )}
                     </View>
                   </View>
-                  <TouchableOpacity
-                    style={[styles.whatsappBtn, !dir.phone && styles.whatsappBtnDisabled]}
-                    onPress={() => {
-                      if (!dir.phone) {
-                        Alert.alert('Telefono non disponibile', 'Questo dirigente non ha un numero registrato');
-                        return;
-                      }
-                      const phone = dir.phone.replace(/\D/g, '');
-                      const phoneWithCountry = phone.startsWith('39') ? phone : `39${phone}`;
-                      Linking.openURL(`https://wa.me/${phoneWithCountry}`);
-                    }}
-                  >
-                    <Ionicons name="logo-whatsapp" size={20} color="#fff" />
-                    <Text style={styles.whatsappBtnText}>WhatsApp</Text>
-                  </TouchableOpacity>
+                  {!dir.phone && (
+                    <TouchableOpacity
+                      style={[styles.whatsappBtn, styles.whatsappBtnDisabled]}
+                      disabled
+                    >
+                      <Ionicons name="logo-whatsapp" size={16} color="#fff" />
+                      <Text style={styles.whatsappBtnText}>WhatsApp</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               ))
             )}
