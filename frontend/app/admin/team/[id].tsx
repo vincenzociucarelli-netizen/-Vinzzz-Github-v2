@@ -1991,4 +1991,44 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
+  // Installments styles
+  installmentRow: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  installmentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  installmentLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  removeInstallmentBtn: {
+    padding: 4,
+  },
+  addInstallmentBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  addInstallmentText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
 });
