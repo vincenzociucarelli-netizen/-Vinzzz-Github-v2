@@ -310,13 +310,32 @@ export default function TeamDetail() {
         match_day: matchDay,
       };
 
-      // Only include payment fields if they are provided
+      // Use new installments format
       if (totalAmount) updateData.total_amount = parseFloat(totalAmount);
-      if (installment1) updateData.installment_1_amount = parseFloat(installment1);
-      if (installment2) updateData.installment_2_amount = parseFloat(installment2);
-      if (installment2Date) updateData.installment_2_due_date = installment2Date;
-      if (installment3) updateData.installment_3_amount = parseFloat(installment3);
-      if (installment3Date) updateData.installment_3_due_date = installment3Date;
+      
+      // Convert installments to proper format for saving
+      const validInstallments = installments
+        .filter(inst => inst.amount && parseFloat(inst.amount) > 0)
+        .map(inst => ({
+          name: inst.name,
+          amount: parseFloat(inst.amount),
+          due_date: inst.due_date || null,
+        }));
+      updateData.installments = validInstallments;
+      
+      // Also save legacy fields for backward compatibility
+      if (validInstallments.length >= 1) {
+        updateData.installment_1_amount = validInstallments[0].amount;
+      }
+      if (validInstallments.length >= 2) {
+        updateData.installment_2_amount = validInstallments[1].amount;
+        updateData.installment_2_due_date = validInstallments[1].due_date;
+      }
+      if (validInstallments.length >= 3) {
+        updateData.installment_3_amount = validInstallments[2].amount;
+        updateData.installment_3_due_date = validInstallments[2].due_date;
+      }
+      
       if (bankInfo) updateData.bank_info = bankInfo;
       if (paypalEmail) updateData.paypal_email = paypalEmail;
 
