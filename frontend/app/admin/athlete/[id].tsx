@@ -1924,33 +1924,33 @@ export default function AdminAthleteDetail() {
               )}
             </View>
 
-            {/* Attestato di Versamento Button */}
-            {payments.length > 0 && (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>📄 Attestato di Versamento</Text>
-                <View style={styles.attestatoButtonsRow}>
-                  <TouchableOpacity 
-                    style={[styles.attestatoButton, styles.attestatoPrintBtn]}
-                    onPress={() => generatePaymentStatement('print')}
-                    data-testid="print-attestato-button"
-                  >
-                    <Ionicons name="print" size={20} color="#fff" />
-                    <Text style={styles.attestatoButtonText}>Stampa</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.attestatoButton, styles.attestatoShareBtn]}
-                    onPress={() => generatePaymentStatement('share')}
-                    data-testid="share-attestato-button"
-                  >
-                    <Ionicons name="share-outline" size={20} color="#fff" />
-                    <Text style={styles.attestatoButtonText}>Condividi</Text>
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.attestatoHint}>
-                  Documento con riepilogo pagamenti, dati società e firma del presidente
-                </Text>
+            {/* Attestato di Versamento Button - Sempre visibile */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>📄 Attestato di Versamento</Text>
+              <View style={styles.attestatoButtonsRow}>
+                <TouchableOpacity 
+                  style={[styles.attestatoButton, styles.attestatoPrintBtn]}
+                  onPress={() => generatePaymentStatement('print')}
+                  data-testid="print-attestato-button"
+                >
+                  <Ionicons name="print" size={20} color="#fff" />
+                  <Text style={styles.attestatoButtonText}>Stampa</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.attestatoButton, styles.attestatoShareBtn]}
+                  onPress={() => generatePaymentStatement('share')}
+                  data-testid="share-attestato-button"
+                >
+                  <Ionicons name="share-outline" size={20} color="#fff" />
+                  <Text style={styles.attestatoButtonText}>Condividi</Text>
+                </TouchableOpacity>
               </View>
-            )}
+              <Text style={styles.attestatoHint}>
+                {payments.length > 0 
+                  ? 'Documento con riepilogo pagamenti, dati società e firma del presidente'
+                  : 'Nessun pagamento registrato - l\'attestato mostrerà importo versato: € 0,00'}
+              </Text>
+            </View>
           </>
         )}
 
