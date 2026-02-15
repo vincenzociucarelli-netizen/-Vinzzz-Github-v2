@@ -511,6 +511,23 @@ const styles = StyleSheet.create({
     color: '#BF360C',
     marginBottom: 2,
   },
+  duplicatesContainer: {
+    marginTop: 12,
+    padding: 10,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 8,
+  },
+  duplicatesTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#F57C00',
+    marginBottom: 4,
+  },
+  duplicateText: {
+    fontSize: 13,
+    color: '#E65100',
+    marginBottom: 2,
+  },
   athletesList: {
     marginTop: 8,
   },
