@@ -1580,6 +1580,26 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     marginTop: 2,
   },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 8,
+  },
+  whatsappBtnSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#25D366',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  whatsappBtnTextSmall: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
   whatsappBtn: {
     flexDirection: 'row',
     alignItems: 'center',
