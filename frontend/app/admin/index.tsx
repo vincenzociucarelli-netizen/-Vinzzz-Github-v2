@@ -277,7 +277,7 @@ export default function AdminDashboard() {
             Accesso completo fino al 30/06/2026
           </Text>
           <Text style={styles.betaBannerSubtext}>
-            Dal 01/07/2026: versione FREE (50 tesserati) + pack aggiuntivi
+            Dal 01/07/2026: versione FREE (30 tesserati) + pack aggiuntivi
           </Text>
         </View>
 
