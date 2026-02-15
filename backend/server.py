@@ -258,6 +258,10 @@ class Team(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     # Payment settings per team
     total_amount: float = 0.0
+    # New flexible installments array (up to 12)
+    # Each installment: {name: str, amount: float, due_date: datetime}
+    installments: List[dict] = []  # [{name: "Quota iscrizione", amount: 150, due_date: "2024-09-15"}, ...]
+    # Legacy fields for backward compatibility
     installment_1_amount: float = 0.0
     installment_2_amount: float = 0.0
     installment_2_due_date: Optional[datetime] = None
