@@ -123,6 +123,47 @@ export default function TeamDetail() {
       setName(teamData.name);
       setDescription(teamData.description || '');
       setTotalAmount(teamData.total_amount?.toString() || '');
+      
+      // Load installments - check for new format first, then legacy
+      if (teamData.installments && teamData.installments.length > 0) {
+        // New format
+        setInstallments(teamData.installments.map((inst: any) => ({
+          name: inst.name || '',
+          amount: inst.amount?.toString() || '',
+          due_date: inst.due_date?.split('T')[0] || '',
+        })));
+      } else {
+        // Convert legacy format to new format
+        const legacyInstallments: {name: string, amount: string, due_date: string}[] = [];
+        if (teamData.installment_1_amount) {
+          legacyInstallments.push({
+            name: 'Quota iscrizione',
+            amount: teamData.installment_1_amount?.toString() || '',
+            due_date: '',
+          });
+        }
+        if (teamData.installment_2_amount) {
+          legacyInstallments.push({
+            name: 'Rata 1',
+            amount: teamData.installment_2_amount?.toString() || '',
+            due_date: teamData.installment_2_due_date?.split('T')[0] || '',
+          });
+        }
+        if (teamData.installment_3_amount) {
+          legacyInstallments.push({
+            name: 'Rata 2',
+            amount: teamData.installment_3_amount?.toString() || '',
+            due_date: teamData.installment_3_due_date?.split('T')[0] || '',
+          });
+        }
+        if (legacyInstallments.length > 0) {
+          setInstallments(legacyInstallments);
+        } else {
+          setInstallments([{ name: 'Quota iscrizione', amount: '', due_date: '' }]);
+        }
+      }
+      
+      // Keep legacy fields for backward compatibility
       setInstallment1(teamData.installment_1_amount?.toString() || '');
       setInstallment2(teamData.installment_2_amount?.toString() || '');
       setInstallment2Date(teamData.installment_2_due_date?.split('T')[0] || '');
