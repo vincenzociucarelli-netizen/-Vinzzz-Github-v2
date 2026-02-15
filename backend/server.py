@@ -4373,6 +4373,7 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
         society_id = current_user.get("society_id")
         imported = 0
         errors = []
+        duplicates = []  # Track duplicate payments
         
         for idx, row in df.iterrows():
             try:
@@ -4422,6 +4423,24 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
                 else:
                     importo = float(importo_raw)
                 
+                # ============ DUPLICATE CHECK ============
+                # Check if a payment with same date and amount already exists for this athlete
+                # We use a date range of the same day to handle timezone issues
+                date_start = data_pagamento.replace(hour=0, minute=0, second=0, microsecond=0)
+                date_end = data_pagamento.replace(hour=23, minute=59, second=59, microsecond=999999)
+                
+                existing_payment = await db.payments.find_one({
+                    "athlete_id": athlete["id"],
+                    "amount": importo,
+                    "paid_date": {"$gte": date_start, "$lte": date_end}
+                })
+                
+                if existing_payment:
+                    athlete_name = athlete.get("full_name", athlete_code)
+                    duplicates.append(f"Riga {idx+2}: {athlete_name} - €{importo:.2f} del {data_pagamento.strftime('%d/%m/%Y')} (già registrato)")
+                    continue
+                # ============ END DUPLICATE CHECK ============
+                
                 # Get payment method - support both letter and full name
                 tipo_raw = row.get('TipoPagamento', '')
                 if pd.isna(tipo_raw) or tipo_raw is None or str(tipo_raw).strip() == '':
@@ -4467,11 +4486,20 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
             except Exception as e:
                 errors.append(f"Riga {idx+2}: {str(e)}")
         
+        # Build response message
+        message_parts = [f"Importati {imported} pagamenti"]
+        if duplicates:
+            message_parts.append(f"{len(duplicates)} duplicati ignorati")
+        if errors:
+            message_parts.append(f"{len(errors)} errori")
+        
         return {
             "success": True,
             "imported": imported,
+            "duplicates": duplicates,
+            "duplicates_count": len(duplicates),
             "errors": errors,
-            "message": f"Importati {imported} pagamenti" + (f" con {len(errors)} errori" if errors else "")
+            "message": " - ".join(message_parts)
         }
         
     except Exception as e:
