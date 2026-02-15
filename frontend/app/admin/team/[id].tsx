@@ -69,6 +69,11 @@ export default function TeamDetail() {
   
   // Form fields - payments
   const [totalAmount, setTotalAmount] = useState('');
+  // New dynamic installments array: [{name, amount, due_date}]
+  const [installments, setInstallments] = useState<{name: string, amount: string, due_date: string}[]>([
+    { name: 'Quota iscrizione', amount: '', due_date: '' },
+  ]);
+  // Legacy fields for backward compatibility display
   const [installment1, setInstallment1] = useState('');
   const [installment2, setInstallment2] = useState('');
   const [installment2Date, setInstallment2Date] = useState('');
