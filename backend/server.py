@@ -302,6 +302,9 @@ class TeamUpdate(BaseModel):
     description: Optional[str] = None
     team_photo: Optional[str] = None
     total_amount: Optional[float] = None
+    # New flexible installments array
+    installments: Optional[List[dict]] = None  # [{name: str, amount: float, due_date: str}, ...]
+    # Legacy fields for backward compatibility
     installment_1_amount: Optional[float] = None
     installment_2_amount: Optional[float] = None
     installment_2_due_date: Optional[str] = None
