@@ -284,14 +284,35 @@ export default function PaymentsImport() {
 
         {/* Import Result */}
         {importResult && (
-          <View style={[styles.resultCard, importResult.errors?.length > 0 ? styles.resultWarning : styles.resultSuccess]}>
+          <View style={[styles.resultCard, 
+            (importResult.errors?.length > 0 || importResult.duplicates_count > 0) 
+              ? styles.resultWarning 
+              : styles.resultSuccess
+          ]}>
             <Text style={styles.resultTitle}>
-              {importResult.errors?.length > 0 ? '⚠️ Importazione con errori' : '✅ Importazione completata'}
+              {importResult.errors?.length > 0 || importResult.duplicates_count > 0 
+                ? '⚠️ Importazione con avvisi' 
+                : '✅ Importazione completata'}
             </Text>
             <Text style={styles.resultText}>Pagamenti importati: {importResult.imported}</Text>
+            
+            {/* Duplicates Warning */}
+            {importResult.duplicates_count > 0 && (
+              <View style={styles.duplicatesContainer}>
+                <Text style={styles.duplicatesTitle}>🔄 Duplicati ignorati ({importResult.duplicates_count}):</Text>
+                {importResult.duplicates?.slice(0, 5).map((dup: string, idx: number) => (
+                  <Text key={idx} style={styles.duplicateText}>• {dup}</Text>
+                ))}
+                {importResult.duplicates_count > 5 && (
+                  <Text style={styles.duplicateText}>...e altri {importResult.duplicates_count - 5} duplicati</Text>
+                )}
+              </View>
+            )}
+            
+            {/* Errors */}
             {importResult.errors?.length > 0 && (
               <View style={styles.errorsContainer}>
-                <Text style={styles.errorsTitle}>Errori:</Text>
+                <Text style={styles.errorsTitle}>❌ Errori:</Text>
                 {importResult.errors.map((err: string, idx: number) => (
                   <Text key={idx} style={styles.errorText}>• {err}</Text>
                 ))}
