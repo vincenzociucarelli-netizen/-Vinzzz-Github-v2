@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
+import { Ionicons } from '../../src/components/Icon';
 
 
 interface Notification {
