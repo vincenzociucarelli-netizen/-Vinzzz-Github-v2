@@ -730,8 +730,8 @@ export default function AdminAthleteDetail() {
 
   // Generate payment statement (attestato di versamento)
   const generatePaymentStatement = async (action: 'print' | 'share') => {
-    if (!athlete || payments.length === 0) {
-      showAlert('Attenzione', 'Nessun pagamento da includere nell\'attestato');
+    if (!athlete) {
+      showAlert('Attenzione', 'Dati atleta non disponibili');
       return;
     }
 
@@ -741,7 +741,7 @@ export default function AdminAthleteDetail() {
       const year = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
       const season = `${year}/${year + 1}`;
 
-      // Prepare receipt data
+      // Prepare receipt data - works even with 0 payments
       const receiptData: ReceiptData = {
         athlete: {
           first_name: (athlete as any).first_name || athlete.full_name?.split(' ').slice(1).join(' ') || '',
@@ -772,13 +772,13 @@ export default function AdminAthleteDetail() {
           logo: societyData?.logo || societyData?.company_logo_base64 || '',
           stamp_signature: societyData?.stamp_signature || societyData?.stamp_signature_base64 || '',
         },
-        payments: payments.map((p: any, index) => ({
+        payments: payments.length > 0 ? payments.map((p: any, index) => ({
           date: p.paid_date || '',
           receipt_number: `${index + 1}`,
           amount: p.amount || 0,
           description: p.description || p.notes || '',
           payment_method: p.payment_method || (p.is_cash ? 'Contanti' : 'Bonifico'),
-        })),
+        })) : [], // Empty array if no payments
         season: season,
         receipt_number: `ATT-${athlete.id?.slice(-6).toUpperCase()}`,
         team_name: team?.name || '',
