@@ -168,10 +168,14 @@ export default function TeamAttendances() {
         {/* Period Info */}
         <View style={styles.periodInfo}>
           {viewMode === 'weekly' && (
-            <Text style={styles.periodText}>Settimana dal {stats.week_start}</Text>
+            <Text style={styles.periodText}>
+              Settimana dal {stats.week_start} ({stats.expected_weekly} allenamenti previsti)
+            </Text>
           )}
           {viewMode === 'monthly' && (
-            <Text style={styles.periodText}>{stats.month_name}</Text>
+            <Text style={styles.periodText}>
+              {stats.month_name} ({stats.expected_monthly} allenamenti fino ad oggi)
+            </Text>
           )}
           {viewMode === 'total' && (
             <Text style={styles.periodText}>Dall'inizio della stagione</Text>
