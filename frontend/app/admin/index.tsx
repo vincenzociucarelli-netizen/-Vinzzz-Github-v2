@@ -295,7 +295,7 @@ export default function AdminDashboard() {
         {/* Beta Phase Banner */}
         <View style={styles.betaBanner}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="gift" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={{ fontSize: 20, marginRight: 8 }}>{Icons.gift}</Text>
             <Text style={styles.betaBannerTitle}>Fase Beta Gratuita</Text>
           </View>
           <Text style={styles.betaBannerText}>
