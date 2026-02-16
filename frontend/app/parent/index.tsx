@@ -51,6 +51,10 @@ export default function ParentDashboard() {
   const [trialModalVisible, setTrialModalVisible] = useState(false);
   const [athletesRequiringAction, setAthletesRequiringAction] = useState<any[]>([]);
   const [processingTrial, setProcessingTrial] = useState(false);
+  
+  // Digital signature state
+  const [signatureVisible, setSignatureVisible] = useState(false);
+  const [signingAthlete, setSigningAthlete] = useState<any | null>(null);
 
   // Mappa nome atleta -> colore
   const athleteColorMap = useMemo(() => {
