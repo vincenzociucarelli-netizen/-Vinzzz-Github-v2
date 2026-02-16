@@ -110,10 +110,26 @@ I tesserati includono: atleti, dirigenti e coach.
    - Backend: Nuovo endpoint `PATCH /api/users/{id}/onboarding`
    - Test: 12/12 backend tests passati, frontend verificato via Playwright
 
+2. **✅ Sistema Firma Digitale COMPLETATO**:
+   - Componente `SignaturePad.tsx` riutilizzabile per firma grafica su schermo
+   - Backend: Generazione PDF con reportlab (firma + timestamp + dati documento)
+   - Backend: Invio automatico email con PDF allegato (SendGrid)
+   - Backend: Archiviazione documenti firmati nel database (collection `signed_documents`)
+   - Endpoints:
+     - `POST /api/documents/sign` - Firma un documento
+     - `GET /api/documents/signed` - Lista documenti firmati
+     - `GET /api/documents/signed/{id}/pdf` - Scarica PDF firmato
+
+3. **✅ Firma Privacy Genitori INTEGRATA**:
+   - Il consenso privacy ora richiede firma digitale
+   - PDF generato con testo privacy completo + firma grafica
+   - Email automatica con copia del documento firmato
+   - Integrato nel flusso di accettazione post-periodo di prova
+
 ## Pending/Backlog
 - P0: **Coach Onboarding Checklist** ✅ COMPLETATO
-- P1: **Sistema Firma Documentale** - Firma grafica + PDF + email automatica
-- P1: **Applicare firma alla Privacy Genitori** - Sostituire flag con firma documentale
+- P1: **Sistema Firma Documentale** ✅ COMPLETATO
+- P1: **Applicare firma alla Privacy Genitori** ✅ COMPLETATO
 - P1: **Modulo Compensi Sportivi (Coach)** - Anagrafica collaboratori, ricevute mensili, dichiarazioni
 - P1: Implementare logica freemium (limite 30 tesserati gratuiti)
 - P2: Limite team per società + upgrade message
