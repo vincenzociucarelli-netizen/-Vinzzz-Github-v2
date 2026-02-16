@@ -46,6 +46,33 @@ interface CoachProfile {
   compensation_accepted: boolean;
 }
 
+interface ThresholdStatus {
+  coach_id: string;
+  year: number;
+  monthly_compensation: number;
+  yearly_total: number;
+  thresholds: {
+    '5000': {
+      threshold: number;
+      warning_at: number;
+      needs_warning: boolean;
+      needs_declaration: boolean;
+      declaration_signed: boolean;
+      declaration_date?: string;
+    };
+    '15000': {
+      threshold: number;
+      warning_at: number;
+      needs_warning: boolean;
+      needs_declaration: boolean;
+      declaration_signed: boolean;
+      declaration_date?: string;
+    };
+  };
+  is_blocked: boolean;
+  block_reason?: string;
+}
+
 export default function CoachCompensation() {
   const router = useRouter();
   const { user } = useAuthStore();
@@ -56,15 +83,20 @@ export default function CoachCompensation() {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   
-  // Signature modal
+  // Threshold status
+  const [thresholdStatus, setThresholdStatus] = useState<ThresholdStatus | null>(null);
+  
+  // Signature modal for receipts
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [signing, setSigning] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
   
-  // Threshold flags
-  const [showExceeded5000, setShowExceeded5000] = useState(false);
-  const [showExceeded15000, setShowExceeded15000] = useState(false);
+  // Declaration modal
+  const [showDeclarationModal, setShowDeclarationModal] = useState(false);
+  const [declarationType, setDeclarationType] = useState<'5000' | '15000'>('5000');
+  const [declarationSignature, setDeclarationSignature] = useState<string | null>(null);
+  const [signingDeclaration, setSigningDeclaration] = useState(false);
   
   const signatureRef = useRef<any>(null);
 
@@ -87,9 +119,17 @@ export default function CoachCompensation() {
       
       // Calculate yearly total
       const total = yearRecords
-        .filter((r: CompensationRecord) => r.received)
+        .filter((r: CompensationRecord) => r.receipt_signed)
         .reduce((sum: number, r: CompensationRecord) => sum + (r.amount_gross || r.amount || 0), 0);
       setYearlyTotal(total);
+      
+      // Load threshold status
+      try {
+        const thresholdRes = await api.get(`/coach/${user?.id}/threshold-status/${currentYear}`);
+        setThresholdStatus(thresholdRes.data);
+      } catch (err) {
+        console.log('Error loading threshold status:', err);
+      }
       
     } catch (error) {
       console.error('Error loading data:', error);
@@ -99,6 +139,29 @@ export default function CoachCompensation() {
   };
 
   const handleOpenSignature = (month: number) => {
+    // Check if blocked by threshold
+    if (thresholdStatus?.is_blocked) {
+      Alert.alert(
+        'Azione Bloccata',
+        thresholdStatus.block_reason || 'Devi prima firmare la dichiarazione di superamento soglia.',
+        [
+          { text: 'Annulla', style: 'cancel' },
+          { 
+            text: 'Firma Dichiarazione', 
+            onPress: () => {
+              // Determine which declaration is needed
+              if (thresholdStatus.thresholds['15000'].needs_declaration) {
+                openDeclarationModal('15000');
+              } else if (thresholdStatus.thresholds['5000'].needs_declaration) {
+                openDeclarationModal('5000');
+              }
+            }
+          }
+        ]
+      );
+      return;
+    }
+    
     // Check if this month is already signed
     const existingRecord = records.find(r => r.month === month && r.receipt_signed);
     if (existingRecord) {
@@ -108,18 +171,48 @@ export default function CoachCompensation() {
     
     setSelectedMonth(month);
     setSignature(null);
-    
-    // Calculate new total and check thresholds
-    const monthlyAmount = profile?.monthly_compensation || 0;
-    const newTotal = yearlyTotal + monthlyAmount;
-    
-    setShowExceeded5000(newTotal > 5000 && yearlyTotal <= 5000);
-    setShowExceeded15000(newTotal > 15000 && yearlyTotal <= 15000);
-    
     setShowSignatureModal(true);
   };
 
-  const handleSign = async (exceeded5000: boolean = false, exceeded15000: boolean = false) => {
+  const openDeclarationModal = (type: '5000' | '15000') => {
+    setDeclarationType(type);
+    setDeclarationSignature(null);
+    setShowDeclarationModal(true);
+  };
+
+  const handleSignDeclaration = async () => {
+    if (!declarationSignature) {
+      Alert.alert('Errore', 'Firma richiesta');
+      return;
+    }
+    
+    try {
+      setSigningDeclaration(true);
+      
+      const response = await api.post(`/coach/${user?.id}/threshold-declaration`, {
+        year: currentYear,
+        threshold_type: declarationType,
+        signature_base64: declarationSignature.replace('data:image/png;base64,', ''),
+      });
+      
+      const thresholdAmount = declarationType === '5000' ? '5.000' : '15.000';
+      
+      Alert.alert(
+        'Dichiarazione Firmata',
+        `Dichiarazione di superamento soglia € ${thresholdAmount} firmata con successo!\n\nUna copia è stata inviata alla tua email.`
+      );
+      
+      setShowDeclarationModal(false);
+      loadData(); // Reload to update status
+      
+    } catch (error: any) {
+      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la firma');
+    } finally {
+      setSigningDeclaration(false);
+    }
+  };
+
+  const handleSign = async () => {
     if (!signature || !selectedMonth || !profile) {
       Alert.alert('Errore', 'Firma richiesta');
       return;
@@ -127,6 +220,12 @@ export default function CoachCompensation() {
     
     try {
       setSigning(true);
+      
+      // Calculate if thresholds will be exceeded
+      const monthlyAmount = profile.monthly_compensation || 0;
+      const newTotal = yearlyTotal + monthlyAmount;
+      const exceeded5000 = newTotal > 5000 && yearlyTotal <= 5000;
+      const exceeded15000 = newTotal > 15000 && yearlyTotal <= 15000;
       
       const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
@@ -152,7 +251,7 @@ export default function CoachCompensation() {
     }
   };
 
-  const getMonthStatus = (month: number): 'pending' | 'signed' | 'future' => {
+  const getMonthStatus = (month: number): 'pending' | 'signed' | 'future' | 'blocked' => {
     if (month > currentMonth && currentYear >= new Date().getFullYear()) {
       return 'future';
     }
@@ -160,7 +259,127 @@ export default function CoachCompensation() {
     if (record?.receipt_signed) {
       return 'signed';
     }
+    if (thresholdStatus?.is_blocked) {
+      return 'blocked';
+    }
     return 'pending';
+  };
+
+  const renderThresholdWarnings = () => {
+    if (!thresholdStatus) return null;
+    
+    const warnings = [];
+    
+    // Warning for approaching €5.000
+    if (thresholdStatus.thresholds['5000'].needs_warning && !thresholdStatus.thresholds['5000'].declaration_signed) {
+      warnings.push(
+        <View key="warning-5000" style={[styles.thresholdBanner, { backgroundColor: '#FFF3CD' }]}>
+          <Ionicons name="warning" size={18} color="#856404" />
+          <View style={styles.thresholdBannerContent}>
+            <Text style={styles.thresholdBannerTitle}>Attenzione: Prossima soglia €5.000</Text>
+            <Text style={styles.thresholdBannerText}>
+              Con la prossima quietanza supererai la soglia previdenziale di €5.000.
+            </Text>
+          </View>
+        </View>
+      );
+    }
+    
+    // Warning for approaching €15.000
+    if (thresholdStatus.thresholds['15000'].needs_warning && !thresholdStatus.thresholds['15000'].declaration_signed) {
+      warnings.push(
+        <View key="warning-15000" style={[styles.thresholdBanner, { backgroundColor: '#F8D7DA' }]}>
+          <Ionicons name="alert-circle" size={18} color="#721C24" />
+          <View style={styles.thresholdBannerContent}>
+            <Text style={[styles.thresholdBannerTitle, { color: '#721C24' }]}>Attenzione: Prossima soglia €15.000</Text>
+            <Text style={[styles.thresholdBannerText, { color: '#721C24' }]}>
+              Con la prossima quietanza supererai la soglia fiscale di €15.000.
+            </Text>
+          </View>
+        </View>
+      );
+    }
+    
+    // Blocked: needs €5.000 declaration
+    if (thresholdStatus.thresholds['5000'].needs_declaration) {
+      warnings.push(
+        <TouchableOpacity 
+          key="blocked-5000" 
+          style={[styles.thresholdBanner, styles.blockedBanner]}
+          onPress={() => openDeclarationModal('5000')}
+          data-testid="declaration-5000-btn"
+        >
+          <Ionicons name="lock-closed" size={18} color="#fff" />
+          <View style={styles.thresholdBannerContent}>
+            <Text style={[styles.thresholdBannerTitle, { color: '#fff' }]}>
+              Dichiarazione €5.000 richiesta
+            </Text>
+            <Text style={[styles.thresholdBannerText, { color: '#fff' }]}>
+              Tocca qui per firmare la dichiarazione e sbloccare le quietanze
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+      );
+    }
+    
+    // Blocked: needs €15.000 declaration
+    if (thresholdStatus.thresholds['15000'].needs_declaration) {
+      warnings.push(
+        <TouchableOpacity 
+          key="blocked-15000" 
+          style={[styles.thresholdBanner, styles.blockedBanner, { backgroundColor: '#721C24' }]}
+          onPress={() => openDeclarationModal('15000')}
+          data-testid="declaration-15000-btn"
+        >
+          <Ionicons name="lock-closed" size={18} color="#fff" />
+          <View style={styles.thresholdBannerContent}>
+            <Text style={[styles.thresholdBannerTitle, { color: '#fff' }]}>
+              URGENTE: Dichiarazione €15.000 richiesta
+            </Text>
+            <Text style={[styles.thresholdBannerText, { color: '#fff' }]}>
+              Tocca qui per firmare la dichiarazione fiscale
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+      );
+    }
+    
+    // Show signed declarations
+    if (thresholdStatus.thresholds['5000'].declaration_signed) {
+      warnings.push(
+        <View key="signed-5000" style={[styles.thresholdBanner, { backgroundColor: '#D4EDDA' }]}>
+          <Ionicons name="checkmark-circle" size={18} color="#155724" />
+          <View style={styles.thresholdBannerContent}>
+            <Text style={[styles.thresholdBannerTitle, { color: '#155724' }]}>
+              Dichiarazione €5.000 firmata
+            </Text>
+            <Text style={[styles.thresholdBannerText, { color: '#155724' }]}>
+              Soglia previdenziale comunicata
+            </Text>
+          </View>
+        </View>
+      );
+    }
+    
+    if (thresholdStatus.thresholds['15000'].declaration_signed) {
+      warnings.push(
+        <View key="signed-15000" style={[styles.thresholdBanner, { backgroundColor: '#D4EDDA' }]}>
+          <Ionicons name="checkmark-circle" size={18} color="#155724" />
+          <View style={styles.thresholdBannerContent}>
+            <Text style={[styles.thresholdBannerTitle, { color: '#155724' }]}>
+              Dichiarazione €15.000 firmata
+            </Text>
+            <Text style={[styles.thresholdBannerText, { color: '#155724' }]}>
+              Soglia fiscale comunicata
+            </Text>
+          </View>
+        </View>
+      );
+    }
+    
+    return warnings.length > 0 ? <View style={styles.warningsContainer}>{warnings}</View> : null;
   };
 
   const renderMonthCard = (month: number) => {
@@ -175,8 +394,9 @@ export default function CoachCompensation() {
           styles.monthCard,
           status === 'signed' && styles.monthCardSigned,
           status === 'future' && styles.monthCardFuture,
+          status === 'blocked' && styles.monthCardBlocked,
         ]}
-        onPress={() => status === 'pending' && handleOpenSignature(month)}
+        onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month)}
         disabled={status === 'future'}
         data-testid={`month-card-${month}`}
       >
@@ -187,6 +407,9 @@ export default function CoachCompensation() {
           )}
           {status === 'future' && (
             <Ionicons name="time-outline" size={20} color="#999" />
+          )}
+          {status === 'blocked' && (
+            <Ionicons name="lock-closed" size={20} color="#FF9500" />
           )}
         </View>
         
@@ -200,6 +423,10 @@ export default function CoachCompensation() {
         
         {status === 'pending' && (
           <Text style={styles.pendingText}>Tocca per firmare</Text>
+        )}
+        
+        {status === 'blocked' && (
+          <Text style={styles.blockedText}>Firma dichiarazione</Text>
         )}
         
         {status === 'future' && (
@@ -238,24 +465,38 @@ export default function CoachCompensation() {
             <Text style={styles.summaryValue}>€ {(profile?.monthly_compensation || 0).toFixed(2)}</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Totale ricevuto:</Text>
+            <Text style={styles.summaryLabel}>Totale quietanzato:</Text>
             <Text style={[styles.summaryValue, styles.summaryTotal]}>€ {yearlyTotal.toFixed(2)}</Text>
           </View>
           
-          {/* Threshold warnings */}
-          {yearlyTotal > 5000 && (
-            <View style={[styles.thresholdBanner, { backgroundColor: '#FFF3CD' }]}>
-              <Ionicons name="warning" size={16} color="#856404" />
-              <Text style={styles.thresholdText}>Superata soglia €5.000</Text>
+          {/* Progress bars */}
+          <View style={styles.progressSection}>
+            <Text style={styles.progressLabel}>Soglia €5.000 (previdenziale)</Text>
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { width: `${Math.min((yearlyTotal / 5000) * 100, 100)}%` },
+                  yearlyTotal >= 5000 ? styles.progressFillExceeded : {}
+                ]} 
+              />
             </View>
-          )}
-          {yearlyTotal > 15000 && (
-            <View style={[styles.thresholdBanner, { backgroundColor: '#F8D7DA' }]}>
-              <Ionicons name="alert-circle" size={16} color="#721C24" />
-              <Text style={[styles.thresholdText, { color: '#721C24' }]}>Superata soglia €15.000</Text>
+            
+            <Text style={[styles.progressLabel, { marginTop: 12 }]}>Soglia €15.000 (fiscale)</Text>
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { width: `${Math.min((yearlyTotal / 15000) * 100, 100)}%` },
+                  yearlyTotal >= 15000 ? styles.progressFillExceeded : {}
+                ]} 
+              />
             </View>
-          )}
+          </View>
         </View>
+
+        {/* Threshold Warnings/Actions */}
+        {renderThresholdWarnings()}
 
         {/* Monthly Cards */}
         <Text style={styles.sectionTitle}>Quietanze Mensili</Text>
@@ -267,15 +508,16 @@ export default function CoachCompensation() {
         <View style={styles.infoSection}>
           <Text style={styles.infoTitle}>Informazioni</Text>
           <Text style={styles.infoText}>
-            • Fino a €5.000/anno: compenso esente da tasse{'\n'}
-            • Da €5.000 a €15.000: ritenuta IRPEF 23%{'\n'}
-            • Oltre €15.000: contributi INPS + IRPEF{'\n'}
-            • La firma della quietanza genera un PDF che viene inviato via email
+            • Fino a €5.000/anno: compenso esente da tasse e contributi{'\n'}
+            • Da €5.000 a €15.000: soggetto a contributi previdenziali{'\n'}
+            • Oltre €15.000: soggetto anche a imposizione fiscale IRPEF{'\n'}
+            • La firma della quietanza genera un PDF inviato via email{'\n'}
+            • Al superamento delle soglie è richiesta una dichiarazione
           </Text>
         </View>
       </ScrollView>
 
-      {/* Signature Modal */}
+      {/* Signature Modal for Receipts */}
       <Modal
         visible={showSignatureModal}
         animationType="slide"
@@ -306,27 +548,6 @@ export default function CoachCompensation() {
                 </Text>
               </View>
 
-              {/* Threshold Warning */}
-              {showExceeded5000 && (
-                <View style={[styles.warningBox, { backgroundColor: '#FFF3CD' }]}>
-                  <Ionicons name="warning" size={20} color="#856404" />
-                  <Text style={styles.warningText}>
-                    Con questo compenso supererai la soglia di €5.000 annuali.
-                    Dalla prossima quietanza verranno applicate le ritenute IRPEF.
-                  </Text>
-                </View>
-              )}
-
-              {showExceeded15000 && (
-                <View style={[styles.warningBox, { backgroundColor: '#F8D7DA' }]}>
-                  <Ionicons name="alert-circle" size={20} color="#721C24" />
-                  <Text style={[styles.warningText, { color: '#721C24' }]}>
-                    ATTENZIONE: Con questo compenso supererai la soglia di €15.000 annuali.
-                    Saranno applicati contributi INPS e obblighi fiscali aggiuntivi.
-                  </Text>
-                </View>
-              )}
-
               {/* Signature Pad */}
               <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
               <SignaturePad
@@ -352,13 +573,110 @@ export default function CoachCompensation() {
                     styles.confirmButton,
                     !signature && styles.buttonDisabled
                   ]}
-                  onPress={() => handleSign(showExceeded5000, showExceeded15000)}
+                  onPress={handleSign}
                   disabled={!signature || signing}
                 >
                   {signing ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
                     <Text style={styles.confirmButtonText}>Firma Quietanza</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Declaration Modal */}
+      <Modal
+        visible={showDeclarationModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowDeclarationModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={[styles.modalHeader, declarationType === '15000' && { backgroundColor: '#721C24' }]}>
+              <Text style={[styles.modalTitle, declarationType === '15000' && { color: '#fff' }]}>
+                Dichiarazione Soglia € {declarationType === '5000' ? '5.000' : '15.000'}
+              </Text>
+              <TouchableOpacity onPress={() => setShowDeclarationModal(false)}>
+                <Ionicons name="close" size={24} color={declarationType === '15000' ? '#fff' : '#333'} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll}>
+              {/* Declaration Preview */}
+              <View style={[styles.receiptPreview, declarationType === '15000' && { borderColor: '#721C24' }]}>
+                <Text style={styles.receiptTitle}>
+                  COMUNICAZIONE DI SUPERAMENTO DELLA SOGLIA {declarationType === '5000' ? 'PREVIDENZIALE' : 'FISCALE'}
+                </Text>
+                <Text style={styles.receiptText}>
+                  Il/La sottoscritto/a{'\n'}
+                  Nome e Cognome: {profile?.full_name}{'\n'}
+                  Codice Fiscale: {profile?.fiscal_code || 'N/D'}{'\n'}
+                  {'\n'}
+                  COMUNICA{'\n'}
+                  {'\n'}
+                  che, alla data odierna, il totale dei compensi percepiti per attività sportiva dilettantistica nell'anno solare {currentYear}, anche da altri enti sportivi, ha raggiunto e/o superato l'importo complessivo di € {declarationType === '5000' ? '5.000,00' : '15.000,00'}.{'\n'}
+                  {'\n'}
+                  Il sottoscritto dichiara di essere a conoscenza che, dal momento del superamento della suddetta soglia, {declarationType === '5000' 
+                    ? 'i compensi eccedenti sono soggetti agli obblighi previdenziali previsti dalla normativa vigente.'
+                    : 'i compensi eccedenti sono soggetti a imposizione fiscale secondo la normativa vigente.'
+                  }{'\n'}
+                  {'\n'}
+                  Si impegna inoltre a comunicare tempestivamente eventuali ulteriori variazioni della propria situazione.
+                </Text>
+              </View>
+
+              {/* Warning */}
+              <View style={[styles.warningBox, declarationType === '15000' && { backgroundColor: '#F8D7DA' }]}>
+                <Ionicons 
+                  name={declarationType === '5000' ? 'warning' : 'alert-circle'} 
+                  size={20} 
+                  color={declarationType === '5000' ? '#856404' : '#721C24'} 
+                />
+                <Text style={[styles.warningText, declarationType === '15000' && { color: '#721C24' }]}>
+                  {declarationType === '5000' 
+                    ? 'Firmando questa dichiarazione comunichi di aver superato la soglia previdenziale di €5.000. I compensi futuri saranno soggetti a contributi.'
+                    : 'ATTENZIONE: Firmando questa dichiarazione comunichi di aver superato la soglia fiscale di €15.000. I compensi futuri saranno soggetti a tassazione IRPEF.'
+                  }
+                </Text>
+              </View>
+
+              {/* Signature Pad */}
+              <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
+              <SignaturePad
+                onSave={(sig) => setDeclarationSignature(sig)}
+                onClear={() => setDeclarationSignature(null)}
+                width={Platform.OS === 'web' ? 400 : undefined}
+                height={200}
+              />
+
+              {/* Confirm Buttons */}
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setShowDeclarationModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Annulla</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.modalButton, 
+                    styles.confirmButton,
+                    declarationType === '15000' && { backgroundColor: '#721C24' },
+                    !declarationSignature && styles.buttonDisabled
+                  ]}
+                  onPress={handleSignDeclaration}
+                  disabled={!declarationSignature || signingDeclaration}
+                >
+                  {signingDeclaration ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.confirmButtonText}>Firma Dichiarazione</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -415,7 +733,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -446,18 +764,54 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#007AFF',
   },
+  progressSection: {
+    marginTop: 16,
+  },
+  progressLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#34C759',
+    borderRadius: 4,
+  },
+  progressFillExceeded: {
+    backgroundColor: '#FF9500',
+  },
+  warningsContainer: {
+    marginBottom: 16,
+    gap: 10,
+  },
   thresholdBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 10,
-    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    gap: 10,
   },
-  thresholdText: {
-    fontSize: 13,
-    color: '#856404',
+  thresholdBannerContent: {
     flex: 1,
+  },
+  thresholdBannerTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#856404',
+  },
+  thresholdBannerText: {
+    fontSize: 12,
+    color: '#856404',
+    marginTop: 2,
+  },
+  blockedBanner: {
+    backgroundColor: '#FF9500',
   },
   sectionTitle: {
     fontSize: 16,
@@ -490,6 +844,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     opacity: 0.6,
   },
+  monthCardBlocked: {
+    borderColor: '#FF9500',
+    backgroundColor: '#FFF8E6',
+  },
   monthHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -514,6 +872,10 @@ const styles = StyleSheet.create({
   pendingText: {
     fontSize: 9,
     color: '#007AFF',
+  },
+  blockedText: {
+    fontSize: 9,
+    color: '#FF9500',
   },
   futureText: {
     fontSize: 9,
@@ -587,6 +949,7 @@ const styles = StyleSheet.create({
   warningBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    backgroundColor: '#FFF3CD',
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
