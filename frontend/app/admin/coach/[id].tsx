@@ -152,10 +152,39 @@ export default function AdminCoachDetail() {
       setMonthlyCompensation(coachRes.data.monthly_compensation?.toString() || '0');
       setOtherAnnualCompensation(coachRes.data.other_annual_compensation?.toString() || '0');
       setSelectedTeams(coachRes.data.assigned_teams || []);
+      
+      // Initialize onboarding checklist state
+      const checklist = coachRes.data.onboarding_checklist || {};
+      setChecklistItems({
+        contract_signed: checklist.contract_signed || false,
+        ras_registered: checklist.ras_registered || false,
+        id_acquired: checklist.id_acquired || false,
+        fiscal_code_acquired: checklist.fiscal_code_acquired || false,
+        criminal_record: checklist.criminal_record || false,
+      });
+      setPriorCompensation(coachRes.data.prior_compensation?.toString() || '0');
     } catch (error) {
       console.error('Error loading coach data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveOnboarding = async () => {
+    setSavingOnboarding(true);
+    try {
+      await api.patch(`/users/${id}/onboarding`, {
+        onboarding_checklist: checklistItems,
+        prior_compensation: parseFloat(priorCompensation) || 0,
+        onboarding_completed: true,
+      });
+      showAlert('Successo', 'Checklist onboarding aggiornata');
+      setEditingOnboarding(false);
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
+    } finally {
+      setSavingOnboarding(false);
     }
   };
 
