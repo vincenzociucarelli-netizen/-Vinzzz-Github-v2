@@ -3978,16 +3978,16 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
         # Get all attendances for this athlete
         all_attendances = await db.attendances.count_documents({"athlete_id": athlete_id})
         
-        # Get weekly attendances
+        # Get weekly attendances (use datetime objects, not strings for MongoDB comparison)
         week_attendances = await db.attendances.count_documents({
             "athlete_id": athlete_id,
-            "check_in_time": {"$gte": week_start.isoformat()}
+            "check_in_time": {"$gte": week_start}
         })
         
         # Get monthly attendances
         month_attendances = await db.attendances.count_documents({
             "athlete_id": athlete_id,
-            "check_in_time": {"$gte": month_start.isoformat()}
+            "check_in_time": {"$gte": month_start}
         })
         
         # Estimate expected trainings based on team training days
