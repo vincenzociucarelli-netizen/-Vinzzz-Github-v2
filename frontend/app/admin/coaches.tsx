@@ -550,6 +550,107 @@ export default function CoachesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Onboarding Checklist Modal */}
+      <Modal
+        visible={onboardingModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setOnboardingModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.onboardingModalContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>📋 Checklist Onboarding Coach</Text>
+              <Text style={styles.modalSubtitle}>{coachToApprove?.full_name}</Text>
+              
+              <Text style={styles.checklistHeader}>Pratiche burocratiche da completare:</Text>
+              
+              <TouchableOpacity
+                style={[styles.checklistItem, checklistItems.contract_signed && styles.checklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, contract_signed: !checklistItems.contract_signed})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.contract_signed ? '☑️' : '⬜'}</Text>
+                <Text style={styles.checklistText}>Contratto/Lettera d'incarico firmata</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.checklistItem, checklistItems.ras_registered && styles.checklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, ras_registered: !checklistItems.ras_registered})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.ras_registered ? '☑️' : '⬜'}</Text>
+                <Text style={styles.checklistText}>Iscrizione RAS (Registro Attività Sportive)</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.checklistItem, checklistItems.id_acquired && styles.checklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, id_acquired: !checklistItems.id_acquired})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.id_acquired ? '☑️' : '⬜'}</Text>
+                <Text style={styles.checklistText}>Documento d'identità acquisito</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.checklistItem, checklistItems.fiscal_code_acquired && styles.checklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, fiscal_code_acquired: !checklistItems.fiscal_code_acquired})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.fiscal_code_acquired ? '☑️' : '⬜'}</Text>
+                <Text style={styles.checklistText}>Codice fiscale acquisito</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.checklistItem, checklistItems.criminal_record && styles.checklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, criminal_record: !checklistItems.criminal_record})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.criminal_record ? '☑️' : '⬜'}</Text>
+                <Text style={styles.checklistText}>Certificato casellario giudiziale (se richiesto)</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.compensationSection}>
+                <Text style={styles.compensationLabel}>💰 Compensi già percepiti fino alla data di assunzione (€)</Text>
+                <Text style={styles.compensationHint}>
+                  Inserisci l'importo dichiarato dal coach dei compensi sportivi già ricevuti nel corrente anno fiscale da altre società
+                </Text>
+                <TextInput
+                  style={styles.compensationInput}
+                  value={priorCompensation}
+                  onChangeText={setPriorCompensation}
+                  placeholder="0"
+                  keyboardType="decimal-pad"
+                  placeholderTextColor="#999"
+                />
+              </View>
+              
+              <View style={styles.checklistNote}>
+                <Text style={styles.checklistNoteText}>
+                  ⚠️ Puoi approvare il coach anche senza completare tutte le voci. 
+                  Un promemoria apparirà nella sua scheda finché non saranno complete.
+                </Text>
+              </View>
+              
+              <View style={styles.onboardingButtons}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setOnboardingModalVisible(false)}
+                >
+                  <Text style={styles.cancelBtnText}>Annulla</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.approveBtn2, approvingCoach && styles.disabledBtn]}
+                  onPress={handleApproveWithChecklist}
+                  disabled={approvingCoach}
+                >
+                  {approvingCoach ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.approveBtnText}>✓ Approva Coach</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
