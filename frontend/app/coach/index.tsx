@@ -1576,6 +1576,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  forceButton: {
+    backgroundColor: '#FF9500',
+  },
+  forceButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
   profileLink: {
     flexDirection: 'row',
     alignItems: 'center',
