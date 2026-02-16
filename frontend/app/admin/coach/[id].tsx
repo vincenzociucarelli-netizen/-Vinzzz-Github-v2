@@ -1347,4 +1347,23 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 18,
   },
+  // Prior compensation styles
+  priorCompensationBox: {
+    backgroundColor: '#F0F8FF',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+  },
+  priorCompensationLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  priorCompensationValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
 });
