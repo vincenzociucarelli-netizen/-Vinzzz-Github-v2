@@ -4639,6 +4639,23 @@ async def check_attendance(attendance_data: AttendanceCreate, current_user = Dep
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
+    # Check if already registered today
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+    
+    existing_attendance = await db.attendances.find_one({
+        "athlete_id": athlete_id,
+        "check_in_time": {"$gte": today_start, "$lte": today_end}
+    })
+    
+    if existing_attendance:
+        # Return the existing attendance with a special status
+        existing_attendance.pop('_id', None)
+        existing_att = Attendance(**existing_attendance)
+        existing_att.status = "already_registered"
+        existing_att.block_reason = "GIÀ REGISTRATA OGGI"
+        return existing_att
+    
     # Check status
     status_check = await check_athlete_status(athlete_id)
     
