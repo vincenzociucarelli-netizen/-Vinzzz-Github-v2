@@ -2050,6 +2050,16 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
         else:
             update_data["contract_start_date"] = None
     
+    if "contract_end_date" in data:
+        if data["contract_end_date"]:
+            try:
+                # Parse ISO date string (YYYY-MM-DD)
+                update_data["contract_end_date"] = datetime.fromisoformat(data["contract_end_date"])
+            except:
+                pass
+        else:
+            update_data["contract_end_date"] = None
+    
     if update_data:
         await db.users.update_one(
             {"id": user_id},
