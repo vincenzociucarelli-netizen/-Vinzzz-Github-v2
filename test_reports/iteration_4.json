@@ -1,0 +1,51 @@
+{
+  "summary": "Coach Onboarding Checklist feature fully tested. Backend API (PATCH /api/users/{id}/onboarding) works correctly. Frontend onboarding modal appears when approving pending coach with all 5 checklist items and prior_compensation field. Banner promemoria displays correctly on coach detail page showing missing checklist items.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_onboarding.py",
+    "/app/test_reports/pytest/onboarding_test_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "FIXED: Added onboarding_checklist, prior_compensation, onboarding_completed, onboarding_date fields to GET /api/users/{id} response (was missing, causing data to appear not saved)"
+  ],
+  "updated_files": [
+    "/app/backend/server.py (lines 2032-2045 - added onboarding fields to get_user_detail response)",
+    "/app/backend/tests/test_onboarding.py (new test file)"
+  ],
+  "success_rate": {"backend": "100% (12/12 tests passed)", "frontend": "100% - all flows verified via Playwright"},
+  "seed_data_creation": "Test coaches created and cleaned up during testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Coach Onboarding feature fully implemented and working. Admin credentials: pallavoloperugia@gmail.com / 11092012. The onboarding modal appears when clicking the green approve button for pending coaches. Banner shows missing items on coach detail page.",
+  "features_verified": {
+    "popup_checklist_on_approve": "PASS - Modal appears with title '📋 Checklist Onboarding Coach' when clicking approve button for pending coach",
+    "prior_compensation_field": "PASS - Field present in modal with placeholder '0', accepts decimal values",
+    "banner_promemoria": "PASS - Yellow banner '📋 Promemoria Onboarding' appears on coach detail page showing 'Da completare: Iscrizione RAS, Codice fiscale' for missing items",
+    "patch_onboarding_endpoint": "PASS - All 12 backend tests passed for PATCH /api/users/{id}/onboarding",
+    "data_persistence": "PASS - onboarding_checklist, prior_compensation saved to database and retrieved correctly"
+  },
+  "checklist_items_tested": [
+    "contract_signed (Contratto/Lettera d'incarico firmata)",
+    "ras_registered (Iscrizione RAS)",
+    "id_acquired (Documento d'identità acquisito)", 
+    "fiscal_code_acquired (Codice fiscale acquisito)",
+    "criminal_record (Certificato casellario giudiziale)"
+  ],
+  "screenshots": {
+    "login_page": ".screenshots/01_initial_page.png",
+    "coaches_list": ".screenshots/05_coaches_page.png",
+    "onboarding_modal": ".screenshots/06_onboarding_modal.png",
+    "filled_checklist": ".screenshots/07_filled_checklist.png",
+    "coach_detail_with_banner": ".screenshots/09_coach_detail_page.png",
+    "prior_compensation_displayed": ".screenshots/14_prior_compensation.png"
+  }
+}
