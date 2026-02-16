@@ -277,11 +277,50 @@ export default function AdminCoachDetail() {
     }
   };
 
-  // Calculate total annual compensation
+  // Calculate total annual compensation - considera data inizio contratto
   const getTotalAnnualCompensation = () => {
-    const thisClub = (parseFloat(monthlyCompensation) || 0) * 12;
-    const other = parseFloat(otherAnnualCompensation) || 0;
-    return thisClub + other;
+    const monthly = parseFloat(monthlyCompensation) || 0;
+    const prior = coach?.prior_compensation || 0;  // Compensi pregressi (prima del contratto)
+    
+    // Se c'è una data di inizio contratto, calcola solo i mesi dal contratto a dicembre
+    let monthsInContract = 12;
+    if (coach?.contract_start_date) {
+      const startDate = new Date(coach.contract_start_date);
+      const startMonth = startDate.getMonth(); // 0-11
+      // Mesi rimanenti nell'anno solare (da mese inizio a dicembre)
+      monthsInContract = 12 - startMonth;
+    }
+    
+    // Totale = compensi pregressi + (compenso mensile × mesi dal contratto a fine anno)
+    const thisClubTotal = monthly * monthsInContract;
+    return prior + thisClubTotal;
+  };
+  
+  // Calcola dettaglio compensi per display
+  const getCompensationBreakdown = () => {
+    const monthly = parseFloat(monthlyCompensation) || 0;
+    const prior = coach?.prior_compensation || 0;
+    
+    let monthsInContract = 12;
+    let startMonthName = 'Gennaio';
+    
+    if (coach?.contract_start_date) {
+      const startDate = new Date(coach.contract_start_date);
+      const startMonth = startDate.getMonth();
+      monthsInContract = 12 - startMonth;
+      const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                          'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+      startMonthName = monthNames[startMonth];
+    }
+    
+    return {
+      monthly,
+      prior,
+      monthsInContract,
+      startMonthName,
+      thisClubTotal: monthly * monthsInContract,
+      grandTotal: prior + (monthly * monthsInContract)
+    };
   };
 
   const getCompensationBadge = () => {
