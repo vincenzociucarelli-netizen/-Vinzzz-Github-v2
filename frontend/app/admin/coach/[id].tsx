@@ -294,21 +294,26 @@ export default function AdminCoachDetail() {
     }
   };
 
-  // Calculate total annual compensation - considera data inizio contratto
+  // Calculate total annual compensation - considera data inizio e fine contratto
   const getTotalAnnualCompensation = () => {
     const monthly = parseFloat(monthlyCompensation) || 0;
     const prior = coach?.prior_compensation || 0;  // Compensi pregressi (prima del contratto)
     
-    // Se c'è una data di inizio contratto, calcola solo i mesi dal contratto a dicembre
+    // Calcola mesi del contratto
     let monthsInContract = 12;
-    if (coach?.contract_start_date) {
-      const startDate = new Date(coach.contract_start_date);
-      const startMonth = startDate.getMonth(); // 0-11
-      // Mesi rimanenti nell'anno solare (da mese inizio a dicembre)
-      monthsInContract = 12 - startMonth;
+    if (contractStartDate && contractEndDate) {
+      const start = new Date(contractStartDate);
+      const end = new Date(contractEndDate);
+      // Calcola differenza in mesi
+      monthsInContract = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+      if (monthsInContract < 1) monthsInContract = 1;
+    } else if (contractStartDate) {
+      // Solo data inizio: calcola fino a dicembre stesso anno
+      const start = new Date(contractStartDate);
+      monthsInContract = 12 - start.getMonth();
     }
     
-    // Totale = compensi pregressi + (compenso mensile × mesi dal contratto a fine anno)
+    // Totale = compensi pregressi + (compenso mensile × mesi contratto)
     const thisClubTotal = monthly * monthsInContract;
     return prior + thisClubTotal;
   };
@@ -317,17 +322,29 @@ export default function AdminCoachDetail() {
   const getCompensationBreakdown = () => {
     const monthly = parseFloat(monthlyCompensation) || 0;
     const prior = coach?.prior_compensation || 0;
+    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
     
     let monthsInContract = 12;
     let startMonthName = 'Gennaio';
+    let endMonthName = 'Dicembre';
+    let startYear = new Date().getFullYear();
+    let endYear = startYear;
     
-    if (coach?.contract_start_date) {
-      const startDate = new Date(coach.contract_start_date);
-      const startMonth = startDate.getMonth();
-      monthsInContract = 12 - startMonth;
-      const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-                          'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
-      startMonthName = monthNames[startMonth];
+    if (contractStartDate && contractEndDate) {
+      const start = new Date(contractStartDate);
+      const end = new Date(contractEndDate);
+      monthsInContract = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+      if (monthsInContract < 1) monthsInContract = 1;
+      startMonthName = monthNames[start.getMonth()];
+      endMonthName = monthNames[end.getMonth()];
+      startYear = start.getFullYear();
+      endYear = end.getFullYear();
+    } else if (contractStartDate) {
+      const start = new Date(contractStartDate);
+      monthsInContract = 12 - start.getMonth();
+      startMonthName = monthNames[start.getMonth()];
+      startYear = start.getFullYear();
     }
     
     return {
@@ -335,6 +352,9 @@ export default function AdminCoachDetail() {
       prior,
       monthsInContract,
       startMonthName,
+      endMonthName,
+      startYear,
+      endYear,
       thisClubTotal: monthly * monthsInContract,
       grandTotal: prior + (monthly * monthsInContract)
     };
