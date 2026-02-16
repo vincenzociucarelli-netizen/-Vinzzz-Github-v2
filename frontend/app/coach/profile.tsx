@@ -118,6 +118,8 @@ export default function CoachProfile() {
         iban: data.iban || '',
         account_holder: data.account_holder || '',
         bank_name: data.bank_name || '',
+        doc_front_image: data.doc_front_image || '',
+        doc_back_image: data.doc_back_image || '',
       });
       setEditData({
         email: data.email || '',
