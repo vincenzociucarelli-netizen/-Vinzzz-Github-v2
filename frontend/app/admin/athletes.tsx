@@ -14,6 +14,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/services/api';
 import { Athlete, Team } from '../../src/types';
 import { exportToExcel } from '../../src/utils/excelExport';
@@ -242,7 +243,7 @@ export default function AdminAthletes() {
           {exporting ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={{ fontSize: 22, color: '#fff' }}>📤</Text>
+            <Ionicons name="share-outline" size={22} color="#fff" />
           )}
         </TouchableOpacity>
       </View>
@@ -250,7 +251,7 @@ export default function AdminAthletes() {
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
-          <Text style={{ fontSize: 18, marginRight: 8 }}>🔍</Text>
+          <Ionicons name="search" size={18} color="#999" style={{ marginRight: 8 }} />
           <TextInput
             style={styles.searchInput}
             placeholder="Cerca atleta o squadra..."
