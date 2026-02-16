@@ -793,10 +793,10 @@ export default function AdminCoachDetail() {
                       </View>
                     )}
                     
-                    {coach?.contract_start_date && (
+                    {(contractStartDate || contractEndDate) && (
                       <View style={[styles.totalBox, { marginTop: 8, backgroundColor: '#E3F2FD' }]}>
                         <Text style={[styles.totalLabel, { color: '#1565C0' }]}>
-                          Da {breakdown.startMonthName} ({breakdown.monthsInContract} mesi)
+                          Periodo: {breakdown.startMonthName} {breakdown.startYear} - {breakdown.endMonthName} {breakdown.endYear} ({breakdown.monthsInContract} mesi)
                         </Text>
                         <Text style={[styles.totalValue, { color: '#1565C0' }]}>
                           €{breakdown.monthly} × {breakdown.monthsInContract} = €{breakdown.thisClubTotal.toLocaleString()}
@@ -804,9 +804,9 @@ export default function AdminCoachDetail() {
                       </View>
                     )}
                     
-                    <View style={[styles.totalBox, { marginTop: 12 }]}>
-                      <Text style={styles.totalLabel}>Totale Annuo Previsto</Text>
-                      <Text style={styles.totalValue}>
+                    <View style={[styles.totalBox, { marginTop: 12, backgroundColor: '#E8F5E9' }]}>
+                      <Text style={[styles.totalLabel, { color: '#2E7D32' }]}>Totale Compenso Contratto (per RAS)</Text>
+                      <Text style={[styles.totalValue, { color: '#2E7D32', fontSize: 20 }]}>
                         €{breakdown.grandTotal.toLocaleString()}
                       </Text>
                     </View>
