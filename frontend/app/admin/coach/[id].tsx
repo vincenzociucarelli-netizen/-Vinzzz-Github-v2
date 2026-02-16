@@ -841,12 +841,15 @@ export default function AdminCoachDetail() {
               {/* Mostra breakdown del calcolo */}
               {(() => {
                 const breakdown = getCompensationBreakdown();
+                const yearlyBreakdown = getYearlyBreakdown();
+                const years = Object.keys(yearlyBreakdown).map(Number).sort();
+                
                 return (
                   <>
                     {breakdown.prior > 0 && (
                       <View style={[styles.totalBox, { marginTop: 8, backgroundColor: '#FFF3E0' }]}>
                         <Text style={[styles.totalLabel, { color: '#E65100' }]}>
-                          Compensi Pregressi (prima del contratto)
+                          Compensi Pregressi (dichiarati all'assunzione)
                         </Text>
                         <Text style={[styles.totalValue, { color: '#E65100' }]}>
                           €{breakdown.prior.toLocaleString()}
@@ -857,11 +860,57 @@ export default function AdminCoachDetail() {
                     {(contractStartDate || contractEndDate) && (
                       <View style={[styles.totalBox, { marginTop: 8, backgroundColor: '#E3F2FD' }]}>
                         <Text style={[styles.totalLabel, { color: '#1565C0' }]}>
-                          Periodo: {breakdown.startMonthName} {breakdown.startYear} - {breakdown.endMonthName} {breakdown.endYear} ({breakdown.monthsInContract} mesi)
+                          Periodo Contratto: {breakdown.startMonthName} {breakdown.startYear} - {breakdown.endMonthName} {breakdown.endYear}
                         </Text>
                         <Text style={[styles.totalValue, { color: '#1565C0' }]}>
-                          €{breakdown.monthly} × {breakdown.monthsInContract} = €{breakdown.thisClubTotal.toLocaleString()}
+                          €{breakdown.monthly} × {breakdown.monthsInContract} mesi = €{breakdown.thisClubTotal.toLocaleString()}
                         </Text>
+                      </View>
+                    )}
+                    
+                    {/* Breakdown per ANNO SOLARE (soglie fiscali) */}
+                    {years.length > 0 && (
+                      <View style={{ marginTop: 16 }}>
+                        <Text style={[styles.totalLabel, { marginBottom: 8, fontWeight: 'bold' }]}>
+                          📊 Calcolo per Anno Solare (soglie €5k/€15k)
+                        </Text>
+                        
+                        {years.map(year => {
+                          const data = yearlyBreakdown[year];
+                          const bgColor = data.exceedsThreshold15k ? '#FFEBEE' : 
+                                         data.exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9';
+                          const textColor = data.exceedsThreshold15k ? '#C62828' : 
+                                           data.exceedsThreshold5k ? '#F57F17' : '#2E7D32';
+                          const icon = data.exceedsThreshold15k ? '🚨' : 
+                                      data.exceedsThreshold5k ? '⚠️' : '✅';
+                          
+                          return (
+                            <View key={year} style={[styles.totalBox, { marginTop: 4, backgroundColor: bgColor }]}>
+                              <Text style={[styles.totalLabel, { color: textColor }]}>
+                                {icon} Anno {year} ({data.startMonth}-{data.endMonth}: {data.months} mesi)
+                              </Text>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={{ color: textColor, fontSize: 12 }}>
+                                  {data.prior > 0 ? `Pregressi €${data.prior.toLocaleString()} + ` : ''}
+                                  €{(breakdown.monthly || 0)} × {data.months} = €{data.total.toLocaleString()}
+                                </Text>
+                                <Text style={[styles.totalValue, { color: textColor, fontSize: 16 }]}>
+                                  €{data.grandTotal.toLocaleString()}
+                                </Text>
+                              </View>
+                              {data.exceedsThreshold15k && (
+                                <Text style={{ color: '#C62828', fontSize: 11, marginTop: 4 }}>
+                                  Supera soglia €15.000 - Tassazione IRPEF
+                                </Text>
+                              )}
+                              {data.exceedsThreshold5k && !data.exceedsThreshold15k && (
+                                <Text style={{ color: '#F57F17', fontSize: 11, marginTop: 4 }}>
+                                  Supera soglia €5.000 - Contributi previdenziali
+                                </Text>
+                              )}
+                            </View>
+                          );
+                        })}
                       </View>
                     )}
                     
