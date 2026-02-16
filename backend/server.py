@@ -161,12 +161,18 @@ class User(BaseModel):
     last_name: Optional[str] = None
     date_of_birth: Optional[datetime] = None
     place_of_birth: Optional[str] = None
+    birth_province: Optional[str] = None  # Sigla provincia di nascita (es: PG, RM)
     fiscal_code: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
     postal_code: Optional[str] = None
     province: Optional[str] = None
     phone: Optional[str] = None
+    
+    # Documento di identità
+    identity_document_type: Optional[str] = None  # Carta di identità, Patente, Passaporto
+    identity_document_number: Optional[str] = None  # Numero del documento
+    identity_document_expiry: Optional[datetime] = None  # Scadenza documento
     
     # Coach specific - Tesserino
     coach_license_number: Optional[str] = None  # Numero tesserino allenatore
