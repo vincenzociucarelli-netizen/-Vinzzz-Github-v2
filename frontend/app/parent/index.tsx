@@ -178,18 +178,58 @@ export default function ParentDashboard() {
     }
   };
 
-  // Handle privacy acceptance and continue
+  // Handle privacy acceptance and continue - now with digital signature
   const handleAcceptPrivacy = async (athleteId: string, athleteName: string) => {
-    if (Platform.OS === 'web') {
-      if (!window.confirm(`Confermi di accettare l'informativa sulla privacy per ${athleteName} e di voler continuare con la società?`)) {
-        return;
-      }
+    // Find the athlete in the list
+    const athlete = athletesRequiringAction.find(a => a.id === athleteId);
+    if (athlete) {
+      setSigningAthlete({ ...athlete, athleteName });
+      setSignatureVisible(true);
     }
+  };
+  
+  // Handle the actual signature submission
+  const handleSignPrivacy = async (signatureBase64: string) => {
+    if (!signingAthlete || !user) return;
+    
+    const athleteId = signingAthlete.id;
+    const athleteName = signingAthlete.full_name || signingAthlete.athleteName;
     
     setProcessingTrial(true);
     try {
+      // First, sign the document digitally
+      const privacyText = `Il/La sottoscritto/a ${user.full_name}, in qualità di genitore/tutore dell'atleta ${athleteName}, dichiara di aver letto e compreso l'informativa sulla privacy ai sensi del Regolamento UE 2016/679 (GDPR) e del D.Lgs. 196/2003 e successive modificazioni.
+
+Autorizza il trattamento dei dati personali propri e del minore per le finalità connesse all'attività sportiva, incluse:
+- Gestione dell'iscrizione e tesseramento
+- Comunicazioni relative all'attività sportiva
+- Pubblicazione di foto/video su canali ufficiali della società
+- Adempimenti assicurativi e federali
+
+L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la società.`;
+
+      await api.post('/documents/sign', {
+        document_type: 'privacy_consent',
+        document_title: `Consenso Privacy - ${athleteName}`,
+        document_text: privacyText,
+        signer_name: user.full_name,
+        signer_email: user.email,
+        signature_base64: signatureBase64,
+        related_entity_id: athleteId,
+        additional_data: {
+          'Atleta': athleteName,
+          'Genitore/Tutore': user.full_name,
+          'Tipo documento': 'Consenso Privacy e Liberatoria'
+        }
+      });
+      
+      // Then update the athlete's privacy status
       await api.post(`/trial/accept-privacy/${athleteId}`);
-      Alert.alert('✅ Confermato', `${athleteName} è ora attivo nella società. Grazie per la fiducia!`);
+      
+      Alert.alert(
+        '✅ Documento Firmato', 
+        `La privacy per ${athleteName} è stata accettata e firmata.\n\nUna copia del documento è stata inviata alla tua email.`
+      );
       
       // Remove this athlete from the list
       const remaining = athletesRequiringAction.filter(a => a.id !== athleteId);
@@ -201,9 +241,10 @@ export default function ParentDashboard() {
       // Reload athletes
       await loadAthletes();
     } catch (error: any) {
-      Alert.alert('Errore', error.response?.data?.detail || 'Impossibile completare l\'operazione');
+      Alert.alert('Errore', error.response?.data?.detail || 'Impossibile completare la firma');
     } finally {
       setProcessingTrial(false);
+      setSigningAthlete(null);
     }
   };
 
