@@ -1537,6 +1537,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  compensationLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    padding: 14,
+    borderRadius: 10,
+    marginTop: 12,
+    gap: 10,
+  },
+  compensationLinkText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
   cardSubtitle: {
     fontSize: 13,
     color: '#666',
