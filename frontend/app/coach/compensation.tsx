@@ -24,7 +24,7 @@ const MONTH_NAMES = [
 interface CompensationRecord {
   id: string;
   month: number;
-  year: number;
+  year: int;
   amount_gross?: number;
   amount_net?: number;
   amount?: number;
@@ -32,6 +32,7 @@ interface CompensationRecord {
   received: boolean;
   received_date?: string;
   receipt_signed: boolean;
+  receipt_signed_date?: string;
   receipt_document_id?: string;
   exceeded_5000: boolean;
   exceeded_15000: boolean;
