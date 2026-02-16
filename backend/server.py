@@ -6622,95 +6622,85 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
     await db.signed_documents.insert_one(document_record)
     
     # Send email with PDF attachment
-    sendgrid_api_key = os.environ.get("SENDGRID_API_KEY")
-    sendgrid_from_email = os.environ.get("SENDGRID_FROM_EMAIL", "noreply@registrateam.it")
+    timestamp_str = datetime.now().strftime("%d-%m-%Y_%H-%M")
+    filename = f"documento_firmato_{timestamp_str}.pdf"
     
-    if sendgrid_api_key:
-        import sendgrid
-        from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
+    email_body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif;">
+    <h2 style="color: #FF9500;">{society_name}</h2>
+    <p>Gentile {request.signer_name},</p>
+    <p>In allegato trova il documento firmato digitalmente:</p>
+    <p><strong>{request.document_title}</strong></p>
+    <p>Data firma: {datetime.now().strftime("%d/%m/%Y alle %H:%M")}</p>
+    <br>
+    <p style="color: #666; font-size: 12px;">
+    Questo documento è stato generato automaticamente. 
+    Conservi questa email come ricevuta della firma.
+    </p>
+    <hr>
+    <p style="color: #999; font-size: 11px;">
+    {society_name}<br>
+    Documento firmato digitalmente tramite RegistraTEAM
+    </p>
+    </body>
+    </html>
+    """
+    
+    # Encode PDF for attachment
+    encoded_pdf = base64.b64encode(pdf_bytes).decode()
+    
+    # Send to signer
+    try:
+        result = await send_email_with_pdf(
+            to_email=request.signer_email,
+            subject=f"Documento firmato: {request.document_title}",
+            html_content=email_body,
+            pdf_base64=encoded_pdf,
+            pdf_filename=filename,
+            to_name=request.signer_name
+        )
         
-        sg = sendgrid.SendGridAPIClient(api_key=sendgrid_api_key)
-        
-        # Create email
-        timestamp_str = datetime.now().strftime("%d-%m-%Y_%H-%M")
-        filename = f"documento_firmato_{timestamp_str}.pdf"
-        
-        email_body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif;">
-        <h2 style="color: #FF9500;">{society_name}</h2>
-        <p>Gentile {request.signer_name},</p>
-        <p>In allegato trova il documento firmato digitalmente:</p>
-        <p><strong>{request.document_title}</strong></p>
-        <p>Data firma: {datetime.now().strftime("%d/%m/%Y alle %H:%M")}</p>
-        <br>
-        <p style="color: #666; font-size: 12px;">
-        Questo documento è stato generato automaticamente. 
-        Conservi questa email come ricevuta della firma.
-        </p>
-        <hr>
-        <p style="color: #999; font-size: 11px;">
-        {society_name}<br>
-        Documento firmato digitalmente tramite RegistraTEAM
-        </p>
-        </body>
-        </html>
-        """
-        
-        # Send to signer
+        if result.get("success"):
+            logging.info(f"Signed document email sent to {request.signer_email} via {result.get('provider', 'unknown')}")
+        else:
+            logging.error(f"Error sending email to signer: {result.get('error')}")
+    except Exception as e:
+        logging.error(f"Error sending email to signer: {e}")
+    
+    # Send copy to society admin if different email
+    if society_email and society_email != request.signer_email:
         try:
-            message = Mail(
-                from_email=sendgrid_from_email,
-                to_emails=request.signer_email,
-                subject=f"Documento firmato: {request.document_title}",
-                html_content=email_body
+            admin_body = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif;">
+            <h2 style="color: #FF9500;">{society_name}</h2>
+            <p><strong>Nuovo documento firmato</strong></p>
+            <p>Tipo documento: {request.document_type}</p>
+            <p>Titolo: {request.document_title}</p>
+            <p>Firmato da: {request.signer_name}</p>
+            <p>Email: {request.signer_email}</p>
+            <p>Data firma: {datetime.now().strftime("%d/%m/%Y alle %H:%M")}</p>
+            <br>
+            <p>Il documento firmato è allegato a questa email.</p>
+            </body>
+            </html>
+            """
+            
+            result = await send_email_with_pdf(
+                to_email=society_email,
+                subject=f"[Copia] Documento firmato da {request.signer_name}: {request.document_title}",
+                html_content=admin_body,
+                pdf_base64=encoded_pdf,
+                pdf_filename=filename
             )
             
-            # Add PDF attachment
-            encoded_pdf = base64.b64encode(pdf_bytes).decode()
-            attachment = Attachment()
-            attachment.file_content = FileContent(encoded_pdf)
-            attachment.file_name = FileName(filename)
-            attachment.file_type = FileType("application/pdf")
-            attachment.disposition = Disposition("attachment")
-            message.add_attachment(attachment)
-            
-            sg.send(message)
-            logging.info(f"Signed document email sent to {request.signer_email}")
+            if result.get("success"):
+                logging.info(f"Signed document copy sent to admin {society_email} via {result.get('provider', 'unknown')}")
+            else:
+                logging.error(f"Error sending email to admin: {result.get('error')}")
         except Exception as e:
-            logging.error(f"Error sending email to signer: {e}")
-        
-        # Send copy to society admin if different email
-        if society_email and society_email != request.signer_email:
-            try:
-                admin_body = f"""
-                <html>
-                <body style="font-family: Arial, sans-serif;">
-                <h2 style="color: #FF9500;">{society_name}</h2>
-                <p><strong>Nuovo documento firmato</strong></p>
-                <p>Tipo documento: {request.document_type}</p>
-                <p>Titolo: {request.document_title}</p>
-                <p>Firmato da: {request.signer_name}</p>
-                <p>Email: {request.signer_email}</p>
-                <p>Data firma: {datetime.now().strftime("%d/%m/%Y alle %H:%M")}</p>
-                <br>
-                <p>Il documento firmato è allegato a questa email.</p>
-                </body>
-                </html>
-                """
-                
-                admin_message = Mail(
-                    from_email=sendgrid_from_email,
-                    to_emails=society_email,
-                    subject=f"[Copia] Documento firmato da {request.signer_name}: {request.document_title}",
-                    html_content=admin_body
-                )
-                admin_message.add_attachment(attachment)
-                
-                sg.send(admin_message)
-                logging.info(f"Signed document copy sent to admin {society_email}")
-            except Exception as e:
-                logging.error(f"Error sending email to admin: {e}")
+            logging.error(f"Error sending email to admin: {e}")
     
     return {
         "success": True,
