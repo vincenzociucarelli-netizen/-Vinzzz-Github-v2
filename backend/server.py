@@ -616,6 +616,7 @@ class Attendance(BaseModel):
 
 class AttendanceCreate(BaseModel):
     qr_code: str
+    force: bool = False  # Allow coach to force registration for multi-team training
 
 # ==================== HELPER FUNCTIONS ====================
 
