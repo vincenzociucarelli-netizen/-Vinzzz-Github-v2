@@ -124,7 +124,55 @@ export default function CoachesScreen() {
     }
   };
 
+  // Open onboarding checklist modal before approval
+  const openOnboardingModal = (coach: Coach) => {
+    setCoachToApprove(coach);
+    setChecklistItems({
+      contract_signed: false,
+      ras_registered: false,
+      id_acquired: false,
+      fiscal_code_acquired: false,
+      criminal_record: false,
+    });
+    setPriorCompensation('');
+    setOnboardingModalVisible(true);
+    setActionModalVisible(false);
+  };
+
+  const handleApproveWithChecklist = async () => {
+    if (!coachToApprove) return;
+    
+    setApprovingCoach(true);
+    try {
+      // Save checklist and prior compensation data
+      await api.patch(`/users/${coachToApprove.id}/onboarding`, {
+        onboarding_checklist: checklistItems,
+        prior_compensation: parseFloat(priorCompensation) || 0,
+        onboarding_completed: true,
+        onboarding_date: new Date().toISOString(),
+      });
+      
+      // Then approve the coach
+      await api.patch(`/users/${coachToApprove.id}/status`, { status: 'approved' });
+      
+      showAlert('Successo', `${coachToApprove.full_name} è stato approvato!\n\nRicorda di completare le pratiche burocratiche se non ancora fatte.`);
+      setOnboardingModalVisible(false);
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'approvazione');
+    } finally {
+      setApprovingCoach(false);
+    }
+  };
+
   const handleApprove = async (coach: Coach) => {
+    // For pending coaches, show onboarding checklist
+    if (coach.status === 'pending') {
+      openOnboardingModal(coach);
+      return;
+    }
+    
+    // For reactivating suspended coaches, approve directly
     try {
       await api.patch(`/users/${coach.id}/status`, { status: 'approved' });
       showAlert('Successo', `${coach.full_name} è stato approvato`);
