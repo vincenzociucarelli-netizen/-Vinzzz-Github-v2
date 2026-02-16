@@ -254,13 +254,13 @@ export default function AdminDashboard() {
             onPress={() => router.replace('/dirigente')} 
             style={[styles.headerBtn, styles.dirigenteSwitchBtn]}
           >
-            <Text style={{ fontSize: 16 }}>💼</Text>
+            <Ionicons name="briefcase" size={16} color="#007AFF" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerBtn}>
-            <Text style={{ fontSize: 22 }}>⚙️</Text>
+            <Ionicons name="settings" size={22} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleLogout} style={styles.headerBtn}>
-            <Text style={{ fontSize: 22 }}>🚪</Text>
+            <Ionicons name="log-out" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -273,7 +273,10 @@ export default function AdminDashboard() {
       >
         {/* Beta Phase Banner */}
         <View style={styles.betaBanner}>
-          <Text style={styles.betaBannerTitle}>🎉 Fase Beta Gratuita</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="gift" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.betaBannerTitle}>Fase Beta Gratuita</Text>
+          </View>
           <Text style={styles.betaBannerText}>
             Accesso completo fino al 30/06/2026
           </Text>
