@@ -3967,8 +3967,10 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
     
     # Get current date info
     now = datetime.now()
-    week_start = now - timedelta(days=now.weekday())  # Monday
-    month_start = now.replace(day=1)
+    # Set week_start to Monday 00:00:00
+    week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    # Set month_start to 1st of month 00:00:00
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
     # Calculate stats for each athlete
     stats = []
