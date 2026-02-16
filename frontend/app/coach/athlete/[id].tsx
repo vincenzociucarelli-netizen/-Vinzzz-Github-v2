@@ -151,14 +151,6 @@ export default function CoachAthleteDetail() {
     }
   };
 
-  const toggleCharacteristic = (char: string) => {
-    if (selectedCharacteristics.includes(char)) {
-      setSelectedCharacteristics(selectedCharacteristics.filter(c => c !== char));
-    } else {
-      setSelectedCharacteristics([...selectedCharacteristics, char]);
-    }
-  };
-
   const handleSave = async () => {
     setSaving(true);
     try {
