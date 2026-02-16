@@ -1135,6 +1135,8 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
             pass
     if data.place_of_birth is not None:
         update_dict["place_of_birth"] = data.place_of_birth
+    if data.birth_province is not None:
+        update_dict["birth_province"] = data.birth_province
     if data.fiscal_code is not None:
         update_dict["fiscal_code"] = data.fiscal_code
     if data.address is not None:
@@ -1149,6 +1151,16 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
         update_dict["phone"] = data.phone
     if data.coach_license_number is not None:
         update_dict["coach_license_number"] = data.coach_license_number
+    # Documento di identità
+    if data.identity_document_type is not None:
+        update_dict["identity_document_type"] = data.identity_document_type
+    if data.identity_document_number is not None:
+        update_dict["identity_document_number"] = data.identity_document_number
+    if data.identity_document_expiry is not None:
+        try:
+            update_dict["identity_document_expiry"] = datetime.fromisoformat(data.identity_document_expiry.replace('Z', '+00:00'))
+        except:
+            pass
     # Compensation fields
     if data.compensation_accepted is not None:
         update_dict["compensation_accepted"] = data.compensation_accepted
