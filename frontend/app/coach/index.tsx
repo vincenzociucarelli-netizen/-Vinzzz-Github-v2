@@ -633,6 +633,43 @@ export default function CoachScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* Force Registration Modal (Web) */}
+        <Modal
+          visible={forceModalVisible}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setForceModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>⚠️ GIÀ REGISTRATA</Text>
+              <Text style={styles.modalSubtitle}>
+                Questa atleta è già stata registrata oggi.{'\n\n'}
+                Se fa allenamento con due squadre diverse, puoi forzare la registrazione.
+              </Text>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonCancel]}
+                  onPress={() => {
+                    setForceModalVisible(false);
+                    setPendingQrCode(null);
+                  }}
+                >
+                  <Text style={styles.modalButtonCancelText}>Annulla</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.forceButton]}
+                  onPress={() => pendingQrCode && handleForceRegistration(pendingQrCode)}
+                >
+                  <Text style={styles.forceButtonText}>FORZA REGISTRAZIONE</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
