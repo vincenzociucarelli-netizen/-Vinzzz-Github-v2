@@ -796,6 +796,19 @@ export default function CoachProfile() {
               <Text style={styles.acceptedBadgeText}>Compenso Accettato</Text>
             </View>
           )}
+
+          {/* Link to Compensation Page with Receipts */}
+          {profileData.monthly_compensation > 0 && profileData.compensation_accepted && (
+            <TouchableOpacity
+              style={styles.compensationLinkButton}
+              onPress={() => router.push('/coach/compensation')}
+              data-testid="compensation-receipts-btn"
+            >
+              <Ionicons name="document-text" size={20} color="#007AFF" />
+              <Text style={styles.compensationLinkText}>Quietanze Mensili</Text>
+              <Ionicons name="chevron-forward" size={20} color="#007AFF" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Monthly Payment Tracking */}
