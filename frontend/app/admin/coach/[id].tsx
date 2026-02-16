@@ -273,6 +273,7 @@ export default function AdminCoachDetail() {
       await api.patch(`/users/${id}/compensation`, {
         monthly_compensation: parseFloat(monthlyCompensation) || 0,
         other_annual_compensation: parseFloat(otherAnnualCompensation) || 0,
+        contract_start_date: contractStartDate || null,
       });
       showAlert('Successo', 'Compensi aggiornati con successo');
       setEditing(false);
