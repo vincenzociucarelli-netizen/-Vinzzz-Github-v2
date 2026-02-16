@@ -24,7 +24,7 @@ const MONTH_NAMES = [
 interface CompensationRecord {
   id: string;
   month: number;
-  year: int;
+  year: number;
   amount_gross?: number;
   amount_net?: number;
   amount?: number;
