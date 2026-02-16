@@ -60,6 +60,19 @@ export default function CoachesScreen() {
   const [compensationModalVisible, setCompensationModalVisible] = useState(false);
   const [compensationAmount, setCompensationAmount] = useState('');
   const [savingCompensation, setSavingCompensation] = useState(false);
+  
+  // Onboarding checklist modal state
+  const [onboardingModalVisible, setOnboardingModalVisible] = useState(false);
+  const [coachToApprove, setCoachToApprove] = useState<Coach | null>(null);
+  const [checklistItems, setChecklistItems] = useState({
+    contract_signed: false,
+    ras_registered: false,
+    id_acquired: false,
+    fiscal_code_acquired: false,
+    criminal_record: false,
+  });
+  const [priorCompensation, setPriorCompensation] = useState('');
+  const [approvingCoach, setApprovingCoach] = useState(false);
 
   const handleExport = async () => {
     setExporting(true);
