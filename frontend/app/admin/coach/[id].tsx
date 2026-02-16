@@ -401,7 +401,7 @@ export default function AdminCoachDetail() {
           </View>
         )}
 
-        {/* Onboarding Reminder Banner */}
+        {/* Onboarding Reminder Banner - Clickable to edit */}
         {coach.status === 'approved' && (() => {
           const checklist = coach.onboarding_checklist || {};
           const missingChecklist = !checklist.contract_signed || !checklist.ras_registered || 
@@ -418,15 +418,19 @@ export default function AdminCoachDetail() {
           if (missingPriorComp) missingItems.push('Compensi pregressi');
           
           return (
-            <View style={styles.onboardingBanner}>
+            <TouchableOpacity 
+              style={styles.onboardingBanner}
+              onPress={() => setEditingOnboarding(true)}
+            >
               <Text style={{ fontSize: 18 }}>📋</Text>
               <View style={styles.onboardingBannerContent}>
                 <Text style={styles.onboardingBannerTitle}>Promemoria Onboarding</Text>
                 <Text style={styles.onboardingBannerText}>
                   Da completare: {missingItems.join(', ')}
                 </Text>
+                <Text style={styles.onboardingBannerAction}>Tocca per completare →</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         })()}
 
