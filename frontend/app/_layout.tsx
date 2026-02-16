@@ -5,9 +5,6 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { View, Platform } from 'react-native';
 
-// Import Icon component to load fonts via CDN on web
-import '../src/components/Icon';
-
 // Keep splash screen visible while loading fonts
 SplashScreen.preventAutoHideAsync();
 
