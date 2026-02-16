@@ -1315,10 +1315,7 @@ async def transform_user_photo(data: ImageTransformRequest, current_user = Depen
         }
 
 async def send_password_reset_email(to_email: str, reset_token: str, user_name: str):
-    """Send password reset email via SendGrid"""
-    if not SENDGRID_API_KEY:
-        raise HTTPException(status_code=500, detail="Email service not configured")
-    
+    """Send password reset email via Brevo/SendGrid"""
     # Get society name for branding
     settings = await db.settings.find_one({"type": "society"})
     society_name = settings.get("name", "Gestione Società") if settings else "Gestione Società"
@@ -1370,19 +1367,23 @@ async def send_password_reset_email(to_email: str, reset_token: str, user_name: 
     </html>
     """
     
-    message = Mail(
-        from_email=SENDER_EMAIL,
-        to_emails=to_email,
-        subject=f"🔐 Reset Password - {society_name}",
-        html_content=html_content
-    )
-    
     try:
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = sg.send(message)
-        return response.status_code == 202
+        result = await send_transactional_email(
+            to_email=to_email,
+            subject=f"🔐 Reset Password - {society_name}",
+            html_content=html_content,
+            to_name=user_name
+        )
+        if result.get("success"):
+            logging.info(f"Password reset email sent to {to_email} via {result.get('provider', 'unknown')}")
+            return True
+        else:
+            logging.error(f"Failed to send password reset email: {result.get('error')}")
+            raise HTTPException(status_code=500, detail=f"Errore invio email: {result.get('error')}")
+    except HTTPException:
+        raise
     except Exception as e:
-        logging.error(f"SendGrid error: {str(e)}")
+        logging.error(f"Email service error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Errore invio email: {str(e)}")
 
 class ForgotPasswordRequest(BaseModel):
