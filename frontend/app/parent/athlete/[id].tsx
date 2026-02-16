@@ -21,7 +21,7 @@ import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
 import { Picker } from '@react-native-picker/picker';
 import api from '../../../src/services/api';
-import { Ionicons } from '../../../src/components/Icon';
+import { Ionicons } from '@expo/vector-icons';
 import { Athlete, Certificate, Payment, PaymentSettings, Team } from '../../../src/types';
 import { format, differenceInDays, addMonths, subDays } from 'date-fns';
 import { it } from 'date-fns/locale';

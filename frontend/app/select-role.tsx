@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
-import { Ionicons } from '../src/components/Icon';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function SelectRoleScreen() {
   const router = useRouter();
