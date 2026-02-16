@@ -98,6 +98,18 @@ export default function AdminCoachDetail() {
   const [newPassword, setNewPassword] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
   
+  // Onboarding checklist edit state
+  const [editingOnboarding, setEditingOnboarding] = useState(false);
+  const [savingOnboarding, setSavingOnboarding] = useState(false);
+  const [checklistItems, setChecklistItems] = useState({
+    contract_signed: false,
+    ras_registered: false,
+    id_acquired: false,
+    fiscal_code_acquired: false,
+    criminal_record: false,
+  });
+  const [priorCompensation, setPriorCompensation] = useState('0');
+  
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
   const [otherAnnualCompensation, setOtherAnnualCompensation] = useState('0');
