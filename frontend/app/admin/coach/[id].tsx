@@ -678,7 +678,18 @@ export default function AdminCoachDetail() {
           
           {editing ? (
             <>
-              <Text style={styles.inputLabel}>Compenso Mensile da questa ASD (€)</Text>
+              <Text style={styles.inputLabel}>Data Inizio Contratto</Text>
+              <TextInput
+                style={styles.input}
+                value={contractStartDate}
+                onChangeText={setContractStartDate}
+                placeholder="YYYY-MM-DD (es: 2025-09-01)"
+              />
+              <Text style={styles.inputHint}>
+                Da questa data partirà il calcolo dei compensi mensili
+              </Text>
+              
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>Compenso Mensile da questa ASD (€)</Text>
               <TextInput
                 style={styles.input}
                 value={monthlyCompensation}
