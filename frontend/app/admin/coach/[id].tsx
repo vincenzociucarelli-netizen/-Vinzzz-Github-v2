@@ -282,6 +282,7 @@ export default function AdminCoachDetail() {
         monthly_compensation: parseFloat(monthlyCompensation) || 0,
         other_annual_compensation: parseFloat(otherAnnualCompensation) || 0,
         contract_start_date: contractStartDate || null,
+        contract_end_date: contractEndDate || null,
       });
       showAlert('Successo', 'Compensi aggiornati con successo');
       setEditing(false);
