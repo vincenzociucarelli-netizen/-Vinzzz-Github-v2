@@ -731,34 +731,6 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     textAlignVertical: 'top',
   },
-  characteristicsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  characteristicTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    gap: 6,
-  },
-  characteristicTagSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  characteristicText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  characteristicTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
-  },
   privacyNotice: {
     flexDirection: 'row',
     alignItems: 'center',
