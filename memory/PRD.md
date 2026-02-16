@@ -99,7 +99,17 @@ I tesserati includono: atleti, dirigenti e coach.
 
 5. **NOTA PER PUBBLICAZIONE APP**: Registrare dominio `registrateam.it` per email centralizzate (noreply@registrateam.it)
 
+## Session Changes (16/02/2026) - COACH ONBOARDING CHECKLIST
+1. **✅ Checklist Onboarding Coach COMPLETATO**:
+   - Popup con checklist burocratica quando admin approva un nuovo coach
+   - Checklist items: Contratto firmato, Iscrizione RAS, Documento identità, Codice fiscale, Casellario giudiziale
+   - Campo "Compensi pregressi" (€) per tracciare compensi già percepiti alla data di assunzione
+   - Banner promemoria nella pagina dettaglio coach se mancano dati
+   - Backend: Nuovo endpoint `PATCH /api/users/{id}/onboarding`
+   - Test: 12/12 backend tests passati, frontend verificato via Playwright
+
 ## Pending/Backlog
+- P0: **Coach Onboarding Checklist** ✅ COMPLETATO
 - P1: **Sistema Firma Documentale** - Firma grafica + PDF + email automatica
 - P1: **Applicare firma alla Privacy Genitori** - Sostituire flag con firma documentale
 - P1: **Modulo Compensi Sportivi (Coach)** - Anagrafica collaboratori, ricevute mensili, dichiarazioni
