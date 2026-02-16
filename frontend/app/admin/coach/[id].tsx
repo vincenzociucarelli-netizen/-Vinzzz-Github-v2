@@ -650,6 +650,14 @@ export default function AdminCoachDetail() {
               <Text style={styles.acceptedText}>Accettato dal coach</Text>
             </View>
           )}
+          
+          {/* Compensi Pregressi */}
+          {(coach.prior_compensation !== undefined && coach.prior_compensation !== null) && (
+            <View style={styles.priorCompensationBox}>
+              <Text style={styles.priorCompensationLabel}>📋 Compensi pregressi (alla data di assunzione)</Text>
+              <Text style={styles.priorCompensationValue}>€{coach.prior_compensation.toLocaleString()}</Text>
+            </View>
+          )}
         </View>
 
         {/* Storico Compensi */}
