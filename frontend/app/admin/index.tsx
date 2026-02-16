@@ -539,7 +539,7 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/matches')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#FFF5EB' }]}>
-              <Ionicons name="calendar" size={26} color="#FF9800" />
+              <Text style={{ fontSize: 26 }}>{Icons.calendar}</Text>
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Calendario Gare</Text>
@@ -553,7 +553,7 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/dirigenti')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E8F4FD' }]}>
-              <Ionicons name="business" size={26} color="#2196F3" />
+              <Text style={{ fontSize: 26 }}>{Icons.business}</Text>
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>{society.name || 'Società'}</Text>
@@ -564,7 +564,7 @@ export default function AdminDashboard() {
                 <Text style={styles.badgeText}>{pendingCounts.dirigenti}</Text>
               </View>
             )}
-            <Ionicons name="chevron-forward" size={18} color="#999" />
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
           {/* Atleti - DOPO SOCIETÀ */}
@@ -573,13 +573,13 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/athletes')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#F3E5F5' }]}>
-              <Ionicons name="people" size={26} color="#9C27B0" />
+              <Text style={{ fontSize: 26 }}>{Icons.people}</Text>
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Atleti</Text>
               <Text style={styles.menuCardSubtitle}>{stats?.total_athletes || 0} atleti registrati</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#999" />
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
           {/* Coach */}
@@ -588,7 +588,7 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/coaches')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#FFF3E0' }]}>
-              <Ionicons name="fitness" size={26} color="#FF5722" />
+              <Text style={{ fontSize: 26 }}>{Icons.fitness}</Text>
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Coach</Text>
@@ -599,7 +599,7 @@ export default function AdminDashboard() {
                 <Text style={styles.badgeText}>{pendingCounts.coaches}</Text>
               </View>
             )}
-            <Ionicons name="chevron-forward" size={18} color="#999" />
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
           {/* Genitori */}
