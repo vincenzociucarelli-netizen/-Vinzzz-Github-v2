@@ -14,7 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../src/services/api';
-import { Ionicons } from '../../src/components/Icon';
+import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 
 export default function SettingsScreen() {
