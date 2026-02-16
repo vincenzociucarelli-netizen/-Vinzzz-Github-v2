@@ -1310,4 +1310,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  // Onboarding banner styles
+  onboardingBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF9E6',
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFE0B2',
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9500',
+  },
+  onboardingBannerContent: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  onboardingBannerTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FF9500',
+    marginBottom: 4,
+  },
+  onboardingBannerText: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+  },
 });
