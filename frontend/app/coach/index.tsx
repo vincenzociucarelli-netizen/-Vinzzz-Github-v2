@@ -201,11 +201,8 @@ export default function CoachScreen() {
       const attendance = response.data;
       
       if (attendance.status === 'already_registered') {
-        // Already registered today
-        showAlert(
-          '⚠️ GIÀ REGISTRATA',
-          'Questa atleta è già stata registrata oggi!'
-        );
+        // Already registered today - show force option
+        showForceRegistrationDialog(data);
       } else if (attendance.status === 'blocked') {
         // Blocked - show error with red styling
         showAlert(
