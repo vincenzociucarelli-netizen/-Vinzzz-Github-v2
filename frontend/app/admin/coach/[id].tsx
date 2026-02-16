@@ -318,7 +318,68 @@ export default function AdminCoachDetail() {
     return prior + thisClubTotal;
   };
   
-  // Calcola dettaglio compensi per display
+  // Calcola breakdown per ANNO SOLARE (per soglie €5k e €15k)
+  const getYearlyBreakdown = () => {
+    const monthly = parseFloat(monthlyCompensation) || 0;
+    const prior = coach?.prior_compensation || 0;
+    const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+    
+    const years: { [year: number]: { months: number, startMonth: string, endMonth: string, total: number, prior: number, grandTotal: number, exceedsThreshold5k: boolean, exceedsThreshold15k: boolean } } = {};
+    
+    if (contractStartDate && contractEndDate) {
+      const start = new Date(contractStartDate);
+      const end = new Date(contractEndDate);
+      const startYear = start.getFullYear();
+      const endYear = end.getFullYear();
+      
+      for (let year = startYear; year <= endYear; year++) {
+        // Mese inizio per questo anno (0-11)
+        const yearStartMonth = (year === startYear) ? start.getMonth() : 0;
+        // Mese fine per questo anno (0-11)
+        const yearEndMonth = (year === endYear) ? end.getMonth() : 11;
+        
+        const monthsThisYear = yearEndMonth - yearStartMonth + 1;
+        const totalThisYear = monthly * monthsThisYear;
+        
+        // I pregressi si applicano SOLO al primo anno (anno di assunzione)
+        const priorThisYear = (year === startYear) ? prior : 0;
+        const grandTotalThisYear = priorThisYear + totalThisYear;
+        
+        years[year] = {
+          months: monthsThisYear,
+          startMonth: monthNames[yearStartMonth],
+          endMonth: monthNames[yearEndMonth],
+          total: totalThisYear,
+          prior: priorThisYear,
+          grandTotal: grandTotalThisYear,
+          exceedsThreshold5k: grandTotalThisYear > 5000,
+          exceedsThreshold15k: grandTotalThisYear > 15000
+        };
+      }
+    } else if (contractStartDate) {
+      const start = new Date(contractStartDate);
+      const year = start.getFullYear();
+      const startMonth = start.getMonth();
+      const monthsThisYear = 12 - startMonth;
+      const totalThisYear = monthly * monthsThisYear;
+      const grandTotalThisYear = prior + totalThisYear;
+      
+      years[year] = {
+        months: monthsThisYear,
+        startMonth: monthNames[startMonth],
+        endMonth: 'Dic',
+        total: totalThisYear,
+        prior: prior,
+        grandTotal: grandTotalThisYear,
+        exceedsThreshold5k: grandTotalThisYear > 5000,
+        exceedsThreshold15k: grandTotalThisYear > 15000
+      };
+    }
+    
+    return years;
+  };
+  
+  // Calcola dettaglio compensi per display (totale contratto)
   const getCompensationBreakdown = () => {
     const monthly = parseFloat(monthlyCompensation) || 0;
     const prior = coach?.prior_compensation || 0;
