@@ -87,7 +87,6 @@ export default function CoachAthleteDetail() {
       setWeight(athleteData.athlete_weight ? String(athleteData.athlete_weight) : '');
       setElevation(athleteData.athlete_elevation ? String(athleteData.athlete_elevation) : '');
       setNotes(athleteData.athlete_notes || '');
-      setSelectedCharacteristics(athleteData.athlete_characteristics || []);
     } catch (error) {
       console.error('Error loading athlete:', error);
       showAlert('Errore', 'Impossibile caricare i dati dell\'atleta');
