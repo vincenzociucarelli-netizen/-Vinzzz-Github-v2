@@ -18,6 +18,9 @@ interface AthleteStats {
   total_attendances: number;
   weekly_attendances: number;
   monthly_attendances: number;
+  expected_weekly: number;
+  expected_monthly: number;
+  expected_total: number;
   total_percentage: number;
   monthly_percentage: number;
   weekly_percentage: number;
@@ -26,8 +29,11 @@ interface AthleteStats {
 interface TeamAttendanceStats {
   team_name: string;
   total_athletes: number;
+  trainings_per_week: number;
   week_start: string;
   month_name: string;
+  expected_weekly: number;
+  expected_monthly: number;
   athletes: AthleteStats[];
 }
 
