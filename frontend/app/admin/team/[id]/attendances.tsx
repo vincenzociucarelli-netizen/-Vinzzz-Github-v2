@@ -198,6 +198,12 @@ export default function TeamAttendances() {
                 ? athlete.monthly_attendances
                 : athlete.total_attendances;
 
+            const expected = viewMode === 'weekly'
+              ? athlete.expected_weekly
+              : viewMode === 'monthly'
+                ? athlete.expected_monthly
+                : athlete.expected_total;
+
             return (
               <View key={athlete.athlete_id} style={styles.athleteCard}>
                 <View style={styles.athleteInfo}>
@@ -209,7 +215,7 @@ export default function TeamAttendances() {
                       color={getPercentageColor(percentage)} 
                     />
                     <Text style={styles.attendanceCount}>
-                      {attendances} {viewMode === 'weekly' ? 'presenze' : viewMode === 'monthly' ? 'presenze' : 'presenze totali'}
+                      {attendances} su {expected} allenamenti
                     </Text>
                   </View>
                 </View>
