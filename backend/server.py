@@ -5529,16 +5529,10 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
     
     # Send emails
     coach_email = coach.get('email')
-    sendgrid_api_key = os.environ.get("SENDGRID_API_KEY")
-    sendgrid_from_email = os.environ.get("SENDGRID_FROM_EMAIL", "noreply@registrateam.it")
     
-    if sendgrid_api_key and coach_email:
+    if coach_email:
         try:
-            from sendgrid import SendGridAPIClient
-            from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
             import base64
-            
-            sg = SendGridAPIClient(sendgrid_api_key)
             
             # Email to coach
             body = f"""
@@ -5560,31 +5554,31 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             </html>
             """
             
-            message = Mail(
-                from_email=sendgrid_from_email,
-                to_emails=coach_email,
-                subject=f"Quietanza Compenso - {month_name} {request.year} - {society_name}",
-                html_content=body
-            )
-            
-            # Add PDF attachment
+            # Encode PDF for attachment
             encoded_pdf = base64.b64encode(pdf_bytes).decode()
-            attachment = Attachment(
-                FileContent(encoded_pdf),
-                FileName(pdf_filename),
-                FileType('application/pdf'),
-                Disposition('attachment')
-            )
-            message.attachment = attachment
             
-            sg.send(message)
-            logging.info(f"Compensation receipt email sent to {coach_email}")
+            # Send to coach
+            result = await send_email_with_pdf(
+                to_email=coach_email,
+                subject=f"Quietanza Compenso - {month_name} {request.year} - {society_name}",
+                html_content=body,
+                pdf_base64=encoded_pdf,
+                pdf_filename=pdf_filename,
+                to_name=coach.get('full_name', 'Collaboratore')
+            )
+            
+            if result.get("success"):
+                logging.info(f"Compensation receipt email sent to {coach_email} via {result.get('provider', 'unknown')}")
+            else:
+                logging.error(f"Error sending receipt email to coach: {result.get('error')}")
         except Exception as e:
             logging.error(f"Error sending receipt email to coach: {e}")
     
     # Send copy to admin
-    if sendgrid_api_key and admin_email and admin_email != coach_email:
+    if admin_email and admin_email != coach_email:
         try:
+            import base64
+            
             admin_body = f"""
             <html>
             <body>
@@ -5604,23 +5598,20 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             </html>
             """
             
-            admin_message = Mail(
-                from_email=sendgrid_from_email,
-                to_emails=admin_email,
+            encoded_pdf = base64.b64encode(pdf_bytes).decode()
+            
+            result = await send_email_with_pdf(
+                to_email=admin_email,
                 subject=f"[RegistraTEAM] Quietanza firmata - {coach.get('full_name', 'Coach')} - {month_name} {request.year}",
-                html_content=admin_body
+                html_content=admin_body,
+                pdf_base64=encoded_pdf,
+                pdf_filename=pdf_filename
             )
             
-            admin_attachment = Attachment(
-                FileContent(base64.b64encode(pdf_bytes).decode()),
-                FileName(pdf_filename),
-                FileType('application/pdf'),
-                Disposition('attachment')
-            )
-            admin_message.attachment = admin_attachment
-            
-            sg.send(admin_message)
-            logging.info(f"Receipt copy sent to admin {admin_email}")
+            if result.get("success"):
+                logging.info(f"Receipt copy sent to admin {admin_email} via {result.get('provider', 'unknown')}")
+            else:
+                logging.error(f"Error sending receipt email to admin: {result.get('error')}")
         except Exception as e:
             logging.error(f"Error sending receipt email to admin: {e}")
     
