@@ -151,3 +151,69 @@ I tesserati includono: atleti, dirigenti e coach.
 - Genitore → Vede rata da pagare → Clicca "Paga Online" → Stripe Checkout → Pagamento confermato
 - I soldi vanno direttamente sul conto Stripe della società sportiva
 
+## Session Changes (16/02/2026 Sera) - BREVO INTEGRATION & THRESHOLD DECLARATIONS
+
+### 1. ✅ Migrazione Email da SendGrid a Brevo
+- **Nuovo servizio email**: `/app/backend/email_service.py`
+- Supporta sia **Brevo (primario)** che SendGrid (fallback)
+- Dominio `pallavoloperugia.it` autenticato con record DNS (DKIM, DMARC, SPF)
+- Chiave API Brevo configurata e testata
+- **Tutte le email ora passano attraverso Brevo**:
+  - Reset password
+  - Quietanze mensili coach
+  - Documenti firmati
+  - Dichiarazioni superamento soglie
+
+### 2. ✅ Sistema Dichiarazioni Superamento Soglie (€5.000 / €15.000)
+**Backend Endpoints**:
+- `GET /api/coach/{id}/threshold-status/{year}` - Stato soglie per un coach
+- `POST /api/coach/{id}/threshold-declaration` - Firma dichiarazione
+- `GET /api/admin/coaches-threshold-status/{year}` - Dashboard admin
+- `GET /api/admin/threshold-declarations` - Lista tutte le dichiarazioni
+
+**Logica Avvisi Dinamici**:
+- Avviso €5.000 → quando `totale >= 5000 - compenso_mensile`
+- Avviso €15.000 → quando `totale >= 15000 - compenso_mensile`
+- Il coach ha sempre almeno 1 mese di preavviso prima di superare la soglia
+
+**Blocco Quietanze**:
+- Se il coach supera €5.000 o €15.000 senza aver firmato la dichiarazione, non può firmare nuove quietanze
+- Banner rosso nella pagina compensi con link per firmare la dichiarazione
+
+**Frontend** (`/app/frontend/app/coach/compensation.tsx`):
+- Progress bar visive per entrambe le soglie
+- Banner gialli per avvisi imminenti
+- Banner rossi per dichiarazioni obbligatorie
+- Modal dedicato per firmare dichiarazioni €5k e €15k
+- PDF generato e inviato via email a coach + admin
+
+### 3. Documenti Dichiarazioni (da ChatGPT)
+**Documento €5.000 (Soglia Previdenziale)**:
+- Comunicazione superamento soglia previdenziale
+- Compensi eccedenti soggetti a contributi INPS
+
+**Documento €15.000 (Soglia Fiscale)**:
+- Comunicazione superamento soglia fiscale
+- Compensi eccedenti soggetti a imposizione IRPEF
+
+## Files Modified/Created This Session
+- `/app/backend/email_service.py` - NEW: Servizio email Brevo/SendGrid
+- `/app/backend/server.py` - Updated: Endpoint dichiarazioni, migrazione Brevo
+- `/app/backend/.env` - Updated: BREVO_API_KEY
+- `/app/frontend/app/coach/compensation.tsx` - Updated: UI dichiarazioni soglie
+
+## Testing Status
+- Backend API health: ✅
+- Brevo email test: ✅ (email ricevuta)
+- Threshold status endpoint: ✅
+- Admin coaches threshold status: ✅
+
+## Pending/Backlog (Updated)
+- P0: **Modulo Compensi Sportivi** - Da testare il flusso completo (quietanze + dichiarazioni)
+- P1: Implementare logica freemium (limite 30 tesserati gratuiti)
+- P2: Fix libreria icone (`@expo/vector-icons`) per web
+- P2: Miglioramento icona freccia indietro
+- P2: Limite team per società + upgrade message
+- P2: Integrazione Stripe pagamenti online
+- P2: Modulo atleti professionisti con compenso (PRO)
+- P3: Integrazione Stripe per RegistraTEAM (vendita pack membri)
