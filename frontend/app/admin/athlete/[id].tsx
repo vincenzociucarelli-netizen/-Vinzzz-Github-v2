@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
-import { Ionicons } from '../../../src/components/Icon';
+import { Ionicons } from '@expo/vector-icons';
 import { Athlete, Team, Payment, Certificate } from '../../../src/types';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
