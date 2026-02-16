@@ -132,12 +132,57 @@ export default function CoachScreen() {
     setRefreshing(false);
   };
 
+  // State for force registration
+  const [pendingQrCode, setPendingQrCode] = useState<string | null>(null);
+  const [forceModalVisible, setForceModalVisible] = useState(false);
+
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
       window.alert(`${title}\n\n${message}`);
     } else {
       Alert.alert(title, message);
     }
+  };
+
+  const showForceRegistrationDialog = (qrCode: string) => {
+    setPendingQrCode(qrCode);
+    if (Platform.OS === 'web') {
+      setForceModalVisible(true);
+    } else {
+      Alert.alert(
+        '⚠️ GIÀ REGISTRATA',
+        'Questa atleta è già stata registrata oggi.\n\nSe fa allenamento con due squadre diverse, puoi forzare la registrazione.',
+        [
+          {
+            text: 'Annulla',
+            style: 'cancel',
+            onPress: () => setPendingQrCode(null)
+          },
+          {
+            text: 'FORZA REGISTRAZIONE',
+            style: 'destructive',
+            onPress: () => handleForceRegistration(qrCode)
+          }
+        ]
+      );
+    }
+  };
+
+  const handleForceRegistration = async (qrCode: string) => {
+    setForceModalVisible(false);
+    try {
+      const response = await api.post('/attendance/check', { qr_code: qrCode, force: true });
+      const attendance = response.data;
+      
+      if (attendance.status === 'blocked') {
+        showAlert('⛔ ACCESSO NEGATO', attendance.block_reason || 'Atleta non autorizzato');
+      } else {
+        showAlert('✅ Presenza Registrata (Forzata)', 'Seconda presenza registrata per allenamento con altra squadra.');
+      }
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la registrazione');
+    }
+    setPendingQrCode(null);
   };
 
   const formatDate = (dateStr: string) => {
