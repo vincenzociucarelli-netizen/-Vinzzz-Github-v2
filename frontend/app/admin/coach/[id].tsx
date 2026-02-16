@@ -714,8 +714,16 @@ export default function AdminCoachDetail() {
                 onChangeText={setContractStartDate}
                 placeholder="YYYY-MM-DD (es: 2025-09-01)"
               />
+              
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>Data Fine Contratto</Text>
+              <TextInput
+                style={styles.input}
+                value={contractEndDate}
+                onChangeText={setContractEndDate}
+                placeholder="YYYY-MM-DD (es: 2026-06-30)"
+              />
               <Text style={styles.inputHint}>
-                Da questa data partirà il calcolo dei compensi mensili
+                Periodo contratto per calcolo compensi e comunicazione RAS
               </Text>
               
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>Compenso Mensile da questa ASD (€)</Text>
@@ -740,7 +748,7 @@ export default function AdminCoachDetail() {
               </Text>
               
               <View style={styles.totalBox}>
-                <Text style={styles.totalLabel}>Totale Annuale Stimato</Text>
+                <Text style={styles.totalLabel}>Totale Contratto Stimato</Text>
                 <Text style={styles.totalValue}>€{getTotalAnnualCompensation().toLocaleString()}</Text>
               </View>
               
