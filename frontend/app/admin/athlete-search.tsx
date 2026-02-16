@@ -12,7 +12,7 @@ import {
   FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '../../src/components/Icon';
+import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import api from '../../src/services/api';
 import * as XLSX from 'xlsx';
