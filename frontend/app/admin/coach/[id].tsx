@@ -163,6 +163,12 @@ export default function AdminCoachDetail() {
         setContractStartDate(date.toISOString().split('T')[0]); // YYYY-MM-DD
       }
       
+      // Load contract end date
+      if (coachRes.data.contract_end_date) {
+        const date = new Date(coachRes.data.contract_end_date);
+        setContractEndDate(date.toISOString().split('T')[0]); // YYYY-MM-DD
+      }
+      
       // Initialize onboarding checklist state
       const checklist = coachRes.data.onboarding_checklist || {};
       setChecklistItems({
