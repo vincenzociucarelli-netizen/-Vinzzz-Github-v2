@@ -43,6 +43,7 @@ interface Coach {
   coach_license_number?: string;
   monthly_compensation?: number;
   other_annual_compensation?: number;  // Da altre ASD/SSD
+  prior_compensation?: number;  // Compensi pregressi alla data di assunzione
   compensation_accepted?: boolean;
   compensation_history?: { [key: string]: boolean };
   over_5000_limit?: { [key: string]: boolean };
@@ -56,12 +57,23 @@ interface Coach {
   iban?: string;
   iban_holder?: string;
   bank_name?: string;
+  // Onboarding fields
+  onboarding_checklist?: {
+    contract_signed?: boolean;
+    ras_registered?: boolean;
+    id_acquired?: boolean;
+    fiscal_code_acquired?: boolean;
+    criminal_record?: boolean;
+  };
+  onboarding_completed?: boolean;
+  onboarding_date?: string;
 }
 
 interface Team {
   id: string;
   name: string;
 }
+
 
 export default function AdminCoachDetail() {
   const router = useRouter();
