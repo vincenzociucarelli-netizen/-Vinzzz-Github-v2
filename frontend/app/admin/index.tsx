@@ -12,9 +12,30 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
+
+// Emoji icons for reliable cross-platform support
+const Icons = {
+  calendar: '📅',
+  business: '🏢',
+  people: '👥',
+  fitness: '🏋️',
+  family: '👨‍👩‍👧',
+  layers: '📚',
+  search: '🔍',
+  clipboard: '📋',
+  archive: '📦',
+  card: '💳',
+  person: '👤',
+  settings: '⚙️',
+  logout: '🚪',
+  briefcase: '💼',
+  gift: '🎉',
+  chevron: '›',
+  back: '←',
+  add: '+',
+};
 
 interface Stats {
   total_teams: number;
