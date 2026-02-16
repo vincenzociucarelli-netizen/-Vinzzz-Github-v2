@@ -44,6 +44,7 @@ interface Coach {
   monthly_compensation?: number;
   other_annual_compensation?: number;  // Da altre ASD/SSD
   prior_compensation?: number;  // Compensi pregressi alla data di assunzione
+  contract_start_date?: string;  // Data inizio contratto
   compensation_accepted?: boolean;
   compensation_history?: { [key: string]: boolean };
   over_5000_limit?: { [key: string]: boolean };
