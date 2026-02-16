@@ -76,13 +76,38 @@ I tesserati includono: atleti, dirigenti e coach.
 - Backend: 8/8 test passati (trial endpoints)
 - Test file: `/app/backend/tests/test_trial_endpoints.py`
 
+## Session Changes (16/02/2026)
+1. **Fix Sistema Icone**: Sostituito tutte le emoji con icone Ionicons da `@expo/vector-icons`
+   - Aggiornati 25+ file con import uniformato
+   - Menu dashboard admin: tutte le voci ora usano icone vettoriali
+   - Header admin: icone per settings, logout, briefcase
+   - Frecce indietro: tutte convertite da `←` a `arrow-back` di Ionicons
+   - Banner beta: rimosso emoji `🎉`, usata icona `gift`
+   - Pagine atleti: icone per export e ricerca
+   - Rimosso il file workaround `src/components/Icon.tsx` dall'import principale
+
+2. **Email Mittente Aggiornata**: 
+   - Modificato SENDER_EMAIL da `info@pallavoloperugia.it` a `pallavoloperugia@gmail.com`
+
+3. **Confermato Banner 30 Tesserati**: Il banner già mostrava "30 tesserati" (era stato corretto nella sessione precedente)
+
+4. **Discussione Sistema Compensi Sportivi**: 
+   - Definito il flusso per ricevute mensili coach/atleti
+   - Proposta soluzione firma documentale: firma grafica + PDF + email automatica
+   - Stesso sistema riutilizzabile per privacy genitori
+   - NOTA: Da implementare nelle prossime sessioni
+
+5. **NOTA PER PUBBLICAZIONE APP**: Registrare dominio `registrateam.it` per email centralizzate (noreply@registrateam.it)
+
 ## Pending/Backlog
-- P1: Implementare logica freemium (limite 50 tesserati gratuiti)
-- P1: Verificare periodo prova 7 giorni end-to-end con genitore reale
+- P1: **Sistema Firma Documentale** - Firma grafica + PDF + email automatica
+- P1: **Applicare firma alla Privacy Genitori** - Sostituire flag con firma documentale
+- P1: **Modulo Compensi Sportivi (Coach)** - Anagrafica collaboratori, ricevute mensili, dichiarazioni
+- P1: Implementare logica freemium (limite 30 tesserati gratuiti)
 - P2: Limite team per società + upgrade message
 - P2: **Integrazione Stripe pagamenti online** (vedi dettagli sotto)
-- P2: Modulo atleti professionisti con compenso
-- P3: Fix permanente icone (attualmente emoji workaround)
+- P2: Modulo atleti professionisti con compenso (PRO)
+- P3: Integrazione Stripe per RegistraTEAM (vendita pack membri)
 
 ## Dettagli Integrazione Stripe (P2)
 **Modello di business:** La società sportiva cliente configura il proprio account Stripe.
@@ -97,3 +122,4 @@ I tesserati includono: atleti, dirigenti e coach.
 - Admin società → Crea account su stripe.com → Inserisce chiavi API nelle Impostazioni
 - Genitore → Vede rata da pagare → Clicca "Paga Online" → Stripe Checkout → Pagamento confermato
 - I soldi vanno direttamente sul conto Stripe della società sportiva
+
