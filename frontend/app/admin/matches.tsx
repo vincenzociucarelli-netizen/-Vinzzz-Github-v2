@@ -583,14 +583,14 @@ export default function AdminMatches() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={{ fontSize: 24, color: "#fff" }}>←</Text>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>🏐 Calendario Gare</Text>
+        <Text style={styles.headerTitle}>Calendario Gare</Text>
         <TouchableOpacity onPress={handleImportExcel} style={styles.importBtn}>
           <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity onPress={openAddModal} style={styles.addBtn}>
-          <Text style={{ fontSize: 22, color: "#fff" }}>➕</Text>
+          <Ionicons name="add" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
 
