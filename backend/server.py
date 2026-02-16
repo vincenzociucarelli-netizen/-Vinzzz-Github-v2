@@ -5566,6 +5566,318 @@ async def check_pending_trials(current_user = Depends(get_current_user)):
     
     return {"athletes_requiring_action": athletes_requiring_action}
 
+# ==========================================
+# DIGITAL SIGNATURE ENDPOINTS
+# ==========================================
+
+class SignatureDocumentRequest(BaseModel):
+    document_type: str  # "privacy_consent", "coach_contract", "compensation_receipt"
+    document_title: str
+    document_text: str
+    signer_name: str
+    signer_email: str
+    signature_base64: str  # Base64 encoded signature image
+    related_entity_id: Optional[str] = None  # athlete_id, coach_id, etc.
+    additional_data: Optional[dict] = None  # Any extra data to include
+
+def generate_signed_pdf(
+    document_title: str,
+    document_text: str,
+    signer_name: str,
+    signature_base64: str,
+    society_name: str = "PALLAVOLO PERUGIA SSD A RL",
+    additional_data: dict = None
+) -> bytes:
+    """Generate a signed PDF document with timestamp"""
+    if not HAS_PDF_GENERATION:
+        raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    # Timestamp
+    timestamp = datetime.now().strftime("%d/%m/%Y alle %H:%M:%S")
+    
+    # Header
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(width/2, height - 2*cm, society_name)
+    
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(width/2, height - 2.6*cm, "Documento con firma digitale")
+    
+    # Line separator
+    c.setStrokeColor(colors.grey)
+    c.line(2*cm, height - 3*cm, width - 2*cm, height - 3*cm)
+    
+    # Document title
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(2*cm, height - 4*cm, document_title)
+    
+    # Document text - wrap long text
+    c.setFont("Helvetica", 10)
+    text_lines = []
+    words = document_text.split(' ')
+    current_line = ""
+    max_width = width - 4*cm
+    
+    for word in words:
+        test_line = current_line + " " + word if current_line else word
+        if c.stringWidth(test_line, "Helvetica", 10) < max_width:
+            current_line = test_line
+        else:
+            text_lines.append(current_line)
+            current_line = word
+    if current_line:
+        text_lines.append(current_line)
+    
+    y_position = height - 5*cm
+    for line in text_lines[:20]:  # Limit to 20 lines
+        c.drawString(2*cm, y_position, line)
+        y_position -= 0.5*cm
+    
+    if len(text_lines) > 20:
+        c.drawString(2*cm, y_position, "...")
+        y_position -= 0.5*cm
+    
+    # Additional data if present
+    if additional_data:
+        y_position -= 0.5*cm
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(2*cm, y_position, "Dati aggiuntivi:")
+        y_position -= 0.5*cm
+        c.setFont("Helvetica", 9)
+        for key, value in additional_data.items():
+            if y_position < 8*cm:
+                break
+            c.drawString(2.5*cm, y_position, f"- {key}: {value}")
+            y_position -= 0.4*cm
+    
+    # Signature section
+    y_position = min(y_position - 1*cm, 7*cm)
+    
+    # Signature box
+    c.setStrokeColor(colors.HexColor("#007AFF"))
+    c.setLineWidth(1)
+    c.rect(2*cm, y_position - 3*cm, 8*cm, 3*cm)
+    
+    # Add signature image
+    if signature_base64 and HAS_PIL:
+        try:
+            # Remove data URL prefix if present
+            if ',' in signature_base64:
+                signature_base64 = signature_base64.split(',')[1]
+            
+            sig_data = base64.b64decode(signature_base64)
+            sig_image = Image.open(io.BytesIO(sig_data))
+            
+            # Convert to RGB if necessary
+            if sig_image.mode in ('RGBA', 'P'):
+                sig_image = sig_image.convert('RGB')
+            
+            # Save to buffer
+            sig_buffer = io.BytesIO()
+            sig_image.save(sig_buffer, format='PNG')
+            sig_buffer.seek(0)
+            
+            # Draw signature image
+            from reportlab.lib.utils import ImageReader
+            img_reader = ImageReader(sig_buffer)
+            c.drawImage(img_reader, 2.2*cm, y_position - 2.8*cm, width=7.6*cm, height=2.6*cm, preserveAspectRatio=True)
+        except Exception as e:
+            logging.error(f"Error adding signature image: {e}")
+            c.drawString(4*cm, y_position - 1.5*cm, "[Firma digitale]")
+    
+    # Signer info
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(11*cm, y_position - 0.5*cm, "Firmato da:")
+    c.setFont("Helvetica", 10)
+    c.drawString(11*cm, y_position - 1*cm, signer_name)
+    
+    c.setFont("Helvetica", 9)
+    c.drawString(11*cm, y_position - 1.6*cm, f"Data: {timestamp}")
+    
+    # Footer with legal notice
+    c.setFont("Helvetica", 8)
+    c.setFillColor(colors.grey)
+    footer_text = "Documento generato automaticamente con firma digitale grafica. Valido ai sensi della normativa vigente."
+    c.drawCentredString(width/2, 1.5*cm, footer_text)
+    c.drawCentredString(width/2, 1*cm, f"Generato il {timestamp}")
+    
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()
+
+@api_router.post("/documents/sign")
+async def sign_document(request: SignatureDocumentRequest, current_user = Depends(get_current_user)):
+    """Create a signed document with digital signature and send via email"""
+    
+    # Get society info
+    society = await db.societies.find_one()
+    society_name = society.get("name", "PALLAVOLO PERUGIA SSD A RL") if society else "PALLAVOLO PERUGIA SSD A RL"
+    society_email = society.get("email") if society else None
+    
+    # Generate PDF
+    try:
+        pdf_bytes = generate_signed_pdf(
+            document_title=request.document_title,
+            document_text=request.document_text,
+            signer_name=request.signer_name,
+            signature_base64=request.signature_base64,
+            society_name=society_name,
+            additional_data=request.additional_data
+        )
+    except Exception as e:
+        logging.error(f"Error generating PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
+    
+    # Store signed document record in database
+    document_record = {
+        "id": str(uuid.uuid4()),
+        "document_type": request.document_type,
+        "document_title": request.document_title,
+        "signer_name": request.signer_name,
+        "signer_email": request.signer_email,
+        "signer_id": current_user["id"],
+        "related_entity_id": request.related_entity_id,
+        "signed_at": datetime.utcnow(),
+        "pdf_base64": base64.b64encode(pdf_bytes).decode('utf-8'),
+        "additional_data": request.additional_data
+    }
+    await db.signed_documents.insert_one(document_record)
+    
+    # Send email with PDF attachment
+    sendgrid_api_key = os.environ.get("SENDGRID_API_KEY")
+    sendgrid_from_email = os.environ.get("SENDGRID_FROM_EMAIL", "noreply@registrateam.it")
+    
+    if sendgrid_api_key:
+        import sendgrid
+        from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
+        
+        sg = sendgrid.SendGridAPIClient(api_key=sendgrid_api_key)
+        
+        # Create email
+        timestamp_str = datetime.now().strftime("%d-%m-%Y_%H-%M")
+        filename = f"documento_firmato_{timestamp_str}.pdf"
+        
+        email_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif;">
+        <h2 style="color: #FF9500;">{society_name}</h2>
+        <p>Gentile {request.signer_name},</p>
+        <p>In allegato trova il documento firmato digitalmente:</p>
+        <p><strong>{request.document_title}</strong></p>
+        <p>Data firma: {datetime.now().strftime("%d/%m/%Y alle %H:%M")}</p>
+        <br>
+        <p style="color: #666; font-size: 12px;">
+        Questo documento è stato generato automaticamente. 
+        Conservi questa email come ricevuta della firma.
+        </p>
+        <hr>
+        <p style="color: #999; font-size: 11px;">
+        {society_name}<br>
+        Documento firmato digitalmente tramite RegistraTEAM
+        </p>
+        </body>
+        </html>
+        """
+        
+        # Send to signer
+        try:
+            message = Mail(
+                from_email=sendgrid_from_email,
+                to_emails=request.signer_email,
+                subject=f"Documento firmato: {request.document_title}",
+                html_content=email_body
+            )
+            
+            # Add PDF attachment
+            encoded_pdf = base64.b64encode(pdf_bytes).decode()
+            attachment = Attachment()
+            attachment.file_content = FileContent(encoded_pdf)
+            attachment.file_name = FileName(filename)
+            attachment.file_type = FileType("application/pdf")
+            attachment.disposition = Disposition("attachment")
+            message.add_attachment(attachment)
+            
+            sg.send(message)
+            logging.info(f"Signed document email sent to {request.signer_email}")
+        except Exception as e:
+            logging.error(f"Error sending email to signer: {e}")
+        
+        # Send copy to society admin if different email
+        if society_email and society_email != request.signer_email:
+            try:
+                admin_body = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif;">
+                <h2 style="color: #FF9500;">{society_name}</h2>
+                <p><strong>Nuovo documento firmato</strong></p>
+                <p>Tipo documento: {request.document_type}</p>
+                <p>Titolo: {request.document_title}</p>
+                <p>Firmato da: {request.signer_name}</p>
+                <p>Email: {request.signer_email}</p>
+                <p>Data firma: {datetime.now().strftime("%d/%m/%Y alle %H:%M")}</p>
+                <br>
+                <p>Il documento firmato è allegato a questa email.</p>
+                </body>
+                </html>
+                """
+                
+                admin_message = Mail(
+                    from_email=sendgrid_from_email,
+                    to_emails=society_email,
+                    subject=f"[Copia] Documento firmato da {request.signer_name}: {request.document_title}",
+                    html_content=admin_body
+                )
+                admin_message.add_attachment(attachment)
+                
+                sg.send(admin_message)
+                logging.info(f"Signed document copy sent to admin {society_email}")
+            except Exception as e:
+                logging.error(f"Error sending email to admin: {e}")
+    
+    return {
+        "success": True,
+        "document_id": document_record["id"],
+        "message": f"Documento firmato con successo. Una copia è stata inviata a {request.signer_email}"
+    }
+
+@api_router.get("/documents/signed/{document_id}/pdf")
+async def get_signed_document_pdf(document_id: str, current_user = Depends(get_current_user)):
+    """Download a signed document PDF"""
+    document = await db.signed_documents.find_one({"id": document_id})
+    
+    if not document:
+        raise HTTPException(status_code=404, detail="Documento non trovato")
+    
+    # Check access: only signer or admin can view
+    if document["signer_id"] != current_user["id"] and current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Non autorizzato a visualizzare questo documento")
+    
+    pdf_bytes = base64.b64decode(document["pdf_base64"])
+    
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=documento_firmato_{document_id}.pdf"}
+    )
+
+@api_router.get("/documents/signed")
+async def list_signed_documents(current_user = Depends(get_current_user)):
+    """List signed documents for current user or all for admin"""
+    query = {}
+    
+    if current_user["role"] != UserRole.ADMIN:
+        query["signer_id"] = current_user["id"]
+    
+    documents = await db.signed_documents.find(query, {"pdf_base64": 0}).to_list(100)
+    
+    for doc in documents:
+        clean_mongo_doc(doc)
+    
+    return documents
+
 @api_router.get("/")
 async def root():
     return {"message": "Athlete Attendance API"}
