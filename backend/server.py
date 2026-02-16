@@ -2038,6 +2038,11 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "iban": user.get("iban"),
         "account_holder": user.get("account_holder"),
         "bank_name": user.get("bank_name"),
+        # Onboarding fields
+        "onboarding_checklist": user.get("onboarding_checklist"),
+        "prior_compensation": user.get("prior_compensation"),
+        "onboarding_completed": user.get("onboarding_completed"),
+        "onboarding_date": user.get("onboarding_date"),
     }
 
 @api_router.patch("/users/{user_id}/bank-details")
