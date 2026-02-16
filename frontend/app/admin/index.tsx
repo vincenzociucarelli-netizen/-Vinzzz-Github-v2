@@ -718,7 +718,7 @@ export default function AdminDashboard() {
         {inviteCode && (
           <View style={styles.regenSection}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <Ionicons name="settings" size={20} color="#666" style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: 20, marginRight: 8 }}>{Icons.settings}</Text>
               <Text style={styles.regenSectionTitle}>Impostazioni Avanzate</Text>
             </View>
             <TouchableOpacity 
