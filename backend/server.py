@@ -3951,6 +3951,45 @@ async def get_certificate(athlete_id: str, current_user = Depends(get_current_us
     
     return Certificate(**certificate)
 
+def count_training_days_in_period(training_sessions: list, start_date: datetime, end_date: datetime) -> int:
+    """
+    Count how many training days occurred between start_date and end_date (inclusive).
+    Based on team's configured training_sessions.
+    """
+    if not training_sessions:
+        return 0
+    
+    # Map Italian day names to weekday numbers (Monday=0, Sunday=6)
+    day_map = {
+        'lunedì': 0, 'lunedi': 0,
+        'martedì': 1, 'martedi': 1,
+        'mercoledì': 2, 'mercoledi': 2,
+        'giovedì': 3, 'giovedi': 3,
+        'venerdì': 4, 'venerdi': 4,
+        'sabato': 5,
+        'domenica': 6
+    }
+    
+    # Get training weekdays from team config
+    training_weekdays = set()
+    for session in training_sessions:
+        day_name = session.get('day', '').lower().strip()
+        if day_name in day_map:
+            training_weekdays.add(day_map[day_name])
+    
+    if not training_weekdays:
+        return 0
+    
+    # Count training days in the period
+    count = 0
+    current = start_date
+    while current <= end_date:
+        if current.weekday() in training_weekdays:
+            count += 1
+        current += timedelta(days=1)
+    
+    return count
+
 @api_router.get("/teams/{team_id}/attendance-stats")
 async def get_team_attendance_stats(team_id: str, current_user = Depends(get_current_user)):
     """Get attendance statistics for all athletes in a team"""
@@ -3965,17 +4004,35 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
     # Get all athletes in the team
     athletes = await db.athletes.find({"team_id": team_id}).to_list(1000)
     
+    # Get team's training sessions configuration
+    training_sessions = team.get("training_sessions", [])
+    trainings_per_week = len(training_sessions) if training_sessions else 3  # fallback to 3
+    
     # Get current date info
     now = datetime.now()
+    today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
     # Set week_start to Monday 00:00:00
     week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     # Set month_start to 1st of month 00:00:00
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
+    # Calculate expected trainings based on ACTUAL training days up to TODAY
+    expected_weekly = count_training_days_in_period(training_sessions, week_start, today_end)
+    expected_monthly = count_training_days_in_period(training_sessions, month_start, today_end)
+    
     # Calculate stats for each athlete
     stats = []
     for athlete in athletes:
         athlete_id = athlete["id"]
+        
+        # Get registration date for total calculation
+        reg_date = athlete["registration_date"]
+        if isinstance(reg_date, str):
+            reg_date = datetime.fromisoformat(reg_date)
+        
+        # Calculate expected total trainings from registration to today
+        expected_total = count_training_days_in_period(training_sessions, reg_date, today_end)
         
         # Get all attendances for this athlete
         all_attendances = await db.attendances.count_documents({"athlete_id": athlete_id})
@@ -3992,17 +4049,7 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
             "check_in_time": {"$gte": month_start}
         })
         
-        # Estimate expected trainings based on team training days
-        # Assuming 3 trainings per week (typical)
-        reg_date = athlete["registration_date"]
-        if isinstance(reg_date, str):
-            reg_date = datetime.fromisoformat(reg_date)
-        weeks_active = max(1, (now - reg_date).days // 7)
-        expected_total = weeks_active * 3  # 3 trainings per week estimate
-        expected_monthly = 12  # ~3 trainings per week * 4 weeks
-        expected_weekly = 3
-        
-        # Calculate percentages
+        # Calculate percentages based on actual expected trainings
         total_percentage = round((all_attendances / max(expected_total, 1)) * 100, 1)
         monthly_percentage = round((month_attendances / max(expected_monthly, 1)) * 100, 1)
         weekly_percentage = round((week_attendances / max(expected_weekly, 1)) * 100, 1)
@@ -4018,6 +4065,9 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
             "total_attendances": all_attendances,
             "weekly_attendances": week_attendances,
             "monthly_attendances": month_attendances,
+            "expected_weekly": expected_weekly,
+            "expected_monthly": expected_monthly,
+            "expected_total": expected_total,
             "total_percentage": total_percentage,
             "monthly_percentage": monthly_percentage,
             "weekly_percentage": weekly_percentage,
@@ -4029,8 +4079,11 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
     return {
         "team_name": team["name"],
         "total_athletes": len(athletes),
+        "trainings_per_week": trainings_per_week,
         "week_start": week_start.strftime("%d/%m/%Y"),
         "month_name": now.strftime("%B %Y"),
+        "expected_weekly": expected_weekly,
+        "expected_monthly": expected_monthly,
         "athletes": stats
     }
 
