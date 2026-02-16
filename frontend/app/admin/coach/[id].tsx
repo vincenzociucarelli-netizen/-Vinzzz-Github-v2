@@ -720,12 +720,43 @@ export default function AdminCoachDetail() {
                   <Text style={styles.compensationPeriod}>/anno (altre ASD)</Text>
                 </View>
               )}
-              <View style={[styles.totalBox, { marginTop: 12 }]}>
-                <Text style={styles.totalLabel}>Totale Annuale</Text>
-                <Text style={styles.totalValue}>
-                  €{(((coach.monthly_compensation || 0) * 12) + (coach.other_annual_compensation || 0)).toLocaleString()}
-                </Text>
-              </View>
+              
+              {/* Mostra breakdown del calcolo */}
+              {(() => {
+                const breakdown = getCompensationBreakdown();
+                return (
+                  <>
+                    {breakdown.prior > 0 && (
+                      <View style={[styles.totalBox, { marginTop: 8, backgroundColor: '#FFF3E0' }]}>
+                        <Text style={[styles.totalLabel, { color: '#E65100' }]}>
+                          Compensi Pregressi (prima del contratto)
+                        </Text>
+                        <Text style={[styles.totalValue, { color: '#E65100' }]}>
+                          €{breakdown.prior.toLocaleString()}
+                        </Text>
+                      </View>
+                    )}
+                    
+                    {coach?.contract_start_date && (
+                      <View style={[styles.totalBox, { marginTop: 8, backgroundColor: '#E3F2FD' }]}>
+                        <Text style={[styles.totalLabel, { color: '#1565C0' }]}>
+                          Da {breakdown.startMonthName} ({breakdown.monthsInContract} mesi)
+                        </Text>
+                        <Text style={[styles.totalValue, { color: '#1565C0' }]}>
+                          €{breakdown.monthly} × {breakdown.monthsInContract} = €{breakdown.thisClubTotal.toLocaleString()}
+                        </Text>
+                      </View>
+                    )}
+                    
+                    <View style={[styles.totalBox, { marginTop: 12 }]}>
+                      <Text style={styles.totalLabel}>Totale Annuo Previsto</Text>
+                      <Text style={styles.totalValue}>
+                        €{breakdown.grandTotal.toLocaleString()}
+                      </Text>
+                    </View>
+                  </>
+                );
+              })()}
             </>
           )}
 
