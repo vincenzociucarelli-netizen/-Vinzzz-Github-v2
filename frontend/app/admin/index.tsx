@@ -692,7 +692,10 @@ export default function AdminDashboard() {
         {/* Rigenera Codice - A fondo pagina */}
         {inviteCode && (
           <View style={styles.regenSection}>
-            <Text style={styles.regenSectionTitle}>⚙️ Impostazioni Avanzate</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Ionicons name="settings" size={20} color="#666" style={{ marginRight: 8 }} />
+              <Text style={styles.regenSectionTitle}>Impostazioni Avanzate</Text>
+            </View>
             <TouchableOpacity 
               style={styles.regenButtonBottom}
               onPress={async () => {
