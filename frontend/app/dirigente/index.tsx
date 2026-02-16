@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
-import { Ionicons } from '../../src/components/Icon';
+import { Ionicons } from '@expo/vector-icons';
 import { format, differenceInDays } from 'date-fns';
 import { it } from 'date-fns/locale';
 
