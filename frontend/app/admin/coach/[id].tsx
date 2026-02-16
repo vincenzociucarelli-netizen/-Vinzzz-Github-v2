@@ -910,6 +910,100 @@ export default function AdminCoachDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Onboarding Checklist Edit Modal */}
+      <Modal
+        visible={editingOnboarding}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditingOnboarding(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.onboardingModalContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>📋 Checklist Onboarding</Text>
+              <Text style={styles.modalSubtitle}>{coach?.full_name}</Text>
+              
+              <Text style={styles.onboardingChecklistHeader}>Spunta le voci completate:</Text>
+              
+              <TouchableOpacity
+                style={[styles.onboardingChecklistItem, checklistItems.contract_signed && styles.onboardingChecklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, contract_signed: !checklistItems.contract_signed})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.contract_signed ? '☑️' : '⬜'}</Text>
+                <Text style={styles.onboardingChecklistText}>Contratto/Lettera d'incarico firmata</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.onboardingChecklistItem, checklistItems.ras_registered && styles.onboardingChecklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, ras_registered: !checklistItems.ras_registered})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.ras_registered ? '☑️' : '⬜'}</Text>
+                <Text style={styles.onboardingChecklistText}>Iscrizione RAS (Registro Attività Sportive)</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.onboardingChecklistItem, checklistItems.id_acquired && styles.onboardingChecklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, id_acquired: !checklistItems.id_acquired})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.id_acquired ? '☑️' : '⬜'}</Text>
+                <Text style={styles.onboardingChecklistText}>Documento d'identità acquisito</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.onboardingChecklistItem, checklistItems.fiscal_code_acquired && styles.onboardingChecklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, fiscal_code_acquired: !checklistItems.fiscal_code_acquired})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.fiscal_code_acquired ? '☑️' : '⬜'}</Text>
+                <Text style={styles.onboardingChecklistText}>Codice fiscale acquisito</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.onboardingChecklistItem, checklistItems.criminal_record && styles.onboardingChecklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, criminal_record: !checklistItems.criminal_record})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.criminal_record ? '☑️' : '⬜'}</Text>
+                <Text style={styles.onboardingChecklistText}>Certificato casellario giudiziale (se richiesto)</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.onboardingCompensationSection}>
+                <Text style={styles.onboardingCompensationLabel}>💰 Compensi pregressi alla data di assunzione (€)</Text>
+                <Text style={styles.onboardingCompensationHint}>
+                  Importo dichiarato dal coach dei compensi sportivi già percepiti nel corrente anno fiscale
+                </Text>
+                <TextInput
+                  style={styles.onboardingCompensationInput}
+                  value={priorCompensation}
+                  onChangeText={setPriorCompensation}
+                  placeholder="0"
+                  keyboardType="decimal-pad"
+                  placeholderTextColor="#999"
+                />
+              </View>
+              
+              <View style={styles.onboardingModalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setEditingOnboarding(false)}
+                >
+                  <Text style={styles.modalCancelBtnText}>Annulla</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.onboardingSaveBtn, savingOnboarding && styles.disabledBtn]}
+                  onPress={handleSaveOnboarding}
+                  disabled={savingOnboarding}
+                >
+                  {savingOnboarding ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.onboardingSaveBtnText}>Salva</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
