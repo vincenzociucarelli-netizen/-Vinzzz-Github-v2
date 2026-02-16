@@ -2040,6 +2040,16 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
     if "other_annual_compensation" in data:
         update_data["other_annual_compensation"] = float(data["other_annual_compensation"]) if data["other_annual_compensation"] else 0
     
+    if "contract_start_date" in data:
+        if data["contract_start_date"]:
+            try:
+                # Parse ISO date string (YYYY-MM-DD)
+                update_data["contract_start_date"] = datetime.fromisoformat(data["contract_start_date"])
+            except:
+                pass
+        else:
+            update_data["contract_start_date"] = None
+    
     if update_data:
         await db.users.update_one(
             {"id": user_id},
