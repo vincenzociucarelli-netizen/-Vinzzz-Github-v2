@@ -584,7 +584,7 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/parents')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#FCE4EC' }]}>
-              <Text style={{ fontSize: 26 }}>👨‍👩‍👧</Text>
+              <Ionicons name="people-circle" size={26} color="#E91E63" />
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Genitori</Text>
@@ -595,7 +595,7 @@ export default function AdminDashboard() {
                 <Text style={styles.badgeText}>{pendingCounts.parents}</Text>
               </View>
             )}
-            <Text style={{ fontSize: 18, color: '#999' }}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
 
           {/* Squadre */}
@@ -604,13 +604,13 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/teams')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
-              <Text style={{ fontSize: 26 }}>👥</Text>
+              <Ionicons name="layers" size={26} color="#4CAF50" />
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Squadre</Text>
               <Text style={styles.menuCardSubtitle}>{stats?.total_teams || 0} squadre registrate</Text>
             </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
 
           {/* Ricerca Avanzata Atleti */}
@@ -619,13 +619,13 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/athlete-search')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E8EAF6' }]}>
-              <Text style={{ fontSize: 26 }}>🔍</Text>
+              <Ionicons name="search" size={26} color="#3F51B5" />
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Ricerca Avanzata</Text>
               <Text style={styles.menuCardSubtitle}>Filtra atleti per ruolo, anno, CAP, altezza</Text>
             </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
 
           {/* Storico Presenze */}
@@ -634,13 +634,13 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/attendances')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#F0EFFF' }]}>
-              <Text style={{ fontSize: 26 }}>📋</Text>
+              <Ionicons name="clipboard" size={26} color="#673AB7" />
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Storico Presenze</Text>
               <Text style={styles.menuCardSubtitle}>Presenze di oggi: {stats?.today_attendances || 0}</Text>
             </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
           
           {/* Archivio Stagioni */}
@@ -649,13 +649,13 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/seasons')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#FBE9E7' }]}>
-              <Text style={{ fontSize: 26 }}>📦</Text>
+              <Ionicons name="archive" size={26} color="#795548" />
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Archivio Stagioni</Text>
               <Text style={styles.menuCardSubtitle}>Storico atleti, coach e campionati</Text>
             </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
 
           {/* Import Pagamenti */}
@@ -664,13 +664,13 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/payments-import')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
-              <Text style={{ fontSize: 26 }}>💳</Text>
+              <Ionicons name="card" size={26} color="#4CAF50" />
             </View>
             <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>📥 Import Pagamenti</Text>
+              <Text style={styles.menuCardTitle}>Import Pagamenti</Text>
               <Text style={styles.menuCardSubtitle}>Importa da Excel bonifici, POS, contanti</Text>
             </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
 
           {/* Il Mio Profilo */}
@@ -679,13 +679,13 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/profile')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E3F2FD' }]}>
-              <Text style={{ fontSize: 26 }}>👤</Text>
+              <Ionicons name="person" size={26} color="#2196F3" />
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Il Mio Profilo</Text>
               <Text style={styles.menuCardSubtitle}>Dati personali e compensi</Text>
             </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
         </View>
 
