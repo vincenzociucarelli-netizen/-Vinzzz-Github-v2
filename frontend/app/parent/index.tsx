@@ -14,7 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '../../src/components/Icon';
 import { Athlete } from '../../src/types';
 
 // Colori vivaci per distinguere i figli

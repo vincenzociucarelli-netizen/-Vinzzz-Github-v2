@@ -14,7 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import api from '../../src/services/api';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '../../src/components/Icon';
 import { Team } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
 
