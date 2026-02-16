@@ -35,6 +35,7 @@ const Icons = {
   chevron: '›',
   back: '←',
   add: '+',
+  refresh: '🔄',
 };
 
 interface Stats {
