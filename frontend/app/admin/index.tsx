@@ -275,13 +275,13 @@ export default function AdminDashboard() {
             onPress={() => router.replace('/dirigente')} 
             style={[styles.headerBtn, styles.dirigenteSwitchBtn]}
           >
-            <Ionicons name="briefcase" size={16} color="#007AFF" />
+            <Text style={{ fontSize: 16 }}>{Icons.briefcase}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerBtn}>
-            <Ionicons name="settings" size={22} color="#fff" />
+            <Text style={{ fontSize: 22, color: '#fff' }}>{Icons.settings}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleLogout} style={styles.headerBtn}>
-            <Ionicons name="log-out" size={22} color="#fff" />
+            <Text style={{ fontSize: 22, color: '#fff' }}>{Icons.logout}</Text>
           </TouchableOpacity>
         </View>
       </View>
