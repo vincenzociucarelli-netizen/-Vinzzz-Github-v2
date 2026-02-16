@@ -16,6 +16,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import { Athlete } from '../../src/types';
+import SignaturePad from '../../src/components/SignaturePad';
 
 // Colori vivaci per distinguere i figli
 const ATHLETE_COLORS = [
