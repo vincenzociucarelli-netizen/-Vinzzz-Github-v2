@@ -105,6 +105,8 @@ I tesserati includono: atleti, dirigenti e coach.
    - Checklist items: Contratto firmato, Iscrizione RAS, Documento identità, Codice fiscale, Casellario giudiziale
    - Campo "Compensi pregressi" (€) per tracciare compensi già percepiti alla data di assunzione
    - Banner promemoria nella pagina dettaglio coach se mancano dati
+   - **NUOVO**: Banner cliccabile per aprire modal di modifica checklist
+   - **NUOVO**: Modal editabile per spuntare voci checklist e aggiornare compensi pregressi
    - Backend: Nuovo endpoint `PATCH /api/users/{id}/onboarding`
    - Test: 12/12 backend tests passati, frontend verificato via Playwright
 
