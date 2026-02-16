@@ -155,6 +155,12 @@ export default function AdminCoachDetail() {
       setOtherAnnualCompensation(coachRes.data.other_annual_compensation?.toString() || '0');
       setSelectedTeams(coachRes.data.assigned_teams || []);
       
+      // Load contract start date
+      if (coachRes.data.contract_start_date) {
+        const date = new Date(coachRes.data.contract_start_date);
+        setContractStartDate(date.toISOString().split('T')[0]); // YYYY-MM-DD
+      }
+      
       // Initialize onboarding checklist state
       const checklist = coachRes.data.onboarding_checklist || {};
       setChecklistItems({
