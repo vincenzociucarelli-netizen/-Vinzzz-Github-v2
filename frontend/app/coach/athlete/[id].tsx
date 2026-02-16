@@ -170,7 +170,6 @@ export default function CoachAthleteDetail() {
         athlete_weight: weight ? parseInt(weight) : null,
         athlete_elevation: elevation ? parseInt(elevation) : null,
         athlete_notes: notes || null,
-        athlete_characteristics: selectedCharacteristics,
       });
       showAlert('✅ Successo', 'Dati tecnici salvati correttamente');
     } catch (error: any) {
