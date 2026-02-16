@@ -1486,6 +1486,12 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 18,
   },
+  onboardingBannerAction: {
+    fontSize: 12,
+    color: '#FF9500',
+    marginTop: 6,
+    fontWeight: '600',
+  },
   // Prior compensation styles
   priorCompensationBox: {
     backgroundColor: '#F0F8FF',
@@ -1504,5 +1510,85 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#007AFF',
+  },
+  // Onboarding edit modal styles
+  onboardingModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '92%',
+    maxWidth: 500,
+    maxHeight: '90%',
+  },
+  onboardingChecklistHeader: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  onboardingChecklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 10,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  onboardingChecklistItemChecked: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#34C759',
+  },
+  onboardingChecklistText: {
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 12,
+    flex: 1,
+  },
+  onboardingCompensationSection: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  onboardingCompensationLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  onboardingCompensationHint: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 10,
+    lineHeight: 18,
+  },
+  onboardingCompensationInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 14,
+    fontSize: 16,
+    backgroundColor: '#fafafa',
+  },
+  onboardingModalButtons: {
+    flexDirection: 'row',
+    marginTop: 20,
+    gap: 12,
+  },
+  onboardingSaveBtn: {
+    flex: 1.5,
+    padding: 14,
+    backgroundColor: '#34C759',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onboardingSaveBtnText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
   },
 });
