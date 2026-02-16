@@ -4651,12 +4651,16 @@ async def check_attendance(attendance_data: AttendanceCreate, current_user = Dep
         })
         
         if existing_attendance:
-            # Return the existing attendance with a special status
-            existing_attendance.pop('_id', None)
-            existing_att = Attendance(**existing_attendance)
-            existing_att.status = "already_registered"
-            existing_att.block_reason = "GIÀ REGISTRATA OGGI"
-            return existing_att
+            # Return a NEW attendance object with "already_registered" status
+            # This does NOT create a new record in the database
+            return Attendance(
+                id=existing_attendance["id"],
+                athlete_id=athlete_id,
+                coach_id=existing_attendance["coach_id"],
+                check_in_time=existing_attendance["check_in_time"],
+                status="already_registered",
+                block_reason="GIÀ REGISTRATA OGGI"
+            )
     
     # Check status
     status_check = await check_athlete_status(athlete_id)
