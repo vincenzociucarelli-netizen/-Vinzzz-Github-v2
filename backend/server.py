@@ -5654,6 +5654,460 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         "exceeded_15000": request.exceeded_15000
     }
 
+# ==================== THRESHOLD DECLARATIONS (€5.000 / €15.000) ====================
+
+@api_router.get("/coach/{coach_id}/threshold-status/{year}")
+async def get_coach_threshold_status(
+    coach_id: str,
+    year: int,
+    current_user = Depends(get_current_user)
+):
+    """
+    Get the threshold status for a coach for a specific year.
+    Returns info about €5.000 and €15.000 thresholds including:
+    - Current yearly total
+    - Monthly compensation
+    - Warning thresholds (total >= threshold - monthly_compensation)
+    - Required declarations (total >= threshold)
+    - Signed declarations
+    """
+    # Verify access
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH]:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    if current_user["role"] == UserRole.COACH and current_user["id"] != coach_id:
+        raise HTTPException(status_code=403, detail="Puoi vedere solo i tuoi dati")
+    
+    # Get coach data
+    coach = await db.users.find_one({"id": coach_id})
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach non trovato")
+    
+    monthly_compensation = coach.get("monthly_compensation", 0) or 0
+    
+    # Calculate yearly total from signed receipts
+    yearly_records = await db.coach_compensations.find({
+        "coach_id": coach_id,
+        "year": year,
+        "receipt_signed": True
+    }).to_list(12)
+    
+    yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
+    
+    # Get existing declarations for this year
+    declarations = await db.threshold_declarations.find({
+        "coach_id": coach_id,
+        "year": year
+    }).to_list(10)
+    
+    declaration_5000 = next((d for d in declarations if d.get("threshold_type") == "5000"), None)
+    declaration_15000 = next((d for d in declarations if d.get("threshold_type") == "15000"), None)
+    
+    # Calculate thresholds
+    warning_5000_threshold = 5000 - monthly_compensation
+    warning_15000_threshold = 15000 - monthly_compensation
+    
+    # Status flags
+    needs_warning_5000 = yearly_total >= warning_5000_threshold and yearly_total < 5000
+    needs_warning_15000 = yearly_total >= warning_15000_threshold and yearly_total < 15000
+    
+    needs_declaration_5000 = yearly_total >= 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
+    needs_declaration_15000 = yearly_total >= 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
+    
+    # Blocking status: can't sign new receipts if declaration is needed
+    is_blocked = needs_declaration_5000 or needs_declaration_15000
+    
+    return {
+        "coach_id": coach_id,
+        "coach_name": coach.get("full_name", ""),
+        "year": year,
+        "monthly_compensation": monthly_compensation,
+        "yearly_total": yearly_total,
+        "thresholds": {
+            "5000": {
+                "threshold": 5000,
+                "warning_at": warning_5000_threshold,
+                "needs_warning": needs_warning_5000,
+                "needs_declaration": needs_declaration_5000,
+                "declaration_signed": bool(declaration_5000 and declaration_5000.get("signed")),
+                "declaration_date": declaration_5000.get("signed_date") if declaration_5000 else None,
+                "document_id": declaration_5000.get("document_id") if declaration_5000 else None
+            },
+            "15000": {
+                "threshold": 15000,
+                "warning_at": warning_15000_threshold,
+                "needs_warning": needs_warning_15000,
+                "needs_declaration": needs_declaration_15000,
+                "declaration_signed": bool(declaration_15000 and declaration_15000.get("signed")),
+                "declaration_date": declaration_15000.get("signed_date") if declaration_15000 else None,
+                "document_id": declaration_15000.get("document_id") if declaration_15000 else None
+            }
+        },
+        "is_blocked": is_blocked,
+        "block_reason": "Devi firmare la dichiarazione di superamento soglia prima di poter firmare nuove quietanze" if is_blocked else None
+    }
+
+
+@api_router.post("/coach/{coach_id}/threshold-declaration")
+async def sign_threshold_declaration(
+    coach_id: str,
+    request: ThresholdDeclarationRequest,
+    current_user = Depends(get_current_user)
+):
+    """
+    Sign a threshold declaration (€5.000 or €15.000).
+    This unblocks the coach from signing new monthly receipts.
+    """
+    # Verify coach is signing their own declaration
+    if current_user["role"] != UserRole.COACH or current_user["id"] != coach_id:
+        raise HTTPException(status_code=403, detail="Solo il coach può firmare le proprie dichiarazioni")
+    
+    if request.threshold_type not in ["5000", "15000"]:
+        raise HTTPException(status_code=400, detail="Tipo soglia non valido. Usa '5000' o '15000'")
+    
+    threshold_amount = 5000.0 if request.threshold_type == "5000" else 15000.0
+    
+    # Get coach data
+    coach = await db.users.find_one({"id": coach_id})
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach non trovato")
+    
+    # Get society data
+    society = await db.societies.find_one()
+    society_name = society.get("name", "ASD/SSD") if society else "ASD/SSD"
+    admin_email = society.get("email") if society else None
+    
+    # Get settings for more society info
+    settings = await db.settings.find_one({"type": "society"})
+    fiscal_code_society = settings.get("fiscal_code", "") if settings else ""
+    
+    # Calculate current yearly total
+    yearly_records = await db.coach_compensations.find({
+        "coach_id": coach_id,
+        "year": request.year,
+        "receipt_signed": True
+    }).to_list(12)
+    
+    yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
+    
+    # Check if declaration already exists
+    existing = await db.threshold_declarations.find_one({
+        "coach_id": coach_id,
+        "year": request.year,
+        "threshold_type": request.threshold_type
+    })
+    
+    if existing and existing.get("signed"):
+        raise HTTPException(status_code=400, detail="Dichiarazione già firmata per questo anno e soglia")
+    
+    now = datetime.utcnow()
+    
+    # Determine declaration type (previdenziale vs fiscale)
+    if request.threshold_type == "5000":
+        declaration_type = "PREVIDENZIALE"
+        obligation_text = "i compensi eccedenti sono soggetti agli obblighi previdenziali previsti dalla normativa vigente"
+        title_suffix = "SOGLIA PREVIDENZIALE €5.000"
+    else:
+        declaration_type = "FISCALE"
+        obligation_text = "i compensi eccedenti sono soggetti a imposizione fiscale secondo la normativa vigente"
+        title_suffix = "SOGLIA FISCALE €15.000"
+    
+    # Generate declaration PDF text
+    declaration_text = f"""COMUNICAZIONE DI SUPERAMENTO DELLA SOGLIA {declaration_type} DI COMPENSI SPORTIVI DILETTANTISTICI DI € {threshold_amount:,.2f}
+
+Il/La sottoscritto/a
+Nome e Cognome: {coach.get('full_name', 'N/D')}
+Codice Fiscale: {coach.get('fiscal_code', 'N/D')}
+
+in relazione al rapporto di collaborazione sportiva dilettantistica con
+ASD/SSD: {society_name}
+{f"C.F./P.IVA: {fiscal_code_society}" if fiscal_code_society else ""}
+
+COMUNICA
+
+che, alla data odierna, il totale dei compensi percepiti per attività sportiva dilettantistica nell'anno solare {request.year}, anche da altri enti sportivi, ha raggiunto e/o superato l'importo complessivo di € {threshold_amount:,.2f}.
+
+Il sottoscritto dichiara di essere a conoscenza che, dal momento del superamento della suddetta soglia, {obligation_text}.
+
+Si impegna inoltre a comunicare tempestivamente eventuali ulteriori variazioni della propria situazione.
+
+Totale compensi dichiarati: € {yearly_total:,.2f}
+
+Luogo e data: _________________, {now.strftime('%d/%m/%Y')}
+"""
+
+    try:
+        # Generate PDF
+        pdf_bytes = generate_signed_pdf(
+            document_title=f"Dichiarazione Superamento {title_suffix}",
+            document_text=declaration_text,
+            signer_name=coach.get('full_name', 'Collaboratore'),
+            signature_base64=request.signature_base64,
+            society_name=society_name
+        )
+    except Exception as e:
+        logging.error(f"Error generating declaration PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
+    
+    # Save PDF
+    declaration_id = str(uuid.uuid4())
+    pdf_filename = f"dichiarazione_{request.threshold_type}_{coach_id}_{request.year}_{declaration_id}.pdf"
+    pdf_path = os.path.join(SIGNED_DOCS_DIR, pdf_filename)
+    
+    try:
+        with open(pdf_path, 'wb') as f:
+            f.write(pdf_bytes)
+    except Exception as e:
+        logging.error(f"Error saving declaration PDF: {e}")
+        raise HTTPException(status_code=500, detail="Errore nel salvataggio del documento")
+    
+    # Create or update declaration record
+    declaration_data = {
+        "coach_id": coach_id,
+        "year": request.year,
+        "threshold_type": request.threshold_type,
+        "threshold_amount": threshold_amount,
+        "total_at_declaration": yearly_total,
+        "signed": True,
+        "signature_base64": request.signature_base64,
+        "signed_date": now,
+        "document_id": declaration_id,
+        "pdf_path": pdf_path
+    }
+    
+    if existing:
+        await db.threshold_declarations.update_one(
+            {"id": existing["id"]},
+            {"$set": declaration_data}
+        )
+        declaration_data["id"] = existing["id"]
+    else:
+        declaration = ThresholdDeclaration(**declaration_data)
+        await db.threshold_declarations.insert_one(declaration.dict())
+        declaration_data["id"] = declaration.id
+    
+    # Store document record
+    document_record = {
+        "id": declaration_id,
+        "document_type": f"threshold_declaration_{request.threshold_type}",
+        "document_title": f"Dichiarazione Superamento {title_suffix}",
+        "coach_id": coach_id,
+        "coach_name": coach.get('full_name', ''),
+        "year": request.year,
+        "threshold_type": request.threshold_type,
+        "threshold_amount": threshold_amount,
+        "pdf_path": pdf_path,
+        "pdf_filename": pdf_filename,
+        "signed_at": now
+    }
+    await db.signed_documents.insert_one(document_record)
+    
+    # Send emails
+    coach_email = coach.get('email')
+    email_sent = False
+    
+    # Import email service
+    try:
+        from email_service import send_email_with_pdf
+        import base64
+        
+        pdf_base64 = base64.b64encode(pdf_bytes).decode()
+        
+        if coach_email:
+            email_body = f"""
+            <html>
+            <body>
+            <h2>Dichiarazione Superamento Soglia € {threshold_amount:,.0f} - Anno {request.year}</h2>
+            <p>Gentile {coach.get('full_name', 'Collaboratore')},</p>
+            <p>In allegato trova la dichiarazione di superamento della soglia {declaration_type.lower()} di € {threshold_amount:,.2f} firmata.</p>
+            <p><strong>Riepilogo:</strong></p>
+            <ul>
+            <li>Soglia: € {threshold_amount:,.2f}</li>
+            <li>Totale compensi dichiarati: € {yearly_total:,.2f}</li>
+            <li>Data dichiarazione: {now.strftime('%d/%m/%Y %H:%M')}</li>
+            </ul>
+            <p><em>Si prega di conservare questo documento per eventuali controlli fiscali.</em></p>
+            <hr>
+            <p><em>Documento generato automaticamente da RegistraTEAM</em></p>
+            </body>
+            </html>
+            """
+            
+            result = await send_email_with_pdf(
+                to_email=coach_email,
+                subject=f"Dichiarazione Superamento € {threshold_amount:,.0f} - Anno {request.year}",
+                html_content=email_body,
+                pdf_base64=pdf_base64,
+                pdf_filename=pdf_filename,
+                cc_email=admin_email if admin_email and admin_email != coach_email else None
+            )
+            
+            email_sent = result.get("success", False)
+            if email_sent:
+                logging.info(f"Declaration email sent to {coach_email}")
+        
+        # Send separate notification to admin
+        if admin_email and admin_email != coach_email:
+            alert_emoji = "⚠️" if request.threshold_type == "5000" else "🚨"
+            urgency = "ATTENZIONE" if request.threshold_type == "5000" else "URGENTE"
+            
+            admin_body = f"""
+            <html>
+            <body>
+            <h2>{alert_emoji} {urgency}: Dichiarazione Superamento Soglia € {threshold_amount:,.0f}</h2>
+            <p>Il collaboratore <strong>{coach.get('full_name', 'N/D')}</strong> ha firmato la dichiarazione di superamento della soglia {declaration_type.lower()} di € {threshold_amount:,.2f}.</p>
+            <p><strong>Dettagli:</strong></p>
+            <ul>
+            <li>Anno: {request.year}</li>
+            <li>Soglia superata: € {threshold_amount:,.2f}</li>
+            <li>Totale compensi: € {yearly_total:,.2f}</li>
+            <li>Data firma: {now.strftime('%d/%m/%Y %H:%M')}</li>
+            </ul>
+            <p><em>In allegato il documento firmato.</em></p>
+            </body>
+            </html>
+            """
+            
+            await send_email_with_pdf(
+                to_email=admin_email,
+                subject=f"[RegistraTEAM] {alert_emoji} Dichiarazione €{threshold_amount:,.0f} - {coach.get('full_name', 'Coach')}",
+                html_content=admin_body,
+                pdf_base64=pdf_base64,
+                pdf_filename=pdf_filename
+            )
+    except Exception as e:
+        logging.error(f"Error sending declaration email: {e}")
+    
+    # Update email sent status
+    if email_sent:
+        await db.threshold_declarations.update_one(
+            {"coach_id": coach_id, "year": request.year, "threshold_type": request.threshold_type},
+            {"$set": {"email_sent": True, "email_sent_date": now}}
+        )
+    
+    # Create admin notification
+    alert_emoji = "⚠️" if request.threshold_type == "5000" else "🚨"
+    urgency = "" if request.threshold_type == "5000" else "URGENTE: "
+    
+    notification = AdminNotification(
+        type=f"coach_declaration_{request.threshold_type}",
+        title=f"{alert_emoji} {urgency}Dichiarazione €{threshold_amount:,.0f} firmata",
+        message=f"Il coach {coach.get('full_name', 'Sconosciuto')} ha firmato la dichiarazione di superamento della soglia {declaration_type.lower()} di € {threshold_amount:,.2f} per l'anno {request.year}. Totale compensi: € {yearly_total:,.2f}",
+        related_user_id=coach_id,
+        related_user_name=coach.get('full_name', '')
+    )
+    await db.admin_notifications.insert_one(notification.dict())
+    
+    return {
+        "success": True,
+        "declaration_id": declaration_id,
+        "threshold_type": request.threshold_type,
+        "threshold_amount": threshold_amount,
+        "yearly_total": yearly_total,
+        "message": f"Dichiarazione firmata con successo. Una copia è stata inviata a {coach_email}",
+        "email_sent": email_sent
+    }
+
+
+@api_router.get("/admin/threshold-declarations")
+async def get_all_threshold_declarations(
+    year: Optional[int] = None,
+    current_user = Depends(get_current_user)
+):
+    """Get all threshold declarations (admin only) with coach info"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere tutte le dichiarazioni")
+    
+    query = {}
+    if year:
+        query["year"] = year
+    
+    declarations = await db.threshold_declarations.find(query).sort([("year", -1), ("signed_date", -1)]).to_list(200)
+    
+    # Enrich with coach info
+    result = []
+    for d in declarations:
+        coach = await db.users.find_one({"id": d.get("coach_id")})
+        clean_mongo_doc(d)
+        d["coach_name"] = coach.get("full_name", "N/D") if coach else "N/D"
+        d["coach_email"] = coach.get("email", "") if coach else ""
+        result.append(d)
+    
+    return result
+
+
+@api_router.get("/admin/coaches-threshold-status/{year}")
+async def get_all_coaches_threshold_status(
+    year: int,
+    current_user = Depends(get_current_user)
+):
+    """Get threshold status for all coaches for a specific year (admin dashboard)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere lo stato di tutti i coach")
+    
+    # Get all coaches
+    coaches = await db.users.find({"role": UserRole.COACH}).to_list(100)
+    
+    result = []
+    for coach in coaches:
+        coach_id = coach.get("id")
+        monthly_compensation = coach.get("monthly_compensation", 0) or 0
+        
+        # Get yearly total
+        yearly_records = await db.coach_compensations.find({
+            "coach_id": coach_id,
+            "year": year,
+            "receipt_signed": True
+        }).to_list(12)
+        yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
+        
+        # Get declarations
+        declarations = await db.threshold_declarations.find({
+            "coach_id": coach_id,
+            "year": year
+        }).to_list(10)
+        
+        declaration_5000 = next((d for d in declarations if d.get("threshold_type") == "5000"), None)
+        declaration_15000 = next((d for d in declarations if d.get("threshold_type") == "15000"), None)
+        
+        # Calculate warning thresholds
+        warning_5000 = yearly_total >= (5000 - monthly_compensation) and yearly_total < 5000
+        warning_15000 = yearly_total >= (15000 - monthly_compensation) and yearly_total < 15000
+        
+        needs_5000 = yearly_total >= 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
+        needs_15000 = yearly_total >= 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
+        
+        status = "ok"
+        if needs_15000:
+            status = "blocked_15000"
+        elif needs_5000:
+            status = "blocked_5000"
+        elif warning_15000:
+            status = "warning_15000"
+        elif warning_5000:
+            status = "warning_5000"
+        
+        result.append({
+            "coach_id": coach_id,
+            "coach_name": coach.get("full_name", ""),
+            "coach_email": coach.get("email", ""),
+            "monthly_compensation": monthly_compensation,
+            "yearly_total": yearly_total,
+            "status": status,
+            "warning_5000": warning_5000,
+            "warning_15000": warning_15000,
+            "needs_declaration_5000": needs_5000,
+            "needs_declaration_15000": needs_15000,
+            "declaration_5000_signed": bool(declaration_5000 and declaration_5000.get("signed")),
+            "declaration_15000_signed": bool(declaration_15000 and declaration_15000.get("signed"))
+        })
+    
+    # Sort by status (blocked first, then warnings, then ok)
+    status_order = {"blocked_15000": 0, "blocked_5000": 1, "warning_15000": 2, "warning_5000": 3, "ok": 4}
+    result.sort(key=lambda x: status_order.get(x["status"], 5))
+    
+    return result
+
 # ==================== CHAMPIONSHIP ENDPOINTS ====================
 
 @api_router.get("/championships")
