@@ -1578,11 +1578,14 @@ const styles = StyleSheet.create({
   },
   forceButton: {
     backgroundColor: '#FF9500',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   forceButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   profileLink: {
     flexDirection: 'row',
