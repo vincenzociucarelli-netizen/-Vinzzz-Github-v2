@@ -1218,12 +1218,10 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
 
 # ==================== PASSWORD RESET ENDPOINTS ====================
 
-# SendGrid Email Setup
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+# Email service - uses Brevo with SendGrid fallback
+from email_service import send_transactional_email, send_email_with_pdf
 
-SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY")
-SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "noreply@example.com")
+SENDER_EMAIL = os.environ.get("SENDGRID_FROM_EMAIL", "info@pallavoloperugia.it")
 
 def generate_reset_token():
     """Generate a secure random token for password reset"""
