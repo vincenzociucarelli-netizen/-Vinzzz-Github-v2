@@ -754,6 +754,21 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
           </View>
         </View>
       </Modal>
+
+      {/* Digital Signature Modal */}
+      {signingAthlete && user && (
+        <SignaturePad
+          visible={signatureVisible}
+          onClose={() => {
+            setSignatureVisible(false);
+            setSigningAthlete(null);
+          }}
+          onSign={handleSignPrivacy}
+          documentTitle={`Consenso Privacy - ${signingAthlete.full_name || signingAthlete.athleteName}`}
+          documentText={`Il/La sottoscritto/a ${user.full_name}, in qualità di genitore/tutore dell'atleta ${signingAthlete.full_name || signingAthlete.athleteName}, dichiara di aver letto e compreso l'informativa sulla privacy ai sensi del GDPR e autorizza il trattamento dei dati personali per le finalità connesse all'attività sportiva.`}
+          signerName={user.full_name}
+        />
+      )}
     </View>
   );
 }
