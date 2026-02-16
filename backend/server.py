@@ -1852,6 +1852,43 @@ async def update_user_status(user_id: str, data: UserUpdateStatus, current_user 
     
     return {"message": f"Utente {data.status} con successo"}
 
+class CoachOnboardingData(BaseModel):
+    onboarding_checklist: Optional[dict] = None
+    prior_compensation: Optional[float] = None
+    onboarding_completed: Optional[bool] = None
+    onboarding_date: Optional[str] = None
+
+@api_router.patch("/users/{user_id}/onboarding")
+async def update_coach_onboarding(user_id: str, data: CoachOnboardingData, current_user = Depends(get_current_user)):
+    """Update coach onboarding data - admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può gestire l'onboarding")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    update_dict = {}
+    if data.onboarding_checklist is not None:
+        update_dict["onboarding_checklist"] = data.onboarding_checklist
+    if data.prior_compensation is not None:
+        update_dict["prior_compensation"] = data.prior_compensation
+    if data.onboarding_completed is not None:
+        update_dict["onboarding_completed"] = data.onboarding_completed
+    if data.onboarding_date is not None:
+        try:
+            update_dict["onboarding_date"] = datetime.fromisoformat(data.onboarding_date.replace('Z', '+00:00'))
+        except:
+            update_dict["onboarding_date"] = datetime.utcnow()
+    
+    if update_dict:
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": update_dict}
+        )
+    
+    return {"message": "Dati onboarding aggiornati"}
+
 @api_router.patch("/users/{user_id}/assigned-teams")
 async def update_assigned_teams(user_id: str, data: dict, current_user = Depends(get_current_user)):
     """Assign teams to a coach - admin only"""
