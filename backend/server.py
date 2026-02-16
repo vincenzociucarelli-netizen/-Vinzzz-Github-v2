@@ -202,6 +202,29 @@ class CoachCompensation(BaseModel):
     exceeded_15000_declaration_id: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+class ThresholdDeclaration(BaseModel):
+    """Dichiarazione di superamento soglia €5.000 o €15.000"""
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    coach_id: str
+    year: int
+    threshold_type: str  # "5000" or "15000"
+    threshold_amount: float  # 5000.0 or 15000.0
+    total_at_declaration: float  # Totale compensi al momento della dichiarazione
+    signed: bool = False
+    signature_base64: Optional[str] = None
+    signed_date: Optional[datetime] = None
+    document_id: Optional[str] = None  # PDF document ID
+    pdf_path: Optional[str] = None
+    email_sent: bool = False
+    email_sent_date: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ThresholdDeclarationRequest(BaseModel):
+    """Request to sign a threshold declaration"""
+    year: int
+    threshold_type: str  # "5000" or "15000"
+    signature_base64: str
+
 class AdminNotification(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     type: str  # "coach_exceeded_5000", "coach_exceeded_15000", etc.
