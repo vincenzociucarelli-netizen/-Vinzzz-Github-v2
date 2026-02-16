@@ -155,7 +155,13 @@ export default function CoachScreen() {
       const response = await api.post('/attendance/check', { qr_code: data });
       const attendance = response.data;
       
-      if (attendance.status === 'blocked') {
+      if (attendance.status === 'already_registered') {
+        // Already registered today
+        showAlert(
+          '⚠️ GIÀ REGISTRATA',
+          'Questa atleta è già stata registrata oggi!'
+        );
+      } else if (attendance.status === 'blocked') {
         // Blocked - show error with red styling
         showAlert(
           '⛔ ACCESSO NEGATO',
