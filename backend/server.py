@@ -5315,6 +5315,322 @@ async def get_annual_compensation_summary(coach_id: str, year: int, current_user
         "exceeded_month": exceeded_month.get("month") if exceeded_month else None
     }
 
+# Quietanza Compenso Sportivo Request model
+class CompensationReceiptRequest(BaseModel):
+    month: int
+    year: int
+    amount_gross: float
+    signature_base64: str
+    exceeded_5000: bool = False
+    exceeded_15000: bool = False
+
+@api_router.post("/coach/{coach_id}/compensation/receipt")
+async def sign_compensation_receipt(
+    coach_id: str,
+    request: CompensationReceiptRequest,
+    current_user = Depends(get_current_user)
+):
+    """Coach firma la quietanza mensile di compenso sportivo dilettantistico"""
+    if current_user["role"] != UserRole.COACH or current_user["id"] != coach_id:
+        raise HTTPException(status_code=403, detail="Solo il coach può firmare le proprie quietanze")
+    
+    # Get coach data
+    coach = await db.users.find_one({"id": coach_id})
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach non trovato")
+    
+    # Get society data
+    society = await db.societies.find_one()
+    society_name = society.get("name", "ASD/SSD") if society else "ASD/SSD"
+    admin_email = society.get("email") if society else None
+    
+    # Calculate yearly totals to check thresholds
+    yearly_records = await db.coach_compensations.find({
+        "coach_id": coach_id,
+        "year": request.year,
+        "received": True
+    }).to_list(12)
+    
+    yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
+    new_total = yearly_total + request.amount_gross
+    
+    # Calculate net amount (lordo = netto fino a €5.000)
+    amount_net = request.amount_gross
+    deductions = 0.0
+    
+    # Se si supera €5.000 o €15.000 si applicano ritenute
+    if new_total > 5000 or request.exceeded_5000:
+        # Dopo €5.000: ritenuta IRPEF 23% sull'importo eccedente
+        # Semplificato: per ora mostriamo solo che ci sono deduzioni
+        if new_total > 15000 or request.exceeded_15000:
+            # Oltre €15.000: contributi INPS + IRPEF
+            # Per semplicità: ritenuta ~33% (IRPEF + contributi)
+            deductions = request.amount_gross * 0.33
+        else:
+            # Tra €5.000 e €15.000: solo IRPEF 23%
+            deductions = request.amount_gross * 0.23
+        amount_net = request.amount_gross - deductions
+    
+    # Check if record exists for this month
+    existing = await db.coach_compensations.find_one({
+        "coach_id": coach_id,
+        "year": request.year,
+        "month": request.month
+    })
+    
+    now = datetime.utcnow()
+    month_names = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+                   "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+    month_name = month_names[request.month]
+    
+    # Generate receipt PDF
+    receipt_text = f"""QUIETANZA COMPENSO SPORTIVO DILETTANTISTICO
+
+ASD/SSD: {society_name}
+
+Collaboratore: {coach.get('full_name', 'N/D')}
+Codice Fiscale: {coach.get('fiscal_code', 'N/D')}
+
+Mese di riferimento: {month_name} {request.year}
+
+Compenso lordo: € {request.amount_gross:.2f}
+Ritenute: € {deductions:.2f}
+Netto corrisposto: € {amount_net:.2f}
+
+Totale annuo progressivo: € {new_total:.2f}
+
+Il collaboratore dichiara che, alla data odierna, non sono intervenute variazioni rispetto all'autocertificazione dei compensi sportivi dilettantistici precedentemente resa.
+"""
+
+    # Add threshold declaration if needed
+    if request.exceeded_5000 and not request.exceeded_15000:
+        receipt_text += f"""
+⚠️ DICHIARAZIONE SUPERAMENTO SOGLIA €5.000
+Il collaboratore dichiara di aver superato, nell'anno {request.year}, la soglia di €5.000 di compensi sportivi dilettantistici complessivi.
+"""
+    elif request.exceeded_15000:
+        receipt_text += f"""
+🚨 DICHIARAZIONE SUPERAMENTO SOGLIA €15.000
+Il collaboratore dichiara di aver superato, nell'anno {request.year}, la soglia di €15.000 di compensi sportivi dilettantistici complessivi. 
+Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti da tale superamento.
+"""
+
+    try:
+        # Generate PDF using existing function
+        pdf_bytes = generate_signed_pdf(
+            document_title=f"Quietanza Compenso - {month_name} {request.year}",
+            document_text=receipt_text,
+            signer_name=coach.get('full_name', 'Collaboratore'),
+            signature_base64=request.signature_base64,
+            society_name=society_name
+        )
+    except Exception as e:
+        logging.error(f"Error generating receipt PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
+    
+    # Save PDF
+    receipt_id = str(uuid.uuid4())
+    pdf_filename = f"quietanza_{coach_id}_{request.year}_{request.month:02d}_{receipt_id}.pdf"
+    pdf_path = os.path.join(SIGNED_DOCS_DIR, pdf_filename)
+    
+    try:
+        with open(pdf_path, 'wb') as f:
+            f.write(pdf_bytes)
+    except Exception as e:
+        logging.error(f"Error saving receipt PDF: {e}")
+        raise HTTPException(status_code=500, detail="Errore nel salvataggio del documento")
+    
+    # Store document record
+    document_record = {
+        "id": receipt_id,
+        "document_type": "compensation_receipt",
+        "document_title": f"Quietanza Compenso - {month_name} {request.year}",
+        "coach_id": coach_id,
+        "coach_name": coach.get('full_name', ''),
+        "month": request.month,
+        "year": request.year,
+        "amount_gross": request.amount_gross,
+        "amount_net": amount_net,
+        "deductions": deductions,
+        "pdf_path": pdf_path,
+        "pdf_filename": pdf_filename,
+        "signed_at": now,
+        "exceeded_5000": request.exceeded_5000,
+        "exceeded_15000": request.exceeded_15000
+    }
+    await db.signed_documents.insert_one(document_record)
+    
+    # Update or create compensation record
+    if existing:
+        await db.coach_compensations.update_one(
+            {"id": existing["id"]},
+            {"$set": {
+                "amount_gross": request.amount_gross,
+                "amount_net": amount_net,
+                "deductions": deductions,
+                "received": True,
+                "received_date": now,
+                "receipt_signed": True,
+                "receipt_signature_base64": request.signature_base64,
+                "receipt_document_id": receipt_id,
+                "receipt_signed_date": now,
+                "exceeded_5000": request.exceeded_5000,
+                "exceeded_5000_date": now if request.exceeded_5000 else None,
+                "exceeded_15000": request.exceeded_15000,
+                "exceeded_15000_date": now if request.exceeded_15000 else None
+            }}
+        )
+    else:
+        record = CoachCompensation(
+            coach_id=coach_id,
+            month=request.month,
+            year=request.year,
+            amount_gross=request.amount_gross,
+            amount_net=amount_net,
+            deductions=deductions,
+            received=True,
+            received_date=now,
+            receipt_signed=True,
+            receipt_signature_base64=request.signature_base64,
+            receipt_document_id=receipt_id,
+            receipt_signed_date=now,
+            exceeded_5000=request.exceeded_5000,
+            exceeded_5000_date=now if request.exceeded_5000 else None,
+            exceeded_15000=request.exceeded_15000,
+            exceeded_15000_date=now if request.exceeded_15000 else None
+        )
+        await db.coach_compensations.insert_one(record.dict())
+    
+    # Send emails
+    coach_email = coach.get('email')
+    sendgrid_api_key = os.environ.get("SENDGRID_API_KEY")
+    sendgrid_from_email = os.environ.get("SENDGRID_FROM_EMAIL", "noreply@registrateam.it")
+    
+    if sendgrid_api_key and coach_email:
+        try:
+            from sendgrid import SendGridAPIClient
+            from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
+            import base64
+            
+            sg = SendGridAPIClient(sendgrid_api_key)
+            
+            # Email to coach
+            body = f"""
+            <html>
+            <body>
+            <h2>Quietanza Compenso Sportivo - {month_name} {request.year}</h2>
+            <p>Gentile {coach.get('full_name', 'Collaboratore')},</p>
+            <p>In allegato trova la quietanza del compenso sportivo dilettantistico firmata per il mese di {month_name} {request.year}.</p>
+            <p><strong>Riepilogo:</strong></p>
+            <ul>
+            <li>Compenso lordo: € {request.amount_gross:.2f}</li>
+            <li>Ritenute: € {deductions:.2f}</li>
+            <li>Netto corrisposto: € {amount_net:.2f}</li>
+            </ul>
+            <p>Totale annuo progressivo: € {new_total:.2f}</p>
+            <hr>
+            <p><em>Documento generato automaticamente da RegistraTEAM</em></p>
+            </body>
+            </html>
+            """
+            
+            message = Mail(
+                from_email=sendgrid_from_email,
+                to_emails=coach_email,
+                subject=f"Quietanza Compenso - {month_name} {request.year} - {society_name}",
+                html_content=body
+            )
+            
+            # Add PDF attachment
+            encoded_pdf = base64.b64encode(pdf_bytes).decode()
+            attachment = Attachment(
+                FileContent(encoded_pdf),
+                FileName(pdf_filename),
+                FileType('application/pdf'),
+                Disposition('attachment')
+            )
+            message.attachment = attachment
+            
+            sg.send(message)
+            logging.info(f"Compensation receipt email sent to {coach_email}")
+        except Exception as e:
+            logging.error(f"Error sending receipt email to coach: {e}")
+    
+    # Send copy to admin
+    if sendgrid_api_key and admin_email and admin_email != coach_email:
+        try:
+            admin_body = f"""
+            <html>
+            <body>
+            <h2>Quietanza Compenso Firmata - {coach.get('full_name', 'Coach')}</h2>
+            <p>Il collaboratore <strong>{coach.get('full_name', 'N/D')}</strong> ha firmato la quietanza del compenso sportivo per {month_name} {request.year}.</p>
+            <p><strong>Dettagli:</strong></p>
+            <ul>
+            <li>Compenso lordo: € {request.amount_gross:.2f}</li>
+            <li>Netto corrisposto: € {amount_net:.2f}</li>
+            <li>Totale annuo progressivo: € {new_total:.2f}</li>
+            </ul>
+            {'<p style="color: orange;"><strong>⚠️ ATTENZIONE: Il collaboratore ha superato la soglia di €5.000</strong></p>' if request.exceeded_5000 else ''}
+            {'<p style="color: red;"><strong>🚨 URGENTE: Il collaboratore ha superato la soglia di €15.000</strong></p>' if request.exceeded_15000 else ''}
+            <hr>
+            <p><em>In allegato il documento firmato.</em></p>
+            </body>
+            </html>
+            """
+            
+            admin_message = Mail(
+                from_email=sendgrid_from_email,
+                to_emails=admin_email,
+                subject=f"[RegistraTEAM] Quietanza firmata - {coach.get('full_name', 'Coach')} - {month_name} {request.year}",
+                html_content=admin_body
+            )
+            
+            admin_attachment = Attachment(
+                FileContent(base64.b64encode(pdf_bytes).decode()),
+                FileName(pdf_filename),
+                FileType('application/pdf'),
+                Disposition('attachment')
+            )
+            admin_message.attachment = admin_attachment
+            
+            sg.send(admin_message)
+            logging.info(f"Receipt copy sent to admin {admin_email}")
+        except Exception as e:
+            logging.error(f"Error sending receipt email to admin: {e}")
+    
+    # Create admin notifications for threshold crossings
+    if request.exceeded_5000 and not request.exceeded_15000:
+        notification = AdminNotification(
+            type="coach_exceeded_5000",
+            title="⚠️ Coach ha superato €5.000",
+            message=f"Il coach {coach.get('full_name', 'Sconosciuto')} ha dichiarato di aver superato il limite di €5.000 annuali di compensi sportivi dilettantistici. Data dichiarazione: {now.strftime('%d/%m/%Y %H:%M')}",
+            related_user_id=coach_id,
+            related_user_name=coach.get('full_name', '')
+        )
+        await db.admin_notifications.insert_one(notification.dict())
+    
+    if request.exceeded_15000:
+        notification = AdminNotification(
+            type="coach_exceeded_15000",
+            title="🚨 URGENTE: Coach ha superato €15.000",
+            message=f"ATTENZIONE: Il coach {coach.get('full_name', 'Sconosciuto')} ha dichiarato di aver superato il limite di €15.000 annuali. Questo comporta obblighi fiscali e contributivi aggiuntivi! Data: {now.strftime('%d/%m/%Y %H:%M')}",
+            related_user_id=coach_id,
+            related_user_name=coach.get('full_name', '')
+        )
+        await db.admin_notifications.insert_one(notification.dict())
+    
+    return {
+        "success": True,
+        "document_id": receipt_id,
+        "message": f"Quietanza firmata con successo. Una copia è stata inviata a {coach_email}",
+        "amount_gross": request.amount_gross,
+        "amount_net": amount_net,
+        "deductions": deductions,
+        "yearly_total": new_total,
+        "exceeded_5000": request.exceeded_5000,
+        "exceeded_15000": request.exceeded_15000
+    }
+
 # ==================== CHAMPIONSHIP ENDPOINTS ====================
 
 @api_router.get("/championships")
