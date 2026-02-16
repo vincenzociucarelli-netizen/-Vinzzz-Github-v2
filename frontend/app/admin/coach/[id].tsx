@@ -360,6 +360,35 @@ export default function AdminCoachDetail() {
           </View>
         )}
 
+        {/* Onboarding Reminder Banner */}
+        {coach.status === 'approved' && (() => {
+          const checklist = coach.onboarding_checklist || {};
+          const missingChecklist = !checklist.contract_signed || !checklist.ras_registered || 
+                                   !checklist.id_acquired || !checklist.fiscal_code_acquired;
+          const missingPriorComp = (coach.prior_compensation === undefined || coach.prior_compensation === null);
+          
+          if (!missingChecklist && !missingPriorComp) return null;
+          
+          const missingItems = [];
+          if (!checklist.contract_signed) missingItems.push('Contratto/Lettera d\'incarico');
+          if (!checklist.ras_registered) missingItems.push('Iscrizione RAS');
+          if (!checklist.id_acquired) missingItems.push('Documento d\'identità');
+          if (!checklist.fiscal_code_acquired) missingItems.push('Codice fiscale');
+          if (missingPriorComp) missingItems.push('Compensi pregressi');
+          
+          return (
+            <View style={styles.onboardingBanner}>
+              <Text style={{ fontSize: 18 }}>📋</Text>
+              <View style={styles.onboardingBannerContent}>
+                <Text style={styles.onboardingBannerTitle}>Promemoria Onboarding</Text>
+                <Text style={styles.onboardingBannerText}>
+                  Da completare: {missingItems.join(', ')}
+                </Text>
+              </View>
+            </View>
+          );
+        })()}
+
         {/* Profile Photo */}
         <View style={styles.photoSection}>
           <TouchableOpacity 
