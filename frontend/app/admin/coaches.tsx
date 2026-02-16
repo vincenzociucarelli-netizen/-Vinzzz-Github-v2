@@ -328,14 +328,14 @@ export default function CoachesScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={{ fontSize: 24, color: '#fff' }}>←</Text>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Coach</Text>
         <TouchableOpacity onPress={handleExport} disabled={exporting}>
           {exporting ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={{ fontSize: 22, color: '#fff' }}>📤</Text>
+            <Ionicons name="share-outline" size={22} color="#fff" />
           )}
         </TouchableOpacity>
       </View>
