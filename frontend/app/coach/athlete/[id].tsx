@@ -461,34 +461,6 @@ export default function CoachAthleteDetail() {
           />
         </View>
 
-        {/* Characteristics Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📊 Caratteristiche</Text>
-          {settings.athlete_characteristics.length > 0 ? (
-            <View style={styles.characteristicsContainer}>
-              {settings.athlete_characteristics.map((char, index) => {
-                const isSelected = selectedCharacteristics.includes(char);
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[styles.characteristicTag, isSelected && styles.characteristicTagSelected]}
-                    onPress={() => toggleCharacteristic(char)}
-                  >
-                    <Text style={[styles.characteristicText, isSelected && styles.characteristicTextSelected]}>
-                      {char}
-                    </Text>
-                    {isSelected && <Ionicons name="checkmark" size={16} color="#fff" />}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : (
-            <Text style={styles.noSettingsText}>
-              ⚠️ Nessuna caratteristica definita. L'admin deve configurare le caratteristiche nelle impostazioni.
-            </Text>
-          )}
-        </View>
-
         {/* Privacy Notice */}
         <View style={styles.privacyNotice}>
           <Ionicons name="lock-closed" size={16} color="#666" />
