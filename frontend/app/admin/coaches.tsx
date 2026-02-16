@@ -15,7 +15,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
 import { Team } from '../../src/types';
 import { exportToExcel } from '../../src/utils/excelExport';
