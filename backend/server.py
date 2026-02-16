@@ -1097,6 +1097,7 @@ class UserProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     date_of_birth: Optional[str] = None
     place_of_birth: Optional[str] = None
+    birth_province: Optional[str] = None  # Sigla provincia di nascita
     fiscal_code: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
@@ -1104,6 +1105,10 @@ class UserProfileUpdate(BaseModel):
     province: Optional[str] = None
     phone: Optional[str] = None
     coach_license_number: Optional[str] = None
+    # Documento di identità
+    identity_document_type: Optional[str] = None  # Carta di identità, Patente, Passaporto
+    identity_document_number: Optional[str] = None  # Numero del documento
+    identity_document_expiry: Optional[str] = None  # Scadenza documento (ISO string)
     # Compensation fields
     compensation_accepted: Optional[bool] = None
     compensation_history: Optional[dict] = None
