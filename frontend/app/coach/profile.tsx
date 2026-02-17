@@ -854,27 +854,38 @@ export default function CoachProfile() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
               {getContractMonths().map((month) => {
                 const [year, monthNum] = month.key.split('-');
-                const receipt = signedReceipts.find(r => r.year === parseInt(year) && r.month === parseInt(monthNum));
+                const yearInt = parseInt(year);
+                const monthInt = parseInt(monthNum);
+                const receipt = signedReceipts.find(r => r.year === yearInt && r.month === monthInt);
                 const isSigned = receipt?.receipt_signed === true;
+                
+                // Check if month is in the future
+                const now = new Date();
+                const currentYearActual = now.getFullYear();
+                const currentMonthActual = now.getMonth() + 1;
+                const isFuture = (yearInt > currentYearActual) || 
+                                 (yearInt === currentYearActual && monthInt > currentMonthActual);
+                
                 return (
                   <View 
                     key={month.key} 
                     style={{
-                      backgroundColor: isSigned ? '#E8F5E9' : '#F5F5F5',
+                      backgroundColor: isSigned ? '#E8F5E9' : isFuture ? '#FAFAFA' : '#F5F5F5',
                       borderRadius: 6,
                       paddingVertical: 6,
                       paddingHorizontal: 10,
                       borderWidth: 1,
-                      borderColor: isSigned ? '#4CAF50' : '#E0E0E0',
+                      borderColor: isSigned ? '#4CAF50' : isFuture ? '#E8E8E8' : '#E0E0E0',
                       minWidth: 85,
                       alignItems: 'center',
+                      opacity: isFuture ? 0.6 : 1,
                     }}
                   >
-                    <Text style={{ fontSize: 11, color: '#666', fontWeight: '500' }}>
+                    <Text style={{ fontSize: 11, color: isFuture ? '#AAA' : '#666', fontWeight: '500' }}>
                       {month.label.split(' ')[0].substring(0, 3)} {month.label.split(' ')[1]}
                     </Text>
-                    <Text style={{ fontSize: 12, color: isSigned ? '#2E7D32' : '#999', fontWeight: '600' }}>
-                      {isSigned ? '✓' : '-'}
+                    <Text style={{ fontSize: 12, color: isSigned ? '#2E7D32' : isFuture ? '#CCC' : '#999', fontWeight: '600' }}>
+                      {isSigned ? '✓' : isFuture ? '○' : '-'}
                     </Text>
                   </View>
                 );
