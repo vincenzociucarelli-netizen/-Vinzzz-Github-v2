@@ -123,17 +123,21 @@ export default function CoachCompensation() {
       setProfile(profileRes.data);
       
       // Parse contract dates
+      let startYear = null;
+      let endYear = null;
       if (profileRes.data.contract_start_date) {
         const startParts = profileRes.data.contract_start_date.split('-');
         if (startParts.length === 3) {
-          setContractStartYear(parseInt(startParts[0]));
+          startYear = parseInt(startParts[0]);
+          setContractStartYear(startYear);
           setContractStartMonth(parseInt(startParts[1]));
         }
       }
       if (profileRes.data.contract_end_date) {
         const endParts = profileRes.data.contract_end_date.split('-');
         if (endParts.length === 3) {
-          setContractEndYear(parseInt(endParts[0]));
+          endYear = parseInt(endParts[0]);
+          setContractEndYear(endYear);
           setContractEndMonth(parseInt(endParts[1]));
         }
       }
@@ -141,20 +145,20 @@ export default function CoachCompensation() {
       // Set prior compensation
       setPriorCompensation(profileRes.data.other_annual_compensation || 0);
       
-      // Load compensation records
+      // Load ALL compensation records (not filtered by year)
       const recordsRes = await api.get(`/coach/${user?.id}/compensation`);
-      const yearRecords = recordsRes.data.filter((r: CompensationRecord) => r.year === currentYear);
-      setRecords(yearRecords);
+      setRecords(recordsRes.data || []);
       
-      // Calculate yearly total
-      const total = yearRecords
-        .filter((r: CompensationRecord) => r.receipt_signed)
+      // Calculate yearly total for current display year
+      const total = (recordsRes.data || [])
+        .filter((r: CompensationRecord) => r.year === currentYear && r.receipt_signed)
         .reduce((sum: number, r: CompensationRecord) => sum + (r.amount_gross || r.amount || 0), 0);
       setYearlyTotal(total);
       
-      // Load threshold status
+      // Load threshold status for contract start year (where thresholds matter most)
+      const thresholdYear = startYear || currentYear;
       try {
-        const thresholdRes = await api.get(`/coach/${user?.id}/threshold-status/${currentYear}`);
+        const thresholdRes = await api.get(`/coach/${user?.id}/threshold-status/${thresholdYear}`);
         setThresholdStatus(thresholdRes.data);
       } catch (err) {
         console.log('Error loading threshold status:', err);
