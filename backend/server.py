@@ -5742,22 +5742,35 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                         from PIL import Image as PILImage
                         sig_pil = PILImage.open(io.BytesIO(sig_data))
                         
-                        # Handle transparency - composite onto white background
-                        if sig_pil.mode in ('RGBA', 'P', 'LA'):
-                            # Convert to RGBA first
-                            if sig_pil.mode != 'RGBA':
+                        # Handle transparency - composite onto white background and normalize colors
+                        # Convert to RGB first regardless of mode
+                        if sig_pil.mode != 'RGB':
+                            if sig_pil.mode == 'RGBA':
+                                # Create white background
+                                background = PILImage.new('RGB', sig_pil.size, (255, 255, 255))
+                                # Paste using alpha as mask
+                                background.paste(sig_pil, mask=sig_pil.split()[3])
+                                sig_pil = background
+                            elif sig_pil.mode == 'P':
                                 sig_pil = sig_pil.convert('RGBA')
-                            
-                            # Create a white background
-                            background = PILImage.new('RGBA', sig_pil.size, (255, 255, 255, 255))
-                            
-                            # Composite the signature onto the white background
-                            sig_pil = PILImage.alpha_composite(background, sig_pil)
-                            sig_pil = sig_pil.convert('RGB')
-                        elif sig_pil.mode == 'L':
-                            sig_pil = sig_pil.convert('RGB')
-                        elif sig_pil.mode != 'RGB':
-                            sig_pil = sig_pil.convert('RGB')
+                                background = PILImage.new('RGB', sig_pil.size, (255, 255, 255))
+                                background.paste(sig_pil, mask=sig_pil.split()[3])
+                                sig_pil = background
+                            else:
+                                sig_pil = sig_pil.convert('RGB')
+                        
+                        # Process to ensure black signature on white background
+                        pixels = sig_pil.load()
+                        width, height = sig_pil.size
+                        
+                        for y in range(height):
+                            for x in range(width):
+                                r, g, b = pixels[x, y]
+                                luminance = (r * 0.299 + g * 0.587 + b * 0.114)
+                                if luminance < 200:  # Dark pixel
+                                    pixels[x, y] = (0, 0, 0)
+                                else:
+                                    pixels[x, y] = (255, 255, 255)
                         
                         sig_temp = f"/tmp/threshold_sig_{coach_id}_{request.year}.png"
                         sig_pil.save(sig_temp, format='PNG')
