@@ -6779,41 +6779,36 @@ def generate_signed_pdf(
             # Debug: log image info
             logging.info(f"Signature image mode: {sig_image.mode}, size: {sig_image.size}")
             
-            # Handle transparency properly - composite onto white background
-            if sig_image.mode in ('RGBA', 'P', 'LA', 'PA'):
-                # Convert to RGBA first
-                if sig_image.mode != 'RGBA':
+            # Convert to RGB first regardless of mode
+            if sig_image.mode != 'RGB':
+                if sig_image.mode == 'RGBA':
+                    # Create white background
+                    background = Image.new('RGB', sig_image.size, (255, 255, 255))
+                    # Paste using alpha as mask
+                    background.paste(sig_image, mask=sig_image.split()[3])
+                    sig_image = background
+                elif sig_image.mode == 'P':
                     sig_image = sig_image.convert('RGBA')
-                
-                # Create a white background
-                background = Image.new('RGBA', sig_image.size, (255, 255, 255, 255))
-                
-                # Get pixel data
-                pixels = sig_image.load()
-                width, height = sig_image.size
-                
-                # Create a new image for the signature strokes only
-                # Any pixel that is not fully transparent and not white becomes black
-                stroke_image = Image.new('RGBA', sig_image.size, (0, 0, 0, 0))
-                stroke_pixels = stroke_image.load()
-                
-                for y in range(height):
-                    for x in range(width):
-                        r, g, b, a = pixels[x, y]
-                        # If pixel has any opacity and is not white/near-white, make it black
-                        if a > 10:  # Has some opacity
-                            # Check if it's not white (signature stroke)
-                            if r < 250 or g < 250 or b < 250:
-                                stroke_pixels[x, y] = (0, 0, 0, a)  # Black with original alpha
-                
-                # Composite: white background + black signature strokes
-                sig_image = Image.alpha_composite(background, stroke_image)
-                sig_image = sig_image.convert('RGB')
-            elif sig_image.mode == 'L':
-                # Grayscale - convert to RGB
-                sig_image = sig_image.convert('RGB')
-            elif sig_image.mode != 'RGB':
-                sig_image = sig_image.convert('RGB')
+                    background = Image.new('RGB', sig_image.size, (255, 255, 255))
+                    background.paste(sig_image, mask=sig_image.split()[3])
+                    sig_image = background
+                else:
+                    sig_image = sig_image.convert('RGB')
+            
+            # Now process to ensure black signature on white background
+            # Convert any non-white pixels to black
+            pixels = sig_image.load()
+            width, height = sig_image.size
+            
+            for y in range(height):
+                for x in range(width):
+                    r, g, b = pixels[x, y]
+                    # Calculate luminance
+                    luminance = (r * 0.299 + g * 0.587 + b * 0.114)
+                    if luminance < 200:  # Dark pixel (signature stroke)
+                        pixels[x, y] = (0, 0, 0)  # Make it pure black
+                    else:  # Light pixel (background)
+                        pixels[x, y] = (255, 255, 255)  # Make it pure white
             
             # Save to buffer
             sig_buffer = io.BytesIO()
