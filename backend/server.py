@@ -5671,6 +5671,159 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         except Exception as e:
             logging.error(f"Error sending receipt email to admin: {e}")
     
+    # Check if this is the FIRST time exceeding €5.000 threshold this year
+    # Generate and send "COMUNICAZIONE DI SUPERAMENTO DELLA SOGLIA" document
+    if request.exceeded_5000:
+        # Check if there are previous records this year that already exceeded €5.000
+        previous_exceeded = await db.coach_compensations.find_one({
+            "coach_id": coach_id,
+            "year": request.year,
+            "month": {"$lt": request.month},
+            "exceeded_5000": True
+        })
+        
+        if not previous_exceeded:
+            # This is the FIRST month exceeding €5.000 - generate the threshold document
+            try:
+                from fpdf import FPDF
+                
+                threshold_pdf = FPDF()
+                threshold_pdf.add_page()
+                
+                # Header
+                threshold_pdf.set_font('Helvetica', 'B', 14)
+                threshold_pdf.multi_cell(0, 8, 'COMUNICAZIONE DI SUPERAMENTO DELLA SOGLIA')
+                threshold_pdf.multi_cell(0, 8, 'PREVIDENZIALE DI COMPENSI SPORTIVI')
+                threshold_pdf.multi_cell(0, 8, 'DILETTANTISTICI DI € 5.000,00 (Cinquemila/00)')
+                threshold_pdf.ln(10)
+                
+                # Coach info
+                threshold_pdf.set_font('Helvetica', '', 11)
+                threshold_pdf.multi_cell(0, 6, f"Il/La sottoscritto/a")
+                threshold_pdf.ln(3)
+                threshold_pdf.set_font('Helvetica', 'B', 11)
+                threshold_pdf.multi_cell(0, 6, f"Nome e Cognome: {coach.get('full_name', '')}")
+                threshold_pdf.multi_cell(0, 6, f"Codice Fiscale: {coach.get('fiscal_code', '')}")
+                threshold_pdf.ln(5)
+                
+                threshold_pdf.set_font('Helvetica', '', 11)
+                threshold_pdf.multi_cell(0, 6, f"in relazione al rapporto di collaborazione sportiva dilettantistica con")
+                threshold_pdf.set_font('Helvetica', 'B', 11)
+                threshold_pdf.multi_cell(0, 6, f"ASD/SSD {society_name}")
+                threshold_pdf.ln(8)
+                
+                # COMUNICA
+                threshold_pdf.set_font('Helvetica', 'B', 14)
+                threshold_pdf.cell(0, 8, 'COMUNICA', ln=True, align='C')
+                threshold_pdf.ln(5)
+                
+                threshold_pdf.set_font('Helvetica', '', 11)
+                threshold_pdf.multi_cell(0, 6, f"che, alla data odierna, il totale dei compensi percepiti per attivita sportiva dilettantistica nell'anno solare {request.year}, anche da altri enti sportivi, ha raggiunto e/o superato l'importo complessivo di € 5.000,00.")
+                threshold_pdf.ln(5)
+                
+                threshold_pdf.multi_cell(0, 6, "Il sottoscritto dichiara di essere a conoscenza che, dal momento del superamento della suddetta soglia, i compensi eccedenti sono soggetti agli obblighi previdenziali previsti dalla normativa vigente.")
+                threshold_pdf.ln(5)
+                
+                threshold_pdf.multi_cell(0, 6, "Si impegna inoltre a comunicare tempestivamente eventuali ulteriori variazioni della propria situazione.")
+                threshold_pdf.ln(15)
+                
+                # Signature
+                threshold_pdf.set_font('Helvetica', '', 11)
+                threshold_pdf.cell(0, 6, f"Luogo e data: {coach.get('city', 'Italia')}, {now.strftime('%d/%m/%Y')}", ln=True)
+                threshold_pdf.ln(5)
+                threshold_pdf.cell(0, 6, "Firma:", ln=True)
+                
+                # Add signature image
+                if request.signature_base64:
+                    try:
+                        sig_data = base64.b64decode(request.signature_base64.split(',')[1] if ',' in request.signature_base64 else request.signature_base64)
+                        sig_temp = f"/tmp/threshold_sig_{coach_id}_{request.year}.png"
+                        with open(sig_temp, 'wb') as sf:
+                            sf.write(sig_data)
+                        threshold_pdf.image(sig_temp, x=20, w=50, h=20)
+                        os.remove(sig_temp)
+                    except:
+                        pass
+                
+                threshold_pdf_bytes = bytes(threshold_pdf.output())
+                
+                # Save threshold document
+                threshold_doc_id = str(uuid.uuid4())
+                threshold_filename = f"comunicazione_superamento_5000_{coach_id}_{request.year}_{threshold_doc_id}.pdf"
+                threshold_path = os.path.join(SIGNED_DOCS_DIR, threshold_filename)
+                with open(threshold_path, 'wb') as f:
+                    f.write(threshold_pdf_bytes)
+                
+                # Store threshold document record
+                threshold_doc_record = {
+                    "id": threshold_doc_id,
+                    "document_type": "threshold_5000_communication",
+                    "document_title": f"Comunicazione Superamento €5.000 - {request.year}",
+                    "coach_id": coach_id,
+                    "coach_name": coach.get('full_name', ''),
+                    "year": request.year,
+                    "month": request.month,
+                    "total_at_threshold": new_total,
+                    "pdf_path": threshold_path,
+                    "pdf_filename": threshold_filename,
+                    "signed_at": now
+                }
+                await db.signed_documents.insert_one(threshold_doc_record)
+                
+                # Send threshold document to coach
+                if coach_email:
+                    threshold_body = f"""
+                    <html>
+                    <body>
+                    <h2>⚠️ Comunicazione Superamento Soglia €5.000 - Anno {request.year}</h2>
+                    <p>Gentile {coach.get('full_name', 'Collaboratore')},</p>
+                    <p>Con la quietanza del mese di {month_name} {request.year}, il totale dei compensi sportivi dilettantistici percepiti nell'anno solare {request.year} ha superato la soglia di €5.000.</p>
+                    <p><strong>Totale annuo raggiunto: €{new_total:.2f}</strong></p>
+                    <p>In allegato trova la <strong>Comunicazione di Superamento della Soglia Previdenziale</strong> firmata.</p>
+                    <p>Da questo momento, i compensi eccedenti sono soggetti agli obblighi previdenziali previsti dalla normativa vigente.</p>
+                    <p>Cordiali saluti,<br>{society_name}</p>
+                    </body>
+                    </html>
+                    """
+                    
+                    threshold_pdf_b64 = base64.b64encode(threshold_pdf_bytes).decode('utf-8')
+                    result = await send_email_with_pdf(
+                        to_email=coach_email,
+                        subject=f"⚠️ Comunicazione Superamento €5.000 - Anno {request.year}",
+                        body=threshold_body,
+                        pdf_base64=threshold_pdf_b64,
+                        filename=threshold_filename
+                    )
+                    if result.get('success'):
+                        logging.info(f"Threshold €5.000 communication sent to {coach_email}")
+                
+                # Send threshold document to admin
+                if admin_email:
+                    admin_threshold_body = f"""
+                    <html>
+                    <body>
+                    <h2>⚠️ NOTIFICA: Coach ha superato €5.000 - Anno {request.year}</h2>
+                    <p>Il coach <strong>{coach.get('full_name', '')}</strong> ha superato la soglia di €5.000 di compensi sportivi dilettantistici.</p>
+                    <p><strong>Totale annuo raggiunto: €{new_total:.2f}</strong></p>
+                    <p>In allegato la Comunicazione di Superamento firmata dal collaboratore.</p>
+                    <p>Ricordiamo che da questo momento i compensi eccedenti sono soggetti agli obblighi previdenziali.</p>
+                    </body>
+                    </html>
+                    """
+                    
+                    result = await send_email_with_pdf(
+                        to_email=admin_email,
+                        subject=f"⚠️ {coach.get('full_name', 'Coach')} - Superamento €5.000 Anno {request.year}",
+                        body=admin_threshold_body,
+                        pdf_base64=threshold_pdf_b64,
+                        filename=threshold_filename
+                    )
+                    if result.get('success'):
+                        logging.info(f"Threshold €5.000 notification sent to admin {admin_email}")
+                
+            except Exception as e:
+                logging.error(f"Error generating threshold €5.000 document: {e}")
+    
     # Create admin notifications for threshold crossings
     if request.exceeded_5000 and not request.exceeded_15000:
         notification = AdminNotification(
