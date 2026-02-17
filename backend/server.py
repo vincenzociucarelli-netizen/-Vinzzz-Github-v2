@@ -5733,17 +5733,34 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 threshold_pdf.ln(5)
                 threshold_pdf.cell(0, 6, "Firma:", ln=True)
                 
-                # Add signature image
+                # Add signature image with proper transparency handling
                 if request.signature_base64:
                     try:
                         sig_data = base64.b64decode(request.signature_base64.split(',')[1] if ',' in request.signature_base64 else request.signature_base64)
+                        
+                        # Process signature to handle transparency
+                        from PIL import Image as PILImage
+                        sig_pil = PILImage.open(io.BytesIO(sig_data))
+                        
+                        # Handle transparency - create white background
+                        if sig_pil.mode in ('RGBA', 'P'):
+                            if sig_pil.mode == 'P':
+                                sig_pil = sig_pil.convert('RGBA')
+                            background = PILImage.new('RGB', sig_pil.size, (255, 255, 255))
+                            if len(sig_pil.split()) == 4:
+                                background.paste(sig_pil, mask=sig_pil.split()[3])
+                            else:
+                                background.paste(sig_pil)
+                            sig_pil = background
+                        elif sig_pil.mode != 'RGB':
+                            sig_pil = sig_pil.convert('RGB')
+                        
                         sig_temp = f"/tmp/threshold_sig_{coach_id}_{request.year}.png"
-                        with open(sig_temp, 'wb') as sf:
-                            sf.write(sig_data)
+                        sig_pil.save(sig_temp, format='PNG')
                         threshold_pdf.image(sig_temp, x=20, w=50, h=20)
                         os.remove(sig_temp)
-                    except:
-                        pass
+                    except Exception as sig_err:
+                        logging.error(f"Error adding signature to threshold doc: {sig_err}")
                 
                 threshold_pdf_bytes = bytes(threshold_pdf.output())
                 
