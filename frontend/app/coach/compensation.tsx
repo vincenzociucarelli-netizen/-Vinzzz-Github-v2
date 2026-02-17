@@ -86,6 +86,13 @@ export default function CoachCompensation() {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   
+  // Contract dates
+  const [contractStartYear, setContractStartYear] = useState<number | null>(null);
+  const [contractEndYear, setContractEndYear] = useState<number | null>(null);
+  const [contractStartMonth, setContractStartMonth] = useState<number | null>(null);
+  const [contractEndMonth, setContractEndMonth] = useState<number | null>(null);
+  const [priorCompensation, setPriorCompensation] = useState(0);
+  
   // Threshold status
   const [thresholdStatus, setThresholdStatus] = useState<ThresholdStatus | null>(null);
   
