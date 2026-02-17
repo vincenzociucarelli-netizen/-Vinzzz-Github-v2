@@ -798,7 +798,7 @@ export default function AdminCoachDetail() {
                     setContractStartDate(formatted);
                   }
                 }}
-                placeholder="01/09/2025"
+                placeholder="GG/MM/AAAA"
                 maxLength={10}
               />
               
