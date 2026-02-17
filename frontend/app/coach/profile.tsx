@@ -145,8 +145,6 @@ export default function CoachProfile() {
         iban: data.iban || '',
         account_holder: data.account_holder || '',
         bank_name: data.bank_name || '',
-        doc_front_image: data.doc_front_image || '',
-        doc_back_image: data.doc_back_image || '',
       });
       // Load compensation history
       setCompensationHistory(data.compensation_history || {});
@@ -522,7 +520,7 @@ export default function CoachProfile() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <View style={{ backgroundColor: "rgba(0,0,0,0.3)", borderRadius: 20, padding: 6 }}><Ionicons name="chevron-back" size={24} color="#fff" /></View>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Il Mio Profilo</Text>
         <TouchableOpacity onPress={handleLogout}>
