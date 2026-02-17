@@ -5418,10 +5418,12 @@ async def sign_compensation_receipt(
     if not coach:
         raise HTTPException(status_code=404, detail="Coach non trovato")
     
-    # Get society data
+    # Get society data from settings and societies collection
+    society_settings = await db.settings.find_one({"type": "society"})
     society = await db.societies.find_one()
-    society_name = society.get("name", "ASD/SSD") if society else "ASD/SSD"
-    admin_email = society.get("email") if society else None
+    # Prioritize settings over societies collection
+    society_name = (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
+    admin_email = (society_settings.get("email") if society_settings else None) or (society.get("email") if society else None)
     
     # Calculate yearly totals to check thresholds
     yearly_records = await db.coach_compensations.find({
