@@ -573,22 +573,25 @@ export default function CoachCompensation() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Profile Link at TOP */}
-        <TouchableOpacity 
-          style={[styles.infoSection, { marginBottom: 16, backgroundColor: '#fff', borderRadius: 12 }]}
-          onPress={() => router.push('/coach/profile')}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="person-circle" size={40} color="#FF9500" />
-              <View style={{ marginLeft: 12 }}>
-                <Text style={[styles.infoTitle, { marginBottom: 0 }]}>Il Mio Profilo</Text>
-                <Text style={{ fontSize: 12, color: '#666' }}>Dati personali, documento e IBAN</Text>
-              </View>
+        {/* Coach Name and Profile Link */}
+        <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <Ionicons name="person-circle" size={50} color="#007AFF" />
+            <View style={{ marginLeft: 12 }}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Coach'}</Text>
+              <Text style={{ fontSize: 13, color: '#666' }}>Compenso mensile: €{(profile?.monthly_compensation || 0).toFixed(2)}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#999" />
           </View>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F8FF', padding: 10, borderRadius: 8 }}
+            onPress={() => router.push('/coach/profile')}
+          >
+            <Ionicons name="create-outline" size={18} color="#007AFF" />
+            <Text style={{ marginLeft: 8, color: '#007AFF', fontWeight: '500' }}>Il Mio Profilo</Text>
+            <Text style={{ flex: 1, textAlign: 'right', fontSize: 12, color: '#666' }}>Dati personali, documento e IBAN</Text>
+            <Ionicons name="chevron-forward" size={18} color="#007AFF" style={{ marginLeft: 8 }} />
+          </TouchableOpacity>
+        </View>
         
         {/* Year Summaries - Contract-based */}
         {contractStartYear && contractEndYear && (
