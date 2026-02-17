@@ -112,6 +112,9 @@ export default function AdminCoachDetail() {
   });
   const [priorCompensation, setPriorCompensation] = useState('0');
   
+  // Quietanze firmate reali dal database
+  const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
+  
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
   const [otherAnnualCompensation, setOtherAnnualCompensation] = useState('0');
