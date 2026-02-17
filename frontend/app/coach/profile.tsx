@@ -827,17 +827,19 @@ export default function CoachProfile() {
             <Text style={styles.cardTitle}>📅 Registro Quietanze</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
               {getSeasonMonths().map((month) => {
-                const isPaid = compensationHistory[month.key] === true;
+                const [year, monthNum] = month.key.split('-');
+                const receipt = signedReceipts.find(r => r.year === parseInt(year) && r.month === parseInt(monthNum));
+                const isSigned = receipt?.receipt_signed === true;
                 return (
                   <View 
                     key={month.key} 
                     style={{
-                      backgroundColor: isPaid ? '#E8F5E9' : '#F5F5F5',
+                      backgroundColor: isSigned ? '#E8F5E9' : '#F5F5F5',
                       borderRadius: 6,
                       paddingVertical: 6,
                       paddingHorizontal: 10,
                       borderWidth: 1,
-                      borderColor: isPaid ? '#4CAF50' : '#E0E0E0',
+                      borderColor: isSigned ? '#4CAF50' : '#E0E0E0',
                       minWidth: 85,
                       alignItems: 'center',
                     }}
@@ -845,8 +847,8 @@ export default function CoachProfile() {
                     <Text style={{ fontSize: 11, color: '#666', fontWeight: '500' }}>
                       {month.label.split(' ')[0].substring(0, 3)} {month.label.split(' ')[1]}
                     </Text>
-                    <Text style={{ fontSize: 12, color: isPaid ? '#2E7D32' : '#999', fontWeight: '600' }}>
-                      {isPaid ? '✓' : '-'}
+                    <Text style={{ fontSize: 12, color: isSigned ? '#2E7D32' : '#999', fontWeight: '600' }}>
+                      {isSigned ? '✓' : '-'}
                     </Text>
                   </View>
                 );
