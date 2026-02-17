@@ -1695,10 +1695,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   floatingSaveBtn: {
-    position: 'absolute',
-    bottom: 20,
-    left: 16,
-    right: 16,
+    marginTop: 20,
     backgroundColor: '#FF9500',
     padding: 16,
     borderRadius: 12,
