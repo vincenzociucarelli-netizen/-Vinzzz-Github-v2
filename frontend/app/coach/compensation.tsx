@@ -577,11 +577,39 @@ export default function CoachCompensation() {
         <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <Ionicons name="person-circle" size={50} color="#007AFF" />
-            <View style={{ marginLeft: 12 }}>
+            <View style={{ marginLeft: 12, flex: 1 }}>
               <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Coach'}</Text>
               <Text style={{ fontSize: 13, color: '#666' }}>Compenso mensile: €{(profile?.monthly_compensation || 0).toFixed(2)}</Text>
             </View>
           </View>
+          
+          {/* Contract Period - Full dates */}
+          {profile?.contract_start_date && profile?.contract_end_date && (
+            <View style={{ 
+              backgroundColor: '#E8F4FD', 
+              padding: 12, 
+              borderRadius: 8, 
+              marginBottom: 12,
+              borderWidth: 1,
+              borderColor: '#007AFF',
+              borderStyle: 'dashed'
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, marginRight: 6 }}>📅</Text>
+                <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>Periodo Contratto</Text>
+              </View>
+              <Text style={{ fontSize: 18, color: '#007AFF', fontWeight: 'bold', marginTop: 4, textAlign: 'center' }}>
+                {(() => {
+                  const startParts = profile.contract_start_date!.split('-');
+                  const endParts = profile.contract_end_date!.split('-');
+                  const startFormatted = `${startParts[2]}/${startParts[1]}/${startParts[0]}`;
+                  const endFormatted = `${endParts[2]}/${endParts[1]}/${endParts[0]}`;
+                  return `${startFormatted} - ${endFormatted}`;
+                })()}
+              </Text>
+            </View>
+          )}
+          
           <TouchableOpacity 
             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F8FF', padding: 10, borderRadius: 8 }}
             onPress={() => router.push('/coach/profile')}
