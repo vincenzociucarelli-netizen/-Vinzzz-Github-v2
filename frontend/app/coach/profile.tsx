@@ -196,20 +196,42 @@ export default function CoachProfile() {
     }
   };
 
-  // Generate season months (July to June)
-  const getSeasonMonths = () => {
-    const now = new Date();
-    const currentYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
-    const months = [];
+  // Generate contract months based on coach's contract dates
+  const getContractMonths = () => {
+    const months: {key: string, label: string}[] = [];
     const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
                         'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
-    for (let i = 0; i < 12; i++) {
-      const monthIndex = (6 + i) % 12;
-      const year = monthIndex >= 6 ? currentYear : currentYear + 1;
-      months.push({
-        key: `${year}-${String(monthIndex + 1).padStart(2, '0')}`,
-        label: `${monthNames[monthIndex]} ${year}`,
-      });
+    
+    // Use contract dates if available
+    const startDate = profileData.contract_start_date ? new Date(profileData.contract_start_date) : null;
+    const endDate = profileData.contract_end_date ? new Date(profileData.contract_end_date) : null;
+    
+    if (startDate && endDate) {
+      // Generate months from contract start to end
+      let current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const end = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+      
+      while (current <= end) {
+        const monthIndex = current.getMonth();
+        const year = current.getFullYear();
+        months.push({
+          key: `${year}-${String(monthIndex + 1).padStart(2, '0')}`,
+          label: `${monthNames[monthIndex]} ${year}`,
+        });
+        current.setMonth(current.getMonth() + 1);
+      }
+    } else {
+      // Fallback to season months (July to June)
+      const now = new Date();
+      const currentYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+      for (let i = 0; i < 12; i++) {
+        const monthIndex = (6 + i) % 12;
+        const year = monthIndex >= 6 ? currentYear : currentYear + 1;
+        months.push({
+          key: `${year}-${String(monthIndex + 1).padStart(2, '0')}`,
+          label: `${monthNames[monthIndex]} ${year}`,
+        });
+      }
     }
     return months;
   };
