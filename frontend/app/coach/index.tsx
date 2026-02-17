@@ -1506,7 +1506,7 @@ const styles = StyleSheet.create({
   },
   buttonSecondary: {
     backgroundColor: '#f0f0f0',
-    marginTop: 16,
+    marginTop: 24,
   },
   buttonSecondaryText: {
     color: '#007AFF',
