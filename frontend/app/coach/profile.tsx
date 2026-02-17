@@ -855,14 +855,13 @@ export default function CoachProfile() {
         {/* Monthly Payment Tracking */}
         {profileData.monthly_compensation > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📅 Registro Pagamenti Mensili</Text>
+            <Text style={styles.cardTitle}>📅 Storico Pagamenti Mensili</Text>
             <Text style={styles.cardSubtitle}>
-              Indica i mesi in cui hai ricevuto il compenso
+              Visualizza lo stato dei pagamenti (gestito dalla società)
             </Text>
             
             {getSeasonMonths().map((month) => {
               const isPaid = compensationHistory[month.key] === true;
-              const isOver5000 = over5000Limit[month.key] === true;
               
               return (
                 <View key={month.key} style={styles.monthRow}>
@@ -870,12 +869,11 @@ export default function CoachProfile() {
                     <Text style={styles.monthLabel}>{month.label}</Text>
                   </View>
                   <View style={styles.monthActions}>
-                    <TouchableOpacity
-                      style={[styles.monthCheckbox, isPaid && styles.monthCheckboxActive]}
-                      onPress={() => handleToggleMonth(month.key)}
+                    <View
+                      style={[styles.monthCheckbox, isPaid && styles.monthCheckboxActive, { opacity: 0.8 }]}
                     >
                       {isPaid && <Ionicons name="checkmark" size={16} color="#fff" />}
-                    </TouchableOpacity>
+                    </View>
                     <Text style={[styles.monthStatusText, isPaid && styles.monthStatusTextPaid]}>
                       {isPaid ? 'PAGATO' : 'NON PAGATO'}
                     </Text>
