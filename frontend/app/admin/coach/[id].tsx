@@ -186,8 +186,13 @@ export default function AdminCoachDetail() {
       // Load actual signed receipts from compensation endpoint
       try {
         const compensationRes = await api.get(`/coach/${id}/compensation`);
-        if (compensationRes.data?.records) {
+        // The endpoint returns an array directly, not { records: [...] }
+        if (Array.isArray(compensationRes.data)) {
+          setSignedReceipts(compensationRes.data);
+        } else if (compensationRes.data?.records) {
           setSignedReceipts(compensationRes.data.records);
+        } else {
+          setSignedReceipts([]);
         }
       } catch (compError) {
         console.log('No compensation data available');
