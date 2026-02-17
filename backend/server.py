@@ -1561,6 +1561,7 @@ class SocietySettingsUpdate(BaseModel):
     phone2: Optional[str] = None
     president_name: Optional[str] = None
     stamp_signature: Optional[str] = None  # Base64 encoded image of stamp and signature
+    email: Optional[str] = None  # Society email for notifications
 
 @api_router.get("/settings/society")
 async def get_society_settings():
