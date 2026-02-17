@@ -250,6 +250,10 @@ export default function CoachScreen() {
             fps: 10, 
             qrbox: { width: 250, height: 250 },
             rememberLastUsedCamera: true,
+            // Prefer back camera (environment facing)
+            videoConstraints: {
+              facingMode: { ideal: "environment" }
+            }
           },
           false
         );
