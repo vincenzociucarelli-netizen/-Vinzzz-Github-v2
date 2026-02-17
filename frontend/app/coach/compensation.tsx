@@ -122,6 +122,25 @@ export default function CoachCompensation() {
       const profileRes = await api.get('/auth/me');
       setProfile(profileRes.data);
       
+      // Parse contract dates
+      if (profileRes.data.contract_start_date) {
+        const startParts = profileRes.data.contract_start_date.split('-');
+        if (startParts.length === 3) {
+          setContractStartYear(parseInt(startParts[0]));
+          setContractStartMonth(parseInt(startParts[1]));
+        }
+      }
+      if (profileRes.data.contract_end_date) {
+        const endParts = profileRes.data.contract_end_date.split('-');
+        if (endParts.length === 3) {
+          setContractEndYear(parseInt(endParts[0]));
+          setContractEndMonth(parseInt(endParts[1]));
+        }
+      }
+      
+      // Set prior compensation
+      setPriorCompensation(profileRes.data.other_annual_compensation || 0);
+      
       // Load compensation records
       const recordsRes = await api.get(`/coach/${user?.id}/compensation`);
       const yearRecords = recordsRes.data.filter((r: CompensationRecord) => r.year === currentYear);
