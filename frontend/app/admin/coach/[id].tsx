@@ -182,6 +182,17 @@ export default function AdminCoachDetail() {
         criminal_record: checklist.criminal_record || false,
       });
       setPriorCompensation(coachRes.data.prior_compensation?.toString() || '0');
+      
+      // Load actual signed receipts from compensation endpoint
+      try {
+        const compensationRes = await api.get(`/coach/${id}/compensation`);
+        if (compensationRes.data?.records) {
+          setSignedReceipts(compensationRes.data.records);
+        }
+      } catch (compError) {
+        console.log('No compensation data available');
+        setSignedReceipts([]);
+      }
     } catch (error) {
       console.error('Error loading coach data:', error);
     } finally {
