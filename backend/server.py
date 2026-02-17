@@ -6755,8 +6755,16 @@ def generate_signed_pdf(
             sig_data = base64.b64decode(signature_base64)
             sig_image = Image.open(io.BytesIO(sig_data))
             
-            # Convert to RGB if necessary
+            # Handle transparency properly - create white background
             if sig_image.mode in ('RGBA', 'P'):
+                # Create a white background image
+                background = Image.new('RGB', sig_image.size, (255, 255, 255))
+                # Paste the signature on white background, using alpha channel as mask
+                if sig_image.mode == 'P':
+                    sig_image = sig_image.convert('RGBA')
+                background.paste(sig_image, mask=sig_image.split()[3] if len(sig_image.split()) == 4 else None)
+                sig_image = background
+            elif sig_image.mode != 'RGB':
                 sig_image = sig_image.convert('RGB')
             
             # Save to buffer
