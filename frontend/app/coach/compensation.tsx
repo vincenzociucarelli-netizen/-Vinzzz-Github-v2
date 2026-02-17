@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
-import SignaturePad from '../../src/components/SignaturePad';
+import SignaturePadInline from '../../src/components/SignaturePadInline';
 
 const MONTH_NAMES = [
   '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
