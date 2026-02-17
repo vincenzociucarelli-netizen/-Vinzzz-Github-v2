@@ -848,7 +848,7 @@ export default function CoachProfile() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📅 Registro Quietanze</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-              {getSeasonMonths().map((month) => {
+              {getContractMonths().map((month) => {
                 const [year, monthNum] = month.key.split('-');
                 const receipt = signedReceipts.find(r => r.year === parseInt(year) && r.month === parseInt(monthNum));
                 const isSigned = receipt?.receipt_signed === true;
