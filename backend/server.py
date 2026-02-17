@@ -2131,6 +2131,9 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "compensation_accepted": user.get("compensation_accepted", False),
         "compensation_history": user.get("compensation_history", {}),
         "over_5000_limit": user.get("over_5000_limit", {}),
+        # Contract dates
+        "contract_start_date": user.get("contract_start_date").strftime("%Y-%m-%d") if user.get("contract_start_date") else None,
+        "contract_end_date": user.get("contract_end_date").strftime("%Y-%m-%d") if user.get("contract_end_date") else None,
         # Document and Bank details (new fields)
         "id_type": user.get("id_type"),
         "id_front": user.get("id_front"),
