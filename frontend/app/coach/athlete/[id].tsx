@@ -211,7 +211,7 @@ export default function CoachAthleteDetail() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="chevron-back-circle" size={32} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Dati Tecnici</Text>
           <View style={{ width: 24 }} />
@@ -228,7 +228,7 @@ export default function CoachAthleteDetail() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="chevron-back-circle" size={32} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Errore</Text>
           <View style={{ width: 24 }} />
@@ -247,7 +247,7 @@ export default function CoachAthleteDetail() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="chevron-back-circle" size={32} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Dati Tecnici</Text>
         <TouchableOpacity onPress={handleSave} disabled={saving}>

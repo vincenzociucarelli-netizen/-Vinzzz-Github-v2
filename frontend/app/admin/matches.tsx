@@ -583,7 +583,7 @@ export default function AdminMatches() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="chevron-back-circle" size={32} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Calendario Gare</Text>
         <TouchableOpacity onPress={handleImportExcel} style={styles.importBtn}>

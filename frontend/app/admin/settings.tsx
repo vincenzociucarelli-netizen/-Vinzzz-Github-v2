@@ -215,7 +215,7 @@ export default function SettingsScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="chevron-back-circle" size={32} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Impostazioni</Text>
           <View style={{ width: 24 }} />
@@ -231,7 +231,7 @@ export default function SettingsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="chevron-back-circle" size={32} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Impostazioni</Text>
         <View style={{ width: 24 }} />

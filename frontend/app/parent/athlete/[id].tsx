@@ -1088,7 +1088,7 @@ export default function AthleteDetail() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="chevron-back-circle" size={32} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Caricamento...</Text>
           <View style={{ width: 24 }} />
@@ -1110,7 +1110,7 @@ export default function AthleteDetail() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.replace('/parent')}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="chevron-back-circle" size={32} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{athlete.full_name}</Text>
         <TouchableOpacity onPress={handleLogout}>
