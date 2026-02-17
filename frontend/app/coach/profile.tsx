@@ -55,6 +55,8 @@ export default function CoachProfile() {
     coach_license_number: '',
     monthly_compensation: 0,
     compensation_accepted: false,
+    contract_start_date: '',
+    contract_end_date: '',
     // Documento e Dati Bancari
     id_type: '',
     id_front: '',
