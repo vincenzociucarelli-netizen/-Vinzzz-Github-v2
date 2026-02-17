@@ -831,7 +831,7 @@ export default function AdminCoachDetail() {
                     setContractEndDate(formatted);
                   }
                 }}
-                placeholder="31/05/2026"
+                placeholder="GG/MM/AAAA"
                 maxLength={10}
               />
               
