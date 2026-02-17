@@ -1070,7 +1070,10 @@ export default function AdminCoachDetail() {
                     <View style={[styles.totalBox, { marginTop: 12, backgroundColor: '#E8F5E9' }]}>
                       <Text style={[styles.totalLabel, { color: '#2E7D32' }]}>Totale Compenso Contratto (per RAS)</Text>
                       <Text style={[styles.totalValue, { color: '#2E7D32', fontSize: 20 }]}>
-                        €{breakdown.grandTotal.toLocaleString()}
+                        €{breakdown.thisClubTotal.toLocaleString()}
+                      </Text>
+                      <Text style={{ color: '#2E7D32', fontSize: 12, marginTop: 4 }}>
+                        (€{breakdown.monthly} × {breakdown.monthsInContract} mesi)
                       </Text>
                     </View>
                   </>
