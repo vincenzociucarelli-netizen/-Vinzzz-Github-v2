@@ -44,6 +44,9 @@ interface CoachProfile {
   fiscal_code?: string;
   monthly_compensation: number;
   compensation_accepted: boolean;
+  contract_start_date?: string;
+  contract_end_date?: string;
+  other_annual_compensation?: number; // Prior compensation
 }
 
 interface ThresholdStatus {
