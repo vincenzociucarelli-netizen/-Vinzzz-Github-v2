@@ -113,6 +113,8 @@ export default function CoachProfile() {
         coach_license_number: data.coach_license_number || '',
         monthly_compensation: data.monthly_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
+        contract_start_date: data.contract_start_date || '',
+        contract_end_date: data.contract_end_date || '',
         // Documento e Dati Bancari
         id_type: data.id_type || '',
         id_front: data.id_front || '',
