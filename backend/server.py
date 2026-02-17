@@ -1649,6 +1649,8 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
         update_dict["president_name"] = data.president_name
     if data.stamp_signature is not None:
         update_dict["stamp_signature"] = data.stamp_signature
+    if data.email is not None:
+        update_dict["email"] = data.email
     
     if update_dict:
         await db.settings.update_one(
