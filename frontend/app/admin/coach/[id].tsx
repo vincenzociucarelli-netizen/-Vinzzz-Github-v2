@@ -888,30 +888,6 @@ export default function AdminCoachDetail() {
                   maxLength={4}
                 />
               </View>
-                  value={contractEndDate.split('-')[1] || ''}
-                  onChangeText={(month) => {
-                    const parts = contractEndDate.split('-');
-                    const newDate = `${parts[0] || '2026'}-${month.padStart(2, '0')}-${parts[2] || '31'}`;
-                    setContractEndDate(newDate);
-                  }}
-                  placeholder="MM"
-                  keyboardType="number-pad"
-                  maxLength={2}
-                />
-                <Text style={styles.dateSeparator}>/</Text>
-                <TextInput
-                  style={[styles.input, styles.yearInput]}
-                  value={contractEndDate.split('-')[0] || ''}
-                  onChangeText={(year) => {
-                    const parts = contractEndDate.split('-');
-                    const newDate = `${year}-${parts[1] || '05'}-${parts[2] || '31'}`;
-                    setContractEndDate(newDate);
-                  }}
-                  placeholder="AAAA"
-                  keyboardType="number-pad"
-                  maxLength={4}
-                />
-              </View>
               
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>💰 Compenso Mensile (€)</Text>
               <TextInput
