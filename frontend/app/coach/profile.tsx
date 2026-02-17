@@ -123,6 +123,8 @@ export default function CoachProfile() {
         bank_name: data.bank_name || '',
         doc_front_image: data.doc_front_image || '',
         doc_back_image: data.doc_back_image || '',
+        contract_start_date: data.contract_start_date || '',
+        contract_end_date: data.contract_end_date || '',
       });
       setEditData({
         email: data.email || '',
