@@ -981,6 +981,17 @@ export default function AdminCoachDetail() {
                 </View>
               )}
             </View>
+            
+            {/* Pulsante SALVA Fluttuante */}
+            <TouchableOpacity
+              style={[styles.floatingSaveBtn, saving && styles.saveBtnDisabled]}
+              onPress={handleSaveCompensation}
+              disabled={saving}
+            >
+              <Text style={styles.floatingSaveBtnText}>
+                {saving ? 'Salvataggio...' : '💾 SALVA COMPENSI'}
+              </Text>
+            </TouchableOpacity>
           ) : (
             <>
               <View style={styles.compensationDisplay}>
