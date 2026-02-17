@@ -562,52 +562,144 @@ export default function CoachCompensation() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Summary Card */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Riepilogo {currentYear}</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Compenso mensile:</Text>
-            <Text style={styles.summaryValue}>€ {(profile?.monthly_compensation || 0).toFixed(2)}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Totale quietanzato:</Text>
-            <Text style={[styles.summaryValue, styles.summaryTotal]}>€ {yearlyTotal.toFixed(2)}</Text>
-          </View>
-          
-          {/* Progress bars */}
-          <View style={styles.progressSection}>
-            <Text style={styles.progressLabel}>Soglia €5.000 (previdenziale)</Text>
-            <View style={styles.progressBar}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { width: `${Math.min((yearlyTotal / 5000) * 100, 100)}%` },
-                  yearlyTotal >= 5000 ? styles.progressFillExceeded : {}
-                ]} 
-              />
+        {/* Profile Link at TOP */}
+        <TouchableOpacity 
+          style={[styles.infoSection, { marginBottom: 16, backgroundColor: '#fff', borderRadius: 12 }]}
+          onPress={() => router.push('/coach/profile')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="person-circle" size={40} color="#FF9500" />
+              <View style={{ marginLeft: 12 }}>
+                <Text style={[styles.infoTitle, { marginBottom: 0 }]}>Il Mio Profilo</Text>
+                <Text style={{ fontSize: 12, color: '#666' }}>Dati personali, documento e IBAN</Text>
+              </View>
             </View>
+            <Ionicons name="chevron-forward" size={24} color="#999" />
+          </View>
+        </TouchableOpacity>
+        
+        {/* Year Summaries - Contract-based */}
+        {contractStartYear && contractEndYear && (
+          <>
+            {/* First Year Summary (with prior compensation) */}
+            {(() => {
+              const summary = getYearSummary(contractStartYear);
+              const exceeds5k = summary.totalProjected >= 5000;
+              const exceeds15k = summary.totalProjected >= 15000;
+              return (
+                <View key={`summary-${contractStartYear}`} style={[styles.summaryCard, { marginBottom: 16 }]}>
+                  <Text style={styles.summaryTitle}>📊 Anno {contractStartYear} (Inizio Contratto)</Text>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Mesi nel contratto:</Text>
+                    <Text style={styles.summaryValue}>{MONTH_NAMES[contractStartMonth]} - Dic ({summary.monthCount} mesi)</Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Compenso da contratto:</Text>
+                    <Text style={styles.summaryValue}>€{summary.monthlyComp} × {summary.monthCount} = €{summary.yearlyFromContract.toLocaleString()}</Text>
+                  </View>
+                  {summary.priorCompensation > 0 && (
+                    <View style={[styles.summaryRow, { backgroundColor: '#FFF3CD', padding: 8, borderRadius: 6 }]}>
+                      <Text style={[styles.summaryLabel, { color: '#856404' }]}>+ Pregressi dichiarati:</Text>
+                      <Text style={[styles.summaryValue, { color: '#856404' }]}>€{summary.priorCompensation.toLocaleString()}</Text>
+                    </View>
+                  )}
+                  <View style={[styles.summaryRow, { marginTop: 8, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8 }]}>
+                    <Text style={[styles.summaryLabel, { fontWeight: 'bold' }]}>TOTALE ANNO:</Text>
+                    <Text style={[styles.summaryValue, styles.summaryTotal, exceeds5k ? { color: '#FF3B30' } : {}]}>
+                      €{summary.totalProjected.toLocaleString()}
+                    </Text>
+                  </View>
+                  {exceeds5k && (
+                    <Text style={{ fontSize: 12, color: '#FF3B30', marginTop: 4 }}>
+                      ⚠️ Supera soglia €5.000 {exceeds15k ? '+ €15.000' : ''}
+                    </Text>
+                  )}
+                </View>
+              );
+            })()}
             
-            <Text style={[styles.progressLabel, { marginTop: 12 }]}>Soglia €15.000 (fiscale)</Text>
-            <View style={styles.progressBar}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { width: `${Math.min((yearlyTotal / 15000) * 100, 100)}%` },
-                  yearlyTotal >= 15000 ? styles.progressFillExceeded : {}
-                ]} 
-              />
+            {/* Second Year Summary (if contract spans 2 years) */}
+            {contractEndYear > contractStartYear && (() => {
+              const summary = getYearSummary(contractEndYear);
+              const exceeds5k = summary.totalProjected >= 5000;
+              const exceeds15k = summary.totalProjected >= 15000;
+              return (
+                <View key={`summary-${contractEndYear}`} style={[styles.summaryCard, { marginBottom: 16 }]}>
+                  <Text style={styles.summaryTitle}>📊 Anno {contractEndYear} (Fine Contratto)</Text>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Mesi nel contratto:</Text>
+                    <Text style={styles.summaryValue}>Gen - {MONTH_NAMES[contractEndMonth]} ({summary.monthCount} mesi)</Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Compenso da contratto:</Text>
+                    <Text style={styles.summaryValue}>€{summary.monthlyComp} × {summary.monthCount} = €{summary.yearlyFromContract.toLocaleString()}</Text>
+                  </View>
+                  <View style={[styles.summaryRow, { marginTop: 8, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8 }]}>
+                    <Text style={[styles.summaryLabel, { fontWeight: 'bold' }]}>TOTALE ANNO:</Text>
+                    <Text style={[styles.summaryValue, styles.summaryTotal, exceeds5k ? { color: '#FF3B30' } : {}]}>
+                      €{summary.totalProjected.toLocaleString()}
+                    </Text>
+                  </View>
+                  {exceeds5k && (
+                    <Text style={{ fontSize: 12, color: '#FF3B30', marginTop: 4 }}>
+                      ⚠️ Supera soglia €5.000 {exceeds15k ? '+ €15.000' : ''}
+                    </Text>
+                  )}
+                </View>
+              );
+            })()}
+          </>
+        )}
+        
+        {/* Fallback: Old summary if no contract dates */}
+        {(!contractStartYear || !contractEndYear) && (
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Riepilogo {currentYear}</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Compenso mensile:</Text>
+              <Text style={styles.summaryValue}>€ {(profile?.monthly_compensation || 0).toFixed(2)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Totale quietanzato:</Text>
+              <Text style={[styles.summaryValue, styles.summaryTotal]}>€ {yearlyTotal.toFixed(2)}</Text>
             </View>
           </View>
-        </View>
+        )}
 
         {/* Threshold Warnings/Actions */}
         {renderThresholdWarnings()}
 
-        {/* Monthly Cards */}
-        <Text style={styles.sectionTitle}>Quietanze Mensili</Text>
-        <View style={styles.monthsGrid}>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => renderMonthCard(month))}
-        </View>
+        {/* Monthly Cards - Contract-based */}
+        {contractStartYear && contractEndYear && (
+          <>
+            {/* First Year Months */}
+            <Text style={styles.sectionTitle}>Quietanze {contractStartYear}</Text>
+            <View style={styles.monthsGrid}>
+              {getContractMonthsForYear(contractStartYear).map(month => renderMonthCard(month, contractStartYear))}
+            </View>
+            
+            {/* Second Year Months */}
+            {contractEndYear > contractStartYear && (
+              <>
+                <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Quietanze {contractEndYear}</Text>
+                <View style={styles.monthsGrid}>
+                  {getContractMonthsForYear(contractEndYear).map(month => renderMonthCard(month, contractEndYear))}
+                </View>
+              </>
+            )}
+          </>
+        )}
+        
+        {/* Fallback: Old 12 months if no contract dates */}
+        {(!contractStartYear || !contractEndYear) && (
+          <>
+            <Text style={styles.sectionTitle}>Quietanze Mensili</Text>
+            <View style={styles.monthsGrid}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => renderMonthCard(month))}
+            </View>
+          </>
+        )}
 
         {/* Info Section */}
         <View style={styles.infoSection}>
