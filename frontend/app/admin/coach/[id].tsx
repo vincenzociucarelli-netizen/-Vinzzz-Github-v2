@@ -983,6 +983,22 @@ export default function AdminCoachDetail() {
                 <Text style={styles.compensationPeriod}>/mese (questa ASD)</Text>
               </View>
               
+              {/* Date Contratto */}
+              {(coach.contract_start_date || coach.contract_end_date) && (
+                <View style={[styles.totalBox, { marginTop: 12, backgroundColor: '#E3F2FD' }]}>
+                  <Text style={[styles.totalLabel, { color: '#1565C0' }]}>📅 Periodo Contratto</Text>
+                  <Text style={[styles.totalValue, { color: '#1565C0', fontSize: 16 }]}>
+                    {coach.contract_start_date ? (() => {
+                      const parts = coach.contract_start_date.split('-');
+                      return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : coach.contract_start_date;
+                    })() : 'N/D'} - {coach.contract_end_date ? (() => {
+                      const parts = coach.contract_end_date.split('-');
+                      return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : coach.contract_end_date;
+                    })() : 'N/D'}
+                  </Text>
+                </View>
+              )}
+              
               {/* Mostra breakdown del calcolo */}
               {(() => {
                 const breakdown = getCompensationBreakdown();
