@@ -267,7 +267,7 @@ export default function CoachCompensation() {
       
       const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
-        year: currentYear,
+        year: selectedYear,
         amount_gross: profile.monthly_compensation,
         signature_base64: signature.replace('data:image/png;base64,', ''),
         exceeded_5000: exceeded5000,
