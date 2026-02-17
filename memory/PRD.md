@@ -62,28 +62,34 @@ Full-stack React/FastAPI application for managing a volleyball club with:
 
 ## Latest Updates (Feb 17, 2026)
 
-### Fixed Issues
+### Fixed Issues - Session 2
+1. **Quietanze Ott/Nov 2025 non visibili** (P0 - RESOLVED)
+   - Le quietanze sono ora visibili nella pagina `/coach/compensation`
+   - Ottobre 2025 ✅ e Novembre 2025 ✅ mostrati correttamente
+
+2. **Email non arrivano a Pallavolo Perugia** (P0 - RESOLVED)
+   - Causa: campo `email` non era impostato nelle settings società
+   - Aggiunto campo `email` a `SocietySettingsUpdate` model
+   - Aggiunto `email` a GET/PATCH `/api/settings/society`
+   - Configurato `pallavoloperugia@gmail.com` come destinatario
+   - Backend ora legge email da `settings` (priorità) o `societies`
+
+3. **Registro quietanze nel profilo** (P1 - IN PROGRESS)
+   - Il file `profile.tsx` ha problemi legacy di sintassi
+   - La sezione "Storico Pagamenti" esiste ma mostra il vecchio formato
+   - Richiede refactoring completo del file
+
+### Fixed Issues - Session 1
 1. **Signed Receipts Not Visible** (P0 - RESOLVED)
    - Root cause: react-native-signature-canvas uses WebView which doesn't work on web
    - Solution: Created new `SignaturePadInline` component using `react-signature-canvas` for web
-   - Component location: `/app/frontend/src/components/SignaturePadInline.tsx`
 
 2. **"Il Mio Profilo" Position** (P1 - RESOLVED)
    - Moved link directly under coach name with improved layout
-   - Shows coach name, monthly compensation, and profile link in header
-
-3. **Contract Date Display** (RESOLVED)
-   - When contract dates are set, system shows correct months (Sep-Dec 2024, Jan-May 2025)
-   - Year summaries display compensation breakdown per year
-
-### New Components
-- `SignaturePadInline.tsx`: Cross-platform signature component
-  - Uses `react-signature-canvas` for web
-  - Uses `react-native-signature-canvas` for native
-  - Handles signature save/clear with callbacks
 
 ## Pending Issues (P1)
 - Parent login not working (frontend redirect issue)
+- Compact registry in profile.tsx needs refactoring
 
 ## Backlog (P2)
 - @expo/vector-icons not rendering on web (recurring issue)
