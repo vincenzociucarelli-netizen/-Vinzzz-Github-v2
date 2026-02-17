@@ -321,7 +321,7 @@ export default function AdminCoachDetail() {
   // Calcola breakdown per ANNO SOLARE (per soglie €5k e €15k)
   const getYearlyBreakdown = () => {
     const monthly = parseFloat(monthlyCompensation) || 0;
-    const prior = coach?.prior_compensation || 0;
+    const prior = parseFloat(otherAnnualCompensation) || 0;  // Compensi pregressi dichiarati
     const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
     
     const years: { [year: number]: { months: number, startMonth: string, endMonth: string, total: number, prior: number, grandTotal: number, exceedsThreshold5k: boolean, exceedsThreshold15k: boolean } } = {};
