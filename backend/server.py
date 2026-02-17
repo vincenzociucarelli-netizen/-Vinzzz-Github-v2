@@ -6772,15 +6772,29 @@ def generate_signed_pdf(
             sig_data = base64.b64decode(signature_base64)
             sig_image = Image.open(io.BytesIO(sig_data))
             
-            # Handle transparency properly - create white background
-            if sig_image.mode in ('RGBA', 'P'):
-                # Create a white background image
-                background = Image.new('RGB', sig_image.size, (255, 255, 255))
-                # Paste the signature on white background, using alpha channel as mask
-                if sig_image.mode == 'P':
+            # Handle transparency properly - create white background with black signature
+            if sig_image.mode in ('RGBA', 'P', 'LA'):
+                # Convert to RGBA first
+                if sig_image.mode != 'RGBA':
                     sig_image = sig_image.convert('RGBA')
-                background.paste(sig_image, mask=sig_image.split()[3] if len(sig_image.split()) == 4 else None)
-                sig_image = background
+                
+                # Create a white background
+                background = Image.new('RGBA', sig_image.size, (255, 255, 255, 255))
+                
+                # Get the alpha channel as mask
+                r, g, b, a = sig_image.split()
+                
+                # Create black signature where there's opacity
+                # The signature canvas typically draws with any color, we want it black
+                black_sig = Image.new('RGBA', sig_image.size, (0, 0, 0, 0))
+                black_sig.paste((0, 0, 0), mask=a)  # Black where signature exists
+                
+                # Composite: white background + black signature using alpha
+                sig_image = Image.alpha_composite(background, black_sig)
+                sig_image = sig_image.convert('RGB')
+            elif sig_image.mode == 'L':
+                # Grayscale - invert if needed and add white background
+                sig_image = sig_image.convert('RGB')
             elif sig_image.mode != 'RGB':
                 sig_image = sig_image.convert('RGB')
             
