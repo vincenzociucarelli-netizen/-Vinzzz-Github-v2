@@ -767,27 +767,92 @@ export default function AdminCoachDetail() {
           </View>
           
           {editing ? (
-            <>
-              <Text style={styles.inputLabel}>Data Inizio Contratto</Text>
-              <TextInput
-                style={styles.input}
-                value={contractStartDate}
-                onChangeText={setContractStartDate}
-                placeholder="YYYY-MM-DD (es: 2025-09-01)"
-              />
+            <View style={{ paddingBottom: 80 }}>
+              <Text style={styles.inputLabel}>📅 Data Inizio Contratto</Text>
+              <View style={styles.dateInputRow}>
+                <TextInput
+                  style={[styles.input, styles.dateInput]}
+                  value={contractStartDate.split('-')[2] || ''}
+                  onChangeText={(day) => {
+                    const parts = contractStartDate.split('-');
+                    const newDate = `${parts[0] || '2025'}-${parts[1] || '09'}-${day.padStart(2, '0')}`;
+                    setContractStartDate(newDate);
+                  }}
+                  placeholder="GG"
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+                <Text style={styles.dateSeparator}>/</Text>
+                <TextInput
+                  style={[styles.input, styles.dateInput]}
+                  value={contractStartDate.split('-')[1] || ''}
+                  onChangeText={(month) => {
+                    const parts = contractStartDate.split('-');
+                    const newDate = `${parts[0] || '2025'}-${month.padStart(2, '0')}-${parts[2] || '01'}`;
+                    setContractStartDate(newDate);
+                  }}
+                  placeholder="MM"
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+                <Text style={styles.dateSeparator}>/</Text>
+                <TextInput
+                  style={[styles.input, styles.yearInput]}
+                  value={contractStartDate.split('-')[0] || ''}
+                  onChangeText={(year) => {
+                    const parts = contractStartDate.split('-');
+                    const newDate = `${year}-${parts[1] || '09'}-${parts[2] || '01'}`;
+                    setContractStartDate(newDate);
+                  }}
+                  placeholder="AAAA"
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+              </View>
               
-              <Text style={[styles.inputLabel, { marginTop: 16 }]}>Data Fine Contratto</Text>
-              <TextInput
-                style={styles.input}
-                value={contractEndDate}
-                onChangeText={setContractEndDate}
-                placeholder="YYYY-MM-DD (es: 2026-06-30)"
-              />
-              <Text style={styles.inputHint}>
-                Periodo contratto per calcolo compensi e comunicazione RAS
-              </Text>
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>📅 Data Fine Contratto</Text>
+              <View style={styles.dateInputRow}>
+                <TextInput
+                  style={[styles.input, styles.dateInput]}
+                  value={contractEndDate.split('-')[2] || ''}
+                  onChangeText={(day) => {
+                    const parts = contractEndDate.split('-');
+                    const newDate = `${parts[0] || '2026'}-${parts[1] || '05'}-${day.padStart(2, '0')}`;
+                    setContractEndDate(newDate);
+                  }}
+                  placeholder="GG"
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+                <Text style={styles.dateSeparator}>/</Text>
+                <TextInput
+                  style={[styles.input, styles.dateInput]}
+                  value={contractEndDate.split('-')[1] || ''}
+                  onChangeText={(month) => {
+                    const parts = contractEndDate.split('-');
+                    const newDate = `${parts[0] || '2026'}-${month.padStart(2, '0')}-${parts[2] || '31'}`;
+                    setContractEndDate(newDate);
+                  }}
+                  placeholder="MM"
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+                <Text style={styles.dateSeparator}>/</Text>
+                <TextInput
+                  style={[styles.input, styles.yearInput]}
+                  value={contractEndDate.split('-')[0] || ''}
+                  onChangeText={(year) => {
+                    const parts = contractEndDate.split('-');
+                    const newDate = `${year}-${parts[1] || '05'}-${parts[2] || '31'}`;
+                    setContractEndDate(newDate);
+                  }}
+                  placeholder="AAAA"
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+              </View>
               
-              <Text style={[styles.inputLabel, { marginTop: 16 }]}>Compenso Mensile da questa ASD (€)</Text>
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>💰 Compenso Mensile (€)</Text>
               <TextInput
                 style={styles.input}
                 value={monthlyCompensation}
@@ -796,7 +861,7 @@ export default function AdminCoachDetail() {
                 placeholder="0"
               />
               
-              <Text style={[styles.inputLabel, { marginTop: 16 }]}>Compensi Annuali da altre ASD/SSD (€)</Text>
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>📋 Compensi Pregressi Dichiarati (€)</Text>
               <TextInput
                 style={styles.input}
                 value={otherAnnualCompensation}
@@ -805,24 +870,117 @@ export default function AdminCoachDetail() {
                 placeholder="0"
               />
               <Text style={styles.inputHint}>
-                Inserisci la somma dichiarata dal coach dei compensi ricevuti da altre associazioni sportive
+                Importo dichiarato dal coach percepito prima dell'assunzione (Gen-Ago se assunto a Set)
               </Text>
               
-              <View style={styles.totalBox}>
-                <Text style={styles.totalLabel}>Totale Contratto Stimato</Text>
-                <Text style={styles.totalValue}>€{getTotalAnnualCompensation().toLocaleString()}</Text>
-              </View>
-              
-              <TouchableOpacity
-                style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-                onPress={handleSaveCompensation}
-                disabled={saving}
-              >
-                <Text style={styles.saveBtnText}>
-                  {saving ? 'Salvataggio...' : 'Salva Compensi'}
-                </Text>
-              </TouchableOpacity>
-            </>
+              {/* Preview calcoli */}
+              {contractStartDate && contractEndDate && (
+                <View style={{ marginTop: 20 }}>
+                  {(() => {
+                    const breakdown = getCompensationBreakdown();
+                    const yearlyBreakdown = getYearlyBreakdown();
+                    const years = Object.keys(yearlyBreakdown).map(Number).sort();
+                    const prior = parseFloat(otherAnnualCompensation) || 0;
+                    
+                    return (
+                      <>
+                        {/* Box RAS - Totale Contratto */}
+                        <View style={[styles.totalBox, { backgroundColor: '#E3F2FD', marginBottom: 12 }]}>
+                          <Text style={[styles.totalLabel, { color: '#1565C0', fontWeight: 'bold' }]}>
+                            📄 Comunicazione RAS - Totale Contratto
+                          </Text>
+                          <Text style={{ color: '#1565C0', fontSize: 12, marginTop: 4 }}>
+                            Dal {contractStartDate.split('-').reverse().join('/')} al {contractEndDate.split('-').reverse().join('/')} = {breakdown.monthsInContract} mesi
+                          </Text>
+                          <Text style={[styles.totalValue, { color: '#1565C0', fontSize: 22 }]}>
+                            €{breakdown.thisClubTotal.toLocaleString()}
+                          </Text>
+                          <Text style={{ color: '#1565C0', fontSize: 11 }}>
+                            ({breakdown.monthsInContract} mesi × €{parseFloat(monthlyCompensation) || 0})
+                          </Text>
+                        </View>
+                        
+                        {/* Box Anno Inizio */}
+                        {years.length > 0 && years[0] && yearlyBreakdown[years[0]] && (
+                          <View style={[styles.totalBox, { 
+                            backgroundColor: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9',
+                            marginBottom: 12 
+                          }]}>
+                            <Text style={[styles.totalLabel, { 
+                              color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32',
+                              fontWeight: 'bold' 
+                            }]}>
+                              {yearlyBreakdown[years[0]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[0]} (Anno Inizio)
+                            </Text>
+                            <Text style={{ color: '#666', fontSize: 12, marginTop: 4 }}>
+                              {yearlyBreakdown[years[0]].startMonth} - Dic {years[0]} = {yearlyBreakdown[years[0]].months} mesi
+                            </Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                              <View>
+                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600' }}>€{yearlyBreakdown[years[0]].total.toLocaleString()}</Text>
+                              </View>
+                              {prior > 0 && (
+                                <View>
+                                  <Text style={{ fontSize: 12, color: '#E65100' }}>+ Pregressi:</Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#E65100' }}>€{prior.toLocaleString()}</Text>
+                                </View>
+                              )}
+                              <View>
+                                <Text style={{ fontSize: 12, color: '#333' }}>Totale:</Text>
+                                <Text style={{ fontSize: 18, fontWeight: 'bold', color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
+                                  €{yearlyBreakdown[years[0]].grandTotal.toLocaleString()}
+                                </Text>
+                              </View>
+                            </View>
+                            {yearlyBreakdown[years[0]].exceedsThreshold5k && (
+                              <Text style={{ fontSize: 11, color: '#F57F17', marginTop: 4 }}>
+                                ⚠️ Supera soglia €5.000 - Contributi previdenziali
+                              </Text>
+                            )}
+                          </View>
+                        )}
+                        
+                        {/* Box Anno Fine (se diverso) */}
+                        {years.length > 1 && years[1] && yearlyBreakdown[years[1]] && (
+                          <View style={[styles.totalBox, { 
+                            backgroundColor: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9',
+                            marginBottom: 12 
+                          }]}>
+                            <Text style={[styles.totalLabel, { 
+                              color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32',
+                              fontWeight: 'bold' 
+                            }]}>
+                              {yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} (Anno Fine)
+                            </Text>
+                            <Text style={{ color: '#666', fontSize: 12, marginTop: 4 }}>
+                              Gen - {yearlyBreakdown[years[1]].endMonth} {years[1]} = {yearlyBreakdown[years[1]].months} mesi
+                            </Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                              <View>
+                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600' }}>€{yearlyBreakdown[years[1]].total.toLocaleString()}</Text>
+                              </View>
+                              <View>
+                                <Text style={{ fontSize: 12, color: '#333' }}>Totale Anno:</Text>
+                                <Text style={{ fontSize: 18, fontWeight: 'bold', color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
+                                  €{yearlyBreakdown[years[1]].grandTotal.toLocaleString()}
+                                </Text>
+                              </View>
+                            </View>
+                            {yearlyBreakdown[years[1]].exceedsThreshold5k && (
+                              <Text style={{ fontSize: 11, color: '#F57F17', marginTop: 4 }}>
+                                ⚠️ Supera soglia €5.000 - Contributi previdenziali
+                              </Text>
+                            )}
+                          </View>
+                        )}
+                      </>
+                    );
+                  })()}
+                </View>
+              )}
+            </View>
           ) : (
             <>
               <View style={styles.compensationDisplay}>
