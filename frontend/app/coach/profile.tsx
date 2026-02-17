@@ -196,11 +196,44 @@ export default function CoachProfile() {
 
   // Generate season months (July to June)
   const getSeasonMonths = () => {
-    const now = new Date();
-    const currentYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
-    const months = [];
     const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
                         'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    const months = [];
+    
+    // Se abbiamo le date del contratto, usiamo quelle
+    if (profileData.contract_start_date && profileData.contract_end_date) {
+      const startParts = profileData.contract_start_date.split('-');
+      const endParts = profileData.contract_end_date.split('-');
+      
+      if (startParts.length === 3 && endParts.length === 3) {
+        const startYear = parseInt(startParts[0]);
+        const startMonth = parseInt(startParts[1]) - 1; // 0-indexed
+        const endYear = parseInt(endParts[0]);
+        const endMonth = parseInt(endParts[1]) - 1; // 0-indexed
+        
+        let currentYear = startYear;
+        let currentMonth = startMonth;
+        
+        while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
+          months.push({
+            key: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`,
+            label: `${monthNames[currentMonth]} ${currentYear}`,
+          });
+          
+          currentMonth++;
+          if (currentMonth > 11) {
+            currentMonth = 0;
+            currentYear++;
+          }
+        }
+        
+        return months;
+      }
+    }
+    
+    // Fallback: stagione standard (Luglio - Giugno)
+    const now = new Date();
+    const currentYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
     for (let i = 0; i < 12; i++) {
       const monthIndex = (6 + i) % 12;
       const year = monthIndex >= 6 ? currentYear : currentYear + 1;
