@@ -769,125 +769,71 @@ export default function AdminCoachDetail() {
           {editing ? (
             <>
             <View style={{ paddingBottom: 80 }}>
-              <Text style={styles.inputLabel}>📅 Data Inizio Contratto</Text>
-              <View style={styles.dateInputRow}>
-                <TextInput
-                  style={[styles.input, styles.dateInput]}
-                  value={(() => {
-                    if (!contractStartDate) return '';
-                    const parts = contractStartDate.split('-');
-                    return parts[2] || '';
-                  })()}
-                  onChangeText={(day) => {
-                    const parts = (contractStartDate || '--').split('-');
-                    const y = parts[0] || '2025';
-                    const m = parts[1] || '09';
-                    const d = day.replace(/\D/g, '').slice(0, 2);
-                    setContractStartDate(`${y}-${m}-${d.padStart(2, '0')}`);
-                  }}
-                  placeholder="GG"
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
-                <Text style={styles.dateSeparator}>/</Text>
-                <TextInput
-                  style={[styles.input, styles.dateInput]}
-                  value={(() => {
-                    if (!contractStartDate) return '';
-                    const parts = contractStartDate.split('-');
-                    return parts[1] || '';
-                  })()}
-                  onChangeText={(month) => {
-                    const parts = (contractStartDate || '--').split('-');
-                    const y = parts[0] || '2025';
-                    const m = month.replace(/\D/g, '').slice(0, 2);
-                    const d = parts[2] || '01';
-                    setContractStartDate(`${y}-${m.padStart(2, '0')}-${d}`);
-                  }}
-                  placeholder="MM"
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
-                <Text style={styles.dateSeparator}>/</Text>
-                <TextInput
-                  style={[styles.input, styles.yearInput]}
-                  value={(() => {
-                    if (!contractStartDate) return '';
-                    const parts = contractStartDate.split('-');
-                    return parts[0] || '';
-                  })()}
-                  onChangeText={(year) => {
-                    const parts = (contractStartDate || '--').split('-');
-                    const y = year.replace(/\D/g, '').slice(0, 4);
-                    const m = parts[1] || '09';
-                    const d = parts[2] || '01';
-                    setContractStartDate(`${y}-${m}-${d}`);
-                  }}
-                  placeholder="AAAA"
-                  keyboardType="numeric"
-                  maxLength={4}
-                />
-              </View>
+              <Text style={styles.inputLabel}>📅 Data Inizio Contratto (GG/MM/AAAA)</Text>
+              <TextInput
+                style={styles.input}
+                value={contractStartDate ? (() => {
+                  const parts = contractStartDate.split('-');
+                  if (parts.length === 3) {
+                    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                  }
+                  return contractStartDate;
+                })() : ''}
+                onChangeText={(text) => {
+                  // Permetti solo numeri e /
+                  const cleaned = text.replace(/[^\d\/]/g, '');
+                  // Auto-formatta come DD/MM/YYYY
+                  let formatted = cleaned;
+                  if (cleaned.length === 2 && !cleaned.includes('/')) {
+                    formatted = cleaned + '/';
+                  } else if (cleaned.length === 5 && cleaned.split('/').length === 2) {
+                    formatted = cleaned + '/';
+                  }
+                  // Converti in YYYY-MM-DD per lo state
+                  const parts = formatted.split('/');
+                  if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+                    setContractStartDate(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                  } else {
+                    // Salva il testo formattato temporaneamente
+                    setContractStartDate(formatted);
+                  }
+                }}
+                placeholder="01/09/2025"
+                maxLength={10}
+              />
               
-              <Text style={[styles.inputLabel, { marginTop: 16 }]}>📅 Data Fine Contratto</Text>
-              <View style={styles.dateInputRow}>
-                <TextInput
-                  style={[styles.input, styles.dateInput]}
-                  value={(() => {
-                    if (!contractEndDate) return '';
-                    const parts = contractEndDate.split('-');
-                    return parts[2] || '';
-                  })()}
-                  onChangeText={(day) => {
-                    const parts = (contractEndDate || '--').split('-');
-                    const y = parts[0] || '2026';
-                    const m = parts[1] || '05';
-                    const d = day.replace(/\D/g, '').slice(0, 2);
-                    setContractEndDate(`${y}-${m}-${d.padStart(2, '0')}`);
-                  }}
-                  placeholder="GG"
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
-                <Text style={styles.dateSeparator}>/</Text>
-                <TextInput
-                  style={[styles.input, styles.dateInput]}
-                  value={(() => {
-                    if (!contractEndDate) return '';
-                    const parts = contractEndDate.split('-');
-                    return parts[1] || '';
-                  })()}
-                  onChangeText={(month) => {
-                    const parts = (contractEndDate || '--').split('-');
-                    const y = parts[0] || '2026';
-                    const m = month.replace(/\D/g, '').slice(0, 2);
-                    const d = parts[2] || '31';
-                    setContractEndDate(`${y}-${m.padStart(2, '0')}-${d}`);
-                  }}
-                  placeholder="MM"
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
-                <Text style={styles.dateSeparator}>/</Text>
-                <TextInput
-                  style={[styles.input, styles.yearInput]}
-                  value={(() => {
-                    if (!contractEndDate) return '';
-                    const parts = contractEndDate.split('-');
-                    return parts[0] || '';
-                  })()}
-                  onChangeText={(year) => {
-                    const parts = (contractEndDate || '--').split('-');
-                    const y = year.replace(/\D/g, '').slice(0, 4);
-                    const m = parts[1] || '05';
-                    const d = parts[2] || '31';
-                    setContractEndDate(`${y}-${m}-${d}`);
-                  }}
-                  placeholder="AAAA"
-                  keyboardType="numeric"
-                  maxLength={4}
-                />
-              </View>
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>📅 Data Fine Contratto (GG/MM/AAAA)</Text>
+              <TextInput
+                style={styles.input}
+                value={contractEndDate ? (() => {
+                  const parts = contractEndDate.split('-');
+                  if (parts.length === 3) {
+                    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                  }
+                  return contractEndDate;
+                })() : ''}
+                onChangeText={(text) => {
+                  // Permetti solo numeri e /
+                  const cleaned = text.replace(/[^\d\/]/g, '');
+                  // Auto-formatta come DD/MM/YYYY
+                  let formatted = cleaned;
+                  if (cleaned.length === 2 && !cleaned.includes('/')) {
+                    formatted = cleaned + '/';
+                  } else if (cleaned.length === 5 && cleaned.split('/').length === 2) {
+                    formatted = cleaned + '/';
+                  }
+                  // Converti in YYYY-MM-DD per lo state
+                  const parts = formatted.split('/');
+                  if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+                    setContractEndDate(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                  } else {
+                    // Salva il testo formattato temporaneamente
+                    setContractEndDate(formatted);
+                  }
+                }}
+                placeholder="31/05/2026"
+                maxLength={10}
+              />
               
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>💰 Compenso Mensile (€)</Text>
               <TextInput
