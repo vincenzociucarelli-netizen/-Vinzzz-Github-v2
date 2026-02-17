@@ -758,11 +758,10 @@ export default function CoachCompensation() {
 
               {/* Signature Pad */}
               <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
-              <SignaturePad
+              <SignaturePadInline
                 ref={signatureRef}
                 onSave={(sig) => setSignature(sig)}
                 onClear={() => setSignature(null)}
-                width={Platform.OS === 'web' ? 400 : undefined}
                 height={200}
               />
 
