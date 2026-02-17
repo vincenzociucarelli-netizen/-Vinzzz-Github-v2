@@ -1604,7 +1604,8 @@ async def get_society_settings():
         "phone": settings.get("phone"),
         "phone2": settings.get("phone2"),
         "president_name": settings.get("president_name"),
-        "stamp_signature": settings.get("stamp_signature")
+        "stamp_signature": settings.get("stamp_signature"),
+        "email": settings.get("email")
     }
 
 @api_router.patch("/settings/society")
