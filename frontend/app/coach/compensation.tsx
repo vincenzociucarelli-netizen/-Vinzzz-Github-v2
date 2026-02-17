@@ -149,10 +149,14 @@ export default function CoachCompensation() {
       const recordsRes = await api.get(`/coach/${user?.id}/compensation`);
       setRecords(recordsRes.data || []);
       
-      // Calculate yearly total for current display year
-      const total = (recordsRes.data || [])
+      // Calculate yearly total for current display year (including prior compensation for first year)
+      const totalFromReceipts = (recordsRes.data || [])
         .filter((r: CompensationRecord) => r.year === currentYear && r.receipt_signed)
         .reduce((sum: number, r: CompensationRecord) => sum + (r.amount_gross || r.amount || 0), 0);
+      
+      // Add prior compensation if this is the first year of the contract
+      const priorComp = profileRes.data.other_annual_compensation || 0;
+      const total = (currentYear === startYear) ? totalFromReceipts + priorComp : totalFromReceipts;
       setYearlyTotal(total);
       
       // Load threshold status for contract start year (where thresholds matter most)
