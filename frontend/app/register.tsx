@@ -232,7 +232,7 @@ export default function Register() {
   const renderInviteCode = () => (
     <View style={styles.stepContainer}>
       <TouchableOpacity style={styles.backBtn} onPress={() => setStep('role')}>
-        <Ionicons name="arrow-back" size={24} color="#007AFF" />
+        <View style={{ backgroundColor: "rgba(0,122,255,0.15)", borderRadius: 20, padding: 6 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
       </TouchableOpacity>
 
       <Text style={styles.stepTitle}>Codice Invito</Text>
@@ -282,7 +282,7 @@ export default function Register() {
         style={styles.backBtn} 
         onPress={() => setStep('role')}
       >
-        <Ionicons name="arrow-back" size={24} color="#007AFF" />
+        <View style={{ backgroundColor: "rgba(0,122,255,0.15)", borderRadius: 20, padding: 6 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
       </TouchableOpacity>
 
       <Text style={styles.formTitle}>

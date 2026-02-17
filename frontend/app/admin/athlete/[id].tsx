@@ -2384,7 +2384,7 @@ export default function AdminAthleteDetail() {
               style={styles.certViewerBackBtn}
               onPress={() => setCertViewerVisible(false)}
             >
-              <Ionicons name="arrow-back" size={24} color="#333" />
+              <View style={{ backgroundColor: "rgba(0,0,0,0.2)", borderRadius: 20, padding: 6 }}><Ionicons name="chevron-back" size={24} color="#333" /></View>
             </TouchableOpacity>
             <Text style={styles.certViewerTitleFull}>📋 Certificato Medico</Text>
             <View style={{ width: 60 }} />

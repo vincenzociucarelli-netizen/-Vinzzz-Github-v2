@@ -1893,7 +1893,7 @@ export default function AthleteDetail() {
               style={styles.certViewerBackBtn}
               onPress={() => setViewCertModalVisible(false)}
             >
-              <Ionicons name="arrow-back" size={24} color="#333" />
+              <View style={{ backgroundColor: "rgba(0,0,0,0.2)", borderRadius: 20, padding: 6 }}><Ionicons name="chevron-back" size={24} color="#333" /></View>
             </TouchableOpacity>
             <Text style={styles.certViewerTitle}>📋 Certificato Medico</Text>
             {/* Print and Share Buttons */}
