@@ -1112,38 +1112,52 @@ export default function AdminCoachDetail() {
           )}
         </View>
 
-        {/* Storico Compensi */}
+        {/* Storico Quietanze Firmate - Dati reali dal database */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📅 Storico Pagamenti Stagione</Text>
-          <Text style={styles.historySubtitle}>Mesi segnati come pagati dal coach</Text>
+          <Text style={styles.cardTitle}>📋 Quietanze Firmate</Text>
+          <Text style={styles.historySubtitle}>Quietanze effettivamente firmate dal coach</Text>
           
-          {seasonMonths.map((month) => {
-            const isPaid = coach.compensation_history?.[month.key] === true;
-            const exceeded = coach.over_5000_limit?.[month.key] === true;
-            
-            return (
-              <View key={month.key} style={styles.monthRow}>
-                <Text style={styles.monthLabel}>{month.label}</Text>
-                <View style={styles.monthStatus}>
-                  {exceeded && (
-                    <View style={styles.exceededBadge}>
-                      <Text style={styles.exceededText}>€5K+</Text>
+          {signedReceipts.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Nessuna quietanza firmata</Text>
+            </View>
+          ) : (
+            signedReceipts
+              .filter(r => r.receipt_signed === true)
+              .sort((a, b) => {
+                if (a.year !== b.year) return b.year - a.year;
+                return b.month - a.month;
+              })
+              .map((receipt) => {
+                const monthNames = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 
+                                   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+                const monthLabel = `${monthNames[receipt.month]} ${receipt.year}`;
+                const signedDate = receipt.receipt_signed_date 
+                  ? format(new Date(receipt.receipt_signed_date), 'dd/MM/yyyy', { locale: it })
+                  : '-';
+                
+                return (
+                  <View key={`${receipt.year}-${receipt.month}`} style={styles.monthRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.monthLabel}>{monthLabel}</Text>
+                      <Text style={styles.signedDateText}>Firmata il: {signedDate}</Text>
                     </View>
-                  )}
-                  <View style={[styles.paidBadge, isPaid ? styles.paidBadgeActive : styles.paidBadgeInactive]}>
-                    <Ionicons 
-                      name={isPaid ? "checkmark" : "remove"} 
-                      size={14} 
-                      color={isPaid ? "#fff" : "#999"} 
-                    />
-                    <Text style={[styles.paidText, isPaid ? styles.paidTextActive : styles.paidTextInactive]}>
-                      {isPaid ? 'PAGATO' : 'NON PAGATO'}
-                    </Text>
+                    <View style={styles.monthStatus}>
+                      <View style={[styles.paidBadge, styles.paidBadgeActive]}>
+                        <Ionicons name="checkmark" size={14} color="#fff" />
+                        <Text style={[styles.paidText, styles.paidTextActive]}>FIRMATA</Text>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              </View>
-            );
-          })}
+                );
+              })
+          )}
+          
+          {signedReceipts.filter(r => r.receipt_signed === true).length === 0 && signedReceipts.length > 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Nessuna quietanza firmata ancora</Text>
+            </View>
+          )}
         </View>
 
         {/* Documenti e IBAN - Solo visualizzazione per Admin */}
