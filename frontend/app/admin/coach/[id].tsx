@@ -2054,4 +2054,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  // New styles for signed receipts display
+  signedDateText: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 2,
+  },
+  emptyState: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+  },
 });
