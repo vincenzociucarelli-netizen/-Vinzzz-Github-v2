@@ -992,6 +992,7 @@ export default function AdminCoachDetail() {
                 {saving ? 'Salvataggio...' : '💾 SALVA COMPENSI'}
               </Text>
             </TouchableOpacity>
+            </>
           ) : (
             <>
               <View style={styles.compensationDisplay}>
