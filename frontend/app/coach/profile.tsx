@@ -70,7 +70,7 @@ export default function CoachProfile() {
 
   const [editData, setEditData] = useState({ ...profileData });
   const [compensationHistory, setCompensationHistory] = useState({});
-  const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
+  const [signedReceipts, setSignedReceipts] = useState([] as any[]);
   const [over5000Limit, setOver5000Limit] = useState({});
   const [hasExceeded5000, setHasExceeded5000] = useState(false);
   const [hasExceeded15000, setHasExceeded15000] = useState(false);
