@@ -284,7 +284,7 @@ export default function AthleteSearchScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back-circle" size={32} color="#fff" />
+          <View style={{ backgroundColor: "rgba(0,0,0,0.3)", borderRadius: 20, padding: 6 }}><Ionicons name="chevron-back" size={24} color="#fff" /></View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>🔍 Ricerca Atleti</Text>
         <TouchableOpacity onPress={() => setShowFilters(!showFilters)}>
