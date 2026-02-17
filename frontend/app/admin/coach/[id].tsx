@@ -773,40 +773,58 @@ export default function AdminCoachDetail() {
               <View style={styles.dateInputRow}>
                 <TextInput
                   style={[styles.input, styles.dateInput]}
-                  value={contractStartDate.split('-')[2] || ''}
-                  onChangeText={(day) => {
+                  value={(() => {
+                    if (!contractStartDate) return '';
                     const parts = contractStartDate.split('-');
-                    const newDate = `${parts[0] || '2025'}-${parts[1] || '09'}-${day.padStart(2, '0')}`;
-                    setContractStartDate(newDate);
+                    return parts[2] || '';
+                  })()}
+                  onChangeText={(day) => {
+                    const parts = (contractStartDate || '--').split('-');
+                    const y = parts[0] || '2025';
+                    const m = parts[1] || '09';
+                    const d = day.replace(/\D/g, '').slice(0, 2);
+                    setContractStartDate(`${y}-${m}-${d.padStart(2, '0')}`);
                   }}
                   placeholder="GG"
-                  keyboardType="number-pad"
+                  keyboardType="numeric"
                   maxLength={2}
                 />
                 <Text style={styles.dateSeparator}>/</Text>
                 <TextInput
                   style={[styles.input, styles.dateInput]}
-                  value={contractStartDate.split('-')[1] || ''}
-                  onChangeText={(month) => {
+                  value={(() => {
+                    if (!contractStartDate) return '';
                     const parts = contractStartDate.split('-');
-                    const newDate = `${parts[0] || '2025'}-${month.padStart(2, '0')}-${parts[2] || '01'}`;
-                    setContractStartDate(newDate);
+                    return parts[1] || '';
+                  })()}
+                  onChangeText={(month) => {
+                    const parts = (contractStartDate || '--').split('-');
+                    const y = parts[0] || '2025';
+                    const m = month.replace(/\D/g, '').slice(0, 2);
+                    const d = parts[2] || '01';
+                    setContractStartDate(`${y}-${m.padStart(2, '0')}-${d}`);
                   }}
                   placeholder="MM"
-                  keyboardType="number-pad"
+                  keyboardType="numeric"
                   maxLength={2}
                 />
                 <Text style={styles.dateSeparator}>/</Text>
                 <TextInput
                   style={[styles.input, styles.yearInput]}
-                  value={contractStartDate.split('-')[0] || ''}
-                  onChangeText={(year) => {
+                  value={(() => {
+                    if (!contractStartDate) return '';
                     const parts = contractStartDate.split('-');
-                    const newDate = `${year}-${parts[1] || '09'}-${parts[2] || '01'}`;
-                    setContractStartDate(newDate);
+                    return parts[0] || '';
+                  })()}
+                  onChangeText={(year) => {
+                    const parts = (contractStartDate || '--').split('-');
+                    const y = year.replace(/\D/g, '').slice(0, 4);
+                    const m = parts[1] || '09';
+                    const d = parts[2] || '01';
+                    setContractStartDate(`${y}-${m}-${d}`);
                   }}
                   placeholder="AAAA"
-                  keyboardType="number-pad"
+                  keyboardType="numeric"
                   maxLength={4}
                 />
               </View>
@@ -815,19 +833,61 @@ export default function AdminCoachDetail() {
               <View style={styles.dateInputRow}>
                 <TextInput
                   style={[styles.input, styles.dateInput]}
-                  value={contractEndDate.split('-')[2] || ''}
-                  onChangeText={(day) => {
+                  value={(() => {
+                    if (!contractEndDate) return '';
                     const parts = contractEndDate.split('-');
-                    const newDate = `${parts[0] || '2026'}-${parts[1] || '05'}-${day.padStart(2, '0')}`;
-                    setContractEndDate(newDate);
+                    return parts[2] || '';
+                  })()}
+                  onChangeText={(day) => {
+                    const parts = (contractEndDate || '--').split('-');
+                    const y = parts[0] || '2026';
+                    const m = parts[1] || '05';
+                    const d = day.replace(/\D/g, '').slice(0, 2);
+                    setContractEndDate(`${y}-${m}-${d.padStart(2, '0')}`);
                   }}
                   placeholder="GG"
-                  keyboardType="number-pad"
+                  keyboardType="numeric"
                   maxLength={2}
                 />
                 <Text style={styles.dateSeparator}>/</Text>
                 <TextInput
                   style={[styles.input, styles.dateInput]}
+                  value={(() => {
+                    if (!contractEndDate) return '';
+                    const parts = contractEndDate.split('-');
+                    return parts[1] || '';
+                  })()}
+                  onChangeText={(month) => {
+                    const parts = (contractEndDate || '--').split('-');
+                    const y = parts[0] || '2026';
+                    const m = month.replace(/\D/g, '').slice(0, 2);
+                    const d = parts[2] || '31';
+                    setContractEndDate(`${y}-${m.padStart(2, '0')}-${d}`);
+                  }}
+                  placeholder="MM"
+                  keyboardType="numeric"
+                  maxLength={2}
+                />
+                <Text style={styles.dateSeparator}>/</Text>
+                <TextInput
+                  style={[styles.input, styles.yearInput]}
+                  value={(() => {
+                    if (!contractEndDate) return '';
+                    const parts = contractEndDate.split('-');
+                    return parts[0] || '';
+                  })()}
+                  onChangeText={(year) => {
+                    const parts = (contractEndDate || '--').split('-');
+                    const y = year.replace(/\D/g, '').slice(0, 4);
+                    const m = parts[1] || '05';
+                    const d = parts[2] || '31';
+                    setContractEndDate(`${y}-${m}-${d}`);
+                  }}
+                  placeholder="AAAA"
+                  keyboardType="numeric"
+                  maxLength={4}
+                />
+              </View>
                   value={contractEndDate.split('-')[1] || ''}
                   onChangeText={(month) => {
                     const parts = contractEndDate.split('-');
