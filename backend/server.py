@@ -664,9 +664,13 @@ class AttendanceCreate(BaseModel):
 # ==================== HELPER FUNCTIONS ====================
 
 def clean_mongo_doc(doc):
-    """Remove _id from MongoDB document for Pydantic serialization"""
+    """Remove _id from MongoDB document and convert datetime fields for JSON serialization"""
     if doc:
         doc.pop('_id', None)
+        # Convert datetime fields to ISO string
+        for key, value in list(doc.items()):
+            if isinstance(value, datetime):
+                doc[key] = value.strftime("%Y-%m-%d")
     return doc
 
 def clean_mongo_docs(docs):
