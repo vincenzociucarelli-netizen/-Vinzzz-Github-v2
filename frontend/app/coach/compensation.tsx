@@ -485,23 +485,24 @@ export default function CoachCompensation() {
     return warnings.length > 0 ? <View style={styles.warningsContainer}>{warnings}</View> : null;
   };
 
-  const renderMonthCard = (month: number) => {
-    const status = getMonthStatus(month);
-    const record = records.find(r => r.month === month);
+  const renderMonthCard = (month: number, year?: number) => {
+    const displayYear = year || currentYear;
+    const status = getMonthStatus(month, displayYear);
+    const record = records.find(r => r.month === month && r.year === displayYear);
     const monthlyAmount = profile?.monthly_compensation || 0;
     
     return (
       <TouchableOpacity
-        key={month}
+        key={`${displayYear}-${month}`}
         style={[
           styles.monthCard,
           status === 'signed' && styles.monthCardSigned,
           status === 'future' && styles.monthCardFuture,
           status === 'blocked' && styles.monthCardBlocked,
         ]}
-        onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month)}
+        onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
         disabled={status === 'future'}
-        data-testid={`month-card-${month}`}
+        data-testid={`month-card-${displayYear}-${month}`}
       >
         <View style={styles.monthHeader}>
           <Text style={styles.monthName}>{MONTH_NAMES[month]}</Text>
