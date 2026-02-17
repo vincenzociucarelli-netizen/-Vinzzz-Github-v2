@@ -164,6 +164,13 @@ export default function CoachProfile() {
       // Load profile photo
       setProfilePhoto(data.profile_photo || null);
       setProfilePhotoArtistic(data.profile_photo_artistic || null);
+      // Load signed receipts
+      try {
+        const receiptsRes = await api.get(`/coach/${data.id}/compensation`);
+        setSignedReceipts(receiptsRes.data || []);
+      } catch (e) {
+        console.log('No receipts found');
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
