@@ -203,6 +203,7 @@ export default function CoachCompensation() {
     }
     
     setSelectedMonth(month);
+    setSelectedYear(targetYear);
     setSignature(null);
     setShowSignatureModal(true);
   };
