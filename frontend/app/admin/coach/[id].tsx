@@ -982,14 +982,6 @@ export default function AdminCoachDetail() {
                 <Text style={styles.compensationAmount}>€{coach.monthly_compensation || 0}</Text>
                 <Text style={styles.compensationPeriod}>/mese (questa ASD)</Text>
               </View>
-              {(coach.other_annual_compensation || 0) > 0 && (
-                <View style={[styles.compensationDisplay, { marginTop: 8 }]}>
-                  <Text style={[styles.compensationAmount, { fontSize: 18, color: '#666' }]}>
-                    €{coach.other_annual_compensation}
-                  </Text>
-                  <Text style={styles.compensationPeriod}>/anno (altre ASD)</Text>
-                </View>
-              )}
               
               {/* Mostra breakdown del calcolo */}
               {(() => {
