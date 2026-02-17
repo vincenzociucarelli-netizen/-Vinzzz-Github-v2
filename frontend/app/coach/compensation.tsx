@@ -303,6 +303,70 @@ export default function CoachCompensation() {
     }
     return 'pending';
   };
+  
+  // Get months for current year based on contract dates
+  const getContractMonthsForYear = (year: number): number[] => {
+    if (!contractStartYear || !contractEndYear || !contractStartMonth || !contractEndMonth) {
+      // Fallback: all 12 months
+      return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    }
+    
+    const months: number[] = [];
+    
+    // First year of contract
+    if (year === contractStartYear && year === contractEndYear) {
+      // Contract starts and ends in same year
+      for (let m = contractStartMonth; m <= contractEndMonth; m++) {
+        months.push(m);
+      }
+    } else if (year === contractStartYear) {
+      // First year: from start month to December
+      for (let m = contractStartMonth; m <= 12; m++) {
+        months.push(m);
+      }
+    } else if (year === contractEndYear) {
+      // Last year: from January to end month
+      for (let m = 1; m <= contractEndMonth; m++) {
+        months.push(m);
+      }
+    } else if (year > contractStartYear && year < contractEndYear) {
+      // Middle years: all months
+      for (let m = 1; m <= 12; m++) {
+        months.push(m);
+      }
+    }
+    
+    return months;
+  };
+  
+  // Calculate year summary with prior compensation
+  const getYearSummary = (year: number) => {
+    const monthsInYear = getContractMonthsForYear(year);
+    const monthlyComp = profile?.monthly_compensation || 0;
+    const monthCount = monthsInYear.length;
+    const yearlyFromContract = monthlyComp * monthCount;
+    
+    // Add prior compensation only for the first year of contract
+    const includePrior = year === contractStartYear;
+    const prior = includePrior ? priorCompensation : 0;
+    const total = yearlyFromContract + prior;
+    
+    // Calculate signed total for this year
+    const signedTotal = records
+      .filter(r => r.year === year && r.receipt_signed)
+      .reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
+    
+    return {
+      year,
+      monthCount,
+      monthlyComp,
+      yearlyFromContract,
+      priorCompensation: prior,
+      totalProjected: total,
+      signedTotal: signedTotal + prior,
+      months: monthsInYear,
+    };
+  };
 
   const renderThresholdWarnings = () => {
     if (!thresholdStatus) return null;
