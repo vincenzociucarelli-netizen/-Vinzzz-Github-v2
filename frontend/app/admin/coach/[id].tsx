@@ -382,7 +382,7 @@ export default function AdminCoachDetail() {
   // Calcola dettaglio compensi per display (totale contratto)
   const getCompensationBreakdown = () => {
     const monthly = parseFloat(monthlyCompensation) || 0;
-    const prior = coach?.prior_compensation || 0;
+    const prior = parseFloat(otherAnnualCompensation) || 0;  // Compensi pregressi dichiarati
     const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
                         'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
     
