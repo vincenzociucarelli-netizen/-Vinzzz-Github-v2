@@ -749,7 +749,7 @@ export default function CoachCompensation() {
                 <Text style={styles.receiptTitle}>QUIETANZA COMPENSO SPORTIVO DILETTANTISTICO</Text>
                 <Text style={styles.receiptText}>
                   Collaboratore: {profile?.full_name}{'\n'}
-                  Mese: {MONTH_NAMES[selectedMonth || 0]} {currentYear}{'\n'}
+                  Mese: {MONTH_NAMES[selectedMonth || 0]} {selectedYear}{'\n'}
                   Compenso lordo: € {(profile?.monthly_compensation || 0).toFixed(2)}{'\n'}
                   {'\n'}
                   Il collaboratore dichiara che non sono intervenute variazioni rispetto all'autocertificazione precedente.
