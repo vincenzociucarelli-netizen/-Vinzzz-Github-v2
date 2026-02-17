@@ -1706,6 +1706,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
   totalBox: { 
     backgroundColor: '#F5F5F5', 
     padding: 12, 
