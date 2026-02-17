@@ -860,35 +860,48 @@ export default function CoachProfile() {
           )}
         </View>
 
-        {/* Monthly Payment Tracking */}
+        {/* Monthly Payment Tracking - Compact */}
         {profileData.monthly_compensation > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📅 Storico Pagamenti Mensili</Text>
-            <Text style={styles.cardSubtitle}>
-              Visualizza lo stato dei pagamenti (gestito dalla società)
-            </Text>
-            
-            {getSeasonMonths().map((month) => {
-              const isPaid = compensationHistory[month.key] === true;
-              
-              return (
-                <View key={month.key} style={styles.monthRow}>
-                  <View style={styles.monthInfo}>
-                    <Text style={styles.monthLabel}>{month.label}</Text>
-                  </View>
-                  <View style={styles.monthActions}>
-                    <View
-                      style={[styles.monthCheckbox, isPaid && styles.monthCheckboxActive, { opacity: 0.8 }]}
-                    >
-                      {isPaid && <Ionicons name="checkmark" size={16} color="#fff" />}
-                    </View>
-                    <Text style={[styles.monthStatusText, isPaid && styles.monthStatusTextPaid]}>
-                      {isPaid ? 'PAGATO' : 'NON PAGATO'}
+            <Text style={styles.cardTitle}>📅 Registro Quietanze</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+              {getSeasonMonths().map((month) => {
+                // Check if this month has a signed receipt
+                const [year, monthNum] = month.key.split('-');
+                const receipt = signedReceipts.find(r => r.year === parseInt(year) && r.month === parseInt(monthNum));
+                const isSigned = receipt?.receipt_signed === true;
+                
+                return (
+                  <View 
+                    key={month.key} 
+                    style={{
+                      backgroundColor: isSigned ? '#E8F5E9' : '#F5F5F5',
+                      borderRadius: 6,
+                      paddingVertical: 6,
+                      paddingHorizontal: 10,
+                      borderWidth: 1,
+                      borderColor: isSigned ? '#4CAF50' : '#E0E0E0',
+                      minWidth: 90,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, color: '#666', fontWeight: '500' }}>
+                      {month.label.split(' ')[0].substring(0, 3)} {month.label.split(' ')[1]}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: isSigned ? '#2E7D32' : '#999', fontWeight: '600' }}>
+                      {isSigned ? '✓ Firmata' : '-'}
                     </Text>
                   </View>
-                </View>
-              );
-            })}
+                );
+              })}
+            </View>
+            {signedReceipts.length > 0 && (
+              <Text style={{ fontSize: 11, color: '#666', marginTop: 10, textAlign: 'right' }}>
+                Totale quietanzato: €{signedReceipts.filter(r => r.receipt_signed).reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0).toLocaleString()}
+              </Text>
+            )}
+          </View>
+        )}
 
             {/* Tabella Fiscale Compensi */}
             <View style={styles.taxTableSection}>
