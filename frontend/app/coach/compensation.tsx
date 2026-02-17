@@ -167,7 +167,11 @@ export default function CoachCompensation() {
     }
   };
 
-  const handleOpenSignature = (month: number) => {
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+  const handleOpenSignature = (month: number, year?: number) => {
+    const targetYear = year || currentYear;
+    
     // Check if blocked by threshold
     if (thresholdStatus?.is_blocked) {
       Alert.alert(
@@ -192,7 +196,7 @@ export default function CoachCompensation() {
     }
     
     // Check if this month is already signed
-    const existingRecord = records.find(r => r.month === month && r.receipt_signed);
+    const existingRecord = records.find(r => r.month === month && r.year === targetYear && r.receipt_signed);
     if (existingRecord) {
       Alert.alert('Già firmata', 'La quietanza per questo mese è già stata firmata.');
       return;
