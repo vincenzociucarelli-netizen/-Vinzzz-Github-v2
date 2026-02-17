@@ -58,16 +58,44 @@ Full-stack React/FastAPI application for managing a volleyball club with:
 - **teams**: Team definitions
 - **threshold_declarations**: Signed tax threshold declarations
 - **societies**: Club/society settings
+- **coach_compensations**: Compensation records with signatures
+
+## Latest Updates (Feb 17, 2026)
+
+### Fixed Issues
+1. **Signed Receipts Not Visible** (P0 - RESOLVED)
+   - Root cause: react-native-signature-canvas uses WebView which doesn't work on web
+   - Solution: Created new `SignaturePadInline` component using `react-signature-canvas` for web
+   - Component location: `/app/frontend/src/components/SignaturePadInline.tsx`
+
+2. **"Il Mio Profilo" Position** (P1 - RESOLVED)
+   - Moved link directly under coach name with improved layout
+   - Shows coach name, monthly compensation, and profile link in header
+
+3. **Contract Date Display** (RESOLVED)
+   - When contract dates are set, system shows correct months (Sep-Dec 2024, Jan-May 2025)
+   - Year summaries display compensation breakdown per year
+
+### New Components
+- `SignaturePadInline.tsx`: Cross-platform signature component
+  - Uses `react-signature-canvas` for web
+  - Uses `react-native-signature-canvas` for native
+  - Handles signature save/clear with callbacks
 
 ## Pending Issues (P1)
 - Parent login not working (frontend redirect issue)
 
 ## Backlog (P2)
-- @expo/vector-icons not rendering on web
+- @expo/vector-icons not rendering on web (recurring issue)
 - Stripe integration for payments
 - Freemium 30-member limit enforcement
+- Professional Athletes with Compensation module
 
 ## Test Credentials
 - Admin: pallavoloperugia@gmail.com / 11092012
 - Coach (Rossi Lia): lia@test.com / Test1234
 - Coach (Pietro): coach.pietro@test.com / Test1234
+- Parent (Luca): luca@test.com / Test1234
+
+## Test Reports
+- Latest: `/app/test_reports/iteration_6.json` - 100% pass rate
