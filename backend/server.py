@@ -5742,16 +5742,27 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                         from PIL import Image as PILImage
                         sig_pil = PILImage.open(io.BytesIO(sig_data))
                         
-                        # Handle transparency - create white background
-                        if sig_pil.mode in ('RGBA', 'P'):
-                            if sig_pil.mode == 'P':
+                        # Handle transparency - create white background with black signature
+                        if sig_pil.mode in ('RGBA', 'P', 'LA'):
+                            # Convert to RGBA first
+                            if sig_pil.mode != 'RGBA':
                                 sig_pil = sig_pil.convert('RGBA')
-                            background = PILImage.new('RGB', sig_pil.size, (255, 255, 255))
-                            if len(sig_pil.split()) == 4:
-                                background.paste(sig_pil, mask=sig_pil.split()[3])
-                            else:
-                                background.paste(sig_pil)
-                            sig_pil = background
+                            
+                            # Create a white background
+                            background = PILImage.new('RGBA', sig_pil.size, (255, 255, 255, 255))
+                            
+                            # Get the alpha channel as mask
+                            r, g, b, a = sig_pil.split()
+                            
+                            # Create black signature where there's opacity
+                            black_sig = PILImage.new('RGBA', sig_pil.size, (0, 0, 0, 0))
+                            black_sig.paste((0, 0, 0), mask=a)  # Black where signature exists
+                            
+                            # Composite: white background + black signature using alpha
+                            sig_pil = PILImage.alpha_composite(background, black_sig)
+                            sig_pil = sig_pil.convert('RGB')
+                        elif sig_pil.mode == 'L':
+                            sig_pil = sig_pil.convert('RGB')
                         elif sig_pil.mode != 'RGB':
                             sig_pil = sig_pil.convert('RGB')
                         
