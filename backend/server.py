@@ -5426,6 +5426,9 @@ async def sign_compensation_receipt(
     society_name = (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
     admin_email = (society_settings.get("email") if society_settings else None) or (society.get("email") if society else None)
     
+    # Get prior compensation (declared at hiring)
+    prior_compensation = coach.get("other_annual_compensation", 0) or 0
+    
     # Calculate yearly totals to check thresholds
     yearly_records = await db.coach_compensations.find({
         "coach_id": coach_id,
@@ -5433,8 +5436,25 @@ async def sign_compensation_receipt(
         "received": True
     }).to_list(12)
     
-    yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
+    yearly_total_from_receipts = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
+    
+    # Add prior compensation to the first year of contract
+    contract_start = coach.get("contract_start_date")
+    contract_start_year = None
+    if contract_start:
+        if isinstance(contract_start, str):
+            contract_start_year = int(contract_start.split('-')[0])
+        elif hasattr(contract_start, 'year'):
+            contract_start_year = contract_start.year
+    
+    # Include prior compensation in the first year of contract
+    if contract_start_year and request.year == contract_start_year:
+        yearly_total = yearly_total_from_receipts + prior_compensation
+    else:
+        yearly_total = yearly_total_from_receipts
+    
     new_total = yearly_total + request.amount_gross
+    logging.info(f"Compensation calculation: prior={prior_compensation}, yearly_receipts={yearly_total_from_receipts}, year={request.year}, contract_start_year={contract_start_year}, new_total={new_total}")
     
     # Calculate net amount (lordo = netto fino a €5.000)
     amount_net = request.amount_gross
