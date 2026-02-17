@@ -768,7 +768,7 @@ export default function AdminCoachDetail() {
           
           {editing ? (
             <>
-            <View style={{ paddingBottom: 80 }}>
+            <View>
               <Text style={styles.inputLabel}>📅 Data Inizio Contratto (GG/MM/AAAA)</Text>
               <TextInput
                 style={styles.input}
