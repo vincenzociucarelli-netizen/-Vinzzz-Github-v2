@@ -813,131 +813,36 @@ export default function CoachProfile() {
           )}
         </View>
 
-        {/* Monthly Payment Tracking */}
+        {/* Registro Quietanze Compatto */}
         {profileData.monthly_compensation > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📅 Registro Pagamenti Mensili</Text>
-            <Text style={styles.cardSubtitle}>
-              Indica i mesi in cui hai ricevuto il compenso
-            </Text>
-            
-            {getSeasonMonths().map((month) => {
-              const isPaid = compensationHistory[month.key] === true;
-              const isOver5000 = over5000Limit[month.key] === true;
-              
-              return (
-                <View key={month.key} style={styles.monthRow}>
-                  <View style={styles.monthInfo}>
-                    <Text style={styles.monthLabel}>{month.label}</Text>
-                  </View>
-                  <View style={styles.monthActions}>
-                    <TouchableOpacity
-                      style={[styles.monthCheckbox, isPaid && styles.monthCheckboxActive]}
-                      onPress={() => handleToggleMonth(month.key)}
-                    >
-                      {isPaid && <Ionicons name="checkmark" size={16} color="#fff" />}
-                    </TouchableOpacity>
-                    <Text style={[styles.monthStatusText, isPaid && styles.monthStatusTextPaid]}>
-                      {isPaid ? 'PAGATO' : 'NON PAGATO'}
+            <Text style={styles.cardTitle}>📅 Registro Quietanze</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+              {getSeasonMonths().map((month) => {
+                const isPaid = compensationHistory[month.key] === true;
+                return (
+                  <View 
+                    key={month.key} 
+                    style={{
+                      backgroundColor: isPaid ? '#E8F5E9' : '#F5F5F5',
+                      borderRadius: 6,
+                      paddingVertical: 6,
+                      paddingHorizontal: 10,
+                      borderWidth: 1,
+                      borderColor: isPaid ? '#4CAF50' : '#E0E0E0',
+                      minWidth: 85,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, color: '#666', fontWeight: '500' }}>
+                      {month.label.split(' ')[0].substring(0, 3)} {month.label.split(' ')[1]}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: isPaid ? '#2E7D32' : '#999', fontWeight: '600' }}>
+                      {isPaid ? '✓' : '-'}
                     </Text>
                   </View>
-                </View>
-              );
-            })}
-
-            {/* Tabella Fiscale Compensi */}
-            <View style={styles.taxTableSection}>
-              <Text style={styles.taxTableTitle}>📊 Regime Fiscale Compensi Sportivi</Text>
-              <Text style={styles.taxTableSubtitle}>Anno solare 01/01 - 31/12</Text>
-              
-              <View style={styles.taxTable}>
-                <View style={styles.taxTableHeader}>
-                  <Text style={styles.taxTableHeaderCell}>Fascia</Text>
-                  <Text style={styles.taxTableHeaderCell}>IRPEF</Text>
-                  <Text style={styles.taxTableHeaderCell}>INPS</Text>
-                  <Text style={styles.taxTableHeaderCell}>Adempimenti</Text>
-                </View>
-                
-                <View style={[styles.taxTableRow, !hasExceeded5000 && styles.taxTableRowActive]}>
-                  <Text style={styles.taxTableCell}>0 - 5.000€</Text>
-                  <Text style={[styles.taxTableCell, styles.taxCellGreen]}>❌ NO</Text>
-                  <Text style={[styles.taxTableCell, styles.taxCellGreen]}>❌ NO</Text>
-                  <Text style={[styles.taxTableCell, styles.taxCellOrange]}>⚠️ SÌ</Text>
-                </View>
-                
-                <View style={[styles.taxTableRow, hasExceeded5000 && !hasExceeded15000 && styles.taxTableRowActive]}>
-                  <Text style={styles.taxTableCell}>5.001 - 15.000€</Text>
-                  <Text style={[styles.taxTableCell, styles.taxCellGreen]}>❌ NO</Text>
-                  <Text style={[styles.taxTableCell, styles.taxCellRed]}>✅ SÌ</Text>
-                  <Text style={[styles.taxTableCell, styles.taxCellOrange]}>⚠️ SÌ</Text>
-                </View>
-                
-                <View style={[styles.taxTableRow, hasExceeded15000 && styles.taxTableRowActive]}>
-                  <Text style={styles.taxTableCell}>Oltre 15.000€</Text>
-                  <Text style={[styles.taxTableCell, styles.taxCellRed]}>✅ SÌ*</Text>
-                  <Text style={[styles.taxTableCell, styles.taxCellRed]}>✅ SÌ</Text>
-                  <Text style={[styles.taxTableCell, styles.taxCellOrange]}>⚠️ SÌ</Text>
-                </View>
-              </View>
-              
-              <Text style={styles.taxTableNote}>* IRPEF solo sulla parte eccedente i €15.000</Text>
-            </View>
-
-            {/* Dichiarazioni Superamento Limiti */}
-            <View style={styles.limitSection}>
-              <Text style={styles.limitSectionTitle}>📝 Dichiarazioni da comunicare alla società</Text>
-              
-              {/* Dichiarazione €5.000 */}
-              <TouchableOpacity
-                style={[styles.limitCheckbox, hasExceeded5000 && styles.limitCheckbox5000Active]}
-                onPress={handleToggle5000Limit}
-              >
-                <View style={[styles.checkbox, hasExceeded5000 && styles.checkbox5000Active]}>
-                  {hasExceeded5000 && <Ionicons name="checkmark" size={16} color="#fff" />}
-                </View>
-                <View style={styles.limitCheckboxContent}>
-                  <Text style={styles.limitCheckboxTitle}>Superamento €5.000</Text>
-                  <Text style={styles.limitCheckboxDesc}>
-                    Dichiaro di aver superato €5.000 di compensi totali nell&apos;anno solare
-                  </Text>
-                </View>
-              </TouchableOpacity>
-              
-              {/* Data dichiarazione €5.000 */}
-              {over5000Limit.exceeded_5000_date && (
-                <Text style={styles.declarationDate}>
-                  📅 Dichiarato il: {(() => {
-                    const d = new Date(over5000Limit.exceeded_5000_date);
-                    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-                  })()}
-                </Text>
-              )}
-              
-              {/* Dichiarazione €15.000 */}
-              <TouchableOpacity
-                style={[styles.limitCheckbox, hasExceeded15000 && styles.limitCheckbox15000Active, { marginTop: 12 }]}
-                onPress={handleToggle15000Limit}
-              >
-                <View style={[styles.checkbox, hasExceeded15000 && styles.checkbox15000Active]}>
-                  {hasExceeded15000 && <Ionicons name="checkmark" size={16} color="#fff" />}
-                </View>
-                <View style={styles.limitCheckboxContent}>
-                  <Text style={styles.limitCheckboxTitle}>Superamento €15.000</Text>
-                  <Text style={styles.limitCheckboxDesc}>
-                    Dichiaro di aver superato €15.000 di compensi totali nell&apos;anno solare
-                  </Text>
-                </View>
-              </TouchableOpacity>
-              
-              {/* Data dichiarazione €15.000 */}
-              {over5000Limit.exceeded_15000_date && (
-                <Text style={styles.declarationDate}>
-                  📅 Dichiarato il: {(() => {
-                    const d = new Date(over5000Limit.exceeded_15000_date);
-                    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-                  })()}
-                </Text>
-              )}
+                );
+              })}
             </View>
           </View>
         )}
