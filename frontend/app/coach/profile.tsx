@@ -55,8 +55,6 @@ export default function CoachProfile() {
     coach_license_number: '',
     monthly_compensation: 0,
     compensation_accepted: false,
-    contract_start_date: '',
-    contract_end_date: '',
     // Documento e Dati Bancari
     id_type: '',
     id_front: '',
@@ -70,7 +68,6 @@ export default function CoachProfile() {
 
   const [editData, setEditData] = useState({ ...profileData });
   const [compensationHistory, setCompensationHistory] = useState({});
-  const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
   const [over5000Limit, setOver5000Limit] = useState({});
   const [hasExceeded5000, setHasExceeded5000] = useState(false);
   const [hasExceeded15000, setHasExceeded15000] = useState(false);
@@ -114,8 +111,6 @@ export default function CoachProfile() {
         coach_license_number: data.coach_license_number || '',
         monthly_compensation: data.monthly_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
-        contract_start_date: data.contract_start_date || '',
-        contract_end_date: data.contract_end_date || '',
         // Documento e Dati Bancari
         id_type: data.id_type || '',
         id_front: data.id_front || '',
@@ -197,44 +192,11 @@ export default function CoachProfile() {
 
   // Generate season months (July to June)
   const getSeasonMonths = () => {
-    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-                        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
-    const months = [];
-    
-    // Se abbiamo le date del contratto, usiamo quelle
-    if (profileData.contract_start_date && profileData.contract_end_date) {
-      const startParts = profileData.contract_start_date.split('-');
-      const endParts = profileData.contract_end_date.split('-');
-      
-      if (startParts.length === 3 && endParts.length === 3) {
-        const startYear = parseInt(startParts[0]);
-        const startMonth = parseInt(startParts[1]) - 1; // 0-indexed
-        const endYear = parseInt(endParts[0]);
-        const endMonth = parseInt(endParts[1]) - 1; // 0-indexed
-        
-        let currentYear = startYear;
-        let currentMonth = startMonth;
-        
-        while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
-          months.push({
-            key: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`,
-            label: `${monthNames[currentMonth]} ${currentYear}`,
-          });
-          
-          currentMonth++;
-          if (currentMonth > 11) {
-            currentMonth = 0;
-            currentYear++;
-          }
-        }
-        
-        return months;
-      }
-    }
-    
-    // Fallback: stagione standard (Luglio - Giugno)
     const now = new Date();
     const currentYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+    const months = [];
+    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
     for (let i = 0; i < 12; i++) {
       const monthIndex = (6 + i) % 12;
       const year = monthIndex >= 6 ? currentYear : currentYear + 1;
@@ -856,13 +818,14 @@ export default function CoachProfile() {
         {/* Monthly Payment Tracking */}
         {profileData.monthly_compensation > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📅 Storico Pagamenti Mensili</Text>
+            <Text style={styles.cardTitle}>📅 Registro Pagamenti Mensili</Text>
             <Text style={styles.cardSubtitle}>
-              Visualizza lo stato dei pagamenti (gestito dalla società)
+              Indica i mesi in cui hai ricevuto il compenso
             </Text>
             
             {getSeasonMonths().map((month) => {
               const isPaid = compensationHistory[month.key] === true;
+              const isOver5000 = over5000Limit[month.key] === true;
               
               return (
                 <View key={month.key} style={styles.monthRow}>
@@ -870,11 +833,12 @@ export default function CoachProfile() {
                     <Text style={styles.monthLabel}>{month.label}</Text>
                   </View>
                   <View style={styles.monthActions}>
-                    <View
-                      style={[styles.monthCheckbox, isPaid && styles.monthCheckboxActive, { opacity: 0.8 }]}
+                    <TouchableOpacity
+                      style={[styles.monthCheckbox, isPaid && styles.monthCheckboxActive]}
+                      onPress={() => handleToggleMonth(month.key)}
                     >
                       {isPaid && <Ionicons name="checkmark" size={16} color="#fff" />}
-                    </View>
+                    </TouchableOpacity>
                     <Text style={[styles.monthStatusText, isPaid && styles.monthStatusTextPaid]}>
                       {isPaid ? 'PAGATO' : 'NON PAGATO'}
                     </Text>
