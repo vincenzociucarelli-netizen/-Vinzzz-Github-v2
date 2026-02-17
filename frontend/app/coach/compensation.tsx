@@ -460,7 +460,9 @@ export default function CoachCompensation() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backArrow}>←</Text>
+          <View style={{ backgroundColor: "rgba(0,0,0,0.3)", borderRadius: 20, padding: 6 }}>
+            <Ionicons name="chevron-back" size={24} color="#fff" />
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Compensi Sportivi</Text>
         <View style={{ width: 40 }} />
