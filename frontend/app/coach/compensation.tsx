@@ -252,9 +252,19 @@ export default function CoachCompensation() {
   };
 
   const getMonthStatus = (month: number): 'pending' | 'signed' | 'future' | 'blocked' => {
-    if (month > currentMonth && currentYear >= new Date().getFullYear()) {
+    const now = new Date();
+    const currentYearActual = now.getFullYear();
+    const currentMonthActual = now.getMonth() + 1;
+    
+    // Only block future months if we're in the same year AND the month is in the future
+    if (currentYear === currentYearActual && month > currentMonthActual) {
       return 'future';
     }
+    // If viewing a future year entirely, block all
+    if (currentYear > currentYearActual) {
+      return 'future';
+    }
+    
     const record = records.find(r => r.month === month);
     if (record?.receipt_signed) {
       return 'signed';
