@@ -47,6 +47,8 @@ export default function SettingsScreen() {
   const [phone2, setPhone2] = useState('');
   const [presidentName, setPresidentName] = useState('');
   const [stampSignature, setStampSignature] = useState<string | null>(null);
+  const [societyEmail, setSocietyEmail] = useState('');
+  const [societyPec, setSocietyPec] = useState('');
   const loadSettings = async () => {
     try {
       const response = await api.get('/settings/society');
@@ -68,6 +70,8 @@ export default function SettingsScreen() {
       setPhone2(response.data.phone2 || '');
       setPresidentName(response.data.president_name || '');
       setStampSignature(response.data.stamp_signature || null);
+      setSocietyEmail(response.data.email || '');
+      setSocietyPec(response.data.pec || '');
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -139,6 +143,8 @@ export default function SettingsScreen() {
         phone2: phone2,
         president_name: presidentName,
         stamp_signature: stampSignature,
+        email: societyEmail,
+        pec: societyPec,
       });
       showAlert('Successo', 'Impostazioni salvate con successo');
     } catch (error: any) {
