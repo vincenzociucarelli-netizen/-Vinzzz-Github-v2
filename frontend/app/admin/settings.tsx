@@ -556,6 +556,33 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Prime Squadre */}
+        <View style={[styles.section, { backgroundColor: '#FFFBEB', borderColor: '#FFD700', borderWidth: 1 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.sectionTitle, { color: '#B8860B' }]}>🏆 Prime Squadre</Text>
+              <Text style={styles.sectionDesc}>
+                Attiva il modulo per gestire compensi di atleti e collaboratori delle serie maggiori
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                { backgroundColor: proEnabled ? '#4CAF50' : '#ccc' }
+              ]}
+              onPress={() => setProEnabled(!proEnabled)}
+            >
+              <View style={[
+                styles.toggleCircle,
+                { transform: [{ translateX: proEnabled ? 20 : 0 }] }
+              ]} />
+            </TouchableOpacity>
+          </View>
+          <Text style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+            {proEnabled ? '✅ Modulo attivo - max 50 membri' : '🔒 Modulo disattivato'}
+          </Text>
+        </View>
+
         {/* Qualifiche Dirigenti */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>👔 Qualifiche Dirigenti</Text>
