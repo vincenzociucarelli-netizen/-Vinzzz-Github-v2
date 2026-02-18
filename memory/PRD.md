@@ -15,73 +15,52 @@ Applicazione per la gestione di club di pallavolo con funzionalità di gestione 
 ### Modulo Compensi Coach (COMPLETO)
 - Generazione PDF quietanze mensili
 - Gestione soglie fiscali €5K e €15K
-- Colorazione card mesi (verde/arancio/rosso)
 - Firma digitale con canvas
 - Invio email automatico
-- Vista admin con storico quietanze
 
 ### Modulo Compensi Dirigenti (COMPLETO)
 - Stessa funzionalità dei Coach
-- Endpoint backend: `/api/dirigente/{id}/compensation/*`
-- Pagina frontend: `/dirigente/compensation.tsx`
 
-### Modulo Prime Squadre (COMPLETO - 18/02/2026)
-**Backend** (`server.py`):
-- Flag `pro_enabled` nelle impostazioni società
-- Campi atleta: `is_compensated`, `monthly_compensation`, `other_annual_compensation`, `contract_start_date`, `contract_end_date`, `fees_waived`
-- Endpoint `/api/prime-squadre/athletes` - lista atleti con compensi
-- Endpoint `/api/prime-squadre/athletes/{id}/enable` - abilita compensi
-- Endpoint `/api/prime-squadre/athletes/{id}/disable` - disabilita compensi
-- Endpoint `PATCH /api/prime-squadre/athletes/{id}` - aggiorna configurazione completa
-- Endpoint `/api/prime-squadre/athletes/{id}/compensation/receipt` - firma quietanza
-- Endpoint `/api/prime-squadre/athletes/{id}/threshold-status/{year}` - stato soglie
-- Endpoint `/api/prime-squadre/stats` - statistiche modulo
-- Limite 50 membri per società
+### Modulo Prime Squadre (IN PROGRESS - 18/02/2026)
 
-**Frontend**:
-- Toggle attivazione in Impostazioni (`settings.tsx`)
-- Pagina gestione Prime Squadre (`admin/prime-squadre.tsx`)
-- Pagina dettaglio atleta (`admin/prime-squadre/[id].tsx`)
-- Modal configurazione completo con:
-  - Compenso mensile
-  - Compensi pregressi (da altre ASD nell'anno)
-  - Date contratto (inizio/fine)
-  - Switch esenzione quote (per atleti che passano da giovanile a professionisti)
-- Dashboard con statistiche annuali
-- Lista membri con compenso e riepilogo annuale
-- Icona dashboard dinamica (bloccata/sbloccata)
+**Backend COMPLETO:**
+- Campo `athlete_type`: "quota" (paga quote) | "compensated" (percepisce compenso)
+- Campo `parents_detached`: flag per sganciare genitori da atleta maggiorenne
+- Campi economici (come coach): `iban`, `bank_name`, `bank_account_holder`
+- Campi documenti: `document_type`, `document_number`, `document_expiry`, `document_front`, `document_back`
+- Endpoint `POST /athletes/{id}/detach-parents` - sgancia genitori
+- Endpoint `POST /athletes/{id}/reattach-parents` - ricollega genitori
+- Endpoint `PATCH /athletes/{id}/type-config` - modifica tipo atleta e configurazione
+
+**Frontend DA IMPLEMENTARE:**
+- [ ] Modificare form registrazione atleta con scelta tipo (A/B)
+- [ ] Se tipo B + minorenne → mostra sezione genitori
+- [ ] Se tipo B + maggiorenne → sezione economica (IBAN, documenti)
+- [ ] Pulsante "Sgancia genitori" nella scheda atleta maggiorenne
+- [ ] Nascondere sezione quote per atleti con fees_waived=true
 
 ### Protezione Auth (COMPLETO)
-- Layout protetti per admin, coach, parent, dirigente
-- Redirect automatico a /login per utenti non autenticati
-- API interceptor per gestire errori 401/403
+- Layout protetti per tutti i ruoli
+- Redirect automatico a /login
 
 ### Gestione Utenti
 - Login/registrazione multi-ruolo
-- Ruoli: Admin, Coach, Parent, Director (viewer)
-- Profili con dati anagrafici e bancari
-
-### Scanner QR
-- Scansione presenze atleti
-- Fotocamera posteriore di default
-
-### Impostazioni Società
-- Campi Email e PEC
-- Nome società dinamico
-- Toggle Prime Squadre
+- Ruoli: Admin, Coach, Parent, Director
 
 ## Bug Noti
-1. **Login Parent** - Da testare con credenziali reali (P2)
+1. **Login Parent** - Da testare (P2)
 2. **Icone @expo/vector-icons** - Non si caricano su web (P3)
 
+## Prossimi Task
+1. Implementare scelta tipo atleta nel form di registrazione
+2. Form dati economici per atleti tipo "compensated"
+3. Pulsante "Sgancia genitori" nella scheda atleta
+
 ## Backlog
-- Modello Freemium (limite 30 membri free)
-- Integrazione Stripe per abbonamenti (da luglio 2026)
-- Refactoring server.py (oltre 8000 righe)
-- PDF automatici per atleti PRO
-- Email notifiche per atleti PRO
-- Nascondere sezione quote per atleti con fees_waived=true
+- Modello Freemium
+- Integrazione Stripe (luglio 2026)
+- Refactoring server.py
 
 ## Ultima Modifica
 - Data: 18 Febbraio 2026
-- Modifica: Aggiunta gestione completa atleti Prime Squadre con date contratto, compensi pregressi, esenzione quote
+- Modifica: Backend per gestione tipo atleta (quota/compensated), sgancio genitori, dati economici
