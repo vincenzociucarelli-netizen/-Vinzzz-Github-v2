@@ -85,22 +85,25 @@ class FIPAVScraper:
     
     async def get_championships(self, season_id: Optional[str] = None) -> List[Dict]:
         """Get available championships for a season"""
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            params = {}
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            params = {'ComitatoId': self.comitato_id}
             if season_id:
                 params['StId'] = season_id
             
-            response = await client.get(self.base_url, params=params)
+            response = await client.get(self.base_url, params=params, headers=self.HEADERS)
             soup = BeautifulSoup(response.text, 'html.parser')
             
             championships = []
-            champ_select = soup.find('select', {'id': lambda x: x and 'Campionato' in str(x)})
-            if champ_select:
-                for option in champ_select.find_all('option'):
-                    value = option.get('value', '')
-                    text = option.get_text(strip=True)
-                    if value and 'Tutti' not in text:
-                        championships.append({'id': value, 'name': text})
+            for select in soup.find_all('select'):
+                select_id = select.get('id', '')
+                select_name = select.get('name', '')
+                if 'Campionato' in select_id or 'Campionato' in select_name or 'CId' in select_name:
+                    for option in select.find_all('option'):
+                        value = option.get('value', '')
+                        text = option.get_text(strip=True)
+                        if value and text and 'Tutti' not in text:
+                            championships.append({'id': value, 'name': text})
+                    break
             
             return championships
     
