@@ -5606,8 +5606,8 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             receipt_signed_date=now,
             exceeded_5000=first_time_exceeded_5000,
             exceeded_5000_date=now if first_time_exceeded_5000 else None,
-            exceeded_15000=request.exceeded_15000,
-            exceeded_15000_date=now if request.exceeded_15000 else None
+            exceeded_15000=first_time_exceeded_15000,
+            exceeded_15000_date=now if first_time_exceeded_15000 else None
         )
         await db.coach_compensations.insert_one(record.dict())
     
