@@ -276,6 +276,14 @@ export default function ImportCalendarScreen() {
       return;
     }
 
+    if (selectedMatches.size === 0) {
+      showAlert('Errore', 'Seleziona almeno una partita da importare');
+      return;
+    }
+
+    // Get selected matches from previewMatches
+    const matchesToImport = previewMatches.filter((_, index) => selectedMatches.has(index));
+
     // Use the name from the first mapping (user can modify it)
     const searchName = teamMappings.length > 0 && teamMappings[0].federation_team_name 
       ? teamMappings[0].federation_team_name 
@@ -283,13 +291,9 @@ export default function ImportCalendarScreen() {
 
     setImporting(true);
     try {
-      const response = await api.post('/federation/import', {
-        federation,
-        region: selectedRegion,
+      const response = await api.post('/federation/import-selected', {
+        matches: matchesToImport,
         society_name: searchName,
-        federation_society_id: selectedSociety,
-        season_id: selectedSeason,
-        championship_id: selectedChampionships.length > 0 ? selectedChampionships[0] : null,
         team_mappings: teamMappings.filter(m => m.local_team_id)
       });
       setImportResult(response.data);
