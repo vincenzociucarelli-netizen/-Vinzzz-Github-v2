@@ -517,26 +517,34 @@ export default function CoachCompensation() {
           status === 'signed' && styles.monthCardSigned,
           status === 'future' && styles.monthCardFuture,
           status === 'blocked' && styles.monthCardBlocked,
-          exceeded15k && { borderWidth: 2, borderColor: '#E65100' },
-          exceeded5k && !exceeded15k && { borderWidth: 2, borderColor: '#F9A825' },
+          exceeded15k && { borderWidth: 3, borderColor: '#E65100' },
+          exceeded5k && !exceeded15k && { borderWidth: 3, borderColor: '#F9A825' },
         ]}
         onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
         disabled={status === 'future'}
         data-testid={`month-card-${displayYear}-${month}`}
       >
+        {/* Threshold Badge - positioned at top right */}
+        {(exceeded5k || exceeded15k) && (
+          <View style={{
+            position: 'absolute',
+            top: -8,
+            right: -8,
+            backgroundColor: exceeded15k ? '#E65100' : '#F9A825',
+            paddingHorizontal: 6,
+            paddingVertical: 3,
+            borderRadius: 8,
+            zIndex: 10,
+          }}>
+            <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
+              {exceeded15k ? '>15K' : '>5K'}
+            </Text>
+          </View>
+        )}
+        
         <View style={styles.monthHeader}>
           <Text style={styles.monthName}>{MONTH_NAMES[month]}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            {exceeded15k && (
-              <View style={{ backgroundColor: '#E65100', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 }}>
-                <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>€15K+</Text>
-              </View>
-            )}
-            {exceeded5k && !exceeded15k && (
-              <View style={{ backgroundColor: '#F9A825', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 }}>
-                <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>€5K+</Text>
-              </View>
-            )}
             {status === 'signed' && (
               <Ionicons name="checkmark-circle" size={20} color="#34C759" />
             )}
