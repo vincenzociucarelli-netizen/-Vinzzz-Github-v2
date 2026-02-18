@@ -238,15 +238,22 @@ export default function ImportCalendarScreen() {
 
     setPreviewLoading(true);
     try {
+      // Use the name from the first mapping (user can modify it)
+      const searchName = teamMappings.length > 0 && teamMappings[0].federation_team_name 
+        ? teamMappings[0].federation_team_name 
+        : selectedSocietyName;
+      
       const response = await api.post('/federation/preview', {
         federation,
         region: selectedRegion,
-        society_name: selectedSocietyName,
+        society_name: searchName,
         federation_society_id: selectedSociety,
         season_id: selectedSeason,
         championship_id: selectedChampionships.length > 0 ? selectedChampionships[0] : null
       });
       setPreviewMatches(response.data.matches || []);
+      // Update the displayed name to show what was searched
+      setSelectedSocietyName(searchName);
       setStep(3);
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore nel caricamento anteprima');
@@ -261,12 +268,17 @@ export default function ImportCalendarScreen() {
       return;
     }
 
+    // Use the name from the first mapping (user can modify it)
+    const searchName = teamMappings.length > 0 && teamMappings[0].federation_team_name 
+      ? teamMappings[0].federation_team_name 
+      : selectedSocietyName;
+
     setImporting(true);
     try {
       const response = await api.post('/federation/import', {
         federation,
         region: selectedRegion,
-        society_name: selectedSocietyName,
+        society_name: searchName,
         federation_society_id: selectedSociety,
         season_id: selectedSeason,
         championship_id: selectedChampionships.length > 0 ? selectedChampionships[0] : null,
