@@ -5800,7 +5800,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 logging.error(f"Error generating threshold €5.000 document: {e}")
     
     # Create admin notifications for threshold crossings
-    if request.exceeded_5000 and not request.exceeded_15000:
+    if first_time_exceeded_5000 and not first_time_exceeded_15000:
         notification = AdminNotification(
             type="coach_exceeded_5000",
             title="⚠️ Coach ha superato €5.000",
