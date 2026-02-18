@@ -588,16 +588,16 @@ export default function CoachScreen() {
           
           {Platform.OS === 'web' ? (
             <>
-              <TouchableOpacity style={styles.button} onPress={startWebScanner}>
-                <Ionicons name="camera" size={24} color="#fff" />
-                <Text style={styles.buttonText}>Apri Scanner Fotocamera</Text>
+              <TouchableOpacity style={[styles.button, { marginTop: 30, marginBottom: 20, paddingVertical: 18 }]} onPress={startWebScanner}>
+                <Ionicons name="camera" size={28} color="#fff" />
+                <Text style={[styles.buttonText, { fontSize: 18, marginLeft: 12 }]}>Apri Scanner Fotocamera</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.button, styles.buttonSecondary]} 
+                style={[styles.button, styles.buttonSecondary, { marginTop: 15, paddingVertical: 18 }]} 
                 onPress={() => setManualInputModalVisible(true)}
               >
-                <Ionicons name="keypad" size={24} color="#007AFF" />
+                <Ionicons name="keypad" size={28} color="#007AFF" />
                 <Text style={styles.buttonSecondaryText}>Inserisci Codice Manualmente</Text>
               </TouchableOpacity>
             </>
