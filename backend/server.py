@@ -1131,16 +1131,8 @@ async def register(user_data: UserCreate):
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
-    logging.info(f"Login attempt for email: {credentials.email}")
     user = await db.users.find_one({"email": credentials.email})
-    logging.info(f"User found: {user is not None}")
-    if not user:
-        raise HTTPException(status_code=401, detail="Email o password non corretti")
-    
-    is_valid = verify_password(credentials.password, user["password_hash"])
-    logging.info(f"Password valid: {is_valid}")
-    
-    if not is_valid:
+    if not user or not verify_password(credentials.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Email o password non corretti")
     
     # Check if user is approved (except parents who are auto-approved)
