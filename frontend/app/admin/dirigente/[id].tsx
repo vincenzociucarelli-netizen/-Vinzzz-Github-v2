@@ -584,38 +584,107 @@ export default function AdminDirigenteDetail() {
           )}
         </View>
 
-        {/* Storico Compensi */}
+        {/* Storico Quietanze Firmate - Dati reali dal database */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📅 Storico Pagamenti Stagione</Text>
-          <Text style={styles.historySubtitle}>Mesi segnati come pagati dal dirigente</Text>
+          <Text style={styles.cardTitle}>📋 Quietanze Firmate</Text>
+          <Text style={styles.historySubtitle}>Quietanze effettivamente firmate dal dirigente</Text>
           
-          {seasonMonths.map((month) => {
-            const isPaid = dirigente.compensation_history?.[month.key] === true;
-            const exceeded = dirigente.over_5000_limit?.[month.key] === true;
-            
-            return (
-              <View key={month.key} style={styles.monthRow}>
-                <Text style={styles.monthLabel}>{month.label}</Text>
-                <View style={styles.monthStatus}>
-                  {exceeded && (
-                    <View style={styles.exceededBadge}>
-                      <Text style={styles.exceededText}>€5K+</Text>
+          {signedReceipts.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Nessuna quietanza firmata</Text>
+            </View>
+          ) : (
+            (() => {
+              // Sort receipts by date (oldest first) to find threshold crossings
+              const sortedByDate = [...signedReceipts]
+                .filter(r => r.receipt_signed === true)
+                .sort((a, b) => {
+                  if (a.year !== b.year) return a.year - b.year;
+                  return a.month - b.month;
+                });
+              
+              // Track thresholds PER YEAR (they reset each calendar year)
+              const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
+              
+              for (const r of sortedByDate) {
+                if (!thresholdsByYear[r.year]) {
+                  thresholdsByYear[r.year] = { first5k: null, first15k: null };
+                }
+                if (r.exceeded_5000 && thresholdsByYear[r.year].first5k === null) {
+                  thresholdsByYear[r.year].first5k = r.month;
+                }
+                if (r.exceeded_15000 && thresholdsByYear[r.year].first15k === null) {
+                  thresholdsByYear[r.year].first15k = r.month;
+                }
+              }
+              
+              // Helper to check if a month is after a threshold IN THE SAME YEAR
+              const isAfterThreshold = (receipt: any, type: '5k' | '15k') => {
+                const yearThresholds = thresholdsByYear[receipt.year];
+                if (!yearThresholds) return false;
+                const thresholdMonth = type === '5k' ? yearThresholds.first5k : yearThresholds.first15k;
+                if (thresholdMonth === null) return false;
+                return receipt.month >= thresholdMonth;
+              };
+              
+              // Sort for display (newest first)
+              const sortedForDisplay = [...sortedByDate].reverse();
+              
+              return sortedForDisplay.map((receipt) => {
+                const monthNames = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 
+                                   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+                const monthLabel = `${monthNames[receipt.month]} ${receipt.year}`;
+                const signedDate = receipt.receipt_signed_date 
+                  ? format(new Date(receipt.receipt_signed_date), 'dd/MM/yyyy', { locale: it })
+                  : '-';
+                
+                // Check if this is THE month where threshold was crossed (show badge)
+                const isThreshold5kMonth = receipt.exceeded_5000 === true;
+                const isThreshold15kMonth = receipt.exceeded_15000 === true;
+                
+                // Check if this month is after the threshold was crossed IN SAME YEAR (highlight row)
+                const isAfter15k = isAfterThreshold(receipt, '15k');
+                const isAfter5k = isAfterThreshold(receipt, '5k');
+                
+                return (
+                  <View key={`${receipt.year}-${receipt.month}`} style={[
+                    styles.monthRow,
+                    isAfter15k && { backgroundColor: '#FFF3E0', borderLeftWidth: 4, borderLeftColor: '#E65100' },
+                    isAfter5k && !isAfter15k && { backgroundColor: '#FFF8E1', borderLeftWidth: 4, borderLeftColor: '#F9A825' }
+                  ]}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Text style={styles.monthLabel}>{monthLabel}</Text>
+                        {isThreshold15kMonth && (
+                          <View style={{ backgroundColor: '#E65100', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                            <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>&gt;15K</Text>
+                          </View>
+                        )}
+                        {isThreshold5kMonth && !isThreshold15kMonth && (
+                          <View style={{ backgroundColor: '#F9A825', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                            <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>&gt;5K</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.signedDateText}>Firmata il: {signedDate}</Text>
                     </View>
-                  )}
-                  <View style={[styles.paidBadge, isPaid ? styles.paidBadgeActive : styles.paidBadgeInactive]}>
-                    <Ionicons 
-                      name={isPaid ? "checkmark" : "remove"} 
-                      size={14} 
-                      color={isPaid ? "#fff" : "#999"} 
-                    />
-                    <Text style={[styles.paidText, isPaid ? styles.paidTextActive : styles.paidTextInactive]}>
-                      {isPaid ? 'PAGATO' : 'NON PAGATO'}
-                    </Text>
+                    <View style={styles.monthStatus}>
+                      <View style={[styles.paidBadge, styles.paidBadgeActive]}>
+                        <Ionicons name="checkmark" size={14} color="#fff" />
+                        <Text style={[styles.paidText, styles.paidTextActive]}>FIRMATA</Text>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              </View>
-            );
-          })}
+                );
+              });
+            })()
+          )}
+          
+          {signedReceipts.filter(r => r.receipt_signed === true).length === 0 && signedReceipts.length > 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Nessuna quietanza firmata ancora</Text>
+            </View>
+          )}
         </View>
 
         {/* Documenti e IBAN - Solo per utenti approvati */}
