@@ -6718,6 +6718,411 @@ class SignatureDocumentRequest(BaseModel):
     related_entity_id: Optional[str] = None  # athlete_id, coach_id, etc.
     additional_data: Optional[dict] = None  # Any extra data to include
 
+def generate_monthly_receipt_pdf(
+    society_name: str,
+    collaborator_name: str,
+    collaborator_fiscal_code: str,
+    month_name: str,
+    year: int,
+    amount_gross: float,
+    amount_net: float,
+    signature_base64: str
+) -> bytes:
+    """Generate monthly compensation receipt PDF with proper formatting"""
+    if not HAS_PDF_GENERATION:
+        raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    timestamp = datetime.now().strftime("%d/%m/%Y")
+    
+    # Title - centered, bold
+    c.setFont("Helvetica-Bold", 14)
+    title = "QUIETANZA COMPENSO SPORTIVO DILETTANTISTICO"
+    c.drawCentredString(width/2, height - 3*cm, title)
+    
+    # Society name
+    c.setFont("Helvetica", 11)
+    y = height - 4.5*cm
+    c.drawString(2*cm, y, f"ASD/SSD: {society_name}")
+    
+    # Collaborator info
+    y -= 1*cm
+    c.drawString(2*cm, y, f"Collaboratore: {collaborator_name}")
+    
+    y -= 0.6*cm
+    c.drawString(2*cm, y, f"Codice Fiscale: {collaborator_fiscal_code or '________________________'}")
+    
+    # Reference month
+    y -= 1*cm
+    c.drawString(2*cm, y, f"Mese di riferimento: {month_name} {year}")
+    
+    # Amounts
+    y -= 1.2*cm
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, f"Compenso lordo: € {amount_gross:.2f}")
+    
+    y -= 0.7*cm
+    c.setFont("Helvetica", 11)
+    c.drawString(2*cm, y, f"Netto corrisposto: € {amount_net:.2f}")
+    
+    # Declaration text
+    y -= 1.5*cm
+    c.setFont("Helvetica", 10)
+    declaration = "Il collaboratore dichiara che, alla data odierna, non sono intervenute variazioni rispetto all'autocertificazione dei compensi sportivi dilettantistici precedentemente resa."
+    
+    # Word wrap declaration
+    words = declaration.split(' ')
+    lines = []
+    current_line = ""
+    max_width = width - 4*cm
+    for word in words:
+        test_line = current_line + " " + word if current_line else word
+        if c.stringWidth(test_line, "Helvetica", 10) < max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    
+    for line in lines:
+        c.drawString(2*cm, y, line)
+        y -= 0.5*cm
+    
+    # Signature section
+    y -= 1.5*cm
+    c.setFont("Helvetica", 10)
+    c.drawString(2*cm, y, f"Data: {timestamp}")
+    c.drawString(width - 8*cm, y, "Firma collaboratore:")
+    
+    # Add signature image
+    if signature_base64 and HAS_PIL:
+        try:
+            if ',' in signature_base64:
+                signature_base64 = signature_base64.split(',')[1]
+            
+            sig_data = base64.b64decode(signature_base64)
+            sig_image = Image.open(io.BytesIO(sig_data))
+            
+            # Convert to RGB
+            if sig_image.mode != 'RGB':
+                if sig_image.mode == 'RGBA':
+                    background = Image.new('RGB', sig_image.size, (255, 255, 255))
+                    background.paste(sig_image, mask=sig_image.split()[3])
+                    sig_image = background
+                else:
+                    sig_image = sig_image.convert('RGB')
+            
+            # Normalize colors
+            pixels = sig_image.load()
+            w, h = sig_image.size
+            for py in range(h):
+                for px in range(w):
+                    r, g, b = pixels[px, py]
+                    luminance = (r * 0.299 + g * 0.587 + b * 0.114)
+                    if luminance < 200:
+                        pixels[px, py] = (0, 0, 0)
+                    else:
+                        pixels[px, py] = (255, 255, 255)
+            
+            sig_buffer = io.BytesIO()
+            sig_image.save(sig_buffer, format='PNG')
+            sig_buffer.seek(0)
+            
+            from reportlab.lib.utils import ImageReader
+            img_reader = ImageReader(sig_buffer)
+            c.drawImage(img_reader, width - 8*cm, y - 2.5*cm, width=6*cm, height=2*cm, preserveAspectRatio=True)
+        except Exception as e:
+            logging.error(f"Error adding signature: {e}")
+    
+    c.save()
+    return buffer.getvalue()
+
+def generate_threshold_5k_pdf(
+    society_name: str,
+    collaborator_name: str,
+    collaborator_fiscal_code: str,
+    year: int,
+    signature_base64: str
+) -> bytes:
+    """Generate €5,000 threshold communication PDF"""
+    if not HAS_PDF_GENERATION:
+        raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    timestamp = datetime.now().strftime("%d/%m/%Y")
+    
+    # Title - centered, bold
+    c.setFont("Helvetica-Bold", 12)
+    title1 = "COMUNICAZIONE DI SUPERAMENTO DELLA SOGLIA PREVIDENZIALE"
+    title2 = "DI COMPENSI SPORTIVI DILETTANTISTICI DI € 5.000,00 (Cinquemila/00)"
+    c.drawCentredString(width/2, height - 2.5*cm, title1)
+    c.drawCentredString(width/2, height - 3.2*cm, title2)
+    
+    # Intro
+    y = height - 5*cm
+    c.setFont("Helvetica", 11)
+    c.drawString(2*cm, y, "Il/La sottoscritto/a")
+    
+    # Name and fiscal code
+    y -= 0.8*cm
+    c.drawString(2*cm, y, f"Nome e Cognome: {collaborator_name}")
+    
+    y -= 0.6*cm
+    c.drawString(2*cm, y, f"Codice Fiscale: {collaborator_fiscal_code or '________________________'}")
+    
+    # Relationship
+    y -= 1*cm
+    c.drawString(2*cm, y, "in relazione al rapporto di collaborazione sportiva dilettantistica con")
+    
+    y -= 0.6*cm
+    c.drawString(2*cm, y, f"ASD/SSD: {society_name}")
+    
+    # COMUNICA - centered, spaced
+    y -= 1.5*cm
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(width/2, y, "C O M U N I C A")
+    
+    # Communication text
+    y -= 1.2*cm
+    c.setFont("Helvetica", 10)
+    text = f"che, alla data odierna, il totale dei compensi percepiti per attività sportiva dilettantistica nell'anno solare {year}, anche da altri enti sportivi, ha raggiunto e/o superato l'importo complessivo di € 5.000,00."
+    
+    # Word wrap
+    words = text.split(' ')
+    lines = []
+    current_line = ""
+    max_width = width - 4*cm
+    for word in words:
+        test_line = current_line + " " + word if current_line else word
+        if c.stringWidth(test_line, "Helvetica", 10) < max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    
+    for line in lines:
+        c.drawString(2*cm, y, line)
+        y -= 0.5*cm
+    
+    # Declaration paragraphs
+    y -= 0.8*cm
+    decl1 = "Il sottoscritto dichiara di essere a conoscenza che, dal momento del superamento della suddetta soglia, i compensi eccedenti sono soggetti agli obblighi previdenziali previsti dalla normativa vigente."
+    
+    words = decl1.split(' ')
+    lines = []
+    current_line = ""
+    for word in words:
+        test_line = current_line + " " + word if current_line else word
+        if c.stringWidth(test_line, "Helvetica", 10) < max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    
+    for line in lines:
+        c.drawString(2*cm, y, line)
+        y -= 0.5*cm
+    
+    y -= 0.5*cm
+    decl2 = "Si impegna inoltre a comunicare tempestivamente eventuali ulteriori variazioni della propria situazione."
+    c.drawString(2*cm, y, decl2)
+    
+    # Signature section
+    y -= 2*cm
+    c.drawString(2*cm, y, f"Luogo e data: __________________, {timestamp}")
+    c.drawString(width - 7*cm, y, "Firma:")
+    
+    # Add signature image
+    if signature_base64 and HAS_PIL:
+        try:
+            if ',' in signature_base64:
+                signature_base64 = signature_base64.split(',')[1]
+            
+            sig_data = base64.b64decode(signature_base64)
+            sig_image = Image.open(io.BytesIO(sig_data))
+            
+            if sig_image.mode != 'RGB':
+                if sig_image.mode == 'RGBA':
+                    background = Image.new('RGB', sig_image.size, (255, 255, 255))
+                    background.paste(sig_image, mask=sig_image.split()[3])
+                    sig_image = background
+                else:
+                    sig_image = sig_image.convert('RGB')
+            
+            pixels = sig_image.load()
+            w, h = sig_image.size
+            for py in range(h):
+                for px in range(w):
+                    r, g, b = pixels[px, py]
+                    luminance = (r * 0.299 + g * 0.587 + b * 0.114)
+                    if luminance < 200:
+                        pixels[px, py] = (0, 0, 0)
+                    else:
+                        pixels[px, py] = (255, 255, 255)
+            
+            sig_buffer = io.BytesIO()
+            sig_image.save(sig_buffer, format='PNG')
+            sig_buffer.seek(0)
+            
+            from reportlab.lib.utils import ImageReader
+            img_reader = ImageReader(sig_buffer)
+            c.drawImage(img_reader, width - 7*cm, y - 2.5*cm, width=5*cm, height=2*cm, preserveAspectRatio=True)
+        except Exception as e:
+            logging.error(f"Error adding signature: {e}")
+    
+    c.save()
+    return buffer.getvalue()
+
+def generate_threshold_15k_pdf(
+    society_name: str,
+    collaborator_name: str,
+    collaborator_fiscal_code: str,
+    year: int,
+    signature_base64: str
+) -> bytes:
+    """Generate €15,000 threshold communication PDF"""
+    if not HAS_PDF_GENERATION:
+        raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    timestamp = datetime.now().strftime("%d/%m/%Y")
+    
+    # Title
+    c.setFont("Helvetica-Bold", 12)
+    title1 = "COMUNICAZIONE DI SUPERAMENTO DELLA SOGLIA FISCALE"
+    title2 = "DEI COMPENSI SPORTIVI DILETTANTISTICI DI € 15.000,00 (Quindicimila)"
+    c.drawCentredString(width/2, height - 2.5*cm, title1)
+    c.drawCentredString(width/2, height - 3.2*cm, title2)
+    
+    # Intro
+    y = height - 5*cm
+    c.setFont("Helvetica", 11)
+    c.drawString(2*cm, y, "Il/La sottoscritto/a")
+    
+    y -= 0.8*cm
+    c.drawString(2*cm, y, f"Nome e Cognome: {collaborator_name}")
+    
+    y -= 0.6*cm
+    c.drawString(2*cm, y, f"Codice Fiscale: {collaborator_fiscal_code or '________________________'}")
+    
+    y -= 1*cm
+    c.drawString(2*cm, y, "in relazione al rapporto di collaborazione sportiva dilettantistica con")
+    
+    y -= 0.6*cm
+    c.drawString(2*cm, y, f"ASD/SSD: {society_name}")
+    
+    # COMUNICA
+    y -= 1.5*cm
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(width/2, y, "C O M U N I C A")
+    
+    # Communication text
+    y -= 1.2*cm
+    c.setFont("Helvetica", 10)
+    text = f"che, alla data odierna, il totale dei compensi percepiti per attività sportiva dilettantistica nell'anno solare {year}, anche da altri enti sportivi, ha raggiunto e/o superato l'importo complessivo di € 15.000,00."
+    
+    words = text.split(' ')
+    lines = []
+    current_line = ""
+    max_width = width - 4*cm
+    for word in words:
+        test_line = current_line + " " + word if current_line else word
+        if c.stringWidth(test_line, "Helvetica", 10) < max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    
+    for line in lines:
+        c.drawString(2*cm, y, line)
+        y -= 0.5*cm
+    
+    # Declaration - FISCAL instead of PREVIDENZIALE
+    y -= 0.8*cm
+    decl1 = "Il sottoscritto dichiara di essere a conoscenza che, dal momento del superamento della suddetta soglia, i compensi eccedenti sono soggetti a imposizione fiscale secondo la normativa vigente."
+    
+    words = decl1.split(' ')
+    lines = []
+    current_line = ""
+    for word in words:
+        test_line = current_line + " " + word if current_line else word
+        if c.stringWidth(test_line, "Helvetica", 10) < max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    
+    for line in lines:
+        c.drawString(2*cm, y, line)
+        y -= 0.5*cm
+    
+    y -= 0.5*cm
+    decl2 = "Si impegna inoltre a comunicare tempestivamente eventuali ulteriori variazioni della propria situazione."
+    c.drawString(2*cm, y, decl2)
+    
+    # Signature
+    y -= 2*cm
+    c.drawString(2*cm, y, f"Luogo e data: __________________, {timestamp}")
+    c.drawString(width - 7*cm, y, "Firma:")
+    
+    if signature_base64 and HAS_PIL:
+        try:
+            if ',' in signature_base64:
+                signature_base64 = signature_base64.split(',')[1]
+            
+            sig_data = base64.b64decode(signature_base64)
+            sig_image = Image.open(io.BytesIO(sig_data))
+            
+            if sig_image.mode != 'RGB':
+                if sig_image.mode == 'RGBA':
+                    background = Image.new('RGB', sig_image.size, (255, 255, 255))
+                    background.paste(sig_image, mask=sig_image.split()[3])
+                    sig_image = background
+                else:
+                    sig_image = sig_image.convert('RGB')
+            
+            pixels = sig_image.load()
+            w, h = sig_image.size
+            for py in range(h):
+                for px in range(w):
+                    r, g, b = pixels[px, py]
+                    luminance = (r * 0.299 + g * 0.587 + b * 0.114)
+                    if luminance < 200:
+                        pixels[px, py] = (0, 0, 0)
+                    else:
+                        pixels[px, py] = (255, 255, 255)
+            
+            sig_buffer = io.BytesIO()
+            sig_image.save(sig_buffer, format='PNG')
+            sig_buffer.seek(0)
+            
+            from reportlab.lib.utils import ImageReader
+            img_reader = ImageReader(sig_buffer)
+            c.drawImage(img_reader, width - 7*cm, y - 2.5*cm, width=5*cm, height=2*cm, preserveAspectRatio=True)
+        except Exception as e:
+            logging.error(f"Error adding signature: {e}")
+    
+    c.save()
+    return buffer.getvalue()
+
 def generate_signed_pdf(
     document_title: str,
     document_text: str,
