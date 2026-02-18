@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,27 +14,28 @@ import { Ionicons } from '../src/components/Icon';
 export default function SelectRoleScreen() {
   const router = useRouter();
   const { user, isLoading, loadAuth } = useAuthStore();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
-      if (isLoading) {
-        await loadAuth();
-      }
+      // Always try to load auth on mount
+      await loadAuth();
+      setIsChecking(false);
     };
     checkAuth();
-  }, [isLoading]);
+  }, []);
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isChecking && !isLoading) {
       // Redirect to login if not authenticated or not admin
       if (!user || user.role !== 'admin') {
         router.replace('/login');
       }
     }
-  }, [user, isLoading]);
+  }, [user, isLoading, isChecking]);
 
   // Show loading while checking auth
-  if (isLoading || !user) {
+  if (isChecking || isLoading || !user) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
