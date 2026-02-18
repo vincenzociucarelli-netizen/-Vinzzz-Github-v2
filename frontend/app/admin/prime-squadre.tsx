@@ -784,4 +784,68 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  formGroup: {
+    marginBottom: 20,
+  },
+  formLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  formInput: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    textAlign: 'center',
+  },
+  formHint: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+  },
+  inputPrefix: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#B8860B',
+    marginRight: 8,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dateField: {
+    flex: 1,
+  },
+  dateLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  dateInput: {
+    fontSize: 14,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    textAlign: 'center',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9f9f9',
+    padding: 12,
+    borderRadius: 8,
+  },
+  contractText: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 2,
+  },
 });
