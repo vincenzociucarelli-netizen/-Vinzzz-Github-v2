@@ -109,22 +109,25 @@ class FIPAVScraper:
     
     async def get_societies(self, season_id: Optional[str] = None) -> List[Dict]:
         """Get available societies/teams for a season"""
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            params = {}
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            params = {'ComitatoId': self.comitato_id}
             if season_id:
                 params['StId'] = season_id
             
-            response = await client.get(self.base_url, params=params)
+            response = await client.get(self.base_url, params=params, headers=self.HEADERS)
             soup = BeautifulSoup(response.text, 'html.parser')
             
             societies = []
-            society_select = soup.find('select', {'id': lambda x: x and 'Societa' in str(x)})
-            if society_select:
-                for option in society_select.find_all('option'):
-                    value = option.get('value', '')
-                    text = option.get_text(strip=True)
-                    if value and 'Tutte' not in text:
-                        societies.append({'id': value, 'name': text})
+            for select in soup.find_all('select'):
+                select_id = select.get('id', '')
+                select_name = select.get('name', '')
+                if 'Societa' in select_id or 'Societa' in select_name or 'SId' in select_name:
+                    for option in select.find_all('option'):
+                        value = option.get('value', '')
+                        text = option.get_text(strip=True)
+                        if value and text and 'Tutte' not in text:
+                            societies.append({'id': value, 'name': text})
+                    break
             
             return societies
     
