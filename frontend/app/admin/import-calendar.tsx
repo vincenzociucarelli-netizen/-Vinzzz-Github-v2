@@ -502,43 +502,152 @@ export default function ImportCalendarScreen() {
     </View>
   );
 
+  // Filter matches by date
+  const getFilteredMatches = () => {
+    return previewMatches.filter(match => {
+      const matchDate = new Date(match.date);
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+        if (matchDate < from) return false;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo);
+        to.setHours(23, 59, 59);
+        if (matchDate > to) return false;
+      }
+      return true;
+    });
+  };
+
+  const filteredMatches = getFilteredMatches();
+
+  const toggleMatchSelection = (index: number) => {
+    setSelectedMatches(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelectedMatches(new Set());
+    } else {
+      setSelectedMatches(new Set(filteredMatches.map((_, i) => i)));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  // Initialize selection when matches load
+  const initializeSelection = () => {
+    setSelectedMatches(new Set(previewMatches.map((_, i) => i)));
+    setSelectAll(true);
+  };
+
   const renderStep3 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>3. Anteprima Partite</Text>
+      <Text style={styles.stepTitle}>3. Seleziona Partite da Importare</Text>
       
       <Text style={styles.previewCount}>
         Trovate {previewMatches.length} partite per "{selectedSocietyName}"
       </Text>
 
-      <ScrollView style={styles.previewList} nestedScrollEnabled>
-        {previewMatches.map((match, index) => (
-          <View key={index} style={styles.matchCard}>
-            <View style={styles.matchHeader}>
-              <Text style={styles.matchDate}>{formatDate(match.date)}</Text>
-              {match.championship && (
-                <Text style={styles.matchChamp}>{match.championship}</Text>
-              )}
-            </View>
-            <View style={styles.matchTeams}>
-              <Text style={[
-                styles.matchTeam,
-                match.home_team.toLowerCase().includes(selectedSocietyName.toLowerCase().split(' ')[0]) && styles.matchTeamHighlight
-              ]}>
-                {match.home_team}
-              </Text>
-              <Text style={styles.matchVs}>vs</Text>
-              <Text style={[
-                styles.matchTeam,
-                match.away_team.toLowerCase().includes(selectedSocietyName.toLowerCase().split(' ')[0]) && styles.matchTeamHighlight
-              ]}>
-                {match.away_team}
-              </Text>
-            </View>
-            {match.result && (
-              <Text style={styles.matchResult}>Risultato: {match.result}</Text>
-            )}
+      {/* Date Filter */}
+      <View style={styles.dateFilterContainer}>
+        <Text style={styles.filterLabel}>Filtra per data:</Text>
+        <View style={styles.dateInputRow}>
+          <View style={styles.dateInputGroup}>
+            <Text style={styles.dateInputLabel}>Da:</Text>
+            <TextInput
+              style={styles.dateInput}
+              value={dateFrom}
+              onChangeText={setDateFrom}
+              placeholder="GG/MM/AA"
+              placeholderTextColor="#999"
+            />
           </View>
-        ))}
+          <View style={styles.dateInputGroup}>
+            <Text style={styles.dateInputLabel}>A:</Text>
+            <TextInput
+              style={styles.dateInput}
+              value={dateTo}
+              onChangeText={setDateTo}
+              placeholder="GG/MM/AA"
+              placeholderTextColor="#999"
+            />
+          </View>
+        </View>
+        <Text style={styles.filterInfo}>
+          Mostrate {filteredMatches.length} di {previewMatches.length} partite
+        </Text>
+      </View>
+
+      {/* Select All */}
+      <TouchableOpacity style={styles.selectAllRow} onPress={toggleSelectAll}>
+        <Ionicons 
+          name={selectAll ? "checkbox" : "square-outline"} 
+          size={24} 
+          color="#007AFF" 
+        />
+        <Text style={styles.selectAllText}>
+          {selectAll ? "Deseleziona tutte" : "Seleziona tutte"}
+        </Text>
+        <Text style={styles.selectedCount}>
+          ({selectedMatches.size} selezionate)
+        </Text>
+      </TouchableOpacity>
+
+      <ScrollView style={styles.previewList} nestedScrollEnabled>
+        {filteredMatches.map((match, index) => {
+          const originalIndex = previewMatches.indexOf(match);
+          const isSelected = selectedMatches.has(originalIndex);
+          
+          return (
+            <TouchableOpacity 
+              key={index} 
+              style={[styles.matchCard, isSelected && styles.matchCardSelected]}
+              onPress={() => toggleMatchSelection(originalIndex)}
+            >
+              <View style={styles.matchSelectRow}>
+                <Ionicons 
+                  name={isSelected ? "checkbox" : "square-outline"} 
+                  size={22} 
+                  color={isSelected ? "#34C759" : "#ccc"} 
+                />
+                <View style={styles.matchContent}>
+                  <View style={styles.matchHeader}>
+                    <Text style={styles.matchDate}>{formatDate(match.date)}</Text>
+                    {match.championship && (
+                      <Text style={styles.matchChamp}>{match.championship}</Text>
+                    )}
+                  </View>
+                  <View style={styles.matchTeams}>
+                    <Text style={[
+                      styles.matchTeam,
+                      match.home_team.toLowerCase().includes(selectedSocietyName.toLowerCase().split(' ')[0]) && styles.matchTeamHighlight
+                    ]}>
+                      {match.home_team}
+                    </Text>
+                    <Text style={styles.matchVs}>vs</Text>
+                    <Text style={[
+                      styles.matchTeam,
+                      match.away_team.toLowerCase().includes(selectedSocietyName.toLowerCase().split(' ')[0]) && styles.matchTeamHighlight
+                    ]}>
+                      {match.away_team}
+                    </Text>
+                  </View>
+                  {match.result && match.result !== '-' && (
+                    <Text style={styles.matchResult}>Risultato: {match.result}</Text>
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       <View style={styles.buttonRow}>
@@ -548,9 +657,9 @@ export default function ImportCalendarScreen() {
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.button, styles.buttonSuccess, importing && styles.buttonDisabled]}
+          style={[styles.button, styles.buttonSuccess, (importing || selectedMatches.size === 0) && styles.buttonDisabled]}
           onPress={handleImport}
-          disabled={importing}
+          disabled={importing || selectedMatches.size === 0}
           data-testid="import-btn"
         >
           {importing ? (
@@ -558,7 +667,7 @@ export default function ImportCalendarScreen() {
           ) : (
             <>
               <Ionicons name="cloud-download" size={20} color="#fff" />
-              <Text style={styles.buttonText}>Importa Partite</Text>
+              <Text style={styles.buttonText}>Importa {selectedMatches.size} Partite</Text>
             </>
           )}
         </TouchableOpacity>
