@@ -6,24 +6,8 @@ import {
   StyleSheet,
   Modal,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
-
-// Web-only import
-let WebSignatureCanvas: any = null;
-if (Platform.OS === 'web') {
-  WebSignatureCanvas = require('react-signature-canvas').default;
-}
-
-// Mobile-only import  
-let MobileSignatureCanvas: any = null;
-if (Platform.OS !== 'web') {
-  try {
-    MobileSignatureCanvas = require('react-native-signature-canvas').default;
-  } catch (e) {
-    console.log('react-native-signature-canvas not available');
-  }
-}
+import ReactSignatureCanvas from 'react-signature-canvas';
 
 interface SignaturePadProps {
   visible: boolean;
@@ -42,16 +26,12 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
   documentText,
   signerName,
 }) => {
-  const signatureRef = useRef<any>(null);
+  const signatureRef = useRef<ReactSignatureCanvas>(null);
   const [signing, setSigning] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
 
   const handleClear = () => {
-    if (Platform.OS === 'web') {
-      signatureRef.current?.clear();
-    } else {
-      signatureRef.current?.clearSignature();
-    }
+    signatureRef.current?.clear();
     setHasSignature(false);
   };
 
@@ -60,108 +40,23 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
       return;
     }
     
-    if (Platform.OS === 'web') {
-      // Web: get signature directly
-      const signature = signatureRef.current?.toDataURL('image/png');
-      if (signature) {
-        await handleSignatureData(signature);
+    const signature = signatureRef.current?.toDataURL('image/png');
+    if (signature) {
+      setSigning(true);
+      try {
+        await onSign(signature);
+        handleClear();
+        onClose();
+      } catch (error) {
+        console.error('Error signing:', error);
+      } finally {
+        setSigning(false);
       }
-    } else {
-      // Mobile: trigger read
-      signatureRef.current?.readSignature();
     }
   };
 
   const handleSignatureEnd = () => {
     setHasSignature(true);
-  };
-
-  const handleSignatureData = async (signature: string) => {
-    if (!signature || signature === 'data:,') {
-      return;
-    }
-    
-    setSigning(true);
-    try {
-      await onSign(signature);
-      handleClear();
-      onClose();
-    } catch (error) {
-      console.error('Error signing:', error);
-    } finally {
-      setSigning(false);
-    }
-  };
-
-  // Web signature canvas style
-  const webCanvasStyle = {
-    width: '100%',
-    height: '100%',
-    border: '1px solid #ccc',
-    borderRadius: 8,
-    backgroundColor: 'white',
-  };
-
-  // Mobile webStyle
-  const mobileWebStyle = `.m-signature-pad {
-    box-shadow: none;
-    border: none;
-    width: 100%;
-    height: 100%;
-  }
-  .m-signature-pad--body {
-    border: none;
-  }
-  .m-signature-pad--footer {
-    display: none;
-  }
-  body, html {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-  }
-  canvas {
-    width: 100% !important;
-    height: 100% !important;
-  }`;
-
-  const renderSignatureCanvas = () => {
-    if (Platform.OS === 'web' && WebSignatureCanvas) {
-      return (
-        <WebSignatureCanvas
-          ref={signatureRef}
-          onEnd={handleSignatureEnd}
-          canvasProps={{
-            style: webCanvasStyle,
-          }}
-          backgroundColor="white"
-          penColor="black"
-        />
-      );
-    } else if (MobileSignatureCanvas) {
-      return (
-        <MobileSignatureCanvas
-          ref={signatureRef}
-          onEnd={handleSignatureEnd}
-          onOK={handleSignatureData}
-          webStyle={mobileWebStyle}
-          backgroundColor="white"
-          penColor="black"
-          dotSize={2}
-          minWidth={1}
-          maxWidth={3}
-        />
-      );
-    } else {
-      return (
-        <View style={styles.fallbackContainer}>
-          <Text style={styles.fallbackText}>
-            Firma non disponibile su questa piattaforma
-          </Text>
-        </View>
-      );
-    }
   };
 
   return (
@@ -205,7 +100,19 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
           <View style={styles.signatureSection}>
             <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
             <View style={styles.signatureBox}>
-              {renderSignatureCanvas()}
+              <ReactSignatureCanvas
+                ref={signatureRef}
+                onEnd={handleSignatureEnd}
+                canvasProps={{
+                  style: {
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'white',
+                  },
+                }}
+                backgroundColor="white"
+                penColor="black"
+              />
             </View>
             {!hasSignature && (
               <Text style={styles.signatureHint}>
@@ -375,17 +282,6 @@ const styles = StyleSheet.create({
   },
   disabledBtn: {
     backgroundColor: '#ccc',
-  },
-  fallbackContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  fallbackText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
   },
 });
 
