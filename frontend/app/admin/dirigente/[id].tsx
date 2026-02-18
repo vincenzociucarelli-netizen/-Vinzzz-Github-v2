@@ -82,6 +82,7 @@ export default function AdminDirigenteDetail() {
   
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
+  const [otherAnnualCompensation, setOtherAnnualCompensation] = useState('');
   const [qualification, setQualification] = useState('');
   const [availableQualifications, setAvailableQualifications] = useState<string[]>([]);
   const [qualificationModalVisible, setQualificationModalVisible] = useState(false);
@@ -92,7 +93,8 @@ export default function AdminDirigenteDetail() {
   const [iban, setIban] = useState('');
   const [ibanHolder, setIbanHolder] = useState('');
   const [bankName, setBankName] = useState('');
-
+  // Signed receipts
+  const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
   const openImageViewer = (imageBase64: string, title: string) => {
     setViewingImage(imageBase64);
     setViewingImageTitle(title);
