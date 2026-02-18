@@ -7410,6 +7410,470 @@ async def list_signed_documents(current_user = Depends(get_current_user)):
     
     return documents
 
+# ==================== DIRIGENTE COMPENSATION ENDPOINTS ====================
+
+@api_router.get("/dirigente/{dirigente_id}/compensation")
+async def get_dirigente_compensation(dirigente_id: str, current_user = Depends(get_current_user)):
+    """Get compensation records for a dirigente"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    if current_user["role"] == UserRole.VIEWER and current_user["id"] != dirigente_id:
+        raise HTTPException(status_code=403, detail="Puoi vedere solo i tuoi compensi")
+    
+    records = await db.dirigente_compensations.find({"dirigente_id": dirigente_id}).sort([("year", -1), ("month", -1)]).to_list(100)
+    clean_mongo_docs(records)
+    return records
+
+@api_router.post("/dirigente/{dirigente_id}/compensation")
+async def set_dirigente_compensation(dirigente_id: str, amount: float, current_user = Depends(get_current_user)):
+    """Set monthly compensation for a dirigente (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può impostare compensi")
+    
+    # Update dirigente record
+    await db.users.update_one(
+        {"id": dirigente_id, "role": UserRole.VIEWER},
+        {"$set": {
+            "monthly_compensation": amount,
+            "compensation_accepted": False  # Reset acceptance
+        }}
+    )
+    
+    return {"message": "Compenso mensile impostato", "amount": amount}
+
+@api_router.post("/dirigente/{dirigente_id}/accept-compensation")
+async def accept_dirigente_compensation(dirigente_id: str, current_user = Depends(get_current_user)):
+    """Dirigente accepts the compensation offer"""
+    if current_user["role"] != UserRole.VIEWER or current_user["id"] != dirigente_id:
+        raise HTTPException(status_code=403, detail="Solo il dirigente può accettare il proprio compenso")
+    
+    # Update dirigente record
+    now = datetime.utcnow()
+    # Calculate contract end date (31/05 of current season)
+    season_end_year = now.year if now.month <= 5 else now.year + 1
+    contract_end = datetime(season_end_year, 5, 31)
+    
+    await db.users.update_one(
+        {"id": dirigente_id},
+        {"$set": {
+            "compensation_accepted": True,
+            "compensation_accepted_date": now,
+            "contract_start_date": now,
+            "contract_end_date": contract_end
+        }}
+    )
+    
+    return {"message": "Compenso accettato", "contract_end": contract_end.strftime("%d/%m/%Y")}
+
+@api_router.get("/dirigente/{dirigente_id}/compensation/annual/{year}")
+async def get_dirigente_annual_compensation_summary(dirigente_id: str, year: int, current_user = Depends(get_current_user)):
+    """Get annual summary of compensations for dirigente"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    records = await db.dirigente_compensations.find({
+        "dirigente_id": dirigente_id,
+        "year": year,
+        "received": True
+    }).to_list(12)
+    
+    total = sum(r.get("amount", 0) for r in records)
+    exceeded_month = next((r for r in records if r.get("exceeded_5000")), None)
+    
+    return {
+        "year": year,
+        "total_received": total,
+        "months_received": len(records),
+        "exceeded_5000": exceeded_month is not None,
+        "exceeded_month": exceeded_month.get("month") if exceeded_month else None
+    }
+
+@api_router.post("/dirigente/{dirigente_id}/compensation/receipt")
+async def sign_dirigente_compensation_receipt(
+    dirigente_id: str,
+    request: CompensationReceiptRequest,
+    current_user = Depends(get_current_user)
+):
+    """Dirigente firma la quietanza mensile di compenso sportivo dilettantistico"""
+    if current_user["role"] != UserRole.VIEWER or current_user["id"] != dirigente_id:
+        raise HTTPException(status_code=403, detail="Solo il dirigente può firmare le proprie quietanze")
+    
+    # Get dirigente data
+    dirigente = await db.users.find_one({"id": dirigente_id})
+    if not dirigente:
+        raise HTTPException(status_code=404, detail="Dirigente non trovato")
+    
+    # Get society data from settings and societies collection
+    society_settings = await db.settings.find_one({"type": "society"})
+    society = await db.societies.find_one()
+    society_name = (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
+    admin_email = (society_settings.get("email") if society_settings else None) or (society.get("email") if society else None)
+    
+    # Get prior compensation (declared at hiring)
+    prior_compensation = dirigente.get("other_annual_compensation", 0) or 0
+    
+    # Calculate yearly totals to check thresholds
+    yearly_records = await db.dirigente_compensations.find({
+        "dirigente_id": dirigente_id,
+        "year": request.year,
+        "received": True
+    }).to_list(12)
+    
+    yearly_total_from_receipts = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
+    
+    # Add prior compensation to the first year of contract
+    contract_start = dirigente.get("contract_start_date")
+    contract_start_year = None
+    if contract_start:
+        if isinstance(contract_start, str):
+            contract_start_year = int(contract_start.split('-')[0])
+        elif hasattr(contract_start, 'year'):
+            contract_start_year = contract_start.year
+    
+    # Include prior compensation in the first year of contract
+    if contract_start_year and request.year == contract_start_year:
+        yearly_total = yearly_total_from_receipts + prior_compensation
+    else:
+        yearly_total = yearly_total_from_receipts
+    
+    new_total = yearly_total + request.amount_gross
+    logging.info(f"Dirigente compensation calculation: prior={prior_compensation}, yearly_receipts={yearly_total_from_receipts}, year={request.year}, contract_start_year={contract_start_year}, new_total={new_total}")
+    
+    # Calculate net amount (lordo = netto fino a €5.000)
+    amount_net = request.amount_gross
+    deductions = 0.0
+    
+    # Determina se QUESTA è la prima volta che si supera €5.000 o €15.000
+    first_time_exceeded_5000 = (new_total > 5000 and yearly_total <= 5000)
+    first_time_exceeded_15000 = (new_total > 15000 and yearly_total <= 15000)
+    
+    logging.info(f"Dirigente threshold check: yearly_total={yearly_total}, new_total={new_total}, first_5k={first_time_exceeded_5000}, first_15k={first_time_exceeded_15000}")
+    
+    # Se si supera €5.000 o €15.000 si applicano ritenute
+    if new_total > 5000:
+        if new_total > 15000:
+            deductions = request.amount_gross * 0.33
+        else:
+            deductions = request.amount_gross * 0.23
+        amount_net = request.amount_gross - deductions
+    
+    # Check if record exists for this month
+    existing = await db.dirigente_compensations.find_one({
+        "dirigente_id": dirigente_id,
+        "year": request.year,
+        "month": request.month
+    })
+    
+    now = datetime.utcnow()
+    month_names = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+                   "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+    month_name = month_names[request.month]
+    
+    try:
+        # Generate the appropriate PDF based on threshold status
+        if first_time_exceeded_15000:
+            pdf_bytes = generate_threshold_15k_pdf(
+                society_name=society_name,
+                collaborator_name=dirigente.get('full_name', 'Collaboratore'),
+                collaborator_fiscal_code=dirigente.get('fiscal_code', ''),
+                year=request.year,
+                signature_base64=request.signature_base64
+            )
+            pdf_filename_prefix = "comunicazione_15k_dirigente"
+            doc_type = "threshold_15000_communication"
+            doc_title = f"Comunicazione Superamento €15.000 - {month_name} {request.year}"
+        elif first_time_exceeded_5000:
+            pdf_bytes = generate_threshold_5k_pdf(
+                society_name=society_name,
+                collaborator_name=dirigente.get('full_name', 'Collaboratore'),
+                collaborator_fiscal_code=dirigente.get('fiscal_code', ''),
+                year=request.year,
+                signature_base64=request.signature_base64
+            )
+            pdf_filename_prefix = "comunicazione_5k_dirigente"
+            doc_type = "threshold_5000_communication"
+            doc_title = f"Comunicazione Superamento €5.000 - {month_name} {request.year}"
+        else:
+            pdf_bytes = generate_monthly_receipt_pdf(
+                society_name=society_name,
+                collaborator_name=dirigente.get('full_name', 'Collaboratore'),
+                collaborator_fiscal_code=dirigente.get('fiscal_code', ''),
+                month_name=month_name,
+                year=request.year,
+                amount_gross=request.amount_gross,
+                signature_base64=request.signature_base64
+            )
+            pdf_filename_prefix = "quietanza_dirigente"
+            doc_type = "compensation_receipt"
+            doc_title = f"Quietanza Compenso Dirigente - {month_name} {request.year}"
+    except Exception as e:
+        logging.error(f"Error generating PDF for dirigente: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
+    
+    # Save PDF
+    receipt_id = str(uuid.uuid4())
+    pdf_filename = f"{pdf_filename_prefix}_{dirigente_id}_{request.year}_{request.month:02d}_{receipt_id}.pdf"
+    pdf_path = os.path.join(SIGNED_DOCS_DIR, pdf_filename)
+    
+    try:
+        with open(pdf_path, 'wb') as f:
+            f.write(pdf_bytes)
+    except Exception as e:
+        logging.error(f"Error saving PDF for dirigente: {e}")
+        raise HTTPException(status_code=500, detail="Errore nel salvataggio del documento")
+    
+    # Store document record
+    document_record = {
+        "id": receipt_id,
+        "document_type": doc_type,
+        "document_title": doc_title,
+        "dirigente_id": dirigente_id,
+        "dirigente_name": dirigente.get('full_name', ''),
+        "month": request.month,
+        "year": request.year,
+        "amount_gross": request.amount_gross,
+        "amount_net": amount_net,
+        "deductions": deductions,
+        "pdf_path": pdf_path,
+        "pdf_filename": pdf_filename,
+        "signed_at": now,
+        "exceeded_5000": first_time_exceeded_5000,
+        "exceeded_15000": first_time_exceeded_15000
+    }
+    await db.signed_documents.insert_one(document_record)
+    
+    # Update or create compensation record
+    if existing:
+        await db.dirigente_compensations.update_one(
+            {"id": existing["id"]},
+            {"$set": {
+                "amount_gross": request.amount_gross,
+                "amount_net": amount_net,
+                "deductions": deductions,
+                "received": True,
+                "received_date": now,
+                "receipt_signed": True,
+                "receipt_signature_base64": request.signature_base64,
+                "receipt_document_id": receipt_id,
+                "receipt_signed_date": now,
+                "exceeded_5000": first_time_exceeded_5000,
+                "exceeded_5000_date": now if first_time_exceeded_5000 else None,
+                "exceeded_15000": first_time_exceeded_15000,
+                "exceeded_15000_date": now if first_time_exceeded_15000 else None
+            }}
+        )
+    else:
+        record = DirigenteCompensation(
+            dirigente_id=dirigente_id,
+            month=request.month,
+            year=request.year,
+            amount_gross=request.amount_gross,
+            amount_net=amount_net,
+            deductions=deductions,
+            received=True,
+            received_date=now,
+            receipt_signed=True,
+            receipt_signature_base64=request.signature_base64,
+            receipt_document_id=receipt_id,
+            receipt_signed_date=now,
+            exceeded_5000=first_time_exceeded_5000,
+            exceeded_5000_date=now if first_time_exceeded_5000 else None,
+            exceeded_15000=first_time_exceeded_15000,
+            exceeded_15000_date=now if first_time_exceeded_15000 else None
+        )
+        await db.dirigente_compensations.insert_one(record.dict())
+    
+    # Send emails
+    dirigente_email = dirigente.get('email')
+    
+    if dirigente_email:
+        try:
+            body = f"""
+            <html>
+            <body>
+            <h2>Quietanza Compenso Sportivo - {month_name} {request.year}</h2>
+            <p>Gentile {dirigente.get('full_name', 'Collaboratore')},</p>
+            <p>In allegato trova la quietanza del compenso sportivo dilettantistico firmata per il mese di {month_name} {request.year}.</p>
+            <p><strong>Riepilogo:</strong></p>
+            <ul>
+            <li>Compenso lordo: € {request.amount_gross:.2f}</li>
+            <li>Totale annuo progressivo: € {new_total:.2f}</li>
+            </ul>
+            <hr>
+            <p><em>Documento generato automaticamente da RegistraTEAM</em></p>
+            </body>
+            </html>
+            """
+            
+            encoded_pdf = base64.b64encode(pdf_bytes).decode()
+            
+            result = await send_email_with_pdf(
+                to_email=dirigente_email,
+                subject=f"Quietanza Compenso Dirigente - {month_name} {request.year} - {society_name}",
+                html_content=body,
+                pdf_base64=encoded_pdf,
+                pdf_filename=pdf_filename,
+                to_name=dirigente.get('full_name', 'Collaboratore')
+            )
+            
+            if result.get("success"):
+                logging.info(f"Dirigente compensation receipt email sent to {dirigente_email} via {result.get('provider', 'unknown')}")
+            else:
+                logging.error(f"Error sending receipt email to dirigente: {result.get('error')}")
+        except Exception as e:
+            logging.error(f"Error sending receipt email to dirigente: {e}")
+    
+    # Send copy to admin
+    if admin_email and admin_email != dirigente_email:
+        try:
+            admin_body = f"""
+            <html>
+            <body>
+            <h2>Quietanza Compenso Firmata - {dirigente.get('full_name', 'Dirigente')}</h2>
+            <p>Il dirigente <strong>{dirigente.get('full_name', 'N/D')}</strong> ha firmato la quietanza del compenso sportivo per {month_name} {request.year}.</p>
+            <p><strong>Dettagli:</strong></p>
+            <ul>
+            <li>Compenso lordo: € {request.amount_gross:.2f}</li>
+            <li>Totale annuo progressivo: € {new_total:.2f}</li>
+            </ul>
+            {'<p style="color: orange;"><strong>⚠️ ATTENZIONE: Il dirigente ha superato la soglia di €5.000</strong></p>' if first_time_exceeded_5000 else ''}
+            {'<p style="color: red;"><strong>🚨 URGENTE: Il dirigente ha superato la soglia di €15.000</strong></p>' if first_time_exceeded_15000 else ''}
+            <hr>
+            <p><em>In allegato il documento firmato.</em></p>
+            </body>
+            </html>
+            """
+            
+            encoded_pdf = base64.b64encode(pdf_bytes).decode()
+            
+            result = await send_email_with_pdf(
+                to_email=admin_email,
+                subject=f"[RegistraTEAM] Quietanza firmata - {dirigente.get('full_name', 'Dirigente')} - {month_name} {request.year}",
+                html_content=admin_body,
+                pdf_base64=encoded_pdf,
+                pdf_filename=pdf_filename
+            )
+            
+            if result.get("success"):
+                logging.info(f"Dirigente receipt copy sent to admin {admin_email}")
+            else:
+                logging.error(f"Error sending dirigente receipt email to admin: {result.get('error')}")
+        except Exception as e:
+            logging.error(f"Error sending dirigente receipt email to admin: {e}")
+    
+    # Notify admin if thresholds exceeded
+    if first_time_exceeded_5000:
+        notification = AdminNotification(
+            type="dirigente_exceeded_5000",
+            title="⚠️ Dirigente ha superato €5.000",
+            message=f"Il dirigente {dirigente.get('full_name', 'Sconosciuto')} ha superato il limite di €5.000 annuali di compensi sportivi dilettantistici.",
+            related_user_id=dirigente_id,
+            related_user_name=dirigente.get('full_name', '')
+        )
+        await db.admin_notifications.insert_one(notification.dict())
+    
+    if first_time_exceeded_15000:
+        notification = AdminNotification(
+            type="dirigente_exceeded_15000",
+            title="🚨 URGENTE: Dirigente ha superato €15.000",
+            message=f"ATTENZIONE: Il dirigente {dirigente.get('full_name', 'Sconosciuto')} ha superato il limite di €15.000 annuali. Obblighi fiscali e contributivi!",
+            related_user_id=dirigente_id,
+            related_user_name=dirigente.get('full_name', '')
+        )
+        await db.admin_notifications.insert_one(notification.dict())
+    
+    return {
+        "message": "Quietanza firmata con successo",
+        "receipt_id": receipt_id,
+        "amount_gross": request.amount_gross,
+        "amount_net": amount_net,
+        "deductions": deductions,
+        "yearly_total": new_total,
+        "exceeded_5000": first_time_exceeded_5000,
+        "exceeded_15000": first_time_exceeded_15000
+    }
+
+@api_router.get("/dirigente/{dirigente_id}/threshold-status/{year}")
+async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_user = Depends(get_current_user)):
+    """Get threshold status for a dirigente in a specific year"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    if current_user["role"] == UserRole.VIEWER and current_user["id"] != dirigente_id:
+        raise HTTPException(status_code=403, detail="Puoi vedere solo i tuoi dati")
+    
+    dirigente = await db.users.find_one({"id": dirigente_id})
+    if not dirigente:
+        raise HTTPException(status_code=404, detail="Dirigente non trovato")
+    
+    monthly_compensation = dirigente.get("monthly_compensation", 0) or 0
+    prior_compensation = dirigente.get("other_annual_compensation", 0) or 0
+    
+    yearly_records = await db.dirigente_compensations.find({
+        "dirigente_id": dirigente_id,
+        "year": year,
+        "receipt_signed": True
+    }).to_list(12)
+    
+    yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
+    
+    # Add prior compensation if this is the first year of contract
+    contract_start = dirigente.get("contract_start_date")
+    contract_start_year = None
+    if contract_start:
+        if isinstance(contract_start, str):
+            contract_start_year = int(contract_start.split('-')[0])
+        elif hasattr(contract_start, 'year'):
+            contract_start_year = contract_start.year
+    
+    if contract_start_year and year == contract_start_year:
+        yearly_total += prior_compensation
+    
+    # Check if thresholds have been exceeded
+    exceeded_5000_record = next((r for r in yearly_records if r.get("exceeded_5000")), None)
+    exceeded_15000_record = next((r for r in yearly_records if r.get("exceeded_15000")), None)
+    
+    # Calculate if we're approaching thresholds
+    next_total = yearly_total + monthly_compensation
+    approaching_5000 = (yearly_total < 5000 and next_total > 4500)
+    approaching_15000 = (yearly_total < 15000 and next_total > 14500)
+    
+    # Check if blocked (exceeded but not declared)
+    needs_5000_declaration = (yearly_total > 5000 and not exceeded_5000_record)
+    needs_15000_declaration = (yearly_total > 15000 and not exceeded_15000_record)
+    is_blocked = needs_5000_declaration or needs_15000_declaration
+    
+    return {
+        "dirigente_id": dirigente_id,
+        "year": year,
+        "monthly_compensation": monthly_compensation,
+        "prior_compensation": prior_compensation,
+        "yearly_total": yearly_total,
+        "thresholds": {
+            "5000": {
+                "threshold": 5000,
+                "warning_at": 4500,
+                "needs_warning": approaching_5000,
+                "needs_declaration": needs_5000_declaration,
+                "declaration_signed": exceeded_5000_record is not None,
+                "declaration_date": exceeded_5000_record.get("exceeded_5000_date") if exceeded_5000_record else None
+            },
+            "15000": {
+                "threshold": 15000,
+                "warning_at": 14500,
+                "needs_warning": approaching_15000,
+                "needs_declaration": needs_15000_declaration,
+                "declaration_signed": exceeded_15000_record is not None,
+                "declaration_date": exceeded_15000_record.get("exceeded_15000_date") if exceeded_15000_record else None
+            }
+        },
+        "is_blocked": is_blocked,
+        "block_reason": "Devi prima firmare la dichiarazione di superamento soglia." if is_blocked else None
+    }
+
+
+
 @api_router.get("/")
 async def root():
     return {"message": "Athlete Attendance API"}
