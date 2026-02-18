@@ -6641,7 +6641,6 @@ def generate_monthly_receipt_pdf(
     month_name: str,
     year: int,
     amount_gross: float,
-    amount_net: float,
     signature_base64: str
 ) -> bytes:
     """Generate monthly compensation receipt PDF with proper formatting"""
@@ -6675,14 +6674,10 @@ def generate_monthly_receipt_pdf(
     y -= 1*cm
     c.drawString(2*cm, y, f"Mese di riferimento: {month_name} {year}")
     
-    # Amounts
+    # Amount - ONLY GROSS, no net
     y -= 1.2*cm
     c.setFont("Helvetica-Bold", 11)
     c.drawString(2*cm, y, f"Compenso lordo: € {amount_gross:.2f}")
-    
-    y -= 0.7*cm
-    c.setFont("Helvetica", 11)
-    c.drawString(2*cm, y, f"Netto corrisposto: € {amount_net:.2f}")
     
     # Declaration text
     y -= 1.5*cm
