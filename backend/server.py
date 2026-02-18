@@ -5810,7 +5810,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         )
         await db.admin_notifications.insert_one(notification.dict())
     
-    if request.exceeded_15000:
+    if first_time_exceeded_15000:
         notification = AdminNotification(
             type="coach_exceeded_15000",
             title="🚨 URGENTE: Coach ha superato €15.000",
