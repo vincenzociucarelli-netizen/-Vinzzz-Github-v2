@@ -266,30 +266,6 @@ export default function AdminDirigenteDetail() {
     }
   };
 
-  // Generate season months (July to June)
-  const getSeasonMonths = () => {
-    const now = new Date();
-    const currentYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
-    const months = [];
-    for (let i = 0; i < 12; i++) {
-      const monthIndex = (6 + i) % 12;
-      const year = monthIndex >= 6 ? currentYear : currentYear + 1;
-      const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-                          'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
-      months.push({
-        key: `${year}-${String(monthIndex + 1).padStart(2, '0')}`,
-        label: `${monthNames[monthIndex]} ${year}`,
-      });
-    }
-    return months;
-  };
-
-  const seasonMonths = getSeasonMonths();
-
-  // Check if any month has exceeded €5000
-  const hasExceeded5000 = dirigente?.over_5000_limit && 
-    Object.values(dirigente.over_5000_limit).some(v => v === true);
-
   if (loading) {
     return (
       <View style={styles.container}>
