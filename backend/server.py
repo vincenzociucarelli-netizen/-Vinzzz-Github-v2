@@ -2505,6 +2505,329 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
         "errors": errors
     }
 
+
+# ==================== FEDERATION CALENDAR IMPORT ====================
+
+from federation_scraper import FIPAVScraper, FIPScraper
+
+class FederationImportConfig(BaseModel):
+    """Configuration for federation calendar import"""
+    federation: str  # "fipav" or "fip"
+    region: str  # e.g., "umbria"
+    society_name: str  # Name of the society to filter matches
+    team_mappings: List[dict]  # [{federation_team_name: str, local_team_id: str}, ...]
+    season_id: Optional[str] = None
+    championship_ids: Optional[List[str]] = None
+
+class FederationSocietyConfig(BaseModel):
+    """Configuration stored per society for federation imports"""
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    society_id: str
+    federation: str  # "fipav" or "fip"
+    region: str
+    federation_society_id: Optional[str] = None  # ID from federation website
+    federation_society_name: str  # Name as appears on federation website
+    team_mappings: List[dict] = []  # [{federation_team_name: str, local_team_id: str, championship_id: str}, ...]
+    last_import: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+@api_router.get("/federation/regions")
+async def get_federation_regions(federation: str = "fipav"):
+    """Get available regions for a federation"""
+    if federation.lower() == "fipav":
+        regions = [
+            {"id": "umbria", "name": "Umbria"},
+            {"id": "lazio", "name": "Lazio"},
+            {"id": "toscana", "name": "Toscana"},
+            {"id": "emilia", "name": "Emilia Romagna"},
+            {"id": "lombardia", "name": "Lombardia"},
+            {"id": "piemonte", "name": "Piemonte"},
+            {"id": "veneto", "name": "Veneto"},
+            {"id": "marche", "name": "Marche"},
+            {"id": "abruzzo", "name": "Abruzzo"},
+            {"id": "campania", "name": "Campania"},
+            {"id": "puglia", "name": "Puglia"},
+            {"id": "calabria", "name": "Calabria"},
+            {"id": "sicilia", "name": "Sicilia"},
+            {"id": "sardegna", "name": "Sardegna"},
+            {"id": "liguria", "name": "Liguria"},
+            {"id": "friuli", "name": "Friuli Venezia Giulia"},
+            {"id": "trentino", "name": "Trentino Alto Adige"},
+        ]
+    elif federation.lower() == "fip":
+        regions = [
+            {"id": "umbria", "name": "Umbria"},
+            {"id": "lazio", "name": "Lazio"},
+            {"id": "toscana", "name": "Toscana"},
+        ]
+    else:
+        regions = []
+    
+    return regions
+
+@api_router.get("/federation/seasons")
+async def get_federation_seasons(federation: str = "fipav", region: str = "umbria"):
+    """Get available seasons from federation"""
+    try:
+        if federation.lower() == "fipav":
+            scraper = FIPAVScraper(region=region)
+            seasons = await scraper.get_seasons()
+            return seasons
+        else:
+            return []
+    except Exception as e:
+        logging.error(f"Error getting federation seasons: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore recupero stagioni: {str(e)}")
+
+@api_router.get("/federation/championships")
+async def get_federation_championships(federation: str = "fipav", region: str = "umbria", season_id: Optional[str] = None):
+    """Get available championships from federation"""
+    try:
+        if federation.lower() == "fipav":
+            scraper = FIPAVScraper(region=region)
+            championships = await scraper.get_championships(season_id)
+            return championships
+        else:
+            return []
+    except Exception as e:
+        logging.error(f"Error getting federation championships: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore recupero campionati: {str(e)}")
+
+@api_router.get("/federation/societies")
+async def get_federation_societies(federation: str = "fipav", region: str = "umbria", season_id: Optional[str] = None):
+    """Get available societies from federation"""
+    try:
+        if federation.lower() == "fipav":
+            scraper = FIPAVScraper(region=region)
+            societies = await scraper.get_societies(season_id)
+            return societies
+        else:
+            return []
+    except Exception as e:
+        logging.error(f"Error getting federation societies: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore recupero società: {str(e)}")
+
+@api_router.post("/federation/preview")
+async def preview_federation_import(config: dict, current_user = Depends(get_current_user)):
+    """Preview matches that would be imported from federation"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può importare calendari")
+    
+    try:
+        federation = config.get("federation", "fipav").lower()
+        region = config.get("region", "umbria")
+        society_name = config.get("society_name", "")
+        championship_id = config.get("championship_id")
+        season_id = config.get("season_id")
+        society_id = config.get("federation_society_id")
+        
+        if federation == "fipav":
+            scraper = FIPAVScraper(region=region)
+            matches = await scraper.scrape_matches(
+                society_id=society_id,
+                championship_id=championship_id,
+                season_id=season_id,
+                society_name=society_name
+            )
+            
+            # Convert to dict for JSON response
+            matches_data = []
+            for m in matches:
+                matches_data.append({
+                    "match_number": m.match_number,
+                    "date": m.date.isoformat(),
+                    "home_team": m.home_team,
+                    "away_team": m.away_team,
+                    "result": m.result,
+                    "championship": m.championship,
+                    "giornata": m.giornata
+                })
+            
+            return {
+                "matches": matches_data,
+                "count": len(matches_data)
+            }
+        else:
+            return {"matches": [], "count": 0, "message": "FIP non ancora supportato"}
+    
+    except Exception as e:
+        logging.error(f"Error previewing federation import: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore preview import: {str(e)}")
+
+@api_router.post("/federation/import")
+async def import_from_federation(config: dict, current_user = Depends(get_current_user)):
+    """Import matches from federation to local database"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può importare calendari")
+    
+    try:
+        federation = config.get("federation", "fipav").lower()
+        region = config.get("region", "umbria")
+        society_name = config.get("society_name", "")
+        championship_id = config.get("championship_id")
+        season_id = config.get("season_id")
+        society_id = config.get("federation_society_id")
+        team_mappings = config.get("team_mappings", [])  # [{federation_team_name: str, local_team_id: str}, ...]
+        
+        society_id_local = current_user.get("society_id")
+        
+        if federation == "fipav":
+            scraper = FIPAVScraper(region=region)
+            matches = await scraper.scrape_matches(
+                society_id=society_id,
+                championship_id=championship_id,
+                season_id=season_id,
+                society_name=society_name
+            )
+            
+            imported_count = 0
+            skipped_count = 0
+            errors = []
+            
+            # Build a mapping dict for quick lookup
+            mapping_dict = {}
+            for mapping in team_mappings:
+                fed_name = mapping.get("federation_team_name", "").lower()
+                local_id = mapping.get("local_team_id")
+                if fed_name and local_id:
+                    mapping_dict[fed_name] = local_id
+            
+            # Also add variations of society_name to mapping
+            if society_name:
+                for mapping in team_mappings:
+                    fed_name = mapping.get("federation_team_name", "").lower()
+                    local_id = mapping.get("local_team_id")
+                    if local_id:
+                        # Add the society_name as a key if it contains the federation name
+                        if society_name.lower() in fed_name or fed_name in society_name.lower():
+                            mapping_dict[society_name.lower()] = local_id
+            
+            # Collect match numbers for deletion
+            match_numbers = [m.match_number for m in matches if m.match_number]
+            
+            # Delete existing matches with same match_number
+            if match_numbers:
+                delete_result = await db.matches.delete_many({
+                    "match_number": {"$in": match_numbers},
+                    "society_id": society_id_local
+                })
+                logging.info(f"Deleted {delete_result.deleted_count} existing matches")
+            
+            for scraped_match in matches:
+                # Determine which team this match is for (our team can be home or away)
+                local_team_id = None
+                is_home = False
+                
+                # Check home team
+                home_lower = scraped_match.home_team.lower()
+                for key, value in mapping_dict.items():
+                    if key in home_lower or home_lower in key:
+                        local_team_id = value
+                        is_home = True
+                        break
+                
+                # Check away team if not found in home
+                if not local_team_id:
+                    away_lower = scraped_match.away_team.lower()
+                    for key, value in mapping_dict.items():
+                        if key in away_lower or away_lower in key:
+                            local_team_id = value
+                            is_home = False
+                            break
+                
+                if not local_team_id:
+                    skipped_count += 1
+                    continue
+                
+                # Get team info
+                team = await db.teams.find_one({"id": local_team_id})
+                team_name = team.get("name", "") if team else ""
+                
+                # Determine opponent
+                opponent = scraped_match.away_team if is_home else scraped_match.home_team
+                
+                # Create match
+                match = Match(
+                    society_id=society_id_local,
+                    team_id=local_team_id,
+                    team_name=team_name,
+                    match_number=scraped_match.match_number,
+                    date=scraped_match.date,
+                    opponent=opponent,
+                    home_away="home" if is_home else "away",
+                    result=scraped_match.result,
+                    notes=f"Campionato: {scraped_match.championship}" if scraped_match.championship else None
+                )
+                
+                await db.matches.insert_one(match.dict())
+                imported_count += 1
+            
+            # Save import configuration for future use
+            import_config = {
+                "society_id": society_id_local,
+                "federation": federation,
+                "region": region,
+                "federation_society_id": society_id,
+                "federation_society_name": society_name,
+                "championship_id": championship_id,
+                "season_id": season_id,
+                "team_mappings": team_mappings,
+                "last_import": datetime.utcnow()
+            }
+            
+            await db.federation_configs.update_one(
+                {"society_id": society_id_local, "federation": federation},
+                {"$set": import_config},
+                upsert=True
+            )
+            
+            return {
+                "message": f"Importate {imported_count} partite dalla federazione",
+                "imported": imported_count,
+                "skipped": skipped_count,
+                "errors": errors
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Federazione non supportata")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error importing from federation: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore import: {str(e)}")
+
+@api_router.get("/federation/config")
+async def get_federation_config(current_user = Depends(get_current_user)):
+    """Get saved federation import configuration for current society"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere la configurazione")
+    
+    society_id = current_user.get("society_id")
+    if not society_id:
+        return None
+    
+    config = await db.federation_configs.find_one({"society_id": society_id})
+    if config:
+        clean_mongo_doc(config)
+    
+    return config
+
+@api_router.delete("/federation/config")
+async def delete_federation_config(current_user = Depends(get_current_user)):
+    """Delete federation import configuration"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare la configurazione")
+    
+    society_id = current_user.get("society_id")
+    if not society_id:
+        return {"message": "Nessuna configurazione trovata"}
+    
+    await db.federation_configs.delete_one({"society_id": society_id})
+    
+    return {"message": "Configurazione eliminata"}
+
+
+
 @api_router.get("/parent/commitments")
 async def get_parent_commitments(current_user = Depends(get_current_user)):
     """Get commitments (trainings + matches) for parent's children - 7 days"""
