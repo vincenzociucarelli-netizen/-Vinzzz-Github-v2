@@ -300,10 +300,16 @@ export default function PrimeSquadrePage() {
                 <View style={styles.compensationInfo}>
                   <Text style={styles.compensationText}>
                     Compenso: €{athlete.monthly_compensation || 0}/mese
+                    {athlete.fees_waived && ' • Quote esenti'}
                   </Text>
                   {athlete.compensation_summary && (
                     <Text style={styles.yearlyText}>
                       Anno: €{athlete.compensation_summary.yearly_total.toLocaleString()} ({athlete.compensation_summary.months_received} mesi)
+                    </Text>
+                  )}
+                  {athlete.contract_start_date && athlete.contract_end_date && (
+                    <Text style={styles.contractText}>
+                      Contratto: {athlete.contract_start_date.substring(5)} → {athlete.contract_end_date.substring(5)}
                     </Text>
                   )}
                 </View>
@@ -311,12 +317,9 @@ export default function PrimeSquadrePage() {
               <View style={styles.athleteActions}>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => {
-                    setSelectedAthlete(athlete);
-                    setCompensationAmount(String(athlete.monthly_compensation || ''));
-                  }}
+                  onPress={() => openEditConfig(athlete)}
                 >
-                  <Text style={styles.actionButtonText}>💰</Text>
+                  <Text style={styles.actionButtonText}>⚙️</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionButton}
