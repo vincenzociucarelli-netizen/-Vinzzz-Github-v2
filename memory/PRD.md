@@ -15,10 +15,17 @@ Applicazione per la gestione di club di pallavolo con funzionalità di gestione 
 ### Modulo Compensi Coach (COMPLETO)
 - Generazione PDF quietanze mensili
 - Gestione soglie fiscali €5K e €15K
-- Badge colorati per soglie superate
+- Colorazione card mesi (verde/arancio/rosso)
 - Firma digitale con canvas
 - Invio email automatico
 - Vista admin con storico quietanze
+
+### Modulo Compensi Dirigenti (COMPLETO - 18/02/2026)
+- Stessa funzionalità dei Coach
+- Endpoint backend: `/api/dirigente/{id}/compensation/*`
+- Pagina frontend: `/dirigente/compensation.tsx`
+- Rimossa sezione "Registro Pagamenti Mensili" dal profilo (obsoleta)
+- Accessibile anche agli Admin come Dirigenti
 
 ### Gestione Utenti
 - Login/registrazione multi-ruolo
@@ -36,7 +43,7 @@ Applicazione per la gestione di club di pallavolo con funzionalità di gestione 
 3. **Icone @expo/vector-icons** - Non si caricano su web (P3)
 
 ## Prossimi Task
-1. Estendere modulo compensi ai Dirigenti
+1. ~~Estendere modulo compensi ai Dirigenti~~ ✅ COMPLETATO
 2. Estendere modulo compensi agli Atleti PRO
 
 ## Backlog
@@ -45,5 +52,6 @@ Applicazione per la gestione di club di pallavolo con funzionalità di gestione 
 - Limite squadre con messaggio upgrade
 
 ## Ultima Modifica
-- Data: Dicembre 2025
-- Modifica: Implementati colori distintivi per soglie €5K (arancione) e €15K (rosso) nelle card dei mesi
+- Data: 18 Febbraio 2026
+- Modifica: Implementato modulo compensi completo per Dirigenti, rimossa sezione "Registro Pagamenti Mensili" obsoleta dal profilo
+
