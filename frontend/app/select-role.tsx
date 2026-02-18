@@ -168,4 +168,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 32,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
 });
