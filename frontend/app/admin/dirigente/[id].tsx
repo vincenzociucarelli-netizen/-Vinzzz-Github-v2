@@ -131,6 +131,7 @@ export default function AdminDirigenteDetail() {
       
       setDirigente(userResponse.data);
       setMonthlyCompensation(userResponse.data.monthly_compensation?.toString() || '0');
+      setOtherAnnualCompensation(userResponse.data.other_annual_compensation?.toString() || '0');
       setQualification(userResponse.data.qualification || '');
       setDocumentType(userResponse.data.document_type || '');
       setDocumentFront(userResponse.data.document_front || '');
@@ -138,6 +139,16 @@ export default function AdminDirigenteDetail() {
       setIban(userResponse.data.iban || '');
       setIbanHolder(userResponse.data.iban_holder || '');
       setBankName(userResponse.data.bank_name || '');
+      
+      // Load signed receipts from compensation endpoint
+      try {
+        const compensationRes = await api.get(`/dirigente/${id}/compensation`);
+        if (Array.isArray(compensationRes.data)) {
+          setSignedReceipts(compensationRes.data);
+        }
+      } catch (err) {
+        console.log('No compensation data available');
+      }
       
       // Load available qualifications from settings
       setAvailableQualifications(settingsResponse.data.dirigente_qualifications || []);
