@@ -7006,15 +7006,8 @@ def generate_threshold_15k_pdf(
     
     timestamp = datetime.now().strftime("%d/%m/%Y")
     
-    # Invert name to "COGNOME NOME" format
-    name_parts = collaborator_name.strip().split()
-    if len(name_parts) >= 2:
-        # Assume last word is surname, rest is name
-        surname = name_parts[-1]
-        first_names = " ".join(name_parts[:-1])
-        formatted_name = f"{surname} {first_names}"
-    else:
-        formatted_name = collaborator_name
+    # Name is already stored as "COGNOME NOME" in database - use as-is
+    formatted_name = collaborator_name
     
     # Title
     c.setFont("Helvetica-Bold", 12)
