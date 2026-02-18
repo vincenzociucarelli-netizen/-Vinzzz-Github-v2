@@ -1,71 +1,75 @@
-<analysis>**original_problem_statement**: The user wants to continue developing the RegistraTEAM volleyball club management application. Initially, the goal was to fix several bugs and enhance the coach compensation module. During the session, the user requested further UI enhancements for the compensation view: coloring the entire monthly record based on whether a fiscal threshold (€5K or €15K) was crossed. After several iterations, this was successfully implemented and verified.
-
-The user's next and current priority is to replicate the entire, newly-perfected compensation module for a new user role: **Directors ()**.
+<analysis>**original_problem_statement**: The initial goal was to replicate the coach compensation module for a new Director () role. This was successfully implemented, tested, and refined with the user. The scope then expanded to include:
+1.  Fixing various UI/UX issues, notably on the QR scanner page.
+2.  Correcting PDF generation logic for fiscal threshold declarations.
+3.  Designing a new premium module called Prime Squadre (First Teams) to manage compensation for professional athletes and collaborators. This involved a detailed discussion to define the feature's scope, UI placeholder, and commercial model (freemium with manual activation).
+4.  At the end of the session, the user requested three final small fixes: adding email/PEC fields to society settings, verifying all back-arrow icons are the new style, and confirming how the society name is loaded.
 
 **PRODUCT REQUIREMENTS**:
-1.  **Compensation Module (UI Enhancement)**:
-    *   Color-code the monthly compensation records to indicate fiscal status for the year.
-    *   The month a threshold is crossed (€5K or €15K) should have a specific background color (orange or red).
-    *   All *subsequent* months within the same fiscal year should also be highlighted with that color.
-    *   The highlighting must reset to the default (green) at the start of a new calendar year.
-2.  **Compensation Module (Directors)**:
-    *   Extend all compensation functionalities (monthly receipts, threshold calculations, PDF generation, digital signing, UI views) from Coaches to Directors ().
+1.  **Compensation Module (Directors)**: All compensation functionalities (monthly receipts, threshold calculations, PDF generation, digital signing, UI views) from Coaches must be available for Directors (). (COMPLETED)
+2.  **PDF Generation Fixes**:
+    *   The name on the declaration PDFs must be Cognome Nome (Last Name First Name). (COMPLETED)
+    *   The Luogo e data (Place and date) line must use the society's city (e.g., Perugia) instead of a blank line. (COMPLETED)
+3.  **QR Scanner Enhancements**:
+    *   Default to the rear camera. (COMPLETED)
+    *   Increase spacing between UI controls for better usability. (COMPLETED)
+    *   Provide user guidance on how to grant permanent camera permissions. (COMPLETED)
+4.  **Prime Squadre Module (Phase 1 - Placeholder)**:
+    *   Add a disabled/locked Prime Squadre icon to the admin dashboard. (COMPLETED)
+    *   On click, show a detailed popup explaining the premium feature, its functionality, limits (50 members), and future availability (paid from July 1, 2026). (COMPLETED)
+5.  **Settings Enhancement**: Add  and  (certified email) fields to the society settings page. (NOT STARTED)
 
 **User's preferred language**: italiano
 
 **what currently exists?**
 - A full-stack React/FastAPI/MongoDB application for volleyball club management.
-- The coach compensation module is fully functional and user-verified.
-- The UI for displaying coach compensation now correctly colors monthly records based on fiscal threshold status, including highlighting subsequent months within the same fiscal year and resetting the colors for a new year. This logic is applied consistently across the coach's profile, the detailed compensation page, and the admin's view.
+- The coach and director compensation modules are fully implemented and user-verified. This includes backend endpoints, frontend pages for users and admins, PDF generation, and email notifications.
+- The QR scanner page has been improved with a default back camera, better button spacing, and informational text.
+- A placeholder for the Prime Squadre premium feature exists in the admin dashboard. It's a locked icon that opens an informational popup detailing the feature, as designed with the user.
 
 **Last working item**:
-    - Last item agent was working: After the user confirmed all UI color-coding for the coach compensation module was perfect, they requested to implement the same functionality for Directors (). The agent acknowledged this and was about to begin planning the implementation by exploring the project's file structure.
+    - Last item agent was working: The agent acknowledged three final requests from the user before ending the session:
+        1. Add  and  fields to the society settings.
+        2. Double-check that all back-arrow icons across the app use the new, visible style.
+        3. Clarify if the society name (Pallavolo Perugia SSD) is hardcoded or loaded dynamically from settings.
     - Status: NOT STARTED
     - Agent Testing Done: N
-    - Which testing method agent to use? After implementing the backend and frontend for the Director compensation, use the backend testing agent for the new API endpoints and the frontend testing agent for the new UI pages.
+    - Which testing method agent to use? Manual testing by viewing the settings page after modification and using  to find all instances of back-arrow icons.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Admin panel authentication/navigation is buggy (P1)
-  - Issue 2: Login for users with the  role is not working (P2)
-  - Issue 3: QR Scanner usability improvements need user verification (P2)
-  - Issue 4: Icon library () fails to load on the web (P3)
+  - Issue 1: (P0) Final requests from the user (Add email/PEC fields, check back-arrows, confirm society name source).
+  - Issue 2: (P1) Admin panel authentication/navigation is buggy.
+  - Issue 3: (P2) Login for users with the  role is not working.
+  - Issue 4: (P3) Icon library () fails to load on the web.
 
   **Issues Detail**:
-  - **Issue 1: Admin panel authentication/navigation is buggy**
-     - **Description**: During testing, the agent repeatedly failed to log in as an admin or encountered Coach non trovato and 403 Forbidden errors when navigating the admin panel. This suggests a problem with token handling, session state, or authorization checks in the frontend admin pages.
-     - **Attempted fixes**: None. Workarounds like direct URL navigation were used.
+  - **Issue 1: Final user requests**
+     - **Description**: The user made three small requests at the very end of the session that were not addressed.
+     - **Attempted fixes**: None.
      - **Next debug checklist**:
-        1. Log in as an admin.
-        2. Try navigating from the main admin page to a specific resource (e.g., coach list to coach detail).
-        3. Inspect the browser's developer tools (Console, Network tabs) for errors.
-        4. Check how the auth token is stored (localStorage) and passed in API request headers in the admin section.
-        5. Review the state management () and routing logic in the admin pages ().
-     - **Why fix this issue and what will be achieved with the fix?**: A stable admin panel is critical for managing the application and testing new features.
+        1. Locate the society settings page/component in the frontend and the corresponding endpoint/model in the backend.
+        2. Add the  and  fields to the UI and the database save logic.
+        3. Use  or a similar tool to find all instances of the back-arrow component and visually inspect the code to ensure they have the correct styling ().
+        4. Find where the society name is displayed on the dashboard and trace it back to see if it's loaded from the database or hardcoded.
+     - **Why fix this issue and what will be achieved with the fix?**: Completes the user's final requests from the session, improving application settings and ensuring UI consistency.
+     - **Status**: NOT STARTED
+     - **Is recurring issue?**: N
+     - **Should Test frontend/backend/both after fix?**: Both
+
+  - **Issue 2: Admin panel authentication/navigation is buggy**
+     - **Description**: Agent and user have repeatedly encountered login issues, Not Found errors, or Forbidden errors when navigating the admin panel, suggesting problems with token handling or session state in the frontend admin pages.
      - **Status**: NOT STARTED
      - **Is recurring issue?**: Y
      - **Should Test frontend/backend/both after fix?**: Frontend
 
-  - **Issue 2: Parents cannot log in**
-     - **Attempted fixes**: None. This is a long-standing issue.
-     - **Next debug checklist**: Check backend logs for auth errors for the  role. Compare frontend login flow with a working role like .
-     - **Why fix this issue and what will be achieved with the fix?**: Enables a key user group to access the application.
+  - **Issue 3: Parents cannot log in**
+     - **Description**: A long-standing issue where users with the  role are unable to log in.
      - **Status**: NOT STARTED
      - **Is recurring issue?**: Y
      - **Should Test frontend/backend/both after fix?**: Both
 
-  - **Issue 3: QR Scanner usability improvements need user verification**
-     - **Description**: Changes to default to the rear camera and add button spacing were implemented but not confirmed by the user.
-     - **Next debug checklist**: Ask the user to test the QR scanner page.
-     - **Why fix this issue and what will be achieved with the fix?**: Ensures UX improvements meet user needs.
-     - **Status**: USER VERIFICATION PENDING
-     - **Is recurring issue?**: N
-     - **Should Test frontend/backend/both after fix?**: Frontend
-
   - **Issue 4: Icon library fails to load on web**
-     - **Attempted fixes**: None. This is a known issue.
-     - **Next debug checklist**: Review the project's web configuration to ensure fonts/assets from  are correctly bundled.
-     - **Why fix this issue and what will be achieved with the fix?**: Fixes broken UI elements.
+     - **Description**: A known, recurring issue where icons from  do not render correctly in the web version of the app.
      - **Status**: NOT STARTED
      - **Is recurring issue?**: Y
      - **Should Test frontend/backend/both after fix?**: Frontend
@@ -75,89 +79,113 @@ The user's next and current priority is to replicate the entire, newly-perfected
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - (P0) **Extend Compensation Module to Directors ()**: This is the immediate next task requested by the user.
+    - (P0) **Implement Prime Squadre Module (Phase 2)**: This is the main upcoming task.
         - **Backend**:
-            - Modify the  collection schema to support compensation data.
-            - Create new endpoints in  by duplicating and adapting the coach compensation logic (e.g., , ).
+            - Add a flag (e.g., ) to the  collection.
+            - Add a flag (e.g., ) to the  collection, to be manually toggled by the super-admin.
+            - Create new endpoints in  for athlete compensation, replicating the logic from the coach/director modules. This includes creating a new  model.
         - **Frontend**:
-            - Create a new compensation page  adapted from the coach version.
-            - Add a link to this page from the Director's profile.
-            - Update the admin panel to view Director compensations.
-    - (P1) **Extend Compensation Module to Professional Athletes ()**: Same work as for Directors, but for the  role.
-    - (P1) **Refactor **: Propose breaking the monolithic  into smaller, manageable modules (e.g., , ) to improve maintainability.
+            - Create new pages and components for managing Prime Squadre compensation.
+            - Update the admin dashboard to unlock the Prime Squadre section when  is true for the society.
 - **Future Tasks**:
-    - (P2) Implement Freemium model logic (30-member limit).
-    - (P2) Implement Stripe integration for club subscription plans.
+    - (P1) **Refactor **: Break the monolithic  (now over 8000 lines) into smaller modules (, , ).
+    - (P2) **Implement Stripe Integration**: Integrate Stripe to handle payments for the Prime Squadre premium plan, starting July 2026.
+    - (P2) Implement Freemium model logic (e.g., 30-member limit for the free plan).
     - (P2) Implement a team limit for societies with an upgrade message.
 
 **Completed work in this session**
-- **UI Enhancement for Coach Compensation**:
-  - Implemented logic to color the background of monthly compensation records based on fiscal thresholds.
-  - The logic correctly highlights not only the month of the threshold crossing but all subsequent months within the same fiscal year.
-  - Fixed a bug where the highlighting did not reset at the start of a new calendar year.
-  - **Files Updated**:
-    - 
-    - 
-    - 
+- **Director Compensation Module (P0 Task - COMPLETE)**:
+  - Replicated the entire coach compensation module for Directors, including backend endpoints, frontend UI (), PDF generation, and email notifications.
+  - Refactored the Director profile page () to remove the old payment log and add a new compact view of signed receipts.
+  - Fixed bugs related to fiscal threshold calculations and contract dates.
+- **PDF Generation Fixes**:
+  - Corrected the name order to Cognome, Nome in declaration PDFs.
+  - Replaced the blank Luogo field with the society's city (Perugia) in declaration PDFs.
+  - **File Updated**: 
+- **QR Scanner Enhancements**:
+  - Forced the rear camera as the default.
+  - Increased button size and spacing for better usability.
+  - Added an informational note explaining how to set permanent camera permissions.
+  - **File Updated**: 
+- **Prime Squadre Placeholder (Premium Feature)**:
+  - Designed the feature scope and commercial model with the user.
+  - Added a locked Prime Squadre icon with a PREMIUM badge to the admin dashboard.
+  - Implemented a detailed informational popup that appears on click.
+  - **File Updated**: 
+- **Bug Fixes**:
+  - Fixed a frontend crash on  due to invalid JSX.
+  - Fixed a visual glitch (a stray  character) on the admin view of director compensation ().
+  - Cleaned up the database by removing obsolete compensation entries after a contract date change.
+  - Stabilized backend crashes by restarting services.
 
 **Earlier issues found/mentioned but not fixed**
-- The **Admin Panel Authentication/Navigation bug** was identified as a major friction point during development but was not fixed.
-- The pre-existing **Parent Login** and **** issues were not addressed.
+- The long-standing issues with **Admin Panel Authentication**, **Parent Login**, and ** rendering** were not addressed in this session.
 
 **Known issue recurrence from previous fork**
   - **Issue recurrence in previous fork**:
     -  role login failure.
     -  library failing to render on the web.
-  - **Recurrence count**: 3+
+  - **Recurrence count**: 4+
   - **Status**: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Fiscal Year Logic**: Implemented business logic that respects calendar year boundaries for financial calculations, ensuring fiscal thresholds reset on January 1st.
-- **Stateful UI Coloring**: The frontend now derives the background color of components from aggregated financial data () and date comparisons, providing an intuitive visual status to the user.
+- **Feature Gating**: Designed a premium feature (Prime Squadre) to be gated by a manual flag () in the database, with a UI placeholder (locked icon and popup) shown to non-premium users.
+- **Code Duplication for Roles**: The pattern of duplicating backend endpoints and frontend components for different user roles (Coach -> Director) was continued. This highlights the need for refactoring to more abstract, reusable code.
 
 **key DB schema**
-  - **coach_compensations**: .
-  - **dirigenti**: This collection will need to be updated to include compensation-related fields and a corresponding  collection will be needed.
-
-**changes in tech stack**
-  - None.
+  - **dirigente_compensations**: Created, mirroring . .
+  - **dirigenti**: Updated to support compensation fields (, , , etc.).
+  - **societies**: Needs  and  fields to be added. Will also need a  boolean flag for the Prime Squadre feature.
+  - **athletes**: Will need a boolean flag like  to distinguish Prime Squadre members.
 
 **All files of reference**
--  (reference for new Director page)
 - 
 - 
--  (reference for new Director endpoints)
+- 
+- 
+- 
+- 
+-  (updated by the agent)
 
 **Areas that need refactoring**:
-- ****: This file is over 7000 lines and urgently needs to be broken down into smaller modules (, , ) before more logic is added.
-- **Admin Authentication**: The frontend auth flow for the admin role is unreliable and requires a full review and potential refactor.
+- ****: Critically needs to be broken down. It is now extremely large and difficult to maintain. Adding the Prime Squadre logic will make it worse.
+- **Compensation Logic**: The compensation logic is duplicated across  and  endpoints. This should be abstracted into a shared service/function that can be reused for the upcoming  role.
+- **Admin Authentication**: The entire admin login and session management flow is unreliable and needs a complete review.
 
 **Critical Info for New Agent**
-- You MUST continue the conversation in **Italiano**.
-- The user is very happy and has explicitly approved all recent UI changes for the coach compensation module.
-- The next task is non-negotiable: begin implementing the **compensation module for Directors ()**, replicating the functionality from the coach module. This is your P0 task.
-- It is highly recommended to propose fixing the **buggy admin login/navigation flow (Issue #1)** as a prerequisite or parallel task, as it will be essential for testing the new Director functionality.
-- Similarly, proposing a **refactor of ** before adding more complex logic is a wise strategic move to maintain the health of the codebase.
+- You MUST continue the conversation in **Italiano**. The user is very engaged and provides excellent, specific feedback.
+- **Priority 1**: Address the user's three final requests from the last message (add email/PEC to settings, check back-arrows, confirm society name source).
+- **Priority 2**: Begin the implementation of the **Prime Squadre** module (Phase 2). The design and scope are already defined and approved by the user. Do not re-open the design discussion.
+- The recurring issues with Admin and Parent login are significant blockers. Proposing to fix the Admin login issue before or alongside the Prime Squadre implementation is highly recommended, as it will be essential for testing.
+- The user is the main tester and uses a real account (, role ). Be prepared to work with this real data and clean up test entries if necessary.
 
 **documents and test reports created in this job**
-- None.
+-  was updated.
 
 **Last 10 User Messages and any pending HUMAN messages**
-- **10. User:** Ciao cara..buon lavoro È un piacere lavorare con te 🥰 - Acknowledged.
-- **9. User:** Benissimo!..grazie Ora puoi fare ai Dirigenti lo stesso lavoro dei coach Ma io ti saluto perché da me è tardissimo 3.27 am 😬 - **Request**: Start work on the Director compensation module. - **In Progress**
-- **8. User:** Shows a screenshot and says Ok bene! Ma da gennaio in poi verde!.. inizia un nuovo anno Sia lato coach che lato admin - **Bug Report**: The color highlighting doesn't reset for the new year. - **Resolved**
-- **7. User:** Provo subito Pietro che deve fare quietanze di dic e gen - User is starting to test. - **Acknowledged**
-- **6. User:** Shows a screenshot and says Vorrei evidenziati i giallo anche i mesi di riepilogo sua per il coach che per ladmin .. e sua per il superamento dei 5k che dei 15k - **New Requirement**: Highlight all subsequent months after a threshold is crossed, not just the single month. - **Resolved**
-- **5. User:** No no..mi trovo bene cosi ora..grazie Mi è venuta una idea... I mesi in cui i compensi superano i 5k o i 15k li vorrei di colore diverso rispetto al verde del tutto free 5k arancio come hai già fatto 15k rosso come hai già fatto - **New Requirement**: Color the entire month card/row, not just a badge. - **Resolved**
+- **10. User:** Asks for confirmation on the app name ( vs ). Agent advises keeping .
+- **9. User:** Asks for a better phrasing for the fiscal threshold line in the popup, suggesting Rilevamento superamento soglie €5K/€15K. Agent agrees and implements.
+- **8. User:** Suggests cleaning up the feature list in the popup. Agent implements.
+- **7. User:** Asks to remove a phrase from the popup description. Agent implements.
+- **6. User:** Suggests rephrasing the Atleti section in the popup for clarity. Agent implements.
+- **5. User:** Asks to remove fisioterapisti from the collaborators list and add others. Agent implements.
+- **4. User:** Asks to add more features to the popup description and sets the member limit to 50. Agent implements.
+- **3. User:** Asks for a change in the popup's subtitle and clarification on where to place collaborators (scoutman, etc.). Agent advises putting them in Prime Squadre and implements.
+- **2. User:** Asks for clarification on the costs of supporting 30 vs 50 athletes. Agent provides a cost analysis.
+- **1. User:** **(PENDING)** Asks for three final changes before stopping:
+    1.  Add  and  fields to Society settings.
+    2.  Check if all back-arrow icons are updated.
+    3.  Confirm if the society name on the dashboard is dynamic or hardcoded.
 
 **Project Health Check:**
 - **Broken**:
     - Login for the  role.
-    - Admin panel authentication and navigation.
+    - Admin panel authentication and navigation remains unstable.
 - **Mocked**:
+    - The Prime Squadre feature is currently a UI placeholder only.
     - Freemium model logic.
     - Stripe integration.
 
@@ -165,16 +193,16 @@ The user's next and current priority is to replicate the entire, newly-perfected
 - **Brevo**: Email provider.
 - **fpdf2 / Pillow**: Server-side PDF generation and image manipulation.
 - **react-signature-canvas**: Frontend signature capture for web.
-- **react-native-signature-canvas**: Frontend signature capture for mobile.
+- **html5-qrcode**: Library used for the web-based QR scanner.
 
 **Testing status**
   - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
-  - Known regressions: None from this session. Old regressions (parent login, icons) persist.
+  - Known regressions: Old regressions (parent login, icons) persist.
 
 **Credentials to test flow:**
-- Admin and coach credentials remain unstable. It is recommended to establish and document a stable set of test users (admin, coach, parent, dirigente) for future development.
+- User's primary account for testing is  (role: ). The password is unknown to the agent. Direct collaboration with the user is required for testing authenticated flows.
 
 **What agent forgot to execute**
-- The agent has not yet addressed the long-standing issues from previous forks (parent login, admin auth, icons). It correctly prioritized the user's immediate requests. The next step is to formulate a plan that includes the user's main request (Director module) while also addressing critical blockers (admin auth) and technical debt ( refactor).</analysis>
+- The agent did not get to execute the user's final three requests before the session ended: adding email/PEC to settings, checking all back-arrows, and verifying the society name source. These should be the first tasks for the next session.</analysis>
