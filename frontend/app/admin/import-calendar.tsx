@@ -57,6 +57,14 @@ export default function ImportCalendarScreen() {
   const [championships, setChampionships] = useState<SelectOption[]>([]);
   const [selectedChampionships, setSelectedChampionships] = useState<string[]>([]);
   
+  // Date filter
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  
+  // Match selection
+  const [selectedMatches, setSelectedMatches] = useState<Set<number>>(new Set());
+  const [selectAll, setSelectAll] = useState(true);
+  
   // Society
   const [societies, setSocieties] = useState<SelectOption[]>([]);
   const [selectedSociety, setSelectedSociety] = useState('');
