@@ -77,57 +77,58 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Document Text */}
-          <View style={styles.documentContainer}>
-            <Text style={styles.documentText}>{documentText}</Text>
-          </View>
-
-          {/* Signer Info */}
-          <View style={styles.signerInfo}>
-            <Text style={styles.signerLabel}>Firmato da:</Text>
-            <Text style={styles.signerName}>{signerName}</Text>
-            <Text style={styles.dateLabel}>
-              Data: {new Date().toLocaleDateString('it-IT', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </Text>
-          </View>
-
-          {/* Signature Area */}
-          <View style={styles.signatureSection}>
-            <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
-            <View style={styles.signatureBox}>
-              <ReactSignatureCanvas
-                ref={signatureRef}
-                onEnd={handleSignatureEnd}
-                canvasProps={{
-                  style: {
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: 'white',
-                  },
-                }}
-                backgroundColor="white"
-                penColor="black"
-              />
+          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer}>
+            {/* Document Text */}
+            <View style={styles.documentContainer}>
+              <Text style={styles.documentText}>{documentText}</Text>
             </View>
-            {!hasSignature && (
-              <Text style={styles.signatureHint}>
-                Usa il mouse o il dito per firmare
-              </Text>
-            )}
-          </View>
 
-          {/* Buttons */}
-          <View style={styles.buttons}>
-            <TouchableOpacity
-              style={styles.clearBtn}
-              onPress={handleClear}
-            >
+            {/* Signer Info */}
+            <View style={styles.signerInfo}>
+              <Text style={styles.signerLabel}>Firmato da:</Text>
+              <Text style={styles.signerName}>{signerName}</Text>
+              <Text style={styles.dateLabel}>
+                Data: {new Date().toLocaleDateString('it-IT', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </Text>
+            </View>
+
+            {/* Signature Area */}
+            <View style={styles.signatureSection}>
+              <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
+              <View style={styles.signatureBox}>
+                <ReactSignatureCanvas
+                  ref={signatureRef}
+                  onEnd={handleSignatureEnd}
+                  canvasProps={{
+                    style: {
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: 'white',
+                    },
+                  }}
+                  backgroundColor="white"
+                  penColor="black"
+                />
+              </View>
+              {!hasSignature && (
+                <Text style={styles.signatureHint}>
+                  Usa il mouse o il dito per firmare
+                </Text>
+              )}
+            </View>
+
+            {/* Buttons */}
+            <View style={styles.buttons}>
+              <TouchableOpacity
+                style={styles.clearBtn}
+                onPress={handleClear}
+              >
               <Text style={styles.clearBtnText}>Cancella</Text>
             </TouchableOpacity>
             <TouchableOpacity
