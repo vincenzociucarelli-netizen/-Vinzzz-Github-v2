@@ -49,6 +49,7 @@ export default function SettingsScreen() {
   const [stampSignature, setStampSignature] = useState<string | null>(null);
   const [societyEmail, setSocietyEmail] = useState('');
   const [societyPec, setSocietyPec] = useState('');
+  const [proEnabled, setProEnabled] = useState(false);
   const loadSettings = async () => {
     try {
       const response = await api.get('/settings/society');
@@ -72,6 +73,7 @@ export default function SettingsScreen() {
       setStampSignature(response.data.stamp_signature || null);
       setSocietyEmail(response.data.email || '');
       setSocietyPec(response.data.pec || '');
+      setProEnabled(response.data.pro_enabled || false);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
