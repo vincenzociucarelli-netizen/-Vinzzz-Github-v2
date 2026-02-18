@@ -192,17 +192,35 @@ export default function PrimeSquadrePage() {
   };
 
   const handleSetCompensation = async () => {
-    if (!selectedAthlete || !compensationAmount) return;
+    if (!selectedAthlete) return;
     
     try {
-      await api.post(`/prime-squadre/athletes/${selectedAthlete.id}/set-compensation?amount=${parseFloat(compensationAmount)}`);
-      showAlert('Successo', `Compenso impostato a €${compensationAmount}`);
+      await api.patch(`/prime-squadre/athletes/${selectedAthlete.id}`, {
+        monthly_compensation: parseFloat(configForm.monthly_compensation) || 0,
+        other_annual_compensation: parseFloat(configForm.other_annual_compensation) || 0,
+        contract_start_date: configForm.contract_start_date,
+        contract_end_date: configForm.contract_end_date,
+        fees_waived: configForm.fees_waived,
+      });
+      showAlert('Successo', 'Configurazione aggiornata');
       setSelectedAthlete(null);
-      setCompensationAmount('');
+      setShowConfigModal(false);
       loadData();
     } catch (error: any) {
-      showAlert('Errore', error.response?.data?.detail || 'Impossibile impostare compenso');
+      showAlert('Errore', error.response?.data?.detail || 'Impossibile aggiornare configurazione');
     }
+  };
+
+  const openEditConfig = (athlete: Athlete) => {
+    setSelectedAthlete(athlete);
+    setConfigForm({
+      monthly_compensation: String(athlete.monthly_compensation || 0),
+      other_annual_compensation: String(athlete.other_annual_compensation || 0),
+      contract_start_date: athlete.contract_start_date || '2025-09-01',
+      contract_end_date: athlete.contract_end_date || '2026-05-31',
+      fees_waived: athlete.fees_waived || false,
+    });
+    setShowConfigModal(true);
   };
 
   const filteredAllAthletes = allAthletes.filter(a =>
