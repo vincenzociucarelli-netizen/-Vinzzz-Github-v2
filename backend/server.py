@@ -5708,101 +5708,14 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         if not previous_exceeded:
             # This is the FIRST month exceeding €5.000 - generate the threshold document
             try:
-                from fpdf import FPDF
-                
-                threshold_pdf = FPDF()
-                threshold_pdf.add_page()
-                
-                # Header
-                threshold_pdf.set_font('Helvetica', 'B', 14)
-                threshold_pdf.multi_cell(0, 8, 'COMUNICAZIONE DI SUPERAMENTO DELLA SOGLIA')
-                threshold_pdf.multi_cell(0, 8, 'PREVIDENZIALE DI COMPENSI SPORTIVI')
-                threshold_pdf.multi_cell(0, 8, 'DILETTANTISTICI DI € 5.000,00 (Cinquemila/00)')
-                threshold_pdf.ln(10)
-                
-                # Coach info
-                threshold_pdf.set_font('Helvetica', '', 11)
-                threshold_pdf.multi_cell(0, 6, f"Il/La sottoscritto/a")
-                threshold_pdf.ln(3)
-                threshold_pdf.set_font('Helvetica', 'B', 11)
-                threshold_pdf.multi_cell(0, 6, f"Nome e Cognome: {coach.get('full_name', '')}")
-                threshold_pdf.multi_cell(0, 6, f"Codice Fiscale: {coach.get('fiscal_code', '')}")
-                threshold_pdf.ln(5)
-                
-                threshold_pdf.set_font('Helvetica', '', 11)
-                threshold_pdf.multi_cell(0, 6, f"in relazione al rapporto di collaborazione sportiva dilettantistica con")
-                threshold_pdf.set_font('Helvetica', 'B', 11)
-                threshold_pdf.multi_cell(0, 6, f"ASD/SSD {society_name}")
-                threshold_pdf.ln(8)
-                
-                # COMUNICA
-                threshold_pdf.set_font('Helvetica', 'B', 14)
-                threshold_pdf.cell(0, 8, 'COMUNICA', ln=True, align='C')
-                threshold_pdf.ln(5)
-                
-                threshold_pdf.set_font('Helvetica', '', 11)
-                threshold_pdf.multi_cell(0, 6, f"che, alla data odierna, il totale dei compensi percepiti per attivita sportiva dilettantistica nell'anno solare {request.year}, anche da altri enti sportivi, ha raggiunto e/o superato l'importo complessivo di € 5.000,00.")
-                threshold_pdf.ln(5)
-                
-                threshold_pdf.multi_cell(0, 6, "Il sottoscritto dichiara di essere a conoscenza che, dal momento del superamento della suddetta soglia, i compensi eccedenti sono soggetti agli obblighi previdenziali previsti dalla normativa vigente.")
-                threshold_pdf.ln(5)
-                
-                threshold_pdf.multi_cell(0, 6, "Si impegna inoltre a comunicare tempestivamente eventuali ulteriori variazioni della propria situazione.")
-                threshold_pdf.ln(15)
-                
-                # Signature
-                threshold_pdf.set_font('Helvetica', '', 11)
-                threshold_pdf.cell(0, 6, f"Luogo e data: {coach.get('city', 'Italia')}, {now.strftime('%d/%m/%Y')}", ln=True)
-                threshold_pdf.ln(5)
-                threshold_pdf.cell(0, 6, "Firma:", ln=True)
-                
-                # Add signature image with proper transparency handling
-                if request.signature_base64:
-                    try:
-                        sig_data = base64.b64decode(request.signature_base64.split(',')[1] if ',' in request.signature_base64 else request.signature_base64)
-                        
-                        # Process signature to handle transparency
-                        from PIL import Image as PILImage
-                        sig_pil = PILImage.open(io.BytesIO(sig_data))
-                        
-                        # Handle transparency - composite onto white background and normalize colors
-                        # Convert to RGB first regardless of mode
-                        if sig_pil.mode != 'RGB':
-                            if sig_pil.mode == 'RGBA':
-                                # Create white background
-                                background = PILImage.new('RGB', sig_pil.size, (255, 255, 255))
-                                # Paste using alpha as mask
-                                background.paste(sig_pil, mask=sig_pil.split()[3])
-                                sig_pil = background
-                            elif sig_pil.mode == 'P':
-                                sig_pil = sig_pil.convert('RGBA')
-                                background = PILImage.new('RGB', sig_pil.size, (255, 255, 255))
-                                background.paste(sig_pil, mask=sig_pil.split()[3])
-                                sig_pil = background
-                            else:
-                                sig_pil = sig_pil.convert('RGB')
-                        
-                        # Process to ensure black signature on white background
-                        pixels = sig_pil.load()
-                        width, height = sig_pil.size
-                        
-                        for y in range(height):
-                            for x in range(width):
-                                r, g, b = pixels[x, y]
-                                luminance = (r * 0.299 + g * 0.587 + b * 0.114)
-                                if luminance < 200:  # Dark pixel
-                                    pixels[x, y] = (0, 0, 0)
-                                else:
-                                    pixels[x, y] = (255, 255, 255)
-                        
-                        sig_temp = f"/tmp/threshold_sig_{coach_id}_{request.year}.png"
-                        sig_pil.save(sig_temp, format='PNG')
-                        threshold_pdf.image(sig_temp, x=20, w=50, h=20)
-                        os.remove(sig_temp)
-                    except Exception as sig_err:
-                        logging.error(f"Error adding signature to threshold doc: {sig_err}")
-                
-                threshold_pdf_bytes = bytes(threshold_pdf.output())
+                # Use new formatted PDF function
+                threshold_pdf_bytes = generate_threshold_5k_pdf(
+                    society_name=society_name,
+                    collaborator_name=coach.get('full_name', ''),
+                    collaborator_fiscal_code=coach.get('fiscal_code', ''),
+                    year=request.year,
+                    signature_base64=request.signature_base64
+                )
                 
                 # Save threshold document
                 threshold_doc_id = str(uuid.uuid4())
