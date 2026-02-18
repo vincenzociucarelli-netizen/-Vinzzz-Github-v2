@@ -158,6 +158,16 @@ export default function DirigenteProfile() {
       // Load profile photo
       setProfilePhoto(data.profile_photo || null);
       setProfilePhotoArtistic(data.profile_photo_artistic || null);
+      
+      // Load signed receipts
+      try {
+        const receiptsRes = await api.get(`/dirigente/${user?.id}/compensation`);
+        if (Array.isArray(receiptsRes.data)) {
+          setSignedReceipts(receiptsRes.data.filter((r: any) => r.receipt_signed));
+        }
+      } catch (err) {
+        console.log('No compensation data');
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
