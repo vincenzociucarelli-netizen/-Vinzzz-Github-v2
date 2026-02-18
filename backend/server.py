@@ -7611,7 +7611,8 @@ async def sign_dirigente_compensation_receipt(
                 collaborator_name=dirigente.get('full_name', 'Collaboratore'),
                 collaborator_fiscal_code=dirigente.get('fiscal_code', ''),
                 year=request.year,
-                signature_base64=request.signature_base64
+                signature_base64=request.signature_base64,
+                society_city=society_city
             )
             pdf_filename_prefix = "comunicazione_15k_dirigente"
             doc_type = "threshold_15000_communication"
@@ -7622,7 +7623,8 @@ async def sign_dirigente_compensation_receipt(
                 collaborator_name=dirigente.get('full_name', 'Collaboratore'),
                 collaborator_fiscal_code=dirigente.get('fiscal_code', ''),
                 year=request.year,
-                signature_base64=request.signature_base64
+                signature_base64=request.signature_base64,
+                society_city=society_city
             )
             pdf_filename_prefix = "comunicazione_5k_dirigente"
             doc_type = "threshold_5000_communication"
