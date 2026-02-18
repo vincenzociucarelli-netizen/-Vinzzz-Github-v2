@@ -211,6 +211,14 @@ export default function ImportCalendarScreen() {
     });
   };
 
+  const updateTeamMappingName = (index: number, newName: string) => {
+    setTeamMappings(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], federation_team_name: newName };
+      return updated;
+    });
+  };
+
   const addTeamMapping = () => {
     setTeamMappings(prev => [
       ...prev,
