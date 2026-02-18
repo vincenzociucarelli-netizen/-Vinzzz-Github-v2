@@ -3156,6 +3156,40 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  manualPaymentsSection: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  manualPaymentsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2E7D32',
+    marginBottom: 12,
+  },
+  manualPaymentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  manualPaymentInfo: {
+    flex: 1,
+  },
+  manualPaymentAmount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  manualPaymentDate: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
   deleteRequestButton: {
     flexDirection: 'row',
     alignItems: 'center',
