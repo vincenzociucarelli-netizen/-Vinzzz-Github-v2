@@ -30,30 +30,36 @@ class FIPAVScraper:
     
     BASE_URL = "http://{region}.portalefipav.net/risultati-classifiche.aspx"
     
-    # Region codes
+    # Region codes and their ComitatoId
     REGIONS = {
-        "umbria": "umbria",
-        "lazio": "lazio",
-        "toscana": "toscana",
-        "emilia": "emilia",
-        "lombardia": "lombardia",
-        "piemonte": "piemonte",
-        "veneto": "veneto",
-        "marche": "marche",
-        "abruzzo": "abruzzo",
-        "campania": "campania",
-        "puglia": "puglia",
-        "calabria": "calabria",
-        "sicilia": "sicilia",
-        "sardegna": "sardegna",
-        "liguria": "liguria",
-        "friuli": "friuli",
-        "trentino": "trentino",
+        "umbria": {"id": "umbria", "comitato_id": "30"},
+        "lazio": {"id": "lazio", "comitato_id": "12"},
+        "toscana": {"id": "toscana", "comitato_id": "29"},
+        "emilia": {"id": "emilia", "comitato_id": "8"},
+        "lombardia": {"id": "lombardia", "comitato_id": "14"},
+        "piemonte": {"id": "piemonte", "comitato_id": "21"},
+        "veneto": {"id": "veneto", "comitato_id": "32"},
+        "marche": {"id": "marche", "comitato_id": "16"},
+        "abruzzo": {"id": "abruzzo", "comitato_id": "1"},
+        "campania": {"id": "campania", "comitato_id": "5"},
+        "puglia": {"id": "puglia", "comitato_id": "24"},
+        "calabria": {"id": "calabria", "comitato_id": "4"},
+        "sicilia": {"id": "sicilia", "comitato_id": "27"},
+        "sardegna": {"id": "sardegna", "comitato_id": "26"},
+        "liguria": {"id": "liguria", "comitato_id": "13"},
+        "friuli": {"id": "friuli", "comitato_id": "10"},
+        "trentino": {"id": "trentino", "comitato_id": "28"},
+    }
+    
+    HEADERS = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
     
     def __init__(self, region: str = "umbria"):
         self.region = region.lower()
         self.base_url = self.BASE_URL.format(region=self.region)
+        region_data = self.REGIONS.get(self.region, {"comitato_id": "30"})
+        self.comitato_id = region_data.get("comitato_id", "30")
     
     async def get_seasons(self) -> List[Dict]:
         """Get available seasons from the dropdown"""
