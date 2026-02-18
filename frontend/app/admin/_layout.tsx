@@ -53,6 +53,7 @@ export default function AdminLayout() {
       <Stack.Screen name="athlete-search" />
       <Stack.Screen name="attendances" />
       <Stack.Screen name="prime-squadre" />
+      <Stack.Screen name="prime-squadre/[id]" />
     </Stack>
   );
 }
