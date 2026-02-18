@@ -147,6 +147,7 @@ export default function SettingsScreen() {
         stamp_signature: stampSignature,
         email: societyEmail,
         pec: societyPec,
+        pro_enabled: proEnabled,
       });
       showAlert('Successo', 'Impostazioni salvate con successo');
     } catch (error: any) {
