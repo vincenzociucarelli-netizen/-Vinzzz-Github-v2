@@ -852,52 +852,87 @@ export default function CoachProfile() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📅 Registro Quietanze</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-              {getContractMonths().map((month) => {
-                const [year, monthNum] = month.key.split('-');
-                const yearInt = parseInt(year);
-                const monthInt = parseInt(monthNum);
-                const receipt = signedReceipts.find(r => r.year === yearInt && r.month === monthInt);
-                const isSigned = receipt?.receipt_signed === true;
-                const exceeded5k = receipt?.exceeded_5000 === true;
-                const exceeded15k = receipt?.exceeded_15000 === true;
+              {(() => {
+                // Find first month where each threshold was exceeded
+                const sortedReceipts = [...signedReceipts]
+                  .filter(r => r.receipt_signed)
+                  .sort((a, b) => {
+                    if (a.year !== b.year) return a.year - b.year;
+                    return a.month - b.month;
+                  });
                 
-                // Check if month is in the future
-                const now = new Date();
-                const currentYearActual = now.getFullYear();
-                const currentMonthActual = now.getMonth() + 1;
-                const isFuture = (yearInt > currentYearActual) || 
-                                 (yearInt === currentYearActual && monthInt > currentMonthActual);
+                let first5k: { year: number, month: number } | null = null;
+                let first15k: { year: number, month: number } | null = null;
                 
-                return (
-                  <View 
-                    key={month.key} 
-                    style={{
-                      backgroundColor: exceeded15k ? '#FFF3E0' : exceeded5k ? '#FFF8E1' : isSigned ? '#E8F5E9' : isFuture ? '#FAFAFA' : '#F5F5F5',
-                      borderRadius: 6,
-                      paddingVertical: 6,
-                      paddingHorizontal: 10,
-                      borderWidth: exceeded15k ? 2 : exceeded5k ? 2 : isSigned ? 2 : 1,
-                      borderColor: exceeded15k ? '#E65100' : exceeded5k ? '#F9A825' : isSigned ? '#4CAF50' : isFuture ? '#E8E8E8' : '#E0E0E0',
-                      minWidth: 85,
-                      alignItems: 'center',
-                      opacity: isFuture ? 0.6 : 1,
-                    }}
-                  >
-                    <Text style={{ fontSize: 11, color: isFuture ? '#AAA' : '#666', fontWeight: '500' }}>
-                      {month.label.split(' ')[0].substring(0, 3)} {month.label.split(' ')[1]}
-                    </Text>
-                    {exceeded15k ? (
-                      <Text style={{ fontSize: 11, color: '#E65100', fontWeight: 'bold' }}>&gt;15K</Text>
-                    ) : exceeded5k ? (
-                      <Text style={{ fontSize: 11, color: '#F9A825', fontWeight: 'bold' }}>&gt;5K</Text>
-                    ) : (
-                      <Text style={{ fontSize: 12, color: isSigned ? '#2E7D32' : isFuture ? '#CCC' : '#999', fontWeight: '600' }}>
-                        {isSigned ? '✓' : isFuture ? '○' : '-'}
+                for (const r of sortedReceipts) {
+                  if (r.exceeded_5000 && !first5k) {
+                    first5k = { year: r.year, month: r.month };
+                  }
+                  if (r.exceeded_15000 && !first15k) {
+                    first15k = { year: r.year, month: r.month };
+                  }
+                }
+                
+                const isAfterThreshold = (yearInt: number, monthInt: number, threshold: { year: number, month: number } | null) => {
+                  if (!threshold) return false;
+                  if (yearInt > threshold.year) return true;
+                  if (yearInt === threshold.year && monthInt >= threshold.month) return true;
+                  return false;
+                };
+                
+                return getContractMonths().map((month) => {
+                  const [year, monthNum] = month.key.split('-');
+                  const yearInt = parseInt(year);
+                  const monthInt = parseInt(monthNum);
+                  const receipt = signedReceipts.find(r => r.year === yearInt && r.month === monthInt);
+                  const isSigned = receipt?.receipt_signed === true;
+                  
+                  // Check if THIS is the threshold month (for badge)
+                  const isThreshold5k = receipt?.exceeded_5000 === true;
+                  const isThreshold15k = receipt?.exceeded_15000 === true;
+                  
+                  // Check if month is AFTER threshold (for highlighting)
+                  const isAfter5k = isSigned && isAfterThreshold(yearInt, monthInt, first5k);
+                  const isAfter15k = isSigned && isAfterThreshold(yearInt, monthInt, first15k);
+                  
+                  // Check if month is in the future
+                  const now = new Date();
+                  const currentYearActual = now.getFullYear();
+                  const currentMonthActual = now.getMonth() + 1;
+                  const isFuture = (yearInt > currentYearActual) || 
+                                   (yearInt === currentYearActual && monthInt > currentMonthActual);
+                  
+                  return (
+                    <View 
+                      key={month.key} 
+                      style={{
+                        backgroundColor: isAfter15k ? '#FFF3E0' : isAfter5k ? '#FFF8E1' : isSigned ? '#E8F5E9' : isFuture ? '#FAFAFA' : '#F5F5F5',
+                        borderRadius: 6,
+                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                        borderWidth: isAfter15k ? 2 : isAfter5k ? 2 : isSigned ? 2 : 1,
+                        borderColor: isAfter15k ? '#E65100' : isAfter5k ? '#F9A825' : isSigned ? '#4CAF50' : isFuture ? '#E8E8E8' : '#E0E0E0',
+                        minWidth: 85,
+                        alignItems: 'center',
+                        opacity: isFuture ? 0.6 : 1,
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, color: isFuture ? '#AAA' : '#666', fontWeight: '500' }}>
+                        {month.label.split(' ')[0].substring(0, 3)} {month.label.split(' ')[1]}
                       </Text>
-                    )}
-                  </View>
-                );
-              })}
+                      {isThreshold15k ? (
+                        <Text style={{ fontSize: 11, color: '#E65100', fontWeight: 'bold' }}>&gt;15K</Text>
+                      ) : isThreshold5k ? (
+                        <Text style={{ fontSize: 11, color: '#F9A825', fontWeight: 'bold' }}>&gt;5K</Text>
+                      ) : (
+                        <Text style={{ fontSize: 12, color: isSigned ? (isAfter15k ? '#E65100' : isAfter5k ? '#F9A825' : '#2E7D32') : isFuture ? '#CCC' : '#999', fontWeight: '600' }}>
+                          {isSigned ? '✓' : isFuture ? '○' : '-'}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                });
+              })()}
             </View>
           </View>
         )}
