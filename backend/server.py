@@ -5701,7 +5701,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
     
     # Check if this is the FIRST time exceeding €5.000 threshold this year
     # Generate and send "COMUNICAZIONE DI SUPERAMENTO DELLA SOGLIA" document
-    if request.exceeded_5000:
+    if first_time_exceeded_5000:
         # Check if there are previous records this year that already exceeded €5.000
         previous_exceeded = await db.coach_compensations.find_one({
             "coach_id": coach_id,
