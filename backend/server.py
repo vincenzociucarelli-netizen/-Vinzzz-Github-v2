@@ -1616,6 +1616,7 @@ class SocietySettingsUpdate(BaseModel):
     president_name: Optional[str] = None
     stamp_signature: Optional[str] = None  # Base64 encoded image of stamp and signature
     email: Optional[str] = None  # Society email for notifications
+    pec: Optional[str] = None  # PEC (Posta Elettronica Certificata)
 
 @api_router.get("/settings/society")
 async def get_society_settings():
@@ -1659,7 +1660,8 @@ async def get_society_settings():
         "phone2": settings.get("phone2"),
         "president_name": settings.get("president_name"),
         "stamp_signature": settings.get("stamp_signature"),
-        "email": settings.get("email")
+        "email": settings.get("email"),
+        "pec": settings.get("pec")
     }
 
 @api_router.patch("/settings/society")
@@ -1706,6 +1708,8 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
         update_dict["stamp_signature"] = data.stamp_signature
     if data.email is not None:
         update_dict["email"] = data.email
+    if data.pec is not None:
+        update_dict["pec"] = data.pec
     
     if update_dict:
         await db.settings.update_one(
