@@ -642,7 +642,7 @@ export default function AdminDashboard() {
           <TouchableOpacity
             style={[styles.menuCard, { opacity: 0.7, borderWidth: 1, borderColor: '#FFD700', borderStyle: 'dashed' }]}
             onPress={() => {
-              const message = `🏆 PRIME SQUADRE\n\nGestisci i compensi sportivi per gli atleti delle prime squadre:\n\n• Quietanze mensili con firma digitale\n• Gestione soglie fiscali €5K/€15K\n• PDF automatici e invio email\n• Atleti promossi dal vivaio + nuovi arrivi\n\n━━━━━━━━━━━━━━━━━\n\n📅 Questa funzionalità sarà disponibile a pagamento dal 1° Luglio 2026.\n\nPer maggiori informazioni contatta l'assistenza.`;
+              const message = `🏆 PRIME SQUADRE\n\nGestisci i compensi sportivi per atleti e collaboratori delle serie maggiori:\n\n• Quietanze mensili con firma digitale\n• Gestione soglie fiscali €5K/€15K\n• PDF automatici e invio email\n• Atleti promossi dal vivaio + nuovi arrivi\n• Collaboratori (fisioterapisti, massaggiatori, scout, etc.)\n\n━━━━━━━━━━━━━━━━━\n\n📅 Questa funzionalità sarà disponibile a pagamento dal 1° Luglio 2026.\n\nPer maggiori informazioni contatta l'assistenza.`;
               
               if (Platform.OS === 'web') {
                 window.alert(message);
@@ -656,7 +656,7 @@ export default function AdminDashboard() {
             </View>
             <View style={styles.menuCardContent}>
               <Text style={[styles.menuCardTitle, { color: '#B8860B' }]}>Prime Squadre</Text>
-              <Text style={styles.menuCardSubtitle}>Compensi atleti serie A/B/C/D</Text>
+              <Text style={styles.menuCardSubtitle}>Compensi atleti e collaboratori serie maggiori</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={{ backgroundColor: '#FFD700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
