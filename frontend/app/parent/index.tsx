@@ -705,10 +705,18 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
         visible={trialModalVisible}
         animationType="fade"
         transparent={true}
-        onRequestClose={() => {}} // Cannot dismiss by back button
+        onRequestClose={() => setTrialModalVisible(false)}
       >
         <View style={styles.trialModalOverlay}>
           <View style={styles.trialModalContent}>
+            {/* Close button */}
+            <TouchableOpacity 
+              style={styles.trialCloseBtn}
+              onPress={() => setTrialModalVisible(false)}
+            >
+              <Text style={styles.trialCloseBtnText}>✕</Text>
+            </TouchableOpacity>
+            
             <View style={styles.trialModalHeader}>
               <Ionicons name="time-outline" size={48} color="#FF9500" />
               <Text style={styles.trialModalTitle}>Periodo di Prova Terminato</Text>
@@ -751,6 +759,14 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
                 <Text style={styles.trialProcessingText}>Elaborazione in corso...</Text>
               </View>
             )}
+            
+            {/* Decide later button */}
+            <TouchableOpacity 
+              style={styles.trialDecideLaterBtn}
+              onPress={() => setTrialModalVisible(false)}
+            >
+              <Text style={styles.trialDecideLaterText}>Decidi dopo</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
