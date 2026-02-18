@@ -6969,7 +6969,8 @@ def generate_threshold_15k_pdf(
     collaborator_name: str,
     collaborator_fiscal_code: str,
     year: int,
-    signature_base64: str
+    signature_base64: str,
+    society_city: str = "Perugia"
 ) -> bytes:
     """Generate €15,000 threshold communication PDF"""
     if not HAS_PDF_GENERATION:
@@ -6980,6 +6981,16 @@ def generate_threshold_15k_pdf(
     width, height = A4
     
     timestamp = datetime.now().strftime("%d/%m/%Y")
+    
+    # Invert name to "COGNOME NOME" format
+    name_parts = collaborator_name.strip().split()
+    if len(name_parts) >= 2:
+        # Assume last word is surname, rest is name
+        surname = name_parts[-1]
+        first_names = " ".join(name_parts[:-1])
+        formatted_name = f"{surname} {first_names}"
+    else:
+        formatted_name = collaborator_name
     
     # Title
     c.setFont("Helvetica-Bold", 12)
@@ -6994,7 +7005,7 @@ def generate_threshold_15k_pdf(
     c.drawString(2*cm, y, "Il/La sottoscritto/a")
     
     y -= 0.8*cm
-    c.drawString(2*cm, y, f"Nome e Cognome: {collaborator_name}")
+    c.drawString(2*cm, y, f"Cognome e Nome: {formatted_name}")
     
     y -= 0.6*cm
     c.drawString(2*cm, y, f"Codice Fiscale: {collaborator_fiscal_code or '________________________'}")
