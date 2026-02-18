@@ -212,6 +212,33 @@ class CoachCompensation(BaseModel):
     exceeded_15000_declaration_id: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+class DirigenteCompensation(BaseModel):
+    """Monthly compensation record for dirigenti (directors)"""
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    dirigente_id: str
+    month: int  # 1-12
+    year: int
+    amount_gross: float  # Compenso lordo
+    amount_net: float  # Netto corrisposto (= lordo se sotto €5.000)
+    deductions: float = 0.0  # Ritenute (se applicate)
+    received: bool = False  # Flag pagamento ricevuto
+    received_date: Optional[datetime] = None
+    # Quietanza firmata
+    receipt_signed: bool = False  # Quietanza firmata
+    receipt_signature_base64: Optional[str] = None
+    receipt_document_id: Optional[str] = None  # ID del documento PDF generato
+    receipt_signed_date: Optional[datetime] = None
+    # Soglie superate
+    exceeded_5000: bool = False  # Flag superamento €5.000 annuali
+    exceeded_5000_date: Optional[datetime] = None
+    exceeded_5000_declaration_id: Optional[str] = None  # Documento dichiarazione
+    exceeded_15000: bool = False  # Flag superamento €15.000 annuali
+    exceeded_15000_date: Optional[datetime] = None
+    exceeded_15000_declaration_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+
 class ThresholdDeclaration(BaseModel):
     """Dichiarazione di superamento soglia €5.000 o €15.000"""
     id: str = Field(default_factory=lambda: str(ObjectId()))
