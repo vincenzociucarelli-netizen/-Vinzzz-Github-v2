@@ -8,7 +8,22 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import SignatureCanvas from 'react-native-signature-canvas';
+
+// Web-only import
+let WebSignatureCanvas: any = null;
+if (Platform.OS === 'web') {
+  WebSignatureCanvas = require('react-signature-canvas').default;
+}
+
+// Mobile-only import  
+let MobileSignatureCanvas: any = null;
+if (Platform.OS !== 'web') {
+  try {
+    MobileSignatureCanvas = require('react-native-signature-canvas').default;
+  } catch (e) {
+    console.log('react-native-signature-canvas not available');
+  }
+}
 
 interface SignaturePadProps {
   visible: boolean;
@@ -32,7 +47,11 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
   const [hasSignature, setHasSignature] = useState(false);
 
   const handleClear = () => {
-    signatureRef.current?.clearSignature();
+    if (Platform.OS === 'web') {
+      signatureRef.current?.clear();
+    } else {
+      signatureRef.current?.clearSignature();
+    }
     setHasSignature(false);
   };
 
@@ -41,7 +60,16 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
       return;
     }
     
-    signatureRef.current?.readSignature();
+    if (Platform.OS === 'web') {
+      // Web: get signature directly
+      const signature = signatureRef.current?.toDataURL('image/png');
+      if (signature) {
+        await handleSignatureData(signature);
+      }
+    } else {
+      // Mobile: trigger read
+      signatureRef.current?.readSignature();
+    }
   };
 
   const handleSignatureEnd = () => {
@@ -65,7 +93,17 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
     }
   };
 
-  const webStyle = `.m-signature-pad {
+  // Web signature canvas style
+  const webCanvasStyle = {
+    width: '100%',
+    height: '100%',
+    border: '1px solid #ccc',
+    borderRadius: 8,
+    backgroundColor: 'white',
+  };
+
+  // Mobile webStyle
+  const mobileWebStyle = `.m-signature-pad {
     box-shadow: none;
     border: none;
     width: 100%;
@@ -87,6 +125,44 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
     width: 100% !important;
     height: 100% !important;
   }`;
+
+  const renderSignatureCanvas = () => {
+    if (Platform.OS === 'web' && WebSignatureCanvas) {
+      return (
+        <WebSignatureCanvas
+          ref={signatureRef}
+          onEnd={handleSignatureEnd}
+          canvasProps={{
+            style: webCanvasStyle,
+          }}
+          backgroundColor="white"
+          penColor="black"
+        />
+      );
+    } else if (MobileSignatureCanvas) {
+      return (
+        <MobileSignatureCanvas
+          ref={signatureRef}
+          onEnd={handleSignatureEnd}
+          onOK={handleSignatureData}
+          webStyle={mobileWebStyle}
+          backgroundColor="white"
+          penColor="black"
+          dotSize={2}
+          minWidth={1}
+          maxWidth={3}
+        />
+      );
+    } else {
+      return (
+        <View style={styles.fallbackContainer}>
+          <Text style={styles.fallbackText}>
+            Firma non disponibile su questa piattaforma
+          </Text>
+        </View>
+      );
+    }
+  };
 
   return (
     <Modal
@@ -129,30 +205,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
           <View style={styles.signatureSection}>
             <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
             <View style={styles.signatureBox}>
-              {Platform.OS === 'web' ? (
-                <SignatureCanvas
-                  ref={signatureRef}
-                  onEnd={handleSignatureEnd}
-                  onOK={handleSignatureData}
-                  webStyle={webStyle}
-                  backgroundColor="white"
-                  penColor="black"
-                  dotSize={2}
-                  minWidth={1}
-                  maxWidth={3}
-                />
-              ) : (
-                <SignatureCanvas
-                  ref={signatureRef}
-                  onEnd={handleSignatureEnd}
-                  onOK={handleSignatureData}
-                  backgroundColor="white"
-                  penColor="black"
-                  dotSize={2}
-                  minWidth={1}
-                  maxWidth={3}
-                />
-              )}
+              {renderSignatureCanvas()}
             </View>
             {!hasSignature && (
               <Text style={styles.signatureHint}>
@@ -180,16 +233,10 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
               {signing ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={styles.confirmBtnText}>Conferma e Firma</Text>
+                <Text style={styles.confirmBtnText}>Conferma Firma</Text>
               )}
             </TouchableOpacity>
           </View>
-
-          {/* Legal Notice */}
-          <Text style={styles.legalNotice}>
-            Firmando questo documento confermi di aver letto e accettato il contenuto.
-            Una copia del documento firmato verrà inviata via email.
-          </Text>
         </View>
       </View>
     </Modal>
@@ -199,27 +246,27 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
   },
   container: {
     backgroundColor: '#fff',
     borderRadius: 16,
     width: '100%',
-    maxWidth: 600,
-    maxHeight: '95%',
-    padding: 20,
+    maxWidth: 500,
+    maxHeight: '90%',
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 12,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#f9f9f9',
   },
   title: {
     fontSize: 18,
@@ -228,29 +275,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   closeBtn: {
-    padding: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   closeBtnText: {
-    fontSize: 20,
+    fontSize: 16,
     color: '#666',
+    fontWeight: 'bold',
   },
   documentContainer: {
-    backgroundColor: '#f8f8f8',
     padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-    maxHeight: 150,
+    backgroundColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   documentText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#333',
     lineHeight: 20,
   },
   signerInfo: {
-    backgroundColor: '#E3F2FD',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   signerLabel: {
     fontSize: 12,
@@ -258,17 +309,17 @@ const styles = StyleSheet.create({
   },
   signerName: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1976D2',
-    marginTop: 2,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 4,
   },
   dateLabel: {
     fontSize: 12,
     color: '#666',
-    marginTop: 4,
+    marginTop: 8,
   },
   signatureSection: {
-    marginBottom: 16,
+    padding: 16,
   },
   signatureLabel: {
     fontSize: 14,
@@ -278,55 +329,63 @@ const styles = StyleSheet.create({
   },
   signatureBox: {
     height: 150,
-    borderWidth: 2,
-    borderColor: '#007AFF',
+    borderWidth: 1,
+    borderColor: '#ccc',
     borderRadius: 8,
-    borderStyle: 'dashed',
-    backgroundColor: '#fff',
     overflow: 'hidden',
+    backgroundColor: '#fff',
   },
   signatureHint: {
     fontSize: 12,
     color: '#999',
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   buttons: {
     flexDirection: 'row',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
     gap: 12,
-    marginBottom: 12,
   },
   clearBtn: {
     flex: 1,
-    padding: 14,
-    backgroundColor: '#f5f5f5',
+    paddingVertical: 14,
     borderRadius: 10,
+    backgroundColor: '#f0f0f0',
     alignItems: 'center',
   },
   clearBtnText: {
     fontSize: 16,
+    fontWeight: '600',
     color: '#666',
   },
   confirmBtn: {
     flex: 2,
-    padding: 14,
-    backgroundColor: '#34C759',
+    paddingVertical: 14,
     borderRadius: 10,
+    backgroundColor: '#34C759',
     alignItems: 'center',
   },
   confirmBtnText: {
     fontSize: 16,
-    color: '#fff',
     fontWeight: '600',
+    color: '#fff',
   },
   disabledBtn: {
-    opacity: 0.5,
+    backgroundColor: '#ccc',
   },
-  legalNotice: {
-    fontSize: 11,
+  fallbackContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  fallbackText: {
+    fontSize: 14,
     color: '#999',
     textAlign: 'center',
-    lineHeight: 16,
   },
 });
 
