@@ -740,10 +740,10 @@ export default function ImportCalendarScreen() {
           
           <TouchableOpacity
             style={styles.button}
-            onPress={() => router.push('/admin/calendar')}
+            onPress={() => router.push('/admin/matches')}
           >
             <Ionicons name="calendar" size={20} color="#fff" />
-            <Text style={styles.buttonText}>Vai al Calendario</Text>
+            <Text style={styles.buttonText}>Vai alle Partite</Text>
           </TouchableOpacity>
         </View>
       </View>
