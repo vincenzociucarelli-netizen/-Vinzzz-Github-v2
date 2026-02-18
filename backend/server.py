@@ -5628,10 +5628,8 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             <p><strong>Riepilogo:</strong></p>
             <ul>
             <li>Compenso lordo: € {request.amount_gross:.2f}</li>
-            <li>Ritenute: € {deductions:.2f}</li>
-            <li>Netto corrisposto: € {amount_net:.2f}</li>
+            <li>Totale annuo progressivo: € {new_total:.2f}</li>
             </ul>
-            <p>Totale annuo progressivo: € {new_total:.2f}</p>
             <hr>
             <p><em>Documento generato automaticamente da RegistraTEAM</em></p>
             </body>
@@ -5671,7 +5669,6 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             <p><strong>Dettagli:</strong></p>
             <ul>
             <li>Compenso lordo: € {request.amount_gross:.2f}</li>
-            <li>Netto corrisposto: € {amount_net:.2f}</li>
             <li>Totale annuo progressivo: € {new_total:.2f}</li>
             </ul>
             {'<p style="color: orange;"><strong>⚠️ ATTENZIONE: Il collaboratore ha superato la soglia di €5.000</strong></p>' if first_time_exceeded_5000 else ''}
