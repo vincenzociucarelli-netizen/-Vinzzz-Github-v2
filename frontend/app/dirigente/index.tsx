@@ -253,10 +253,28 @@ export default function DirigenteIndex() {
           <View style={styles.profileInfo}>
             <Text style={styles.profileTitle}>Il Mio Profilo</Text>
             <Text style={styles.profileDescription}>
-              Gestisci dati personali e compensi
+              Gestisci dati personali e documento
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#8E44AD" />
+        </TouchableOpacity>
+
+        {/* Compensation Card */}
+        <TouchableOpacity
+          style={[styles.profileCard, { marginTop: 12, borderColor: '#27AE60', backgroundColor: '#F0FFF4' }]}
+          onPress={() => router.push('/dirigente/compensation')}
+          data-testid="compensation-card"
+        >
+          <View style={[styles.profileIcon, { backgroundColor: '#E8F8F0' }]}>
+            <Ionicons name="receipt" size={28} color="#27AE60" />
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={[styles.profileTitle, { color: '#27AE60' }]}>Compensi Sportivi</Text>
+            <Text style={styles.profileDescription}>
+              Firma quietanze mensili e gestisci soglie fiscali
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#27AE60" />
         </TouchableOpacity>
 
         {/* Teams Section */}
