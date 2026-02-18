@@ -577,16 +577,24 @@ export default function CoachCompensation() {
     const exceeded5k = record?.exceeded_5000 === true;
     const exceeded15k = record?.exceeded_15000 === true;
     
+    // Determine the card style based on threshold status
+    const getCardStyle = () => {
+      if (status === 'signed') {
+        if (exceeded15k) return styles.monthCardSigned15k;
+        if (exceeded5k) return styles.monthCardSigned5k;
+        return styles.monthCardSigned;
+      }
+      if (status === 'future') return styles.monthCardFuture;
+      if (status === 'blocked') return styles.monthCardBlocked;
+      return null;
+    };
+    
     return (
       <TouchableOpacity
         key={`${displayYear}-${month}`}
         style={[
           styles.monthCard,
-          status === 'signed' && styles.monthCardSigned,
-          status === 'future' && styles.monthCardFuture,
-          status === 'blocked' && styles.monthCardBlocked,
-          exceeded15k && { borderWidth: 3, borderColor: '#E65100' },
-          exceeded5k && !exceeded15k && { borderWidth: 3, borderColor: '#F9A825' },
+          getCardStyle(),
         ]}
         onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
         disabled={status === 'future'}
@@ -1173,6 +1181,14 @@ const styles = StyleSheet.create({
   monthCardSigned: {
     borderColor: '#34C759',
     backgroundColor: '#F0FFF4',
+  },
+  monthCardSigned5k: {
+    borderColor: '#F9A825',
+    backgroundColor: '#FFF8E1',
+  },
+  monthCardSigned15k: {
+    borderColor: '#E65100',
+    backgroundColor: '#FFF3E0',
   },
   monthCardFuture: {
     borderColor: '#ddd',
