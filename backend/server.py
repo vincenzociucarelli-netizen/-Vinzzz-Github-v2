@@ -7445,8 +7445,11 @@ async def set_dirigente_compensation(dirigente_id: str, amount: float, current_u
 @api_router.post("/dirigente/{dirigente_id}/accept-compensation")
 async def accept_dirigente_compensation(dirigente_id: str, current_user = Depends(get_current_user)):
     """Dirigente accepts the compensation offer"""
-    if current_user["role"] != UserRole.VIEWER or current_user["id"] != dirigente_id:
+    # Allow both VIEWER (dirigente) and ADMIN to accept their own compensation
+    if current_user["id"] != dirigente_id:
         raise HTTPException(status_code=403, detail="Solo il dirigente può accettare il proprio compenso")
+    if current_user["role"] not in [UserRole.VIEWER, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Update dirigente record
     now = datetime.utcnow()
