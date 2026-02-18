@@ -640,33 +640,56 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
-          {/* Prime Squadre - Premium Feature (Locked) */}
-          <TouchableOpacity
-            style={[styles.menuCard, { opacity: 0.7, borderWidth: 1, borderColor: '#FFD700', borderStyle: 'dashed' }]}
-            onPress={() => {
-              const message = `🏆 PRIME SQUADRE\n\nGestisci atleti e collaboratori delle serie maggiori:\n\n📋 FUNZIONALITÀ BASE:\n• Certificati medici\n• Luogo, giorno ed ora di allenamento\n• Calendario gare\n\n💰 FUNZIONALITÀ COMPENSI ATLETI E COLLABORATORI:\n• Quietanze mensili con firma digitale\n• Rilevamento superamento soglie €5K/€15K\n• PDF automatici e invio email\n• Collaboratori (scout, massaggiatori, segnapunti, etc.)\n\n👥 LIMITE: fino a 50 tesserati\n(Per società con più di 50 tesserati sono disponibili lotti aggiuntivi)\n\n━━━━━━━━━━━━━━━━━\n\n📅 Disponibile a pagamento dal 1° Luglio 2026.\n\nPer info: assistenza@registrateam.it`;
-              
-              if (Platform.OS === 'web') {
-                window.alert(message);
-              } else {
-                Alert.alert('🏆 Prime Squadre', message, [{ text: 'Ho capito', style: 'default' }]);
-              }
-            }}
-          >
-            <View style={[styles.menuIcon, { backgroundColor: '#FFF8E1' }]}>
-              <Text style={{ fontSize: 26 }}>🏆</Text>
-            </View>
-            <View style={styles.menuCardContent}>
-              <Text style={[styles.menuCardTitle, { color: '#B8860B' }]}>Prime Squadre</Text>
-              <Text style={styles.menuCardSubtitle}>Compensi atleti e collaboratori serie maggiori</Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ backgroundColor: '#FFD700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
-                <Text style={{ fontSize: 10, color: '#333', fontWeight: 'bold' }}>PREMIUM</Text>
+          {/* Prime Squadre - Premium Feature */}
+          {proEnabled ? (
+            // Versione sbloccata - va alla pagina Prime Squadre
+            <TouchableOpacity
+              style={[styles.menuCard, { borderWidth: 2, borderColor: '#FFD700' }]}
+              onPress={() => router.push('/admin/prime-squadre')}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#FFF8E1' }]}>
+                <Text style={{ fontSize: 26 }}>🏆</Text>
               </View>
-              <Text style={{ fontSize: 16 }}>🔒</Text>
-            </View>
-          </TouchableOpacity>
+              <View style={styles.menuCardContent}>
+                <Text style={[styles.menuCardTitle, { color: '#B8860B' }]}>Prime Squadre</Text>
+                <Text style={styles.menuCardSubtitle}>Compensi atleti e collaboratori serie maggiori</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ backgroundColor: '#4CAF50', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
+                  <Text style={{ fontSize: 10, color: '#fff', fontWeight: 'bold' }}>ATTIVO</Text>
+                </View>
+                <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            // Versione bloccata - mostra popup informativo
+            <TouchableOpacity
+              style={[styles.menuCard, { opacity: 0.7, borderWidth: 1, borderColor: '#FFD700', borderStyle: 'dashed' }]}
+              onPress={() => {
+                const message = `🏆 PRIME SQUADRE\n\nGestisci atleti e collaboratori delle serie maggiori:\n\n📋 FUNZIONALITÀ BASE:\n• Certificati medici\n• Luogo, giorno ed ora di allenamento\n• Calendario gare\n\n💰 FUNZIONALITÀ COMPENSI ATLETI E COLLABORATORI:\n• Quietanze mensili con firma digitale\n• Rilevamento superamento soglie €5K/€15K\n• PDF automatici e invio email\n• Collaboratori (scout, massaggiatori, segnapunti, etc.)\n\n👥 LIMITE: fino a 50 tesserati\n(Per società con più di 50 tesserati sono disponibili lotti aggiuntivi)\n\n━━━━━━━━━━━━━━━━━\n\n📅 Disponibile a pagamento dal 1° Luglio 2026.\n\nPer info: assistenza@registrateam.it`;
+                
+                if (Platform.OS === 'web') {
+                  window.alert(message);
+                } else {
+                  Alert.alert('🏆 Prime Squadre', message, [{ text: 'Ho capito', style: 'default' }]);
+                }
+              }}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#FFF8E1' }]}>
+                <Text style={{ fontSize: 26 }}>🏆</Text>
+              </View>
+              <View style={styles.menuCardContent}>
+                <Text style={[styles.menuCardTitle, { color: '#B8860B' }]}>Prime Squadre</Text>
+                <Text style={styles.menuCardSubtitle}>Compensi atleti e collaboratori serie maggiori</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ backgroundColor: '#FFD700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
+                  <Text style={{ fontSize: 10, color: '#333', fontWeight: 'bold' }}>PREMIUM</Text>
+                </View>
+                <Text style={{ fontSize: 16 }}>🔒</Text>
+              </View>
+            </TouchableOpacity>
+          )}
 
           {/* Ricerca Avanzata Atleti */}
           <TouchableOpacity
