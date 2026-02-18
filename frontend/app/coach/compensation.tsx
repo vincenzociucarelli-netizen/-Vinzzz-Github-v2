@@ -505,6 +505,10 @@ export default function CoachCompensation() {
     const record = records.find(r => r.month === month && r.year === displayYear);
     const monthlyAmount = profile?.monthly_compensation || 0;
     
+    // Check if threshold was exceeded in this month
+    const exceeded5k = record?.exceeded_5000 === true;
+    const exceeded15k = record?.exceeded_15000 === true;
+    
     return (
       <TouchableOpacity
         key={`${displayYear}-${month}`}
@@ -513,6 +517,8 @@ export default function CoachCompensation() {
           status === 'signed' && styles.monthCardSigned,
           status === 'future' && styles.monthCardFuture,
           status === 'blocked' && styles.monthCardBlocked,
+          exceeded15k && { borderWidth: 2, borderColor: '#E65100' },
+          exceeded5k && !exceeded15k && { borderWidth: 2, borderColor: '#F9A825' },
         ]}
         onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
         disabled={status === 'future'}
@@ -520,15 +526,27 @@ export default function CoachCompensation() {
       >
         <View style={styles.monthHeader}>
           <Text style={styles.monthName}>{MONTH_NAMES[month]}</Text>
-          {status === 'signed' && (
-            <Ionicons name="checkmark-circle" size={20} color="#34C759" />
-          )}
-          {status === 'future' && (
-            <Ionicons name="time-outline" size={20} color="#999" />
-          )}
-          {status === 'blocked' && (
-            <Ionicons name="lock-closed" size={20} color="#FF9500" />
-          )}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            {exceeded15k && (
+              <View style={{ backgroundColor: '#E65100', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 }}>
+                <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>€15K+</Text>
+              </View>
+            )}
+            {exceeded5k && !exceeded15k && (
+              <View style={{ backgroundColor: '#F9A825', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 }}>
+                <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>€5K+</Text>
+              </View>
+            )}
+            {status === 'signed' && (
+              <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+            )}
+            {status === 'future' && (
+              <Ionicons name="time-outline" size={20} color="#999" />
+            )}
+            {status === 'blocked' && (
+              <Ionicons name="lock-closed" size={20} color="#FF9500" />
+            )}
+          </View>
         </View>
         
         <Text style={styles.monthAmount}>€ {monthlyAmount.toFixed(2)}</Text>
