@@ -273,17 +273,22 @@ export default function CoachCompensation() {
     try {
       setSigningDeclaration(true);
       
-      const response = await api.post(`/coach/${user?.id}/threshold-declaration`, {
-        year: currentYear,
-        threshold_type: declarationType,
+      // Use the compensation receipt endpoint which now generates the correct threshold document
+      const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
+        month: selectedMonth,
+        year: selectedYear,
+        amount_gross: profile?.monthly_compensation || 0,
         signature_base64: declarationSignature.replace('data:image/png;base64,', ''),
+        exceeded_5000: declarationType === '5000',
+        exceeded_15000: declarationType === '15000',
       });
       
       const thresholdAmount = declarationType === '5000' ? '5.000' : '15.000';
+      const monthName = MONTH_NAMES[selectedMonth || 0];
       
       Alert.alert(
         'Dichiarazione Firmata',
-        `Dichiarazione di superamento soglia € ${thresholdAmount} firmata con successo!\n\nUna copia è stata inviata alla tua email.`
+        `Comunicazione di superamento soglia € ${thresholdAmount} per ${monthName} ${selectedYear} firmata con successo!\n\nCompreso lordo: € ${response.data.amount_gross.toFixed(2)}\nTotale annuo: € ${response.data.yearly_total.toFixed(2)}\n\nUna copia è stata inviata alla tua email e alla società.`
       );
       
       setShowDeclarationModal(false);
