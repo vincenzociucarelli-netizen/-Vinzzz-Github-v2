@@ -1079,7 +1079,7 @@ export default function CoachScreen() {
               <Text style={styles.sectionTitle}>👥 Atleti - {selectedTeam.name}</Text>
               <TouchableOpacity 
                 style={styles.attendanceBtn}
-                onPress={() => router.push(`/admin/team/${selectedTeam.id}/attendances`)}
+                onPress={() => router.push(`/coach/team/${selectedTeam.id}/attendances`)}
               >
                 <Ionicons name="calendar" size={16} color="#007AFF" />
                 <Text style={styles.attendanceBtnText}>Presenze</Text>
