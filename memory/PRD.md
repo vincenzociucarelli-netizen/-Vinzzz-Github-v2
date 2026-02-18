@@ -24,12 +24,37 @@ Applicazione per la gestione di club di pallavolo con funzionalità di gestione 
 - Stessa funzionalità dei Coach
 - Endpoint backend: `/api/dirigente/{id}/compensation/*`
 - Pagina frontend: `/dirigente/compensation.tsx`
-- Rimossa sezione "Registro Pagamenti Mensili" dal profilo (obsoleta)
 - Accessibile anche agli Admin come Dirigenti
+
+### Modulo Prime Squadre (COMPLETO - 18/02/2026)
+- **Backend** (`server.py`):
+  - Flag `pro_enabled` nelle impostazioni società
+  - Endpoint `/api/prime-squadre/athletes` - lista atleti con compensi
+  - Endpoint `/api/prime-squadre/athletes/{id}/enable` - abilita compensi
+  - Endpoint `/api/prime-squadre/athletes/{id}/disable` - disabilita compensi
+  - Endpoint `/api/prime-squadre/athletes/{id}/set-compensation` - imposta compenso mensile
+  - Endpoint `/api/prime-squadre/athletes/{id}/compensation/receipt` - firma quietanza
+  - Endpoint `/api/prime-squadre/athletes/{id}/threshold-status/{year}` - stato soglie
+  - Endpoint `/api/prime-squadre/stats` - statistiche modulo
+  - Limite 50 membri per società
+- **Frontend**:
+  - Toggle attivazione in Impostazioni (`settings.tsx`)
+  - Pagina gestione Prime Squadre (`admin/prime-squadre.tsx`)
+  - Dashboard con statistiche annuali
+  - Lista membri con compenso e riepilogo annuale
+  - Modal per aggiungere atleti
+  - Modal per impostare compenso mensile
+  - Icona dashboard dinamica (bloccata/sbloccata)
+
+### Protezione Auth (FIX - 18/02/2026)
+- Layout protetti per admin, coach, parent, dirigente
+- Redirect automatico a /login per utenti non autenticati
+- API interceptor per gestire errori 401/403
+- Routing corretto per ruolo 'viewer' (Dirigente)
 
 ### Gestione Utenti
 - Login/registrazione multi-ruolo
-- Ruoli: Admin, Coach, Parent, Director
+- Ruoli: Admin, Coach, Parent, Director (viewer)
 - Profili con dati anagrafici e bancari
 - Upload documenti identità
 
@@ -37,29 +62,33 @@ Applicazione per la gestione di club di pallavolo con funzionalità di gestione 
 - Scansione presenze atleti
 - Fotocamera posteriore di default
 
-### Impostazioni Società (AGGIORNATO - 18/02/2026)
+### Impostazioni Società
 - Campi Email e PEC aggiunti
-- Nome società dinamico (caricato da database, non hardcoded)
-- Tutti i pulsanti freccia "indietro" con stile corretto (backgroundColor rgba)
+- Nome società dinamico
+- Toggle Prime Squadre
+
+## Bug Risolti (18/02/2026)
+1. ✅ Protezione route Admin/Coach/Parent/Dirigente
+2. ✅ Redirect automatico su errori auth 401/403
+3. ✅ Routing ruolo 'viewer' (Dirigente)
 
 ## Bug Noti
-1. **Login Parent** - Non funziona (P2)
-2. **Login Admin** - Navigazione buggy (P1)
-3. **Icone @expo/vector-icons** - Non si caricano su web (P3)
+1. **Login Parent** - Da testare con credenziali reali (P2)
+2. **Icone @expo/vector-icons** - Non si caricano su web (P3)
 
 ## Prossimi Task
-1. ~~Estendere modulo compensi ai Dirigenti~~ ✅ COMPLETATO
-2. ~~Aggiungere campi Email/PEC a Impostazioni~~ ✅ COMPLETATO
-3. Implementare modulo "Prime Squadre" (Fase 2)
-4. Fix bug Admin panel authentication
+1. ~~Fix bug Admin panel authentication~~ ✅ COMPLETATO
+2. ~~Implementare modulo "Prime Squadre"~~ ✅ COMPLETATO
+3. Test completo Prime Squadre con utente reale
+4. Implementare firma quietanze atleti PRO
 
 ## Backlog
-- Modello Freemium (limite 30 membri)
+- Modello Freemium (limite 30 membri free)
 - Integrazione Stripe per abbonamenti (da luglio 2026)
-- Limite squadre con messaggio upgrade
 - Refactoring server.py (oltre 8000 righe)
+- PDF automatici per atleti PRO
+- Email notifiche per atleti PRO
 
 ## Ultima Modifica
 - Data: 18 Febbraio 2026
-- Modifica: Aggiunti campi Email e PEC alle impostazioni società, verificate frecce indietro, confermato nome società dinamico
-
+- Modifica: Implementato modulo Prime Squadre completo (backend + frontend), fix auth admin panel
