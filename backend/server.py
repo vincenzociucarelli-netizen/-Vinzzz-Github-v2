@@ -8316,6 +8316,144 @@ async def get_prime_squadre_stats(current_user = Depends(get_current_user)):
     }
 
 
+# ==================== GESTIONE ATLETI - GENITORI ====================
+
+@api_router.post("/athletes/{athlete_id}/detach-parents")
+async def detach_parents(athlete_id: str, current_user = Depends(get_current_user)):
+    """Sgancia i genitori da un atleta maggiorenne"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può sganciare i genitori")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Verifica che l'atleta sia maggiorenne
+    if athlete.get("is_minor", True):
+        raise HTTPException(status_code=400, detail="L'atleta è ancora minorenne")
+    
+    # Sgancia i genitori
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "parents_detached": True,
+            "parents_detached_date": datetime.utcnow(),
+            # Opzionalmente possiamo cancellare i dati dei genitori
+            # "phone_father": None,
+            # "phone_mother": None,
+            # "tax_payer_name": None,
+            # etc.
+        }}
+    )
+    
+    return {"message": "Genitori sganciati con successo", "athlete_id": athlete_id}
+
+
+@api_router.post("/athletes/{athlete_id}/reattach-parents")
+async def reattach_parents(athlete_id: str, current_user = Depends(get_current_user)):
+    """Riattiva il collegamento con i genitori per un atleta"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può gestire i genitori")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "parents_detached": False,
+            "parents_detached_date": None
+        }}
+    )
+    
+    return {"message": "Genitori ricollegati con successo", "athlete_id": athlete_id}
+
+
+class AthleteTypeUpdate(BaseModel):
+    """Modifica il tipo di atleta e la configurazione compensi"""
+    athlete_type: Optional[str] = None  # "quota" | "compensated"
+    fees_waived: Optional[bool] = None
+    is_compensated: Optional[bool] = None
+    monthly_compensation: Optional[float] = None
+    other_annual_compensation: Optional[float] = None
+    contract_start_date: Optional[str] = None
+    contract_end_date: Optional[str] = None
+    iban: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account_holder: Optional[str] = None
+    document_type: Optional[str] = None
+    document_number: Optional[str] = None
+    document_expiry: Optional[str] = None
+    document_front: Optional[str] = None
+    document_back: Optional[str] = None
+
+
+@api_router.patch("/athletes/{athlete_id}/type-config")
+async def update_athlete_type_config(
+    athlete_id: str,
+    data: AthleteTypeUpdate,
+    current_user = Depends(get_current_user)
+):
+    """Aggiorna il tipo di atleta e la configurazione compensi/quote"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare la configurazione")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    update_dict = {}
+    
+    if data.athlete_type is not None:
+        if data.athlete_type not in ["quota", "compensated"]:
+            raise HTTPException(status_code=400, detail="Tipo atleta non valido")
+        update_dict["athlete_type"] = data.athlete_type
+        # Se passa a "compensated", attiva automaticamente is_compensated
+        if data.athlete_type == "compensated":
+            update_dict["is_compensated"] = True
+    
+    if data.fees_waived is not None:
+        update_dict["fees_waived"] = data.fees_waived
+    if data.is_compensated is not None:
+        update_dict["is_compensated"] = data.is_compensated
+    if data.monthly_compensation is not None:
+        update_dict["monthly_compensation"] = data.monthly_compensation
+    if data.other_annual_compensation is not None:
+        update_dict["other_annual_compensation"] = data.other_annual_compensation
+    if data.contract_start_date is not None:
+        update_dict["contract_start_date"] = data.contract_start_date
+    if data.contract_end_date is not None:
+        update_dict["contract_end_date"] = data.contract_end_date
+    if data.iban is not None:
+        update_dict["iban"] = data.iban
+    if data.bank_name is not None:
+        update_dict["bank_name"] = data.bank_name
+    if data.bank_account_holder is not None:
+        update_dict["bank_account_holder"] = data.bank_account_holder
+    if data.document_type is not None:
+        update_dict["document_type"] = data.document_type
+    if data.document_number is not None:
+        update_dict["document_number"] = data.document_number
+    if data.document_expiry is not None:
+        update_dict["document_expiry"] = data.document_expiry
+    if data.document_front is not None:
+        update_dict["document_front"] = data.document_front
+    if data.document_back is not None:
+        update_dict["document_back"] = data.document_back
+    
+    if update_dict:
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": update_dict}
+        )
+    
+    # Return updated athlete
+    updated = await db.athletes.find_one({"id": athlete_id})
+    clean_mongo_docs([updated])
+    return updated
+
+
 @api_router.get("/")
 async def root():
     return {"message": "Athlete Attendance API"}
