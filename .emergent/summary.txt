@@ -1,208 +1,184 @@
-<analysis>**original_problem_statement**: The initial goal was to replicate the coach compensation module for a new Director () role. This was successfully implemented, tested, and refined with the user. The scope then expanded to include:
-1.  Fixing various UI/UX issues, notably on the QR scanner page.
-2.  Correcting PDF generation logic for fiscal threshold declarations.
-3.  Designing a new premium module called Prime Squadre (First Teams) to manage compensation for professional athletes and collaborators. This involved a detailed discussion to define the feature's scope, UI placeholder, and commercial model (freemium with manual activation).
-4.  At the end of the session, the user requested three final small fixes: adding email/PEC fields to society settings, verifying all back-arrow icons are the new style, and confirming how the society name is loaded.
+<analysis>**original_problem_statement**: The initial goal was to replicate the coach compensation module for a Director () role. This expanded to include UI fixes (QR scanner), PDF corrections, and designing a Prime Squadre (First Teams) premium module. The scope further evolved to address critical authentication bugs, implement the Prime Squadre functionality, and then refactor the core athlete registration process to differentiate between fee-paying and compensated athletes. The latest request is to build a new major feature: a configurable tool for sports clubs to import their game schedules by scraping federation websites like FIPAV (volleyball) and FIP (basketball).
 
 **PRODUCT REQUIREMENTS**:
-1.  **Compensation Module (Directors)**: All compensation functionalities (monthly receipts, threshold calculations, PDF generation, digital signing, UI views) from Coaches must be available for Directors (). (COMPLETED)
-2.  **PDF Generation Fixes**:
-    *   The name on the declaration PDFs must be Cognome Nome (Last Name First Name). (COMPLETED)
-    *   The Luogo e data (Place and date) line must use the society's city (e.g., Perugia) instead of a blank line. (COMPLETED)
-3.  **QR Scanner Enhancements**:
-    *   Default to the rear camera. (COMPLETED)
-    *   Increase spacing between UI controls for better usability. (COMPLETED)
-    *   Provide user guidance on how to grant permanent camera permissions. (COMPLETED)
-4.  **Prime Squadre Module (Phase 1 - Placeholder)**:
-    *   Add a disabled/locked Prime Squadre icon to the admin dashboard. (COMPLETED)
-    *   On click, show a detailed popup explaining the premium feature, its functionality, limits (50 members), and future availability (paid from July 1, 2026). (COMPLETED)
-5.  **Settings Enhancement**: Add  and  (certified email) fields to the society settings page. (NOT STARTED)
+1.  **Compensation Module (Directors)**: Replicate all coach compensation features for Directors. (COMPLETED)
+2.  **PDF & QR Scanner Fixes**: Correct name formats in PDFs and improve QR scanner usability. (COMPLETED)
+3.  **Prime Squadre Module**:
+    *   Phase 1: Implement a UI placeholder for the premium feature. (COMPLETED)
+    *   Phase 2: Build the full functionality, allowing admins to add existing athletes to a Prime Squadre group, set their compensation, contract dates, and manage monthly receipts. (IN PROGRESS)
+    *   Refinement: Handle the scenario where a youth athlete is promoted, with an option to waive their existing fees. (IN PROGRESS)
+4.  **Settings Enhancement**: Add  and  fields to society settings. (COMPLETED)
+5.  **Admin Panel Stability**: Fix recurring authentication and navigation bugs. (COMPLETED)
+6.  **Athlete Registration Refactor**:
+    *   At registration, distinguish between athletes who pay fees and those who receive compensation.
+    *   Implement a Detach Parents feature for all athletes who turn 18. (IN PROGRESS, Backend Done)
+7.  **Federation Game Importer**: Create a feature allowing clubs to import game schedules from external federation websites by configuring their sport, region, and team details. (NOT STARTED)
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-- A full-stack React/FastAPI/MongoDB application for volleyball club management.
-- The coach and director compensation modules are fully implemented and user-verified. This includes backend endpoints, frontend pages for users and admins, PDF generation, and email notifications.
-- The QR scanner page has been improved with a default back camera, better button spacing, and informational text.
-- A placeholder for the Prime Squadre premium feature exists in the admin dashboard. It's a locked icon that opens an informational popup detailing the feature, as designed with the user.
+- A full-stack React/FastAPI/MongoDB application for sports club management.
+- Complete and tested compensation modules for Coaches and Directors.
+- A functional (but still evolving) Prime Squadre module where admins can manage compensated athletes. The backend supports contract dates, pre-existing compensation, and a flag to waive fees.
+- A stabilized authentication system with protected routes for all user roles (, , , ) and a global API interceptor that redirects to login on auth errors.
+- A Detach Parents feature is implemented on the backend and has a UI button on the athlete's profile page, allowing an admin to dissociate parental accounts from an adult athlete.
+- The backend  model has been updated with an  field to support the upcoming registration flow refactor.
 
 **Last working item**:
-    - Last item agent was working: The agent acknowledged three final requests from the user before ending the session:
-        1. Add  and  fields to the society settings.
-        2. Double-check that all back-arrow icons across the app use the new, visible style.
-        3. Clarify if the society name (Pallavolo Perugia SSD) is hardcoded or loaded dynamically from settings.
-    - Status: NOT STARTED
-    - Agent Testing Done: N
-    - Which testing method agent to use? Manual testing by viewing the settings page after modification and using  to find all instances of back-arrow icons.
-    - User Testing Done: N
+- Last item agent was working: The agent and user were planning a new major feature: scraping and importing game schedules from federation websites (FIPAV for volleyball, FIP for basketball). The agent successfully proved the concept by extracting data from both sites and proposed a scalable solution where each club can configure its own import parameters (sport, region, team ID, championship IDs).
+- Status: NOT STARTED
+- Agent Testing Done: N/A (Feature not implemented)
+- Which testing method agent to use? This is a large feature. The backend scraping logic should be tested with a dedicated Python script or unit tests. The full e2e flow (frontend configuration -> backend scraping -> data displayed in-app) will require the .
+- User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: (P0) Final requests from the user (Add email/PEC fields, check back-arrows, confirm society name source).
-  - Issue 2: (P1) Admin panel authentication/navigation is buggy.
-  - Issue 3: (P2) Login for users with the  role is not working.
-  - Issue 4: (P3) Icon library () fails to load on the web.
+- Issue 1: (P1) Login for users with the  role is not working.
+- Issue 2: (P2) Icon library () fails to load on the web.
 
-  **Issues Detail**:
-  - **Issue 1: Final user requests**
-     - **Description**: The user made three small requests at the very end of the session that were not addressed.
-     - **Attempted fixes**: None.
-     - **Next debug checklist**:
-        1. Locate the society settings page/component in the frontend and the corresponding endpoint/model in the backend.
-        2. Add the  and  fields to the UI and the database save logic.
-        3. Use  or a similar tool to find all instances of the back-arrow component and visually inspect the code to ensure they have the correct styling ().
-        4. Find where the society name is displayed on the dashboard and trace it back to see if it's loaded from the database or hardcoded.
-     - **Why fix this issue and what will be achieved with the fix?**: Completes the user's final requests from the session, improving application settings and ensuring UI consistency.
-     - **Status**: NOT STARTED
-     - **Is recurring issue?**: N
-     - **Should Test frontend/backend/both after fix?**: Both
+**Issues Detail**:
+- **Issue 1: Parents cannot log in**
+    - **Description**: A long-standing, recurring bug preventing  role users from logging in. While major auth fixes were implemented, this specific role's login flow was not explicitly tested and is presumed to still be broken.
+    - **Attempted fixes**: The global auth protection added in this session might have an impact, but no direct fix was attempted.
+    - **Next debug checklist**:
+        1.  Review the  layout () and the auth protection logic within.
+        2.  Trace the login flow in  specifically for the  role.
+        3.  Check the browser console and network requests during a parent login attempt to identify where it fails.
+    - **Why fix this issue and what will be achieved with the fix?**: This is a critical bug preventing a whole class of users from accessing the application.
+    - **Status**: NOT STARTED
+    - **Is recurring issue?**: Y
+    - **Should Test frontend/backend/both after fix?**: Both
 
-  - **Issue 2: Admin panel authentication/navigation is buggy**
-     - **Description**: Agent and user have repeatedly encountered login issues, Not Found errors, or Forbidden errors when navigating the admin panel, suggesting problems with token handling or session state in the frontend admin pages.
-     - **Status**: NOT STARTED
-     - **Is recurring issue?**: Y
-     - **Should Test frontend/backend/both after fix?**: Frontend
-
-  - **Issue 3: Parents cannot log in**
-     - **Description**: A long-standing issue where users with the  role are unable to log in.
-     - **Status**: NOT STARTED
-     - **Is recurring issue?**: Y
-     - **Should Test frontend/backend/both after fix?**: Both
-
-  - **Issue 4: Icon library fails to load on web**
-     - **Description**: A known, recurring issue where icons from  do not render correctly in the web version of the app.
-     - **Status**: NOT STARTED
-     - **Is recurring issue?**: Y
-     - **Should Test frontend/backend/both after fix?**: Frontend
+- **Issue 2: Icon library fails to load on web**
+    - **Description**: Icons from  do not render correctly in the web build, appearing as placeholders.
+    - **Status**: NOT STARTED
+    - **Is recurring issue?**: Y
+    - **Should Test frontend/backend/both after fix?**: Frontend
 
 **In progress Task List**:
-  - None.
+- **Task 1: Athlete Registration Refactor (Frontend)** (P1)
+    - **Description**: The athlete registration form needs to be redesigned to incorporate a mandatory choice at the beginning: Athlete who pays fee vs. Athlete who receives compensation. The backend model has already been updated to support this ().
+    - **Where to resume**: Modify the file . This will involve significant state management and UI changes to show different form fields based on the initial selection.
+    - **What will be achieved with this?**: This will streamline the athlete creation process and correctly structure the data from the very beginning, simplifying logic for downstream features like Prime Squadre.
+    - **Status**: IN PROGRESS (Backend done, Frontend not started)
+    - **Should Test frontend/backend/both after fix?**: Both
+    - **Blocked on something**: No.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - (P0) **Implement Prime Squadre Module (Phase 2)**: This is the main upcoming task.
-        - **Backend**:
-            - Add a flag (e.g., ) to the  collection.
-            - Add a flag (e.g., ) to the  collection, to be manually toggled by the super-admin.
-            - Create new endpoints in  for athlete compensation, replicating the logic from the coach/director modules. This includes creating a new  model.
-        - **Frontend**:
-            - Create new pages and components for managing Prime Squadre compensation.
-            - Update the admin dashboard to unlock the Prime Squadre section when  is true for the society.
+    - **(P0) Implement Federation Game Schedule Importer**:
+        - **Backend**: Create new scraping endpoints that take parameters (sport, region, team ID, championship ID) and return a list of games from external federation websites (starting with FIPAV and FIP).
+        - **Frontend**: Build a new admin page where a society can configure its import settings. This UI should guide the user to select their sport/region, find their team, and check which championships to import. The imported games should be displayed in a calendar or list view.
 - **Future Tasks**:
-    - (P1) **Refactor **: Break the monolithic  (now over 8000 lines) into smaller modules (, , ).
-    - (P2) **Implement Stripe Integration**: Integrate Stripe to handle payments for the Prime Squadre premium plan, starting July 2026.
-    - (P2) Implement Freemium model logic (e.g., 30-member limit for the free plan).
-    - (P2) Implement a team limit for societies with an upgrade message.
+    - **(P2) Refactor **: Break the monolithic  into a modular structure (e.g., , , ). This is becoming critical for maintainability.
+    - **(P3) Implement Stripe Integration**: To handle payments for premium plans.
+    - **(P3) Implement Freemium Logic**: Enforce limits (e.g., team count, member count) and show upgrade prompts.
 
 **Completed work in this session**
-- **Director Compensation Module (P0 Task - COMPLETE)**:
-  - Replicated the entire coach compensation module for Directors, including backend endpoints, frontend UI (), PDF generation, and email notifications.
-  - Refactored the Director profile page () to remove the old payment log and add a new compact view of signed receipts.
-  - Fixed bugs related to fiscal threshold calculations and contract dates.
-- **PDF Generation Fixes**:
-  - Corrected the name order to Cognome, Nome in declaration PDFs.
-  - Replaced the blank Luogo field with the society's city (Perugia) in declaration PDFs.
-  - **File Updated**: 
-- **QR Scanner Enhancements**:
-  - Forced the rear camera as the default.
-  - Increased button size and spacing for better usability.
-  - Added an informational note explaining how to set permanent camera permissions.
-  - **File Updated**: 
-- **Prime Squadre Placeholder (Premium Feature)**:
-  - Designed the feature scope and commercial model with the user.
-  - Added a locked Prime Squadre icon with a PREMIUM badge to the admin dashboard.
-  - Implemented a detailed informational popup that appears on click.
-  - **File Updated**: 
-- **Bug Fixes**:
-  - Fixed a frontend crash on  due to invalid JSX.
-  - Fixed a visual glitch (a stray  character) on the admin view of director compensation ().
-  - Cleaned up the database by removing obsolete compensation entries after a contract date change.
-  - Stabilized backend crashes by restarting services.
+- **Admin Panel Stability and Auth Fixes (COMPLETE)**:
+  - Implemented protected route layouts for all user roles (, , , ), preventing unauthorized access.
+  - Added a global API interceptor () to automatically handle 401/403 errors and redirect users to the login page.
+  - Verified with the testing agent, all tests passed.
+- **User's Final Requests (COMPLETE)**:
+  - Added  and  fields to the society settings page and backend model.
+  - Verified that all back-arrow icons across the app use the correct visible style.
+  - Confirmed the society name on the dashboard is loaded dynamically from the database.
+- **Prime Squadre Module Enhancements (IN PROGRESS)**:
+  - Fixed a critical navigation bug by creating the athlete detail page ().
+  - Updated the backend  model and frontend UI to include fields for , , , and a boolean  for promoted youth athletes.
+  - Created a comprehensive configuration modal that appears when adding or editing a Prime Squadre athlete.
+- **Detach Parents Feature (COMPLETE)**:
+  - Created a backend endpoint () to remove parent associations.
+  - Added a Sgancia Genitori button to the admin's athlete detail page () that is available for all adult athletes.
 
 **Earlier issues found/mentioned but not fixed**
-- The long-standing issues with **Admin Panel Authentication**, **Parent Login**, and ** rendering** were not addressed in this session.
+- The two long-standing issues remain: **Parent Login Failure** and ** rendering** on the web.
 
 **Known issue recurrence from previous fork**
-  - **Issue recurrence in previous fork**:
-    -  role login failure.
-    -  library failing to render on the web.
-  - **Recurrence count**: 4+
-  - **Status**: NOT STARTED
+- **Issue recurrence in previous fork**:
+  -  role login failure.
+  -  library failing to render on the web.
+- **Recurrence count**: 5+
+- **Status**: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Feature Gating**: Designed a premium feature (Prime Squadre) to be gated by a manual flag () in the database, with a UI placeholder (locked icon and popup) shown to non-premium users.
-- **Code Duplication for Roles**: The pattern of duplicating backend endpoints and frontend components for different user roles (Coach -> Director) was continued. This highlights the need for refactoring to more abstract, reusable code.
+- **Protected Routes**: Implemented using Expo Router's layout files, which check authentication state from a Zustand store () before rendering a route group. This provides robust route protection.
+- **API Interceptors**: Used Axios interceptors () to create a global error handler for API responses, specifically to catch 401/403 status codes and trigger a clean logout and redirect.
+- **Web Scraping**: Validated the feasibility of scraping JS-heavy websites and iframes by using a browser automation tool to interact with the page and by accessing an iframe's source URL directly to get clean HTML.
 
 **key DB schema**
-  - **dirigente_compensations**: Created, mirroring . .
-  - **dirigenti**: Updated to support compensation fields (, , , etc.).
-  - **societies**: Needs  and  fields to be added. Will also need a  boolean flag for the Prime Squadre feature.
-  - **athletes**: Will need a boolean flag like  to distinguish Prime Squadre members.
+- **societies**:  (boolean),  (string),  (string) have been added.
+- **athletes**: Significantly updated with fields to support compensated athletes:
+  - : string ( | )
+  - : boolean
+  - : number
+  - , : string (ISO date)
+  - : number
+  - : boolean
+  - : string
+  - : string
 
 **All files of reference**
 - 
 - 
+-  (and other role layouts)
 - 
 - 
 - 
 - 
--  (updated by the agent)
+-  (Target for next task)
 
 **Areas that need refactoring**:
-- ****: Critically needs to be broken down. It is now extremely large and difficult to maintain. Adding the Prime Squadre logic will make it worse.
-- **Compensation Logic**: The compensation logic is duplicated across  and  endpoints. This should be abstracted into a shared service/function that can be reused for the upcoming  role.
-- **Admin Authentication**: The entire admin login and session management flow is unreliable and needs a complete review.
+- ****: Critically needs to be broken down into smaller modules. It is extremely large and difficult to maintain.
+- **Athlete Registration**: The  page needs a complete overhaul to support the new  logic.
 
 **Critical Info for New Agent**
-- You MUST continue the conversation in **Italiano**. The user is very engaged and provides excellent, specific feedback.
-- **Priority 1**: Address the user's three final requests from the last message (add email/PEC to settings, check back-arrows, confirm society name source).
-- **Priority 2**: Begin the implementation of the **Prime Squadre** module (Phase 2). The design and scope are already defined and approved by the user. Do not re-open the design discussion.
-- The recurring issues with Admin and Parent login are significant blockers. Proposing to fix the Admin login issue before or alongside the Prime Squadre implementation is highly recommended, as it will be essential for testing.
-- The user is the main tester and uses a real account (, role ). Be prepared to work with this real data and clean up test entries if necessary.
+- **You MUST continue the conversation in Italiano.**
+- **Priority 1 (Upcoming Task):** Begin implementation of the configurable **Federation Game Schedule Importer**. The user is very excited about this feature. The design should be scalable, allowing each club to configure their own settings.
+- **Priority 2 (In-Progress Task):** Complete the frontend refactor of the **Athlete Registration** page (). This is a prerequisite for the new athlete onboarding flow.
+- The user has approved a scalable design for the scraping feature where each club configures its own parameters. Do not build a hardcoded solution.
 
 **documents and test reports created in this job**
--  was updated.
+-  (updated by the agent)
+-  (from testing the auth fixes)
 
 **Last 10 User Messages and any pending HUMAN messages**
-- **10. User:** Asks for confirmation on the app name ( vs ). Agent advises keeping .
-- **9. User:** Asks for a better phrasing for the fiscal threshold line in the popup, suggesting Rilevamento superamento soglie €5K/€15K. Agent agrees and implements.
-- **8. User:** Suggests cleaning up the feature list in the popup. Agent implements.
-- **7. User:** Asks to remove a phrase from the popup description. Agent implements.
-- **6. User:** Suggests rephrasing the Atleti section in the popup for clarity. Agent implements.
-- **5. User:** Asks to remove fisioterapisti from the collaborators list and add others. Agent implements.
-- **4. User:** Asks to add more features to the popup description and sets the member limit to 50. Agent implements.
-- **3. User:** Asks for a change in the popup's subtitle and clarification on where to place collaborators (scoutman, etc.). Agent advises putting them in Prime Squadre and implements.
-- **2. User:** Asks for clarification on the costs of supporting 30 vs 50 athletes. Agent provides a cost analysis.
-- **1. User:** **(PENDING)** Asks for three final changes before stopping:
-    1.  Add  and  fields to Society settings.
-    2.  Check if all back-arrow icons are updated.
-    3.  Confirm if the society name on the dashboard is dynamic or hardcoded.
+- **10. User:** Proposes to create the feature to scrape game schedules from federation websites.
+- **9. Agent:** Confirms feasibility by successfully scraping the FIPAV (volleyball) website, noting its complexity.
+- **8. User:** Enthusiastically agrees to proceed.
+- **7. User:** Mentions the FIP (basketball) website is much simpler and provides a link.
+- **6. Agent:** Confirms the FIP site is easier and even has a backend API endpoint.
+- **5. User:** Asks a crucial scalability question: can each club manage its own import settings post-launch, or will it require developer intervention for each new club/region?
+- **4. Agent:** Proposes a scalable solution where each club configures its own settings (sport, region, team ID) within the app.
+- **3. User:** Approves the configurable design.
+- **2. Agent:** Acknowledges the user's approval and is ready to start building the configurable scraping feature.
+- **1. User:** Asks to proceed with building the FIPAV integration for Umbria volleyball first, with the system designed to be extensible to other regions and sports later.
 
 **Project Health Check:**
 - **Broken**:
-    - Login for the  role.
-    - Admin panel authentication and navigation remains unstable.
+  - Login for the  role.
+  - Web rendering of .
 - **Mocked**:
-    - The Prime Squadre feature is currently a UI placeholder only.
-    - Freemium model logic.
-    - Stripe integration.
+  - Freemium model logic and Stripe integration are still just ideas.
 
 **3rd Party Integrations**
 - **Brevo**: Email provider.
-- **fpdf2 / Pillow**: Server-side PDF generation and image manipulation.
-- **react-signature-canvas**: Frontend signature capture for web.
-- **html5-qrcode**: Library used for the web-based QR scanner.
+- **fpdf2 / Pillow**: Server-side PDF generation.
+- **react-signature-canvas**: Frontend signature capture.
+- **html5-qrcode**: QR scanner library.
+- **Playwright (conceptual)**: The agent has validated the use of a powerful scraping tool to interact with external websites. This will likely be needed for the FIPAV/FIP integration.
 
 **Testing status**
-  - Testing agent used after significant changes: NO
-  - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: []
-  - Known regressions: Old regressions (parent login, icons) persist.
+- Testing agent used after significant changes: YES (for the authentication fixes).
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created: None.
+- Known regressions: Parent login failure, web icon rendering.
 
 **Credentials to test flow:**
-- User's primary account for testing is  (role: ). The password is unknown to the agent. Direct collaboration with the user is required for testing authenticated flows.
+- User account:  (role: ).
+- Test accounts found by testing agent:  and . These can be used to test different roles.
 
 **What agent forgot to execute**
-- The agent did not get to execute the user's final three requests before the session ended: adding email/PEC to settings, checking all back-arrows, and verifying the society name source. These should be the first tasks for the next session.</analysis>
+- The agent correctly identified the next steps based on user requests. No major tasks were forgotten, but the long-standing issues (parent login, icons) were once again deferred in favor of new feature development.</analysis>
