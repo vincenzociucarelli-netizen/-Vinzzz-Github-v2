@@ -250,10 +250,14 @@ export default function CoachScreen() {
             fps: 10, 
             qrbox: { width: 250, height: 250 },
             rememberLastUsedCamera: true,
-            // Prefer back camera (environment facing)
+            showTorchButtonIfSupported: true,
+            // Force back camera (environment facing) and hide camera selection
             videoConstraints: {
-              facingMode: { ideal: "environment" }
-            }
+              facingMode: { exact: "environment" }
+            },
+            // Hide UI elements for simpler interface
+            showZoomSliderIfSupported: false,
+            defaultZoomValueIfSupported: 1,
           },
           false
         );
@@ -270,6 +274,43 @@ export default function CoachScreen() {
         );
         
         webScannerRef.current = html5QrcodeScanner;
+        
+        // Add custom CSS to improve button spacing
+        setTimeout(() => {
+          const style = document.createElement('style');
+          style.textContent = `
+            #web-qr-scanner button {
+              margin: 15px 10px !important;
+              padding: 15px 25px !important;
+              font-size: 16px !important;
+              min-height: 50px !important;
+            }
+            #web-qr-scanner select {
+              margin: 15px 10px !important;
+              padding: 12px !important;
+              font-size: 16px !important;
+            }
+            #web-qr-scanner #html5-qrcode-button-camera-permission {
+              background-color: #007AFF !important;
+              color: white !important;
+              border: none !important;
+              border-radius: 10px !important;
+              margin-bottom: 25px !important;
+            }
+            #web-qr-scanner #html5-qrcode-anchor-scan-type-change {
+              margin-top: 20px !important;
+              font-size: 14px !important;
+            }
+            #web-qr-scanner #html5-qrcode-button-camera-start,
+            #web-qr-scanner #html5-qrcode-button-camera-stop {
+              background-color: #34C759 !important;
+              color: white !important;
+              border: none !important;
+              border-radius: 10px !important;
+            }
+          `;
+          document.head.appendChild(style);
+        }, 200);
       } catch (error) {
         console.error('Error starting web scanner:', error);
         showAlert('Errore', 'Impossibile avviare lo scanner. Prova a inserire il codice manualmente.');
