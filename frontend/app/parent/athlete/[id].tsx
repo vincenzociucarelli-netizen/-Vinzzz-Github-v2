@@ -1697,20 +1697,38 @@ export default function AthleteDetail() {
           
           {/* Download Fiscal Receipt Button */}
           {payments.length > 0 && (
-            <TouchableOpacity
-              style={[styles.downloadReceiptBtn, generatingReceipt && { opacity: 0.6 }]}
-              onPress={handleDownloadFiscalReceipt}
-              disabled={generatingReceipt}
-            >
-              {generatingReceipt ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={{ fontSize: 20 }}>🧾</Text>
-              )}
-              <Text style={styles.downloadReceiptBtnText}>
-                {generatingReceipt ? 'Generazione...' : 'Scarica Ricevuta Fiscale'}
-              </Text>
-            </TouchableOpacity>
+            <>
+              {/* Show all manual payments */}
+              <View style={styles.manualPaymentsSection}>
+                <Text style={styles.manualPaymentsTitle}>Pagamenti Effettuati:</Text>
+                {payments.map((p, idx) => (
+                  <View key={p.id || idx} style={styles.manualPaymentRow}>
+                    <View style={styles.manualPaymentInfo}>
+                      <Text style={styles.manualPaymentAmount}>€{p.amount?.toFixed(2)}</Text>
+                      <Text style={styles.manualPaymentDate}>
+                        {p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : 'Data non specificata'}
+                      </Text>
+                    </View>
+                    <Ionicons name="checkmark-circle" size={24} color="#34C759" />
+                  </View>
+                ))}
+              </View>
+              
+              <TouchableOpacity
+                style={[styles.downloadReceiptBtn, generatingReceipt && { opacity: 0.6 }]}
+                onPress={handleDownloadFiscalReceipt}
+                disabled={generatingReceipt}
+              >
+                {generatingReceipt ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={{ fontSize: 20 }}>🧾</Text>
+                )}
+                <Text style={styles.downloadReceiptBtnText}>
+                  {generatingReceipt ? 'Generazione...' : 'Scarica Ricevuta Fiscale'}
+                </Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
 
