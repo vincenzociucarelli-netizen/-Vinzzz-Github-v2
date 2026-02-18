@@ -180,7 +180,32 @@ export default function CoachCompensation() {
   const handleOpenSignature = (month: number, year?: number) => {
     const targetYear = year || currentYear;
     
-    // Check if blocked by threshold
+    // Calculate if this month will exceed thresholds
+    const monthlyAmount = profile?.monthly_compensation || 0;
+    const priorComp = profile?.other_annual_compensation || 0;
+    
+    // Get contract start year
+    let contractStartYear = null;
+    if (profile?.contract_start_date) {
+      contractStartYear = parseInt(profile.contract_start_date.split('-')[0]);
+    }
+    
+    // Calculate total before this month
+    const yearRecords = records.filter(r => r.year === targetYear && r.receipt_signed);
+    const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
+    const yearTotalBeforeThis = (targetYear === contractStartYear) 
+      ? yearTotalFromReceipts + priorComp 
+      : yearTotalFromReceipts;
+    
+    const newTotal = yearTotalBeforeThis + monthlyAmount;
+    
+    // Check if THIS month will be the first to exceed thresholds
+    const willExceed5k = newTotal > 5000 && yearTotalBeforeThis <= 5000;
+    const willExceed15k = newTotal > 15000 && yearTotalBeforeThis <= 15000;
+    
+    console.log('Threshold check for modal:', { yearTotalBeforeThis, monthlyAmount, newTotal, willExceed5k, willExceed15k });
+    
+    // Check if blocked by threshold (already exceeded but not declared)
     if (thresholdStatus?.is_blocked) {
       Alert.alert(
         'Azione Bloccata',
@@ -213,7 +238,24 @@ export default function CoachCompensation() {
     setSelectedMonth(month);
     setSelectedYear(targetYear);
     setSignature(null);
-    setShowSignatureModal(true);
+    
+    // If this month will exceed a threshold, show declaration modal instead
+    if (willExceed15k) {
+      openDeclarationModalForMonth('15000', month, targetYear);
+    } else if (willExceed5k) {
+      openDeclarationModalForMonth('5000', month, targetYear);
+    } else {
+      setShowSignatureModal(true);
+    }
+  };
+
+  // New function to open declaration modal for a specific month
+  const openDeclarationModalForMonth = (type: '5000' | '15000', month: number, year: number) => {
+    setDeclarationType(type);
+    setDeclarationSignature(null);
+    setSelectedMonth(month);
+    setSelectedYear(year);
+    setShowDeclarationModal(true);
   };
 
   const openDeclarationModal = (type: '5000' | '15000') => {
