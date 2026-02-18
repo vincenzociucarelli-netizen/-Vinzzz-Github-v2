@@ -550,6 +550,22 @@ export default function AdminDashboard() {
             </View>
           </TouchableOpacity>
 
+          {/* Importa Calendario Federazione */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/import-calendar')}
+            data-testid="import-calendar-btn"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E3F2FD' }]}>
+              <Text style={{ fontSize: 26 }}>🌐</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Importa Calendario</Text>
+              <Text style={styles.menuCardSubtitle}>Da FIPAV, FIP e altre federazioni</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
           {/* Dirigenti / Società */}
           <TouchableOpacity
             style={styles.menuCard}
