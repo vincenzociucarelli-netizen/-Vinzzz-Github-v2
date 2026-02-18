@@ -1233,4 +1233,31 @@ const styles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
   },
+  trialCloseBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  trialCloseBtnText: {
+    fontSize: 18,
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  trialDecideLaterBtn: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  trialDecideLaterText: {
+    fontSize: 14,
+    color: '#666',
+    textDecorationLine: 'underline',
+  },
 });
