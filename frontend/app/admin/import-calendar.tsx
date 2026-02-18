@@ -259,7 +259,11 @@ export default function ImportCalendarScreen() {
         season_id: selectedSeason,
         championship_id: selectedChampionships.length > 0 ? selectedChampionships[0] : null
       });
-      setPreviewMatches(response.data.matches || []);
+      const matches = response.data.matches || [];
+      setPreviewMatches(matches);
+      // Initialize all matches as selected
+      setSelectedMatches(new Set(matches.map((_: any, i: number) => i)));
+      setSelectAll(true);
       // Update the displayed name to show what was searched
       setSelectedSocietyName(searchName);
       setStep(3);
