@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
     height: 50,
   },
   championshipList: {
-    maxHeight: 200,
+    maxHeight: 350,
     backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
