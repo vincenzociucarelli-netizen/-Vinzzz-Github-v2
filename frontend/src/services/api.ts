@@ -24,4 +24,25 @@ api.interceptors.request.use(
   }
 );
 
+// Handle auth errors globally
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Clear stored auth data on auth errors
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
+      
+      // Redirect to login (web only - native apps handle this differently)
+      if (typeof window !== 'undefined' && window.location) {
+        // Only redirect if not already on login page
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
