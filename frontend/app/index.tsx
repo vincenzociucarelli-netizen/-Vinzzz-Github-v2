@@ -13,13 +13,16 @@ export default function Index() {
         // Route based on role
         switch (user.role) {
           case 'admin':
-            router.replace('/admin');
+            router.replace('/select-role');
             break;
           case 'coach':
             router.replace('/coach');
             break;
           case 'parent':
             router.replace('/parent');
+            break;
+          case 'viewer':
+            router.replace('/dirigente');
             break;
           default:
             router.replace('/login');
