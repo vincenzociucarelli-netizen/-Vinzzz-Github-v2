@@ -1127,13 +1127,40 @@ export default function AdminCoachDetail() {
               <Text style={styles.emptyText}>Nessuna quietanza firmata</Text>
             </View>
           ) : (
-            signedReceipts
-              .filter(r => r.receipt_signed === true)
-              .sort((a, b) => {
-                if (a.year !== b.year) return b.year - a.year;
-                return b.month - a.month;
-              })
-              .map((receipt) => {
+            (() => {
+              // Sort receipts by date (oldest first) to find threshold crossings
+              const sortedByDate = [...signedReceipts]
+                .filter(r => r.receipt_signed === true)
+                .sort((a, b) => {
+                  if (a.year !== b.year) return a.year - b.year;
+                  return a.month - b.month;
+                });
+              
+              // Find first month where each threshold was exceeded
+              let first5kMonth: { year: number, month: number } | null = null;
+              let first15kMonth: { year: number, month: number } | null = null;
+              
+              for (const r of sortedByDate) {
+                if (r.exceeded_5000 && !first5kMonth) {
+                  first5kMonth = { year: r.year, month: r.month };
+                }
+                if (r.exceeded_15000 && !first15kMonth) {
+                  first15kMonth = { year: r.year, month: r.month };
+                }
+              }
+              
+              // Helper to check if a month is after a threshold date
+              const isAfterOrEqual = (receipt: any, threshold: { year: number, month: number } | null) => {
+                if (!threshold) return false;
+                if (receipt.year > threshold.year) return true;
+                if (receipt.year === threshold.year && receipt.month >= threshold.month) return true;
+                return false;
+              };
+              
+              // Sort for display (newest first)
+              const sortedForDisplay = [...sortedByDate].reverse();
+              
+              return sortedForDisplay.map((receipt) => {
                 const monthNames = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 
                                    'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
                 const monthLabel = `${monthNames[receipt.month]} ${receipt.year}`;
@@ -1141,24 +1168,29 @@ export default function AdminCoachDetail() {
                   ? format(new Date(receipt.receipt_signed_date), 'dd/MM/yyyy', { locale: it })
                   : '-';
                 
-                const exceeded5k = receipt.exceeded_5000 === true;
-                const exceeded15k = receipt.exceeded_15000 === true;
+                // Check if this is THE month where threshold was crossed (show badge)
+                const isThreshold5kMonth = receipt.exceeded_5000 === true;
+                const isThreshold15kMonth = receipt.exceeded_15000 === true;
+                
+                // Check if this month is after the threshold was crossed (highlight row)
+                const isAfter15k = isAfterOrEqual(receipt, first15kMonth);
+                const isAfter5k = isAfterOrEqual(receipt, first5kMonth);
                 
                 return (
                   <View key={`${receipt.year}-${receipt.month}`} style={[
                     styles.monthRow,
-                    exceeded15k && { backgroundColor: '#FFF3E0', borderLeftWidth: 4, borderLeftColor: '#E65100' },
-                    exceeded5k && !exceeded15k && { backgroundColor: '#FFF8E1', borderLeftWidth: 4, borderLeftColor: '#F9A825' }
+                    isAfter15k && { backgroundColor: '#FFF3E0', borderLeftWidth: 4, borderLeftColor: '#E65100' },
+                    isAfter5k && !isAfter15k && { backgroundColor: '#FFF8E1', borderLeftWidth: 4, borderLeftColor: '#F9A825' }
                   ]}>
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Text style={styles.monthLabel}>{monthLabel}</Text>
-                        {exceeded15k && (
+                        {isThreshold15kMonth && (
                           <View style={{ backgroundColor: '#E65100', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
                             <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>&gt;15K</Text>
                           </View>
                         )}
-                        {exceeded5k && !exceeded15k && (
+                        {isThreshold5kMonth && !isThreshold15kMonth && (
                           <View style={{ backgroundColor: '#F9A825', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
                             <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>&gt;5K</Text>
                           </View>
@@ -1174,7 +1206,8 @@ export default function AdminCoachDetail() {
                     </View>
                   </View>
                 );
-              })
+              });
+            })()
           )}
           
           {signedReceipts.filter(r => r.receipt_signed === true).length === 0 && signedReceipts.length > 0 && (
