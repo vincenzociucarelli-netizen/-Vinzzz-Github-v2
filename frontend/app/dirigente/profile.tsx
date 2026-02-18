@@ -100,24 +100,6 @@ export default function DirigenteProfile() {
     }
   };
 
-  // Generate season months (July to June)
-  const getSeasonMonths = () => {
-    const now = new Date();
-    const currentYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
-    const months = [];
-    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-                        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
-    for (let i = 0; i < 12; i++) {
-      const monthIndex = (6 + i) % 12;
-      const year = monthIndex >= 6 ? currentYear : currentYear + 1;
-      months.push({
-        key: `${year}-${String(monthIndex + 1).padStart(2, '0')}`,
-        label: `${monthNames[monthIndex]} ${year}`,
-      });
-    }
-    return months;
-  };
-
   const loadProfile = async () => {
     try {
       const response = await api.get('/auth/me');
