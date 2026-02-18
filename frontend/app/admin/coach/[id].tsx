@@ -1136,25 +1136,29 @@ export default function AdminCoachDetail() {
                   return a.month - b.month;
                 });
               
-              // Find first month where each threshold was exceeded
-              let first5kMonth: { year: number, month: number } | null = null;
-              let first15kMonth: { year: number, month: number } | null = null;
+              // Track thresholds PER YEAR (they reset each calendar year)
+              const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
               
               for (const r of sortedByDate) {
-                if (r.exceeded_5000 && !first5kMonth) {
-                  first5kMonth = { year: r.year, month: r.month };
+                if (!thresholdsByYear[r.year]) {
+                  thresholdsByYear[r.year] = { first5k: null, first15k: null };
                 }
-                if (r.exceeded_15000 && !first15kMonth) {
-                  first15kMonth = { year: r.year, month: r.month };
+                if (r.exceeded_5000 && thresholdsByYear[r.year].first5k === null) {
+                  thresholdsByYear[r.year].first5k = r.month;
+                }
+                if (r.exceeded_15000 && thresholdsByYear[r.year].first15k === null) {
+                  thresholdsByYear[r.year].first15k = r.month;
                 }
               }
               
-              // Helper to check if a month is after a threshold date
-              const isAfterOrEqual = (receipt: any, threshold: { year: number, month: number } | null) => {
-                if (!threshold) return false;
-                if (receipt.year > threshold.year) return true;
-                if (receipt.year === threshold.year && receipt.month >= threshold.month) return true;
-                return false;
+              // Helper to check if a month is after a threshold IN THE SAME YEAR
+              const isAfterThreshold = (receipt: any, type: '5k' | '15k') => {
+                const yearThresholds = thresholdsByYear[receipt.year];
+                if (!yearThresholds) return false;
+                const thresholdMonth = type === '5k' ? yearThresholds.first5k : yearThresholds.first15k;
+                if (thresholdMonth === null) return false;
+                // Only highlight months in the SAME year that are >= threshold month
+                return receipt.month >= thresholdMonth;
               };
               
               // Sort for display (newest first)
@@ -1172,9 +1176,9 @@ export default function AdminCoachDetail() {
                 const isThreshold5kMonth = receipt.exceeded_5000 === true;
                 const isThreshold15kMonth = receipt.exceeded_15000 === true;
                 
-                // Check if this month is after the threshold was crossed (highlight row)
-                const isAfter15k = isAfterOrEqual(receipt, first15kMonth);
-                const isAfter5k = isAfterOrEqual(receipt, first5kMonth);
+                // Check if this month is after the threshold was crossed IN SAME YEAR (highlight row)
+                const isAfter15k = isAfterThreshold(receipt, '15k');
+                const isAfter5k = isAfterThreshold(receipt, '5k');
                 
                 return (
                   <View key={`${receipt.year}-${receipt.month}`} style={[
