@@ -415,6 +415,31 @@ export default function SettingsScreen() {
             onChangeText={setPresidentName}
             placeholder="Es: Mario Rossi"
           />
+
+          <View style={styles.row}>
+            <View style={styles.halfInputContainer}>
+              <Text style={styles.inputLabel}>Email Società</Text>
+              <TextInput
+                style={styles.input}
+                value={societyEmail}
+                onChangeText={setSocietyEmail}
+                placeholder="Es: info@societasportiva.it"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+            <View style={styles.halfInputContainer}>
+              <Text style={styles.inputLabel}>PEC</Text>
+              <TextInput
+                style={styles.input}
+                value={societyPec}
+                onChangeText={setSocietyPec}
+                placeholder="Es: societa@pec.it"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
         </View>
 
         {/* Timbro e Firma */}
