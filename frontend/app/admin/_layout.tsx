@@ -10,14 +10,12 @@ export default function AdminLayout() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      // Ensure auth is loaded
-      if (isLoading) {
-        await loadAuth();
-      }
+      // Always try to load auth on mount
+      await loadAuth();
       setIsChecking(false);
     };
     checkAuth();
-  }, [isLoading]);
+  }, []);
 
   useEffect(() => {
     if (!isChecking && !isLoading) {

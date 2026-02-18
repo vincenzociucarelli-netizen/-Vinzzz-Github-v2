@@ -10,13 +10,12 @@ export default function ParentLayout() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      if (isLoading) {
-        await loadAuth();
-      }
+      // Always try to load auth on mount
+      await loadAuth();
       setIsChecking(false);
     };
     checkAuth();
-  }, [isLoading]);
+  }, []);
 
   useEffect(() => {
     if (!isChecking && !isLoading) {
