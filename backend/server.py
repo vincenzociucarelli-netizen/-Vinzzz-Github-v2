@@ -7930,6 +7930,322 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
 
 
 
+# ==================== PRIME SQUADRE (ATLETI PRO) ENDPOINTS ====================
+
+@api_router.get("/prime-squadre/athletes")
+async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
+    """Get list of athletes with compensation enabled (Prime Squadre members)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può accedere a Prime Squadre")
+    
+    # Check if pro_enabled is true for this society
+    settings = await db.settings.find_one({"type": "society"})
+    if not settings or not settings.get("pro_enabled", False):
+        raise HTTPException(status_code=403, detail="Modulo Prime Squadre non attivato per questa società")
+    
+    # Get athletes with is_compensated = True
+    athletes = await db.athletes.find({"is_compensated": True}).to_list(100)
+    clean_mongo_docs(athletes)
+    
+    # Get their compensation records for the current year
+    current_year = datetime.utcnow().year
+    for athlete in athletes:
+        records = await db.atleta_pro_compensations.find({
+            "atleta_id": athlete["id"],
+            "year": current_year
+        }).to_list(12)
+        
+        yearly_total = sum(r.get("amount_gross", 0) for r in records if r.get("receipt_signed"))
+        months_received = len([r for r in records if r.get("receipt_signed")])
+        
+        athlete["compensation_summary"] = {
+            "yearly_total": yearly_total,
+            "months_received": months_received,
+            "monthly_amount": athlete.get("monthly_compensation", 0)
+        }
+    
+    return athletes
+
+@api_router.post("/prime-squadre/athletes/{athlete_id}/enable")
+async def enable_athlete_compensation(athlete_id: str, current_user = Depends(get_current_user)):
+    """Enable compensation for an athlete (add to Prime Squadre)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può gestire Prime Squadre")
+    
+    # Check if pro_enabled
+    settings = await db.settings.find_one({"type": "society"})
+    if not settings or not settings.get("pro_enabled", False):
+        raise HTTPException(status_code=403, detail="Modulo Prime Squadre non attivato")
+    
+    # Check member limit (50)
+    current_count = await db.athletes.count_documents({"is_compensated": True})
+    if current_count >= 50:
+        raise HTTPException(status_code=400, detail="Raggiunto il limite massimo di 50 membri Prime Squadre")
+    
+    # Update athlete
+    result = await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {"is_compensated": True}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    return {"message": "Atleta aggiunto a Prime Squadre", "athlete_id": athlete_id}
+
+@api_router.post("/prime-squadre/athletes/{athlete_id}/disable")
+async def disable_athlete_compensation(athlete_id: str, current_user = Depends(get_current_user)):
+    """Disable compensation for an athlete (remove from Prime Squadre)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può gestire Prime Squadre")
+    
+    result = await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {"is_compensated": False, "monthly_compensation": 0}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    return {"message": "Atleta rimosso da Prime Squadre", "athlete_id": athlete_id}
+
+@api_router.post("/prime-squadre/athletes/{athlete_id}/set-compensation")
+async def set_athlete_compensation(athlete_id: str, amount: float, current_user = Depends(get_current_user)):
+    """Set monthly compensation for an athlete"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può impostare compensi")
+    
+    # Verify athlete is in Prime Squadre
+    athlete = await db.athletes.find_one({"id": athlete_id, "is_compensated": True})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato in Prime Squadre")
+    
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {"monthly_compensation": amount}}
+    )
+    
+    return {"message": "Compenso mensile impostato", "amount": amount}
+
+@api_router.get("/prime-squadre/athletes/{athlete_id}/compensation")
+async def get_athlete_compensation_records(athlete_id: str, current_user = Depends(get_current_user)):
+    """Get compensation records for an athlete"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può visualizzare i compensi")
+    
+    records = await db.atleta_pro_compensations.find({"atleta_id": athlete_id}).sort([("year", -1), ("month", -1)]).to_list(100)
+    clean_mongo_docs(records)
+    return records
+
+@api_router.post("/prime-squadre/athletes/{athlete_id}/compensation/receipt")
+async def sign_athlete_compensation_receipt(
+    athlete_id: str,
+    request: CompensationReceiptRequest,
+    current_user = Depends(get_current_user)
+):
+    """Sign monthly compensation receipt for an athlete (admin signs on behalf)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può gestire le quietanze")
+    
+    # Get athlete
+    athlete = await db.athletes.find_one({"id": athlete_id, "is_compensated": True})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato in Prime Squadre")
+    
+    monthly_compensation = athlete.get("monthly_compensation", 0)
+    if monthly_compensation <= 0:
+        raise HTTPException(status_code=400, detail="Compenso mensile non impostato")
+    
+    # Get society settings for PDF generation
+    society_settings = await db.settings.find_one({"type": "society"})
+    if not society_settings:
+        raise HTTPException(status_code=400, detail="Impostazioni società non configurate")
+    
+    year = request.year
+    month = request.month
+    
+    # Check if already signed
+    existing = await db.atleta_pro_compensations.find_one({
+        "atleta_id": athlete_id,
+        "year": year,
+        "month": month,
+        "receipt_signed": True
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Quietanza già firmata per questo mese")
+    
+    # Calculate yearly total to check thresholds
+    prior_compensation = athlete.get("other_annual_compensation", 0) or 0
+    yearly_records = await db.atleta_pro_compensations.find({
+        "atleta_id": athlete_id,
+        "year": year,
+        "receipt_signed": True
+    }).to_list(12)
+    
+    yearly_total = sum(r.get("amount_gross", 0) for r in yearly_records)
+    
+    # Add prior compensation if this is the first year of contract
+    contract_start = athlete.get("contract_start_date")
+    contract_start_year = None
+    if contract_start:
+        if isinstance(contract_start, str):
+            contract_start_year = int(contract_start.split('-')[0])
+        elif hasattr(contract_start, 'year'):
+            contract_start_year = contract_start.year
+    
+    if contract_start_year and year == contract_start_year:
+        yearly_total += prior_compensation
+    
+    new_total = yearly_total + monthly_compensation
+    exceeded_5000 = new_total > 5000
+    exceeded_15000 = new_total > 15000
+    
+    now = datetime.utcnow()
+    
+    # Create or update record
+    record_id = str(ObjectId())
+    record = AtletaProCompensation(
+        id=record_id,
+        atleta_id=athlete_id,
+        month=month,
+        year=year,
+        amount_gross=monthly_compensation,
+        amount_net=monthly_compensation,
+        deductions=0,
+        received=True,
+        received_date=now,
+        receipt_signed=True,
+        receipt_signature_base64=request.signature_base64,
+        receipt_signed_date=now,
+        exceeded_5000=exceeded_5000,
+        exceeded_5000_date=now if exceeded_5000 else None,
+        exceeded_15000=exceeded_15000,
+        exceeded_15000_date=now if exceeded_15000 else None
+    )
+    
+    # Check if record exists (update) or insert new
+    existing_record = await db.atleta_pro_compensations.find_one({
+        "atleta_id": athlete_id,
+        "year": year,
+        "month": month
+    })
+    
+    if existing_record:
+        await db.atleta_pro_compensations.update_one(
+            {"atleta_id": athlete_id, "year": year, "month": month},
+            {"$set": record.dict()}
+        )
+    else:
+        await db.atleta_pro_compensations.insert_one(record.dict())
+    
+    return {
+        "message": "Quietanza firmata con successo",
+        "record_id": record_id,
+        "amount": monthly_compensation,
+        "yearly_total": new_total,
+        "exceeded_5000": exceeded_5000,
+        "exceeded_15000": exceeded_15000
+    }
+
+@api_router.get("/prime-squadre/athletes/{athlete_id}/threshold-status/{year}")
+async def get_athlete_threshold_status(athlete_id: str, year: int, current_user = Depends(get_current_user)):
+    """Get threshold status for an athlete in a specific year"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id, "is_compensated": True})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato in Prime Squadre")
+    
+    monthly_compensation = athlete.get("monthly_compensation", 0) or 0
+    prior_compensation = athlete.get("other_annual_compensation", 0) or 0
+    
+    yearly_records = await db.atleta_pro_compensations.find({
+        "atleta_id": athlete_id,
+        "year": year,
+        "receipt_signed": True
+    }).to_list(12)
+    
+    yearly_total = sum(r.get("amount_gross", 0) for r in yearly_records)
+    
+    # Add prior compensation if this is the first year of contract
+    contract_start = athlete.get("contract_start_date")
+    contract_start_year = None
+    if contract_start:
+        if isinstance(contract_start, str):
+            contract_start_year = int(contract_start.split('-')[0])
+        elif hasattr(contract_start, 'year'):
+            contract_start_year = contract_start.year
+    
+    if contract_start_year and year == contract_start_year:
+        yearly_total += prior_compensation
+    
+    exceeded_5000_record = next((r for r in yearly_records if r.get("exceeded_5000")), None)
+    exceeded_15000_record = next((r for r in yearly_records if r.get("exceeded_15000")), None)
+    
+    next_total = yearly_total + monthly_compensation
+    approaching_5000 = (yearly_total < 5000 and next_total > 4500)
+    approaching_15000 = (yearly_total < 15000 and next_total > 14500)
+    
+    return {
+        "athlete_id": athlete_id,
+        "year": year,
+        "monthly_compensation": monthly_compensation,
+        "prior_compensation": prior_compensation,
+        "yearly_total": yearly_total,
+        "thresholds": {
+            "5000": {
+                "threshold": 5000,
+                "exceeded": exceeded_5000_record is not None,
+                "exceeded_month": exceeded_5000_record.get("month") if exceeded_5000_record else None,
+                "approaching": approaching_5000
+            },
+            "15000": {
+                "threshold": 15000,
+                "exceeded": exceeded_15000_record is not None,
+                "exceeded_month": exceeded_15000_record.get("month") if exceeded_15000_record else None,
+                "approaching": approaching_15000
+            }
+        }
+    }
+
+@api_router.get("/prime-squadre/stats")
+async def get_prime_squadre_stats(current_user = Depends(get_current_user)):
+    """Get statistics for Prime Squadre module"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può visualizzare le statistiche")
+    
+    # Check if pro_enabled
+    settings = await db.settings.find_one({"type": "society"})
+    pro_enabled = settings.get("pro_enabled", False) if settings else False
+    
+    # Count members
+    total_members = await db.athletes.count_documents({"is_compensated": True})
+    max_members = 50
+    
+    # Get current year totals
+    current_year = datetime.utcnow().year
+    yearly_records = await db.atleta_pro_compensations.find({
+        "year": current_year,
+        "receipt_signed": True
+    }).to_list(1000)
+    
+    total_compensations = sum(r.get("amount_gross", 0) for r in yearly_records)
+    total_receipts = len(yearly_records)
+    
+    return {
+        "pro_enabled": pro_enabled,
+        "total_members": total_members,
+        "max_members": max_members,
+        "available_slots": max_members - total_members,
+        "current_year": current_year,
+        "yearly_stats": {
+            "total_compensations": total_compensations,
+            "total_receipts": total_receipts
+        }
+    }
+
+
 @api_router.get("/")
 async def root():
     return {"message": "Athlete Attendance API"}
