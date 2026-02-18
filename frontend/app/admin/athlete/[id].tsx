@@ -1821,6 +1821,40 @@ export default function AdminAthleteDetail() {
                 <Text style={styles.withdrawButtonText}>Ritira Atleta dalla Squadra</Text>
               </TouchableOpacity>
             )}
+
+            {/* Detach/Reattach Parents Button - Only for adult athletes */}
+            {!athlete.is_minor && (
+              <View style={styles.parentsActionSection}>
+                {!athlete.parents_detached ? (
+                  <TouchableOpacity
+                    style={styles.detachParentsButton}
+                    onPress={handleDetachParents}
+                    disabled={detachingParents}
+                  >
+                    <Ionicons name="people" size={20} color="#FF9500" />
+                    <Text style={styles.detachParentsButtonText}>
+                      {detachingParents ? 'Sganciamento...' : 'Sgancia Genitori (Maggiorenne)'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View>
+                    <View style={styles.parentsDetachedBadge}>
+                      <Text style={styles.parentsDetachedText}>👤 Genitori sganciati</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.reattachParentsButton}
+                      onPress={handleReattachParents}
+                      disabled={detachingParents}
+                    >
+                      <Ionicons name="people" size={18} color="#007AFF" />
+                      <Text style={styles.reattachParentsButtonText}>
+                        {detachingParents ? 'Ricollegamento...' : 'Ricollega Genitori'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            )}
           </>
         )}
 
