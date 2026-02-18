@@ -2618,6 +2618,8 @@ async def preview_federation_import(config: dict, current_user = Depends(get_cur
         region = config.get("region", "umbria")
         society_name = config.get("society_name", "")
         championship_id = config.get("championship_id")
+        
+        logging.info(f"Preview request - society_name: '{society_name}', championship_id: {championship_id}")
         season_id = config.get("season_id")
         society_id = config.get("federation_society_id")
         
