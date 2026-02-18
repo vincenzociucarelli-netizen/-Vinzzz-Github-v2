@@ -5573,7 +5573,8 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 collaborator_name=coach.get('full_name', 'Collaboratore'),
                 collaborator_fiscal_code=coach.get('fiscal_code', ''),
                 year=request.year,
-                signature_base64=request.signature_base64
+                signature_base64=request.signature_base64,
+                society_city=society_city
             )
             pdf_filename_prefix = "comunicazione_5k"
             doc_type = "threshold_5000_communication"
