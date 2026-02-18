@@ -7989,7 +7989,7 @@ async def enable_athlete_compensation(athlete_id: str, current_user = Depends(ge
     if current_count >= 50:
         raise HTTPException(status_code=400, detail="Raggiunto il limite massimo di 50 membri Prime Squadre")
     
-    # Update athlete
+    # Update athlete - just enable, config will be done via update endpoint
     result = await db.athletes.update_one(
         {"id": athlete_id},
         {"$set": {"is_compensated": True}}
@@ -7999,6 +7999,55 @@ async def enable_athlete_compensation(athlete_id: str, current_user = Depends(ge
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
     return {"message": "Atleta aggiunto a Prime Squadre", "athlete_id": athlete_id}
+
+
+class PrimeSquadreAthleteUpdate(BaseModel):
+    """Update Prime Squadre athlete configuration"""
+    monthly_compensation: Optional[float] = None
+    other_annual_compensation: Optional[float] = None
+    contract_start_date: Optional[str] = None
+    contract_end_date: Optional[str] = None
+    fees_waived: Optional[bool] = None
+
+
+@api_router.patch("/prime-squadre/athletes/{athlete_id}")
+async def update_prime_squadre_athlete(
+    athlete_id: str, 
+    data: PrimeSquadreAthleteUpdate,
+    current_user = Depends(get_current_user)
+):
+    """Update Prime Squadre athlete configuration (compensation, contract dates, fees)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare Prime Squadre")
+    
+    # Verify athlete is in Prime Squadre
+    athlete = await db.athletes.find_one({"id": athlete_id, "is_compensated": True})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato in Prime Squadre")
+    
+    update_dict = {}
+    if data.monthly_compensation is not None:
+        update_dict["monthly_compensation"] = data.monthly_compensation
+    if data.other_annual_compensation is not None:
+        update_dict["other_annual_compensation"] = data.other_annual_compensation
+    if data.contract_start_date is not None:
+        update_dict["contract_start_date"] = data.contract_start_date
+    if data.contract_end_date is not None:
+        update_dict["contract_end_date"] = data.contract_end_date
+    if data.fees_waived is not None:
+        update_dict["fees_waived"] = data.fees_waived
+    
+    if update_dict:
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": update_dict}
+        )
+    
+    # Return updated athlete
+    updated = await db.athletes.find_one({"id": athlete_id})
+    clean_mongo_docs([updated])
+    return updated
+
 
 @api_router.post("/prime-squadre/athletes/{athlete_id}/disable")
 async def disable_athlete_compensation(athlete_id: str, current_user = Depends(get_current_user)):
