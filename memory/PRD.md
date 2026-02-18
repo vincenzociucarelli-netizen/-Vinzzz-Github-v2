@@ -1,60 +1,49 @@
 # RegistraTEAM - Product Requirements Document
 
-## Applicazione
-Gestione società sportive dilettantistiche (pallavolo) con focus su compensi sportivi e quietanze digitali.
-
-## Funzionalità Implementate (Febbraio 2025)
-
-### Modulo Compensi Sportivi ✅
-- **Quietanze Mensili**: Firma digitale con generazione PDF automatica
-- **Calcolo Soglie €5.000 e €15.000**: Automatico con compensi pregressi inclusi
-- **Comunicazioni di Superamento Soglia**:
-  - PDF "COMUNICAZIONE DI SUPERAMENTO SOGLIA PREVIDENZIALE €5.000"
-  - PDF "COMUNICAZIONE DI SUPERAMENTO SOGLIA FISCALE €15.000"
-- **Badge visivi ">5K" e ">15K"**: Su card mesi e registro quietanze
-- **Email automatiche**: Invio PDF firmati a coach e admin
-- **Notifiche Admin**: Alert per superamento soglie
-
-### PDF Generati
-1. **Quietanza Mensile**: Solo compenso lordo (senza netto)
-2. **Comunicazione €5.000**: Obblighi previdenziali
-3. **Comunicazione €15.000**: Obblighi fiscali
-
-### Firma Digitale ✅
-- Firma su canvas web (react-signature-canvas)
-- Conversione corretta trasparenza PNG → sfondo bianco
-- Normalizzazione colori (firma sempre nera leggibile)
-
-### Dashboard Coach ✅
-- Periodo contratto visibile (DD/MM/YYYY - DD/MM/YYYY)
-- Registro quietanze con badge superamento soglia
-- Modale corretto in base al tipo di documento
-
-### Dashboard Admin ✅
-- Visualizzazione quietanze firmate per coach
-- Badge ">5K" / ">15K" su mesi con superamento
-- Notifiche superamento soglia
+## Descrizione Prodotto
+Applicazione per la gestione di club di pallavolo con funzionalità di gestione atleti, coach, compensi e documenti.
 
 ## Architettura Tecnica
+- **Frontend**: React Native / Expo Router
+- **Backend**: FastAPI (Python)
+- **Database**: MongoDB
+- **Email**: Brevo
+- **PDF**: fpdf2 / Pillow
 
-### Backend (FastAPI + MongoDB)
-- `/api/coach/{id}/compensation` - Lista compensi
-- `/api/coach/{id}/compensation/receipt` - Firma quietanza/dichiarazione
-- Generazione PDF con ReportLab e FPDF
-- Email con Brevo
+## Funzionalità Implementate
 
-### Frontend (React Native/Expo)
-- Pagine: coach/compensation.tsx, coach/profile.tsx
-- Admin: admin/coach/[id].tsx
-- Componenti: SignaturePadInline.tsx
+### Modulo Compensi Coach (COMPLETO)
+- Generazione PDF quietanze mensili
+- Gestione soglie fiscali €5K e €15K
+- Badge colorati per soglie superate
+- Firma digitale con canvas
+- Invio email automatico
+- Vista admin con storico quietanze
 
-## Test Completati
-- **ROSSI LIA**: €4.000 pregresso → €5K superata a Ottobre 2025
-- **COACH PIETRO**: €13.800 pregresso → €15K superata a Novembre 2025
+### Gestione Utenti
+- Login/registrazione multi-ruolo
+- Ruoli: Admin, Coach, Parent, Director
+- Profili con dati anagrafici e bancari
+- Upload documenti identità
 
-## Prossimi Passi (Backlog)
-- [ ] Freemium: Limite 30 membri piano FREE
-- [ ] Stripe: Pagamenti online per società
-- [ ] Modulo Atleti Professionisti con Compenso
-- [ ] Fix login genitori
-- [ ] Fix icone @expo/vector-icons su web
+### Scanner QR
+- Scansione presenze atleti
+- Fotocamera posteriore di default
+
+## Bug Noti
+1. **Login Parent** - Non funziona (P2)
+2. **Login Admin** - Navigazione buggy (P1)
+3. **Icone @expo/vector-icons** - Non si caricano su web (P3)
+
+## Prossimi Task
+1. Estendere modulo compensi ai Dirigenti
+2. Estendere modulo compensi agli Atleti PRO
+
+## Backlog
+- Modello Freemium (limite 30 membri)
+- Integrazione Stripe per abbonamenti
+- Limite squadre con messaggio upgrade
+
+## Ultima Modifica
+- Data: Dicembre 2025
+- Modifica: Implementati colori distintivi per soglie €5K (arancione) e €15K (rosso) nelle card dei mesi
