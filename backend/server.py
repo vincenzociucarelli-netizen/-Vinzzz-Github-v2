@@ -6920,7 +6920,7 @@ def generate_threshold_5k_pdf(
     
     # Signature section
     y -= 2*cm
-    c.drawString(2*cm, y, f"Luogo e data: __________________, {timestamp}")
+    c.drawString(2*cm, y, f"Luogo e data: {society_city}, {timestamp}")
     c.drawString(width - 7*cm, y, "Firma:")
     
     # Add signature image
