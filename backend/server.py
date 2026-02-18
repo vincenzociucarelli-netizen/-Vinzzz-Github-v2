@@ -5518,7 +5518,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
 """
 
     try:
-        # Generate PDF using new formatted function
+        # Generate PDF using new formatted function (no net amount)
         pdf_bytes = generate_monthly_receipt_pdf(
             society_name=society_name,
             collaborator_name=coach.get('full_name', 'Collaboratore'),
@@ -5526,7 +5526,6 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             month_name=month_name,
             year=request.year,
             amount_gross=request.amount_gross,
-            amount_net=amount_net,
             signature_base64=request.signature_base64
         )
     except Exception as e:
