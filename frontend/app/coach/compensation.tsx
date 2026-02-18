@@ -567,21 +567,56 @@ export default function CoachCompensation() {
     return warnings.length > 0 ? <View style={styles.warningsContainer}>{warnings}</View> : null;
   };
 
+  // Find first month where each threshold was exceeded (for highlighting subsequent months)
+  const getThresholdMonths = () => {
+    const signedRecords = records.filter(r => r.receipt_signed);
+    const sorted = [...signedRecords].sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return a.month - b.month;
+    });
+    
+    let first5k: { year: number, month: number } | null = null;
+    let first15k: { year: number, month: number } | null = null;
+    
+    for (const r of sorted) {
+      if (r.exceeded_5000 && !first5k) {
+        first5k = { year: r.year, month: r.month };
+      }
+      if (r.exceeded_15000 && !first15k) {
+        first15k = { year: r.year, month: r.month };
+      }
+    }
+    
+    return { first5k, first15k };
+  };
+  
+  const isMonthAfterThreshold = (month: number, year: number, threshold: { year: number, month: number } | null) => {
+    if (!threshold) return false;
+    if (year > threshold.year) return true;
+    if (year === threshold.year && month >= threshold.month) return true;
+    return false;
+  };
+
   const renderMonthCard = (month: number, year?: number) => {
     const displayYear = year || currentYear;
     const status = getMonthStatus(month, displayYear);
     const record = records.find(r => r.month === month && r.year === displayYear);
     const monthlyAmount = profile?.monthly_compensation || 0;
     
-    // Check if threshold was exceeded in this month
+    // Check if threshold was exceeded in this specific month (for badge)
     const exceeded5k = record?.exceeded_5000 === true;
     const exceeded15k = record?.exceeded_15000 === true;
+    
+    // Check if this month is after threshold was crossed (for highlighting)
+    const { first5k, first15k } = getThresholdMonths();
+    const isAfter5k = status === 'signed' && isMonthAfterThreshold(month, displayYear, first5k);
+    const isAfter15k = status === 'signed' && isMonthAfterThreshold(month, displayYear, first15k);
     
     // Determine the card style based on threshold status
     const getCardStyle = () => {
       if (status === 'signed') {
-        if (exceeded15k) return styles.monthCardSigned15k;
-        if (exceeded5k) return styles.monthCardSigned5k;
+        if (isAfter15k) return styles.monthCardSigned15k;
+        if (isAfter5k) return styles.monthCardSigned5k;
         return styles.monthCardSigned;
       }
       if (status === 'future') return styles.monthCardFuture;
