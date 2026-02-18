@@ -853,7 +853,7 @@ export default function CoachProfile() {
             <Text style={styles.cardTitle}>📅 Registro Quietanze</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
               {(() => {
-                // Find first month where each threshold was exceeded
+                // Find first month where each threshold was exceeded PER YEAR
                 const sortedReceipts = [...signedReceipts]
                   .filter(r => r.receipt_signed)
                   .sort((a, b) => {
@@ -861,23 +861,28 @@ export default function CoachProfile() {
                     return a.month - b.month;
                   });
                 
-                let first5k: { year: number, month: number } | null = null;
-                let first15k: { year: number, month: number } | null = null;
+                // Track thresholds PER YEAR (they reset each calendar year)
+                const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
                 
                 for (const r of sortedReceipts) {
-                  if (r.exceeded_5000 && !first5k) {
-                    first5k = { year: r.year, month: r.month };
+                  if (!thresholdsByYear[r.year]) {
+                    thresholdsByYear[r.year] = { first5k: null, first15k: null };
                   }
-                  if (r.exceeded_15000 && !first15k) {
-                    first15k = { year: r.year, month: r.month };
+                  if (r.exceeded_5000 && thresholdsByYear[r.year].first5k === null) {
+                    thresholdsByYear[r.year].first5k = r.month;
+                  }
+                  if (r.exceeded_15000 && thresholdsByYear[r.year].first15k === null) {
+                    thresholdsByYear[r.year].first15k = r.month;
                   }
                 }
                 
-                const isAfterThreshold = (yearInt: number, monthInt: number, threshold: { year: number, month: number } | null) => {
-                  if (!threshold) return false;
-                  if (yearInt > threshold.year) return true;
-                  if (yearInt === threshold.year && monthInt >= threshold.month) return true;
-                  return false;
+                const isAfterThreshold = (yearInt: number, monthInt: number, type: '5k' | '15k') => {
+                  const yearThresholds = thresholdsByYear[yearInt];
+                  if (!yearThresholds) return false;
+                  const thresholdMonth = type === '5k' ? yearThresholds.first5k : yearThresholds.first15k;
+                  if (thresholdMonth === null) return false;
+                  // Only highlight months in the SAME year that are >= threshold month
+                  return monthInt >= thresholdMonth;
                 };
                 
                 return getContractMonths().map((month) => {
@@ -891,9 +896,9 @@ export default function CoachProfile() {
                   const isThreshold5k = receipt?.exceeded_5000 === true;
                   const isThreshold15k = receipt?.exceeded_15000 === true;
                   
-                  // Check if month is AFTER threshold (for highlighting)
-                  const isAfter5k = isSigned && isAfterThreshold(yearInt, monthInt, first5k);
-                  const isAfter15k = isSigned && isAfterThreshold(yearInt, monthInt, first15k);
+                  // Check if month is AFTER threshold IN SAME YEAR (for highlighting)
+                  const isAfter5k = isSigned && isAfterThreshold(yearInt, monthInt, '5k');
+                  const isAfter15k = isSigned && isAfterThreshold(yearInt, monthInt, '15k');
                   
                   // Check if month is in the future
                   const now = new Date();
