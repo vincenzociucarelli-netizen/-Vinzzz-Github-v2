@@ -385,45 +385,122 @@ export default function PrimeSquadrePage() {
         </View>
       </Modal>
 
-      {/* Set Compensation Modal */}
-      <Modal visible={!!selectedAthlete} animationType="fade" transparent>
+      {/* Configuration Modal (for both add and edit) */}
+      <Modal visible={showConfigModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Imposta Compenso</Text>
-            <Text style={styles.modalSubtitle}>
-              {selectedAthlete?.last_name} {selectedAthlete?.first_name}
-            </Text>
-            
-            <View style={styles.inputRow}>
-              <Text style={styles.inputLabel}>€</Text>
-              <TextInput
-                style={styles.compensationInput}
-                placeholder="0.00"
-                keyboardType="numeric"
-                value={compensationAmount}
-                onChangeText={setCompensationAmount}
-              />
-              <Text style={styles.inputSuffix}>/mese</Text>
+          <ScrollView style={{ maxHeight: '90%' }}>
+            <View style={[styles.modalContent, { marginVertical: 40 }]}>
+              <Text style={styles.modalTitle}>
+                {athleteToAdd ? 'Configura Atleta Prime Squadre' : 'Modifica Configurazione'}
+              </Text>
+              <Text style={styles.modalSubtitle}>
+                {athleteToAdd 
+                  ? `${athleteToAdd.last_name} ${athleteToAdd.first_name}`
+                  : `${selectedAthlete?.last_name} ${selectedAthlete?.first_name}`
+                }
+              </Text>
+              
+              {/* Compenso Mensile */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>💰 Compenso Mensile</Text>
+                <View style={styles.inputRow}>
+                  <Text style={styles.inputPrefix}>€</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="0"
+                    keyboardType="numeric"
+                    value={configForm.monthly_compensation}
+                    onChangeText={(v) => setConfigForm({...configForm, monthly_compensation: v})}
+                  />
+                  <Text style={styles.inputSuffix}>/mese</Text>
+                </View>
+                <Text style={styles.formHint}>Lascia 0 se l'atleta non percepisce compensi</Text>
+              </View>
+
+              {/* Compensi Pregressi */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>📊 Compensi già percepiti nell'anno</Text>
+                <View style={styles.inputRow}>
+                  <Text style={styles.inputPrefix}>€</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="0"
+                    keyboardType="numeric"
+                    value={configForm.other_annual_compensation}
+                    onChangeText={(v) => setConfigForm({...configForm, other_annual_compensation: v})}
+                  />
+                </View>
+                <Text style={styles.formHint}>Compensi da altre ASD nell'anno corrente (per calcolo soglie €5K/€15K)</Text>
+              </View>
+
+              {/* Date Contratto */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>📅 Periodo Contrattuale</Text>
+                <View style={styles.dateRow}>
+                  <View style={styles.dateField}>
+                    <Text style={styles.dateLabel}>Inizio</Text>
+                    <TextInput
+                      style={styles.dateInput}
+                      placeholder="2025-09-01"
+                      value={configForm.contract_start_date}
+                      onChangeText={(v) => setConfigForm({...configForm, contract_start_date: v})}
+                    />
+                  </View>
+                  <View style={styles.dateField}>
+                    <Text style={styles.dateLabel}>Fine</Text>
+                    <TextInput
+                      style={styles.dateInput}
+                      placeholder="2026-05-31"
+                      value={configForm.contract_end_date}
+                      onChangeText={(v) => setConfigForm({...configForm, contract_end_date: v})}
+                    />
+                  </View>
+                </View>
+                <Text style={styles.formHint}>Formato: AAAA-MM-GG</Text>
+              </View>
+
+              {/* Quote Esenti */}
+              <View style={styles.formGroup}>
+                <View style={styles.switchRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.formLabel}>💳 Esenzione Quote</Text>
+                    <Text style={styles.formHint}>
+                      {configForm.fees_waived 
+                        ? 'L\'atleta NON pagherà più le quote (professionista)'
+                        : 'L\'atleta continuerà a pagare le quote'}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={configForm.fees_waived}
+                    onValueChange={(v) => setConfigForm({...configForm, fees_waived: v})}
+                    trackColor={{ false: '#ddd', true: '#B8860B' }}
+                    thumbColor={configForm.fees_waived ? '#fff' : '#f4f3f4'}
+                  />
+                </View>
+              </View>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
+                    setShowConfigModal(false);
+                    setAthleteToAdd(null);
+                    setSelectedAthlete(null);
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Annulla</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.confirmButton]}
+                  onPress={athleteToAdd ? handleConfirmAddAthlete : handleSetCompensation}
+                >
+                  <Text style={styles.confirmButtonText}>
+                    {athleteToAdd ? 'Aggiungi' : 'Salva'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setSelectedAthlete(null);
-                  setCompensationAmount('');
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Annulla</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={handleSetCompensation}
-              >
-                <Text style={styles.confirmButtonText}>Salva</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>
