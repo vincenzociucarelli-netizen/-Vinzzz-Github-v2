@@ -7499,8 +7499,11 @@ async def sign_dirigente_compensation_receipt(
     current_user = Depends(get_current_user)
 ):
     """Dirigente firma la quietanza mensile di compenso sportivo dilettantistico"""
-    if current_user["role"] != UserRole.VIEWER or current_user["id"] != dirigente_id:
+    # Allow both VIEWER (dirigente) and ADMIN to sign their own receipts
+    if current_user["id"] != dirigente_id:
         raise HTTPException(status_code=403, detail="Solo il dirigente può firmare le proprie quietanze")
+    if current_user["role"] not in [UserRole.VIEWER, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Get dirigente data
     dirigente = await db.users.find_one({"id": dirigente_id})
