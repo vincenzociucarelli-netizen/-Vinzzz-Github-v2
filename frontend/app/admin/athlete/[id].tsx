@@ -637,6 +637,64 @@ export default function AdminAthleteDetail() {
     }
   };
 
+  // Detach parents from adult athlete
+  const handleDetachParents = async () => {
+    const confirm = Platform.OS === 'web'
+      ? window.confirm('Confermi di voler sganciare i genitori da questo atleta maggiorenne?\n\nI dati dei genitori rimarranno salvati ma non saranno più visibili.')
+      : await new Promise(resolve => {
+          Alert.alert(
+            'Sgancia Genitori',
+            'Confermi di voler sganciare i genitori da questo atleta maggiorenne?\n\nI dati dei genitori rimarranno salvati ma non saranno più visibili.',
+            [
+              { text: 'Annulla', onPress: () => resolve(false) },
+              { text: 'Conferma', style: 'destructive', onPress: () => resolve(true) },
+            ]
+          );
+        });
+    
+    if (!confirm) return;
+    
+    setDetachingParents(true);
+    try {
+      await api.post(`/athletes/${id}/detach-parents`);
+      showAlert('Successo', 'Genitori sganciati con successo');
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante lo sgancio genitori');
+    } finally {
+      setDetachingParents(false);
+    }
+  };
+
+  // Reattach parents to athlete
+  const handleReattachParents = async () => {
+    const confirm = Platform.OS === 'web'
+      ? window.confirm('Vuoi ricollegare i genitori a questo atleta?')
+      : await new Promise(resolve => {
+          Alert.alert(
+            'Ricollega Genitori',
+            'Vuoi ricollegare i genitori a questo atleta?',
+            [
+              { text: 'Annulla', onPress: () => resolve(false) },
+              { text: 'Conferma', onPress: () => resolve(true) },
+            ]
+          );
+        });
+    
+    if (!confirm) return;
+    
+    setDetachingParents(true);
+    try {
+      await api.post(`/athletes/${id}/reattach-parents`);
+      showAlert('Successo', 'Genitori ricollegati con successo');
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il ricollegamento');
+    } finally {
+      setDetachingParents(false);
+    }
+  };
+
   const getPercentageColor = (percentage: number) => {
     if (percentage >= 80) return '#34C759';
     if (percentage >= 50) return '#FF9500';
