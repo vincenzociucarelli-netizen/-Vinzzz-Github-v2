@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Modal,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import ReactSignatureCanvas from 'react-signature-canvas';
 
