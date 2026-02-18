@@ -211,6 +211,7 @@ export default function AdminDirigenteDetail() {
     try {
       await api.patch(`/users/${id}/compensation`, {
         monthly_compensation: parseFloat(monthlyCompensation) || 0,
+        other_annual_compensation: parseFloat(otherAnnualCompensation) || 0,
       });
       showAlert('Successo', 'Compenso aggiornato con successo');
       setEditing(false);
