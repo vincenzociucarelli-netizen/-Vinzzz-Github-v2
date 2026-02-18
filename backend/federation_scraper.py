@@ -164,20 +164,77 @@ class FIPAVScraper:
             response = await client.get(self.base_url, params=params, headers=self.HEADERS)
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Find all match tables
+            # Find all tables - the first table usually contains match data
             tables = soup.find_all('table')
             
-            current_championship = None
-            
             for table in tables:
-                # Check if there's a championship header before this table
-                prev = table.find_previous(['h3', 'h4', 'strong', 'b'])
-                if prev:
-                    champ_text = prev.get_text(strip=True)
-                    if 'Girone' in champ_text or 'Serie' in champ_text or 'Under' in champ_text or 'Divisione' in champ_text:
-                        current_championship = champ_text
+                rows = table.find_all('tr')
                 
-                # Find rows in the table
+                # Check if this is a match table by looking at the header
+                if len(rows) < 2:
+                    continue
+                    
+                header_cells = rows[0].find_all(['th', 'td'])
+                header_texts = [c.get_text(strip=True).lower() for c in header_cells]
+                
+                # Match table has: Gara, G, Data/ora, Squadra casa, Squadra ospite, Risul.
+                if not any('gara' in h or 'data' in h for h in header_texts):
+                    continue
+                
+                # Process data rows (skip header)
+                for row in rows[1:]:
+                    cells = row.find_all('td')
+                    if len(cells) < 6:
+                        continue
+                    
+                    cell_texts = [c.get_text(strip=True) for c in cells]
+                    
+                    try:
+                        # Structure: Gara, G (giornata), Data/ora, Squadra casa, Squadra ospite, Risul.
+                        match_number = cell_texts[0] if cell_texts[0].isdigit() else None
+                        giornata = cell_texts[1] if len(cell_texts) > 1 else None
+                        
+                        # Parse date/time
+                        date_str = cell_texts[2] if len(cell_texts) > 2 else ""
+                        date_match = re.search(r'(\d{2}/\d{2}/\d{2})\s*(\d{2}:\d{2})?', date_str)
+                        if not date_match:
+                            continue
+                            
+                        date_part = date_match.group(1)
+                        time_part = date_match.group(2) or "00:00"
+                        match_date = datetime.strptime(f"{date_part} {time_part}", "%d/%m/%y %H:%M")
+                        
+                        # Teams
+                        home_team = cell_texts[3] if len(cell_texts) > 3 else ""
+                        away_team = cell_texts[4] if len(cell_texts) > 4 else ""
+                        
+                        # Result
+                        result = cell_texts[5] if len(cell_texts) > 5 else None
+                        if result and '-' not in result:
+                            result = None
+                        
+                        # Filter by society name if provided
+                        if society_name:
+                            society_lower = society_name.lower()
+                            if society_lower not in home_team.lower() and society_lower not in away_team.lower():
+                                continue
+                        
+                        match = ScrapedMatch(
+                            match_number=match_number or f"FIPAV-{match_date.strftime('%Y%m%d%H%M')}",
+                            date=match_date,
+                            home_team=home_team,
+                            away_team=away_team,
+                            result=result,
+                            giornata=giornata
+                        )
+                        matches.append(match)
+                        
+                    except Exception as e:
+                        logging.debug(f"Error parsing row: {e}")
+                        continue
+        
+        logging.info(f"Scraped {len(matches)} matches from FIPAV")
+        return matches
                 rows = table.find_all('tr')
                 
                 for row in rows:
