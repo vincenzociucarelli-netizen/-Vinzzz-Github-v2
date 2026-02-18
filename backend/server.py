@@ -5604,8 +5604,8 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             receipt_signature_base64=request.signature_base64,
             receipt_document_id=receipt_id,
             receipt_signed_date=now,
-            exceeded_5000=request.exceeded_5000,
-            exceeded_5000_date=now if request.exceeded_5000 else None,
+            exceeded_5000=first_time_exceeded_5000,
+            exceeded_5000_date=now if first_time_exceeded_5000 else None,
             exceeded_15000=request.exceeded_15000,
             exceeded_15000_date=now if request.exceeded_15000 else None
         )
