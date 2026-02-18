@@ -143,7 +143,7 @@ class FIPAVScraper:
         
         Args:
             society_id: Filter by society ID
-            championship_id: NOT USED - FIPAV site doesn't support CId+SId together
+            championship_id: Filter by championship ID (CId parameter)
             season_id: Season ID (StId parameter)
             society_name: Name of society to match (for filtering results)
         """
@@ -151,13 +151,16 @@ class FIPAVScraper:
         
         async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
             # Build URL with parameters
-            # NOTE: FIPAV site doesn't work with CId+SId together
-            # So we only use SId and filter by society_name in results
             params = {'ComitatoId': self.comitato_id}
             if season_id:
                 params['StId'] = season_id
             if society_id:
                 params['SId'] = society_id
+            if championship_id:
+                params['CId'] = championship_id
+            
+            # Add btFiltro=CERCA to simulate clicking the search button
+            params['btFiltro'] = 'CERCA'
             
             logging.info(f"Scraping FIPAV: {self.base_url} with params {params}")
             
