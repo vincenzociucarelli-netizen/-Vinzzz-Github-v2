@@ -575,26 +575,33 @@ export default function CoachCompensation() {
       return a.month - b.month;
     });
     
-    let first5k: { year: number, month: number } | null = null;
-    let first15k: { year: number, month: number } | null = null;
+    // Track thresholds PER YEAR (they reset each calendar year)
+    const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
     
     for (const r of sorted) {
-      if (r.exceeded_5000 && !first5k) {
-        first5k = { year: r.year, month: r.month };
+      if (!thresholdsByYear[r.year]) {
+        thresholdsByYear[r.year] = { first5k: null, first15k: null };
       }
-      if (r.exceeded_15000 && !first15k) {
-        first15k = { year: r.year, month: r.month };
+      if (r.exceeded_5000 && thresholdsByYear[r.year].first5k === null) {
+        thresholdsByYear[r.year].first5k = r.month;
+      }
+      if (r.exceeded_15000 && thresholdsByYear[r.year].first15k === null) {
+        thresholdsByYear[r.year].first15k = r.month;
       }
     }
     
-    return { first5k, first15k };
+    return thresholdsByYear;
   };
   
-  const isMonthAfterThreshold = (month: number, year: number, threshold: { year: number, month: number } | null) => {
-    if (!threshold) return false;
-    if (year > threshold.year) return true;
-    if (year === threshold.year && month >= threshold.month) return true;
-    return false;
+  const isMonthAfterThreshold = (month: number, year: number, thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } }, type: '5k' | '15k') => {
+    const yearThresholds = thresholdsByYear[year];
+    if (!yearThresholds) return false;
+    
+    const thresholdMonth = type === '5k' ? yearThresholds.first5k : yearThresholds.first15k;
+    if (thresholdMonth === null) return false;
+    
+    // Only highlight months in the SAME year that are >= threshold month
+    return month >= thresholdMonth;
   };
 
   const renderMonthCard = (month: number, year?: number) => {
@@ -607,10 +614,10 @@ export default function CoachCompensation() {
     const exceeded5k = record?.exceeded_5000 === true;
     const exceeded15k = record?.exceeded_15000 === true;
     
-    // Check if this month is after threshold was crossed (for highlighting)
-    const { first5k, first15k } = getThresholdMonths();
-    const isAfter5k = status === 'signed' && isMonthAfterThreshold(month, displayYear, first5k);
-    const isAfter15k = status === 'signed' && isMonthAfterThreshold(month, displayYear, first15k);
+    // Check if this month is after threshold was crossed IN THE SAME YEAR (for highlighting)
+    const thresholdsByYear = getThresholdMonths();
+    const isAfter5k = status === 'signed' && isMonthAfterThreshold(month, displayYear, thresholdsByYear, '5k');
+    const isAfter15k = status === 'signed' && isMonthAfterThreshold(month, displayYear, thresholdsByYear, '15k');
     
     // Determine the card style based on threshold status
     const getCardStyle = () => {
