@@ -5675,7 +5675,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             <li>Totale annuo progressivo: € {new_total:.2f}</li>
             </ul>
             {'<p style="color: orange;"><strong>⚠️ ATTENZIONE: Il collaboratore ha superato la soglia di €5.000</strong></p>' if first_time_exceeded_5000 else ''}
-            {'<p style="color: red;"><strong>🚨 URGENTE: Il collaboratore ha superato la soglia di €15.000</strong></p>' if request.exceeded_15000 else ''}
+            {'<p style="color: red;"><strong>🚨 URGENTE: Il collaboratore ha superato la soglia di €15.000</strong></p>' if first_time_exceeded_15000 else ''}
             <hr>
             <p><em>In allegato il documento firmato.</em></p>
             </body>
