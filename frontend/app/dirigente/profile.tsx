@@ -651,6 +651,91 @@ export default function DirigenteProfile() {
               </View>
               <Ionicons name="chevron-forward" size={22} color="#8E44AD" />
             </TouchableOpacity>
+            
+            {/* Compact list of signed receipts */}
+            {signedReceipts.length > 0 && (
+              <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#eee' }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 10 }}>
+                  📋 Quietanze Firmate ({signedReceipts.length})
+                </Text>
+                {(() => {
+                  const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                  
+                  // Sort by date and find threshold crossings per year
+                  const sorted = [...signedReceipts].sort((a, b) => {
+                    if (a.year !== b.year) return a.year - b.year;
+                    return a.month - b.month;
+                  });
+                  
+                  const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
+                  for (const r of sorted) {
+                    if (!thresholdsByYear[r.year]) {
+                      thresholdsByYear[r.year] = { first5k: null, first15k: null };
+                    }
+                    if (r.exceeded_5000 && thresholdsByYear[r.year].first5k === null) {
+                      thresholdsByYear[r.year].first5k = r.month;
+                    }
+                    if (r.exceeded_15000 && thresholdsByYear[r.year].first15k === null) {
+                      thresholdsByYear[r.year].first15k = r.month;
+                    }
+                  }
+                  
+                  // Display newest first
+                  const sortedForDisplay = [...sorted].reverse();
+                  
+                  return sortedForDisplay.map((r) => {
+                    const yearThresholds = thresholdsByYear[r.year] || { first5k: null, first15k: null };
+                    const isAfter15k = yearThresholds.first15k !== null && r.month >= yearThresholds.first15k;
+                    const isAfter5k = yearThresholds.first5k !== null && r.month >= yearThresholds.first5k;
+                    
+                    let bgColor = '#F0FFF4'; // green
+                    let borderColor = '#34C759';
+                    if (isAfter15k) {
+                      bgColor = '#FFF3E0';
+                      borderColor = '#E65100';
+                    } else if (isAfter5k) {
+                      bgColor = '#FFF8E1';
+                      borderColor = '#F9A825';
+                    }
+                    
+                    return (
+                      <View key={`${r.year}-${r.month}`} style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingVertical: 8,
+                        paddingHorizontal: 12,
+                        marginBottom: 6,
+                        backgroundColor: bgColor,
+                        borderRadius: 8,
+                        borderLeftWidth: 4,
+                        borderLeftColor: borderColor,
+                      }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="checkmark-circle" size={16} color={borderColor} />
+                          <Text style={{ fontSize: 14, fontWeight: '500', color: '#333' }}>
+                            {MONTH_NAMES[r.month]} {r.year}
+                          </Text>
+                          {r.exceeded_15000 && (
+                            <View style={{ backgroundColor: '#E65100', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                              <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>&gt;15K</Text>
+                            </View>
+                          )}
+                          {r.exceeded_5000 && !r.exceeded_15000 && (
+                            <View style={{ backgroundColor: '#F9A825', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                              <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>&gt;5K</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#8E44AD' }}>
+                          €{(r.amount_gross || r.amount || 0).toFixed(0)}
+                        </Text>
+                      </View>
+                    );
+                  });
+                })()}
+              </View>
+            )}
           )}
         </View>
 
