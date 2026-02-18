@@ -5524,37 +5524,66 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
 """
 
     try:
-        # Generate PDF using new formatted function (no net amount)
-        pdf_bytes = generate_monthly_receipt_pdf(
-            society_name=society_name,
-            collaborator_name=coach.get('full_name', 'Collaboratore'),
-            collaborator_fiscal_code=coach.get('fiscal_code', ''),
-            month_name=month_name,
-            year=request.year,
-            amount_gross=request.amount_gross,
-            signature_base64=request.signature_base64
-        )
+        # Generate the appropriate PDF based on threshold status
+        if first_time_exceeded_15000:
+            # Generate €15K threshold communication
+            pdf_bytes = generate_threshold_15k_pdf(
+                society_name=society_name,
+                collaborator_name=coach.get('full_name', 'Collaboratore'),
+                collaborator_fiscal_code=coach.get('fiscal_code', ''),
+                year=request.year,
+                signature_base64=request.signature_base64
+            )
+            pdf_filename_prefix = "comunicazione_15k"
+            doc_type = "threshold_15000_communication"
+            doc_title = f"Comunicazione Superamento €15.000 - {month_name} {request.year}"
+        elif first_time_exceeded_5000:
+            # Generate €5K threshold communication
+            pdf_bytes = generate_threshold_5k_pdf(
+                society_name=society_name,
+                collaborator_name=coach.get('full_name', 'Collaboratore'),
+                collaborator_fiscal_code=coach.get('fiscal_code', ''),
+                year=request.year,
+                signature_base64=request.signature_base64
+            )
+            pdf_filename_prefix = "comunicazione_5k"
+            doc_type = "threshold_5000_communication"
+            doc_title = f"Comunicazione Superamento €5.000 - {month_name} {request.year}"
+        else:
+            # Generate standard receipt
+            pdf_bytes = generate_monthly_receipt_pdf(
+                society_name=society_name,
+                collaborator_name=coach.get('full_name', 'Collaboratore'),
+                collaborator_fiscal_code=coach.get('fiscal_code', ''),
+                month_name=month_name,
+                year=request.year,
+                amount_gross=request.amount_gross,
+                signature_base64=request.signature_base64
+            )
+            pdf_filename_prefix = "quietanza"
+            doc_type = "compensation_receipt"
+            doc_title = f"Quietanza Compenso - {month_name} {request.year}"
     except Exception as e:
-        logging.error(f"Error generating receipt PDF: {e}")
+        logging.error(f"Error generating PDF: {e}")
         raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
     
     # Save PDF
     receipt_id = str(uuid.uuid4())
-    pdf_filename = f"quietanza_{coach_id}_{request.year}_{request.month:02d}_{receipt_id}.pdf"
+    pdf_filename = f"{pdf_filename_prefix}_{coach_id}_{request.year}_{request.month:02d}_{receipt_id}.pdf"
     pdf_path = os.path.join(SIGNED_DOCS_DIR, pdf_filename)
     
     try:
         with open(pdf_path, 'wb') as f:
             f.write(pdf_bytes)
     except Exception as e:
-        logging.error(f"Error saving receipt PDF: {e}")
+        logging.error(f"Error saving PDF: {e}")
         raise HTTPException(status_code=500, detail="Errore nel salvataggio del documento")
     
     # Store document record
     document_record = {
         "id": receipt_id,
-        "document_type": "compensation_receipt",
-        "document_title": f"Quietanza Compenso - {month_name} {request.year}",
+        "document_type": doc_type,
+        "document_title": doc_title,
         "coach_id": coach_id,
         "coach_name": coach.get('full_name', ''),
         "month": request.month,
