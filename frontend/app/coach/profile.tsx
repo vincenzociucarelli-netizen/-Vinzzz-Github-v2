@@ -858,6 +858,8 @@ export default function CoachProfile() {
                 const monthInt = parseInt(monthNum);
                 const receipt = signedReceipts.find(r => r.year === yearInt && r.month === monthInt);
                 const isSigned = receipt?.receipt_signed === true;
+                const exceeded5k = receipt?.exceeded_5000 === true;
+                const exceeded15k = receipt?.exceeded_15000 === true;
                 
                 // Check if month is in the future
                 const now = new Date();
@@ -870,12 +872,12 @@ export default function CoachProfile() {
                   <View 
                     key={month.key} 
                     style={{
-                      backgroundColor: isSigned ? '#E8F5E9' : isFuture ? '#FAFAFA' : '#F5F5F5',
+                      backgroundColor: exceeded15k ? '#FFF3E0' : exceeded5k ? '#FFF8E1' : isSigned ? '#E8F5E9' : isFuture ? '#FAFAFA' : '#F5F5F5',
                       borderRadius: 6,
                       paddingVertical: 6,
                       paddingHorizontal: 10,
-                      borderWidth: 1,
-                      borderColor: isSigned ? '#4CAF50' : isFuture ? '#E8E8E8' : '#E0E0E0',
+                      borderWidth: exceeded15k ? 2 : exceeded5k ? 2 : 1,
+                      borderColor: exceeded15k ? '#E65100' : exceeded5k ? '#F9A825' : isSigned ? '#4CAF50' : isFuture ? '#E8E8E8' : '#E0E0E0',
                       minWidth: 85,
                       alignItems: 'center',
                       opacity: isFuture ? 0.6 : 1,
@@ -884,9 +886,15 @@ export default function CoachProfile() {
                     <Text style={{ fontSize: 11, color: isFuture ? '#AAA' : '#666', fontWeight: '500' }}>
                       {month.label.split(' ')[0].substring(0, 3)} {month.label.split(' ')[1]}
                     </Text>
-                    <Text style={{ fontSize: 12, color: isSigned ? '#2E7D32' : isFuture ? '#CCC' : '#999', fontWeight: '600' }}>
-                      {isSigned ? '✓' : isFuture ? '○' : '-'}
-                    </Text>
+                    {exceeded15k ? (
+                      <Text style={{ fontSize: 11, color: '#E65100', fontWeight: 'bold' }}>&gt;15K</Text>
+                    ) : exceeded5k ? (
+                      <Text style={{ fontSize: 11, color: '#F9A825', fontWeight: 'bold' }}>&gt;5K</Text>
+                    ) : (
+                      <Text style={{ fontSize: 12, color: isSigned ? '#2E7D32' : isFuture ? '#CCC' : '#999', fontWeight: '600' }}>
+                        {isSigned ? '✓' : isFuture ? '○' : '-'}
+                      </Text>
+                    )}
                   </View>
                 );
               })}
