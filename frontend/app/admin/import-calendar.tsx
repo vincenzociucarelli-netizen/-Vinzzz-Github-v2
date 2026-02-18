@@ -383,7 +383,7 @@ export default function ImportCalendarScreen() {
               <ActivityIndicator size="small" color="#007AFF" />
             ) : (
               <ScrollView style={styles.championshipList} nestedScrollEnabled>
-                {championships.slice(0, 30).map(champ => (
+                {championships.map(champ => (
                   <TouchableOpacity
                     key={champ.id}
                     style={[
