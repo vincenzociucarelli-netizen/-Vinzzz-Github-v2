@@ -10,6 +10,7 @@ import {
   Platform,
   TextInput,
   Modal,
+  Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -21,6 +22,10 @@ interface Athlete {
   last_name: string;
   team_name?: string;
   monthly_compensation?: number;
+  other_annual_compensation?: number;
+  contract_start_date?: string;
+  contract_end_date?: string;
+  fees_waived?: boolean;
   compensation_summary?: {
     yearly_total: number;
     months_received: number;
@@ -40,6 +45,14 @@ interface PrimeSquadreStats {
   };
 }
 
+interface ConfigFormData {
+  monthly_compensation: string;
+  other_annual_compensation: string;
+  contract_start_date: string;
+  contract_end_date: string;
+  fees_waived: boolean;
+}
+
 export default function PrimeSquadrePage() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
@@ -47,9 +60,17 @@ export default function PrimeSquadrePage() {
   const [stats, setStats] = useState<PrimeSquadreStats | null>(null);
   const [allAthletes, setAllAthletes] = useState<Athlete[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showConfigModal, setShowConfigModal] = useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState<Athlete | null>(null);
-  const [compensationAmount, setCompensationAmount] = useState('');
+  const [athleteToAdd, setAthleteToAdd] = useState<Athlete | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [configForm, setConfigForm] = useState<ConfigFormData>({
+    monthly_compensation: '0',
+    other_annual_compensation: '0',
+    contract_start_date: '2025-09-01',
+    contract_end_date: '2026-05-31',
+    fees_waived: false,
+  });
 
   const loadData = async () => {
     try {
