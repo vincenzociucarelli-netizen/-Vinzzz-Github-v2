@@ -265,9 +265,30 @@ export default function CoachCompensation() {
       
       // Calculate if thresholds will be exceeded
       const monthlyAmount = profile.monthly_compensation || 0;
-      const newTotal = yearlyTotal + monthlyAmount;
-      const exceeded5000 = newTotal > 5000 && yearlyTotal <= 5000;
-      const exceeded15000 = newTotal > 15000 && yearlyTotal <= 15000;
+      const priorComp = profile.other_annual_compensation || 0;
+      
+      // Calculate total for the selected year (not current display year)
+      const yearRecords = records.filter(r => r.year === selectedYear && r.receipt_signed);
+      const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
+      
+      // Get contract start year to determine if prior compensation applies
+      let contractStartYear = null;
+      if (profile.contract_start_date) {
+        contractStartYear = parseInt(profile.contract_start_date.split('-')[0]);
+      }
+      
+      // Include prior compensation only for the first year of contract
+      const yearTotalBeforeThis = (selectedYear === contractStartYear) 
+        ? yearTotalFromReceipts + priorComp 
+        : yearTotalFromReceipts;
+      
+      const newTotal = yearTotalBeforeThis + monthlyAmount;
+      
+      // Check if THIS month causes the threshold to be exceeded
+      const exceeded5000 = newTotal > 5000 && yearTotalBeforeThis <= 5000;
+      const exceeded15000 = newTotal > 15000 && yearTotalBeforeThis <= 15000;
+      
+      console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYear, selectedYear });
       
       const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
