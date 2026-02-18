@@ -37,6 +37,11 @@ Applicazione per la gestione di club di pallavolo con funzionalità di gestione 
 - Scansione presenze atleti
 - Fotocamera posteriore di default
 
+### Impostazioni Società (AGGIORNATO - 18/02/2026)
+- Campi Email e PEC aggiunti
+- Nome società dinamico (caricato da database, non hardcoded)
+- Tutti i pulsanti freccia "indietro" con stile corretto (backgroundColor rgba)
+
 ## Bug Noti
 1. **Login Parent** - Non funziona (P2)
 2. **Login Admin** - Navigazione buggy (P1)
@@ -44,14 +49,17 @@ Applicazione per la gestione di club di pallavolo con funzionalità di gestione 
 
 ## Prossimi Task
 1. ~~Estendere modulo compensi ai Dirigenti~~ ✅ COMPLETATO
-2. Estendere modulo compensi agli Atleti PRO
+2. ~~Aggiungere campi Email/PEC a Impostazioni~~ ✅ COMPLETATO
+3. Implementare modulo "Prime Squadre" (Fase 2)
+4. Fix bug Admin panel authentication
 
 ## Backlog
 - Modello Freemium (limite 30 membri)
-- Integrazione Stripe per abbonamenti
+- Integrazione Stripe per abbonamenti (da luglio 2026)
 - Limite squadre con messaggio upgrade
+- Refactoring server.py (oltre 8000 righe)
 
 ## Ultima Modifica
 - Data: 18 Febbraio 2026
-- Modifica: Implementato modulo compensi completo per Dirigenti, rimossa sezione "Registro Pagamenti Mensili" obsoleta dal profilo
+- Modifica: Aggiunti campi Email e PEC alle impostazioni società, verificate frecce indietro, confermato nome società dinamico
 
