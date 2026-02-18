@@ -5587,7 +5587,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 "exceeded_5000": first_time_exceeded_5000,
                 "exceeded_5000_date": now if first_time_exceeded_5000 else None,
                 "exceeded_15000": first_time_exceeded_15000,
-                "exceeded_15000_date": now if request.exceeded_15000 else None
+                "exceeded_15000_date": now if first_time_exceeded_15000 else None
             }}
         )
     else:
