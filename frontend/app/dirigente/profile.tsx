@@ -737,7 +737,6 @@ export default function DirigenteProfile() {
                 })()}
               </View>
             )}
-          )}
         </View>
 
         {/* Documento e Dati Bancari */}
