@@ -894,4 +894,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     marginTop: 12,
   },
+  toggleButton: {
+    width: 50,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    padding: 2,
+  },
+  toggleCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#fff',
+  },
 });
