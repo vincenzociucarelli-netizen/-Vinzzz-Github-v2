@@ -1,86 +1,59 @@
 # RegistraTEAM - Product Requirements Document
 
-## Descrizione Prodotto
-Applicazione per la gestione di club di pallavolo con funzionalità di gestione atleti, coach, compensi e documenti.
+## Problema Originale
+Applicazione per la gestione di società sportive con funzionalità per gestire atleti, coach, dirigenti, pagamenti, presenze e calendari gare.
 
-## Architettura Tecnica
-- **Frontend**: React Native / Expo Router
-- **Backend**: FastAPI (Python)
-- **Database**: MongoDB
-- **Email**: Brevo
-- **PDF**: fpdf2 / Pillow
+## Ultima Sessione: 18 Febbraio 2026
 
-## Funzionalità Implementate
+### Completato Oggi:
 
-### Modulo Compensi Coach (COMPLETO)
-- Generazione PDF quietanze mensili
-- Gestione soglie fiscali €5K e €15K
-- Firma digitale con canvas
-- Invio email automatico
+1. **✅ Importatore Calendari FIPAV** (COMPLETO)
+   - Scraping da umbria.portalefipav.net
+   - Selezione campionato + società + parametro btFiltro=CERCA
+   - Nome squadra modificabile nel mapping
+   - Filtro per data
+   - Selezione singole partite da importare
+   - Supporto 17 regioni italiane
+   - Files: `/app/backend/federation_scraper.py`, `/app/frontend/app/admin/import-calendar.tsx`
 
-### Modulo Compensi Dirigenti (COMPLETO)
-- Stessa funzionalità dei Coach
+2. **✅ Fix bug coach → Presenze** 
+   - Creata pagina `/app/frontend/app/coach/team/[id]/attendances.tsx`
+   - Corretto link da `/admin/...` a `/coach/...`
 
-### Modulo Prime Squadre (IN PROGRESS)
+3. **✅ Fix modale Trial bloccante**
+   - Aggiunto pulsante X per chiudere
+   - Aggiunto link "Decidi dopo"
 
-**Backend COMPLETO:**
-- `athlete_type`: "quota" (paga quote) | "compensated" (percepisce compenso)
-- `parents_detached`: flag per sganciare genitori da atleta maggiorenne
-- Campi economici (IBAN, banca, intestatario)
-- Campi documenti (tipo, numero, scadenza, fronte/retro)
-- Endpoint `POST /athletes/{id}/detach-parents`
-- Endpoint `POST /athletes/{id}/reattach-parents`
-- Endpoint `PATCH /athletes/{id}/type-config`
+4. **✅ Fix firma privacy per web**
+   - Sostituito react-native-signature-canvas con react-signature-canvas
+   - Aggiunto ScrollView al modale
+   - File: `/app/frontend/src/components/SignaturePad.tsx`
 
-**Frontend PARZIALE:**
-- ✅ Pulsante "Sgancia Genitori" nella scheda atleta maggiorenne
-- ✅ Badge "Genitori sganciati" + pulsante "Ricollega"
-- ✅ Pagina gestione Prime Squadre
-- ✅ Pagina dettaglio compensi atleta
-- [ ] Form registrazione atleta con scelta tipo A/B
-- [ ] Sezione dati economici per atleti tipo "compensated"
+5. **✅ Fix pagamenti non visibili al genitore**
+   - Aggiunta sezione "Pagamenti Effettuati" anche senza paymentSettings
+   - Mostrati pagamenti manuali registrati dall'admin
 
-### Protezione Auth (COMPLETO)
-- Layout protetti per tutti i ruoli
-- Redirect automatico a /login
+6. **✅ Fix label "I Miei Atleti" → "I Miei Figli"**
 
-## Prossimi Task
-1. ✅ Pulsante "Sgancia Genitori" - COMPLETATO
-2. [ ] Modificare form registrazione atleta con scelta tipo (A/B)
-3. [ ] Se tipo B + maggiorenne → mostrare dati economici (IBAN, documento)
-4. [ ] Se tipo B + minorenne → mostrare sezione genitori
+### Issue Aperti (da fare):
+- [ ] Rate scadute pagate mostrate in rosso (A - migliorare UI)
+- [ ] Bug login parent (ricorrente)
+- [ ] Icone @expo/vector-icons non renderizzano sul web
 
-### Importatore Calendari Federazioni (COMPLETO - 18/02/2026)
-
-**Backend COMPLETO:**
-- `/app/backend/federation_scraper.py`: Classi FIPAVScraper e FIPScraper
-- Endpoint `GET /api/federation/regions` - Lista regioni disponibili
-- Endpoint `GET /api/federation/seasons` - Stagioni sportive
-- Endpoint `GET /api/federation/championships` - Campionati per stagione
-- Endpoint `GET /api/federation/societies` - Società iscritte alla federazione
-- Endpoint `POST /api/federation/preview` - Anteprima partite (richiede auth admin)
-- Endpoint `POST /api/federation/import` - Importazione partite (richiede auth admin)
-- Endpoint `GET /api/federation/config` - Configurazione salvata
-- Supporto FIPAV con 17 regioni (Umbria, Lazio, Toscana, ecc.)
-- Scraping reale verso portalefipav.net
-
-**Frontend COMPLETO:**
-- `/app/frontend/app/admin/import-calendar.tsx`: Wizard 4 step
-  1. Selezione Federazione + Regione + Stagione
-  2. Selezione Società + Campionati + Mapping squadre locali
-  3. Anteprima partite da importare
-  4. Conferma importazione
-
-**Testing:**
-- 13/13 test backend passati
-- Tutti i flussi frontend verificati
-- Report: `/app/test_reports/iteration_8.json`
-
-## Backlog
-- Modello Freemium
-- Integrazione Stripe (luglio 2026)
+### Prossimi Task:
+- Modulo PRO completo (domani)
 - Refactoring server.py
+- Integrazione Stripe
 
-## Ultima Modifica
-- Data: 18 Febbraio 2026
-- Modifica: Implementato Importatore Calendari Federazioni (FIPAV Umbria)
+## Credenziali Test
+- Admin: `test.admin@test.com` / `Admin123!`
+- Genitore Rita: `gino@test.com` / `Test1234`
+
+## Files Principali Modificati
+- `/app/backend/federation_scraper.py` - Scraper FIPAV
+- `/app/backend/server.py` - Endpoints federation/*
+- `/app/frontend/app/admin/import-calendar.tsx` - UI importazione
+- `/app/frontend/app/coach/team/[id]/attendances.tsx` - Presenze coach
+- `/app/frontend/src/components/SignaturePad.tsx` - Firma web
+- `/app/frontend/app/parent/index.tsx` - Fix label + trial modal
+- `/app/frontend/app/parent/athlete/[id].tsx` - Pagamenti visibili
