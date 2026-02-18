@@ -642,7 +642,7 @@ export default function AdminDashboard() {
           <TouchableOpacity
             style={[styles.menuCard, { opacity: 0.7, borderWidth: 1, borderColor: '#FFD700', borderStyle: 'dashed' }]}
             onPress={() => {
-              const message = `🏆 PRIME SQUADRE\n\nGestisci atleti e collaboratori delle serie maggiori:\n\n📋 FUNZIONALITÀ BASE:\n• Certificati medici\n• Luogo, giorno ed ora di allenamento\n• Calendario gare\n\n💰 FUNZIONALITÀ COMPENSI ATLETI E COLLABORATORI:\n• Quietanze mensili con firma digitale\n• Gestione soglie fiscali €5K/€15K\n• PDF automatici e invio email\n• Collaboratori (scout, massaggiatori, segnapunti, etc.)\n\n👥 LIMITE: fino a 50 tesserati\n(Per società con più di 50 tesserati sono disponibili lotti aggiuntivi)\n\n━━━━━━━━━━━━━━━━━\n\n📅 Disponibile a pagamento dal 1° Luglio 2026.\n\nPer info: assistenza@registrateam.it`;
+              const message = `🏆 PRIME SQUADRE\n\nGestisci atleti e collaboratori delle serie maggiori:\n\n📋 FUNZIONALITÀ BASE:\n• Certificati medici\n• Luogo, giorno ed ora di allenamento\n• Calendario gare\n\n💰 FUNZIONALITÀ COMPENSI ATLETI E COLLABORATORI:\n• Quietanze mensili con firma digitale\n• Rilevamento superamento soglie €5K/€15K\n• PDF automatici e invio email\n• Collaboratori (scout, massaggiatori, segnapunti, etc.)\n\n👥 LIMITE: fino a 50 tesserati\n(Per società con più di 50 tesserati sono disponibili lotti aggiuntivi)\n\n━━━━━━━━━━━━━━━━━\n\n📅 Disponibile a pagamento dal 1° Luglio 2026.\n\nPer info: assistenza@registrateam.it`;
               
               if (Platform.OS === 'web') {
                 window.alert(message);
