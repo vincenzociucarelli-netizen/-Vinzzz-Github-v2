@@ -47,6 +47,9 @@ export default function DirigenteProfile() {
   const [profilePhotoArtistic, setProfilePhotoArtistic] = useState<string | null>(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
   
+  // Signed receipts for compact view
+  const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
+  
   // Profile data
   const [profileData, setProfileData] = useState({
     email: '',
