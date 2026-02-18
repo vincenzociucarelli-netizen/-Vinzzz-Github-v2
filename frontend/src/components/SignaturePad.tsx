@@ -146,6 +146,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
               )}
             </TouchableOpacity>
           </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -158,15 +159,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 10,
   },
   container: {
     backgroundColor: '#fff',
     borderRadius: 16,
     width: '100%',
     maxWidth: 500,
-    maxHeight: '90%',
+    maxHeight: '95%',
     overflow: 'hidden',
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  scrollContentContainer: {
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
