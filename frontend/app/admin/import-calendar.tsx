@@ -419,12 +419,17 @@ export default function ImportCalendarScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Associa Squadre Locali</Text>
             <Text style={styles.hint}>
-              Associa il nome della società federale alle tue squadre locali
+              Modifica il nome per trovare le partite (es. "PALLAVOLO PERUGIA" invece di "PALLAVOLO PERUGIA SSD a RL")
             </Text>
             
             {teamMappings.map((mapping, index) => (
               <View key={index} style={styles.mappingRow}>
-                <Text style={styles.mappingLabel}>{mapping.federation_team_name || 'Squadra Fed.'}</Text>
+                <TextInput
+                  style={styles.mappingInput}
+                  value={mapping.federation_team_name}
+                  onChangeText={(text) => updateTeamMappingName(index, text)}
+                  placeholder="Nome squadra federazione"
+                />
                 <Ionicons name="arrow-forward" size={16} color="#666" />
                 <View style={[styles.pickerContainer, { flex: 1 }]}>
                   <Picker
