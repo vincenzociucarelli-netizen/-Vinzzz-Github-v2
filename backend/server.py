@@ -7071,7 +7071,7 @@ def generate_threshold_15k_pdf(
     
     # Signature
     y -= 2*cm
-    c.drawString(2*cm, y, f"Luogo e data: __________________, {timestamp}")
+    c.drawString(2*cm, y, f"Luogo e data: {society_city}, {timestamp}")
     c.drawString(width - 7*cm, y, "Firma:")
     
     if signature_base64 and HAS_PIL:
