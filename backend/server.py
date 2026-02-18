@@ -5518,13 +5518,16 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
 """
 
     try:
-        # Generate PDF using existing function
-        pdf_bytes = generate_signed_pdf(
-            document_title=f"Quietanza Compenso - {month_name} {request.year}",
-            document_text=receipt_text,
-            signer_name=coach.get('full_name', 'Collaboratore'),
-            signature_base64=request.signature_base64,
-            society_name=society_name
+        # Generate PDF using new formatted function
+        pdf_bytes = generate_monthly_receipt_pdf(
+            society_name=society_name,
+            collaborator_name=coach.get('full_name', 'Collaboratore'),
+            collaborator_fiscal_code=coach.get('fiscal_code', ''),
+            month_name=month_name,
+            year=request.year,
+            amount_gross=request.amount_gross,
+            amount_net=amount_net,
+            signature_base64=request.signature_base64
         )
     except Exception as e:
         logging.error(f"Error generating receipt PDF: {e}")
