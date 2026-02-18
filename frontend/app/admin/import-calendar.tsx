@@ -510,18 +510,43 @@ export default function ImportCalendarScreen() {
     </View>
   );
 
+  // Parse Italian date format (gg/mm/aaaa) to Date object
+  const parseItalianDate = (dateStr: string): Date | null => {
+    if (!dateStr) return null;
+    // Try gg/mm/aaaa format
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+      let year = parseInt(parts[2], 10);
+      // Handle 2-digit year
+      if (year < 100) {
+        year += year < 50 ? 2000 : 1900;
+      }
+      const date = new Date(year, month, day);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+    // Fallback to standard Date parsing
+    const fallback = new Date(dateStr);
+    return isNaN(fallback.getTime()) ? null : fallback;
+  };
+
   // Filter matches by date
   const getFilteredMatches = () => {
     return previewMatches.filter(match => {
       const matchDate = new Date(match.date);
       if (dateFrom) {
-        const from = new Date(dateFrom);
-        if (matchDate < from) return false;
+        const from = parseItalianDate(dateFrom);
+        if (from && matchDate < from) return false;
       }
       if (dateTo) {
-        const to = new Date(dateTo);
-        to.setHours(23, 59, 59);
-        if (matchDate > to) return false;
+        const to = parseItalianDate(dateTo);
+        if (to) {
+          to.setHours(23, 59, 59);
+          if (matchDate > to) return false;
+        }
       }
       return true;
     });
