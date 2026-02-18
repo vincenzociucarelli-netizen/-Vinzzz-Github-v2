@@ -509,6 +509,13 @@ class Athlete(BaseModel):
     athlete_notes: Optional[str] = None  # Note sull'atleta
     athlete_characteristics: Optional[List[str]] = None  # Caratteristiche selezionate
     second_parent_email: Optional[str] = None  # Email del secondo genitore
+    # Prime Squadre fields
+    is_compensated: bool = False  # Flag: atleta in Prime Squadre con compensi
+    monthly_compensation: float = 0.0  # Compenso mensile
+    other_annual_compensation: float = 0.0  # Compensi già percepiti da altre ASD nell'anno
+    contract_start_date: Optional[str] = None  # Data inizio contratto (ISO string)
+    contract_end_date: Optional[str] = None  # Data fine contratto (ISO string)
+    fees_waived: bool = False  # Se true, l'atleta non paga più le quote (passato a professionista)
 
 class AthleteCreate(BaseModel):
     full_name: str
