@@ -151,7 +151,7 @@ class FIPAVScraper:
         
         async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
             # Build URL with parameters
-            params = {}
+            params = {'ComitatoId': self.comitato_id}
             if season_id:
                 params['StId'] = season_id
             if championship_id:
@@ -161,7 +161,7 @@ class FIPAVScraper:
             
             logging.info(f"Scraping FIPAV: {self.base_url} with params {params}")
             
-            response = await client.get(self.base_url, params=params)
+            response = await client.get(self.base_url, params=params, headers=self.HEADERS)
             soup = BeautifulSoup(response.text, 'html.parser')
             
             # Find all match tables
