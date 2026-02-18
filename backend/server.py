@@ -5460,11 +5460,19 @@ async def sign_compensation_receipt(
     amount_net = request.amount_gross
     deductions = 0.0
     
+    # Determina se QUESTA è la prima volta che si supera €5.000 o €15.000
+    # Il backend deve calcolare questo, non affidarsi al frontend
+    first_time_exceeded_5000 = (new_total > 5000 and yearly_total <= 5000)
+    first_time_exceeded_15000 = (new_total > 15000 and yearly_total <= 15000)
+    
+    # Log per debug
+    logging.info(f"Threshold check: yearly_total={yearly_total}, new_total={new_total}, first_5k={first_time_exceeded_5000}, first_15k={first_time_exceeded_15000}")
+    
     # Se si supera €5.000 o €15.000 si applicano ritenute
-    if new_total > 5000 or request.exceeded_5000:
+    if new_total > 5000:
         # Dopo €5.000: ritenuta IRPEF 23% sull'importo eccedente
         # Semplificato: per ora mostriamo solo che ci sono deduzioni
-        if new_total > 15000 or request.exceeded_15000:
+        if new_total > 15000:
             # Oltre €15.000: contributi INPS + IRPEF
             # Per semplicità: ritenuta ~33% (IRPEF + contributi)
             deductions = request.amount_gross * 0.33
@@ -5485,7 +5493,7 @@ async def sign_compensation_receipt(
                    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
     month_name = month_names[request.month]
     
-    # Generate receipt PDF
+    # Generate receipt PDF - solo importo lordo
     receipt_text = f"""QUIETANZA COMPENSO SPORTIVO DILETTANTISTICO
 
 ASD/SSD: {society_name}
@@ -5496,21 +5504,19 @@ Codice Fiscale: {coach.get('fiscal_code', 'N/D')}
 Mese di riferimento: {month_name} {request.year}
 
 Compenso lordo: € {request.amount_gross:.2f}
-Ritenute: € {deductions:.2f}
-Netto corrisposto: € {amount_net:.2f}
 
 Totale annuo progressivo: € {new_total:.2f}
 
 Il collaboratore dichiara che, alla data odierna, non sono intervenute variazioni rispetto all'autocertificazione dei compensi sportivi dilettantistici precedentemente resa.
 """
 
-    # Add threshold declaration if needed
-    if request.exceeded_5000 and not request.exceeded_15000:
+    # Add threshold declaration if needed (based on backend calculation, not frontend)
+    if first_time_exceeded_5000 and not first_time_exceeded_15000:
         receipt_text += f"""
 ⚠️ DICHIARAZIONE SUPERAMENTO SOGLIA €5.000
 Il collaboratore dichiara di aver superato, nell'anno {request.year}, la soglia di €5.000 di compensi sportivi dilettantistici complessivi.
 """
-    elif request.exceeded_15000:
+    elif first_time_exceeded_15000:
         receipt_text += f"""
 🚨 DICHIARAZIONE SUPERAMENTO SOGLIA €15.000
 Il collaboratore dichiara di aver superato, nell'anno {request.year}, la soglia di €15.000 di compensi sportivi dilettantistici complessivi. 
