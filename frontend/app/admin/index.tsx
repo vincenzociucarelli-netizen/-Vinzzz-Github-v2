@@ -638,6 +638,34 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
+          {/* Prime Squadre - Premium Feature (Locked) */}
+          <TouchableOpacity
+            style={[styles.menuCard, { opacity: 0.7, borderWidth: 1, borderColor: '#FFD700', borderStyle: 'dashed' }]}
+            onPress={() => {
+              const message = `🏆 PRIME SQUADRE\n\nGestisci i compensi sportivi per gli atleti delle prime squadre:\n\n• Quietanze mensili con firma digitale\n• Gestione soglie fiscali €5K/€15K\n• PDF automatici e invio email\n• Atleti promossi dal vivaio + nuovi arrivi\n\n━━━━━━━━━━━━━━━━━\n\n📅 Questa funzionalità sarà disponibile a pagamento dal 1° Luglio 2026.\n\nPer maggiori informazioni contatta l'assistenza.`;
+              
+              if (Platform.OS === 'web') {
+                window.alert(message);
+              } else {
+                Alert.alert('🏆 Prime Squadre', message, [{ text: 'Ho capito', style: 'default' }]);
+              }
+            }}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#FFF8E1' }]}>
+              <Text style={{ fontSize: 26 }}>🏆</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={[styles.menuCardTitle, { color: '#B8860B' }]}>Prime Squadre</Text>
+              <Text style={styles.menuCardSubtitle}>Compensi atleti serie A/B/C/D</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ backgroundColor: '#FFD700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
+                <Text style={{ fontSize: 10, color: '#333', fontWeight: 'bold' }}>PREMIUM</Text>
+              </View>
+              <Text style={{ fontSize: 16 }}>🔒</Text>
+            </View>
+          </TouchableOpacity>
+
           {/* Ricerca Avanzata Atleti */}
           <TouchableOpacity
             style={styles.menuCard}
