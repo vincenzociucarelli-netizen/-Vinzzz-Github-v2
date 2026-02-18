@@ -21,40 +21,34 @@ Applicazione per la gestione di club di pallavolo con funzionalità di gestione 
 ### Modulo Compensi Dirigenti (COMPLETO)
 - Stessa funzionalità dei Coach
 
-### Modulo Prime Squadre (IN PROGRESS - 18/02/2026)
+### Modulo Prime Squadre (IN PROGRESS)
 
 **Backend COMPLETO:**
-- Campo `athlete_type`: "quota" (paga quote) | "compensated" (percepisce compenso)
-- Campo `parents_detached`: flag per sganciare genitori da atleta maggiorenne
-- Campi economici (come coach): `iban`, `bank_name`, `bank_account_holder`
-- Campi documenti: `document_type`, `document_number`, `document_expiry`, `document_front`, `document_back`
-- Endpoint `POST /athletes/{id}/detach-parents` - sgancia genitori
-- Endpoint `POST /athletes/{id}/reattach-parents` - ricollega genitori
-- Endpoint `PATCH /athletes/{id}/type-config` - modifica tipo atleta e configurazione
+- `athlete_type`: "quota" (paga quote) | "compensated" (percepisce compenso)
+- `parents_detached`: flag per sganciare genitori da atleta maggiorenne
+- Campi economici (IBAN, banca, intestatario)
+- Campi documenti (tipo, numero, scadenza, fronte/retro)
+- Endpoint `POST /athletes/{id}/detach-parents`
+- Endpoint `POST /athletes/{id}/reattach-parents`
+- Endpoint `PATCH /athletes/{id}/type-config`
 
-**Frontend DA IMPLEMENTARE:**
-- [ ] Modificare form registrazione atleta con scelta tipo (A/B)
-- [ ] Se tipo B + minorenne → mostra sezione genitori
-- [ ] Se tipo B + maggiorenne → sezione economica (IBAN, documenti)
-- [ ] Pulsante "Sgancia genitori" nella scheda atleta maggiorenne
-- [ ] Nascondere sezione quote per atleti con fees_waived=true
+**Frontend PARZIALE:**
+- ✅ Pulsante "Sgancia Genitori" nella scheda atleta maggiorenne
+- ✅ Badge "Genitori sganciati" + pulsante "Ricollega"
+- ✅ Pagina gestione Prime Squadre
+- ✅ Pagina dettaglio compensi atleta
+- [ ] Form registrazione atleta con scelta tipo A/B
+- [ ] Sezione dati economici per atleti tipo "compensated"
 
 ### Protezione Auth (COMPLETO)
 - Layout protetti per tutti i ruoli
 - Redirect automatico a /login
 
-### Gestione Utenti
-- Login/registrazione multi-ruolo
-- Ruoli: Admin, Coach, Parent, Director
-
-## Bug Noti
-1. **Login Parent** - Da testare (P2)
-2. **Icone @expo/vector-icons** - Non si caricano su web (P3)
-
 ## Prossimi Task
-1. Implementare scelta tipo atleta nel form di registrazione
-2. Form dati economici per atleti tipo "compensated"
-3. Pulsante "Sgancia genitori" nella scheda atleta
+1. ✅ Pulsante "Sgancia Genitori" - COMPLETATO
+2. [ ] Modificare form registrazione atleta con scelta tipo (A/B)
+3. [ ] Se tipo B + maggiorenne → mostrare dati economici (IBAN, documento)
+4. [ ] Se tipo B + minorenne → mostrare sezione genitori
 
 ## Backlog
 - Modello Freemium
@@ -63,4 +57,4 @@ Applicazione per la gestione di club di pallavolo con funzionalità di gestione 
 
 ## Ultima Modifica
 - Data: 18 Febbraio 2026
-- Modifica: Backend per gestione tipo atleta (quota/compensated), sgancio genitori, dati economici
+- Modifica: Implementato pulsante "Sgancia/Ricollega Genitori" nella scheda atleta per tutti i maggiorenni
