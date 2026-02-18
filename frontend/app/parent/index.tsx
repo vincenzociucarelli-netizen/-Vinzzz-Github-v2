@@ -361,7 +361,7 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>I Miei Atleti</Text>
+        <Text style={styles.headerTitle}>I Miei Figli</Text>
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>
