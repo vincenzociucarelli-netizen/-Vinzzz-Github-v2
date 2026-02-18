@@ -598,8 +598,20 @@ export default function CoachScreen() {
                 onPress={() => setManualInputModalVisible(true)}
               >
                 <Ionicons name="keypad" size={28} color="#007AFF" />
-                <Text style={styles.buttonSecondaryText}>Inserisci Codice Manualmente</Text>
+                <Text style={[styles.buttonSecondaryText, { fontSize: 18, marginLeft: 12 }]}>Inserisci Codice Manualmente</Text>
               </TouchableOpacity>
+              
+              {/* Tip for permanent camera permission */}
+              <View style={{ marginTop: 30, paddingHorizontal: 20, paddingVertical: 15, backgroundColor: '#F0F8FF', borderRadius: 10, borderWidth: 1, borderColor: '#007AFF', borderStyle: 'dashed' }}>
+                <Text style={{ fontSize: 13, color: '#007AFF', fontWeight: '600', marginBottom: 5 }}>
+                  💡 Suggerimento
+                </Text>
+                <Text style={{ fontSize: 12, color: '#666', lineHeight: 18 }}>
+                  Per evitare di autorizzare la fotocamera ogni volta:{'\n'}
+                  • Tocca ⋮ (menu) → Impostazioni → Impostazioni sito → Fotocamera{'\n'}
+                  • Oppure dopo aver concesso il permesso, seleziona "Consenti sempre"
+                </Text>
+              </View>
             </>
           ) : (
             <TouchableOpacity 
