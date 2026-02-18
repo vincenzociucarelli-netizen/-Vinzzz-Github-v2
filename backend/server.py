@@ -5565,7 +5565,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         "pdf_path": pdf_path,
         "pdf_filename": pdf_filename,
         "signed_at": now,
-        "exceeded_5000": request.exceeded_5000,
+        "exceeded_5000": first_time_exceeded_5000,
         "exceeded_15000": request.exceeded_15000
     }
     await db.signed_documents.insert_one(document_record)
@@ -5584,7 +5584,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 "receipt_signature_base64": request.signature_base64,
                 "receipt_document_id": receipt_id,
                 "receipt_signed_date": now,
-                "exceeded_5000": request.exceeded_5000,
+                "exceeded_5000": first_time_exceeded_5000,
                 "exceeded_5000_date": now if request.exceeded_5000 else None,
                 "exceeded_15000": request.exceeded_15000,
                 "exceeded_15000_date": now if request.exceeded_15000 else None
@@ -5828,7 +5828,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         "amount_net": amount_net,
         "deductions": deductions,
         "yearly_total": new_total,
-        "exceeded_5000": request.exceeded_5000,
+        "exceeded_5000": first_time_exceeded_5000,
         "exceeded_15000": request.exceeded_15000
     }
 
