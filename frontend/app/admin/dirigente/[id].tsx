@@ -1457,4 +1457,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  signedDateText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  emptyState: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+  },
 });
