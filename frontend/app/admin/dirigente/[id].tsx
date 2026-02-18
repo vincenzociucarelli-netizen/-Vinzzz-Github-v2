@@ -529,7 +529,7 @@ export default function AdminDirigenteDetail() {
           
           {editing ? (
             <>
-              <Text style={styles.inputLabel}>Importo Mensile (€)</Text>
+              <Text style={styles.inputLabel}>Importo Mensile (€) - Questa ASD</Text>
               <TextInput
                 style={styles.input}
                 value={monthlyCompensation}
@@ -537,6 +537,19 @@ export default function AdminDirigenteDetail() {
                 keyboardType="decimal-pad"
                 placeholder="0"
               />
+              
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>Compensi Pregressi (€) - Da altre ASD/SSD nell'anno</Text>
+              <TextInput
+                style={styles.input}
+                value={otherAnnualCompensation}
+                onChangeText={setOtherAnnualCompensation}
+                keyboardType="decimal-pad"
+                placeholder="0"
+              />
+              <Text style={{ fontSize: 12, color: '#666', marginTop: 4, marginBottom: 12 }}>
+                Compensi già percepiti da altre società sportive nell'anno solare corrente
+              </Text>
+              
               <TouchableOpacity
                 style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
                 onPress={handleSaveCompensation}
@@ -548,11 +561,20 @@ export default function AdminDirigenteDetail() {
               </TouchableOpacity>
             </>
           ) : (
-            <View style={styles.compensationDisplay}>
-              <Text style={styles.compensationAmount}>€{dirigente.monthly_compensation || 0}</Text>
-              <Text style={styles.compensationPeriod}>/mese</Text>
-            </View>
-          )}
+            <>
+              <View style={styles.compensationDisplay}>
+                <Text style={styles.compensationAmount}>€{dirigente.monthly_compensation || 0}</Text>
+                <Text style={styles.compensationPeriod}>/mese (questa ASD)</Text>
+              </View>
+              {(dirigente as any).other_annual_compensation > 0 && (
+                <View style={{ marginTop: 8, padding: 10, backgroundColor: '#FFF8E1', borderRadius: 8, borderWidth: 1, borderColor: '#F9A825' }}>
+                  <Text style={{ fontSize: 12, color: '#F9A825', fontWeight: '600' }}>
+                    + €{(dirigente as any).other_annual_compensation} compensi pregressi da altre ASD
+                  </Text>
+                </View>
+              )}
+            </>
+          )}}
 
           {dirigente.compensation_accepted && (
             <View style={styles.acceptedBadge}>
