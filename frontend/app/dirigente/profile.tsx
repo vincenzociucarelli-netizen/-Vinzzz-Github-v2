@@ -651,15 +651,16 @@ export default function DirigenteProfile() {
               </View>
               <Ionicons name="chevron-forward" size={22} color="#8E44AD" />
             </TouchableOpacity>
-            
-            {/* Compact list of signed receipts */}
-            {signedReceipts.length > 0 && (
-              <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#eee' }}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 10 }}>
-                  📋 Quietanze Firmate ({signedReceipts.length})
-                </Text>
-                {(() => {
-                  const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+          )}
+          
+          {/* Compact list of signed receipts */}
+          {signedReceipts.length > 0 && (
+            <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#eee' }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 10 }}>
+                📋 Quietanze Firmate ({signedReceipts.length})
+              </Text>
+              {(() => {
+                const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
                   
                   // Sort by date and find threshold crossings per year
                   const sorted = [...signedReceipts].sort((a, b) => {
