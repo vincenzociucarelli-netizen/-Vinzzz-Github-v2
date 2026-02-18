@@ -568,7 +568,7 @@ export default function AdminDirigenteDetail() {
                 </View>
               )}
             </>
-          )}}
+          )}
 
           {dirigente.compensation_accepted && (
             <View style={styles.acceptedBadge}>
