@@ -876,7 +876,7 @@ export default function CoachProfile() {
                       borderRadius: 6,
                       paddingVertical: 6,
                       paddingHorizontal: 10,
-                      borderWidth: exceeded15k ? 2 : exceeded5k ? 2 : 1,
+                      borderWidth: exceeded15k ? 2 : exceeded5k ? 2 : isSigned ? 2 : 1,
                       borderColor: exceeded15k ? '#E65100' : exceeded5k ? '#F9A825' : isSigned ? '#4CAF50' : isFuture ? '#E8E8E8' : '#E0E0E0',
                       minWidth: 85,
                       alignItems: 'center',
