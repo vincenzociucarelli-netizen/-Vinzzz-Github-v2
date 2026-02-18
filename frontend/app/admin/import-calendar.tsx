@@ -599,7 +599,7 @@ export default function ImportCalendarScreen() {
               style={styles.dateInput}
               value={dateFrom}
               onChangeText={setDateFrom}
-              placeholder="GG/MM/AA"
+              placeholder="gg/mm/aaaa"
               placeholderTextColor="#999"
             />
           </View>
@@ -609,7 +609,7 @@ export default function ImportCalendarScreen() {
               style={styles.dateInput}
               value={dateTo}
               onChangeText={setDateTo}
-              placeholder="GG/MM/AA"
+              placeholder="gg/mm/aaaa"
               placeholderTextColor="#999"
             />
           </View>
