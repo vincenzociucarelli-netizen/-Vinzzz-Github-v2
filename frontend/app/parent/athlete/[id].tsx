@@ -1732,6 +1732,40 @@ export default function AthleteDetail() {
           )}
         </View>
 
+        {/* Show payments even without payment settings */}
+        {!paymentSettings && payments.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>💰 Pagamenti Effettuati</Text>
+            <View style={styles.manualPaymentsSection}>
+              {payments.map((p, idx) => (
+                <View key={p.id || idx} style={styles.manualPaymentRow}>
+                  <View style={styles.manualPaymentInfo}>
+                    <Text style={styles.manualPaymentAmount}>€{p.amount?.toFixed(2)}</Text>
+                    <Text style={styles.manualPaymentDate}>
+                      {p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : 'Data non specificata'}
+                    </Text>
+                  </View>
+                  <Ionicons name="checkmark-circle" size={24} color="#34C759" />
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[styles.downloadReceiptBtn, generatingReceipt && { opacity: 0.6 }]}
+              onPress={handleDownloadFiscalReceipt}
+              disabled={generatingReceipt}
+            >
+              {generatingReceipt ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={{ fontSize: 20 }}>🧾</Text>
+              )}
+              <Text style={styles.downloadReceiptBtnText}>
+                {generatingReceipt ? 'Generazione...' : 'Scarica Ricevuta Fiscale'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Request Deletion Section - Only visible when data is unlocked */}
         {dataUnlocked && (
           <View style={styles.deleteSection}>
