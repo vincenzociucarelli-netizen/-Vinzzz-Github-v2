@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
@@ -12,7 +13,34 @@ import { Ionicons } from '../src/components/Icon';
 
 export default function SelectRoleScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, isLoading, loadAuth } = useAuthStore();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (isLoading) {
+        await loadAuth();
+      }
+    };
+    checkAuth();
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      // Redirect to login if not authenticated or not admin
+      if (!user || user.role !== 'admin') {
+        router.replace('/login');
+      }
+    }
+  }, [user, isLoading]);
+
+  // Show loading while checking auth
+  if (isLoading || !user) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
 
   const handleSelectAdmin = () => {
     router.replace('/admin');
