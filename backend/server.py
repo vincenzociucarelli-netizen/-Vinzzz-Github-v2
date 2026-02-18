@@ -2798,6 +2798,115 @@ async def import_from_federation(config: dict, current_user = Depends(get_curren
         logging.error(f"Error importing from federation: {e}")
         raise HTTPException(status_code=500, detail=f"Errore import: {str(e)}")
 
+@api_router.post("/federation/import-selected")
+async def import_selected_matches(config: dict, current_user = Depends(get_current_user)):
+    """Import selected matches directly (without re-scraping)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può importare partite")
+    
+    try:
+        matches = config.get("matches", [])
+        society_name = config.get("society_name", "")
+        team_mappings = config.get("team_mappings", [])
+        
+        society_id_local = current_user.get("society_id")
+        
+        imported_count = 0
+        skipped_count = 0
+        
+        # Build a mapping dict for quick lookup
+        mapping_dict = {}
+        for mapping in team_mappings:
+            fed_name = mapping.get("federation_team_name", "").lower()
+            local_id = mapping.get("local_team_id")
+            if fed_name and local_id:
+                mapping_dict[fed_name] = local_id
+        
+        # Also add society_name variations
+        if society_name:
+            for mapping in team_mappings:
+                local_id = mapping.get("local_team_id")
+                if local_id:
+                    mapping_dict[society_name.lower()] = local_id
+        
+        for match_data in matches:
+            home_team = match_data.get("home_team", "")
+            away_team = match_data.get("away_team", "")
+            match_number = match_data.get("match_number", "")
+            match_date_str = match_data.get("date", "")
+            result = match_data.get("result")
+            
+            # Parse date
+            try:
+                match_date = datetime.fromisoformat(match_date_str.replace('Z', '+00:00'))
+            except:
+                skipped_count += 1
+                continue
+            
+            # Determine which team this match is for
+            local_team_id = None
+            is_home = False
+            
+            # Check home team
+            home_lower = home_team.lower()
+            for key, value in mapping_dict.items():
+                if key in home_lower or home_lower in key:
+                    local_team_id = value
+                    is_home = True
+                    break
+            
+            # Check away team if not found in home
+            if not local_team_id:
+                away_lower = away_team.lower()
+                for key, value in mapping_dict.items():
+                    if key in away_lower or away_lower in key:
+                        local_team_id = value
+                        is_home = False
+                        break
+            
+            if not local_team_id:
+                skipped_count += 1
+                continue
+            
+            # Get team info
+            team = await db.teams.find_one({"id": local_team_id})
+            team_name = team.get("name", "") if team else ""
+            
+            # Determine opponent
+            opponent = away_team if is_home else home_team
+            
+            # Delete existing match with same match_number
+            if match_number:
+                await db.matches.delete_one({
+                    "match_number": match_number,
+                    "society_id": society_id_local
+                })
+            
+            # Create match
+            match = Match(
+                society_id=society_id_local,
+                team_id=local_team_id,
+                team_name=team_name,
+                match_number=match_number or f"FIPAV-{match_date.strftime('%Y%m%d%H%M')}",
+                date=match_date,
+                opponent=opponent,
+                home_away="home" if is_home else "away",
+                result=result if result and result != '-' else None
+            )
+            
+            await db.matches.insert_one(match.dict())
+            imported_count += 1
+        
+        return {
+            "message": f"Importate {imported_count} partite",
+            "imported": imported_count,
+            "skipped": skipped_count
+        }
+    
+    except Exception as e:
+        logging.error(f"Error importing selected matches: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore import: {str(e)}")
+
 @api_router.get("/federation/config")
 async def get_federation_config(current_user = Depends(get_current_user)):
     """Get saved federation import configuration for current society"""
