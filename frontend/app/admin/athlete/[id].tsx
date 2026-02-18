@@ -128,6 +128,9 @@ export default function AdminAthleteDetail() {
   const [newDataPassword, setNewDataPassword] = useState('');
   const [resettingDataPassword, setResettingDataPassword] = useState(false);
   const [hasDataPassword, setHasDataPassword] = useState(false);
+  
+  // Detach parents
+  const [detachingParents, setDetachingParents] = useState(false);
 
   const pickCertImage = async () => {
     // Show action sheet to choose camera or gallery
