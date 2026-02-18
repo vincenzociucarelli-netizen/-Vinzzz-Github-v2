@@ -1141,11 +1141,35 @@ export default function AdminCoachDetail() {
                   ? format(new Date(receipt.receipt_signed_date), 'dd/MM/yyyy', { locale: it })
                   : '-';
                 
+                const exceeded5k = receipt.exceeded_5000 === true;
+                const exceeded15k = receipt.exceeded_15000 === true;
+                
                 return (
-                  <View key={`${receipt.year}-${receipt.month}`} style={styles.monthRow}>
+                  <View key={`${receipt.year}-${receipt.month}`} style={[
+                    styles.monthRow,
+                    exceeded15k && { backgroundColor: '#FFF3E0', borderLeftWidth: 4, borderLeftColor: '#E65100' },
+                    exceeded5k && !exceeded15k && { backgroundColor: '#FFF8E1', borderLeftWidth: 4, borderLeftColor: '#F9A825' }
+                  ]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.monthLabel}>{monthLabel}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Text style={styles.monthLabel}>{monthLabel}</Text>
+                        {exceeded15k && (
+                          <View style={{ backgroundColor: '#E65100', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>€15K+</Text>
+                          </View>
+                        )}
+                        {exceeded5k && !exceeded15k && (
+                          <View style={{ backgroundColor: '#F9A825', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>€5K+</Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={styles.signedDateText}>Firmata il: {signedDate}</Text>
+                      {(exceeded5k || exceeded15k) && (
+                        <Text style={{ fontSize: 10, color: exceeded15k ? '#E65100' : '#F9A825', marginTop: 2 }}>
+                          ⚠️ Superamento soglia {exceeded15k ? '€15.000' : '€5.000'}
+                        </Text>
+                      )}
                     </View>
                     <View style={styles.monthStatus}>
                       <View style={[styles.paidBadge, styles.paidBadgeActive]}>
