@@ -75,10 +75,6 @@ export default function DirigenteProfile() {
   });
 
   const [editData, setEditData] = useState({ ...profileData });
-  const [compensationHistory, setCompensationHistory] = useState<{[key: string]: boolean}>({});
-  const [over5000Limit, setOver5000Limit] = useState<{[key: string]: boolean}>({});
-  const [hasExceeded5000, setHasExceeded5000] = useState(false);
-  const [hasExceeded15000, setHasExceeded15000] = useState(false);
 
   const pickImage = async (side: 'front' | 'back') => {
     try {
