@@ -314,8 +314,9 @@ class TestFederationErrorHandling:
             timeout=30
         )
         
-        # Should either return 200 with empty list or 500 with error
-        assert response.status_code in [200, 500]
+        # Should either return 200 with empty list or 500/520 with error
+        # 520 is Cloudflare error that can occur when external federation site unavailable
+        assert response.status_code in [200, 500, 520]
 
 
 # Run tests when executed directly
