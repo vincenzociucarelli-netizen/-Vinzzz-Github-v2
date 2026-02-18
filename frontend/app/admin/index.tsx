@@ -85,6 +85,7 @@ export default function AdminDashboard() {
   const [inviteCode, setInviteCode] = useState<string>('');
   const [processingDeletion, setProcessingDeletion] = useState<string | null>(null);
   const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
+  const [proEnabled, setProEnabled] = useState<boolean>(false);
 
   const loadStats = async () => {
     try {
@@ -107,6 +108,7 @@ export default function AdminDashboard() {
       setPendingAthletes(pendingAthletesRes.data || []);
       setDeletionRequests(deletionRes.data || []);
       setUnreadNotifications(notifRes.data.count || 0);
+      setProEnabled(societyRes.data.pro_enabled || false);
       
       // Count pending by role
       const pending = pendingRes.data;
