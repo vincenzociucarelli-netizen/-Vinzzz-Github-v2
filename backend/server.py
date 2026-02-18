@@ -509,13 +509,27 @@ class Athlete(BaseModel):
     athlete_notes: Optional[str] = None  # Note sull'atleta
     athlete_characteristics: Optional[List[str]] = None  # Caratteristiche selezionate
     second_parent_email: Optional[str] = None  # Email del secondo genitore
-    # Prime Squadre fields
-    is_compensated: bool = False  # Flag: atleta in Prime Squadre con compensi
+    # Tipo atleta
+    athlete_type: str = "quota"  # "quota" = paga quote, "compensated" = percepisce compenso
+    parents_detached: bool = False  # Se true, genitori "sganciati" (atleta maggiorenne)
+    parents_detached_date: Optional[datetime] = None  # Data sgancio genitori
+    # Prime Squadre / Compensi fields
+    is_compensated: bool = False  # Flag: atleta con compensi attivi
     monthly_compensation: float = 0.0  # Compenso mensile
     other_annual_compensation: float = 0.0  # Compensi già percepiti da altre ASD nell'anno
     contract_start_date: Optional[str] = None  # Data inizio contratto (ISO string)
     contract_end_date: Optional[str] = None  # Data fine contratto (ISO string)
-    fees_waived: bool = False  # Se true, l'atleta non paga più le quote (passato a professionista)
+    fees_waived: bool = False  # Se true, l'atleta non paga le quote
+    # Dati bancari/economici (per atleti che percepiscono compenso)
+    iban: Optional[str] = None  # IBAN per pagamento compensi
+    bank_name: Optional[str] = None  # Nome banca
+    bank_account_holder: Optional[str] = None  # Intestatario conto
+    # Documenti identità (per atleti maggiorenni con compenso)
+    document_type: Optional[str] = None  # Tipo documento (carta_identita, patente, passaporto)
+    document_number: Optional[str] = None  # Numero documento
+    document_expiry: Optional[str] = None  # Scadenza documento (ISO string)
+    document_front: Optional[str] = None  # Fronte documento (base64)
+    document_back: Optional[str] = None  # Retro documento (base64)
 
 class AthleteCreate(BaseModel):
     full_name: str
