@@ -1,107 +1,60 @@
-# RegistraTEAM - Volleyball Club Management Application
+# RegistraTEAM - Product Requirements Document
 
-## Original Problem Statement
-Full-stack React/FastAPI application for managing a volleyball club with:
-- QR code-based attendance system
-- Digital signature module for monthly receipts
-- Sports compensation management with tax threshold declarations (€5k/€15k)
-- Email notifications via Brevo
+## Applicazione
+Gestione società sportive dilettantistiche (pallavolo) con focus su compensi sportivi e quietanze digitali.
 
-## Core Features Implemented
+## Funzionalità Implementate (Febbraio 2025)
 
-### Authentication & User Management
-- Multi-role system: Admin, Coach, Parent, Dirigente, Athlete
-- JWT-based authentication
-- Password reset via email
+### Modulo Compensi Sportivi ✅
+- **Quietanze Mensili**: Firma digitale con generazione PDF automatica
+- **Calcolo Soglie €5.000 e €15.000**: Automatico con compensi pregressi inclusi
+- **Comunicazioni di Superamento Soglia**:
+  - PDF "COMUNICAZIONE DI SUPERAMENTO SOGLIA PREVIDENZIALE €5.000"
+  - PDF "COMUNICAZIONE DI SUPERAMENTO SOGLIA FISCALE €15.000"
+- **Badge visivi ">5K" e ">15K"**: Su card mesi e registro quietanze
+- **Email automatiche**: Invio PDF firmati a coach e admin
+- **Notifiche Admin**: Alert per superamento soglie
 
-### Coach Compensation Module (Latest - Feb 2026)
-- Contract date-based compensation periods
-- Prior compensation tracking
-- Dual year summaries (start year with priors, end year)
-- Tax threshold declarations (€5k previdenziale, €15k fiscale)
-- Digital signature for monthly receipts
-- PDF generation and email sending
+### PDF Generati
+1. **Quietanza Mensile**: Solo compenso lordo (senza netto)
+2. **Comunicazione €5.000**: Obblighi previdenziali
+3. **Comunicazione €15.000**: Obblighi fiscali
 
-### Email Service
-- Migrated from SendGrid to Brevo
-- DNS configuration (TXT, CNAME, DMARC)
-- Templated emails for receipts and declarations
+### Firma Digitale ✅
+- Firma su canvas web (react-signature-canvas)
+- Conversione corretta trasparenza PNG → sfondo bianco
+- Normalizzazione colori (firma sempre nera leggibile)
 
-### UI/UX Updates
-- Improved back arrow visibility across all pages
-- Contract-based month display in compensation page
-- Read-only payment history for coaches
+### Dashboard Coach ✅
+- Periodo contratto visibile (DD/MM/YYYY - DD/MM/YYYY)
+- Registro quietanze con badge superamento soglia
+- Modale corretto in base al tipo di documento
 
-## Technical Architecture
+### Dashboard Admin ✅
+- Visualizzazione quietanze firmate per coach
+- Badge ">5K" / ">15K" su mesi con superamento
+- Notifiche superamento soglia
 
-```
-/app
-├── backend/
-│   ├── server.py          # FastAPI main server
-│   ├── models.py          # Pydantic models
-│   ├── email_service.py   # Brevo integration
-│   └── .env               # BREVO_API_KEY, MONGO_URL
-└── frontend/
-    ├── app/
-    │   ├── admin/         # Admin pages
-    │   ├── coach/         # Coach pages (profile, compensation)
-    │   ├── parent/        # Parent pages
-    │   └── login.tsx
-    └── src/
-        ├── services/api.ts
-        └── types/index.ts
-```
+## Architettura Tecnica
 
-## Key Database Collections
-- **users**: All user types with role-specific fields
-- **athletes**: Athlete profiles
-- **teams**: Team definitions
-- **threshold_declarations**: Signed tax threshold declarations
-- **societies**: Club/society settings
-- **coach_compensations**: Compensation records with signatures
+### Backend (FastAPI + MongoDB)
+- `/api/coach/{id}/compensation` - Lista compensi
+- `/api/coach/{id}/compensation/receipt` - Firma quietanza/dichiarazione
+- Generazione PDF con ReportLab e FPDF
+- Email con Brevo
 
-## Latest Updates (Feb 17, 2026)
+### Frontend (React Native/Expo)
+- Pagine: coach/compensation.tsx, coach/profile.tsx
+- Admin: admin/coach/[id].tsx
+- Componenti: SignaturePadInline.tsx
 
-### Fixed Issues - Session 2
-1. **Quietanze Ott/Nov 2025 non visibili** (P0 - RESOLVED)
-   - Le quietanze sono ora visibili nella pagina `/coach/compensation`
-   - Ottobre 2025 ✅ e Novembre 2025 ✅ mostrati correttamente
+## Test Completati
+- **ROSSI LIA**: €4.000 pregresso → €5K superata a Ottobre 2025
+- **COACH PIETRO**: €13.800 pregresso → €15K superata a Novembre 2025
 
-2. **Email non arrivano a Pallavolo Perugia** (P0 - RESOLVED)
-   - Causa: campo `email` non era impostato nelle settings società
-   - Aggiunto campo `email` a `SocietySettingsUpdate` model
-   - Aggiunto `email` a GET/PATCH `/api/settings/society`
-   - Configurato `pallavoloperugia@gmail.com` come destinatario
-   - Backend ora legge email da `settings` (priorità) o `societies`
-
-3. **Registro quietanze nel profilo** (P1 - IN PROGRESS)
-   - Il file `profile.tsx` ha problemi legacy di sintassi
-   - La sezione "Storico Pagamenti" esiste ma mostra il vecchio formato
-   - Richiede refactoring completo del file
-
-### Fixed Issues - Session 1
-1. **Signed Receipts Not Visible** (P0 - RESOLVED)
-   - Root cause: react-native-signature-canvas uses WebView which doesn't work on web
-   - Solution: Created new `SignaturePadInline` component using `react-signature-canvas` for web
-
-2. **"Il Mio Profilo" Position** (P1 - RESOLVED)
-   - Moved link directly under coach name with improved layout
-
-## Pending Issues (P1)
-- Parent login not working (frontend redirect issue)
-- Compact registry in profile.tsx needs refactoring
-
-## Backlog (P2)
-- @expo/vector-icons not rendering on web (recurring issue)
-- Stripe integration for payments
-- Freemium 30-member limit enforcement
-- Professional Athletes with Compensation module
-
-## Test Credentials
-- Admin: pallavoloperugia@gmail.com / 11092012
-- Coach (Rossi Lia): lia@test.com / Test1234
-- Coach (Pietro): coach.pietro@test.com / Test1234
-- Parent (Luca): luca@test.com / Test1234
-
-## Test Reports
-- Latest: `/app/test_reports/iteration_6.json` - 100% pass rate
+## Prossimi Passi (Backlog)
+- [ ] Freemium: Limite 30 membri piano FREE
+- [ ] Stripe: Pagamenti online per società
+- [ ] Modulo Atleti Professionisti con Compenso
+- [ ] Fix login genitori
+- [ ] Fix icone @expo/vector-icons su web
