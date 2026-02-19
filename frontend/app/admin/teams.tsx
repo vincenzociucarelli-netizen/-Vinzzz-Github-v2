@@ -482,7 +482,7 @@ export default function TeamsScreen() {
                 </View>
               ))}
 
-              {trainings.length < 5 && (
+              {trainings.length < 10 && (
                 <TouchableOpacity style={styles.addButton} onPress={addTraining}>
                   <Ionicons name="add-circle" size={20} color="#007AFF" />
                   <Text style={styles.addButtonText}>Aggiungi Allenamento</Text>
@@ -530,6 +530,61 @@ export default function TeamsScreen() {
                     />
                   </View>
                 </View>
+              </View>
+
+              {/* Rifinitura Section */}
+              <View style={styles.rifinituraSection}>
+                <TouchableOpacity 
+                  style={styles.rifinituraToggle}
+                  onPress={() => setRifinitura({...rifinitura, enabled: !rifinitura.enabled})}
+                >
+                  <Ionicons 
+                    name={rifinitura.enabled ? "checkbox" : "square-outline"} 
+                    size={24} 
+                    color="#007AFF" 
+                  />
+                  <Text style={styles.rifinituraToggleText}>Allenamento di Rifinitura (mattina gara)</Text>
+                </TouchableOpacity>
+                
+                {rifinitura.enabled && (
+                  <View style={styles.trainingFields}>
+                    <View style={styles.fieldRow}>
+                      <View style={styles.fieldHalf}>
+                        <Text style={styles.miniLabel}>Dalle</Text>
+                        <TextInput
+                          style={styles.miniInput}
+                          placeholder="09:00"
+                          value={rifinitura.timeStart}
+                          onChangeText={(v) => setRifinitura({...rifinitura, timeStart: formatTimeInput(v)})}
+                          keyboardType="number-pad"
+                          maxLength={5}
+                        />
+                      </View>
+                      <View style={styles.fieldHalf}>
+                        <Text style={styles.miniLabel}>Alle</Text>
+                        <TextInput
+                          style={styles.miniInput}
+                          placeholder="11:00"
+                          value={rifinitura.timeEnd}
+                          onChangeText={(v) => setRifinitura({...rifinitura, timeEnd: formatTimeInput(v)})}
+                          keyboardType="number-pad"
+                          maxLength={5}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.fieldRow}>
+                      <View style={styles.fieldFull}>
+                        <Text style={styles.miniLabel}>Palestra</Text>
+                        <TextInput
+                          style={styles.miniInput}
+                          placeholder="Es: Palasport Perugia"
+                          value={rifinitura.venue}
+                          onChangeText={(v) => setRifinitura({...rifinitura, venue: v})}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
 
               <Text style={styles.sectionTitle}>🏆 Campionati</Text>
