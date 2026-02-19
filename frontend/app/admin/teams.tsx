@@ -642,106 +642,109 @@ export default function TeamsScreen() {
                 autoCapitalize="none"
               />
 
-              <Text style={styles.sectionTitle}>💶 Pagamenti</Text>
+              {/* Sezione Pagamenti - solo per squadre non Prime Squadre */}
+              {!isPrimaSquadra && (
+                <>
+                  <Text style={styles.sectionTitle}>💶 Pagamenti</Text>
 
-              <Text style={styles.label}>Quota Totale Annuale (€) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Es: 600"
-                value={totalAmount}
-                onChangeText={setTotalAmount}
-                keyboardType="decimal-pad"
-              />
+                  <Text style={styles.label}>Quota Totale Annuale (€) *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Es: 600"
+                    value={totalAmount}
+                    onChangeText={setTotalAmount}
+                    keyboardType="decimal-pad"
+                  />
 
-              <Text style={styles.label}>Rata 1 - Dopo 7 giorni di prova (€) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Es: 250"
-                value={installment1}
-                onChangeText={setInstallment1}
-                keyboardType="decimal-pad"
-              />
+                  <Text style={styles.label}>Rata 1 - Dopo 7 giorni di prova (€) *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Es: 250"
+                    value={installment1}
+                    onChangeText={setInstallment1}
+                    keyboardType="decimal-pad"
+                  />
 
-              <Text style={styles.label}>Rata 2 (€) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Es: 150"
-                value={installment2}
-                onChangeText={setInstallment2}
-                keyboardType="decimal-pad"
-              />
+                  <Text style={styles.label}>Rata 2 (€) *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Es: 150"
+                    value={installment2}
+                    onChangeText={setInstallment2}
+                    keyboardType="decimal-pad"
+                  />
 
-              <Text style={styles.label}>Scadenza Rata 2 *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="GG/MM/AAAA"
-                value={installment2Date}
-                onChangeText={(text) => {
-                  // Auto-format: add / after day and month
-                  let formatted = text.replace(/[^0-9]/g, '');
-                  if (formatted.length > 2) {
-                    formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
-                  }
-                  if (formatted.length > 5) {
-                    formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
-                  }
-                  setInstallment2Date(formatted);
-                }}
-                keyboardType="numbers-and-punctuation"
-                maxLength={10}
-              />
+                  <Text style={styles.label}>Scadenza Rata 2 *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="GG/MM/AAAA"
+                    value={installment2Date}
+                    onChangeText={(text) => {
+                      let formatted = text.replace(/[^0-9]/g, '');
+                      if (formatted.length > 2) {
+                        formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
+                      }
+                      if (formatted.length > 5) {
+                        formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
+                      }
+                      setInstallment2Date(formatted);
+                    }}
+                    keyboardType="numbers-and-punctuation"
+                    maxLength={10}
+                  />
 
-              <Text style={styles.label}>Rata 3 (€) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Es: 200"
-                value={installment3}
-                onChangeText={setInstallment3}
-                keyboardType="decimal-pad"
-              />
+                  <Text style={styles.label}>Rata 3 (€) *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Es: 200"
+                    value={installment3}
+                    onChangeText={setInstallment3}
+                    keyboardType="decimal-pad"
+                  />
 
-              <Text style={styles.label}>Scadenza Rata 3 *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="GG/MM/AAAA"
-                value={installment3Date}
-                onChangeText={(text) => {
-                  // Auto-format: add / after day and month
-                  let formatted = text.replace(/[^0-9]/g, '');
-                  if (formatted.length > 2) {
-                    formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
-                  }
-                  if (formatted.length > 5) {
-                    formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
-                  }
-                  setInstallment3Date(formatted);
-                }}
-                keyboardType="numbers-and-punctuation"
-                maxLength={10}
-              />
+                  <Text style={styles.label}>Scadenza Rata 3 *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="GG/MM/AAAA"
+                    value={installment3Date}
+                    onChangeText={(text) => {
+                      let formatted = text.replace(/[^0-9]/g, '');
+                      if (formatted.length > 2) {
+                        formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
+                      }
+                      if (formatted.length > 5) {
+                        formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
+                      }
+                      setInstallment3Date(formatted);
+                    }}
+                    keyboardType="numbers-and-punctuation"
+                    maxLength={10}
+                  />
 
-              <Text style={styles.sectionTitle}>🏦 Info Pagamento</Text>
+                  <Text style={styles.sectionTitle}>🏦 Info Pagamento</Text>
 
-              <Text style={styles.label}>Dati Bonifico Bancario *</Text>
-              <TextInput
-                style={[styles.input, styles.textArea, { textTransform: 'uppercase' }]}
-                placeholder="IBAN: IT00..."
-                value={bankInfo}
-                onChangeText={(text) => setBankInfo(text.toUpperCase())}
-                autoCapitalize="characters"
-                multiline
-                numberOfLines={3}
-              />
+                  <Text style={styles.label}>Dati Bonifico Bancario *</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea, { textTransform: 'uppercase' }]}
+                    placeholder="IBAN: IT00..."
+                    value={bankInfo}
+                    onChangeText={(text) => setBankInfo(text.toUpperCase())}
+                    autoCapitalize="characters"
+                    multiline
+                    numberOfLines={3}
+                  />
 
-              <Text style={styles.label}>Email PayPal *</Text>
-              <TextInput
-                style={[styles.input, { textTransform: 'lowercase' }]}
-                placeholder="paypal@societa.it"
-                value={paypalEmail}
-                onChangeText={(text) => setPaypalEmail(text.toLowerCase())}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+                  <Text style={styles.label}>Email PayPal *</Text>
+                  <TextInput
+                    style={[styles.input, { textTransform: 'lowercase' }]}
+                    placeholder="paypal@societa.it"
+                    value={paypalEmail}
+                    onChangeText={(text) => setPaypalEmail(text.toLowerCase())}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </>
+              )}
 
               <View style={styles.modalButtons}>
                 <TouchableOpacity
