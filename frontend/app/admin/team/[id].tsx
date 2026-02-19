@@ -1153,6 +1153,35 @@ export default function TeamDetail() {
               </View>
             </View>
 
+            {/* Prima Squadra Badge - solo in VIEW MODE */}
+            {isPrimaSquadra && (
+              <View style={styles.primaSquadraBadge}>
+                <Text style={styles.primaSquadraBadgeIcon}>⭐</Text>
+                <Text style={styles.primaSquadraBadgeText}>Prima Squadra</Text>
+                <Text style={styles.primaSquadraBadgeHint}>Gli atleti ricevono compensi</Text>
+              </View>
+            )}
+
+            {/* Rifinitura Section - VIEW MODE */}
+            {rifinitura.enabled && (
+              <View style={styles.rifinituraViewCard}>
+                <View style={styles.rifinituraViewHeader}>
+                  <Ionicons name="fitness" size={18} color="#007AFF" />
+                  <Text style={styles.rifinituraViewTitle}>Rifinitura (mattina gara)</Text>
+                </View>
+                <View style={styles.rifinituraViewRow}>
+                  <Text style={styles.rifinituraViewLabel}>Orario:</Text>
+                  <Text style={styles.rifinituraViewValue}>{rifinitura.timeStart} - {rifinitura.timeEnd}</Text>
+                </View>
+                <View style={styles.rifinituraViewRow}>
+                  <Text style={styles.rifinituraViewLabel}>Palestra:</Text>
+                  <Text style={styles.rifinituraViewValue}>{rifinitura.venue}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Sezione Quote - nascosta per Prima Squadra */}
+            {!isPrimaSquadra && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>💰 Quote</Text>
               <View style={styles.infoRow}>
