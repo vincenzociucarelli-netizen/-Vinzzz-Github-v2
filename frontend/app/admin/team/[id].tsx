@@ -384,13 +384,13 @@ export default function TeamDetail() {
         // Use new installments format
         if (totalAmount) updateData.total_amount = parseFloat(totalAmount);
       
-        // Convert installments to proper format for saving
+        // Convert installments to proper format for saving (convert dates to ISO)
         const validInstallments = installments
           .filter(inst => inst.amount && parseFloat(inst.amount) > 0)
           .map(inst => ({
             name: inst.name,
             amount: parseFloat(inst.amount),
-            due_date: inst.due_date || null,
+            due_date: formatDateToISO(inst.due_date),
           }));
         updateData.installments = validInstallments;
         
