@@ -177,7 +177,7 @@ export default function TeamDetail() {
         setInstallments(teamData.installments.map((inst: any) => ({
           name: inst.name || '',
           amount: inst.amount?.toString() || '',
-          due_date: inst.due_date?.split('T')[0] || '',
+          due_date: formatDateToItalian(inst.due_date),
         })));
       } else {
         // Convert legacy format to new format
@@ -193,14 +193,14 @@ export default function TeamDetail() {
           legacyInstallments.push({
             name: 'Rata 1',
             amount: teamData.installment_2_amount?.toString() || '',
-            due_date: teamData.installment_2_due_date?.split('T')[0] || '',
+            due_date: formatDateToItalian(teamData.installment_2_due_date),
           });
         }
         if (teamData.installment_3_amount) {
           legacyInstallments.push({
             name: 'Rata 2',
             amount: teamData.installment_3_amount?.toString() || '',
-            due_date: teamData.installment_3_due_date?.split('T')[0] || '',
+            due_date: formatDateToItalian(teamData.installment_3_due_date),
           });
         }
         if (legacyInstallments.length > 0) {
@@ -213,9 +213,9 @@ export default function TeamDetail() {
       // Keep legacy fields for backward compatibility
       setInstallment1(teamData.installment_1_amount?.toString() || '');
       setInstallment2(teamData.installment_2_amount?.toString() || '');
-      setInstallment2Date(teamData.installment_2_due_date?.split('T')[0] || '');
+      setInstallment2Date(formatDateToItalian(teamData.installment_2_due_date));
       setInstallment3(teamData.installment_3_amount?.toString() || '');
-      setInstallment3Date(teamData.installment_3_due_date?.split('T')[0] || '');
+      setInstallment3Date(formatDateToItalian(teamData.installment_3_due_date));
       setBankInfo(teamData.bank_info || '');
       setPaypalEmail(teamData.paypal_email || '');
       setChampionships(teamData.championships || '');
