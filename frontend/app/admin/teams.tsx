@@ -51,6 +51,11 @@ export default function TeamsScreen() {
   const [dayPickerVisible, setDayPickerVisible] = useState(false);
   const [dayPickerTarget, setDayPickerTarget] = useState<{type: 'training' | 'match', index?: number} | null>(null);
   
+  // Delete confirmation modal state
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  
   const daysOfWeek = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
   
   // Open day picker for training
