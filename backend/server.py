@@ -4743,8 +4743,8 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
     for athlete in athletes:
         athlete_id = athlete["id"]
         
-        # Get registration date for total calculation
-        reg_date = athlete["registration_date"]
+        # Get registration date for total calculation (fallback to created_at or today)
+        reg_date = athlete.get("registration_date") or athlete.get("created_at") or today_start
         if isinstance(reg_date, str):
             reg_date = datetime.fromisoformat(reg_date)
         
