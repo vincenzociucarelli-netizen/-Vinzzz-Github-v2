@@ -193,6 +193,16 @@ export default function TeamDetail() {
       if (teamData.match_day) {
         setMatchDay(teamData.match_day);
       }
+
+      // Load rifinitura
+      if (teamData.rifinitura) {
+        setRifinitura({
+          enabled: true,
+          timeStart: teamData.rifinitura.timeStart || '',
+          timeEnd: teamData.rifinitura.timeEnd || '',
+          venue: teamData.rifinitura.venue || '',
+        });
+      }
     } catch (error) {
       console.error('Error loading team:', error);
       showAlert('Errore', 'Impossibile caricare i dati della squadra');
