@@ -3599,6 +3599,102 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
     
     return athlete
 
+# Endpoint per registrare atleti maggiorenni (solo Admin)
+class AdultAthleteCreate(BaseModel):
+    first_name: str
+    last_name: str
+    fiscal_code: Optional[str] = None
+    date_of_birth: str  # YYYY-MM-DD
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    team_id: str
+    athlete_type: str = "quota"  # "quota" o "compensated"
+
+@api_router.post("/athletes/adult")
+async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(get_current_user)):
+    """Registra un atleta maggiorenne direttamente dall'admin"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin possono registrare atleti maggiorenni")
+    
+    # Check if team exists
+    team = await db.teams.find_one({"id": data.team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    # Verify athlete is adult (18+)
+    dob = datetime.fromisoformat(data.date_of_birth)
+    age = (datetime.utcnow() - dob).days // 365
+    if age < 18:
+        raise HTTPException(status_code=400, detail="L'atleta deve essere maggiorenne (18+ anni)")
+    
+    # Get admin's society_id
+    admin_user = await db.users.find_one({"id": current_user["id"]})
+    society_id = admin_user.get("society_id") if admin_user else None
+    
+    # Generate unique athlete code
+    athlete_code = await generate_unique_athlete_code(
+        data.last_name,
+        data.first_name,
+        team.get("name", "") if team else "",
+        society_id
+    )
+    
+    # Create athlete
+    athlete_id = str(ObjectId())
+    qr_code = generate_qr_code(athlete_id)
+    
+    full_name = f"{data.first_name} {data.last_name}"
+    
+    athlete_dict = {
+        "id": athlete_id,
+        "parent_id": None,  # No parent for adult athletes
+        "society_id": society_id,
+        "athlete_code": athlete_code,
+        "full_name": full_name,
+        "first_name": data.first_name,
+        "last_name": data.last_name,
+        "date_of_birth": dob,
+        "is_minor": False,
+        "fiscal_code": data.fiscal_code,
+        "email": data.email,
+        "phone_athlete": data.phone,
+        "team_id": data.team_id,
+        "qr_code": qr_code,
+        "status": "active",  # Adult athletes are immediately active
+        "athlete_type": data.athlete_type,  # "quota" or "compensated"
+        "parents_detached": True,  # No parents for adult athletes
+        "created_at": datetime.utcnow(),
+        "privacy_accepted": True,  # Adult handles their own privacy
+        "privacy_accepted_date": datetime.utcnow(),
+    }
+    
+    await db.athletes.insert_one(athlete_dict)
+    
+    # If athlete pays quota, create payment records
+    if data.athlete_type == "quota":
+        # Get team payment settings
+        if team.get("total_amount", 0) > 0:
+            # Use new installments format if available
+            installments = team.get("installments", [])
+            if installments:
+                for i, inst in enumerate(installments):
+                    payment = {
+                        "id": str(ObjectId()),
+                        "athlete_id": athlete_id,
+                        "society_id": society_id,
+                        "installment_number": i + 1,
+                        "installment_name": inst.get("name", f"Rata {i + 1}"),
+                        "amount": inst.get("amount", 0),
+                        "due_date": inst.get("due_date"),
+                        "paid": False,
+                        "paid_date": None,
+                        "created_at": datetime.utcnow(),
+                    }
+                    await db.payments.insert_one(payment)
+    
+    clean_mongo_doc(athlete_dict)
+    return {"message": "Atleta registrato con successo", "athlete_id": athlete_id, "athlete_code": athlete_code}
+
 @api_router.get("/athletes/my", response_model=List[Athlete])
 async def get_my_athletes(current_user = Depends(get_current_user)):
     if current_user["role"] == UserRole.PARENT:
