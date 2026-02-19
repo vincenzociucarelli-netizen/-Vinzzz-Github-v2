@@ -1454,6 +1454,31 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 2,
   },
+  // Rifinitura Styles
+  rifinituraToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#F0F8FF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    marginTop: 16,
+    gap: 8,
+  },
+  rifinituraToggleActive: {
+    borderColor: '#007AFF',
+    backgroundColor: '#E6F2FF',
+  },
+  rifinituraLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  rifinituraLabelActive: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
   // Team Photo styles
   teamPhotoSection: {
     backgroundColor: '#fff',
