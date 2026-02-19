@@ -3247,8 +3247,15 @@ async def update_team(team_id: str, team_data: TeamUpdate, current_user = Depend
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     
     update_dict = {}
+    # Campi che possono essere esplicitamente settati a null
+    nullable_fields = {'rifinitura', 'description', 'championships', 'calendar_link', 'bank_info', 'paypal_email', 
+                       'installment_2_due_date', 'installment_3_due_date'}
+    
     for key, value in team_data.dict(exclude_unset=True).items():
-        if value is not None:
+        # Permetti di salvare None per i campi nullable
+        if value is None and key in nullable_fields:
+            update_dict[key] = None
+        elif value is not None:
             if "due_date" in key and isinstance(value, str):
                 # Parse date in various formats
                 try:
