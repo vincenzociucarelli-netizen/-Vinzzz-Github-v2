@@ -119,6 +119,18 @@ export default function AdminAthleteDetail() {
   const [availableCharacteristics, setAvailableCharacteristics] = useState<string[]>([]);
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
   
+  // Athlete type for adult athletes (quota vs compensated)
+  const [athleteType, setAthleteType] = useState<'quota' | 'compensated'>('quota');
+  const [changingType, setChangingType] = useState(false);
+  
+  // Compensation data (for compensated athletes)
+  const [compensation, setCompensation] = useState<any>(null);
+  const [compensationModalVisible, setCompensationModalVisible] = useState(false);
+  const [compensationAmount, setCompensationAmount] = useState('');
+  const [compensationStartDate, setCompensationStartDate] = useState('');
+  const [compensationEndDate, setCompensationEndDate] = useState('');
+  const [savingCompensation, setSavingCompensation] = useState(false);
+  
   // QR Code modal
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const qrCodeRef = useRef<View>(null);
