@@ -231,6 +231,12 @@ export default function TeamsScreen() {
     if (hasCompleteMatchDay) {
       trainingScheduleStr += `GIORNO GARA: ${matchDay.day.toUpperCase()} alle ${matchDay.time} - ${matchDay.venue}`;
     }
+    
+    // Add rifinitura to training schedule string
+    const hasRifinitura = rifinitura.enabled && rifinitura.timeStart && rifinitura.timeEnd && rifinitura.venue;
+    if (hasRifinitura) {
+      trainingScheduleStr += `\nRIFINITURA (mattina gara): ${rifinitura.venue} dalle ${rifinitura.timeStart} alle ${rifinitura.timeEnd}`;
+    }
 
     setLoading(true);
     try {
@@ -248,6 +254,7 @@ export default function TeamsScreen() {
         training_schedule: trainingScheduleStr,
         trainings: validTrainings,
         match_day: hasCompleteMatchDay ? matchDay : null,
+        rifinitura: hasRifinitura ? { timeStart: rifinitura.timeStart, timeEnd: rifinitura.timeEnd, venue: rifinitura.venue } : null,
         championships: championships || null,
         calendar_link: calendarLink || null,
       });
