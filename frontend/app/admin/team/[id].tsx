@@ -1213,9 +1213,10 @@ export default function TeamDetail() {
                 </View>
               )}
             </View>
+            )}
 
-            {/* Bank Info Section */}
-            {(team.bank_info || team.paypal_email) && (
+            {/* Bank Info Section - nascosta per Prima Squadra */}
+            {!isPrimaSquadra && (team.bank_info || team.paypal_email) && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>🏦 Dati per il Pagamento</Text>
                 {team.bank_info && (
