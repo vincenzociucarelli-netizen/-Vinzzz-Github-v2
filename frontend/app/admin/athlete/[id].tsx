@@ -3683,4 +3683,167 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
   },
+  // Athlete Type Selector Styles
+  athleteTypeSelector: {
+    backgroundColor: '#fff',
+    margin: 16,
+    marginBottom: 8,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  athleteTypeSelectorLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 12,
+  },
+  athleteTypeButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  athleteTypeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#F9F9F9',
+    gap: 8,
+  },
+  athleteTypeBtnSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  athleteTypeBtnSelectedGold: {
+    backgroundColor: '#B8860B',
+    borderColor: '#B8860B',
+  },
+  athleteTypeBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  athleteTypeBtnTextSelected: {
+    color: '#fff',
+  },
+  // Tab Gold Styles
+  tabGold: {
+    borderBottomColor: 'transparent',
+  },
+  tabGoldActive: {
+    borderBottomColor: '#B8860B',
+  },
+  tabTextGold: {
+    color: '#B8860B',
+  },
+  // Compensation Styles
+  compensationCard: {
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    backgroundColor: '#FFFBEB',
+  },
+  compensationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  compensationTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#B8860B',
+  },
+  compensationAmountBox: {
+    backgroundColor: '#FFF8DC',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  compensationAmountLabel: {
+    fontSize: 13,
+    color: '#B8860B',
+    marginBottom: 4,
+  },
+  compensationAmount: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#B8860B',
+  },
+  compensationDates: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  compensationDateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  compensationDateLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  compensationDateValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  editCompensationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#B8860B',
+    gap: 8,
+  },
+  editCompensationBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#B8860B',
+  },
+  noCompensation: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  noCompensationText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+  },
+  addCompensationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#B8860B',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  addCompensationBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  infoBox: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF8DC',
+    padding: 12,
+    borderRadius: 8,
+    gap: 10,
+  },
+  infoBoxText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+  },
 });
