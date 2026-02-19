@@ -123,6 +123,7 @@ export default function TeamDetail() {
       // Populate form
       setName(teamData.name);
       setDescription(teamData.description || '');
+      setIsPrimaSquadra(teamData.is_prima_squadra || false);
       setTotalAmount(teamData.total_amount?.toString() || '');
       
       // Load installments - check for new format first, then legacy
