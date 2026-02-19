@@ -806,4 +806,182 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 12,
   },
+  // FAB Styles
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  // Form Styles
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  inputLabel: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 4,
+    marginTop: 12,
+  },
+  input: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  pickerContainer: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
+  },
+  // Athlete Type Selection
+  athleteTypeSection: {
+    marginBottom: 20,
+  },
+  athleteTypeButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  athleteTypeBtn: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#F9F9F9',
+    alignItems: 'center',
+    gap: 8,
+  },
+  athleteTypeBtnActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  athleteTypeBtnActiveGold: {
+    backgroundColor: '#B8860B',
+    borderColor: '#B8860B',
+  },
+  athleteTypeBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  athleteTypeBtnTextActive: {
+    color: '#fff',
+  },
+  athleteTypeBtnHint: {
+    fontSize: 11,
+    color: '#999',
+  },
+  athleteTypeBtnHintActive: {
+    color: 'rgba(255,255,255,0.8)',
+  },
+  // Info Box
+  infoBox: {
+    flexDirection: 'row',
+    backgroundColor: '#E3F2FD',
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 20,
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  infoBoxGold: {
+    backgroundColor: '#FFF8DC',
+  },
+  infoBoxText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+  },
+  // Buttons
+  cancelBtn: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
+  saveBtn: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: '#007AFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  saveBtnGold: {
+    backgroundColor: '#B8860B',
+  },
+  saveBtnText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
+  },
 });
