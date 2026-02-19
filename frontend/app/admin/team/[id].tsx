@@ -1327,6 +1327,40 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  // Prima Squadra Toggle
+  primaSquadraToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: 16,
+    marginBottom: 8,
+    padding: 16,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E5E5',
+    gap: 12,
+  },
+  primaSquadraToggleActive: {
+    borderColor: '#FFD700',
+    backgroundColor: '#FFF8DC',
+  },
+  primaSquadraTextContainer: {
+    flex: 1,
+  },
+  primaSquadraLabel: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
+  primaSquadraLabelActive: {
+    color: '#B8860B',
+    fontWeight: 'bold',
+  },
+  primaSquadraHint: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
   // Team Photo styles
   teamPhotoSection: {
     backgroundColor: '#fff',
