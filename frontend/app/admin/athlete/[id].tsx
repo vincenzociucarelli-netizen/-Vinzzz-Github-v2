@@ -662,6 +662,65 @@ export default function AdminAthleteDetail() {
     }
   };
 
+  // Change athlete type (quota <-> compensated)
+  const handleChangeAthleteType = async (newType: 'quota' | 'compensated') => {
+    const typeLabel = newType === 'quota' ? 'paga quota' : 'riceve compenso';
+    const confirm = Platform.OS === 'web'
+      ? window.confirm(`Confermi di voler impostare questo atleta come "${typeLabel}"?\n\n${newType === 'quota' 
+          ? 'Verranno create le rate di pagamento in base alla squadra.'
+          : 'Le rate di pagamento verranno rimosse e potrai configurare il compenso.'}`)
+      : await new Promise(resolve => {
+          Alert.alert(
+            'Cambia Tipo Atleta',
+            `Confermi di voler impostare questo atleta come "${typeLabel}"?\n\n${newType === 'quota' 
+              ? 'Verranno create le rate di pagamento in base alla squadra.'
+              : 'Le rate di pagamento verranno rimosse e potrai configurare il compenso.'}`,
+            [
+              { text: 'Annulla', onPress: () => resolve(false) },
+              { text: 'Conferma', onPress: () => resolve(true) },
+            ]
+          );
+        });
+    
+    if (!confirm) return;
+    
+    setChangingType(true);
+    try {
+      await api.patch(`/athletes/${id}`, { athlete_type: newType });
+      setAthleteType(newType);
+      showAlert('Successo', `Atleta impostato come "${typeLabel}"`);
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il cambio tipo');
+    } finally {
+      setChangingType(false);
+    }
+  };
+
+  // Save athlete compensation
+  const handleSaveCompensation = async () => {
+    if (!compensationAmount || parseFloat(compensationAmount) <= 0) {
+      showAlert('Errore', 'Inserisci un importo valido');
+      return;
+    }
+    
+    setSavingCompensation(true);
+    try {
+      await api.post(`/athletes/${id}/compensation`, {
+        monthly_amount: parseFloat(compensationAmount),
+        start_date: compensationStartDate || null,
+        end_date: compensationEndDate || null,
+      });
+      showAlert('Successo', 'Compenso salvato con successo');
+      setCompensationModalVisible(false);
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
+    } finally {
+      setSavingCompensation(false);
+    }
+  };
+
   // Detach parents from adult athlete
   const handleDetachParents = async () => {
     const confirm = Platform.OS === 'web'
