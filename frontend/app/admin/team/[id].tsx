@@ -83,7 +83,7 @@ export default function TeamDetail() {
   const [bankInfo, setBankInfo] = useState('');
   const [paypalEmail, setPaypalEmail] = useState('');
   
-  // Training sessions (2-4)
+  // Training sessions (2-10)
   const [trainingSessions, setTrainingSessions] = useState<TrainingSession[]>([
     { day: 'Lunedì', timeStart: '', timeEnd: '', venue: '' },
     { day: 'Mercoledì', timeStart: '', timeEnd: '', venue: '' },
@@ -93,6 +93,14 @@ export default function TeamDetail() {
   const [matchDay, setMatchDay] = useState<MatchDay>({
     day: 'Sabato',
     time: '',
+    venue: '',
+  });
+
+  // Rifinitura mattina gara
+  const [rifinitura, setRifinitura] = useState<{enabled: boolean, timeStart: string, timeEnd: string, venue: string}>({
+    enabled: false,
+    timeStart: '',
+    timeEnd: '',
     venue: '',
   });
 
