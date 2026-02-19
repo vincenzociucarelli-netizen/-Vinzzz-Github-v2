@@ -702,6 +702,7 @@ export default function TeamDetail() {
                 placeholder="paypal@email.com"
               />
             </View>
+            )}
 
             {/* Sezione Allenamenti */}
             <View style={styles.section}>
