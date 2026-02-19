@@ -21,6 +21,43 @@ import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import PhotoViewer from '../../../src/components/PhotoViewer';
 
+// Helper functions for date formatting
+const formatDateToItalian = (isoDate: string | null | undefined): string => {
+  if (!isoDate) return '';
+  // Handle ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
+  const datePart = isoDate.split('T')[0];
+  const parts = datePart.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY
+  }
+  return isoDate;
+};
+
+const formatDateToISO = (italianDate: string): string | null => {
+  if (!italianDate) return null;
+  // Handle Italian format (DD/MM/YYYY)
+  const parts = italianDate.split('/');
+  if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
+  }
+  return italianDate;
+};
+
+const formatDateInput = (text: string): string => {
+  // Remove all non-numeric characters
+  let cleaned = text.replace(/[^0-9]/g, '');
+  // Limit to 8 digits
+  cleaned = cleaned.slice(0, 8);
+  // Add / after day and month
+  if (cleaned.length > 2) {
+    cleaned = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
+  }
+  if (cleaned.length > 5) {
+    cleaned = cleaned.slice(0, 5) + '/' + cleaned.slice(5);
+  }
+  return cleaned;
+};
+
 interface CoachInfo {
   id: string;
   full_name: string;
