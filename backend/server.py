@@ -420,6 +420,7 @@ class TeamUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     team_photo: Optional[str] = None
+    is_prima_squadra: Optional[bool] = None
     total_amount: Optional[float] = None
     # New flexible installments array
     installments: Optional[List[dict]] = None  # [{name: str, amount: float, due_date: str}, ...]
@@ -435,6 +436,7 @@ class TeamUpdate(BaseModel):
     training_schedule: Optional[str] = None
     training_sessions: Optional[List[dict]] = None
     match_day: Optional[dict] = None
+    rifinitura: Optional[dict] = None
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
 
