@@ -3713,6 +3713,80 @@ async def get_my_athletes(current_user = Depends(get_current_user)):
     clean_mongo_docs(athletes)
     return [Athlete(**athlete) for athlete in athletes]
 
+# Athlete Compensation endpoints
+@api_router.get("/athletes/{athlete_id}/compensation")
+async def get_athlete_compensation(athlete_id: str, current_user = Depends(get_current_user)):
+    """Get compensation settings for an athlete"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i compensi")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Check if athlete is compensated type
+    if athlete.get("athlete_type") != "compensated":
+        raise HTTPException(status_code=400, detail="Questo atleta non è di tipo 'compensato'")
+    
+    comp = await db.athlete_compensations.find_one({"athlete_id": athlete_id})
+    if not comp:
+        return None
+    
+    clean_mongo_doc(comp)
+    return comp
+
+@api_router.post("/athletes/{athlete_id}/compensation")
+async def set_athlete_compensation(athlete_id: str, data: dict, current_user = Depends(get_current_user)):
+    """Set or update compensation for an athlete"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può impostare i compensi")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Ensure athlete is marked as compensated
+    if athlete.get("athlete_type") != "compensated":
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {"athlete_type": "compensated"}}
+        )
+    
+    monthly_amount = data.get("monthly_amount", 0)
+    start_date = data.get("start_date")
+    end_date = data.get("end_date")
+    
+    # Parse dates if provided
+    if start_date and isinstance(start_date, str):
+        try:
+            start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        except:
+            start_date = None
+    
+    if end_date and isinstance(end_date, str):
+        try:
+            end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except:
+            end_date = None
+    
+    comp_data = {
+        "athlete_id": athlete_id,
+        "society_id": athlete.get("society_id"),
+        "monthly_amount": monthly_amount,
+        "start_date": start_date,
+        "end_date": end_date,
+        "updated_at": datetime.utcnow(),
+    }
+    
+    # Upsert compensation
+    result = await db.athlete_compensations.update_one(
+        {"athlete_id": athlete_id},
+        {"$set": comp_data},
+        upsert=True
+    )
+    
+    return {"message": "Compenso aggiornato con successo"}
+
 @api_router.get("/athletes/pending")
 async def get_pending_athletes(current_user = Depends(get_current_user)):
     """Get all athletes pending approval - admin only - OPTIMIZED"""
