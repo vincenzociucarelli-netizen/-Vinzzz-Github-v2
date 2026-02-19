@@ -2183,6 +2183,91 @@ export default function AdminAthleteDetail() {
                   : 'Nessun pagamento registrato - l\'attestato mostrerà importo versato: € 0,00'}
               </Text>
             </View>
+              </>
+            )}
+
+            {/* Sezione per atleti che RICEVONO COMPENSO */}
+            {athleteType === 'compensated' && (
+              <>
+                {/* Card Compenso */}
+                <View style={[styles.card, styles.compensationCard]}>
+                  <View style={styles.compensationHeader}>
+                    <Ionicons name="trophy" size={24} color="#B8860B" />
+                    <Text style={styles.compensationTitle}>Compenso Atleta</Text>
+                  </View>
+                  
+                  {compensation ? (
+                    <>
+                      <View style={styles.compensationAmountBox}>
+                        <Text style={styles.compensationAmountLabel}>Compenso Mensile</Text>
+                        <Text style={styles.compensationAmount}>€ {compensation.monthly_amount}</Text>
+                      </View>
+                      
+                      {(compensation.start_date || compensation.end_date) && (
+                        <View style={styles.compensationDates}>
+                          {compensation.start_date && (
+                            <View style={styles.compensationDateRow}>
+                              <Text style={styles.compensationDateLabel}>Dal:</Text>
+                              <Text style={styles.compensationDateValue}>
+                                {new Date(compensation.start_date).toLocaleDateString('it-IT')}
+                              </Text>
+                            </View>
+                          )}
+                          {compensation.end_date && (
+                            <View style={styles.compensationDateRow}>
+                              <Text style={styles.compensationDateLabel}>Al:</Text>
+                              <Text style={styles.compensationDateValue}>
+                                {new Date(compensation.end_date).toLocaleDateString('it-IT')}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      )}
+                      
+                      <TouchableOpacity 
+                        style={styles.editCompensationBtn}
+                        onPress={() => {
+                          setCompensationAmount(compensation.monthly_amount?.toString() || '');
+                          setCompensationStartDate(compensation.start_date ? compensation.start_date.split('T')[0] : '');
+                          setCompensationEndDate(compensation.end_date ? compensation.end_date.split('T')[0] : '');
+                          setCompensationModalVisible(true);
+                        }}
+                      >
+                        <Ionicons name="pencil" size={18} color="#B8860B" />
+                        <Text style={styles.editCompensationBtnText}>Modifica Compenso</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <View style={styles.noCompensation}>
+                      <Text style={styles.noCompensationText}>Nessun compenso configurato</Text>
+                      <TouchableOpacity 
+                        style={styles.addCompensationBtn}
+                        onPress={() => {
+                          setCompensationAmount('');
+                          setCompensationStartDate('');
+                          setCompensationEndDate('');
+                          setCompensationModalVisible(true);
+                        }}
+                      >
+                        <Ionicons name="add-circle" size={20} color="#fff" />
+                        <Text style={styles.addCompensationBtnText}>Configura Compenso</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+
+                {/* Info Prime Squadre */}
+                <View style={styles.card}>
+                  <View style={styles.infoBox}>
+                    <Ionicons name="information-circle" size={20} color="#B8860B" />
+                    <Text style={styles.infoBoxText}>
+                      Gli atleti con compenso fanno parte delle Prime Squadre. 
+                      Puoi gestire le quietanze mensili dalla sezione "Prime Squadre" nel menu admin.
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
           </>
         )}
 
