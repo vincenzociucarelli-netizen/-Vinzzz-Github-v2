@@ -1548,6 +1548,66 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
+  // Prima Squadra Badge (VIEW MODE)
+  primaSquadraBadge: {
+    backgroundColor: '#FFF8DC',
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    marginTop: 0,
+    alignItems: 'center',
+  },
+  primaSquadraBadgeIcon: {
+    fontSize: 32,
+    marginBottom: 4,
+  },
+  primaSquadraBadgeText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#B8860B',
+  },
+  primaSquadraBadgeHint: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+  },
+  // Rifinitura View Card
+  rifinituraViewCard: {
+    backgroundColor: '#F0F8FF',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    marginTop: 0,
+  },
+  rifinituraViewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  rifinituraViewTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  rifinituraViewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  rifinituraViewLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  rifinituraViewValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
   // Team Photo styles
   teamPhotoSection: {
     backgroundColor: '#fff',
