@@ -156,6 +156,7 @@ export default function TeamsScreen() {
   const resetForm = () => {
     setName('');
     setDescription('');
+    setIsPrimaSquadra(false);
     setTotalAmount('');
     setInstallment1('');
     setInstallment2('');
