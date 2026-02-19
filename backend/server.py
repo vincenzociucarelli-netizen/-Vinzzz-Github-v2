@@ -453,7 +453,7 @@ class AthleteStatus:
 class Athlete(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     society_id: Optional[str] = None  # ID della società (multi-tenancy)
-    parent_id: str  # User ID of parent/guardian
+    parent_id: Optional[str] = None  # User ID of parent/guardian (None per atleti maggiorenni)
     # Codice univoco atleta (auto-generato: COGNOME3+NOME3-SQUADRA)
     athlete_code: Optional[str] = None  # Es: ROSMAR-U16
     # Tesseramento (gestito da Admin)
@@ -487,7 +487,7 @@ class Athlete(BaseModel):
     team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
     qr_code: str  # Base64 encoded QR code
     registration_date: datetime = Field(default_factory=datetime.utcnow)
-    trial_end_date: datetime  # 7 days after registration
+    trial_end_date: Optional[datetime] = None  # 7 days after registration (None per atleti maggiorenni)
     privacy_accepted: bool = False
     privacy_accepted_date: Optional[datetime] = None
     image_consent: bool = False
