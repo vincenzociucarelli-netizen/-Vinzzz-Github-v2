@@ -373,6 +373,7 @@ class Team(BaseModel):
     name: str
     description: Optional[str] = None
     team_photo: Optional[str] = None  # Foto squadra (base64)
+    is_prima_squadra: bool = False  # Se true, esclude pagamenti
     created_by_admin_id: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     # Payment settings per team
@@ -391,6 +392,7 @@ class Team(BaseModel):
     # Training schedule - structured
     training_sessions: List[dict] = []  # List of TrainingSession
     match_day: Optional[dict] = None  # MatchDay
+    rifinitura: Optional[dict] = None  # Rifinitura mattina gara
     # Legacy fields (keeping for backward compatibility)
     venue: Optional[str] = None
     training_schedule: Optional[str] = None
@@ -401,18 +403,20 @@ class Team(BaseModel):
 class TeamCreate(BaseModel):
     name: str
     description: Optional[str] = None
-    total_amount: float
-    installment_1_amount: float
-    installment_2_amount: float
-    installment_2_due_date: str
-    installment_3_amount: float
-    installment_3_due_date: str
-    bank_info: str
-    paypal_email: str
+    is_prima_squadra: bool = False
+    total_amount: float = 0.0
+    installment_1_amount: float = 0.0
+    installment_2_amount: float = 0.0
+    installment_2_due_date: Optional[str] = None
+    installment_3_amount: float = 0.0
+    installment_3_due_date: Optional[str] = None
+    bank_info: Optional[str] = None
+    paypal_email: Optional[str] = None
     venue: Optional[str] = None
     training_schedule: Optional[str] = None
     training_sessions: Optional[List[dict]] = []
     match_day: Optional[dict] = None
+    rifinitura: Optional[dict] = None
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
 
