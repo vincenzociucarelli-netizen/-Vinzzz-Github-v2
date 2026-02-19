@@ -421,6 +421,218 @@ export default function AdminAthletes() {
           </View>
         )}
       </View>
+
+      {/* FAB - Aggiungi Atleta Maggiorenne */}
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => setShowAddAdultModal(true)}
+        data-testid="add-adult-athlete-btn"
+      >
+        <Ionicons name="person-add" size={24} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Modal Aggiungi Atleta Maggiorenne */}
+      <Modal
+        visible={showAddAdultModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setShowAddAdultModal(false);
+          resetAdultForm();
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Nuovo Atleta Maggiorenne</Text>
+              <TouchableOpacity onPress={() => {
+                setShowAddAdultModal(false);
+                resetAdultForm();
+              }}>
+                <Ionicons name="close" size={28} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {/* Tipo Atleta - Scelta principale */}
+              <View style={styles.athleteTypeSection}>
+                <Text style={styles.sectionLabel}>Tipo Atleta *</Text>
+                <View style={styles.athleteTypeButtons}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.athleteTypeBtn,
+                      adultForm.athlete_type === 'quota' && styles.athleteTypeBtnActive
+                    ]}
+                    onPress={() => setAdultForm({...adultForm, athlete_type: 'quota'})}
+                  >
+                    <Ionicons 
+                      name="card" 
+                      size={24} 
+                      color={adultForm.athlete_type === 'quota' ? '#fff' : '#007AFF'} 
+                    />
+                    <Text style={[
+                      styles.athleteTypeBtnText,
+                      adultForm.athlete_type === 'quota' && styles.athleteTypeBtnTextActive
+                    ]}>Paga Quota</Text>
+                    <Text style={[
+                      styles.athleteTypeBtnHint,
+                      adultForm.athlete_type === 'quota' && styles.athleteTypeBtnHintActive
+                    ]}>Campionati amatoriali</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[
+                      styles.athleteTypeBtn,
+                      adultForm.athlete_type === 'compensated' && styles.athleteTypeBtnActiveGold
+                    ]}
+                    onPress={() => setAdultForm({...adultForm, athlete_type: 'compensated'})}
+                  >
+                    <Ionicons 
+                      name="trophy" 
+                      size={24} 
+                      color={adultForm.athlete_type === 'compensated' ? '#fff' : '#B8860B'} 
+                    />
+                    <Text style={[
+                      styles.athleteTypeBtnText,
+                      adultForm.athlete_type === 'compensated' && styles.athleteTypeBtnTextActive
+                    ]}>Riceve Compenso</Text>
+                    <Text style={[
+                      styles.athleteTypeBtnHint,
+                      adultForm.athlete_type === 'compensated' && styles.athleteTypeBtnHintActive
+                    ]}>Prima Squadra</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Dati Anagrafici */}
+              <Text style={styles.sectionLabel}>Dati Anagrafici</Text>
+              
+              <Text style={styles.inputLabel}>Nome *</Text>
+              <TextInput
+                style={styles.input}
+                value={adultForm.first_name}
+                onChangeText={(v) => setAdultForm({...adultForm, first_name: v})}
+                placeholder="Nome"
+                autoCapitalize="characters"
+              />
+
+              <Text style={styles.inputLabel}>Cognome *</Text>
+              <TextInput
+                style={styles.input}
+                value={adultForm.last_name}
+                onChangeText={(v) => setAdultForm({...adultForm, last_name: v})}
+                placeholder="Cognome"
+                autoCapitalize="characters"
+              />
+
+              <Text style={styles.inputLabel}>Data di Nascita * (GG/MM/AAAA)</Text>
+              <TextInput
+                style={styles.input}
+                value={adultForm.date_of_birth}
+                onChangeText={(v) => setAdultForm({...adultForm, date_of_birth: formatDateInput(v)})}
+                placeholder="GG/MM/AAAA"
+                keyboardType="numeric"
+                maxLength={10}
+              />
+
+              <Text style={styles.inputLabel}>Codice Fiscale</Text>
+              <TextInput
+                style={styles.input}
+                value={adultForm.fiscal_code}
+                onChangeText={(v) => setAdultForm({...adultForm, fiscal_code: v.toUpperCase()})}
+                placeholder="RSSMRA85M01H501Z"
+                autoCapitalize="characters"
+                maxLength={16}
+              />
+
+              {/* Contatti */}
+              <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Contatti</Text>
+
+              <Text style={styles.inputLabel}>Email</Text>
+              <TextInput
+                style={styles.input}
+                value={adultForm.email}
+                onChangeText={(v) => setAdultForm({...adultForm, email: v.toLowerCase()})}
+                placeholder="email@esempio.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <Text style={styles.inputLabel}>Telefono</Text>
+              <TextInput
+                style={styles.input}
+                value={adultForm.phone}
+                onChangeText={(v) => setAdultForm({...adultForm, phone: v})}
+                placeholder="+39 333 1234567"
+                keyboardType="phone-pad"
+              />
+
+              {/* Squadra */}
+              <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Squadra *</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={adultForm.team_id}
+                  onValueChange={(v) => setAdultForm({...adultForm, team_id: v})}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Seleziona squadra..." value="" />
+                  {Object.values(teams).map((team) => (
+                    <Picker.Item key={team.id} label={team.name} value={team.id} />
+                  ))}
+                </Picker>
+              </View>
+
+              {/* Info box */}
+              <View style={[
+                styles.infoBox,
+                adultForm.athlete_type === 'compensated' && styles.infoBoxGold
+              ]}>
+                <Ionicons 
+                  name="information-circle" 
+                  size={20} 
+                  color={adultForm.athlete_type === 'compensated' ? '#B8860B' : '#007AFF'} 
+                />
+                <Text style={styles.infoBoxText}>
+                  {adultForm.athlete_type === 'quota' 
+                    ? 'L\'atleta pagherà le quote come gli altri tesserati della squadra selezionata.'
+                    : 'L\'atleta riceverà un compenso mensile. Potrai configurare l\'importo nella sezione Prime Squadre.'
+                  }
+                </Text>
+              </View>
+            </ScrollView>
+
+            {/* Footer Buttons */}
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.cancelBtn}
+                onPress={() => {
+                  setShowAddAdultModal(false);
+                  resetAdultForm();
+                }}
+              >
+                <Text style={styles.cancelBtnText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[
+                  styles.saveBtn,
+                  adultForm.athlete_type === 'compensated' && styles.saveBtnGold
+                ]}
+                onPress={handleAddAdultAthlete}
+                disabled={addingAthlete}
+              >
+                {addingAthlete ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={20} color="#fff" />
+                    <Text style={styles.saveBtnText}>Registra</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
