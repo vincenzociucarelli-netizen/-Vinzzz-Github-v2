@@ -67,6 +67,86 @@ export default function AdminAthletes() {
     }
   };
 
+  const resetAdultForm = () => {
+    setAdultForm({
+      first_name: '',
+      last_name: '',
+      fiscal_code: '',
+      date_of_birth: '',
+      email: '',
+      phone: '',
+      team_id: '',
+      athlete_type: 'quota',
+    });
+  };
+
+  const formatDateInput = (text: string): string => {
+    let cleaned = text.replace(/[^0-9]/g, '');
+    cleaned = cleaned.slice(0, 8);
+    if (cleaned.length > 2) {
+      cleaned = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
+    }
+    if (cleaned.length > 5) {
+      cleaned = cleaned.slice(0, 5) + '/' + cleaned.slice(5);
+    }
+    return cleaned;
+  };
+
+  const handleAddAdultAthlete = async () => {
+    // Validazione
+    if (!adultForm.first_name.trim() || !adultForm.last_name.trim()) {
+      showAlert('Errore', 'Nome e cognome sono obbligatori');
+      return;
+    }
+    if (!adultForm.team_id) {
+      showAlert('Errore', 'Seleziona una squadra');
+      return;
+    }
+    if (!adultForm.date_of_birth || adultForm.date_of_birth.length !== 10) {
+      showAlert('Errore', 'Inserisci la data di nascita (GG/MM/AAAA)');
+      return;
+    }
+
+    // Verifica che sia maggiorenne
+    const parts = adultForm.date_of_birth.split('/');
+    const birthDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const isAdult = age > 18 || (age === 18 && monthDiff >= 0);
+    
+    if (!isAdult) {
+      showAlert('Errore', 'L\'atleta deve essere maggiorenne (18+ anni).\n\nPer i minorenni, usa la registrazione tramite genitore.');
+      return;
+    }
+
+    setAddingAthlete(true);
+    try {
+      // Converti data in formato ISO
+      const isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      
+      await api.post('/athletes/adult', {
+        first_name: adultForm.first_name.trim().toUpperCase(),
+        last_name: adultForm.last_name.trim().toUpperCase(),
+        fiscal_code: adultForm.fiscal_code.trim().toUpperCase() || null,
+        date_of_birth: isoDate,
+        email: adultForm.email.trim().toLowerCase() || null,
+        phone: adultForm.phone.trim() || null,
+        team_id: adultForm.team_id,
+        athlete_type: adultForm.athlete_type,
+      });
+
+      showAlert('Successo', `${adultForm.first_name} ${adultForm.last_name} registrata con successo!`);
+      setShowAddAdultModal(false);
+      resetAdultForm();
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la registrazione');
+    } finally {
+      setAddingAthlete(false);
+    }
+  };
+
   const loadData = async () => {
     try {
       const [athletesRes, teamsRes] = await Promise.all([
