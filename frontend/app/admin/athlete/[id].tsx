@@ -1995,14 +1995,17 @@ export default function AdminAthleteDetail() {
         {/* PAGAMENTI TAB */}
         {activeTab === 'pagamenti' && (
           <>
-            {/* Riepilogo Quote */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>💰 Riepilogo Quote</Text>
-              {paymentSummary && (
-                <>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>Quota Totale</Text>
-                    <Text style={styles.value}>€{paymentSummary.total_due}</Text>
+            {/* Sezione per atleti che PAGANO QUOTA */}
+            {athleteType === 'quota' && (
+              <>
+                {/* Riepilogo Quote */}
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>💰 Riepilogo Quote</Text>
+                  {paymentSummary && (
+                    <>
+                      <View style={styles.infoRow}>
+                        <Text style={styles.label}>Quota Totale</Text>
+                        <Text style={styles.value}>€{paymentSummary.total_due}</Text>
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>1ª Rata</Text>
