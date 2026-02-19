@@ -611,7 +611,14 @@ export default function TeamDetail() {
             {/* Checkbox Prima Squadra */}
             <TouchableOpacity 
               style={[styles.primaSquadraToggle, isPrimaSquadra && styles.primaSquadraToggleActive]}
-              onPress={() => setIsPrimaSquadra(!isPrimaSquadra)}
+              onPress={() => {
+                const newValue = !isPrimaSquadra;
+                setIsPrimaSquadra(newValue);
+                // Se diventa Prima Squadra, abilita automaticamente la rifinitura
+                if (newValue && !rifinitura.enabled) {
+                  setRifinitura({ ...rifinitura, enabled: true });
+                }
+              }}
             >
               <Ionicons 
                 name={isPrimaSquadra ? "checkbox" : "square-outline"} 
@@ -623,7 +630,7 @@ export default function TeamDetail() {
                   Prima Squadra
                 </Text>
                 <Text style={styles.primaSquadraHint}>
-                  Gli atleti ricevono compensi (nessun pagamento quote)
+                  Gli atleti ricevono compensi (nessun pagamento quote) + rifinitura
                 </Text>
               </View>
             </TouchableOpacity>
