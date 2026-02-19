@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://fixture-loader.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://prime-squadre-module.preview.emergentagent.com').rstrip('/')
 
 # Test credentials from request
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"
