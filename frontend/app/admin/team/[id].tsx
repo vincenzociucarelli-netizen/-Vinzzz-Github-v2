@@ -732,10 +732,12 @@ export default function TeamDetail() {
                           value={installment.due_date}
                           onChangeText={(text) => {
                             const newInstallments = [...installments];
-                            newInstallments[index] = { ...newInstallments[index], due_date: text };
+                            newInstallments[index] = { ...newInstallments[index], due_date: formatDateInput(text) };
                             setInstallments(newInstallments);
                           }}
-                          placeholder="YYYY-MM-DD"
+                          placeholder="GG/MM/AAAA"
+                          keyboardType="numeric"
+                          maxLength={10}
                         />
                       </View>
                     )}
