@@ -1214,11 +1214,26 @@ export default function AdminAthleteDetail() {
           <Text style={[styles.tabText, activeTab === 'dati' && styles.tabTextActive]}>Dati</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'pagamenti' && styles.tabActive]}
+          style={[
+            styles.tab, 
+            activeTab === 'pagamenti' && styles.tabActive,
+            athleteType === 'compensated' && styles.tabGold,
+            athleteType === 'compensated' && activeTab === 'pagamenti' && styles.tabGoldActive
+          ]}
           onPress={() => setActiveTab('pagamenti')}
         >
-          <Ionicons name="card" size={18} color={activeTab === 'pagamenti' ? '#007AFF' : '#666'} />
-          <Text style={[styles.tabText, activeTab === 'pagamenti' && styles.tabTextActive]}>Pagamenti</Text>
+          <Ionicons 
+            name={athleteType === 'compensated' ? "trophy" : "card"} 
+            size={18} 
+            color={activeTab === 'pagamenti' ? (athleteType === 'compensated' ? '#B8860B' : '#007AFF') : '#666'} 
+          />
+          <Text style={[
+            styles.tabText, 
+            activeTab === 'pagamenti' && styles.tabTextActive,
+            athleteType === 'compensated' && activeTab === 'pagamenti' && styles.tabTextGold
+          ]}>
+            {athleteType === 'compensated' ? 'Compensi' : 'Pagamenti'}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'presenze' && styles.tabActive]}
@@ -1233,6 +1248,41 @@ export default function AdminAthleteDetail() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* Adult Athlete Type Selector - solo per maggiorenni */}
+        {!athlete.is_minor && !athlete.parent_id && (
+          <View style={styles.athleteTypeSelector}>
+            <Text style={styles.athleteTypeSelectorLabel}>Tipo Atleta Maggiorenne:</Text>
+            <View style={styles.athleteTypeButtons}>
+              <TouchableOpacity 
+                style={[
+                  styles.athleteTypeBtn,
+                  athleteType === 'quota' && styles.athleteTypeBtnSelected
+                ]}
+                onPress={() => athleteType !== 'quota' && handleChangeAthleteType('quota')}
+                disabled={changingType}
+              >
+                <Ionicons name="card" size={16} color={athleteType === 'quota' ? '#fff' : '#007AFF'} />
+                <Text style={[styles.athleteTypeBtnText, athleteType === 'quota' && styles.athleteTypeBtnTextSelected]}>
+                  Paga Quota
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[
+                  styles.athleteTypeBtn,
+                  athleteType === 'compensated' && styles.athleteTypeBtnSelectedGold
+                ]}
+                onPress={() => athleteType !== 'compensated' && handleChangeAthleteType('compensated')}
+                disabled={changingType}
+              >
+                <Ionicons name="trophy" size={16} color={athleteType === 'compensated' ? '#fff' : '#B8860B'} />
+                <Text style={[styles.athleteTypeBtnText, athleteType === 'compensated' && styles.athleteTypeBtnTextSelected]}>
+                  Riceve Compenso
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Withdrawn Banner */}
         {athlete.is_withdrawn && (
           <View style={styles.withdrawnBanner}>
