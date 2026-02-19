@@ -317,25 +317,6 @@ export default function TeamsScreen() {
     }
   };
 
-  const confirmDeleteTeam = async (teamId: string) => {
-    try {
-      await api.delete(`/teams/${teamId}`);
-      if (Platform.OS === 'web') {
-        window.alert('Squadra eliminata con successo');
-      } else {
-        Alert.alert('Successo', 'Squadra eliminata con successo');
-      }
-      await loadTeams();
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.detail || 'Errore durante l\'eliminazione';
-      if (Platform.OS === 'web') {
-        window.alert(errorMsg);
-      } else {
-        Alert.alert('Errore', errorMsg);
-      }
-    }
-  };
-
   const renderTeamItem = ({ item }: { item: Team }) => {
     const athletesCount = athletesCounts[item.id] || 0;
     
