@@ -64,6 +64,7 @@ export default function TeamDetail() {
   // Form fields - basic info
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [isPrimaSquadra, setIsPrimaSquadra] = useState(false);
   const [championships, setChampionships] = useState('');
   const [calendarLink, setCalendarLink] = useState('');
   
