@@ -136,13 +136,83 @@ export default function TeamsScreen() {
     }
   };
 
+  // Team priority order (from most important to least important)
+  const TEAM_PRIORITY_ORDER = [
+    'Serie A/1', 'Serie A/2', 'Serie A/3',
+    'Serie B/1', 'Serie B/2',
+    'Serie C', 'Serie D',
+    '1° Div.', '2° Div.',
+    'U.19', 'U.18', 'U.17', 'U.16', 'U.15', 'U.14', 'U.13', 'U.12',
+    'Under 19', 'Under 18', 'Under 17', 'Under 16', 'Under 15', 'Under 14', 'Under 13', 'Under 12',
+    'MiniVolley', 'Minivolley', 'Mini Volley',
+    'Starter', 'CSI'
+  ];
+
+  const getTeamPriority = (teamName: string): number => {
+    const nameLower = teamName.toLowerCase();
+    
+    // Check exact matches first (case insensitive)
+    for (let i = 0; i < TEAM_PRIORITY_ORDER.length; i++) {
+      if (nameLower === TEAM_PRIORITY_ORDER[i].toLowerCase()) {
+        return i;
+      }
+    }
+    
+    // Check if team name contains any priority keyword
+    for (let i = 0; i < TEAM_PRIORITY_ORDER.length; i++) {
+      const keyword = TEAM_PRIORITY_ORDER[i].toLowerCase();
+      if (nameLower.includes(keyword) || keyword.includes(nameLower.split(' ')[0])) {
+        return i;
+      }
+    }
+    
+    // Check for patterns like "B/1", "A/2", etc.
+    const serieMatch = nameLower.match(/serie\s*([abc])[\s\/]*(\d)?/i) || 
+                       nameLower.match(/^([abc])[\s\/]*(\d)/i);
+    if (serieMatch) {
+      const letter = serieMatch[1].toUpperCase();
+      const num = serieMatch[2] || '1';
+      const serieKey = `Serie ${letter}/${num}`;
+      const idx = TEAM_PRIORITY_ORDER.findIndex(p => p === serieKey);
+      if (idx >= 0) return idx;
+    }
+    
+    // Check for "Under X" or "U.X" patterns
+    const underMatch = nameLower.match(/under\s*(\d+)/i) || nameLower.match(/u\.?\s*(\d+)/i);
+    if (underMatch) {
+      const age = parseInt(underMatch[1]);
+      // Map age to priority (19 is highest, 12 is lowest among under categories)
+      const underPriorities: {[key: number]: number} = {19: 9, 18: 10, 17: 11, 16: 12, 15: 13, 14: 14, 13: 15, 12: 16};
+      if (underPriorities[age] !== undefined) {
+        return underPriorities[age];
+      }
+    }
+    
+    // Default: put at the end
+    return 999;
+  };
+
+  const sortTeams = (teamsToSort: Team[]): Team[] => {
+    return [...teamsToSort].sort((a, b) => {
+      const priorityA = getTeamPriority(a.name);
+      const priorityB = getTeamPriority(b.name);
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      // If same priority, sort alphabetically
+      return a.name.localeCompare(b.name);
+    });
+  };
+
   const loadTeams = async () => {
     try {
       const [teamsRes, countsRes] = await Promise.all([
         api.get('/teams'),
         api.get('/teams/athletes-count/all'),
       ]);
-      setTeams(teamsRes.data);
+      // Sort teams by priority
+      const sortedTeams = sortTeams(teamsRes.data);
+      setTeams(sortedTeams);
       setAthletesCounts(countsRes.data);
     } catch (error) {
       console.error('Error loading teams:', error);
