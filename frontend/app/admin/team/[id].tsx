@@ -306,14 +306,27 @@ export default function TeamDetail() {
       const updateData: any = {
         name,
         description: description || null,
+        is_prima_squadra: isPrimaSquadra,
         championships: championships || null,
         calendar_link: calendarLink || null,
         training_sessions: trainingSessions,
         match_day: matchDay,
       };
 
-      // Use new installments format
-      if (totalAmount) updateData.total_amount = parseFloat(totalAmount);
+      // Se è Prima Squadra, azzera i campi pagamento
+      if (isPrimaSquadra) {
+        updateData.total_amount = 0;
+        updateData.installments = [];
+        updateData.installment_1_amount = 0;
+        updateData.installment_2_amount = 0;
+        updateData.installment_2_due_date = null;
+        updateData.installment_3_amount = 0;
+        updateData.installment_3_due_date = null;
+        updateData.bank_info = null;
+        updateData.paypal_email = null;
+      } else {
+        // Use new installments format
+        if (totalAmount) updateData.total_amount = parseFloat(totalAmount);
       
       // Convert installments to proper format for saving
       const validInstallments = installments
