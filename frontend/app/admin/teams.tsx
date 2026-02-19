@@ -1446,4 +1446,33 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
+  // Prima Squadra Styles
+  primaSquadraToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    marginVertical: 16,
+    gap: 12,
+  },
+  primaSquadraTextContainer: {
+    flex: 1,
+  },
+  primaSquadraLabel: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
+  primaSquadraLabelActive: {
+    color: '#B8860B',
+    fontWeight: 'bold',
+  },
+  primaSquadraHint: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
 });
