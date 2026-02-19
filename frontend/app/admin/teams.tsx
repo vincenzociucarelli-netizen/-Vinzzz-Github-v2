@@ -82,7 +82,7 @@ export default function TeamsScreen() {
   };
   
   const addTraining = () => {
-    if (trainings.length < 5) {
+    if (trainings.length < 10) {
       setTrainings([...trainings, { day: '', timeStart: '', timeEnd: '', venue: '' }]);
     }
   };
