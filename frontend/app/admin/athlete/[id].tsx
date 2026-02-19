@@ -237,6 +237,19 @@ export default function AdminAthleteDetail() {
       setPayments(paymentsRes.data);
       setCertificate(certRes.data);
       
+      // Load athlete type (for adult athletes)
+      setAthleteType(athleteData.athlete_type || 'quota');
+      
+      // Load compensation data if compensated athlete
+      if (athleteData.athlete_type === 'compensated') {
+        try {
+          const compRes = await api.get(`/athletes/${id}/compensation`);
+          setCompensation(compRes.data);
+        } catch (e) {
+          setCompensation(null);
+        }
+      }
+      
       // Load athlete photo
       setAthletePhoto(athleteData.athlete_photo || null);
       setAthletePhotoArtistic(athleteData.athlete_photo_artistic || null);
