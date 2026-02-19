@@ -12,7 +12,10 @@ import {
   Platform,
   TextInput,
   Image,
+  Modal,
+  ScrollView,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
