@@ -426,6 +426,26 @@ export default function TeamsScreen() {
                 numberOfLines={2}
               />
 
+              {/* Prima Squadra Toggle */}
+              <TouchableOpacity 
+                style={styles.primaSquadraToggle}
+                onPress={() => setIsPrimaSquadra(!isPrimaSquadra)}
+              >
+                <Ionicons 
+                  name={isPrimaSquadra ? "checkbox" : "square-outline"} 
+                  size={26} 
+                  color={isPrimaSquadra ? "#FFD700" : "#999"} 
+                />
+                <View style={styles.primaSquadraTextContainer}>
+                  <Text style={[styles.primaSquadraLabel, isPrimaSquadra && styles.primaSquadraLabelActive]}>
+                    Prima Squadra
+                  </Text>
+                  <Text style={styles.primaSquadraHint}>
+                    Gli atleti ricevono compensi (nessun pagamento quote)
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
               <Text style={styles.sectionTitle}>🏟️ Allenamenti Settimanali</Text>
               <Text style={styles.hint}>Minimo 2, massimo 10 allenamenti</Text>
 
