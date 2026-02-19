@@ -352,9 +352,16 @@ export default function TeamsScreen() {
                 <Text style={styles.statText}>{athletesCount} atleti</Text>
               </View>
             </View>
-            <Text style={styles.teamAmount}>
-              Quota: €{item.total_amount} (€{item.installment_1_amount}/€{item.installment_2_amount}/€{item.installment_3_amount})
-            </Text>
+            {!item.is_prima_squadra && (
+              <Text style={styles.teamAmount}>
+                Quota: €{item.total_amount} (€{item.installment_1_amount}/€{item.installment_2_amount}/€{item.installment_3_amount})
+              </Text>
+            )}
+            {item.is_prima_squadra && (
+              <Text style={[styles.teamAmount, { color: '#B8860B' }]}>
+                ⭐ Prima Squadra
+              </Text>
+            )}
           </View>
           <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
