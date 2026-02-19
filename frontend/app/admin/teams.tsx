@@ -196,19 +196,22 @@ export default function TeamsScreen() {
       return;
     }
 
-    if (!totalAmount || !installment1 || !installment2 || !installment3) {
-      Alert.alert('Errore', 'Inserisci tutti gli importi delle rate');
-      return;
-    }
+    // Solo per squadre NON prime squadre: valida i pagamenti
+    if (!isPrimaSquadra) {
+      if (!totalAmount || !installment1 || !installment2 || !installment3) {
+        Alert.alert('Errore', 'Inserisci tutti gli importi delle rate');
+        return;
+      }
 
-    if (!installment2Date || !installment3Date) {
-      Alert.alert('Errore', 'Inserisci le date di scadenza');
-      return;
-    }
+      if (!installment2Date || !installment3Date) {
+        Alert.alert('Errore', 'Inserisci le date di scadenza');
+        return;
+      }
 
-    if (!bankInfo || !paypalEmail) {
-      Alert.alert('Errore', 'Inserisci le informazioni di pagamento');
-      return;
+      if (!bankInfo || !paypalEmail) {
+        Alert.alert('Errore', 'Inserisci le informazioni di pagamento');
+        return;
+      }
     }
 
     // Convert date from DD/MM/YYYY to YYYY-MM-DD
