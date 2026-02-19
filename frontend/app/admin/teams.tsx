@@ -1396,4 +1396,25 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  // Rifinitura Styles
+  rifinituraSection: {
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  rifinituraToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#F0F8FF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    marginBottom: 12,
+    gap: 8,
+  },
+  rifinituraToggleText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
 });
