@@ -329,6 +329,7 @@ export default function TeamDetail() {
         calendar_link: calendarLink || null,
         training_sessions: trainingSessions,
         match_day: matchDay,
+        rifinitura: rifinitura.enabled ? { timeStart: rifinitura.timeStart, timeEnd: rifinitura.timeEnd, venue: rifinitura.venue } : null,
       };
 
       // Se è Prima Squadra, azzera i campi pagamento
