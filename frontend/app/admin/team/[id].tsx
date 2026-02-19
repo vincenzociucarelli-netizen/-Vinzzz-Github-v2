@@ -859,6 +859,59 @@ export default function TeamDetail() {
                   </View>
                 </View>
               </View>
+
+              {/* Rifinitura */}
+              <TouchableOpacity 
+                style={[styles.rifinituraToggle, rifinitura.enabled && styles.rifinituraToggleActive]}
+                onPress={() => setRifinitura({...rifinitura, enabled: !rifinitura.enabled})}
+              >
+                <Ionicons 
+                  name={rifinitura.enabled ? "checkbox" : "square-outline"} 
+                  size={22} 
+                  color={rifinitura.enabled ? "#007AFF" : "#999"} 
+                />
+                <Text style={[styles.rifinituraLabel, rifinitura.enabled && styles.rifinituraLabelActive]}>
+                  Allenamento di Rifinitura (mattina del giorno gara)
+                </Text>
+              </TouchableOpacity>
+              
+              {rifinitura.enabled && (
+                <View style={styles.trainingEditFields}>
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldQuarter}>
+                      <Text style={styles.miniLabel}>Dalle</Text>
+                      <TextInput
+                        style={styles.miniInput}
+                        value={rifinitura.timeStart}
+                        onChangeText={(v) => setRifinitura({...rifinitura, timeStart: formatTimeInput(v)})}
+                        placeholder="09:00"
+                        keyboardType="numeric"
+                        maxLength={5}
+                      />
+                    </View>
+                    <View style={styles.fieldQuarter}>
+                      <Text style={styles.miniLabel}>Alle</Text>
+                      <TextInput
+                        style={styles.miniInput}
+                        value={rifinitura.timeEnd}
+                        onChangeText={(v) => setRifinitura({...rifinitura, timeEnd: formatTimeInput(v)})}
+                        placeholder="11:00"
+                        keyboardType="numeric"
+                        maxLength={5}
+                      />
+                    </View>
+                    <View style={styles.fieldHalf}>
+                      <Text style={styles.miniLabel}>Palestra</Text>
+                      <TextInput
+                        style={styles.miniInput}
+                        value={rifinitura.venue}
+                        onChangeText={(v) => setRifinitura({...rifinitura, venue: v})}
+                        placeholder="Palasport"
+                      />
+                    </View>
+                  </View>
+                </View>
+              )}
             </View>
 
             <View style={styles.section}>
