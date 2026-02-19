@@ -576,6 +576,28 @@ export default function TeamDetail() {
               </Text>
             </View>
 
+            {/* Checkbox Prima Squadra */}
+            <TouchableOpacity 
+              style={[styles.primaSquadraToggle, isPrimaSquadra && styles.primaSquadraToggleActive]}
+              onPress={() => setIsPrimaSquadra(!isPrimaSquadra)}
+            >
+              <Ionicons 
+                name={isPrimaSquadra ? "checkbox" : "square-outline"} 
+                size={26} 
+                color={isPrimaSquadra ? "#FFD700" : "#999"} 
+              />
+              <View style={styles.primaSquadraTextContainer}>
+                <Text style={[styles.primaSquadraLabel, isPrimaSquadra && styles.primaSquadraLabelActive]}>
+                  Prima Squadra
+                </Text>
+                <Text style={styles.primaSquadraHint}>
+                  Gli atleti ricevono compensi (nessun pagamento quote)
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Sezione Pagamenti - nascosta per Prime Squadre */}
+            {!isPrimaSquadra && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>💰 Quote e Pagamenti</Text>
               <Text style={styles.inputLabel}>Quota Totale (€)</Text>
