@@ -277,24 +277,43 @@ export default function TeamsScreen() {
       return;
     }
 
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm(`Sei sicuro di voler eliminare la squadra "${team.name}"?\n\nQuesta azione è irreversibile.`);
-      if (confirmed) {
-        confirmDeleteTeam(team.id);
+    // Show the delete confirmation modal
+    setTeamToDelete(team);
+    setDeleteConfirmText('');
+    setDeleteModalVisible(true);
+  };
+  
+  const handleConfirmDelete = async () => {
+    if (!teamToDelete) return;
+    
+    // Verify the user typed the exact team name
+    if (deleteConfirmText.trim().toLowerCase() !== teamToDelete.name.trim().toLowerCase()) {
+      if (Platform.OS === 'web') {
+        window.alert('Il nome inserito non corrisponde. Cancellazione annullata.');
+      } else {
+        Alert.alert('Errore', 'Il nome inserito non corrisponde. Cancellazione annullata.');
       }
-    } else {
-      Alert.alert(
-        'Elimina Squadra',
-        `Sei sicuro di voler eliminare la squadra "${team.name}"?\n\nQuesta azione è irreversibile.`,
-        [
-          { text: 'Annulla', style: 'cancel' },
-          {
-            text: 'Elimina',
-            style: 'destructive',
-            onPress: () => confirmDeleteTeam(team.id),
-          },
-        ]
-      );
+      return;
+    }
+    
+    try {
+      await api.delete(`/teams/${teamToDelete.id}`);
+      setDeleteModalVisible(false);
+      setTeamToDelete(null);
+      setDeleteConfirmText('');
+      if (Platform.OS === 'web') {
+        window.alert('Squadra eliminata con successo');
+      } else {
+        Alert.alert('Successo', 'Squadra eliminata con successo');
+      }
+      await loadTeams();
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.detail || 'Errore durante l\'eliminazione';
+      if (Platform.OS === 'web') {
+        window.alert(errorMsg);
+      } else {
+        Alert.alert('Errore', errorMsg);
+      }
     }
   };
 
