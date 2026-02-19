@@ -46,6 +46,7 @@ export default function TeamsScreen() {
     { day: '', timeStart: '', timeEnd: '', venue: '' },
   ]);
   const [matchDay, setMatchDay] = useState({ day: '', time: '', venue: '' });
+  const [rifinitura, setRifinitura] = useState({ enabled: false, timeStart: '', timeEnd: '', venue: '' });
   
   // Day picker modal state
   const [dayPickerVisible, setDayPickerVisible] = useState(false);
