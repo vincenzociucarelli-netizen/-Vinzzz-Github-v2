@@ -715,6 +715,65 @@ export default function TeamsScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={deleteModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => {
+          setDeleteModalVisible(false);
+          setTeamToDelete(null);
+          setDeleteConfirmText('');
+        }}
+      >
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModalContent}>
+            <View style={styles.deleteModalIcon}>
+              <Text style={{ fontSize: 40 }}>⚠️</Text>
+            </View>
+            <Text style={styles.deleteModalTitle}>Eliminazione Squadra</Text>
+            <Text style={styles.deleteModalWarning}>
+              Stai per eliminare definitivamente la squadra:
+            </Text>
+            <Text style={styles.deleteModalTeamName}>"{teamToDelete?.name}"</Text>
+            <Text style={styles.deleteModalInstruction}>
+              Per confermare, digita il nome esatto della squadra:
+            </Text>
+            <TextInput
+              style={styles.deleteModalInput}
+              placeholder={teamToDelete?.name || 'Nome squadra'}
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={styles.deleteModalButtons}>
+              <TouchableOpacity
+                style={styles.deleteModalCancelBtn}
+                onPress={() => {
+                  setDeleteModalVisible(false);
+                  setTeamToDelete(null);
+                  setDeleteConfirmText('');
+                }}
+              >
+                <Text style={styles.deleteModalCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.deleteModalConfirmBtn,
+                  deleteConfirmText.trim().toLowerCase() !== teamToDelete?.name.trim().toLowerCase() && styles.deleteModalConfirmBtnDisabled
+                ]}
+                onPress={handleConfirmDelete}
+                disabled={deleteConfirmText.trim().toLowerCase() !== teamToDelete?.name.trim().toLowerCase()}
+              >
+                <Ionicons name="trash" size={18} color="#fff" />
+                <Text style={styles.deleteModalConfirmText}>Elimina</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
