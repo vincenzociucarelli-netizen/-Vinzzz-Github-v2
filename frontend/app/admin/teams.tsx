@@ -29,6 +29,7 @@ export default function TeamsScreen() {
   // Form fields
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [isPrimaSquadra, setIsPrimaSquadra] = useState(false);
   const [totalAmount, setTotalAmount] = useState('');
   const [installment1, setInstallment1] = useState('');
   const [installment2, setInstallment2] = useState('');
