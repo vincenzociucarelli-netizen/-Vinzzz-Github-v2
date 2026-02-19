@@ -168,6 +168,7 @@ export default function TeamsScreen() {
       { day: '', timeStart: '', timeEnd: '', venue: '' },
     ]);
     setMatchDay({ day: '', time: '', venue: '' });
+    setRifinitura({ enabled: false, timeStart: '', timeEnd: '', venue: '' });
     setChampionships('');
     setCalendarLink('');
   };
