@@ -31,6 +31,20 @@ export default function AdminAthletes() {
   const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const sectionListRef = useRef<SectionList>(null);
+  
+  // Modal per aggiungere atleta maggiorenne
+  const [showAddAdultModal, setShowAddAdultModal] = useState(false);
+  const [addingAthlete, setAddingAthlete] = useState(false);
+  const [adultForm, setAdultForm] = useState({
+    first_name: '',
+    last_name: '',
+    fiscal_code: '',
+    date_of_birth: '',
+    email: '',
+    phone: '',
+    team_id: '',
+    athlete_type: 'quota' as 'quota' | 'compensated', // quota = paga, compensated = riceve compenso
+  });
 
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
