@@ -463,10 +463,10 @@ class Athlete(BaseModel):
     full_name: str  # Manteniamo per retrocompatibilità
     first_name: Optional[str] = None  # Nome
     last_name: Optional[str] = None  # Cognome
-    date_of_birth: datetime
+    date_of_birth: Optional[datetime] = None  # Optional for simplified adult registration
     birth_place: Optional[str] = None  # Luogo di nascita
     birth_province: Optional[str] = None  # Provincia di nascita
-    is_minor: bool
+    is_minor: bool = False  # Default to adult
     fiscal_code: Optional[str] = None  # Codice fiscale atleta
     email: Optional[str] = None  # Email di contatto
     phone_athlete: Optional[str] = None  # Telefono atleta
@@ -483,7 +483,7 @@ class Athlete(BaseModel):
     tax_payer_first_name: Optional[str] = None  # Nome genitore detrazione
     tax_payer_fiscal_code: Optional[str] = None  # CF genitore detrazione
     # Squadra e stato
-    team_id: str  # Squadra principale (per pagamenti)
+    team_id: Optional[str] = None  # Squadra principale (optional for adult registration)
     team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
     qr_code: str  # Base64 encoded QR code
     registration_date: datetime = Field(default_factory=datetime.utcnow)
