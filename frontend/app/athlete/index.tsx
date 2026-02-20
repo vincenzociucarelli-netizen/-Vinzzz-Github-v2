@@ -280,7 +280,7 @@ export default function AthleteScreen() {
         {profile.contract_start_date && profile.contract_end_date && (
           <View style={styles.contractPeriod}>
             <Text style={styles.contractPeriodText}>
-              Periodo Contratto: {new Date(profile.contract_start_date).toLocaleDateString('it-IT')} - {new Date(profile.contract_end_date).toLocaleDateString('it-IT')}
+              Periodo Contratto: {formatDateIT(profile.contract_start_date)} - {formatDateIT(profile.contract_end_date)}
             </Text>
           </View>
         )}
