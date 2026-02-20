@@ -170,7 +170,8 @@ export default function AthleteCompensation() {
         contract_start_date: startDate || null,
         contract_end_date: endDate || null,
         iban: iban || null,
-        iban_holder: ibanHolder || null,
+        iban_holder_first_name: ibanHolderFirstName || null,
+        iban_holder_last_name: ibanHolderLastName || null,
         bank_name: bankName || null,
       });
       
