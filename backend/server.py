@@ -2833,6 +2833,126 @@ async def import_from_federation(config: dict, current_user = Depends(get_curren
                 "skipped": skipped_count,
                 "errors": errors
             }
+        elif federation == "fip":
+            # FIP Basketball
+            scraper = FIPScraper(region=region)
+            codice_campionato = config.get("codice_campionato", "C1")
+            codice_girone = config.get("codice_girone")
+            sesso = config.get("sesso", "M")
+            
+            if not codice_girone:
+                raise HTTPException(status_code=400, detail="Seleziona un campionato (codice_girone)")
+            
+            matches = await scraper.scrape_matches(
+                codice_campionato=codice_campionato,
+                codice_girone=codice_girone,
+                society_name=society_name,
+                sesso=sesso
+            )
+            
+            imported_count = 0
+            skipped_count = 0
+            errors = []
+            
+            # Build a mapping dict for quick lookup
+            mapping_dict = {}
+            for mapping in team_mappings:
+                fed_name = mapping.get("federation_team_name", "").lower()
+                local_id = mapping.get("local_team_id")
+                if fed_name and local_id:
+                    mapping_dict[fed_name] = local_id
+            
+            # Also add variations of society_name to mapping
+            if society_name:
+                for mapping in team_mappings:
+                    fed_name = mapping.get("federation_team_name", "").lower()
+                    local_id = mapping.get("local_team_id")
+                    if local_id:
+                        if society_name.lower() in fed_name or fed_name in society_name.lower():
+                            mapping_dict[society_name.lower()] = local_id
+            
+            # Collect match numbers for deletion
+            match_numbers = [m.match_number for m in matches if m.match_number]
+            
+            # Delete existing matches with same match_number
+            if match_numbers:
+                delete_result = await db.matches.delete_many({
+                    "match_number": {"$in": match_numbers},
+                    "society_id": society_id_local
+                })
+                logging.info(f"[FIP] Deleted {delete_result.deleted_count} existing matches")
+            
+            for scraped_match in matches:
+                local_team_id = None
+                is_home = False
+                
+                # Check home team
+                home_lower = scraped_match.home_team.lower()
+                for key, value in mapping_dict.items():
+                    if key in home_lower or home_lower in key:
+                        local_team_id = value
+                        is_home = True
+                        break
+                
+                # Check away team if not found in home
+                if not local_team_id:
+                    away_lower = scraped_match.away_team.lower()
+                    for key, value in mapping_dict.items():
+                        if key in away_lower or away_lower in key:
+                            local_team_id = value
+                            is_home = False
+                            break
+                
+                if not local_team_id:
+                    skipped_count += 1
+                    continue
+                
+                # Create match document
+                match_doc = {
+                    "id": str(uuid.uuid4()),
+                    "team_id": local_team_id,
+                    "society_id": society_id_local,
+                    "match_number": scraped_match.match_number,
+                    "date": scraped_match.date,
+                    "opponent": scraped_match.away_team if is_home else scraped_match.home_team,
+                    "home_away": "home" if is_home else "away",
+                    "venue": scraped_match.venue,
+                    "result": scraped_match.result,
+                    "championship": scraped_match.championship,
+                    "giornata": scraped_match.giornata,
+                    "federation": "fip",
+                    "imported_at": datetime.utcnow(),
+                    "created_at": datetime.utcnow()
+                }
+                
+                await db.matches.insert_one(match_doc)
+                imported_count += 1
+            
+            # Save import configuration
+            import_config = {
+                "society_id": society_id_local,
+                "federation": federation,
+                "region": region,
+                "codice_campionato": codice_campionato,
+                "codice_girone": codice_girone,
+                "sesso": sesso,
+                "society_name": society_name,
+                "team_mappings": team_mappings,
+                "last_import": datetime.utcnow()
+            }
+            
+            await db.federation_configs.update_one(
+                {"society_id": society_id_local, "federation": federation},
+                {"$set": import_config},
+                upsert=True
+            )
+            
+            return {
+                "message": f"Importate {imported_count} partite FIP",
+                "imported": imported_count,
+                "skipped": skipped_count,
+                "errors": errors
+            }
         else:
             raise HTTPException(status_code=400, detail="Federazione non supportata")
     
