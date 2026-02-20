@@ -4472,6 +4472,10 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
         is_second_parent = athlete.get("second_parent_id") == current_user["id"]
         if not is_primary_parent and not is_second_parent:
             raise HTTPException(status_code=403, detail="Accesso negato")
+    # Allow athlete to access their own data
+    elif current_user["role"] == "athlete":
+        if current_user.get("athlete_id") != athlete_id and current_user["id"] != athlete_id:
+            raise HTTPException(status_code=403, detail="Puoi vedere solo i tuoi dati")
     
     # For compensated athletes, sync compensation data from separate collection if needed
     if athlete.get("athlete_type") == "compensated":
