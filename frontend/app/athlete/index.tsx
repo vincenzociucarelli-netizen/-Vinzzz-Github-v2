@@ -300,7 +300,7 @@ export default function AthleteScreen() {
       </TouchableOpacity>
 
       {/* Yearly Breakdown */}
-      {Object.keys(yearlyTotals).map((yearStr) => {
+      {Object.keys(yearlyTotals).sort((a, b) => parseInt(a) - parseInt(b)).map((yearStr, idx, arr) => {
         const year = parseInt(yearStr);
         const data = yearlyTotals[year];
         const yearTotal = data.total + data.prior;
@@ -311,10 +311,25 @@ export default function AthleteScreen() {
         const firstMonthName = MONTH_NAMES_FULL[yearMonths[0]?.month || 1];
         const lastMonthName = MONTH_NAMES_FULL[yearMonths[yearMonths.length - 1]?.month || 12];
         
+        // Determine if this is start, end, or middle year
+        const isFirstYear = idx === 0;
+        const isLastYear = idx === arr.length - 1;
+        const yearLabel = isFirstYear && isLastYear 
+          ? '' 
+          : isFirstYear 
+            ? '(Inizio Contratto)' 
+            : isLastYear 
+              ? '(Fine Contratto)' 
+              : '';
+        
         return (
           <View key={year} style={styles.yearCard}>
             <View style={styles.yearHeader}>
-              <Text style={styles.yearTitle}>Anno {year}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 18, marginRight: 8 }}>📊</Text>
+                <Text style={styles.yearTitle}>Anno {year}</Text>
+                {yearLabel ? <Text style={styles.yearLabelText}> {yearLabel}</Text> : null}
+              </View>
               {exceeds5K && (
                 <View style={[styles.thresholdBadge, exceeds15K ? styles.thresholdBadge15K : styles.thresholdBadge5K]}>
                   <Text style={styles.thresholdBadgeText}>{exceeds15K ? '>15K' : '>5K'}</Text>
@@ -322,20 +337,21 @@ export default function AthleteScreen() {
               )}
             </View>
             
-            <Text style={styles.yearSubtitle}>
-              Mesi nel contratto: {firstMonthName} - {lastMonthName} ({data.months} mesi)
-            </Text>
-            
             <View style={styles.yearCalculation}>
+              <View style={styles.calcRow}>
+                <Text style={styles.calcLabel}>Mesi nel contratto:</Text>
+                <Text style={styles.calcValue}>{firstMonthName} - {lastMonthName} ({data.months} mesi)</Text>
+              </View>
+              
               <View style={styles.calcRow}>
                 <Text style={styles.calcLabel}>Compenso da contratto:</Text>
                 <Text style={styles.calcValue}>€{profile.monthly_compensation} × {data.months} = €{data.total.toLocaleString('it-IT')}</Text>
               </View>
               
               {data.prior > 0 && (
-                <View style={styles.calcRow}>
-                  <Text style={styles.calcLabel}>+ Pregressi dichiarati:</Text>
-                  <Text style={styles.calcValue}>€{data.prior.toLocaleString('it-IT')}</Text>
+                <View style={[styles.calcRow, styles.priorRow]}>
+                  <Text style={[styles.calcLabel, { color: '#B8860B' }]}>+ Pregressi dichiarati:</Text>
+                  <Text style={[styles.calcValue, { color: '#B8860B', fontWeight: '600' }]}>€{data.prior.toLocaleString('it-IT')}</Text>
                 </View>
               )}
               
