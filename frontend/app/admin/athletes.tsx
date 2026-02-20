@@ -286,10 +286,10 @@ export default function AdminAthletes() {
       onPress={() => router.push(`/admin/athlete/${item.id}`)}
       data-testid={`athlete-card-${item.id}`}
     >
-      {/* Compensated Badge */}
+      {/* Compensated Badge - PRO indicator */}
       {(item as any).athlete_type === 'compensated' && (
         <View style={styles.compensatedBadge}>
-          <Text style={styles.compensatedBadgeText}>€</Text>
+          <Text style={styles.compensatedBadgeText}>PRO</Text>
         </View>
       )}
       {/* Small QR Code */}
