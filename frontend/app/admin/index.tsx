@@ -707,6 +707,22 @@ export default function AdminDashboard() {
             </TouchableOpacity>
           )}
 
+          {/* Report Mensile Quietanze */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/reports')}
+            data-testid="reports-menu-card"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
+              <Text style={{ fontSize: 26 }}>📊</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Report Quietanze</Text>
+              <Text style={styles.menuCardSubtitle}>Riepilogo mensile compensi firmati</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
           {/* Ricerca Avanzata Atleti */}
           <TouchableOpacity
             style={styles.menuCard}
