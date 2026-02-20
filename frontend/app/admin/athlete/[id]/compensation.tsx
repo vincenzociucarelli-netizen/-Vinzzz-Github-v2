@@ -603,25 +603,30 @@ export default function AthleteCompensation() {
           )}
         </View>
 
-        {/* Monthly Receipts */}
+        {/* Monthly Receipts - READ ONLY for Admin */}
         {contractMonths.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📋 Quietanze Mensili</Text>
             <Text style={styles.cardSubtitle}>
-              Clicca su un mese per registrare la firma della quietanza
+              Stato delle quietanze - Solo l'atleta può firmare
             </Text>
 
             <View style={styles.monthsGrid}>
               {contractMonths.map((m, idx) => {
                 const signed = isReceiptSigned(m.month, m.year);
+                const signedDate = getReceiptSignedDate(m.month, m.year);
                 return (
                   <TouchableOpacity
                     key={idx}
                     style={[styles.monthButton, signed && styles.monthButtonSigned]}
                     onPress={() => {
-                      setSelectedMonth({ month: m.month, year: m.year });
-                      setReceiptModalVisible(true);
+                      if (signed) {
+                        // Show details only for signed receipts
+                        setSelectedMonth({ month: m.month, year: m.year });
+                        setReceiptModalVisible(true);
+                      }
                     }}
+                    disabled={!signed}
                   >
                     <Text style={[styles.monthButtonText, signed && styles.monthButtonTextSigned]}>
                       {m.month.substring(0, 3)}
@@ -629,8 +634,10 @@ export default function AthleteCompensation() {
                     <Text style={[styles.monthButtonYear, signed && styles.monthButtonTextSigned]}>
                       {m.year}
                     </Text>
-                    {signed && (
+                    {signed ? (
                       <Ionicons name="checkmark-circle" size={16} color="#fff" style={styles.monthCheck} />
+                    ) : (
+                      <Text style={{ fontSize: 10, color: '#999', marginTop: 2 }}>In attesa</Text>
                     )}
                   </TouchableOpacity>
                 );
