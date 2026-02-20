@@ -793,6 +793,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  yearBreakdownCard: {
+    // No specific styling needed, using inline styles
+  },
   header: {
     backgroundColor: '#B8860B',
     paddingTop: 50,
