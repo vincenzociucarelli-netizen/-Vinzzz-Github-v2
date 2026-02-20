@@ -952,4 +952,63 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
+  // New Bank Section Styles
+  bankSection: {
+    marginTop: 24,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  bankSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  bankIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#dbeafe',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  bankSectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1e3a5f',
+  },
+  bankInputGroup: {
+    marginBottom: 16,
+  },
+  bankInputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  bankInput: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#1e293b',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+  },
+  bankInputRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  bankInputHalf: {
+    flex: 1,
+  },
 });
