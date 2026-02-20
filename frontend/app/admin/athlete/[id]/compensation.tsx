@@ -11,6 +11,7 @@ import {
   Alert,
   Platform,
   Modal,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../../src/services/api';
@@ -36,6 +37,11 @@ interface Athlete {
   iban_holder_first_name?: string;
   iban_holder_last_name?: string;
   bank_name?: string;
+  identity_document_photo?: string;
+  email?: string;
+  fiscal_code?: string;
+  date_of_birth?: string;
+  phone_athlete?: string;
 }
 
 interface SignedReceipt {
