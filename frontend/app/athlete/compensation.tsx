@@ -80,6 +80,7 @@ export default function AthleteCompensation() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
+  const [athleteId, setAthleteId] = useState<string | null>(null);
   const [profile, setProfile] = useState<AthleteProfile | null>(null);
   const [records, setRecords] = useState<CompensationRecord[]>([]);
   const [yearlyTotal, setYearlyTotal] = useState(0);
