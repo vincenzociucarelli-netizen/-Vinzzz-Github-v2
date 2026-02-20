@@ -143,6 +143,10 @@ export default function AdminAthleteDetail() {
   
   // Detach parents
   const [detachingParents, setDetachingParents] = useState(false);
+  
+  // Delete athlete
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const pickCertImage = async () => {
     // Show action sheet to choose camera or gallery
