@@ -280,11 +280,18 @@ export default function AdminAthletes() {
     <TouchableOpacity 
       style={[
         styles.athleteCard,
-        item.is_withdrawn && styles.athleteCardWithdrawn
+        item.is_withdrawn && styles.athleteCardWithdrawn,
+        (item as any).athlete_type === 'compensated' && styles.athleteCardCompensated
       ]}
       onPress={() => router.push(`/admin/athlete/${item.id}`)}
       data-testid={`athlete-card-${item.id}`}
     >
+      {/* Compensated Badge */}
+      {(item as any).athlete_type === 'compensated' && (
+        <View style={styles.compensatedBadge}>
+          <Text style={styles.compensatedBadgeText}>€</Text>
+        </View>
+      )}
       {/* Small QR Code */}
       {(item as any).qr_code && (
         <Image
@@ -297,7 +304,8 @@ export default function AdminAthletes() {
         <View style={styles.athleteNameRow}>
           <Text style={[
             styles.athleteName,
-            item.is_withdrawn && styles.athleteNameWithdrawn
+            item.is_withdrawn && styles.athleteNameWithdrawn,
+            (item as any).athlete_type === 'compensated' && styles.athleteNameCompensated
           ]} numberOfLines={1}>
             {formatAthleteNameForDisplay(item)}
           </Text>
@@ -310,8 +318,12 @@ export default function AdminAthletes() {
             </View>
           )}
         </View>
-        <Text style={styles.teamName} numberOfLines={1}>
+        <Text style={[
+          styles.teamName,
+          (item as any).athlete_type === 'compensated' && styles.teamNameCompensated
+        ]} numberOfLines={1}>
           {teams[item.team_id]?.name || '-'}
+          {(item as any).athlete_type === 'compensated' && ' • Compensato'}
         </Text>
       </View>
       <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item) + '20' }]}>
