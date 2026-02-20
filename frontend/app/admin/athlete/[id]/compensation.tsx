@@ -585,6 +585,104 @@ export default function AthleteCompensation() {
           )}
         </View>
 
+        {/* Yearly Breakdown - Detailed Calculations */}
+        {contractMonths.length > 0 && !isEditing && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📊 Calcoli Annuali</Text>
+            {(() => {
+              const yearlyData = getYearlyBreakdown();
+              const years = Object.keys(yearlyData).map(Number).sort((a, b) => a - b);
+              
+              return years.map((year, idx) => {
+                const data = yearlyData[year];
+                const yearTotal = data.total + data.prior;
+                const exceeds5K = yearTotal > 5000;
+                const exceeds15K = yearTotal > 15000;
+                const isFirstYear = idx === 0;
+                const isLastYear = idx === years.length - 1;
+                const yearLabel = isFirstYear && isLastYear 
+                  ? '' 
+                  : isFirstYear 
+                    ? '(Inizio Contratto)' 
+                    : isLastYear 
+                      ? '(Fine Contratto)' 
+                      : '';
+                
+                const firstMonthName = MONTHS[data.startMonth - 1];
+                const lastMonthName = MONTHS[data.endMonth - 1];
+                
+                return (
+                  <View key={year} style={[styles.yearBreakdownCard, idx > 0 && { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#eee' }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#1a1a2e' }}>Anno {year}</Text>
+                        {yearLabel ? <Text style={{ fontSize: 12, color: '#666', marginLeft: 8, fontStyle: 'italic' }}>{yearLabel}</Text> : null}
+                      </View>
+                      {exceeds5K && (
+                        <View style={{ backgroundColor: exceeds15K ? '#FFEBEE' : '#FFF3E0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 }}>
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: exceeds15K ? '#D32F2F' : '#E65100' }}>
+                            {exceeds15K ? '⚠️ >15K' : '⚠️ >5K'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    
+                    <View style={{ backgroundColor: '#f8f8f8', padding: 12, borderRadius: 10 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <Text style={{ fontSize: 13, color: '#666' }}>Mesi nel contratto:</Text>
+                        <Text style={{ fontSize: 13, color: '#333' }}>{firstMonthName} - {lastMonthName} ({data.months} mesi)</Text>
+                      </View>
+                      
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <Text style={{ fontSize: 13, color: '#666' }}>Compenso da contratto:</Text>
+                        <Text style={{ fontSize: 13, color: '#333' }}>€{monthlyCompensation} × {data.months} = €{data.total.toLocaleString('it-IT')}</Text>
+                      </View>
+                      
+                      {data.prior > 0 && (
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, backgroundColor: 'rgba(184, 134, 11, 0.1)', marginHorizontal: -12, paddingHorizontal: 12, paddingVertical: 6 }}>
+                          <Text style={{ fontSize: 13, color: '#B8860B', fontWeight: '500' }}>+ Pregressi dichiarati:</Text>
+                          <Text style={{ fontSize: 13, color: '#B8860B', fontWeight: '600' }}>€{data.prior.toLocaleString('it-IT')}</Text>
+                        </View>
+                      )}
+                      
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#ddd', marginTop: 4 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e' }}>TOTALE ANNO:</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: exceeds5K ? (exceeds15K ? '#D32F2F' : '#E65100') : '#2E7D32' }}>€{yearTotal.toLocaleString('it-IT')}</Text>
+                      </View>
+                    </View>
+                    
+                    {exceeds5K && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: exceeds15K ? '#FFEBEE' : '#FFF3E0', padding: 10, borderRadius: 8, marginTop: 10 }}>
+                        <Ionicons name="warning" size={16} color={exceeds15K ? '#D32F2F' : '#FF9800'} />
+                        <Text style={{ marginLeft: 8, fontSize: 12, color: exceeds15K ? '#D32F2F' : '#E65100' }}>
+                          {exceeds15K ? 'Supera soglia €15.000 - Ritenuta fiscale' : 'Supera soglia €5.000 - Contributi previdenziali'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              });
+            })()}
+          </View>
+        )}
+
+        {/* Identity Document */}
+        {athlete?.identity_document_photo && !isEditing && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🪪 Documento di Riconoscimento</Text>
+            <View style={{ alignItems: 'center', marginTop: 12 }}>
+              <Image
+                source={{ uri: athlete.identity_document_photo.startsWith('data:') 
+                  ? athlete.identity_document_photo 
+                  : `data:image/jpeg;base64,${athlete.identity_document_photo}` 
+                }}
+                style={{ width: '100%', height: 200, borderRadius: 10 }}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+        )}
+
         {/* Monthly Receipts - READ ONLY for Admin */}
         {contractMonths.length > 0 && (
           <View style={styles.card}>
