@@ -3838,8 +3838,14 @@ async def update_athlete_compensation_settings(athlete_id: str, data: dict, curr
     # Bank info
     if "iban" in data:
         update_data["iban"] = data["iban"]
-    if "iban_holder" in data:
-        update_data["iban_holder"] = data["iban_holder"]
+    if "iban_holder_first_name" in data:
+        # Convert to uppercase
+        val = data["iban_holder_first_name"]
+        update_data["iban_holder_first_name"] = val.upper() if val else None
+    if "iban_holder_last_name" in data:
+        # Convert to uppercase
+        val = data["iban_holder_last_name"]
+        update_data["iban_holder_last_name"] = val.upper() if val else None
     if "bank_name" in data:
         update_data["bank_name"] = data["bank_name"]
     
