@@ -631,7 +631,7 @@ export default function AthleteCompensation() {
         </View>
 
         {/* Yearly Breakdown - Detailed Calculations */}
-        {contractMonths.length > 0 && !isEditing && (
+        {contractMonths.length > 0 && !editing && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📊 Calcoli Annuali</Text>
             {(() => {
@@ -712,7 +712,7 @@ export default function AthleteCompensation() {
         )}
 
         {/* Identity Document */}
-        {athlete?.identity_document_photo && !isEditing && (
+        {athlete?.identity_document_photo && !editing && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>🪪 Documento di Riconoscimento</Text>
             <View style={{ alignItems: 'center', marginTop: 12 }}>
