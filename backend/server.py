@@ -4882,6 +4882,66 @@ async def admin_reset_data_password(athlete_id: str, data: AdminResetDataPasswor
     
     return {"message": f"Password dati resettata per {athlete.get('first_name', '')} {athlete.get('last_name', '')}"}
 
+
+class CreateAthleteAccountRequest(BaseModel):
+    password: str
+
+@api_router.post("/athletes/{athlete_id}/create-account")
+async def create_athlete_account(athlete_id: str, data: CreateAthleteAccountRequest, current_user = Depends(get_current_user)):
+    """Create a user account for a compensated athlete so they can login and sign receipts"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può creare account atleta")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Only compensated athletes need accounts
+    if athlete.get("athlete_type") != "compensated":
+        raise HTTPException(status_code=400, detail="Solo gli atleti retribuiti necessitano di un account")
+    
+    # Check if email exists
+    email = athlete.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="L'atleta deve avere un'email per creare un account")
+    
+    # Check if user already exists
+    existing_user = await db.users.find_one({"email": email})
+    if existing_user:
+        # If user exists but is not linked to this athlete, update it
+        if existing_user.get("role") != "athlete" or existing_user.get("athlete_id") != athlete_id:
+            await db.users.update_one(
+                {"email": email},
+                {"$set": {"role": "athlete", "athlete_id": athlete_id}}
+            )
+            return {"message": "Account esistente aggiornato come atleta", "user_id": existing_user["id"]}
+        else:
+            raise HTTPException(status_code=400, detail="L'atleta ha già un account")
+    
+    # Create new user
+    user_id = str(ObjectId())
+    password_hash = hash_password(data.password)
+    
+    user_dict = {
+        "id": user_id,
+        "email": email,
+        "password_hash": password_hash,
+        "role": "athlete",
+        "athlete_id": athlete_id,
+        "first_name": athlete.get("first_name", ""),
+        "last_name": athlete.get("last_name", ""),
+        "full_name": athlete.get("full_name", ""),
+        "society_id": athlete.get("society_id"),
+        "is_approved": True,  # Auto-approved
+        "created_at": datetime.utcnow(),
+    }
+    
+    await db.users.insert_one(user_dict)
+    
+    return {"message": "Account atleta creato con successo", "user_id": user_id, "email": email}
+
+
+
 @api_router.post("/athletes/{athlete_id}/transform-photo")
 async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, current_user = Depends(get_current_user)):
     """Transform athlete photo to artistic style using AI"""
