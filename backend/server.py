@@ -4085,6 +4085,36 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
         if not is_primary_parent and not is_second_parent:
             raise HTTPException(status_code=403, detail="Accesso negato")
     
+    # For compensated athletes, sync compensation data from separate collection if needed
+    if athlete.get("athlete_type") == "compensated":
+        # Check if compensation fields are missing but exist in separate collection
+        if not athlete.get("monthly_compensation") or not athlete.get("contract_start_date"):
+            comp = await db.athlete_compensations.find_one({"athlete_id": athlete_id})
+            if comp:
+                # Sync data to athlete document and response
+                sync_data = {}
+                if comp.get("monthly_amount") and not athlete.get("monthly_compensation"):
+                    sync_data["monthly_compensation"] = comp["monthly_amount"]
+                    athlete["monthly_compensation"] = comp["monthly_amount"]
+                if comp.get("start_date"):
+                    start_date = comp["start_date"]
+                    if isinstance(start_date, datetime):
+                        start_date = start_date.strftime("%Y-%m-%d")
+                    if not athlete.get("contract_start_date"):
+                        sync_data["contract_start_date"] = start_date
+                        athlete["contract_start_date"] = start_date
+                if comp.get("end_date"):
+                    end_date = comp["end_date"]
+                    if isinstance(end_date, datetime):
+                        end_date = end_date.strftime("%Y-%m-%d")
+                    if not athlete.get("contract_end_date"):
+                        sync_data["contract_end_date"] = end_date
+                        athlete["contract_end_date"] = end_date
+                
+                # Persist sync to database
+                if sync_data:
+                    await db.athletes.update_one({"id": athlete_id}, {"$set": sync_data})
+    
     return Athlete(**athlete)
 
 @api_router.get("/athletes/{athlete_id}/technical-data")
