@@ -1008,6 +1008,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  bankInputColumn: {
+    flexDirection: 'column',
+    gap: 10,
+  },
   bankInputHalf: {
     flex: 1,
   },
