@@ -21,14 +21,15 @@ Sistema di gestione completo per società sportive italiane (pallavolo, basket) 
 7. **Federation Importer** - FIPAV (volleyball) e FIP (basketball)
 8. **Monthly Reports** - PDF consolidato quietanze firmate
 
-### Athlete Compensation Module (JUST COMPLETED)
-**Status**: ✅ IMPLEMENTED AND TESTED (100% pass rate)
+### Athlete Compensation Module (COMPLETED)
+**Status**: ✅ IMPLEMENTED AND TESTED
 
-Funzionalità replicate dal modulo coach:
+Funzionalità complete:
 - **Backend Endpoints**:
   - `POST /athletes/{id}/create-account` - Admin crea account per atleta retribuito
   - `GET /athletes/{id}/compensation/receipts` - Visualizza quietanze (admin + atleta)
-  - `POST /athletes/{id}/compensation/receipt-sign` - Firma digitale quietanza
+  - `POST /athletes/{id}/compensation/receipt-sign` - Firma digitale quietanza (solo atleta)
+  - `POST /athletes/{id}/transform-photo` - Upload foto atleta (atleta può caricare la propria)
   - `GET /prime-squadre/athletes/{id}/threshold-status/{year}` - Stato soglie fiscali
 
 - **Frontend Pages**:
@@ -36,16 +37,14 @@ Funzionalità replicate dal modulo coach:
   - `/athlete/compensation` - Firma quietanze con signature pad
   - `/athlete/profile` - Dati personali atleta
 
-- **Flow Admin**:
-  1. Admin imposta atleta come "retribuito" (athlete_type=compensated)
-  2. Admin configura compenso mensile, date contratto, IBAN
-  3. Admin crea account atleta tramite nuova card "Account Atleta"
-  
-- **Flow Atleta**:
-  1. Atleta fa login con email e password
-  2. Dashboard mostra contratto, totali annuali per anno
-  3. Atleta firma quietanza mensile con firma digitale
-  4. PDF generato e inviato via email
+- **Permessi**:
+  - Admin: SOLO lettura quietanze, NON può firmare
+  - Atleta: può firmare le proprie quietanze, caricare foto
+
+## Bug Fixes (Session 2026-02-20)
+1. ✅ **Formato date**: Corretto "01T00:00:00/12/2025" → "01/12/2025"
+2. ✅ **Upload foto atleta**: Atleta può ora caricare la propria foto senza essere disconnesso
+3. ✅ **Permessi admin quietanze**: Admin ora può solo visualizzare, non firmare
 
 ## Database Schema
 
@@ -69,24 +68,5 @@ Funzionalità replicate dal modulo coach:
 3. **P3**: Refactor server.py into modular routes
 4. **P3**: Stripe integration for premium plans
 
-## Architecture
-```
-/app
-├── backend/
-│   ├── server.py (monolithic - needs refactoring)
-│   └── tests/
-│       └── test_athlete_module.py (14 tests)
-└── frontend/
-    └── app/
-        ├── admin/
-        │   └── athlete/[id]/compensation.tsx
-        ├── athlete/ (NEW)
-        │   ├── _layout.tsx
-        │   ├── index.tsx
-        │   ├── compensation.tsx
-        │   └── profile.tsx
-        └── coach/
-```
-
 ## Last Updated
-2026-02-20: Completed athlete compensation module replication
+2026-02-20: Fixed athlete photo upload, date format, admin read-only receipts
