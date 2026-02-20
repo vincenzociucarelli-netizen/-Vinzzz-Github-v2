@@ -589,6 +589,18 @@ export default function AthleteCompensation() {
                   <Text style={styles.compensationTotalLabel}>Totale Contratto</Text>
                   <Text style={styles.compensationTotalValue}>€{breakdown.thisClubTotal.toLocaleString()}</Text>
                 </View>
+                {parseFloat(otherAnnualCompensation) > 0 && (
+                  <View style={[styles.compensationRow, { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' }]}>
+                    <Text style={styles.compensationLabel}>📋 Compensi Pregressi</Text>
+                    <Text style={styles.compensationValue}>€{parseFloat(otherAnnualCompensation).toLocaleString()}</Text>
+                  </View>
+                )}
+                {parseFloat(otherAnnualCompensation) > 0 && (
+                  <View style={[styles.compensationRow, styles.compensationTotal]}>
+                    <Text style={styles.compensationTotalLabel}>Totale Annuo Complessivo</Text>
+                    <Text style={styles.compensationTotalValue}>€{breakdown.grandTotal.toLocaleString()}</Text>
+                  </View>
+                )}
               </View>
 
               {/* Bank Info Display */}
