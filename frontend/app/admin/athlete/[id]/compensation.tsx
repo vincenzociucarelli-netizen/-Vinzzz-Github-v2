@@ -57,6 +57,11 @@ const MONTHS = [
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
 ];
 
+const MONTH_NAMES_SHORT: { [key: number]: string } = {
+  1: 'Gen', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'Mag', 6: 'Giu',
+  7: 'Lug', 8: 'Ago', 9: 'Set', 10: 'Ott', 11: 'Nov', 12: 'Dic'
+};
+
 export default function AthleteCompensation() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
