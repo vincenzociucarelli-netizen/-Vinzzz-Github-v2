@@ -706,6 +706,73 @@ export default function AthleteCompensation() {
           </View>
         </View>
       </Modal>
+
+      {/* Account Creation Modal */}
+      <Modal
+        visible={showAccountModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAccountModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '60%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Crea Account Atleta</Text>
+              <TouchableOpacity onPress={() => setShowAccountModal(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={{ padding: 20 }}>
+              <Text style={{ fontSize: 14, color: '#666', marginBottom: 16 }}>
+                L'atleta potrà accedere con le seguenti credenziali:
+              </Text>
+              
+              <View style={{ backgroundColor: '#F5F5F5', padding: 16, borderRadius: 12, marginBottom: 16 }}>
+                <Text style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Email</Text>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#333' }}>{athlete?.email}</Text>
+              </View>
+              
+              <Text style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>Password</Text>
+              <TextInput
+                style={{
+                  backgroundColor: '#fff',
+                  borderWidth: 1,
+                  borderColor: '#ddd',
+                  borderRadius: 10,
+                  padding: 14,
+                  fontSize: 16,
+                  marginBottom: 8,
+                }}
+                value={newAccountPassword}
+                onChangeText={setNewAccountPassword}
+                placeholder="Inserisci una password"
+                secureTextEntry
+              />
+              <Text style={{ fontSize: 11, color: '#999', marginBottom: 20 }}>
+                Minimo 6 caratteri. L'atleta potrà cambiarla dopo il primo accesso.
+              </Text>
+              
+              <TouchableOpacity
+                style={{
+                  backgroundColor: creatingAccount ? '#ccc' : '#B8860B',
+                  padding: 16,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                }}
+                onPress={handleCreateAccount}
+                disabled={creatingAccount}
+              >
+                {creatingAccount ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>✓ Crea Account</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
