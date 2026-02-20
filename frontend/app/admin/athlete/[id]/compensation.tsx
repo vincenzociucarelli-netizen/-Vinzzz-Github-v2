@@ -415,9 +415,9 @@ export default function AthleteCompensation() {
 
                 <View style={styles.bankInputGroup}>
                   <Text style={styles.bankInputLabel}>Intestatario Conto</Text>
-                  <View style={styles.bankInputRow}>
+                  <View style={styles.bankInputColumn}>
                     <TextInput
-                      style={[styles.bankInput, styles.bankInputHalf]}
+                      style={styles.bankInput}
                       value={ibanHolderLastName}
                       onChangeText={(t) => setIbanHolderLastName(t.toUpperCase())}
                       placeholder="Cognome"
@@ -425,7 +425,7 @@ export default function AthleteCompensation() {
                       autoCapitalize="characters"
                     />
                     <TextInput
-                      style={[styles.bankInput, styles.bankInputHalf]}
+                      style={styles.bankInput}
                       value={ibanHolderFirstName}
                       onChangeText={(t) => setIbanHolderFirstName(t.toUpperCase())}
                       placeholder="Nome"
