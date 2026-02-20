@@ -729,6 +729,28 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: '#FF3B30',
   },
+  athleteCardCompensated: {
+    backgroundColor: '#FFFBEB',
+    borderLeftWidth: 3,
+    borderLeftColor: '#B8860B',
+  },
+  compensatedBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#B8860B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  compensatedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+  },
   athleteInfo: {
     flex: 1,
     marginRight: 8,
@@ -743,6 +765,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     flex: 1,
+  },
+  athleteNameCompensated: {
+    color: '#8B6914',
   },
   athleteCode: {
     fontSize: 10,
@@ -775,6 +800,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#007AFF',
     marginTop: 2,
+  },
+  teamNameCompensated: {
+    color: '#B8860B',
   },
   statusBadge: {
     paddingHorizontal: 8,
