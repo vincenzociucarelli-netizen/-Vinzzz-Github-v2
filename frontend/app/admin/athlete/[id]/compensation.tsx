@@ -279,8 +279,12 @@ export default function AthleteCompensation() {
       return { monthsInContract: 0, thisClubTotal: 0, grandTotal: other };
     }
     
-    const start = new Date(contractStartDate);
-    const end = new Date(contractEndDate);
+    // Convert from Italian format if needed
+    const startISO = formatDateToISO(contractStartDate) || contractStartDate;
+    const endISO = formatDateToISO(contractEndDate) || contractEndDate;
+    
+    const start = new Date(startISO);
+    const end = new Date(endISO);
     const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
     const thisClubTotal = monthly * months;
     
@@ -298,8 +302,12 @@ export default function AthleteCompensation() {
     
     if (!contractStartDate || !contractEndDate) return {};
     
-    const start = new Date(contractStartDate);
-    const end = new Date(contractEndDate);
+    // Convert from Italian format if needed
+    const startISO = formatDateToISO(contractStartDate) || contractStartDate;
+    const endISO = formatDateToISO(contractEndDate) || contractEndDate;
+    
+    const start = new Date(startISO);
+    const end = new Date(endISO);
     
     const yearlyData: { [year: number]: { months: number, total: number, prior: number, startMonth: number, endMonth: number } } = {};
     
