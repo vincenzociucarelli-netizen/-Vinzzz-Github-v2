@@ -2196,7 +2196,7 @@ export default function AdminAthleteDetail() {
                       <Ionicons name="trophy" size={24} color="#fff" />
                     </View>
                     <View style={styles.compensationCardHeaderText}>
-                      <Text style={styles.compensationCardTitle}>Atleta Compensato</Text>
+                      <Text style={styles.compensationCardTitle}>Atleta Retribuito</Text>
                       <Text style={styles.compensationCardSubtitle}>Percepisce compenso mensile</Text>
                     </View>
                   </View>

@@ -323,7 +323,7 @@ export default function AdminAthletes() {
           (item as any).athlete_type === 'compensated' && styles.teamNameCompensated
         ]} numberOfLines={1}>
           {teams[item.team_id]?.name || '-'}
-          {(item as any).athlete_type === 'compensated' && ' • Compensato'}
+          {(item as any).athlete_type === 'compensated' && ' • Retribuito'}
         </Text>
       </View>
       <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item) + '20' }]}>
