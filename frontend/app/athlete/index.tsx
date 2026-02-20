@@ -67,6 +67,21 @@ export default function AthleteScreen() {
   const [contractStartMonth, setContractStartMonth] = useState<number | null>(null);
   const [contractEndMonth, setContractEndMonth] = useState<number | null>(null);
 
+  // Helper function to format date strings correctly
+  const formatDateIT = (dateStr: string | undefined) => {
+    if (!dateStr) return '';
+    try {
+      // Parse the date string (handles ISO format and other formats)
+      const date = new Date(dateStr);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
       window.alert(`${title}\n\n${message}`);
