@@ -76,6 +76,7 @@ export default function SettingsScreen() {
       setSocietyEmail(response.data.email || '');
       setSocietyPec(response.data.pec || '');
       setProEnabled(response.data.pro_enabled || false);
+      setSportImage(response.data.sport_image || null);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
