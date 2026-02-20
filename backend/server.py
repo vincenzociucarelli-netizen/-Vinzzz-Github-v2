@@ -1633,6 +1633,7 @@ class SocietySettingsUpdate(BaseModel):
     name: Optional[str] = None
     logo: Optional[str] = None  # Base64 encoded image
     logo_size: Optional[int] = None  # Logo size in pixels
+    sport_image: Optional[str] = None  # Base64 encoded image of the sport (e.g., volleyball)
     athlete_roles: Optional[List[str]] = None  # Custom roles for athletes
     athlete_characteristics: Optional[List[str]] = None  # Custom characteristics for athletes
     dirigente_qualifications: Optional[List[str]] = None  # Custom qualifications for dirigenti
