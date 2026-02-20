@@ -7,7 +7,13 @@ Applicazione per la gestione di società sportive con funzionalità per gestire 
 
 ### Completato Oggi:
 
-1. **✅ Report Mensile Quietanze** (COMPLETO)
+1. **✅ Importatore FIP Basketball** (COMPLETO)
+   - Scraper completo per API FIP: `https://backend.fip.it/api/v1/giornata`
+   - Supporto regioni: Umbria, Lazio, Toscana, Emilia, Lombardia, etc.
+   - Preview e Import endpoint funzionanti
+   - Testato: 10 partite trovate per "SVILA PERUGIA BASKET" (Serie C Umbria)
+
+2. **✅ Report Mensile Quietanze** (COMPLETO)
    - Endpoint `GET /reports/monthly-compensation/{year}/{month}` genera PDF
    - Endpoint `GET .../summary` fornisce riepilogo JSON
    - Raggruppa quietanze di Coach, Dirigenti, Atleti, Atleti PRO
