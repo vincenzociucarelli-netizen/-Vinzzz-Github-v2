@@ -392,47 +392,60 @@ export default function AthleteCompensation() {
               </Text>
 
               {/* Bank Info */}
-              <Text style={[styles.sectionTitle, { marginTop: 24 }]}>🏦 Dati Bancari</Text>
-              
-              <Text style={styles.inputLabel}>IBAN</Text>
-              <TextInput
-                style={styles.input}
-                value={iban}
-                onChangeText={(t) => setIban(t.toUpperCase())}
-                placeholder="IT00X0000000000000000000000"
-                autoCapitalize="characters"
-              />
-
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.inputLabel, { marginTop: 12 }]}>Nome Intestatario</Text>
+              {/* Dati Bancari - Improved Design */}
+              <View style={styles.bankSection}>
+                <View style={styles.bankSectionHeader}>
+                  <View style={styles.bankIconContainer}>
+                    <Text style={{ fontSize: 20 }}>🏦</Text>
+                  </View>
+                  <Text style={styles.bankSectionTitle}>Dati Bancari</Text>
+                </View>
+                
+                <View style={styles.bankInputGroup}>
+                  <Text style={styles.bankInputLabel}>IBAN</Text>
                   <TextInput
-                    style={styles.input}
-                    value={ibanHolderFirstName}
-                    onChangeText={(t) => setIbanHolderFirstName(t.toUpperCase())}
-                    placeholder="NOME"
+                    style={styles.bankInput}
+                    value={iban}
+                    onChangeText={(t) => setIban(t.toUpperCase())}
+                    placeholder="IT00X0000000000000000000000"
+                    placeholderTextColor="#999"
                     autoCapitalize="characters"
                   />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.inputLabel, { marginTop: 12 }]}>Cognome Intestatario</Text>
+
+                <View style={styles.bankInputGroup}>
+                  <Text style={styles.bankInputLabel}>Intestatario Conto</Text>
+                  <View style={styles.bankInputRow}>
+                    <TextInput
+                      style={[styles.bankInput, styles.bankInputHalf]}
+                      value={ibanHolderLastName}
+                      onChangeText={(t) => setIbanHolderLastName(t.toUpperCase())}
+                      placeholder="Cognome"
+                      placeholderTextColor="#999"
+                      autoCapitalize="characters"
+                    />
+                    <TextInput
+                      style={[styles.bankInput, styles.bankInputHalf]}
+                      value={ibanHolderFirstName}
+                      onChangeText={(t) => setIbanHolderFirstName(t.toUpperCase())}
+                      placeholder="Nome"
+                      placeholderTextColor="#999"
+                      autoCapitalize="characters"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.bankInputGroup}>
+                  <Text style={styles.bankInputLabel}>Banca</Text>
                   <TextInput
-                    style={styles.input}
-                    value={ibanHolderLastName}
-                    onChangeText={(t) => setIbanHolderLastName(t.toUpperCase())}
-                    placeholder="COGNOME"
-                    autoCapitalize="characters"
+                    style={styles.bankInput}
+                    value={bankName}
+                    onChangeText={setBankName}
+                    placeholder="Nome della banca"
+                    placeholderTextColor="#999"
                   />
                 </View>
               </View>
-
-              <Text style={[styles.inputLabel, { marginTop: 12 }]}>Banca</Text>
-              <TextInput
-                style={styles.input}
-                value={bankName}
-                onChangeText={setBankName}
-                placeholder="Nome Banca"
-              />
 
               {/* Preview */}
               {contractStartDate && contractEndDate && (
