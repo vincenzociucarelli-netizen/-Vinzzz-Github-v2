@@ -403,14 +403,28 @@ export default function AthleteCompensation() {
                 autoCapitalize="characters"
               />
 
-              <Text style={[styles.inputLabel, { marginTop: 12 }]}>Intestatario</Text>
-              <TextInput
-                style={styles.input}
-                value={ibanHolder}
-                onChangeText={setIbanHolder}
-                placeholder="Nome Cognome"
-                autoCapitalize="words"
-              />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.inputLabel, { marginTop: 12 }]}>Nome Intestatario</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={ibanHolderFirstName}
+                    onChangeText={(t) => setIbanHolderFirstName(t.toUpperCase())}
+                    placeholder="NOME"
+                    autoCapitalize="characters"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.inputLabel, { marginTop: 12 }]}>Cognome Intestatario</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={ibanHolderLastName}
+                    onChangeText={(t) => setIbanHolderLastName(t.toUpperCase())}
+                    placeholder="COGNOME"
+                    autoCapitalize="characters"
+                  />
+                </View>
+              </View>
 
               <Text style={[styles.inputLabel, { marginTop: 12 }]}>Banca</Text>
               <TextInput
