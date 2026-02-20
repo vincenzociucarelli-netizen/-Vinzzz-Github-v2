@@ -1,4 +1,6 @@
-<analysis>**original_problem_statement**: The initial goal was to replicate the coach compensation module for a Director () role. This expanded to include UI fixes (QR scanner), PDF corrections, and designing a Prime Squadre (First Teams) premium module. The scope further evolved to address critical authentication bugs, implement the Prime Squadre functionality, and then refactor the core athlete registration process to differentiate between fee-paying and compensated athletes. The latest request is to build a new major feature: a configurable tool for sports clubs to import their game schedules by scraping federation websites like FIPAV (volleyball) and FIP (basketball).
+<analysis>**original_problem_statement**: The initial goal was to replicate the coach compensation module for a Director () role. This expanded to include UI fixes, PDF corrections, and designing a Prime Squadre (First Teams) premium module. The scope further evolved to address critical authentication bugs, implement the Prime Squadre functionality, and refactor the core athlete registration process. The current major feature being built is a configurable tool for sports clubs to import their game schedules by scraping federation websites like FIPAV (volleyball) and FIP (basketball). The user also reports bugs as they test the application, requiring the agent to switch context frequently.
+
+In the last session, development pivoted to address user feedback and bugs related to team and athlete management. This included adding a robust delete confirmation for teams, expanding team training options (up to 10 sessions + pre-game training), implementing a Prima Squadra feature to exclude teams from payment requirements, and building a new admin-facing workflow to register adult athletes who either pay a fee or receive compensation.
 
 **PRODUCT REQUIREMENTS**:
 1.  **Compensation Module (Directors)**: Replicate all coach compensation features for Directors. (COMPLETED)
@@ -7,96 +9,119 @@
     *   Phase 1: Implement a UI placeholder for the premium feature. (COMPLETED)
     *   Phase 2: Build the full functionality, allowing admins to add existing athletes to a Prime Squadre group, set their compensation, contract dates, and manage monthly receipts. (IN PROGRESS)
     *   Refinement: Handle the scenario where a youth athlete is promoted, with an option to waive their existing fees. (IN PROGRESS)
-4.  **Settings Enhancement**: Add  and  fields to society settings. (COMPLETED)
-5.  **Admin Panel Stability**: Fix recurring authentication and navigation bugs. (COMPLETED)
-6.  **Athlete Registration Refactor**:
-    *   At registration, distinguish between athletes who pay fees and those who receive compensation.
-    *   Implement a Detach Parents feature for all athletes who turn 18. (IN PROGRESS, Backend Done)
-7.  **Federation Game Importer**: Create a feature allowing clubs to import game schedules from external federation websites by configuring their sport, region, and team details. (NOT STARTED)
+4.  **Team Management Enhancements**:
+    *   Increase training sessions per team to 10. (COMPLETED)
+    *   Add a Rifinitura (pre-game training) option. (COMPLETED)
+    *   Add a Prima Squadra checkbox to team forms to mark them as professional, hiding payment-related fields. (COMPLETED)
+    *   Implement robust deletion confirmation. (COMPLETED)
+    *   Sort team list by a predefined priority order. (COMPLETED)
+    *   Format date inputs to GG/MM/AAAA. (COMPLETED)
+5.  **Athlete Registration Refactor**:
+    *   Implement a new admin workflow to register adult athletes directly. (COMPLETED)
+    *   Allow admin to specify if the adult athlete pays a fee () or receives compensation (). (COMPLETED)
+    *   On the athlete's detail page, the admin can switch between these two types. (COMPLETED)
+    *   For compensated athletes, replicate the full compensation/receipt management UI from the coach/director modules. (IN PROGRESS)
+6.  **Federation Game Importer**: Create a feature allowing clubs to import game schedules from external federation websites. (FIPAV volleyball is done, FIP basketball is pending).
+7.  **Admin Panel Stability**: Fix recurring authentication and navigation bugs. (Mostly stable, but new bugs were introduced and fixed this session).
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-- A full-stack React/FastAPI/MongoDB application for sports club management.
-- Complete and tested compensation modules for Coaches and Directors.
-- A functional (but still evolving) Prime Squadre module where admins can manage compensated athletes. The backend supports contract dates, pre-existing compensation, and a flag to waive fees.
-- A stabilized authentication system with protected routes for all user roles (, , , ) and a global API interceptor that redirects to login on auth errors.
-- A Detach Parents feature is implemented on the backend and has a UI button on the athlete's profile page, allowing an admin to dissociate parental accounts from an adult athlete.
-- The backend  model has been updated with an  field to support the upcoming registration flow refactor.
+- A full-stack React/FastAPI/MongoDB application for managing a sports club.
+- Admins can create and manage teams with extensive customization, including up to 10 training sessions and a pre-game training option.
+- A Prima Squadra (First Team) feature allows marking professional teams, which hides payment UIs and uses a special badge in the team list. The team list is sorted by league priority.
+- A new admin workflow allows direct registration of adult athletes, bypassing the parent-centric flow. The admin can classify them as fee-paying () or compensated ().
+- The athlete detail page dynamically changes: it shows a payment section for  athletes and a compensation section for  athletes.
+- Backend models (, ) and API endpoints have been updated to support these features.
+- The previous Federation Game Importer for FIPAV (volleyball) is still present.
 
 **Last working item**:
-- Last item agent was working: The agent and user were planning a new major feature: scraping and importing game schedules from federation websites (FIPAV for volleyball, FIP for basketball). The agent successfully proved the concept by extracting data from both sites and proposed a scalable solution where each club can configure its own import parameters (sport, region, team ID, championship IDs).
-- Status: NOT STARTED
-- Agent Testing Done: N/A (Feature not implemented)
-- Which testing method agent to use? This is a large feature. The backend scraping logic should be tested with a dedicated Python script or unit tests. The full e2e flow (frontend configuration -> backend scraping -> data displayed in-app) will require the .
+- Last item agent was working: The user pointed out that the newly created Compensation section for adult athletes was incorrect and not editable. They requested it be an exact replica of the comprehensive compensation management UI available for coaches and directors, which includes monthly receipt tracking, status updates, and PDF generation. The agent began implementing this by creating a new dedicated page at  and adding the required backend endpoints.
+- Status: IN PROGRESS
+- Agent Testing Done: N
+- Which testing method agent to use? both. The agent must first implement the backend endpoints for athlete receipts (mirroring the coach endpoints). Then, build the frontend page at  to replicate the UI and logic from . Finally, test the entire flow: navigating to the page, setting compensation, and managing monthly receipts.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- Issue 1: (P1) Login for users with the  role is not working.
-- Issue 2: (P2) Icon library () fails to load on the web.
+- **Issue 1**: (P0) Athlete compensation UI is incomplete and incorrect. It must be an exact replica of the coach/director compensation module.
+- **Issue 2**: (P1) Login for users with the  role is not working.
+- **Issue 3**: (P2) On the parent dashboard, paid installments that are past their due date are still shown in red as if they are overdue.
+- **Issue 4**: (P3) The icon library () fails to load correctly on the web version of the app.
 
 **Issues Detail**:
-- **Issue 1: Parents cannot log in**
-    - **Description**: A long-standing, recurring bug preventing  role users from logging in. While major auth fixes were implemented, this specific role's login flow was not explicitly tested and is presumed to still be broken.
-    - **Attempted fixes**: The global auth protection added in this session might have an impact, but no direct fix was attempted.
+- **Issue 1: Incomplete Athlete Compensation UI**
+    - **Description**: The current compensation UI for athletes is a placeholder and not functional. The user requires it to have the same full feature set as the existing module for coaches, including managing monthly amounts, contract dates, and generating receipts for each month.
+    - **Attempted fixes**: The agent created a new file  and placeholder backend endpoints. The logic from the coach's compensation page has not yet been copied over and adapted.
     - **Next debug checklist**:
-        1.  Review the  layout () and the auth protection logic within.
-        2.  Trace the login flow in  specifically for the  role.
-        3.  Check the browser console and network requests during a parent login attempt to identify where it fails.
-    - **Why fix this issue and what will be achieved with the fix?**: This is a critical bug preventing a whole class of users from accessing the application.
+        1.  Replicate the backend endpoints for coach receipts () for athletes (e.g., ). Ensure GET, POST, PUT, DELETE operations work for receipts.
+        2.  Copy the content of  (or its compensation-related components) into .
+        3.  Adapt the copied code to work with athlete IDs and the new athlete receipt endpoints.
+        4.  Ensure the UI, state management, and functionality (adding/editing compensation, managing monthly receipts) are identical to the coach's module.
+    - **Why fix this issue and what will be achieved with the fix?**: This is the final step of the compensated athlete feature, which is a core requirement for managing professional teams.
+    - **Status**: IN PROGRESS
+    - **Is recurring issue?**: N
+    - **Should Test frontend/backend/both after fix?**: Both
+
+- **Issue 2: Parents cannot log in**
+    - **Description**: A long-standing, recurring bug preventing  role users from logging in.
     - **Status**: NOT STARTED
     - **Is recurring issue?**: Y
     - **Should Test frontend/backend/both after fix?**: Both
 
-- **Issue 2: Icon library fails to load on web**
-    - **Description**: Icons from  do not render correctly in the web build, appearing as placeholders.
+- **Issue 3: Paid installments appear as overdue**
+    - **Description**: On the parent's payment page, installments that have been paid but are past their original due date are styled in red, causing confusion.
+    - **Status**: NOT STARTED
+    - **Is recurring issue?**: N
+    - **Should Test frontend/backend/both after fix?**: Frontend
+
+- **Issue 4: Icon library fails to load on web**
+    - **Description**: Icons from  do not render correctly in the web build.
     - **Status**: NOT STARTED
     - **Is recurring issue?**: Y
     - **Should Test frontend/backend/both after fix?**: Frontend
 
 **In progress Task List**:
-- **Task 1: Athlete Registration Refactor (Frontend)** (P1)
-    - **Description**: The athlete registration form needs to be redesigned to incorporate a mandatory choice at the beginning: Athlete who pays fee vs. Athlete who receives compensation. The backend model has already been updated to support this ().
-    - **Where to resume**: Modify the file . This will involve significant state management and UI changes to show different form fields based on the initial selection.
-    - **What will be achieved with this?**: This will streamline the athlete creation process and correctly structure the data from the very beginning, simplifying logic for downstream features like Prime Squadre.
-    - **Status**: IN PROGRESS (Backend done, Frontend not started)
+- **Task 1: Complete Athlete Compensation Module** (P0)
+    - **Description**: Fully implement the athlete compensation management page to be identical to the one for coaches.
+    - **Where to resume**:  and .
+    - **What will be achieved with this?**: Complete the feature for managing professional athletes who receive payments.
+    - **Status**: IN PROGRESS
     - **Should Test frontend/backend/both after fix?**: Both
     - **Blocked on something**: No.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - **(P0) Implement Federation Game Schedule Importer**:
-        - **Backend**: Create new scraping endpoints that take parameters (sport, region, team ID, championship ID) and return a list of games from external federation websites (starting with FIPAV and FIP).
-        - **Frontend**: Build a new admin page where a society can configure its import settings. This UI should guide the user to select their sport/region, find their team, and check which championships to import. The imported games should be displayed in a calendar or list view.
+    - **(P1)** Implement FIP (Basketball) Game Schedule Importer: Extend the new import feature to support the FIP website.
 - **Future Tasks**:
-    - **(P2) Refactor **: Break the monolithic  into a modular structure (e.g., , , ). This is becoming critical for maintainability.
-    - **(P3) Implement Stripe Integration**: To handle payments for premium plans.
-    - **(P3) Implement Freemium Logic**: Enforce limits (e.g., team count, member count) and show upgrade prompts.
+    - **(P2)** Implement Season Renewal feature: Add a workflow to easily re-enroll athletes for a new season without re-entering all their data.
+    - **(P3)** Refactor : Break the monolithic  into a modular structure (e.g., , ).
+    - **(P3)** Implement Stripe Integration: To handle payments for premium plans.
+    - **(P3)** Implement Freemium Logic: Enforce limits and show upgrade prompts.
 
 **Completed work in this session**
-- **Admin Panel Stability and Auth Fixes (COMPLETE)**:
-  - Implemented protected route layouts for all user roles (, , , ), preventing unauthorized access.
-  - Added a global API interceptor () to automatically handle 401/403 errors and redirect users to the login page.
-  - Verified with the testing agent, all tests passed.
-- **User's Final Requests (COMPLETE)**:
-  - Added  and  fields to the society settings page and backend model.
-  - Verified that all back-arrow icons across the app use the correct visible style.
-  - Confirmed the society name on the dashboard is loaded dynamically from the database.
-- **Prime Squadre Module Enhancements (IN PROGRESS)**:
-  - Fixed a critical navigation bug by creating the athlete detail page ().
-  - Updated the backend  model and frontend UI to include fields for , , , and a boolean  for promoted youth athletes.
-  - Created a comprehensive configuration modal that appears when adding or editing a Prime Squadre athlete.
-- **Detach Parents Feature (COMPLETE)**:
-  - Created a backend endpoint () to remove parent associations.
-  - Added a Sgancia Genitori button to the admin's athlete detail page () that is available for all adult athletes.
+- **Team Management Overhaul**:
+    - Implemented a robust deletion confirmation modal for teams.
+    - Increased max training sessions to 10 and added a Rifinitura (pre-game training) section.
+    - Implemented a Prima Squadra feature via a checkbox that hides payment forms and displays a badge on the team list.
+    - Implemented custom sorting for the team list.
+    - Fixed date inputs to use  format and auto-format during input.
+- **Adult Athlete Registration Workflow**:
+    - Created an admin-only feature to register adult athletes directly, bypassing the parent flow.
+    - Admins can specify if the athlete pays a fee () or receives compensation ().
+    - The athlete detail page now dynamically shows a Payments or Compensation section based on this type.
+- **Critical Bug Fixes**:
+    - Fixed a bug where deselecting the Rifinitura checkbox didn't save because the backend ignored  values.
+    - Fixed an Athlete Not Found error by making  and  optional in the backend  model.
+    - Fixed a crash on the Attendance page caused by a missing  for new adult athletes.
+    - Fixed a UI bug where Prima Squadra settings were not respected in the read-only view of a team's details.
 
 **Earlier issues found/mentioned but not fixed**
-- The two long-standing issues remain: **Parent Login Failure** and ** rendering** on the web.
+- The two long-standing issues remain: **Parent Login Failure** and ** rendering** on the web. These have been on the backlog for multiple sessions.
 
 **Known issue recurrence from previous fork**
 - **Issue recurrence in previous fork**:
-  -  role login failure.
-  -  library failing to render on the web.
+    -  role login failure.
+    -  library failing to render on the web.
 - **Recurrence count**: 5+
 - **Status**: NOT STARTED
 
@@ -104,81 +129,75 @@
 
 
 **Key Technical Concepts**
-- **Protected Routes**: Implemented using Expo Router's layout files, which check authentication state from a Zustand store () before rendering a route group. This provides robust route protection.
-- **API Interceptors**: Used Axios interceptors () to create a global error handler for API responses, specifically to catch 401/403 status codes and trigger a clean logout and redirect.
-- **Web Scraping**: Validated the feasibility of scraping JS-heavy websites and iframes by using a browser automation tool to interact with the page and by accessing an iframe's source URL directly to get clean HTML.
+- **Conditional UI Rendering**: Extensive use of conditional rendering in React based on state (, , ). This was a source of bugs when view/edit modes were not kept in sync.
+- **Backend Model Evolution**: Modifying Pydantic models in FastAPI (, ) to add new fields (, ) and make existing ones optional (, ) to support new use cases.
+- **Robust API Design**: Fixing a PATCH endpoint to correctly handle  values, allowing fields to be unset in the database.
+- **Component Replication**: The current task requires replicating a complex existing component (Coach/Director Compensation) for a new module (Athlete Compensation).
 
 **key DB schema**
-- **societies**:  (boolean),  (string),  (string) have been added.
-- **athletes**: Significantly updated with fields to support compensated athletes:
-  - : string ( | )
-  - : boolean
-  - : number
-  - , : string (ISO date)
-  - : number
-  - : boolean
-  - : string
-  - : string
+- **teams**: Added , .
+- **athletes**: Added , .  and  are now optional.  and  have been added to mirror the  schema for compensated athletes.
 
 **All files of reference**
 - 
-- 
--  (and other role layouts)
-- 
-- 
-- 
-- 
--  (Target for next task)
+-  (Logic for switching athlete type)
+-  (New page for compensation UI)
+-  (Reference for the correct compensation UI)
+-  (Team editing form)
+-  (Team list)
+-  (Athlete list, new registration modal)
 
 **Areas that need refactoring**:
-- ****: Critically needs to be broken down into smaller modules. It is extremely large and difficult to maintain.
-- **Athlete Registration**: The  page needs a complete overhaul to support the new  logic.
+- ****: Critically needs to be broken down. The addition of numerous endpoints for teams, athletes, and compensation has exacerbated its monolithic nature.
+- ****: This file is extremely large and complex, managing both view and edit modes, multiple dynamic sections, and complex state. It should be broken into smaller, more manageable components.
+- ****: While offloading the compensation logic to a new page was a good step, this file still handles significant state and conditional UI for switching athlete types.
 
 **Critical Info for New Agent**
 - **You MUST continue the conversation in Italiano.**
-- **Priority 1 (Upcoming Task):** Begin implementation of the configurable **Federation Game Schedule Importer**. The user is very excited about this feature. The design should be scalable, allowing each club to configure their own settings.
-- **Priority 2 (In-Progress Task):** Complete the frontend refactor of the **Athlete Registration** page (). This is a prerequisite for the new athlete onboarding flow.
-- The user has approved a scalable design for the scraping feature where each club configures its own parameters. Do not build a hardcoded solution.
+- The top priority (P0) is to build out the athlete compensation page () to be a perfect replica of the coach compensation page. This is a user-blocking issue for a key feature.
+- The user has expressed significant frustration about lost work and regressions. Building trust by delivering a solid, bug-free implementation of the requested feature is paramount.
+- The user filed a complaint about lost work and credits (Message 365), which was deferred to the support team. Be aware of this context, but focus on the technical tasks.
+- After completing the compensation UI, address the long-standing P1 issue: the broken parent login.
 
 **documents and test reports created in this job**
--  (updated by the agent)
--  (from testing the auth fixes)
+None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-- **10. User:** Proposes to create the feature to scrape game schedules from federation websites.
-- **9. Agent:** Confirms feasibility by successfully scraping the FIPAV (volleyball) website, noting its complexity.
-- **8. User:** Enthusiastically agrees to proceed.
-- **7. User:** Mentions the FIP (basketball) website is much simpler and provides a link.
-- **6. Agent:** Confirms the FIP site is easier and even has a backend API endpoint.
-- **5. User:** Asks a crucial scalability question: can each club manage its own import settings post-launch, or will it require developer intervention for each new club/region?
-- **4. Agent:** Proposes a scalable solution where each club configures its own settings (sport, region, team ID) within the app.
-- **3. User:** Approves the configurable design.
-- **2. Agent:** Acknowledges the user's approval and is ready to start building the configurable scraping feature.
-- **1. User:** Asks to proceed with building the FIPAV integration for Umbria volleyball first, with the system designed to be extensible to other regions and sports later.
+- **10. User:** Requests that the Prima Squadra checkbox also enable the pre-game training (rifinitura) and reports a critical bug where the Prima Squadra status is lost after saving.
+- **9. Agent:** Fixes the backend saving logic and adds the requested UI behavior.
+- **8. User:** Requests a specific priority order for the team list (Serie A, B, C, etc.).
+- **7. Agent:** Implements the custom sorting logic on the team list page.
+- **6. User:** Requests that payment due dates be pre-formatted as GG/MM/AAAA.
+- **5. Agent:** Implements the Italian date formatting.
+- **4. User:** Reports two new bugs: the payment section is still visible for Prima Squadra teams, and the pre-game training section is not visible.
+- **3. Agent:** Fixes the UI by correcting the view mode logic, which was missing the conditional check.
+- **2. User:** Requests minor UI tweaks: remove a banner and make a section more compact.
+- **1. Agent:** Implements the UI tweaks.
+- **Pending:** **User:** Reports that deselecting the pre-game training checkbox doesn't save (the section reappears on reload). -> This was fixed. Then user finds Marta is missing -> Agent explains preview DB. User complains about lost work -> Agent refers to support. User asks to proceed -> Agent builds adult athlete registration. User reports 2 new bugs with the new athlete -> Agent fixes them. User asks for full / logic -> Agent implements it. **User:** The compensation section is not editable and is wrong. IT MUST BE LIKE THE ONE FOR COACHES AND DIRECTORS. -> This is the current task.
 
 **Project Health Check:**
 - **Broken**:
-  - Login for the  role.
-  - Web rendering of .
+    - Login for the  role.
+    - Web rendering of .
+    - The athlete compensation UI (functionally incomplete).
 - **Mocked**:
-  - Freemium model logic and Stripe integration are still just ideas.
+    - Freemium model logic and Stripe integration.
 
 **3rd Party Integrations**
-- **Brevo**: Email provider.
-- **fpdf2 / Pillow**: Server-side PDF generation.
-- **react-signature-canvas**: Frontend signature capture.
-- **html5-qrcode**: QR scanner library.
-- **Playwright (conceptual)**: The agent has validated the use of a powerful scraping tool to interact with external websites. This will likely be needed for the FIPAV/FIP integration.
+- **httpx, beautifulsoup4**: Used for web scraping.
+- **react-signature-canvas**: Used for the signature pad.
 
 **Testing status**
-- Testing agent used after significant changes: YES (for the authentication fixes).
+- Testing agent used after significant changes: NO
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: None.
-- Known regressions: Parent login failure, web icon rendering.
+- Known regressions: Parent login is still broken. Icons on web are still broken.
 
 **Credentials to test flow:**
-- User account:  (role: ).
-- Test accounts found by testing agent:  and . These can be used to test different roles.
+- Admin:  / 
+- Admin:  / 
+- Compensated Athlete to test with: MARTA TEST (created during the session).
 
 **What agent forgot to execute**
-- The agent correctly identified the next steps based on user requests. No major tasks were forgotten, but the long-standing issues (parent login, icons) were once again deferred in favor of new feature development.</analysis>
+- The agent has consistently deferred fixing the long-standing **parent login bug** and the **web icon rendering issue** due to more urgent, user-reported bugs. These remain on the backlog.
+- The Athlete Registration Refactor from the original handoff was meant for the *parent-facing* form. The agent built an *admin-facing* form instead based on recent user requests. The parent-facing form refactor has not been addressed.</analysis>
