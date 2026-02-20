@@ -3868,7 +3868,7 @@ async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(
     await db.athletes.insert_one(athlete_dict)
     
     # If athlete pays quota, create payment records
-    if data.athlete_type == "quota":
+    if data.athlete_type == "quota" and team:
         # Get team payment settings
         if team.get("total_amount", 0) > 0:
             # Use new installments format if available
