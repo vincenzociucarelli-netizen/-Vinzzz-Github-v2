@@ -290,8 +290,8 @@ export default function AthleteCompensation() {
     try {
       setSigningDeclaration(true);
       
-      // Use the compensation receipt endpoint which now generates the correct threshold document
-      const response = await api.post(`/athletes/${athleteId}/compensation/receipt`, {
+      // Use the receipt-sign endpoint which generates the correct threshold document
+      const response = await api.post(`/athletes/${athleteId}/compensation/receipt-sign`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile?.monthly_compensation || 0,
@@ -305,7 +305,7 @@ export default function AthleteCompensation() {
       
       Alert.alert(
         'Dichiarazione Firmata',
-        `Comunicazione di superamento soglia € ${thresholdAmount} per ${monthName} ${selectedYear} firmata con successo!\n\nCompreso lordo: € ${response.data.amount_gross.toFixed(2)}\nTotale annuo: € ${response.data.yearly_total.toFixed(2)}\n\nUna copia è stata inviata alla tua email e alla società.`
+        `Comunicazione di superamento soglia € ${thresholdAmount} per ${monthName} ${selectedYear} firmata con successo!\n\nUna copia è stata inviata alla tua email e alla società.`
       );
       
       setShowDeclarationModal(false);
