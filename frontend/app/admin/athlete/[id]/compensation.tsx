@@ -80,6 +80,12 @@ export default function AthleteCompensation() {
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<{month: string, year: number} | null>(null);
   const [signingReceipt, setSigningReceipt] = useState(false);
+  
+  // Account creation
+  const [hasAccount, setHasAccount] = useState(false);
+  const [creatingAccount, setCreatingAccount] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [newAccountPassword, setNewAccountPassword] = useState('');
 
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
