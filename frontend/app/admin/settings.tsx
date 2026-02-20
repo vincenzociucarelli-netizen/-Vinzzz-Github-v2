@@ -50,6 +50,8 @@ export default function SettingsScreen() {
   const [societyEmail, setSocietyEmail] = useState('');
   const [societyPec, setSocietyPec] = useState('');
   const [proEnabled, setProEnabled] = useState(false);
+  const [sportImage, setSportImage] = useState<string | null>(null);
+  
   const loadSettings = async () => {
     try {
       const response = await api.get('/settings/society');
