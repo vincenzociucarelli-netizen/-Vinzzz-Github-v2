@@ -4062,6 +4062,218 @@ async def sign_athlete_compensation_receipt(athlete_id: str, data: dict, current
     
     return {"message": "Quietanza aggiornata"}
 
+
+@api_router.post("/athletes/{athlete_id}/compensation/receipt-sign")
+async def sign_athlete_compensation_receipt_with_signature(
+    athlete_id: str, 
+    data: dict, 
+    current_user = Depends(get_current_user)
+):
+    """Athlete signs their own monthly compensation receipt with digital signature"""
+    # Allow both athlete (signing their own) and admin
+    if current_user["role"] == "athlete":
+        if current_user.get("athlete_id") != athlete_id and current_user["id"] != athlete_id:
+            raise HTTPException(status_code=403, detail="Puoi firmare solo le tue quietanze")
+    elif current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    month = data.get("month")  # int 1-12
+    year = data.get("year")
+    amount_gross = data.get("amount_gross", athlete.get("monthly_compensation", 0))
+    signature_base64 = data.get("signature_base64")
+    
+    if not month or not year:
+        raise HTTPException(status_code=400, detail="Mese e anno sono obbligatori")
+    
+    if not signature_base64:
+        raise HTTPException(status_code=400, detail="Firma digitale obbligatoria")
+    
+    # Get society data
+    society_settings = await db.settings.find_one({"type": "society"})
+    society_rec = await db.societies.find_one()
+    society_name = (society_settings.get("name") if society_settings else None) or (society_rec.get("name") if society_rec else None) or "ASD/SSD"
+    admin_email = (society_settings.get("email") if society_settings else None) or (society_rec.get("email") if society_rec else None)
+    society_city = (society_settings.get("city") if society_settings else None) or (society_rec.get("city") if society_rec else None) or ""
+    
+    # Get prior compensation
+    prior_compensation = athlete.get("other_annual_compensation", 0) or 0
+    
+    # Calculate yearly totals
+    yearly_receipts = await db.athlete_compensation_receipts.find({
+        "athlete_id": athlete_id,
+        "year": year,
+        "signed": True
+    }).to_list(12)
+    
+    yearly_total_from_receipts = sum(r.get("amount", 0) for r in yearly_receipts)
+    
+    # Check contract start year for prior compensation
+    contract_start = athlete.get("contract_start_date")
+    contract_start_year = None
+    if contract_start:
+        if isinstance(contract_start, str):
+            contract_start_year = int(contract_start.split('-')[0])
+        elif hasattr(contract_start, 'year'):
+            contract_start_year = contract_start.year
+    
+    if contract_start_year and year == contract_start_year:
+        yearly_total = yearly_total_from_receipts + prior_compensation
+    else:
+        yearly_total = yearly_total_from_receipts
+    
+    new_total = yearly_total + amount_gross
+    
+    # Threshold checks
+    first_time_exceeded_5000 = (new_total > 5000 and yearly_total <= 5000)
+    first_time_exceeded_15000 = (new_total > 15000 and yearly_total <= 15000)
+    
+    now = datetime.utcnow()
+    month_names = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+                   "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+    month_name = month_names[month]
+    
+    # Generate PDF
+    try:
+        if first_time_exceeded_15000:
+            pdf_bytes = generate_threshold_15k_pdf(
+                society_name=society_name,
+                collaborator_name=athlete.get('full_name', 'Atleta'),
+                collaborator_fiscal_code=athlete.get('fiscal_code', ''),
+                year=year,
+                signature_base64=signature_base64,
+                society_city=society_city
+            )
+            pdf_filename_prefix = "comunicazione_15k_atleta"
+            doc_type = "threshold_15000_communication"
+        elif first_time_exceeded_5000:
+            pdf_bytes = generate_threshold_5k_pdf(
+                society_name=society_name,
+                collaborator_name=athlete.get('full_name', 'Atleta'),
+                collaborator_fiscal_code=athlete.get('fiscal_code', ''),
+                year=year,
+                signature_base64=signature_base64,
+                society_city=society_city
+            )
+            pdf_filename_prefix = "comunicazione_5k_atleta"
+            doc_type = "threshold_5000_communication"
+        else:
+            pdf_bytes = generate_monthly_receipt_pdf(
+                society_name=society_name,
+                collaborator_name=athlete.get('full_name', 'Atleta'),
+                collaborator_fiscal_code=athlete.get('fiscal_code', ''),
+                month_name=month_name,
+                year=year,
+                amount_gross=amount_gross,
+                signature_base64=signature_base64
+            )
+            pdf_filename_prefix = "quietanza_atleta"
+            doc_type = "compensation_receipt"
+    except Exception as e:
+        logging.error(f"Error generating athlete PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
+    
+    # Save PDF
+    receipt_id = str(uuid.uuid4())
+    pdf_filename = f"{pdf_filename_prefix}_{athlete_id}_{year}_{month:02d}_{receipt_id}.pdf"
+    pdf_path = os.path.join(SIGNED_DOCS_DIR, pdf_filename)
+    
+    try:
+        with open(pdf_path, 'wb') as f:
+            f.write(pdf_bytes)
+    except Exception as e:
+        logging.error(f"Error saving athlete PDF: {e}")
+        raise HTTPException(status_code=500, detail="Errore nel salvataggio del documento")
+    
+    # Store document record
+    document_record = {
+        "id": receipt_id,
+        "document_type": doc_type,
+        "document_title": f"Quietanza Compenso Atleta - {month_name} {year}",
+        "athlete_id": athlete_id,
+        "athlete_name": athlete.get('full_name', ''),
+        "month": month,
+        "year": year,
+        "amount_gross": amount_gross,
+        "pdf_path": pdf_path,
+        "pdf_filename": pdf_filename,
+        "signed_at": now,
+        "exceeded_5000": first_time_exceeded_5000,
+        "exceeded_15000": first_time_exceeded_15000
+    }
+    await db.signed_documents.insert_one(document_record)
+    
+    # Update receipt record
+    receipt_data = {
+        "athlete_id": athlete_id,
+        "society_id": athlete.get("society_id"),
+        "month": month_name,
+        "year": year,
+        "signed": True,
+        "signed_date": now,
+        "amount": amount_gross,
+        "signature_base64": signature_base64,
+        "document_id": receipt_id,
+        "pdf_filename": pdf_filename,
+        "exceeded_5000": first_time_exceeded_5000,
+        "exceeded_15000": first_time_exceeded_15000,
+        "updated_at": now,
+    }
+    
+    await db.athlete_compensation_receipts.update_one(
+        {"athlete_id": athlete_id, "month": month_name, "year": year},
+        {"$set": receipt_data},
+        upsert=True
+    )
+    
+    # Send emails
+    athlete_email = athlete.get('email')
+    parent_email = None
+    if athlete.get("parent_id"):
+        parent = await db.users.find_one({"id": athlete.get("parent_id")})
+        if parent:
+            parent_email = parent.get("email")
+    
+    recipient_email = athlete_email or parent_email
+    
+    if recipient_email:
+        try:
+            import base64 as b64
+            body = f"""<html><body>
+            <h2>Quietanza Compenso Sportivo - {month_name} {year}</h2>
+            <p>Gentile {athlete.get('full_name', 'Atleta')},</p>
+            <p>In allegato trova la quietanza del compenso sportivo firmata per {month_name} {year}.</p>
+            <ul><li>Compenso lordo: € {amount_gross:.2f}</li><li>Totale annuo progressivo: € {new_total:.2f}</li></ul>
+            <hr><p><em>Documento generato automaticamente da RegistraTEAM</em></p>
+            </body></html>"""
+            
+            encoded_pdf = b64.b64encode(pdf_bytes).decode()
+            await send_email_with_pdf(to_email=recipient_email, subject=f"Quietanza Compenso - {month_name} {year} - {society_name}", html_content=body, pdf_base64=encoded_pdf, pdf_filename=pdf_filename, to_name=athlete.get('full_name', 'Atleta'))
+        except Exception as e:
+            logging.error(f"Error sending athlete receipt email: {e}")
+    
+    if admin_email and admin_email != recipient_email:
+        try:
+            import base64 as b64
+            admin_body = f"""<html><body>
+            <h2>Quietanza Firmata - {athlete.get('full_name', 'Atleta')}</h2>
+            <p>L'atleta <strong>{athlete.get('full_name', 'N/D')}</strong> ha firmato la quietanza per {month_name} {year}.</p>
+            <ul><li>Compenso lordo: € {amount_gross:.2f}</li><li>Totale annuo: € {new_total:.2f}</li></ul>
+            {'<p style="color:orange;"><strong>⚠️ Superata soglia €5.000</strong></p>' if first_time_exceeded_5000 else ''}
+            {'<p style="color:red;"><strong>🚨 Superata soglia €15.000</strong></p>' if first_time_exceeded_15000 else ''}
+            </body></html>"""
+            encoded_pdf = b64.b64encode(pdf_bytes).decode()
+            await send_email_with_pdf(to_email=admin_email, subject=f"[RegistraTEAM] Quietanza firmata - {athlete.get('full_name', 'Atleta')} - {month_name} {year}", html_content=admin_body, pdf_base64=encoded_pdf, pdf_filename=pdf_filename)
+        except Exception as e:
+            logging.error(f"Error sending admin receipt email: {e}")
+    
+    return {"message": "Quietanza firmata con successo", "document_id": receipt_id, "pdf_filename": pdf_filename, "exceeded_5000": first_time_exceeded_5000, "exceeded_15000": first_time_exceeded_15000}
+
+
+
 @api_router.get("/athletes/{athlete_id}/team")
 async def get_athlete_team(athlete_id: str, current_user = Depends(get_current_user)):
     """Get the team for an athlete"""
