@@ -4017,9 +4017,14 @@ async def update_athlete_compensation_settings(athlete_id: str, data: dict, curr
 
 @api_router.get("/athletes/{athlete_id}/compensation/receipts")
 async def get_athlete_compensation_receipts(athlete_id: str, current_user = Depends(get_current_user)):
-    """Get signed receipts for an athlete"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può vedere le quietanze")
+    """Get signed receipts for an athlete - admin or the athlete themselves"""
+    # Allow admin or the athlete viewing their own receipts
+    if current_user["role"] == "athlete":
+        # Check if the athlete is viewing their own receipts
+        if current_user.get("athlete_id") != athlete_id and current_user["id"] != athlete_id:
+            raise HTTPException(status_code=403, detail="Puoi vedere solo le tue quietanze")
+    elif current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     receipts = await db.athlete_compensation_receipts.find({"athlete_id": athlete_id}).to_list(100)
     clean_mongo_docs(receipts)
