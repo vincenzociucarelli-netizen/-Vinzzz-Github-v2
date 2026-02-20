@@ -9222,6 +9222,315 @@ async def update_athlete_type_config(
     return updated
 
 
+# ============= REPORT MENSILE QUIETANZE =============
+
+def generate_monthly_compensation_report_pdf(
+    society_name: str,
+    month_name: str,
+    year: int,
+    receipts: list,
+    total_amount: float
+) -> bytes:
+    """Generate a monthly summary PDF of all signed compensation receipts"""
+    if not HAS_PDF_GENERATION:
+        raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    timestamp = datetime.now().strftime("%d/%m/%Y alle %H:%M")
+    
+    # Header
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(width/2, height - 2*cm, "REPORT MENSILE QUIETANZE")
+    
+    c.setFont("Helvetica-Bold", 12)
+    c.drawCentredString(width/2, height - 2.8*cm, f"Compensi Sportivi Dilettantistici")
+    
+    # Society and period info
+    c.setFont("Helvetica", 11)
+    c.drawString(2*cm, height - 4*cm, f"Società: {society_name}")
+    c.drawString(2*cm, height - 4.6*cm, f"Periodo: {month_name} {year}")
+    c.drawString(2*cm, height - 5.2*cm, f"Generato il: {timestamp}")
+    
+    # Table header
+    y = height - 6.5*cm
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(colors.Color(0.9, 0.9, 0.9))
+    c.rect(1.5*cm, y - 0.3*cm, width - 3*cm, 0.7*cm, fill=True)
+    c.setFillColor(colors.black)
+    
+    c.drawString(2*cm, y, "Tipo")
+    c.drawString(4*cm, y, "Nominativo")
+    c.drawString(11*cm, y, "Importo")
+    c.drawString(14*cm, y, "Data Firma")
+    
+    # Table rows
+    y -= 0.9*cm
+    c.setFont("Helvetica", 9)
+    
+    for i, receipt in enumerate(receipts):
+        if y < 3*cm:
+            # New page
+            c.showPage()
+            c.setFont("Helvetica", 9)
+            y = height - 3*cm
+        
+        # Alternating row colors
+        if i % 2 == 0:
+            c.setFillColor(colors.Color(0.97, 0.97, 0.97))
+            c.rect(1.5*cm, y - 0.3*cm, width - 3*cm, 0.6*cm, fill=True)
+            c.setFillColor(colors.black)
+        
+        tipo = receipt.get("type", "N/D")
+        nome = receipt.get("name", "N/D")
+        importo = receipt.get("amount", 0)
+        data_firma = receipt.get("signed_date", "N/D")
+        
+        c.drawString(2*cm, y, tipo)
+        c.drawString(4*cm, y, nome[:35] + "..." if len(nome) > 35 else nome)
+        c.drawString(11*cm, y, f"€ {importo:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        c.drawString(14*cm, y, data_firma if isinstance(data_firma, str) else str(data_firma)[:10])
+        
+        y -= 0.6*cm
+    
+    # Total
+    y -= 0.5*cm
+    c.setFont("Helvetica-Bold", 11)
+    c.line(1.5*cm, y + 0.3*cm, width - 1.5*cm, y + 0.3*cm)
+    c.drawString(2*cm, y, f"TOTALE QUIETANZE FIRMATE: {len(receipts)}")
+    c.drawString(11*cm, y, f"€ {total_amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    
+    # Footer
+    y -= 1.5*cm
+    c.setFont("Helvetica", 8)
+    c.setFillColor(colors.Color(0.5, 0.5, 0.5))
+    c.drawString(2*cm, y, "Questo documento è generato automaticamente e riporta le quietanze firmate nel periodo indicato.")
+    c.drawString(2*cm, y - 0.4*cm, f"Report generato da {society_name} - {timestamp}")
+    
+    c.save()
+    return buffer.getvalue()
+
+
+@api_router.get("/reports/monthly-compensation/{year}/{month}")
+async def get_monthly_compensation_report(
+    year: int,
+    month: int,
+    current_user = Depends(get_current_user)
+):
+    """Generate monthly compensation report PDF with all signed receipts"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può generare report")
+    
+    society_id = current_user.get("society_id")
+    
+    # Get society name
+    society_settings = await db.settings.find_one({"type": "society"})
+    society = await db.societies.find_one()
+    society_name = (society_settings.get("name") if society_settings else None) or \
+                   (society.get("name") if society else None) or "ASD/SSD"
+    
+    # Month names in Italian
+    month_names = [
+        "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+        "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+    ]
+    month_name = month_names[month - 1] if 1 <= month <= 12 else f"Mese {month}"
+    
+    all_receipts = []
+    total_amount = 0.0
+    
+    # 1. Get coach compensations
+    coach_comps = await db.coach_compensations.find({
+        "year": year,
+        "month": month,
+        "received": True
+    }).to_list(100)
+    
+    for comp in coach_comps:
+        coach = await db.users.find_one({"id": comp.get("coach_id")})
+        coach_name = coach.get("full_name", "N/D") if coach else "N/D"
+        amount = comp.get("amount_gross", comp.get("amount", 0))
+        signed_date = comp.get("signed_at") or comp.get("updated_at")
+        if isinstance(signed_date, datetime):
+            signed_date = signed_date.strftime("%d/%m/%Y")
+        elif signed_date:
+            signed_date = str(signed_date)[:10]
+        
+        all_receipts.append({
+            "type": "Coach",
+            "name": coach_name,
+            "amount": amount,
+            "signed_date": signed_date or "N/D"
+        })
+        total_amount += amount
+    
+    # 2. Get dirigente compensations
+    dirigente_comps = await db.dirigente_compensations.find({
+        "year": year,
+        "month": month,
+        "received": True
+    }).to_list(100)
+    
+    for comp in dirigente_comps:
+        dirigente = await db.users.find_one({"id": comp.get("dirigente_id")})
+        dirigente_name = dirigente.get("full_name", "N/D") if dirigente else "N/D"
+        amount = comp.get("amount_gross", comp.get("amount", 0))
+        signed_date = comp.get("signed_at") or comp.get("updated_at")
+        if isinstance(signed_date, datetime):
+            signed_date = signed_date.strftime("%d/%m/%Y")
+        elif signed_date:
+            signed_date = str(signed_date)[:10]
+        
+        all_receipts.append({
+            "type": "Dirigente",
+            "name": dirigente_name,
+            "amount": amount,
+            "signed_date": signed_date or "N/D"
+        })
+        total_amount += amount
+    
+    # 3. Get athlete compensation receipts
+    athlete_receipts = await db.athlete_compensation_receipts.find({
+        "year": year,
+        "month": month_name,
+        "signed": True
+    }).to_list(100)
+    
+    for receipt in athlete_receipts:
+        athlete = await db.athletes.find_one({"id": receipt.get("athlete_id")})
+        athlete_name = athlete.get("full_name", "N/D") if athlete else "N/D"
+        amount = receipt.get("amount", 0)
+        signed_date = receipt.get("signed_date")
+        if isinstance(signed_date, datetime):
+            signed_date = signed_date.strftime("%d/%m/%Y")
+        elif signed_date:
+            signed_date = str(signed_date)[:10]
+        
+        all_receipts.append({
+            "type": "Atleta",
+            "name": athlete_name,
+            "amount": amount,
+            "signed_date": signed_date or "N/D"
+        })
+        total_amount += amount
+    
+    # 4. Get atleta pro compensations (Prime Squadre)
+    atleta_pro_comps = await db.atleta_pro_compensations.find({
+        "year": year,
+        "month": month,
+        "received": True
+    }).to_list(100)
+    
+    for comp in atleta_pro_comps:
+        athlete = await db.athletes.find_one({"id": comp.get("atleta_id")})
+        athlete_name = athlete.get("full_name", "N/D") if athlete else "N/D"
+        amount = comp.get("amount_gross", comp.get("amount", 0))
+        signed_date = comp.get("signed_at") or comp.get("updated_at")
+        if isinstance(signed_date, datetime):
+            signed_date = signed_date.strftime("%d/%m/%Y")
+        elif signed_date:
+            signed_date = str(signed_date)[:10]
+        
+        all_receipts.append({
+            "type": "Atleta PRO",
+            "name": athlete_name,
+            "amount": amount,
+            "signed_date": signed_date or "N/D"
+        })
+        total_amount += amount
+    
+    # Sort by type, then by name
+    all_receipts.sort(key=lambda x: (x["type"], x["name"]))
+    
+    # Generate PDF
+    pdf_bytes = generate_monthly_compensation_report_pdf(
+        society_name=society_name,
+        month_name=month_name,
+        year=year,
+        receipts=all_receipts,
+        total_amount=total_amount
+    )
+    
+    # Return as downloadable file
+    filename = f"report_quietanze_{year}_{month:02d}.pdf"
+    
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Type": "application/pdf"
+        }
+    )
+
+
+@api_router.get("/reports/monthly-compensation/{year}/{month}/summary")
+async def get_monthly_compensation_summary(
+    year: int,
+    month: int,
+    current_user = Depends(get_current_user)
+):
+    """Get summary of monthly compensation receipts (without PDF)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può visualizzare i report")
+    
+    month_names = [
+        "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+        "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+    ]
+    month_name = month_names[month - 1] if 1 <= month <= 12 else f"Mese {month}"
+    
+    # Count receipts by type
+    coach_count = await db.coach_compensations.count_documents({
+        "year": year, "month": month, "received": True
+    })
+    
+    dirigente_count = await db.dirigente_compensations.count_documents({
+        "year": year, "month": month, "received": True
+    })
+    
+    athlete_count = await db.athlete_compensation_receipts.count_documents({
+        "year": year, "month": month_name, "signed": True
+    })
+    
+    atleta_pro_count = await db.atleta_pro_compensations.count_documents({
+        "year": year, "month": month, "received": True
+    })
+    
+    # Calculate totals
+    coach_total = 0
+    async for comp in db.coach_compensations.find({"year": year, "month": month, "received": True}):
+        coach_total += comp.get("amount_gross", comp.get("amount", 0))
+    
+    dirigente_total = 0
+    async for comp in db.dirigente_compensations.find({"year": year, "month": month, "received": True}):
+        dirigente_total += comp.get("amount_gross", comp.get("amount", 0))
+    
+    athlete_total = 0
+    async for receipt in db.athlete_compensation_receipts.find({"year": year, "month": month_name, "signed": True}):
+        athlete_total += receipt.get("amount", 0)
+    
+    atleta_pro_total = 0
+    async for comp in db.atleta_pro_compensations.find({"year": year, "month": month, "received": True}):
+        atleta_pro_total += comp.get("amount_gross", comp.get("amount", 0))
+    
+    return {
+        "year": year,
+        "month": month,
+        "month_name": month_name,
+        "breakdown": {
+            "coach": {"count": coach_count, "total": coach_total},
+            "dirigente": {"count": dirigente_count, "total": dirigente_total},
+            "atleta": {"count": athlete_count, "total": athlete_total},
+            "atleta_pro": {"count": atleta_pro_count, "total": atleta_pro_total}
+        },
+        "total_count": coach_count + dirigente_count + athlete_count + atleta_pro_count,
+        "total_amount": coach_total + dirigente_total + athlete_total + atleta_pro_total
+    }
+
+
 @api_router.get("/")
 async def root():
     return {"message": "Athlete Attendance API"}
