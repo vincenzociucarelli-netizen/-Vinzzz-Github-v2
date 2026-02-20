@@ -1584,10 +1584,24 @@ export default function AthleteDetail() {
               if (num > 0) paymentsMap[num] = p;
             });
             
+            // Calcola il totale già pagato (pagamenti manuali senza installment_number)
+            const totalPaid = payments
+              .filter(p => p.paid)
+              .reduce((sum, p) => sum + (p.amount || 0), 0);
+            
+            // Calcola il totale dovuto per tutte le rate
+            const totalDue = rateConfig.reduce((sum, r) => sum + (r.amount || 0), 0);
+            
+            // Se il totale pagato >= totale dovuto, considera tutto pagato
+            const allPaid = totalPaid >= totalDue;
+            
             // Se non abbiamo rate dalla configurazione e nemmeno pagamenti, mostra messaggio
             if (rateConfig.length === 0 && payments.length === 0) {
               return <Text style={styles.noDataText}>Nessun pagamento disponibile</Text>;
             }
+            
+            // Calcola quale rate sono coperte dai pagamenti (ordine crescente)
+            let remainingPaid = totalPaid;
             
             // Unisce le rate: usa i dati dal database se disponibili, altrimenti dalla configurazione
             const allRates = rateConfig.map(config => {
@@ -1599,13 +1613,21 @@ export default function AthleteDetail() {
                   fromDb: true
                 };
               }
+              
+              // Se non c'è un pagamento specifico per questa rata, 
+              // verifica se è coperta dal totale pagato
+              const isPaidByTotal = remainingPaid >= config.amount;
+              if (isPaidByTotal) {
+                remainingPaid -= config.amount;
+              }
+              
               return {
                 id: `config-${config.installment_number}`,
                 installment_number: config.installment_number,
                 name: config.name,
                 amount: config.amount,
                 due_date: config.due_date,
-                paid: false,
+                paid: isPaidByTotal || allPaid,
                 fromDb: false
               };
             });
