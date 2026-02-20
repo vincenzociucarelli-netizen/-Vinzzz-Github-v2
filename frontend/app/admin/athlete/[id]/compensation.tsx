@@ -341,8 +341,16 @@ export default function AthleteCompensation() {
     if (!contractStartDate || !contractEndDate) return [];
     
     const months: {month: string, year: number, monthIndex: number}[] = [];
-    const start = new Date(contractStartDate);
-    const end = new Date(contractEndDate);
+    
+    // Convert from Italian format (DD/MM/YYYY) to ISO if needed
+    const startISO = formatDateToISO(contractStartDate) || contractStartDate;
+    const endISO = formatDateToISO(contractEndDate) || contractEndDate;
+    
+    const start = new Date(startISO);
+    const end = new Date(endISO);
+    
+    // Validate dates
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
     
     let current = new Date(start.getFullYear(), start.getMonth(), 1);
     while (current <= end) {
