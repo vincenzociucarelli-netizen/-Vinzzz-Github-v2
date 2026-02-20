@@ -126,6 +126,36 @@ export default function SettingsScreen() {
     setLogo(null);
   };
 
+  const handleSelectSportImage = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        showAlert('Permesso negato', 'È necessario concedere il permesso per accedere alla galleria');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        setSportImage(result.assets[0].base64);
+      }
+    } catch (error) {
+      console.error('Error selecting sport image:', error);
+      showAlert('Errore', 'Impossibile selezionare l\'immagine');
+    }
+  };
+
+  const handleRemoveSportImage = () => {
+    setSportImage(null);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
