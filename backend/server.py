@@ -4275,7 +4275,16 @@ async def sign_athlete_compensation_receipt_with_signature(
         except Exception as e:
             logging.error(f"Error sending admin receipt email: {e}")
     
-    return {"message": "Quietanza firmata con successo", "document_id": receipt_id, "pdf_filename": pdf_filename, "exceeded_5000": first_time_exceeded_5000, "exceeded_15000": first_time_exceeded_15000}
+    return {
+        "message": "Quietanza firmata con successo", 
+        "document_id": receipt_id, 
+        "pdf_filename": pdf_filename, 
+        "exceeded_5000": first_time_exceeded_5000, 
+        "exceeded_15000": first_time_exceeded_15000,
+        "amount_gross": amount_gross,
+        "amount_net": amount_gross,  # For athletes, net = gross (no deductions calculated here)
+        "yearly_total": new_total
+    }
 
 
 
