@@ -33,7 +33,8 @@ interface Athlete {
   compensation_accepted?: boolean;
   compensation_history?: { [key: string]: boolean };
   iban?: string;
-  iban_holder?: string;
+  iban_holder_first_name?: string;
+  iban_holder_last_name?: string;
   bank_name?: string;
 }
 
