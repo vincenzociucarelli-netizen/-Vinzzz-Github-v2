@@ -668,6 +668,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 4,
   },
+  priorRow: {
+    backgroundColor: 'rgba(184, 134, 11, 0.1)',
+    marginHorizontal: -12,
+    paddingHorizontal: 12,
+    marginVertical: 4,
+    borderRadius: 6,
+    paddingVertical: 8,
+  },
   calcLabel: {
     fontSize: 13,
     color: '#666',
