@@ -340,6 +340,44 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* Immagine Sport */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏐 Immagine Sport</Text>
+          <Text style={styles.sectionDesc}>
+            Carica un'immagine che rappresenta il tuo sport (es. pallone da volley, basket)
+          </Text>
+          
+          <View style={styles.logoContainer}>
+            {sportImage ? (
+              <View style={styles.logoPreview}>
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
+                  style={[styles.logoImage, { width: 100, height: 100 }]}
+                  resizeMode="contain"
+                />
+                <TouchableOpacity 
+                  style={styles.removeLogoBtn}
+                  onPress={handleRemoveSportImage}
+                >
+                  <Ionicons name="close-circle" size={28} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="football-outline" size={48} color="#ccc" />
+                <Text style={styles.logoPlaceholderText}>Nessuna immagine</Text>
+              </View>
+            )}
+            
+            <TouchableOpacity style={styles.selectLogoBtn} onPress={handleSelectSportImage}>
+              <Ionicons name="cloud-upload" size={20} color="#007AFF" />
+              <Text style={styles.selectLogoBtnText}>
+                {sportImage ? 'Cambia Immagine' : 'Seleziona Immagine'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Nome Società</Text>
           <TextInput
