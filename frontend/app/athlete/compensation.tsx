@@ -146,7 +146,7 @@ export default function AthleteCompensation() {
       setPriorCompensation(profileRes.data.other_annual_compensation || 0);
       
       // Load ALL compensation records (not filtered by year)
-      const recordsRes = await api.get(`/athlete/${user?.id}/compensation`);
+      const recordsRes = await api.get(`/athletes/${athleteId}/compensation/receipts`);
       setRecords(recordsRes.data || []);
       
       // Calculate yearly total for current display year (including prior compensation for first year)
