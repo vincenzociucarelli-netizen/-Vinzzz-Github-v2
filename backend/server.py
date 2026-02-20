@@ -3793,39 +3793,46 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
 class AdultAthleteCreate(BaseModel):
     first_name: str
     last_name: str
+    email: str  # Required for adult athletes (needed for account linking)
     fiscal_code: Optional[str] = None
-    date_of_birth: str  # YYYY-MM-DD
-    email: Optional[str] = None
+    date_of_birth: Optional[str] = None  # YYYY-MM-DD, optional initially
     phone: Optional[str] = None
-    team_id: str
+    team_id: Optional[str] = None  # Can assign team later
     athlete_type: str = "quota"  # "quota" o "compensated"
 
 @api_router.post("/athletes/adult")
 async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(get_current_user)):
-    """Registra un atleta maggiorenne direttamente dall'admin"""
+    """Registra un atleta maggiorenne direttamente dall'admin - form semplificato"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin possono registrare atleti maggiorenni")
-    
-    # Check if team exists
-    team = await db.teams.find_one({"id": data.team_id})
-    if not team:
-        raise HTTPException(status_code=404, detail="Squadra non trovata")
-    
-    # Verify athlete is adult (18+)
-    dob = datetime.fromisoformat(data.date_of_birth)
-    age = (datetime.utcnow() - dob).days // 365
-    if age < 18:
-        raise HTTPException(status_code=400, detail="L'atleta deve essere maggiorenne (18+ anni)")
     
     # Get admin's society_id
     admin_user = await db.users.find_one({"id": current_user["id"]})
     society_id = admin_user.get("society_id") if admin_user else None
     
+    # Check if team exists (if provided)
+    team = None
+    if data.team_id:
+        team = await db.teams.find_one({"id": data.team_id})
+        if not team:
+            raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    # Parse date of birth if provided
+    dob = None
+    if data.date_of_birth:
+        try:
+            dob = datetime.fromisoformat(data.date_of_birth)
+            age = (datetime.utcnow() - dob).days // 365
+            if age < 18:
+                raise HTTPException(status_code=400, detail="L'atleta deve essere maggiorenne (18+ anni)")
+        except:
+            pass
+    
     # Generate unique athlete code
     athlete_code = await generate_unique_athlete_code(
         data.last_name,
         data.first_name,
-        team.get("name", "") if team else "",
+        team.get("name", "") if team else "NOSQUADRA",
         society_id
     )
     
@@ -3846,7 +3853,7 @@ async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(
         "date_of_birth": dob,
         "is_minor": False,
         "fiscal_code": data.fiscal_code,
-        "email": data.email,
+        "email": data.email.lower() if data.email else None,
         "phone_athlete": data.phone,
         "team_id": data.team_id,
         "qr_code": qr_code,
