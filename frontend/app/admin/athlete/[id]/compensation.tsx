@@ -659,7 +659,7 @@ export default function AthleteCompensation() {
         )}
       </ScrollView>
 
-      {/* Receipt Modal */}
+      {/* Receipt Modal - READ ONLY for Admin */}
       <Modal
         visible={receiptModalVisible}
         animationType="fade"
@@ -675,45 +675,26 @@ export default function AthleteCompensation() {
               Importo: €{monthlyCompensation}
             </Text>
 
+            {selectedMonth && isReceiptSigned(selectedMonth.month, selectedMonth.year) && (
+              <View style={{ backgroundColor: '#E8F5E9', padding: 16, borderRadius: 12, marginTop: 12 }}>
+                <Text style={{ color: '#2E7D32', fontWeight: '600', fontSize: 14, textAlign: 'center' }}>
+                  ✓ Firmata dall'atleta
+                </Text>
+                {getReceiptSignedDate(selectedMonth.month, selectedMonth.year) && (
+                  <Text style={{ color: '#666', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
+                    Data firma: {new Date(getReceiptSignedDate(selectedMonth.month, selectedMonth.year) || '').toLocaleDateString('it-IT')}
+                  </Text>
+                )}
+              </View>
+            )}
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
                 onPress={() => setReceiptModalVisible(false)}
               >
-                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+                <Text style={styles.modalButtonCancelText}>Chiudi</Text>
               </TouchableOpacity>
-              
-              {selectedMonth && !isReceiptSigned(selectedMonth.month, selectedMonth.year) ? (
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalButtonSign]}
-                  onPress={() => selectedMonth && handleSignReceipt(selectedMonth.month, selectedMonth.year, true)}
-                  disabled={signingReceipt}
-                >
-                  {signingReceipt ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <Ionicons name="checkmark" size={18} color="#fff" />
-                      <Text style={styles.modalButtonSignText}>Firma Quietanza</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalButtonUnsign]}
-                  onPress={() => selectedMonth && handleSignReceipt(selectedMonth.month, selectedMonth.year, false)}
-                  disabled={signingReceipt}
-                >
-                  {signingReceipt ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <Ionicons name="close" size={18} color="#fff" />
-                      <Text style={styles.modalButtonSignText}>Annulla Firma</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
             </View>
           </View>
         </View>
