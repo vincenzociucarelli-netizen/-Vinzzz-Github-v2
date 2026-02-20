@@ -2008,6 +2008,16 @@ export default function AdminAthleteDetail() {
                 )}
               </View>
             )}
+
+            {/* Delete Athlete Button */}
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => setDeleteModalVisible(true)}
+              data-testid="delete-athlete-btn"
+            >
+              <Ionicons name="trash" size={20} color="#fff" />
+              <Text style={styles.deleteButtonText}>Elimina Atleta Definitivamente</Text>
+            </TouchableOpacity>
           </>
         )}
 
