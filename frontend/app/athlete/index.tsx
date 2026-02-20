@@ -631,6 +631,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1a1a2e',
   },
+  yearLabelText: {
+    fontSize: 13,
+    color: '#666',
+    fontStyle: 'italic',
+  },
   thresholdBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
