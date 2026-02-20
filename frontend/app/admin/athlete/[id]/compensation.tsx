@@ -100,6 +100,33 @@ export default function AthleteCompensation() {
     }
   };
 
+  // Convert ISO date (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS) to Italian format (DD/MM/YYYY)
+  const formatDateToItalian = (isoDate: string | null | undefined): string => {
+    if (!isoDate) return '';
+    try {
+      // Handle both "YYYY-MM-DD" and "YYYY-MM-DDTHH:MM:SS" formats
+      const dateStr = isoDate.split('T')[0];
+      const [year, month, day] = dateStr.split('-');
+      if (year && month && day) {
+        return `${day}/${month}/${year}`;
+      }
+      return isoDate;
+    } catch {
+      return isoDate;
+    }
+  };
+
+  // Convert Italian format (DD/MM/YYYY) to ISO format (YYYY-MM-DD) for API
+  const formatDateToISO = (italianDate: string): string | null => {
+    if (!italianDate) return null;
+    const parts = italianDate.split('/');
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return italianDate;
+  };
+
   const loadData = async () => {
     try {
       const [athleteRes, teamRes] = await Promise.all([
@@ -111,12 +138,12 @@ export default function AthleteCompensation() {
       setAthlete(athleteData);
       setTeam(teamRes.data);
       
-      // Load compensation settings
+      // Load compensation settings - convert dates to Italian format
       setMonthlyCompensation(athleteData.monthly_compensation?.toString() || '0');
       setOtherAnnualCompensation(athleteData.other_annual_compensation?.toString() || '0');
       setPriorCompensation(athleteData.prior_compensation?.toString() || '0');
-      setContractStartDate(athleteData.contract_start_date || '');
-      setContractEndDate(athleteData.contract_end_date || '');
+      setContractStartDate(formatDateToItalian(athleteData.contract_start_date));
+      setContractEndDate(formatDateToItalian(athleteData.contract_end_date));
       
       // Bank info
       setIban(athleteData.iban || '');
