@@ -202,7 +202,9 @@ export default function AthleteCompensation() {
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
-    const parts = dateStr.split('-');
+    // Handle ISO datetime format (e.g., 2024-09-01T00:00:00)
+    let cleanDate = dateStr.split('T')[0];
+    const parts = cleanDate.split('-');
     if (parts.length === 3) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
