@@ -3517,6 +3517,13 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
             # Payment info
             "payment_residual": residual,
             "has_overpayment": residual < 0,
+            # Athlete type for compensation
+            "athlete_type": a.get("athlete_type", "quota"),
+            "is_compensated": a.get("is_compensated", False),
+            # Other fields
+            "is_withdrawn": a.get("is_withdrawn", False),
+            "qr_code": a.get("qr_code"),
+            "athlete_code": a.get("athlete_code"),
         })
     
     return result
