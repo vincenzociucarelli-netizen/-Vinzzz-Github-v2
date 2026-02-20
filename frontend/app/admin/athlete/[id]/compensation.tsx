@@ -253,20 +253,22 @@ export default function AthleteCompensation() {
     return dateStr;
   };
 
+  // Handle date input - keeps Italian format (DD/MM/YYYY) in state
   const handleDateInput = (text: string, setter: (val: string) => void) => {
+    // Remove any non-digit and non-slash characters
     const cleaned = text.replace(/[^\d\/]/g, '');
     let formatted = cleaned;
+    
+    // Auto-add slashes for better UX
     if (cleaned.length === 2 && !cleaned.includes('/')) {
       formatted = cleaned + '/';
     } else if (cleaned.length === 5 && cleaned.split('/').length === 2) {
       formatted = cleaned + '/';
     }
-    const parts = formatted.split('/');
-    if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-      setter(`${parts[2]}-${parts[1]}-${parts[0]}`);
-    } else {
-      setter(formatted);
-    }
+    
+    // Keep the date in Italian format (DD/MM/YYYY)
+    // Conversion to ISO happens only during save
+    setter(formatted);
   };
 
   // Calculate compensation breakdown
