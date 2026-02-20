@@ -264,6 +264,43 @@ export default function AthleteCompensation() {
     };
   };
 
+  // Get yearly breakdown for detailed view
+  const getYearlyBreakdown = () => {
+    const monthly = parseFloat(monthlyCompensation) || 0;
+    const other = parseFloat(otherAnnualCompensation) || 0;
+    
+    if (!contractStartDate || !contractEndDate) return {};
+    
+    const start = new Date(contractStartDate);
+    const end = new Date(contractEndDate);
+    
+    const yearlyData: { [year: number]: { months: number, total: number, prior: number, startMonth: number, endMonth: number } } = {};
+    
+    let current = new Date(start);
+    while (current <= end) {
+      const year = current.getFullYear();
+      if (!yearlyData[year]) {
+        yearlyData[year] = { months: 0, total: 0, prior: 0, startMonth: current.getMonth() + 1, endMonth: current.getMonth() + 1 };
+      }
+      yearlyData[year].months++;
+      yearlyData[year].endMonth = current.getMonth() + 1;
+      current.setMonth(current.getMonth() + 1);
+    }
+    
+    // Add prior compensation to first year
+    const years = Object.keys(yearlyData).map(Number).sort((a, b) => a - b);
+    if (years.length > 0) {
+      yearlyData[years[0]].prior = other;
+    }
+    
+    // Calculate totals
+    for (const year of years) {
+      yearlyData[year].total = yearlyData[year].months * monthly;
+    }
+    
+    return yearlyData;
+  };
+
   // Get months in contract range
   const getContractMonths = () => {
     if (!contractStartDate || !contractEndDate) return [];
