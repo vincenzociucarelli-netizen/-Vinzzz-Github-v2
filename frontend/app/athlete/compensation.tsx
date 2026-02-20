@@ -119,23 +119,39 @@ export default function AthleteCompensation() {
     try {
       setLoading(true);
       
-      // Load profile
+      // Load profile and get athlete_id
       const profileRes = await api.get('/auth/me');
-      setProfile(profileRes.data);
+      const userData = profileRes.data;
+      
+      // For athlete users, get the athlete_id from their record
+      let currentAthleteId = userData.athlete_id || userData.id;
+      setAthleteId(currentAthleteId);
+      
+      // If user has athlete_id, fetch full athlete data
+      if (userData.athlete_id) {
+        const athleteRes = await api.get(`/athletes/${userData.athlete_id}`);
+        setProfile(athleteRes.data);
+      } else {
+        setProfile(userData);
+      }
+      
+      const profileData = userData.athlete_id 
+        ? (await api.get(`/athletes/${userData.athlete_id}`)).data 
+        : userData;
       
       // Parse contract dates
       let startYear = null;
       let endYear = null;
-      if (profileRes.data.contract_start_date) {
-        const startParts = profileRes.data.contract_start_date.split('-');
+      if (profileData.contract_start_date) {
+        const startParts = profileData.contract_start_date.split('-');
         if (startParts.length === 3) {
           startYear = parseInt(startParts[0]);
           setContractStartYear(startYear);
           setContractStartMonth(parseInt(startParts[1]));
         }
       }
-      if (profileRes.data.contract_end_date) {
-        const endParts = profileRes.data.contract_end_date.split('-');
+      if (profileData.contract_end_date) {
+        const endParts = profileData.contract_end_date.split('-');
         if (endParts.length === 3) {
           endYear = parseInt(endParts[0]);
           setContractEndYear(endYear);
@@ -144,29 +160,29 @@ export default function AthleteCompensation() {
       }
       
       // Set prior compensation
-      setPriorCompensation(profileRes.data.other_annual_compensation || 0);
+      setPriorCompensation(profileData.other_annual_compensation || 0);
       
-      // Load ALL compensation records (not filtered by year)
-      const recordsRes = await api.get(`/athletes/${athleteId}/compensation/receipts`);
+      // Load ALL compensation records
+      const recordsRes = await api.get(`/athletes/${currentAthleteId}/compensation/receipts`);
       setRecords(recordsRes.data || []);
       
       // Calculate yearly total for current display year (including prior compensation for first year)
       const totalFromReceipts = (recordsRes.data || [])
-        .filter((r: CompensationRecord) => r.year === currentYear && r.receipt_signed)
-        .reduce((sum: number, r: CompensationRecord) => sum + (r.amount_gross || r.amount || 0), 0);
+        .filter((r: CompensationRecord) => r.year === currentYear && r.signed)
+        .reduce((sum: number, r: CompensationRecord) => sum + (r.amount || 0), 0);
       
       // Add prior compensation if this is the first year of the contract
-      const priorComp = profileRes.data.other_annual_compensation || 0;
+      const priorComp = profileData.other_annual_compensation || 0;
       const total = (currentYear === startYear) ? totalFromReceipts + priorComp : totalFromReceipts;
       setYearlyTotal(total);
       
       // Load threshold status for contract start year (where thresholds matter most)
       const thresholdYear = startYear || currentYear;
       try {
-        const thresholdRes = await api.get(`/athletes/${athleteId}/threshold-status/${thresholdYear}`);
+        const thresholdRes = await api.get(`/prime-squadre/athletes/${currentAthleteId}/threshold-status/${thresholdYear}`);
         setThresholdStatus(thresholdRes.data);
       } catch (err) {
-        console.log('Error loading threshold status:', err);
+        console.log('Threshold status not available:', err);
       }
       
     } catch (error) {
