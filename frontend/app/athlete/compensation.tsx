@@ -38,7 +38,7 @@ interface CompensationRecord {
   exceeded_15000: boolean;
 }
 
-interface CoachProfile {
+interface AthleteProfile {
   id: string;
   full_name: string;
   fiscal_code?: string;
@@ -50,7 +50,7 @@ interface CoachProfile {
 }
 
 interface ThresholdStatus {
-  coach_id: string;
+  athlete_id: string;
   year: number;
   monthly_compensation: number;
   yearly_total: number;
@@ -76,11 +76,11 @@ interface ThresholdStatus {
   block_reason?: string;
 }
 
-export default function CoachCompensation() {
+export default function AthleteCompensation() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<CoachProfile | null>(null);
+  const [profile, setProfile] = useState<AthleteProfile | null>(null);
   const [records, setRecords] = useState<CompensationRecord[]>([]);
   const [yearlyTotal, setYearlyTotal] = useState(0);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -146,7 +146,7 @@ export default function CoachCompensation() {
       setPriorCompensation(profileRes.data.other_annual_compensation || 0);
       
       // Load ALL compensation records (not filtered by year)
-      const recordsRes = await api.get(`/coach/${user?.id}/compensation`);
+      const recordsRes = await api.get(`/athlete/${user?.id}/compensation`);
       setRecords(recordsRes.data || []);
       
       // Calculate yearly total for current display year (including prior compensation for first year)
@@ -162,7 +162,7 @@ export default function CoachCompensation() {
       // Load threshold status for contract start year (where thresholds matter most)
       const thresholdYear = startYear || currentYear;
       try {
-        const thresholdRes = await api.get(`/coach/${user?.id}/threshold-status/${thresholdYear}`);
+        const thresholdRes = await api.get(`/athlete/${user?.id}/threshold-status/${thresholdYear}`);
         setThresholdStatus(thresholdRes.data);
       } catch (err) {
         console.log('Error loading threshold status:', err);
@@ -274,7 +274,7 @@ export default function CoachCompensation() {
       setSigningDeclaration(true);
       
       // Use the compensation receipt endpoint which now generates the correct threshold document
-      const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
+      const response = await api.post(`/athlete/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile?.monthly_compensation || 0,
@@ -337,7 +337,7 @@ export default function CoachCompensation() {
       
       console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYear, selectedYear });
       
-      const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
+      const response = await api.post(`/athlete/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile.monthly_compensation,
@@ -721,12 +721,12 @@ export default function CoachCompensation() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Coach Name and Profile Link */}
+        {/* Athlete Name and Profile Link */}
         <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <Ionicons name="person-circle" size={50} color="#007AFF" />
             <View style={{ marginLeft: 12, flex: 1 }}>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Coach'}</Text>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Athlete'}</Text>
               <Text style={{ fontSize: 13, color: '#666' }}>Compenso mensile: €{(profile?.monthly_compensation || 0).toFixed(2)}</Text>
             </View>
           </View>
@@ -760,7 +760,7 @@ export default function CoachCompensation() {
           
           <TouchableOpacity 
             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F8FF', padding: 10, borderRadius: 8 }}
-            onPress={() => router.push('/coach/profile')}
+            onPress={() => router.push('/athlete/profile')}
           >
             <Ionicons name="create-outline" size={18} color="#007AFF" />
             <Text style={{ marginLeft: 8, color: '#007AFF', fontWeight: '500' }}>Il Mio Profilo</Text>
