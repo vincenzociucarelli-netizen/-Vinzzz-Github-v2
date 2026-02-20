@@ -130,12 +130,45 @@ export default function AthleteCompensation() {
       } catch (e) {
         setSignedReceipts([]);
       }
+      
+      // Check if athlete has a user account
+      if (athleteData.email) {
+        try {
+          const usersRes = await api.get('/users');
+          const athleteUser = usersRes.data.find((u: any) => u.email === athleteData.email && u.role === 'athlete');
+          setHasAccount(!!athleteUser);
+        } catch {
+          setHasAccount(false);
+        }
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       showAlert('Errore', 'Impossibile caricare i dati');
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handleCreateAccount = async () => {
+    if (!newAccountPassword || newAccountPassword.length < 6) {
+      showAlert('Errore', 'La password deve avere almeno 6 caratteri');
+      return;
+    }
+    
+    setCreatingAccount(true);
+    try {
+      await api.post(`/athletes/${id}/create-account`, {
+        password: newAccountPassword
+      });
+      showAlert('Successo', `Account creato con successo!\n\nEmail: ${athlete?.email}\nPassword: ${newAccountPassword}\n\nL'atleta può ora accedere per firmare le quietanze.`);
+      setShowAccountModal(false);
+      setNewAccountPassword('');
+      setHasAccount(true);
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la creazione dell\'account');
+    } finally {
+      setCreatingAccount(false);
     }
   };
 
