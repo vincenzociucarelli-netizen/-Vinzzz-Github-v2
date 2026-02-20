@@ -317,6 +317,11 @@ export default function AthleteCompensation() {
     return signedReceipts.some(r => r.month === month && r.year === year && r.signed);
   };
 
+  const getReceiptSignedDate = (month: string, year: number) => {
+    const receipt = signedReceipts.find(r => r.month === month && r.year === year && r.signed);
+    return receipt?.signed_date;
+  };
+
   const getCompensationBadge = () => {
     const breakdown = getCompensationBreakdown();
     if (breakdown.grandTotal > 5000) {
