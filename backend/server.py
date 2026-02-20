@@ -1088,8 +1088,11 @@ async def register(user_data: UserCreate):
             raise HTTPException(status_code=400, detail="Questa società non è più attiva")
         society_id = society["id"]
     
-    # All users start as PENDING and need Admin approval
-    initial_status = UserStatus.PENDING
+    # Parents are auto-approved, all other users need Admin approval
+    if user_data.role == UserRole.PARENT:
+        initial_status = UserStatus.APPROVED
+    else:
+        initial_status = UserStatus.PENDING
     
     # Create user
     user = User(
