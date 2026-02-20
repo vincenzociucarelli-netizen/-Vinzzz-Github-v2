@@ -529,7 +529,8 @@ class Athlete(BaseModel):
     # Dati bancari/economici (per atleti che percepiscono compenso)
     iban: Optional[str] = None  # IBAN per pagamento compensi
     bank_name: Optional[str] = None  # Nome banca
-    bank_account_holder: Optional[str] = None  # Intestatario conto
+    iban_holder_first_name: Optional[str] = None  # Nome intestatario conto
+    iban_holder_last_name: Optional[str] = None  # Cognome intestatario conto
     # Documenti identità (per atleti maggiorenni con compenso)
     document_type: Optional[str] = None  # Tipo documento (carta_identita, patente, passaporto)
     document_number: Optional[str] = None  # Numero documento
