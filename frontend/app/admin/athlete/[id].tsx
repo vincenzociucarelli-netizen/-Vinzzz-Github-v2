@@ -2189,83 +2189,32 @@ export default function AdminAthleteDetail() {
             {/* Sezione per atleti che RICEVONO COMPENSO */}
             {athleteType === 'compensated' && (
               <>
-                {/* Card Compenso */}
-                <View style={[styles.card, styles.compensationCard]}>
-                  <View style={styles.compensationHeader}>
-                    <Ionicons name="trophy" size={24} color="#B8860B" />
-                    <Text style={styles.compensationTitle}>Compenso Atleta</Text>
+                {/* Link alla pagina Compensi dedicata */}
+                <TouchableOpacity 
+                  style={styles.compensationLinkCard}
+                  onPress={() => router.push(`/admin/athlete/${id}/compensation`)}
+                >
+                  <View style={styles.compensationLinkIcon}>
+                    <Ionicons name="trophy" size={32} color="#B8860B" />
                   </View>
-                  
-                  {compensation ? (
-                    <>
-                      <View style={styles.compensationAmountBox}>
-                        <Text style={styles.compensationAmountLabel}>Compenso Mensile</Text>
-                        <Text style={styles.compensationAmount}>€ {compensation.monthly_amount}</Text>
-                      </View>
-                      
-                      {(compensation.start_date || compensation.end_date) && (
-                        <View style={styles.compensationDates}>
-                          {compensation.start_date && (
-                            <View style={styles.compensationDateRow}>
-                              <Text style={styles.compensationDateLabel}>Dal:</Text>
-                              <Text style={styles.compensationDateValue}>
-                                {new Date(compensation.start_date).toLocaleDateString('it-IT')}
-                              </Text>
-                            </View>
-                          )}
-                          {compensation.end_date && (
-                            <View style={styles.compensationDateRow}>
-                              <Text style={styles.compensationDateLabel}>Al:</Text>
-                              <Text style={styles.compensationDateValue}>
-                                {new Date(compensation.end_date).toLocaleDateString('it-IT')}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                      )}
-                      
-                      <TouchableOpacity 
-                        style={styles.editCompensationBtn}
-                        onPress={() => {
-                          setCompensationAmount(compensation.monthly_amount?.toString() || '');
-                          setCompensationStartDate(compensation.start_date ? compensation.start_date.split('T')[0] : '');
-                          setCompensationEndDate(compensation.end_date ? compensation.end_date.split('T')[0] : '');
-                          setCompensationModalVisible(true);
-                        }}
-                      >
-                        <Ionicons name="pencil" size={18} color="#B8860B" />
-                        <Text style={styles.editCompensationBtnText}>Modifica Compenso</Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    <View style={styles.noCompensation}>
-                      <Text style={styles.noCompensationText}>Nessun compenso configurato</Text>
-                      <TouchableOpacity 
-                        style={styles.addCompensationBtn}
-                        onPress={() => {
-                          setCompensationAmount('');
-                          setCompensationStartDate('');
-                          setCompensationEndDate('');
-                          setCompensationModalVisible(true);
-                        }}
-                      >
-                        <Ionicons name="add-circle" size={20} color="#fff" />
-                        <Text style={styles.addCompensationBtnText}>Configura Compenso</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-
-                {/* Info Prime Squadre */}
-                <View style={styles.card}>
-                  <View style={styles.infoBox}>
-                    <Ionicons name="information-circle" size={20} color="#B8860B" />
-                    <Text style={styles.infoBoxText}>
-                      Gli atleti con compenso fanno parte delle Prime Squadre. 
-                      Puoi gestire le quietanze mensili dalla sezione "Prime Squadre" nel menu admin.
+                  <View style={styles.compensationLinkContent}>
+                    <Text style={styles.compensationLinkTitle}>Gestione Compensi</Text>
+                    <Text style={styles.compensationLinkSubtitle}>
+                      Configura compenso mensile, contratto e quietanze
                     </Text>
                   </View>
-                </View>
+                  <Ionicons name="chevron-forward" size={24} color="#B8860B" />
+                </TouchableOpacity>
+
+                {/* Quick Info */}
+                {compensation && (
+                  <View style={styles.compensationQuickInfo}>
+                    <View style={styles.compensationQuickRow}>
+                      <Text style={styles.compensationQuickLabel}>Compenso Mensile</Text>
+                      <Text style={styles.compensationQuickValue}>€{compensation.monthly_amount || 0}</Text>
+                    </View>
+                  </View>
+                )}
               </>
             )}
           </>
