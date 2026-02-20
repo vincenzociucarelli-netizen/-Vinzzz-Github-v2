@@ -455,7 +455,7 @@ export default function AdminAthletes() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Nuovo Atleta Maggiorenne</Text>
+              <Text style={styles.modalTitle}>Invita Atleta Maggiorenne</Text>
               <TouchableOpacity onPress={() => {
                 setShowAddAdultModal(false);
                 resetAdultForm();
@@ -467,7 +467,7 @@ export default function AdminAthletes() {
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
               {/* Tipo Atleta - Scelta principale */}
               <View style={styles.athleteTypeSection}>
-                <Text style={styles.sectionLabel}>Tipo Atleta *</Text>
+                <Text style={styles.sectionLabel}>Tipo Atleta</Text>
                 <View style={styles.athleteTypeButtons}>
                   <TouchableOpacity 
                     style={[
@@ -485,10 +485,6 @@ export default function AdminAthletes() {
                       styles.athleteTypeBtnText,
                       adultForm.athlete_type === 'quota' && styles.athleteTypeBtnTextActive
                     ]}>Paga Quota</Text>
-                    <Text style={[
-                      styles.athleteTypeBtnHint,
-                      adultForm.athlete_type === 'quota' && styles.athleteTypeBtnHintActive
-                    ]}>Campionati amatoriali</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
@@ -506,17 +502,13 @@ export default function AdminAthletes() {
                     <Text style={[
                       styles.athleteTypeBtnText,
                       adultForm.athlete_type === 'compensated' && styles.athleteTypeBtnTextActive
-                    ]}>Riceve Compenso</Text>
-                    <Text style={[
-                      styles.athleteTypeBtnHint,
-                      adultForm.athlete_type === 'compensated' && styles.athleteTypeBtnHintActive
-                    ]}>Prima Squadra</Text>
+                    ]}>Retribuito (PRO)</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Dati Anagrafici */}
-              <Text style={styles.sectionLabel}>Dati Anagrafici</Text>
+              {/* Dati Essenziali */}
+              <Text style={styles.sectionLabel}>Dati Atleta</Text>
               
               <Text style={styles.inputLabel}>Nome *</Text>
               <TextInput
@@ -536,30 +528,7 @@ export default function AdminAthletes() {
                 autoCapitalize="characters"
               />
 
-              <Text style={styles.inputLabel}>Data di Nascita * (GG/MM/AAAA)</Text>
-              <TextInput
-                style={styles.input}
-                value={adultForm.date_of_birth}
-                onChangeText={(v) => setAdultForm({...adultForm, date_of_birth: formatDateInput(v)})}
-                placeholder="GG/MM/AAAA"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-
-              <Text style={styles.inputLabel}>Codice Fiscale</Text>
-              <TextInput
-                style={styles.input}
-                value={adultForm.fiscal_code}
-                onChangeText={(v) => setAdultForm({...adultForm, fiscal_code: v.toUpperCase()})}
-                placeholder="RSSMRA85M01H501Z"
-                autoCapitalize="characters"
-                maxLength={16}
-              />
-
-              {/* Contatti */}
-              <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Contatti</Text>
-
-              <Text style={styles.inputLabel}>Email</Text>
+              <Text style={styles.inputLabel}>Email *</Text>
               <TextInput
                 style={styles.input}
                 value={adultForm.email}
@@ -569,24 +538,15 @@ export default function AdminAthletes() {
                 autoCapitalize="none"
               />
 
-              <Text style={styles.inputLabel}>Telefono</Text>
-              <TextInput
-                style={styles.input}
-                value={adultForm.phone}
-                onChangeText={(v) => setAdultForm({...adultForm, phone: v})}
-                placeholder="+39 333 1234567"
-                keyboardType="phone-pad"
-              />
-
-              {/* Squadra */}
-              <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Squadra *</Text>
+              {/* Squadra - opzionale */}
+              <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Squadra (opzionale)</Text>
               <View style={styles.pickerContainer}>
                 <Picker
                   selectedValue={adultForm.team_id}
                   onValueChange={(v) => setAdultForm({...adultForm, team_id: v})}
                   style={styles.picker}
                 >
-                  <Picker.Item label="Seleziona squadra..." value="" />
+                  <Picker.Item label="Assegna dopo..." value="" />
                   {Object.values(teams).map((team) => (
                     <Picker.Item key={team.id} label={team.name} value={team.id} />
                   ))}
@@ -604,9 +564,10 @@ export default function AdminAthletes() {
                   color={adultForm.athlete_type === 'compensated' ? '#B8860B' : '#007AFF'} 
                 />
                 <Text style={styles.infoBoxText}>
-                  {adultForm.athlete_type === 'quota' 
-                    ? 'L\'atleta pagherà le quote come gli altri tesserati della squadra selezionata.'
-                    : 'L\'atleta riceverà un compenso mensile. Potrai configurare l\'importo nella sezione Prime Squadre.'
+                  L'atleta riceverà un invito e potrà registrarsi autonomamente con questa email. 
+                  {adultForm.athlete_type === 'compensated' 
+                    ? ' Sarà automaticamente riconosciuto come atleta PRO.'
+                    : ''
                   }
                 </Text>
               </View>
