@@ -7,7 +7,14 @@ Applicazione per la gestione di società sportive con funzionalità per gestire 
 
 ### Completato Oggi:
 
-1. **✅ P0: Modulo Compensi Atleti** (COMPLETO)
+1. **✅ Report Mensile Quietanze** (COMPLETO)
+   - Endpoint `GET /reports/monthly-compensation/{year}/{month}` genera PDF
+   - Endpoint `GET .../summary` fornisce riepilogo JSON
+   - Raggruppa quietanze di Coach, Dirigenti, Atleti, Atleti PRO
+   - Pagina frontend `/admin/reports` con selettore mese/anno e download PDF
+   - Link aggiunto alla dashboard admin
+
+2. **✅ P0: Modulo Compensi Atleti** (COMPLETO)
    - Pagina `/app/frontend/app/admin/athlete/[id]/compensation.tsx` completamente funzionante
    - Replica esatta della UI dei coach: compenso mensile, date contratto, IBAN, quietanze mensili
    - Endpoint backend: `PATCH /athletes/{id}/compensation/settings`, `GET/POST .../receipts`
