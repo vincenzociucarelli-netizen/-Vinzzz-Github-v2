@@ -4952,12 +4952,16 @@ async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, 
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Check permissions - admin, coach, or parent of athlete (primary or second)
+    # Check permissions - admin, coach, parent of athlete, or athlete themselves
     if current_user["role"] == UserRole.PARENT:
         is_primary = athlete.get("parent_id") == current_user["id"]
         is_second = athlete.get("second_parent_id") == current_user["id"]
         if not is_primary and not is_second:
             raise HTTPException(status_code=403, detail="Accesso negato")
+    elif current_user["role"] == "athlete":
+        # Athlete can only transform their own photo
+        if current_user.get("athlete_id") != athlete_id:
+            raise HTTPException(status_code=403, detail="Puoi modificare solo la tua foto")
     
     try:
         # Get API key
