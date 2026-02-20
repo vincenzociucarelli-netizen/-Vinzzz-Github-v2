@@ -23,7 +23,7 @@ import PhotoViewer from '../../src/components/PhotoViewer';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
-export default function CoachProfile() {
+export default function AthleteProfile() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [loading, setLoading] = useState(true);
@@ -52,7 +52,7 @@ export default function CoachProfile() {
     postal_code: '',
     province: '',
     phone: '',
-    coach_license_number: '',
+    athlete_license_number: '',
     monthly_compensation: 0,
     compensation_accepted: false,
     contract_start_date: '',
@@ -111,7 +111,7 @@ export default function CoachProfile() {
         postal_code: data.postal_code || '',
         province: data.province || '',
         phone: data.phone || '',
-        coach_license_number: data.coach_license_number || '',
+        athlete_license_number: data.athlete_license_number || '',
         monthly_compensation: data.monthly_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
         // Documento e Dati Bancari
@@ -140,7 +140,7 @@ export default function CoachProfile() {
         postal_code: data.postal_code || '',
         province: data.province || '',
         phone: data.phone || '',
-        coach_license_number: data.coach_license_number || '',
+        athlete_license_number: data.athlete_license_number || '',
         monthly_compensation: data.monthly_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
         // Documento e Dati Bancari
@@ -164,7 +164,7 @@ export default function CoachProfile() {
       setProfilePhotoArtistic(data.profile_photo_artistic || null);
       // Load signed receipts
       try {
-        const receiptsRes = await api.get(`/coach/${data.id}/compensation`);
+        const receiptsRes = await api.get(`/athlete/${data.id}/compensation`);
         setSignedReceipts(receiptsRes.data || []);
       } catch (e) {
         console.log('No receipts found');
@@ -200,7 +200,7 @@ export default function CoachProfile() {
     }
   };
 
-  // Generate contract months based on coach's contract dates
+  // Generate contract months based on athlete's contract dates
   const getContractMonths = () => {
     const months: {key: string, label: string}[] = [];
     const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
@@ -293,7 +293,7 @@ export default function CoachProfile() {
         postal_code: editData.postal_code,
         province: editData.province,
         phone: editData.phone,
-        coach_license_number: editData.coach_license_number,
+        athlete_license_number: editData.athlete_license_number,
       });
       
       showAlert('Successo', 'Profilo aggiornato con successo');
@@ -803,7 +803,7 @@ export default function CoachProfile() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>💼 Dati Fiscali</Text>
           {renderField('Codice Fiscale', profileData.fiscal_code, 'fiscal_code')}
-          {renderField('N° Tesserino Allenatore', profileData.coach_license_number, 'coach_license_number')}
+          {renderField('N° Tesserino Allenatore', profileData.athlete_license_number, 'athlete_license_number')}
         </View>
 
         {/* Compensation Info */}
@@ -839,7 +839,7 @@ export default function CoachProfile() {
           {profileData.monthly_compensation > 0 && profileData.compensation_accepted && (
             <TouchableOpacity
               style={styles.compensationLinkButton}
-              onPress={() => router.push('/coach/compensation')}
+              onPress={() => router.push('/athlete/compensation')}
               data-testid="compensation-receipts-btn"
             >
               <Ionicons name="document-text" size={20} color="#007AFF" />
