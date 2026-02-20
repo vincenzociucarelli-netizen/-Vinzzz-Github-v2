@@ -109,7 +109,8 @@ export default function AthleteCompensation() {
       
       // Bank info
       setIban(athleteData.iban || '');
-      setIbanHolder(athleteData.iban_holder || '');
+      setIbanHolderFirstName(athleteData.iban_holder_first_name || '');
+      setIbanHolderLastName(athleteData.iban_holder_last_name || '');
       setBankName(athleteData.bank_name || '');
       
       // Load signed receipts
