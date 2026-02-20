@@ -2197,7 +2197,7 @@ export default function AdminAthleteDetail() {
                     </View>
                     <View style={styles.compensationCardHeaderText}>
                       <Text style={styles.compensationCardTitle}>Atleta Retribuito</Text>
-                      <Text style={styles.compensationCardSubtitle}>Percepisce compenso mensile</Text>
+                      <Text style={styles.compensationCardSubtitle}>Percepisce compenso sportivo</Text>
                     </View>
                   </View>
 
