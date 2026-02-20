@@ -1091,8 +1091,20 @@ async def register(user_data: UserCreate):
             raise HTTPException(status_code=400, detail="Questa società non è più attiva")
         society_id = society["id"]
     
-    # Parents are auto-approved, all other users need Admin approval
-    if user_data.role == UserRole.PARENT:
+    # Check if there's a compensated athlete with this email - auto-link
+    athlete_id = None
+    final_role = user_data.role
+    compensated_athlete = await db.athletes.find_one({
+        "email": user_data.email.lower(),
+        "athlete_type": "compensated"
+    })
+    if compensated_athlete:
+        athlete_id = compensated_athlete["id"]
+        final_role = "athlete"  # Override role to athlete
+        society_id = compensated_athlete.get("society_id") or society_id
+    
+    # Parents and athletes are auto-approved, all other users need Admin approval
+    if final_role == UserRole.PARENT or final_role == "athlete":
         initial_status = UserStatus.APPROVED
     else:
         initial_status = UserStatus.PENDING
@@ -1101,7 +1113,7 @@ async def register(user_data: UserCreate):
     user = User(
         email=user_data.email,
         password_hash=hash_password(user_data.password),
-        role=user_data.role,
+        role=final_role,
         full_name=user_data.full_name,
         status=initial_status,
         society_id=society_id,
@@ -1110,7 +1122,12 @@ async def register(user_data: UserCreate):
         phone=user_data.phone
     )
     
-    await db.users.insert_one(user.dict())
+    # Set athlete_id if linked to compensated athlete
+    user_dict = user.dict()
+    if athlete_id:
+        user_dict["athlete_id"] = athlete_id
+    
+    await db.users.insert_one(user_dict)
     
     # Se l'utente è un genitore, collega automaticamente gli atleti dove è secondo genitore
     if user.role == UserRole.PARENT and society_id:
@@ -1127,17 +1144,18 @@ async def register(user_data: UserCreate):
                 {"$set": {"second_parent_id": user.id}}
             )
     
-    token = create_token(user.id, user.role)
+    token = create_token(user.id, final_role)
     
     return TokenResponse(
         token=token,
         user={
             "id": user.id, 
             "email": user.email, 
-            "role": user.role, 
+            "role": final_role, 
             "full_name": user.full_name,
-            "status": user.status,
-            "society_id": user.society_id
+            "status": initial_status,
+            "society_id": society_id,
+            "athlete_id": athlete_id
         }
     )
 
