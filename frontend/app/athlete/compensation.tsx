@@ -162,7 +162,7 @@ export default function AthleteCompensation() {
       // Load threshold status for contract start year (where thresholds matter most)
       const thresholdYear = startYear || currentYear;
       try {
-        const thresholdRes = await api.get(`/athlete/${user?.id}/threshold-status/${thresholdYear}`);
+        const thresholdRes = await api.get(`/athletes/${athleteId}/threshold-status/${thresholdYear}`);
         setThresholdStatus(thresholdRes.data);
       } catch (err) {
         console.log('Error loading threshold status:', err);
@@ -274,7 +274,7 @@ export default function AthleteCompensation() {
       setSigningDeclaration(true);
       
       // Use the compensation receipt endpoint which now generates the correct threshold document
-      const response = await api.post(`/athlete/${user?.id}/compensation/receipt`, {
+      const response = await api.post(`/athletes/${athleteId}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile?.monthly_compensation || 0,
@@ -337,7 +337,7 @@ export default function AthleteCompensation() {
       
       console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYear, selectedYear });
       
-      const response = await api.post(`/athlete/${user?.id}/compensation/receipt`, {
+      const response = await api.post(`/athletes/${athleteId}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile.monthly_compensation,
