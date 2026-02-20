@@ -666,6 +666,21 @@ export default function AdminAthleteDetail() {
     }
   };
 
+  // Delete athlete permanently
+  const handleDeleteAthlete = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/athletes/${id}`);
+      showAlert('Successo', 'Atleta eliminato definitivamente');
+      setDeleteModalVisible(false);
+      router.back();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'eliminazione');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // Change athlete type (quota <-> compensated)
   const handleChangeAthleteType = async (newType: 'quota' | 'compensated') => {
     const typeLabel = newType === 'quota' ? 'paga quota' : 'riceve compenso';
