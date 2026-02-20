@@ -133,6 +133,7 @@ export default function SettingsScreen() {
         name: societyName,
         logo: logo,
         logo_size: logoSize,
+        sport_image: sportImage,
         athlete_roles: athleteRoles,
         athlete_characteristics: athleteCharacteristics,
         dirigente_qualifications: dirigenteQualifications,
