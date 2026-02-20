@@ -9373,7 +9373,11 @@ async def sign_athlete_compensation_receipt(
 @api_router.get("/prime-squadre/athletes/{athlete_id}/threshold-status/{year}")
 async def get_athlete_threshold_status(athlete_id: str, year: int, current_user = Depends(get_current_user)):
     """Get threshold status for an athlete in a specific year"""
-    if current_user["role"] != UserRole.ADMIN:
+    # Allow admin or the athlete viewing their own threshold status
+    if current_user["role"] == "athlete":
+        if current_user.get("athlete_id") != athlete_id and current_user["id"] != athlete_id:
+            raise HTTPException(status_code=403, detail="Puoi vedere solo il tuo stato")
+    elif current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
     athlete = await db.athletes.find_one({"id": athlete_id, "is_compensated": True})
