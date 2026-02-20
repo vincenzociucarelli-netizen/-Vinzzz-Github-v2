@@ -739,7 +739,9 @@ export default function AthleteProfile() {
                     setTransformingPhoto(true);
                     
                     try {
-                      const response = await api.post('/auth/me/transform-photo', {
+                      // Use the athlete-specific endpoint
+                      const athleteId = profile?.athlete_id || profile?.id;
+                      const response = await api.post(`/athletes/${athleteId}/transform-photo`, {
                         image_base64: originalPhoto
                       });
                       
