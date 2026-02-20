@@ -164,7 +164,8 @@ export default function AthleteProfile() {
       setProfilePhotoArtistic(data.profile_photo_artistic || null);
       // Load signed receipts
       try {
-        const receiptsRes = await api.get(`/athlete/${data.id}/compensation`);
+        const athleteId = data.athlete_id || data.id;
+        const receiptsRes = await api.get(`/athletes/${athleteId}/compensation/receipts`);
         setSignedReceipts(receiptsRes.data || []);
       } catch (e) {
         console.log('No receipts found');
