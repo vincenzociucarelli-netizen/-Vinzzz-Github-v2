@@ -2189,32 +2189,53 @@ export default function AdminAthleteDetail() {
             {/* Sezione per atleti che RICEVONO COMPENSO */}
             {athleteType === 'compensated' && (
               <>
-                {/* Link alla pagina Compensi dedicata */}
-                <TouchableOpacity 
-                  style={styles.compensationLinkCard}
-                  onPress={() => router.push(`/admin/athlete/${id}/compensation`)}
-                >
-                  <View style={styles.compensationLinkIcon}>
-                    <Ionicons name="trophy" size={32} color="#B8860B" />
-                  </View>
-                  <View style={styles.compensationLinkContent}>
-                    <Text style={styles.compensationLinkTitle}>Gestione Compensi</Text>
-                    <Text style={styles.compensationLinkSubtitle}>
-                      Configura compenso mensile, contratto e quietanze
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={24} color="#B8860B" />
-                </TouchableOpacity>
-
-                {/* Quick Info */}
-                {compensation && (
-                  <View style={styles.compensationQuickInfo}>
-                    <View style={styles.compensationQuickRow}>
-                      <Text style={styles.compensationQuickLabel}>Compenso Mensile</Text>
-                      <Text style={styles.compensationQuickValue}>€{compensation.monthly_amount || 0}</Text>
+                {/* Card Compensi Premium */}
+                <View style={styles.compensationCard}>
+                  <View style={styles.compensationCardHeader}>
+                    <View style={styles.compensationCardIcon}>
+                      <Ionicons name="trophy" size={24} color="#fff" />
+                    </View>
+                    <View style={styles.compensationCardHeaderText}>
+                      <Text style={styles.compensationCardTitle}>Atleta Compensato</Text>
+                      <Text style={styles.compensationCardSubtitle}>Percepisce compenso mensile</Text>
                     </View>
                   </View>
-                )}
+
+                  {/* Quick Stats */}
+                  {athlete && (
+                    <View style={styles.compensationStats}>
+                      <View style={styles.compensationStatItem}>
+                        <Text style={styles.compensationStatLabel}>Compenso Mensile</Text>
+                        <Text style={styles.compensationStatValue}>€{athlete.monthly_compensation || 0}</Text>
+                      </View>
+                      {athlete.contract_start_date && athlete.contract_end_date && (
+                        <View style={styles.compensationStatItem}>
+                          <Text style={styles.compensationStatLabel}>Durata Contratto</Text>
+                          <Text style={styles.compensationStatDate}>
+                            {new Date(athlete.contract_start_date).toLocaleDateString('it-IT')} - {new Date(athlete.contract_end_date).toLocaleDateString('it-IT')}
+                          </Text>
+                        </View>
+                      )}
+                      {(athlete.iban_holder_last_name || athlete.iban_holder_first_name) && (
+                        <View style={styles.compensationStatItem}>
+                          <Text style={styles.compensationStatLabel}>Intestatario</Text>
+                          <Text style={styles.compensationStatDate}>
+                            {athlete.iban_holder_last_name} {athlete.iban_holder_first_name}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  {/* Button to compensation page */}
+                  <TouchableOpacity 
+                    style={styles.compensationButton}
+                    onPress={() => router.push(`/admin/athlete/${id}/compensation`)}
+                  >
+                    <Text style={styles.compensationButtonText}>Gestisci Compensi e Quietanze</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#fff" />
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </>
