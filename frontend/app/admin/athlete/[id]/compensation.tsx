@@ -381,7 +381,7 @@ export default function AthleteCompensation() {
         {/* Account Status Card */}
         <View style={[styles.card, { marginBottom: 16, borderColor: hasAccount ? '#34C759' : '#FF9500', borderWidth: 2 }]}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>🔐 Account Atleta</Text>
+            <Text style={styles.cardTitle}>🔐 Accesso Atleta</Text>
             {hasAccount ? (
               <View style={{ backgroundColor: '#E8F5E9', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 }}>
                 <Text style={{ color: '#2E7D32', fontWeight: '600', fontSize: 12 }}>✓ Attivo</Text>
@@ -396,25 +396,26 @@ export default function AthleteCompensation() {
           {hasAccount ? (
             <View>
               <Text style={{ color: '#666', fontSize: 13, marginBottom: 8 }}>
-                L'atleta può accedere con la propria email ({athlete?.email}) per firmare le quietanze mensili.
+                L'atleta può accedere con la propria email ({athlete?.email}) per firmare autonomamente le quietanze mensili.
               </Text>
             </View>
           ) : (
             <View>
               <Text style={{ color: '#666', fontSize: 13, marginBottom: 12 }}>
-                Per permettere all'atleta di firmare le proprie quietanze, devi creare un account.
+                Per motivi fiscali, l'atleta retribuito deve firmare personalmente ogni quietanza mensile. 
+                Creando un account, l'atleta potrà accedere e firmare in autonomia.
               </Text>
               {athlete?.email ? (
                 <TouchableOpacity 
                   style={{ backgroundColor: '#B8860B', padding: 14, borderRadius: 10, alignItems: 'center' }}
                   onPress={() => setShowAccountModal(true)}
                 >
-                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>🔑 Crea Account Atleta</Text>
+                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>🔑 Crea Accesso per l'Atleta</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={{ backgroundColor: '#FFEBEE', padding: 12, borderRadius: 8 }}>
                   <Text style={{ color: '#C62828', fontSize: 13 }}>
-                    ⚠️ L'atleta deve avere un indirizzo email per creare un account.
+                    ⚠️ L'atleta deve avere un indirizzo email per creare un accesso.
                   </Text>
                 </View>
               )}
