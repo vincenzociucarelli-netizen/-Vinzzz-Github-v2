@@ -354,7 +354,7 @@ export default function AthleteCompensation() {
       
       console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYear, selectedYear });
       
-      const response = await api.post(`/athletes/${athleteId}/compensation/receipt`, {
+      const response = await api.post(`/athletes/${athleteId}/compensation/receipt-sign`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile.monthly_compensation,
