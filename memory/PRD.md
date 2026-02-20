@@ -1,98 +1,92 @@
-# RegistraTEAM - Product Requirements Document
+# RegistraTeam - Product Requirements Document
 
-## Problema Originale
-Applicazione per la gestione di società sportive con funzionalità per gestire atleti, coach, dirigenti, pagamenti, presenze e calendari gare.
+## Original Problem Statement
+Sistema di gestione completo per società sportive italiane (pallavolo, basket) che include:
+- Gestione atleti (minori e adulti)
+- Gestione allenatori con compensi e quietanze
+- Gestione dirigenti con compensi
+- Modulo Prime Squadre per atleti professionisti
+- Importazione partite da federazioni (FIPAV, FIP)
+- Sistema di pagamento quote e fatturazione
 
-## Ultima Sessione: 20 Febbraio 2026
+## Implemented Features
 
-### Completato Oggi:
+### Core Modules
+1. **User Authentication** - Login/Registration per admin, coach, parent, athlete
+2. **Team Management** - CRUD squadre con prima squadra, rifinitura, sessioni allenamento
+3. **Athlete Management** - Registrazione minori/adulti, tipi quota/retribuito
+4. **Coach Compensation** - Gestione compensi, firma digitale quietanze, PDF
+5. **Director (Dirigente) Compensation** - Replicato da coach module
+6. **Prime Squadre Module** - Per atleti professionisti con soglie fiscali
+7. **Federation Importer** - FIPAV (volleyball) e FIP (basketball)
+8. **Monthly Reports** - PDF consolidato quietanze firmate
 
-1. **✅ Importatore FIP Basketball** (COMPLETO)
-   - Scraper completo per API FIP: `https://backend.fip.it/api/v1/giornata`
-   - Supporto regioni: Umbria, Lazio, Toscana, Emilia, Lombardia, etc.
-   - Preview e Import endpoint funzionanti
-   - Testato: 10 partite trovate per "SVILA PERUGIA BASKET" (Serie C Umbria)
+### Athlete Compensation Module (JUST COMPLETED)
+**Status**: ✅ IMPLEMENTED AND TESTED (100% pass rate)
 
-2. **✅ Report Mensile Quietanze** (COMPLETO)
-   - Endpoint `GET /reports/monthly-compensation/{year}/{month}` genera PDF
-   - Endpoint `GET .../summary` fornisce riepilogo JSON
-   - Raggruppa quietanze di Coach, Dirigenti, Atleti, Atleti PRO
-   - Pagina frontend `/admin/reports` con selettore mese/anno e download PDF
-   - Link aggiunto alla dashboard admin
+Funzionalità replicate dal modulo coach:
+- **Backend Endpoints**:
+  - `POST /athletes/{id}/create-account` - Admin crea account per atleta retribuito
+  - `GET /athletes/{id}/compensation/receipts` - Visualizza quietanze (admin + atleta)
+  - `POST /athletes/{id}/compensation/receipt-sign` - Firma digitale quietanza
+  - `GET /prime-squadre/athletes/{id}/threshold-status/{year}` - Stato soglie fiscali
 
-2. **✅ P0: Modulo Compensi Atleti** (COMPLETO)
-   - Pagina `/app/frontend/app/admin/athlete/[id]/compensation.tsx` completamente funzionante
-   - Replica esatta della UI dei coach: compenso mensile, date contratto, IBAN, quietanze mensili
-   - Endpoint backend: `PATCH /athletes/{id}/compensation/settings`, `GET/POST .../receipts`
-   - Sincronizzazione automatica dati da collezione separata a documento atleta
-   - Testato: 11/11 test backend passati, frontend completamente funzionante
+- **Frontend Pages**:
+  - `/athlete` - Dashboard atleta con compensi annuali, griglia mesi
+  - `/athlete/compensation` - Firma quietanze con signature pad
+  - `/athlete/profile` - Dati personali atleta
 
-2. **✅ P1: Fix Login Genitori**
-   - Aggiunto auto-approvazione genitori alla registrazione
-   - Password test account resettata per testing
-   - Testato: login `testparent@trial.com` / `Test1234` funziona
+- **Flow Admin**:
+  1. Admin imposta atleta come "retribuito" (athlete_type=compensated)
+  2. Admin configura compenso mensile, date contratto, IBAN
+  3. Admin crea account atleta tramite nuova card "Account Atleta"
+  
+- **Flow Atleta**:
+  1. Atleta fa login con email e password
+  2. Dashboard mostra contratto, totali annuali per anno
+  3. Atleta firma quietanza mensile con firma digitale
+  4. PDF generato e inviato via email
 
-3. **✅ P2: Rate Pagate Rosse** (Non Riproducibile)
-   - La logica nel codice è già corretta: `isOverdue = !rate.paid && ...`
-   - Le rate pagate mostrano colore verde (#34C759)
-   - Potrebbe essere stato un problema con dati specifici
+## Database Schema
 
-4. **✅ P3: Icone Web** (Già Risolto)
-   - Workaround esistente: `/app/frontend/src/components/Icon.tsx` usa emoji
-   - Nessun import diretto da `@expo/vector-icons`
+### Collections
+- `users`: role includes "athlete" with athlete_id field
+- `athletes`: athlete_type can be "quota" or "compensated"
+- `athlete_compensation_receipts`: store signed receipts with signature
 
-### Sessioni Precedenti:
-- Importatore Calendari FIPAV (completo)
-- Gestione Teams con Prima Squadra, Rifinitura, 10 allenamenti
-- Registrazione Atleti Adulti (quota/compensated)
-- Fix firma privacy per web
-- Fix pagamenti visibili al genitore
+## Test Credentials
+- **Admin**: test.admin@test.com / Test1234
+- **Test Athlete**: test.athlete@trial.com / Athlete123 (athlete_id: 6998cf2dd6878c84c10b35f5)
 
-### Issue Aperti:
-- [ ] FIP (Basketball) importer - da implementare
-- [ ] Refactoring server.py in moduli
+## Pending Issues (Backlog)
+1. **P1**: Parent login not working (recurring issue)
+2. **P2**: Paid installments appear as overdue on parent dashboard
+3. **P3**: @expo/vector-icons rendering on web
 
-### Prossimi Task:
-- [ ] Importatore FIP Basketball
-- [ ] Funzionalità "Rinnovo Stagione"
-- [ ] Refactoring `server.py` 
-- [ ] Integrazione Stripe
+## Upcoming Features
+1. **P2**: Club sport image upload
+2. **P3**: Season renewal workflow
+3. **P3**: Refactor server.py into modular routes
+4. **P3**: Stripe integration for premium plans
 
-### Backlog (Future):
-- [ ] Logica Freemium
-- [ ] App mobile nativa
-
-## Credenziali Test
-- Admin: `test.admin@test.com` / `Test1234`
-- Admin Alt: `pallavoloperugia@gmail.com` / `11092012`
-- Genitore: `testparent@trial.com` / `Test1234`
-- Atleta Compensato: MARTA TEST (id: 69977ba62666bba1803e5a0f)
-
-## Files Principali Modificati (Oggi)
-- `/app/backend/server.py` - Sincronizzazione compensi, auto-approvazione genitori
-- `/app/frontend/app/admin/athlete/[id]/compensation.tsx` - UI compensi atleti
-- `/app/frontend/app/login.tsx` - data-testid su bottone login
-- `/app/backend/tests/test_athlete_compensation.py` - Test automatici
-
-## Architettura
+## Architecture
 ```
 /app
 ├── backend/
-│   ├── server.py              # API principale (da refactoring)
-│   ├── federation_scraper.py  # Scraper FIPAV
-│   └── tests/                 # Test pytest
+│   ├── server.py (monolithic - needs refactoring)
+│   └── tests/
+│       └── test_athlete_module.py (14 tests)
 └── frontend/
     └── app/
-        ├── admin/             # Dashboard admin
-        │   ├── athlete/[id]/compensation.tsx  # NUOVO: compensi atleti
-        │   ├── teams.tsx
-        │   └── import-calendar.tsx
-        ├── coach/             # Dashboard coach
-        ├── parent/            # Dashboard genitori
-        └── login.tsx
+        ├── admin/
+        │   └── athlete/[id]/compensation.tsx
+        ├── athlete/ (NEW)
+        │   ├── _layout.tsx
+        │   ├── index.tsx
+        │   ├── compensation.tsx
+        │   └── profile.tsx
+        └── coach/
 ```
 
-## Schema DB Rilevante
-- **athletes**: athlete_type ('quota'|'compensated'), monthly_compensation, contract_start/end_date, iban, iban_holder, bank_name
-- **athlete_compensation_receipts**: athlete_id, month, year, signed, signed_date, amount
-- **teams**: is_prima_squadra, rifinitura, training_sessions (1-10)
+## Last Updated
+2026-02-20: Completed athlete compensation module replication
