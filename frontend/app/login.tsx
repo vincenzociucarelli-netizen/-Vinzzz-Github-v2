@@ -138,6 +138,7 @@ export default function Login() {
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={loading}
+            data-testid="login-submit-button"
           >
             <Text style={styles.buttonText}>{loading ? 'Accesso...' : 'Accedi'}</Text>
           </TouchableOpacity>
