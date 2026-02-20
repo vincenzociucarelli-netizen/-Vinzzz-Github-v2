@@ -3787,6 +3787,124 @@ async def set_athlete_compensation(athlete_id: str, data: dict, current_user = D
     
     return {"message": "Compenso aggiornato con successo"}
 
+@api_router.patch("/athletes/{athlete_id}/compensation/settings")
+async def update_athlete_compensation_settings(athlete_id: str, data: dict, current_user = Depends(get_current_user)):
+    """Update full compensation settings for an athlete (like coaches)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare i compensi")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    update_data = {}
+    
+    # Monthly compensation
+    if "monthly_compensation" in data:
+        update_data["monthly_compensation"] = data["monthly_compensation"]
+    
+    # Other annual compensation (prior)
+    if "other_annual_compensation" in data:
+        update_data["other_annual_compensation"] = data["other_annual_compensation"]
+    
+    if "prior_compensation" in data:
+        update_data["prior_compensation"] = data["prior_compensation"]
+    
+    # Contract dates
+    if "contract_start_date" in data:
+        val = data["contract_start_date"]
+        if val and isinstance(val, str):
+            try:
+                update_data["contract_start_date"] = datetime.fromisoformat(val.replace('Z', '+00:00')).isoformat()
+            except:
+                update_data["contract_start_date"] = val
+        else:
+            update_data["contract_start_date"] = val
+    
+    if "contract_end_date" in data:
+        val = data["contract_end_date"]
+        if val and isinstance(val, str):
+            try:
+                update_data["contract_end_date"] = datetime.fromisoformat(val.replace('Z', '+00:00')).isoformat()
+            except:
+                update_data["contract_end_date"] = val
+        else:
+            update_data["contract_end_date"] = val
+    
+    # Bank info
+    if "iban" in data:
+        update_data["iban"] = data["iban"]
+    if "iban_holder" in data:
+        update_data["iban_holder"] = data["iban_holder"]
+    if "bank_name" in data:
+        update_data["bank_name"] = data["bank_name"]
+    
+    if update_data:
+        await db.athletes.update_one({"id": athlete_id}, {"$set": update_data})
+    
+    return {"message": "Impostazioni compenso aggiornate"}
+
+@api_router.get("/athletes/{athlete_id}/compensation/receipts")
+async def get_athlete_compensation_receipts(athlete_id: str, current_user = Depends(get_current_user)):
+    """Get signed receipts for an athlete"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere le quietanze")
+    
+    receipts = await db.athlete_compensation_receipts.find({"athlete_id": athlete_id}).to_list(100)
+    clean_mongo_docs(receipts)
+    return receipts
+
+@api_router.post("/athletes/{athlete_id}/compensation/receipt")
+async def sign_athlete_compensation_receipt(athlete_id: str, data: dict, current_user = Depends(get_current_user)):
+    """Sign or unsign a monthly receipt for an athlete"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può firmare le quietanze")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    month = data.get("month")
+    year = data.get("year")
+    signed = data.get("signed", True)
+    
+    if not month or not year:
+        raise HTTPException(status_code=400, detail="Mese e anno sono obbligatori")
+    
+    receipt_data = {
+        "athlete_id": athlete_id,
+        "society_id": athlete.get("society_id"),
+        "month": month,
+        "year": year,
+        "signed": signed,
+        "signed_date": datetime.utcnow() if signed else None,
+        "amount": athlete.get("monthly_compensation", 0),
+        "updated_at": datetime.utcnow(),
+    }
+    
+    # Upsert receipt
+    await db.athlete_compensation_receipts.update_one(
+        {"athlete_id": athlete_id, "month": month, "year": year},
+        {"$set": receipt_data},
+        upsert=True
+    )
+    
+    return {"message": "Quietanza aggiornata"}
+
+@api_router.get("/athletes/{athlete_id}/team")
+async def get_athlete_team(athlete_id: str, current_user = Depends(get_current_user)):
+    """Get the team for an athlete"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    team = await db.teams.find_one({"id": athlete.get("team_id")})
+    if not team:
+        return None
+    
+    clean_mongo_doc(team)
+    return team
+
 @api_router.get("/athletes/pending")
 async def get_pending_athletes(current_user = Depends(get_current_user)):
     """Get all athletes pending approval - admin only - OPTIMIZED"""
