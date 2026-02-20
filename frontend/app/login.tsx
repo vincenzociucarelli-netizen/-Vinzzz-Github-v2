@@ -68,6 +68,8 @@ export default function Login() {
         router.replace('/parent');
       } else if (role === 'viewer') {
         router.replace('/dirigente');
+      } else if (role === 'athlete') {
+        router.replace('/athlete');
       }
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il login');
