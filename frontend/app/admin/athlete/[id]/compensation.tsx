@@ -71,7 +71,8 @@ export default function AthleteCompensation() {
   
   // Bank info
   const [iban, setIban] = useState('');
-  const [ibanHolder, setIbanHolder] = useState('');
+  const [ibanHolderFirstName, setIbanHolderFirstName] = useState('');
+  const [ibanHolderLastName, setIbanHolderLastName] = useState('');
   const [bankName, setBankName] = useState('');
   
   // Signed receipts
