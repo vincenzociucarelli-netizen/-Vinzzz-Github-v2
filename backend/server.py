@@ -2650,6 +2650,7 @@ async def preview_federation_import(config: dict, current_user = Depends(get_cur
                     "date": m.date.isoformat(),
                     "home_team": m.home_team,
                     "away_team": m.away_team,
+                    "venue": m.venue,
                     "result": m.result,
                     "championship": m.championship,
                     "giornata": m.giornata
@@ -2659,8 +2660,41 @@ async def preview_federation_import(config: dict, current_user = Depends(get_cur
                 "matches": matches_data,
                 "count": len(matches_data)
             }
-        else:
-            return {"matches": [], "count": 0, "message": "FIP non ancora supportato"}
+        elif federation == "fip":
+            # FIP Basketball
+            scraper = FIPScraper(region=region)
+            codice_campionato = config.get("codice_campionato", "C1")
+            codice_girone = config.get("codice_girone")
+            sesso = config.get("sesso", "M")
+            
+            if not codice_girone:
+                return {"matches": [], "count": 0, "message": "Seleziona un campionato (codice_girone)"}
+            
+            matches = await scraper.scrape_matches(
+                codice_campionato=codice_campionato,
+                codice_girone=codice_girone,
+                society_name=society_name,
+                sesso=sesso
+            )
+            
+            # Convert to dict for JSON response
+            matches_data = []
+            for m in matches:
+                matches_data.append({
+                    "match_number": m.match_number,
+                    "date": m.date.isoformat(),
+                    "home_team": m.home_team,
+                    "away_team": m.away_team,
+                    "venue": m.venue,
+                    "result": m.result,
+                    "championship": m.championship,
+                    "giornata": m.giornata
+                })
+            
+            return {
+                "matches": matches_data,
+                "count": len(matches_data)
+            }
     
     except Exception as e:
         logging.error(f"Error previewing federation import: {e}")
