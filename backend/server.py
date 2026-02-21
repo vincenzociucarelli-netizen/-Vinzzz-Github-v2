@@ -1214,6 +1214,7 @@ class UserProfileUpdate(BaseModel):
     date_of_birth: Optional[str] = None
     place_of_birth: Optional[str] = None
     birth_province: Optional[str] = None  # Sigla provincia di nascita
+    gender: Optional[str] = None  # M or F - for Codice Fiscale calculation
     fiscal_code: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
