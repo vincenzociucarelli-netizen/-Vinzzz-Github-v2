@@ -196,6 +196,7 @@ export default function AthleteCompensation() {
 
   const handleOpenSignature = (month: number, year?: number) => {
     const targetYear = year || currentYear;
+    console.log('handleOpenSignature called:', { month, targetYear });
     
     // Calculate if this month will exceed thresholds
     const monthlyAmount = profile?.monthly_compensation || 0;
