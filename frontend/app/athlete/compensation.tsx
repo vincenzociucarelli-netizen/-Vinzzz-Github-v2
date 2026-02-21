@@ -1118,7 +1118,7 @@ export default function CoachCompensation() {
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setShowSignatureModal(false)}
+                  onPress={closeSignatureModal}
                 >
                   <Text style={styles.cancelButtonText}>Annulla</Text>
                 </TouchableOpacity>
