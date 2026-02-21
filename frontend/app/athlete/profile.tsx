@@ -162,9 +162,9 @@ export default function AthleteProfile() {
       const exceeded15000 = data.over_5000_limit && data.over_5000_limit.exceeded_15000 === true;
       setHasExceeded5000(exceeded5000 || false);
       setHasExceeded15000(exceeded15000 || false);
-      // Load profile photo
-      setProfilePhoto(data.profile_photo || null);
-      setProfilePhotoArtistic(data.profile_photo_artistic || null);
+      // Load profile photo (athletes use athlete_photo, users use profile_photo)
+      setProfilePhoto(data.athlete_photo || data.profile_photo || null);
+      setProfilePhotoArtistic(data.athlete_photo_artistic || data.profile_photo_artistic || null);
       // Load signed receipts
       try {
         const athleteId = data.athlete_id || data.id;
