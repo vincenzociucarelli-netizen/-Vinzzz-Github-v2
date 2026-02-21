@@ -26,6 +26,8 @@ interface Athlete {
   contract_start_date?: string;
   contract_end_date?: string;
   fees_waived?: boolean;
+  compensation_accepted?: boolean;
+  compensation_accepted_date?: string;
   compensation_summary?: {
     yearly_total: number;
     months_received: number;
