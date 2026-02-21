@@ -254,17 +254,22 @@ export default function AthleteCompensation() {
       return;
     }
     
+    console.log('Setting modal state...', { month, targetYear, willExceed5k, willExceed15k });
     setSelectedMonth(month);
     setSelectedYear(targetYear);
     setSignature(null);
     
     // If this month will exceed a threshold, show declaration modal instead
     if (willExceed15k) {
+      console.log('Opening 15k declaration modal');
       openDeclarationModalForMonth('15000', month, targetYear);
     } else if (willExceed5k) {
+      console.log('Opening 5k declaration modal');
       openDeclarationModalForMonth('5000', month, targetYear);
     } else {
+      console.log('Opening signature modal');
       setShowSignatureModal(true);
+      console.log('Signature modal state set to true');
     }
   };
 
