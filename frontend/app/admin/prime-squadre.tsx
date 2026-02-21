@@ -510,7 +510,9 @@ export default function PrimeSquadrePage() {
                       style={styles.dateInput}
                       placeholder="gg/mm/aaaa"
                       value={configForm.contract_start_date}
-                      onChangeText={(v) => setConfigForm({...configForm, contract_start_date: v})}
+                      onChangeText={(v) => setConfigForm({...configForm, contract_start_date: formatDateWithSlashes(v)})}
+                      keyboardType="numeric"
+                      maxLength={10}
                     />
                   </View>
                   <View style={styles.dateField}>
@@ -519,7 +521,9 @@ export default function PrimeSquadrePage() {
                       style={styles.dateInput}
                       placeholder="gg/mm/aaaa"
                       value={configForm.contract_end_date}
-                      onChangeText={(v) => setConfigForm({...configForm, contract_end_date: v})}
+                      onChangeText={(v) => setConfigForm({...configForm, contract_end_date: formatDateWithSlashes(v)})}
+                      keyboardType="numeric"
+                      maxLength={10}
                     />
                   </View>
                 </View>
