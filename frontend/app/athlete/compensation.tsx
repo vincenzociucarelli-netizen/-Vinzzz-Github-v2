@@ -278,21 +278,18 @@ export default function AthleteCompensation() {
       openDeclarationModalForMonth('5000', month, targetYear);
     } else {
       console.log('Opening signature modal');
-      // Use alert for web to avoid modal issues
-      if (Platform.OS === 'web') {
-        const confirmed = window.confirm(
-          `Vuoi firmare la quietanza per ${MONTH_NAMES[month]} ${targetYear}?\n\n` +
-          `Compenso: € ${(profile?.monthly_compensation || 0).toFixed(2)}\n\n` +
-          `Clicca OK per confermare la firma.`
-        );
-        if (confirmed) {
-          // Direct sign without signature pad
-          setSignature('data:image/png;base64,FIRMA_WEB');
-          handleSignDirect(month, targetYear);
-        }
-      } else {
-        setShowSignatureModal(true);
-      }
+      // Use native Alert for both web and mobile
+      Alert.alert(
+        'Conferma Firma',
+        `Vuoi firmare la quietanza per ${MONTH_NAMES[month]} ${targetYear}?\n\nCompenso: € ${(profile?.monthly_compensation || 0).toFixed(2)}`,
+        [
+          { text: 'Annulla', style: 'cancel' },
+          { 
+            text: 'Firma', 
+            onPress: () => handleSignDirect(month, targetYear)
+          }
+        ]
+      );
       console.log('Signature modal state set to true');
     }
   };
