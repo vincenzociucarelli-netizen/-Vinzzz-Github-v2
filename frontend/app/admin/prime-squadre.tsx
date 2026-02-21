@@ -233,8 +233,8 @@ export default function PrimeSquadrePage() {
       await api.patch(`/prime-squadre/athletes/${selectedAthlete.id}`, {
         monthly_compensation: parseFloat(configForm.monthly_compensation) || 0,
         other_annual_compensation: parseFloat(configForm.other_annual_compensation) || 0,
-        contract_start_date: configForm.contract_start_date,
-        contract_end_date: configForm.contract_end_date,
+        contract_start_date: italianToIso(configForm.contract_start_date),
+        contract_end_date: italianToIso(configForm.contract_end_date),
         fees_waived: configForm.fees_waived,
       });
       showAlert('Successo', 'Configurazione aggiornata');
