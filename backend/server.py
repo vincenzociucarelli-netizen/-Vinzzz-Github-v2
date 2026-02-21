@@ -9342,7 +9342,7 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
 
 @api_router.post("/prime-squadre/athletes/{athlete_id}/enable")
 async def enable_athlete_compensation(athlete_id: str, current_user = Depends(get_current_user)):
-    """Enable compensation for an athlete (add to Prime Squadre)"""
+    """Enable compensation for an athlete or coach (add to Prime Squadre)"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può gestire Prime Squadre")
     
@@ -9351,21 +9351,31 @@ async def enable_athlete_compensation(athlete_id: str, current_user = Depends(ge
     if not settings or not settings.get("pro_enabled", False):
         raise HTTPException(status_code=403, detail="Modulo Prime Squadre non attivato")
     
-    # Check member limit (50)
-    current_count = await db.athletes.count_documents({"is_compensated": True})
-    if current_count >= 50:
+    # Check member limit (50) - count both athletes and coaches
+    athletes_count = await db.athletes.count_documents({"is_compensated": True})
+    coaches_count = await db.users.count_documents({"role": "coach", "is_compensated": True})
+    if athletes_count + coaches_count >= 50:
         raise HTTPException(status_code=400, detail="Raggiunto il limite massimo di 50 membri Prime Squadre")
     
-    # Update athlete - just enable, config will be done via update endpoint
+    # Try to update athlete first
     result = await db.athletes.update_one(
         {"id": athlete_id},
         {"$set": {"is_compensated": True}}
     )
     
-    if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if result.modified_count > 0:
+        return {"message": "Atleta aggiunto a Prime Squadre", "athlete_id": athlete_id}
     
-    return {"message": "Atleta aggiunto a Prime Squadre", "athlete_id": athlete_id}
+    # If not found in athletes, try coaches (users collection)
+    result = await db.users.update_one(
+        {"id": athlete_id, "role": "coach"},
+        {"$set": {"is_compensated": True}}
+    )
+    
+    if result.modified_count > 0:
+        return {"message": "Coach aggiunto a Prime Squadre", "athlete_id": athlete_id}
+    
+    raise HTTPException(status_code=404, detail="Atleta o Coach non trovato")
 
 
 class PrimeSquadreAthleteUpdate(BaseModel):
