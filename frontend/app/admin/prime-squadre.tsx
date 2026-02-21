@@ -167,10 +167,10 @@ export default function PrimeSquadrePage() {
     setAthleteToAdd(athlete);
     setShowAddModal(false);
     setConfigForm({
-      monthly_compensation: '0',
-      other_annual_compensation: '0',
-      contract_start_date: '2025-09-01',
-      contract_end_date: '2026-05-31',
+      monthly_compensation: '',
+      other_annual_compensation: '',
+      contract_start_date: '01/09/2025',
+      contract_end_date: '31/05/2026',
       fees_waived: false,
     });
     setShowConfigModal(true);
