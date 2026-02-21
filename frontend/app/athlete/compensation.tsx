@@ -114,24 +114,24 @@ export default function CoachCompensation() {
   const signatureRef = useRef<any>(null);
 
   useEffect(() => {
-    if (athleteId) {
-      loadData();
-    }
-  }, [currentYear, athleteId]);
+    loadData();
+  }, [currentYear]);
 
   const loadData = async () => {
-    // Check if athleteId is available
-    if (!athleteId) {
-      console.error('No athleteId available');
-      setLoading(false);
-      return;
-    }
-    
     try {
       setLoading(true);
       
-      // Load profile
+      // Load profile and get athleteId
       const profileRes = await api.get('/auth/me');
+      const currentAthleteId = profileRes.data.athlete_id;
+      
+      if (!currentAthleteId) {
+        console.error('No athleteId in user profile');
+        setLoading(false);
+        return;
+      }
+      
+      setAthleteId(currentAthleteId);
       setProfile(profileRes.data);
       
       // Parse contract dates
@@ -157,8 +157,8 @@ export default function CoachCompensation() {
       // Set prior compensation
       setPriorCompensation(profileRes.data.other_annual_compensation || 0);
       
-      // Load ALL compensation records (not filtered by year)
-      const recordsRes = await api.get(`/athletes/${athleteId}/compensation/receipts`);
+      // Load ALL compensation records using the athleteId we just got
+      const recordsRes = await api.get(`/athletes/${currentAthleteId}/compensation/receipts`);
       setRecords(recordsRes.data || []);
       
       // Calculate yearly total for current display year (including prior compensation for first year)
