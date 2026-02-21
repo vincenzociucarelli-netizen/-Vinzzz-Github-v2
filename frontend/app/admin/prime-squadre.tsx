@@ -410,14 +410,8 @@ export default function PrimeSquadrePage() {
               key={athlete.id} 
               style={styles.athleteCard}
               onPress={() => {
-                // Route to correct compensation page based on type
-                if (athlete.type === 'coach') {
-                  router.push(`/admin/coach/${athlete.id}/compensation`);
-                } else if (athlete.type === 'dirigente') {
-                  router.push(`/admin/director/${athlete.id}/compensation`);
-                } else {
-                  router.push(`/admin/athlete/${athlete.id}/compensation`);
-                }
+                // Route to Prime Squadre compensation page (handles all types)
+                router.push(`/admin/prime-squadre/${athlete.id}`);
               }}
               activeOpacity={0.7}
             >
