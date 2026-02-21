@@ -413,6 +413,8 @@ export default function PrimeSquadrePage() {
                 // Route to correct compensation page based on type
                 if (athlete.type === 'coach') {
                   router.push(`/admin/coach/${athlete.id}/compensation`);
+                } else if (athlete.type === 'dirigente') {
+                  router.push(`/admin/director/${athlete.id}/compensation`);
                 } else {
                   router.push(`/admin/athlete/${athlete.id}/compensation`);
                 }
