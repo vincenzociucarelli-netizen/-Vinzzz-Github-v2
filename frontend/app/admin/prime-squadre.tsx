@@ -150,7 +150,7 @@ export default function PrimeSquadrePage() {
       // Load both athletes and coaches
       const [athletesRes, coachesRes] = await Promise.all([
         api.get('/athletes'),
-        api.get('/coaches'),
+        api.get('/users/coaches'),
       ]);
       
       // Filter out athletes already in Prime Squadre
