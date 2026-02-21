@@ -58,6 +58,7 @@ export default function DirigenteProfile() {
     last_name: '',
     date_of_birth: '',
     place_of_birth: '',
+    gender: '' as '' | 'M' | 'F',
     fiscal_code: '',
     address: '',
     city: '',
