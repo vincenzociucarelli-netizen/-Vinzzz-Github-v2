@@ -1005,30 +1005,6 @@ export default function AthleteCompensation() {
           </View>
         </View>
       )}
-                >
-                  <Text style={styles.cancelButtonText}>Annulla</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[
-                    styles.modalButton, 
-                    styles.confirmButton,
-                    !signature && styles.buttonDisabled
-                  ]}
-                  onPress={handleSign}
-                  disabled={!signature || signing}
-                >
-                  {signing ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.confirmButtonText}>Firma Quietanza</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
       {/* Declaration Modal */}
       <Modal
