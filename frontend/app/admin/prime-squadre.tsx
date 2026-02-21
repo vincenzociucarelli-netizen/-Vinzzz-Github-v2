@@ -696,6 +696,11 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 2,
   },
+  acceptanceStatus: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+  },
   athleteActions: {
     flexDirection: 'row',
     gap: 8,
