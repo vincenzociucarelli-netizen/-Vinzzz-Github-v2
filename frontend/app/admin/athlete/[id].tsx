@@ -2645,6 +2645,49 @@ export default function AdminAthleteDetail() {
         </View>
       </Modal>
 
+      {/* Reset Account Password Confirmation Modal */}
+      <Modal
+        visible={resetAccountPasswordVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setResetAccountPasswordVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="mail" size={40} color="#007AFF" />
+              <Text style={styles.modalTitle}>Reset Password Accesso</Text>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              Verrà inviata un'email a:
+            </Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#333', textAlign: 'center', marginVertical: 10 }}>
+              {(athlete as any)?.email || 'N/A'}
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              L'atleta riceverà un codice per impostare una nuova password di accesso all'app.
+            </Text>
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setResetAccountPasswordVisible(false)}
+              >
+                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#007AFF' }]}
+                onPress={handleResetAccountPassword}
+                disabled={resettingAccountPassword}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>
+                  {resettingAccountPassword ? 'Invio...' : 'Invia Email'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Reactivate Modal with Team Selection */}
       <Modal
         visible={reactivateModalVisible}
