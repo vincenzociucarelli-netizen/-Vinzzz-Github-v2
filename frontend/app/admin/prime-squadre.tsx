@@ -453,16 +453,25 @@ export default function PrimeSquadrePage() {
                   style={styles.athleteListItem}
                   onPress={() => handleAddAthlete(athlete)}
                 >
-                  <Text style={styles.athleteListName}>
-                    {athlete.last_name} {athlete.first_name}
-                  </Text>
-                  {athlete.team_name && (
-                    <Text style={styles.athleteListTeam}>{athlete.team_name}</Text>
-                  )}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.athleteListName}>
+                        {athlete.last_name} {athlete.first_name}
+                      </Text>
+                      {athlete.team_name && (
+                        <Text style={styles.athleteListTeam}>{athlete.team_name}</Text>
+                      )}
+                    </View>
+                    <View style={[styles.typeBadge, { backgroundColor: athlete.type === 'coach' ? '#64B5F6' : '#81C784' }]}>
+                      <Text style={styles.typeBadgeText}>
+                        {athlete.type === 'coach' ? '🏋️ Coach' : '⚽ Atleta'}
+                      </Text>
+                    </View>
+                  </View>
                 </TouchableOpacity>
               ))}
               {filteredAllAthletes.length === 0 && (
-                <Text style={styles.noResults}>Nessun atleta trovato</Text>
+                <Text style={styles.noResults}>Nessun atleta o coach trovato</Text>
               )}
             </ScrollView>
             
