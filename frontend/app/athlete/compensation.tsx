@@ -244,7 +244,6 @@ export default function CoachCompensation() {
     }
   };
 
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [acceptingCompensation, setAcceptingCompensation] = useState(false);
 
   // Handler for accepting compensation proposal
