@@ -181,8 +181,8 @@ export default function ReportsPage() {
           <View style={styles.breakdownContainer}>
             <View style={styles.breakdownRow}>
               <View style={styles.breakdownItem}>
-                <View style={[styles.breakdownIcon, { backgroundColor: '#007AFF' }]}>
-                  <Ionicons name="person" size={24} color="#fff" />
+                <View style={[styles.breakdownIcon, { backgroundColor: '#64B5F6' }]}>
+                  <Ionicons name="school" size={24} color="#fff" />
                 </View>
                 <Text style={styles.breakdownLabel}>Coach</Text>
                 <Text style={styles.breakdownCount}>{summary.breakdown.coach.count}</Text>
@@ -190,7 +190,7 @@ export default function ReportsPage() {
               </View>
 
               <View style={styles.breakdownItem}>
-                <View style={[styles.breakdownIcon, { backgroundColor: '#5856D6' }]}>
+                <View style={[styles.breakdownIcon, { backgroundColor: '#9575CD' }]}>
                   <Ionicons name="briefcase" size={24} color="#fff" />
                 </View>
                 <Text style={styles.breakdownLabel}>Dirigenti</Text>
@@ -201,7 +201,7 @@ export default function ReportsPage() {
 
             <View style={styles.breakdownRow}>
               <View style={styles.breakdownItem}>
-                <View style={[styles.breakdownIcon, { backgroundColor: '#34C759' }]}>
+                <View style={[styles.breakdownIcon, { backgroundColor: '#81C784' }]}>
                   <Ionicons name="fitness" size={24} color="#fff" />
                 </View>
                 <Text style={styles.breakdownLabel}>Atleti</Text>
@@ -210,7 +210,7 @@ export default function ReportsPage() {
               </View>
 
               <View style={styles.breakdownItem}>
-                <View style={[styles.breakdownIcon, { backgroundColor: '#FF9500' }]}>
+                <View style={[styles.breakdownIcon, { backgroundColor: '#FFB74D' }]}>
                   <Ionicons name="trophy" size={24} color="#fff" />
                 </View>
                 <Text style={styles.breakdownLabel}>Atleti PRO</Text>
