@@ -2555,6 +2555,55 @@ export default function AdminAthleteDetail() {
         </View>
       </Modal>
 
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={deleteModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="warning" size={40} color="#FF3B30" />
+              <Text style={styles.modalTitleDanger}>Elimina Atleta</Text>
+            </View>
+            <Text style={[styles.modalSubtitle, { color: '#FF3B30', fontWeight: '600' }]}>
+              ⚠️ ATTENZIONE: Questa azione è IRREVERSIBILE!
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              Verranno eliminati definitivamente:{'\n'}
+              • Tutti i dati dell'atleta{'\n'}
+              • Tutti i pagamenti registrati{'\n'}
+              • Tutte le presenze{'\n'}
+              • Tutti i certificati medici
+            </Text>
+            <View style={[styles.deleteConfirmBox]}>
+              <Text style={styles.deleteConfirmText}>
+                Stai per eliminare: {athlete?.first_name} {athlete?.last_name}
+              </Text>
+            </View>
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setDeleteModalVisible(false)}
+              >
+                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonDanger]}
+                onPress={handleDeleteAthlete}
+                disabled={deleting}
+              >
+                <Text style={styles.modalButtonDangerText}>
+                  {deleting ? 'Eliminazione...' : 'ELIMINA DEFINITIVAMENTE'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Reactivate Modal with Team Selection */}
       <Modal
         visible={reactivateModalVisible}
