@@ -201,7 +201,7 @@ export default function ReportsPage() {
             <View style={styles.breakdownRow}>
               <View style={styles.breakdownItem}>
                 <View style={[styles.breakdownIcon, { backgroundColor: '#64B5F6' }]}>
-                  <Ionicons name="fitness" size={24} color="#fff" />
+                  <Text style={{ fontSize: 24 }}>🏋️</Text>
                 </View>
                 <Text style={styles.breakdownLabel}>Coach</Text>
                 <Text style={styles.breakdownCount}>{summary.breakdown.coach.count}</Text>
@@ -221,7 +221,15 @@ export default function ReportsPage() {
             <View style={styles.breakdownRow}>
               <View style={styles.breakdownItem}>
                 <View style={[styles.breakdownIcon, { backgroundColor: '#81C784' }]}>
-                  <Ionicons name="fitness" size={24} color="#fff" />
+                  {society.sport_image ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${society.sport_image}` }}
+                      style={{ width: 32, height: 32, borderRadius: 4 }}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Ionicons name="fitness" size={24} color="#fff" />
+                  )}
                 </View>
                 <Text style={styles.breakdownLabel}>Atleti</Text>
                 <Text style={styles.breakdownCount}>{summary.breakdown.atleta.count}</Text>
