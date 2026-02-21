@@ -9468,9 +9468,6 @@ async def disable_athlete_compensation(athlete_id: str, current_user = Depends(g
         return {"message": "Coach rimosso da Prime Squadre"}
     
     raise HTTPException(status_code=404, detail="Membro non trovato")
-        raise HTTPException(status_code=404, detail="Atleta non trovato")
-    
-    return {"message": "Atleta rimosso da Prime Squadre", "athlete_id": athlete_id}
 
 @api_router.post("/prime-squadre/athletes/{athlete_id}/set-compensation")
 async def set_athlete_compensation(athlete_id: str, amount: float, current_user = Depends(get_current_user)):
