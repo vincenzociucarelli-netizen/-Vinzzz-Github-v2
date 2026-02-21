@@ -37,11 +37,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   refreshUser: async () => {
-    // Simply reload user from AsyncStorage - the API already saved the data
+    // Refresh user data from API
     try {
-      const userStr = await AsyncStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const user = await response.json();
+        await AsyncStorage.setItem('user', JSON.stringify(user));
         set({ user });
       }
     } catch (error) {
