@@ -141,6 +141,10 @@ export default function AdminAthleteDetail() {
   const [resettingDataPassword, setResettingDataPassword] = useState(false);
   const [hasDataPassword, setHasDataPassword] = useState(false);
   
+  // Reset account password (for athlete login)
+  const [resetAccountPasswordVisible, setResetAccountPasswordVisible] = useState(false);
+  const [resettingAccountPassword, setResettingAccountPassword] = useState(false);
+  
   // Detach parents
   const [detachingParents, setDetachingParents] = useState(false);
   
