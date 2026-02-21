@@ -118,6 +118,13 @@ export default function CoachCompensation() {
   }, [currentYear]);
 
   const loadData = async () => {
+    // Check if athleteId is available
+    if (!athleteId) {
+      console.error('No athleteId available');
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       
