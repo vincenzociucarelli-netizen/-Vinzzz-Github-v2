@@ -811,6 +811,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  typeBadgeInline: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+  typeBadgeTextInline: {
+    fontSize: 13,
+    color: '#fff',
+    fontWeight: '600',
+  },
   athleteActions: {
     flexDirection: 'row',
     gap: 8,
