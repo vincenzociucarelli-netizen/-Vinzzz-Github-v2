@@ -109,11 +109,43 @@ export default function CoachCompensation() {
   // Threshold status
   const [thresholdStatus, setThresholdStatus] = useState<ThresholdStatus | null>(null);
   
-  // Signature modal for receipts
-  const [showSignatureModal, setShowSignatureModal] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  // Signature modal for receipts - consolidated into a single state object to prevent re-renders
+  const [signatureModalState, setSignatureModalState] = useState<{
+    visible: boolean;
+    month: number | null;
+    year: number | null;
+    signature: string | null;
+  }>({
+    visible: false,
+    month: null,
+    year: null,
+    signature: null,
+  });
   const [signing, setSigning] = useState(false);
-  const [signature, setSignature] = useState<string | null>(null);
+  
+  // Convenience getters for backward compatibility
+  const showSignatureModal = signatureModalState.visible;
+  const selectedMonth = signatureModalState.month;
+  const selectedYear = signatureModalState.year || currentYear;
+  const signature = signatureModalState.signature;
+  
+  // Helper functions to update signature modal
+  const openSignatureModal = (month: number, year: number) => {
+    setSignatureModalState({
+      visible: true,
+      month,
+      year,
+      signature: null,
+    });
+  };
+  
+  const closeSignatureModal = () => {
+    setSignatureModalState(prev => ({ ...prev, visible: false }));
+  };
+  
+  const setSignature = (sig: string | null) => {
+    setSignatureModalState(prev => ({ ...prev, signature: sig }));
+  };
   
   // Declaration modal
   const [showDeclarationModal, setShowDeclarationModal] = useState(false);
