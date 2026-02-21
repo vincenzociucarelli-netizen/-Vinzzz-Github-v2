@@ -147,10 +147,11 @@ export default function PrimeSquadrePage() {
 
   const loadAllAthletes = async () => {
     try {
-      // Load both athletes and coaches
-      const [athletesRes, coachesRes] = await Promise.all([
+      // Load athletes, coaches, and dirigenti
+      const [athletesRes, coachesRes, dirigentiRes] = await Promise.all([
         api.get('/athletes'),
         api.get('/users/coaches'),
+        api.get('/users/dirigenti').catch(() => ({ data: [] })), // Handle if endpoint doesn't exist
       ]);
       
       // Filter out athletes already in Prime Squadre
@@ -177,10 +178,27 @@ export default function PrimeSquadrePage() {
           fees_waived: c.fees_waived || false,
         }));
       
-      // Combine both lists
-      setAllAthletes([...availableAthletes, ...availableCoaches]);
+      // Dirigenti - add type and format for display, including existing contract data
+      const availableDirigenti = (dirigentiRes.data || [])
+        .filter((d: any) => !primeSquadreIds.includes(d.id))
+        .map((d: any) => ({
+          id: d.id,
+          first_name: d.first_name || d.full_name?.split(' ')[0] || '',
+          last_name: d.last_name || d.full_name?.split(' ').slice(1).join(' ') || '',
+          team_name: d.qualification || 'Dirigente',
+          type: 'dirigente' as const,
+          // Include existing contract data
+          monthly_compensation: d.monthly_compensation || 0,
+          other_annual_compensation: d.other_annual_compensation || 0,
+          contract_start_date: d.contract_start_date || '',
+          contract_end_date: d.contract_end_date || '',
+          fees_waived: d.fees_waived || false,
+        }));
+      
+      // Combine all lists
+      setAllAthletes([...availableAthletes, ...availableCoaches, ...availableDirigenti]);
     } catch (error) {
-      console.error('Error loading athletes and coaches:', error);
+      console.error('Error loading athletes, coaches, and dirigenti:', error);
     }
   };
 
