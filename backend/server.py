@@ -9312,9 +9312,18 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
     athletes = await db.athletes.find({"is_compensated": True}).to_list(100)
     clean_mongo_docs(athletes)
     
+    # Get all teams for lookup
+    teams = await db.teams.find({}).to_list(100)
+    teams_dict = {t["id"]: t["name"] for t in teams}
+    
     # Get their compensation records for the current year
     current_year = datetime.utcnow().year
     for athlete in athletes:
+        # Add team name
+        team_id = athlete.get("team_id")
+        if team_id:
+            athlete["team_name"] = teams_dict.get(team_id, "")
+        
         records = await db.atleta_pro_compensations.find({
             "atleta_id": athlete["id"],
             "year": current_year
