@@ -1521,6 +1521,53 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
+  // Gender buttons styles
+  genderButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  genderBtn: {
+    width: 48,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#F9F9F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  genderBtnActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  genderBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#666',
+  },
+  genderBtnTextActive: {
+    color: '#fff',
+  },
+  cfCalculateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  calculateCfBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#34C759',
+    paddingHorizontal: 12,
+    height: 40,
+    borderRadius: 8,
+    gap: 6,
+  },
+  calculateCfBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   // Document images styles for view mode
   docImagesContainer: {
     flexDirection: 'row',
