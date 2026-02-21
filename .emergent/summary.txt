@@ -1,164 +1,178 @@
-<analysis>**original_problem_statement**: The initial goal was to replicate the coach compensation module for a Director () role. This expanded to include UI fixes, PDF corrections, and designing a Prime Squadre (First Teams) premium module. The scope further evolved to address critical authentication bugs, implement the Prime Squadre functionality, and refactor the core athlete registration process. The current major feature being built is a configurable tool for sports clubs to import their game schedules by scraping federation websites.
+<analysis>**original_problem_statement**: The initial goal was to replicate the coach compensation module for a Director () role. This expanded to include UI fixes, PDF corrections, and designing a Prime Squadre (First Teams) premium module. The scope further evolved to address critical authentication bugs, implement the Prime Squadre functionality, and refactor the core athlete registration process.
 
-The most recent user requests involved a series of UI/UX bug fixes and two new features:
-1.  A function for an admin to delete an athlete profile with a confirmation step.
-2.  Automatic calculation of the Codice Fiscale (Italian tax code) for athletes, coaches, and directors, based on their personal data.
+The most recent user requests involved a series of rapid UI/UX bug fixes and new features, including:
+1.  Fixing a critical receipt signing bug.
+2.  Implementing automatic Codice Fiscale calculation.
+3.  Extensive UI enhancements on the Prime Squadre page, including adding coaches, improving search, and changing date/currency field behavior.
+4.  Numerous icon and image updates across the admin dashboard and reports to use society-specific branding.
+5.  Fixing navigation links and adding context (like team names) to lists.
+6.  Displaying the user's profile picture on the dashboard.
+7.  Correcting static text labels.
 
-Following the implementation of these features, the user reported a critical bug where the receipt signing functionality for PRO athletes was completely broken. A lengthy and complex debugging session ensued to resolve this.
+The user's final requests were to implement a password reset function for admins and to fix a broken search filter.
 
 **PRODUCT REQUIREMENTS**:
 1.  **Compensation Module (Directors)**: COMPLETED
 2.  **PDF & QR Scanner Fixes**: COMPLETED
-3.  **Prime Squadre Module**: COMPLETED
-4.  **Team Management Enhancements**: COMPLETED
+3.  **Prime Squadre Module**: IN PROGRESS (Extensive changes and new features added).
+4.  **Team Management Enhancements**: IN PROGRESS (UI changes ongoing).
 5.  **Athlete Registration Refactor**: COMPLETED
-6.  **Paid Athlete Compensation Module (Overhaul)**: COMPLETED, but recently had major bugs.
+6.  **Paid Athlete Compensation Module (Overhaul)**: COMPLETED (Major bugs fixed in this session).
 7.  **Federation Game Importer**: COMPLETED
-8.  **Monthly Report**: COMPLETED
+8.  **Monthly Report**: IN PROGRESS (UI updated).
 9.  **Club Sport Image**: COMPLETED
 10. **UI/UX Bug Fixes and Enhancements**: IN PROGRESS
 11. **Simplify Adult Athlete Registration**: COMPLETED
 12. **Remove QR Codes from Athlete List**: COMPLETED
-13. **Delete Athlete Functionality**: IN PROGRESS
-14. **Automatic Codice Fiscale Calculation**: IN PROGRESS
+13. **Delete Athlete Functionality**: TESTING PENDING
+14. **Automatic Codice Fiscale Calculation**: COMPLETED (Backend model fix implemented).
+15. **Admin Reset Athlete Password**: NOT STARTED
+16. **Prime Squadre Search Filter Fix**: NOT STARTED
 
 **User's preferred language**: italiano
 
 **what currently exists?**
 - A full-stack React/FastAPI/MongoDB application for sports club management.
-- The agent has just completed an extensive and difficult debugging session on the paid athlete receipt signing module.
-- Key features like Delete Athlete and Codice Fiscale Calculation have been implemented but require verification.
-- A critical bug preventing an athlete from logging in was fixed by correcting their user role and linkage in the database.
-- A series of cascading bugs in the  page were addressed, including issues with state management causing page reloads, incorrect API endpoints, and faulty date formatting.
-- The agent has just implemented a fix for the latest critical bug: signed receipts were disappearing upon page reload due to a mismatch in property names between the frontend () and backend (). This fix is pending verification.
+- The agent successfully debugged and fixed two critical, interconnected bugs in the athlete compensation module:
+    1.  **Disappearing Receipts**: Corrected a frontend/backend data mismatch by changing  to .
+    2.  **Month Mismatch**: Fixed the backend to save the month as a number instead of a string and made the frontend robust enough to handle both legacy (string) and new (number) formats.
+- The agent fixed the bug preventing the  field from being saved by updating the Pydantic models in . This change was tested via .
+- A large number of user-requested UI/UX changes were implemented across multiple pages, including the Prime Squadre list, admin dashboard, reports, and team pages.
+- The Prime Squadre functionality was expanded to include both athletes and coaches.
+- The application environment is highly unstable, with the frontend (Expo) frequently failing due to  watcher limits and Ngrok tunnel timeouts. The agent spent significant time restarting services.
 
 **Last working item**:
-- Last item agent was working: Fixing a critical bug where signed receipts were correctly saved in the database but did not appear as signed on the frontend after a page reload. The agent corrected the frontend code to use the correct property name () returned by the backend API.
-    - **File modified**: 
-- Status: IN PROGRESS
+- Last item agent was working: The user made two final requests: (A) Allow an admin to reset passwords for all athletes, and (B) The search filter on the Prime Squadre page is not working. The agent acknowledged these but had not yet started implementation before the user reported a credit consumption issue.
+- Status: NOT STARTED
 - Agent Testing Done: N
-- Which testing method agent to use? both. The frontend needs to be tested to confirm the UI now correctly reflects the signed status after a page reload. The backend is likely fine, but an end-to-end test is crucial. The test should involve logging in as an athlete, signing a receipt, reloading the page, and verifying the signed status persists.
+- Which testing method agent to use? both. The password reset requires backend changes and UI implementation. The search filter is a frontend bug.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1**: (P0) Signed receipts appear as unsigned after a page reload.
-- **Issue 2**: (P0) The signature modal on the athlete compensation page requires two clicks to open.
-- **Issue 3**: (P1) The new  field for Codice Fiscale calculation is not saved to the database.
+- **Issue 1**: (P0) The search filter in the Aggiungi atleta/collaboratore a prima squadra modal does not work correctly.
+- **Issue 2**: (P1) The signature modal on the athlete compensation page requires two clicks to open.
+- **Issue 3**: (P1) The  library fails to load correctly on the web version of the app, causing some icons to be invisible.
 - **Issue 4**: (P1) Verify the Delete Athlete functionality.
-- **Issue 5**: (P1) The icon library () fails to load correctly on the web version of the app.
-- **Issue 6**: (P2) On the parent dashboard, paid installments that are past their due date are still shown in red.
-- **Issue 7**: (P2) Login for users with the  role is not working.
+- **Issue 5**: (P2) On the parent dashboard, paid installments that are past their due date are still shown in red.
+- **Issue 6**: (P2) Login for users with the  role is not working.
 
 **Issues Detail**:
-- **Issue 1: Signed receipts appear as unsigned after a page reload**
-    - **Description**: After an athlete signs a receipt, it correctly shows as signed. However, if the page is reloaded, the receipt status reverts to unsigned in the UI, even though it is correctly marked as signed in the database.
-    - **Attempted fixes**: The agent identified that the frontend was checking for a property named , while the backend API was returning a property named . The agent changed the frontend code in  to use .
+- **Issue 1: Prime Squadre search filter not working**
+    - **Description**: The user reported that the search filter on the Prime Squadre page is not functioning as expected after the recent changes to include coaches.
+    - **Attempted fixes**: The agent had previously modified this filter to include searching by team name. The last changes involved adding coaches to the searchable list. The logic in  likely has a bug.
     - **Next debug checklist**:
-        1.  Log in as a paid athlete ().
-        2.  Navigate to the compensation page.
-        3.  Sign a receipt for any available month.
-        4.  Confirm the UI shows the receipt as Firmata (Signed).
-        5.  Reload the browser page.
-        6.  Confirm the UI still shows the receipt as Firmata.
-    - **Why fix this issue and what will be achieved with the fix?**: This is a critical bug that breaks the core functionality of the compensation module and makes it unusable.
-    - **Status**: IN PROGRESS
-    - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: Both
-
-- **Issue 2: The signature modal on the athlete compensation page requires two clicks to open**
-    - **Description**: When the user clicks on a month to sign a receipt for the first time, the page re-renders incorrectly (sometimes changing the displayed year). A second click is required to successfully open the signature modal.
-    - **Attempted fixes**: The agent tried multiple solutions, including adding loading state checks and refactoring the data loading logic in . The root cause seems to be a state reset during a re-render caused by the initial click.
-    - **Next debug checklist**:
-        1.  Investigate the  and state update logic in .
-        2.  Determine what state change on the first click is causing the component to re-render and lose context.
-        3.  Refactor the click handler or state management to prevent the unnecessary re-render.
-    - **Why fix this issue and what will be achieved with the fix?**: Improves user experience and removes a confusing UI interaction.
-    - **Status**: IN PROGRESS
+        1.  Open the Aggiungi atleta/collaboratore modal on the Prime Squadre page.
+        2.  Attempt to search for an athlete or coach by name or team.
+        3.  Observe that the list does not filter.
+        4.  Inspect the  logic in .
+        5.  Check the browser console and backend logs for errors during the search.
+    - **Why fix this issue and what will be achieved with the fix?**: This is a core usability feature for managing the Prime Squadre list.
+    - **Status**: NOT STARTED
     - **Is recurring issue?**: N
     - **Should Test frontend/backend/both after fix?**: Frontend
 
-- **Issue 3: The new  field for Codice Fiscale calculation is not saved to the database**
-    - **Description**: The agent added a Gender (Sesso) field to the profile pages for athletes, coaches, and directors. The frontend sends this field in the save/update payload, but the backend Pydantic models (, , ) were not updated to accept this new field. The backend will reject the update request.
-    - **Attempted fixes**: None. This is a newly identified issue.
+- **Issue 2: The signature modal on the athlete compensation page requires two clicks to open**
+    - **Description**: Inherited from the previous session. When the user clicks on a month to sign a receipt, the page re-renders incorrectly, requiring a second click to open the modal.
+    - **Attempted fixes**: None in this session.
     - **Next debug checklist**:
-        1.  Open .
-        2.  Locate the Pydantic models used for updating user, coach, and director profiles (e.g.,  or similar).
-        3.  Add  to these models to allow the field to be saved.
-        4.  Test by updating the gender on a profile and verifying the change persists in the database.
-    - **Why fix this issue and what will be achieved with the fix?**: The Codice Fiscale calculation feature depends on the gender field. Without this fix, the feature is incomplete.
+        1.  Investigate state management in .
+        2.  Identify the state change on the first click that causes the re-render.
+    - **Why fix this issue and what will be achieved with the fix?**: Improves user experience.
     - **Status**: NOT STARTED
-    - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: Both
+    - **Is recurring issue?**: Y
+    - **Should Test frontend/backend/both after fix?**: Frontend
+
+- **Issue 3:  not rendering**
+    - **Description**: Inherited recurring issue. Some icons (e.g., for coach) do not appear.
+    - **Attempted fixes**: The agent changed the icon from  to  as a workaround, confirming the issue is with specific icons not rendering.
+    - **Status**: NOT STARTED
+    - **Is recurring issue?**: Y
+    - **Should Test frontend/backend/both after fix?**: Frontend
 
 - **Issue 4: Verify the Delete Athlete functionality**
-    - **Description**: An admin should be able to delete an athlete from their detail page, with a confirmation modal appearing before the action is executed.
-    - **Attempted fixes**: The agent implemented the frontend button, confirmation modal, and the  function in  to call the existing  endpoint.
-    - **Next debug checklist**:
-        1.  Log in as admin.
-        2.  Navigate to an athlete's detail page.
-        3.  Click the Delete Athlete button.
-        4.  Verify the confirmation modal appears.
-        5.  Confirm the deletion.
-        6.  Verify the user is redirected (e.g., to the athlete list) and the athlete is no longer present.
-    - **Why fix this issue and what will be achieved with the fix?**: Completes a user-requested feature for data management.
+    - **Description**: Inherited task. Admin should be able to delete an athlete profile.
     - **Status**: TESTING PENDING
     - **Is recurring issue?**: N
     - **Should Test frontend/backend/both after fix?**: Both
 
-- **Issues 5, 6, 7**: Same as in previous handoff summary, no progress made.
+- **Issues 5 & 6**: Inherited from previous sessions, no progress made.
 
 **In progress Task List**:
-N/A. All current work is classified under issues.
+- **Task 1**: (P0) Implement Reset Password for athletes by Admin.
+    - **Where to resume**:
+        1.  Create a new backend endpoint (e.g., ) in .
+        2.  Add a Reset Password button to the admin athlete detail page ().
+        3.  Implement a confirmation modal for the action.
+    - **What will be achieved with this?**: Fulfills a direct user feature request for administrative control.
+    - **Status**: NOT STARTED
+    - **Should Test frontend/backend/both after fix?**: Both
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - **(P2)** Implement Season Renewal feature: Add a workflow to easily re-enroll athletes for a new season.
+    - **(P2)** Implement Season Renewal feature.
 - **Future Tasks**:
-    - **(P3)** Refactor : Break the monolithic  into a modular structure.
-    - **(P3)** Refactor frontend code: Consolidate duplicated code between coach and athlete modules.
+    - **(P3)** Refactor  into a modular structure.
+    - **(P3)** Refactor frontend code (consolidate coach/athlete modules).
     - **(P3)** Implement Stripe Integration for premium plans.
     - **(P3)** Implement Freemium Logic with upgrade prompts.
 
 **Completed work in this session**
-- **UI/UX Fixes**:
-  - Removed QR code icons from the athlete list as requested.
-  - Removed hardcoded Intestatario text from the admin's compensation view.
-  - Fixed multiple date formatting issues across the compensation module.
-- **Feature Implementation**:
-  - Implemented a Delete Athlete function with a confirmation modal for admins.
-  - Implemented an automatic Codice Fiscale (tax code) calculation feature. This included a new backend endpoint () and adding the necessary UI fields (Gender, Place of Birth) and logic to the athlete, coach, and director profile pages.
-- **Critical Bug Fixes (Athlete Compensation Module)**:
-  - **Account Linking**: Resolved the root cause of the module not working by correcting the user account for Belli Valentina, changing her role from  to  and linking it to her athlete profile.
-  - **Signature Modal**: After a long debug, fixed a series of bugs that prevented the signature modal from opening and working correctly. This involved replacing the entire component's code with a working version from the coach module and then fixing subtle state management issues that were causing page reloads.
+- **Critical Bug Fixes**:
+    - **Athlete Compensation**: Fixed a critical bug where signed receipts appeared unsigned on page reload by correcting the data model mismatch ( vs ) in .
+    - **Month Data Type**: Fixed the backend to save  as an integer and updated the frontend to correctly handle both string (legacy) and integer month values.
+    - **Gender Field**: Fixed a bug where the  field was not being saved by adding it to the  and  Pydantic models in .
+
+- **Feature Enhancements**:
+    - **Prime Squadre Management**:
+        - Added **Coaches** to the Prime Squadre list, allowing them to be added and managed alongside athletes.
+        - Added the **Team Name** as a visible badge for each person in the list.
+        - Enhanced the search modal to allow searching by **team name**.
+        - Corrected navigation links to point to the correct admin compensation page.
+    - **Athlete Compensation Acceptance**:
+        - Implemented the full flow for athletes to accept their proposed compensation, including backend model updates and a UI banner on the athlete's compensation page.
+    - **Automatic Date Formatting**: Implemented auto-insertion of slashes () in date fields.
+
+- **UI/UX Improvements**:
+    - **Dynamic Icons/Images**:
+        - Replaced generic loading image on the teams page with the society's .
+        - Updated the admin dashboard to use the society's  for the Athletes card and the society's  for the Society card.
+        - Updated the monthly report to use the same icons as the admin dashboard.
+        - Added the society's  to the PRO athlete detail page.
+    - **Profile Picture**: Implemented logic to display the logged-in user's  on the admin dashboard.
+    - **Report Icons**: Increased size and changed colors of icons on the monthly report page for better visibility.
+    - **Form Inputs**: Removed default '0' from currency fields and added / behavior. Changed date fields to use a placeholder.
+    - **Text Correction**: Changed Rifinitura to Rifinitura pre-gara in both frontend and backend.
+    - **Information Section**: Added the informational text about tax thresholds to the admin-facing athlete compensation page for consistency.
 
 **Earlier issues found/mentioned but not fixed**
-- The  rendering issue on the web remains unresolved.
+- The  rendering issue on the web remains unresolved, with workarounds being used instead of a root cause fix.
 
 **Known issue recurrence from previous fork**
 - **Issue recurrence in previous fork**:
     -  role login failure.
     -  library failing to render on the web.
-- **Recurrence count**: 8+
-- **Status**: The parent login issue is . The icon issue is .
+- **Recurrence count**: 9+
+- **Status**: The parent login issue is . The icon issue has been worked around but not fixed.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Deep Frontend Debugging**: The session involved extensive debugging of a React Native/Expo component, revealing issues with state management, component lifecycle (), and the reliability of third-party components (, ) on web vs. mobile.
-- **State Management Brittleness**: The double click bug and page reloads highlight fragile state management where API calls or user interactions inadvertently reset the component's state, leading to unexpected UI behavior.
-- **Backend/Frontend Model Mismatch**: The disappearing signed receipts bug was a classic case of the frontend expecting a data field with one name () while the backend provided it with another (). This emphasizes the need for careful contract testing between services.
-- **Progressive Feature Implementation**: The Codice Fiscale feature was implemented by adding a new utility endpoint to the backend and then progressively adding the required UI and logic to multiple frontend components.
+- **Environment Instability**: The development process was severely hampered by frontend environment issues, including Expo  file watcher limits and Ngrok tunnel timeouts, requiring frequent service restarts.
+- **State Synchronization**: Addressed multiple issues where frontend state was out of sync with the backend (e.g.,  vs. , user  not updating post-login).
+- **Backend Model & Endpoint Evolution**: Iteratively updated Pydantic models and FastAPI endpoints to support new frontend requirements (e.g., saving , adding coaches to Prime Squadre).
+- **Robust Frontend Logic**: Implemented backward-compatible logic in the frontend to handle both old (string) and new (number) data formats for the  field, preventing crashes on legacy data.
 
 **key DB schema**
-- **users, athletes, coaches, directors**: These collections now implicitly require a  field to support Codice Fiscale calculation, but the backend models for updates have not been modified yet, which will cause errors.
+- **users**:  field is now actively used and saved.  is now returned on login and refresh.
+- **prime_squadre_athletes**: This collection now implicitly stores both athletes and coaches, identified by a  field ( or ). The schema now includes .
 
 **All files of reference**
 - **Primary files to work on**:
-    -  (for the disappearing receipt and double click bugs)
-    -  (to add the  field to update models)
-    -  (to test deletion)
-- **Other modified files**:
+    -  (for the search filter bug)
+    -  (for the password reset UI)
+    -  (for the password reset endpoint)
+- **Other heavily modified files**:
     - 
     - 
     - 
@@ -166,36 +180,41 @@ N/A. All current work is classified under issues.
     - 
 
 **Areas that need refactoring**:
-- ****: Although it was heavily patched to work, the state management is clearly fragile and would benefit from a more robust solution (e.g., a dedicated state machine or a library like Zustand/Jotai) to handle loading, data, and modal states without causing unintentional re-renders.
-- ****: Remains monolithic.
-- **Frontend Module Duplication**: Redundancy between coach, director, and athlete profiles persists.
+- **Environment Stability**: This is not code refactoring, but the most critical blocker. The  watcher limit needs a platform-level solution.
+- ****: This file has grown very complex with mixed logic for adding/editing/displaying both athletes and coaches. It could be broken down into smaller components.
+- ****: The file is now over 10,000 lines long and urgently needs to be broken into a proper file structure (e.g., routers, models, services).
 
 **Critical Info for New Agent**
 - **You MUST continue the conversation in Italiano.**
-- **Highest Priority (P0)**: Your first task is to verify the fix for the disappearing signed receipts. The previous agent changed  to . You must test this end-to-end to confirm it works.
-- **Second Priority (P0)**: Address the double click issue on the signature modal. The page re-rendering on the first click is the likely culprit.
-- **Third Priority (P1)**: Fix the bug with saving the  field for the Codice Fiscale feature. This requires adding the  field to the Pydantic update models in .
+- **BEWARE OF ENVIRONMENT INSTABILITY**: The frontend server is very fragile. If you get a 520 error, do not assume your code is wrong. The first step should always be to restart the services (frontend: ERROR (no such process)
+backend: ERROR (not running)
+frontend: ERROR (no such process)
+backend: started). This was a major time sink in the last session.
+- **Top Priorities**: Address the user's last two requests: (1) Fix the broken search filter in Prime Squadre and (2) Implement the password reset functionality for admins.
+- The user has raised a concern about credit consumption. Be mindful of this and direct any further billing questions to the support agent.
 
 **documents and test reports created in this job**
--  (updated multiple times)
+-  (updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-- 10. User reports clicking a month to sign a receipt causes a weird page change, showing the wrong year, and requires a second click.
-- 9. Agent investigates, realizes state is being lost on re-render, and refactors data loading.
-- 8. User reports the page now shows correct data but date formats are wrong.
-- 7. Agent fixes the date formatting.
-- 6. User reports the modal doesn't close after signing.
-- 5. Agent fixes the modal closing logic and a wrong API endpoint.
-- 4. User confirms signing works and emails are sent, but the first click does nothing bug remains.
-- 3. **User reports a new, critical bug: a signed receipt (September) becomes unsigned after the page is re-opened.**
-- 2. Agent investigates, confirms the data is correct in the database, and identifies the issue as a frontend display bug (looking for  instead of ).
-- 1. Agent applies the fix to use  in the frontend. **This fix is untested.**
+- 10. User asks to add coaches to the Prime Squadre selection modal and remove the default '0' from input fields.
+- 9. User reports consuming 660 credits in less than a day and asks for a check.
+- 8. Agent directs user to support for billing issues and gets confirmation to continue coding.
+- 7. User reports a 520 error page.
+- 6. User reports the selection of athletes/coaches in Prime Squadre is not working.
+- 5. User reminds the agent about two previously requested tasks: replacing a generic image with the society's sport image and showing the director's profile picture.
+- 4. User asks to correct the text Rifinitura to Rifinitura pre-gara interna.
+- 3. User reports a 520 error page.
+- 2. User reports an error when trying to add a coach (Lia Rossi) to Prime Squadre.
+- 1. User provides the final two tasks for the session: (A) Allow Admin to reset passwords for all athletes, and (B) The search filter on the Prime Squadre page is broken.
 
 **Project Health Check:**
 - **Broken**:
-    - **Athlete Receipt Signing**: The core functionality is highly unstable. While the latest bug (disappearing receipts) might be fixed, the double click issue persists, indicating underlying state management problems.
-    - **Profile Updates**: Saving profiles for athletes/coaches/directors will fail if the new  field is used.
-    - **Web Icons**:  rendering is still broken.
+    - **Frontend Environment**: The Expo dev server is highly unstable due to  watcher limits, causing frequent 520 errors and requiring manual restarts.
+    - **Prime Squadre Search**: The search/filter functionality is confirmed broken by the user.
+    - **Parent Login**: Known unresolved issue.
+    - **Web Icons**: The  rendering issue persists.
+
 - **Mocked**:
     - Freemium model logic and Stripe integration.
 
@@ -203,19 +222,20 @@ N/A. All current work is classified under issues.
 - **httpx, beautifulsoup4**: Used for web scraping.
 - **reportlab**: Used for PDF generation.
 - **react-signature-canvas**: Used for the signature pad.
-- **python-codicefiscale**: NEW. Used for calculating Italian tax codes.
+- **python-codicefiscale**: Used for calculating Italian tax codes.
 
 **Testing status**
-- Testing agent used after significant changes: YES. The testing agent was used to verify the initial batch of UI fixes and found two backend bugs. However, it was not used for the subsequent, more complex features and bug fixes.
+- Testing agent used after significant changes: NO
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: None.
-- Known regressions: The  issue persists.
+- Known regressions: The search filter in Prime Squadre is a new regression. The  issue persists.
 
 **Credentials to test flow:**
 - **Admin**:  / 
 - **Parent**:  / 
 - **Paid Athlete**:  / 
-- **Paid Athlete (Belli Valentina)**:  /  (Password was likely reset or is known by the user).
+- **Paid Athlete (Belli Valentina)**:  / 
 
 **What agent forgot to execute**
-- The agent added the  field to the frontend forms and save logic for Codice Fiscale calculation but **forgot to update the corresponding Pydantic models in **. This will cause any profile update containing the gender to fail with a validation error.</analysis>
+- The agent was reminded by the user to implement two features requested earlier in the session (replacing a generic image and showing the profile picture). The agent had marked them as done or moved on without full implementation.
+- The agent did not start the final two tasks requested by the user: fixing the search filter and implementing password reset.</analysis>
