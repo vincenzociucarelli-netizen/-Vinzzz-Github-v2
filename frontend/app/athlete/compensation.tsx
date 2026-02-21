@@ -218,10 +218,11 @@ export default function AthleteCompensation() {
     const newTotal = yearTotalBeforeThis + monthlyAmount;
     
     // Check if THIS month will be the first to exceed thresholds
-    const willExceed5k = newTotal > 5000 && yearTotalBeforeThis <= 5000;
-    const willExceed15k = newTotal > 15000 && yearTotalBeforeThis <= 15000;
+    // NOTE: Thresholds only apply if athlete is in Prime Squadre (thresholdStatus exists)
+    const willExceed5k = thresholdStatus && newTotal > 5000 && yearTotalBeforeThis <= 5000;
+    const willExceed15k = thresholdStatus && newTotal > 15000 && yearTotalBeforeThis <= 15000;
     
-    console.log('Threshold check for modal:', { yearTotalBeforeThis, monthlyAmount, newTotal, willExceed5k, willExceed15k });
+    console.log('Threshold check for modal:', { yearTotalBeforeThis, monthlyAmount, newTotal, willExceed5k, willExceed15k, hasPrimeSquadre: !!thresholdStatus });
     
     // Check if blocked by threshold (already exceeded but not declared)
     if (thresholdStatus?.is_blocked) {
