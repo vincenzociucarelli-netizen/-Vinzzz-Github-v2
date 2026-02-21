@@ -344,7 +344,12 @@ export default function PrimeSquadrePage() {
           </View>
         ) : (
           athletes.map(athlete => (
-            <View key={athlete.id} style={styles.athleteCard}>
+            <TouchableOpacity 
+              key={athlete.id} 
+              style={styles.athleteCard}
+              onPress={() => router.push(`/admin/prime-squadre/${athlete.id}`)}
+              activeOpacity={0.7}
+            >
               <View style={styles.athleteInfo}>
                 <Text style={styles.athleteName}>
                   {athlete.last_name} {athlete.first_name}
@@ -380,24 +385,24 @@ export default function PrimeSquadrePage() {
               <View style={styles.athleteActions}>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => openEditConfig(athlete)}
+                  onPress={(e) => { e.stopPropagation(); openEditConfig(athlete); }}
                 >
                   <Text style={styles.actionButtonText}>⚙️</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => router.push(`/admin/prime-squadre/${athlete.id}`)}
+                  onPress={(e) => { e.stopPropagation(); router.push(`/admin/prime-squadre/${athlete.id}`); }}
                 >
                   <Text style={styles.actionButtonText}>📋</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionButton, { backgroundColor: '#FFEBEE' }]}
-                  onPress={() => handleRemoveAthlete(athlete)}
+                  onPress={(e) => { e.stopPropagation(); handleRemoveAthlete(athlete); }}
                 >
                   <Text style={styles.actionButtonText}>❌</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
           ))
         )}
       </ScrollView>
