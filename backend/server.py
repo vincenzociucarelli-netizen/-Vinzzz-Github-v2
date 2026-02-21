@@ -10072,9 +10072,9 @@ async def calcola_codice_fiscale(data: CalcolaCodiceFiscaleRequest):
             birthplace=data.luogo_nascita
         )
         
-        if result and 'code' in result:
+        if result:
             return {
-                "codice_fiscale": result['code'],
+                "codice_fiscale": result,
                 "success": True
             }
         else:
