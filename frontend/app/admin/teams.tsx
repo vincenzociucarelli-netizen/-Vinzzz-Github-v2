@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
@@ -25,6 +26,7 @@ export default function TeamsScreen() {
   const [athletesCounts, setAthletesCounts] = useState<{[key: string]: number}>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sportImage, setSportImage] = useState<string | null>(null);
   
   // Form fields
   const [name, setName] = useState('');
