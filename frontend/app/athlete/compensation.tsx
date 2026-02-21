@@ -86,8 +86,8 @@ export default function CoachCompensation() {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   
-  // Athlete ID from user
-  const athleteId = user?.athlete_id;
+  // Athlete ID - get from user store or will be loaded from /auth/me
+  const [athleteId, setAthleteId] = useState<string | null>(user?.athlete_id || null);
   
   // Contract dates
   const [contractStartYear, setContractStartYear] = useState<number | null>(null);
