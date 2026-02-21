@@ -893,7 +893,13 @@ export default function CoachCompensation() {
           </>
         )}
         
-        {/* Fallback: Old 12 months if no contract dates */}
+        {/* Debug: Show if contract dates are missing */}
+        {(!contractStartYear || !contractEndYear) && loading === false && (
+          <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+            <Text style={{ color: '#856404' }}>⚠️ Date contratto mancanti</Text>
+            <Text style={{ color: '#856404', fontSize: 12 }}>Start: {contractStartYear || 'null'}, End: {contractEndYear || 'null'}</Text>
+          </View>
+        )}
         {(!contractStartYear || !contractEndYear) && (
           <>
             <Text style={styles.sectionTitle}>Quietanze Mensili</Text>
