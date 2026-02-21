@@ -1914,6 +1914,14 @@ async def get_coaches(current_user = Depends(get_current_user)):
     
     result = []
     for c in coaches:
+        # Handle contract dates - they may be datetime objects or strings
+        contract_start = c.get("contract_start_date")
+        contract_end = c.get("contract_end_date")
+        if contract_start and hasattr(contract_start, 'strftime'):
+            contract_start = contract_start.strftime("%Y-%m-%d")
+        if contract_end and hasattr(contract_end, 'strftime'):
+            contract_end = contract_end.strftime("%Y-%m-%d")
+            
         result.append({
             "id": c["id"],
             "email": c["email"],
@@ -1925,6 +1933,9 @@ async def get_coaches(current_user = Depends(get_current_user)):
             "approved_at": c.get("approved_at"),
             "monthly_compensation": c.get("monthly_compensation", 0),
             "other_annual_compensation": c.get("other_annual_compensation", 0),
+            "contract_start_date": contract_start,
+            "contract_end_date": contract_end,
+            "fees_waived": c.get("fees_waived", False),
             "profile_photo": c.get("profile_photo"),
             "profile_photo_artistic": c.get("profile_photo_artistic"),
         })
