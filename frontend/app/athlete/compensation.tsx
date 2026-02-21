@@ -470,7 +470,7 @@ export default function CoachCompensation() {
     
     // Calculate signed total for this year
     const signedTotal = records
-      .filter(r => r.year === year && r.receipt_signed)
+      .filter(r => r.year === year && r.signed)
       .reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
     
     return {
