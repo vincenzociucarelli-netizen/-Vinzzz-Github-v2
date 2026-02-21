@@ -9299,7 +9299,7 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
 
 @api_router.get("/prime-squadre/athletes")
 async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
-    """Get list of athletes with compensation enabled (Prime Squadre members)"""
+    """Get list of athletes and coaches with compensation enabled (Prime Squadre members)"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può accedere a Prime Squadre")
     
@@ -9312,13 +9312,20 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
     athletes = await db.athletes.find({"is_compensated": True}).to_list(100)
     clean_mongo_docs(athletes)
     
+    # Get coaches with is_compensated = True
+    coaches = await db.users.find({"role": "coach", "is_compensated": True}).to_list(50)
+    clean_mongo_docs(coaches)
+    
     # Get all teams for lookup
     teams = await db.teams.find({}).to_list(100)
     teams_dict = {t["id"]: t["name"] for t in teams}
     
     # Get their compensation records for the current year
     current_year = datetime.utcnow().year
+    
+    # Process athletes
     for athlete in athletes:
+        athlete["type"] = "athlete"
         # Add team name
         team_id = athlete.get("team_id")
         if team_id:
@@ -9338,7 +9345,18 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
             "monthly_amount": athlete.get("monthly_compensation", 0)
         }
     
-    return athletes
+    # Process coaches
+    for coach in coaches:
+        coach["type"] = "coach"
+        coach["team_name"] = "Coach"
+        coach["compensation_summary"] = {
+            "yearly_total": 0,
+            "months_received": 0,
+            "monthly_amount": coach.get("monthly_compensation", 0)
+        }
+    
+    # Combine and return
+    return athletes + coaches
 
 @api_router.post("/prime-squadre/athletes/{athlete_id}/enable")
 async def enable_athlete_compensation(athlete_id: str, current_user = Depends(get_current_user)):
