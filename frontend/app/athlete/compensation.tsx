@@ -221,9 +221,8 @@ export default function CoachCompensation() {
     
     try {
       setAcceptingCompensation(true);
-      await api.patch(`/prime-squadre/athletes/${athleteId}`, {
-        compensation_accepted: true
-      });
+      // Use dedicated endpoint for athletes to accept their own compensation
+      await api.post(`/athletes/${athleteId}/accept-compensation`);
       
       // Update local profile state
       setProfile(prev => prev ? { ...prev, compensation_accepted: true } : null);
