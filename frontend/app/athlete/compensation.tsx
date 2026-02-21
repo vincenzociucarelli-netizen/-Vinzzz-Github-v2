@@ -412,7 +412,7 @@ export default function CoachCompensation() {
     }
     
     const record = records.find(r => r.month === month && r.year === checkYear);
-    if (record?.receipt_signed) {
+    if (record?.signed) {
       return 'signed';
     }
     if (thresholdStatus?.is_blocked) {
