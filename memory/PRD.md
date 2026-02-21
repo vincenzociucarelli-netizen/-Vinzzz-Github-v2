@@ -96,18 +96,21 @@ Sistema di gestione completo per società sportive italiane (pallavolo, basket) 
    - Elenca tutti i dati che verranno eliminati (pagamenti, presenze, certificati)
    - Backend: utilizza endpoint DELETE `/athletes/{id}` esistente
 
-2. **Calcolo Automatico Codice Fiscale** ✅
+2. **Calcolo Automatico Codice Fiscale** ✅ (Implementato per TUTTI)
    - Nuova libreria: `python-codicefiscale==0.11.3`
    - Endpoint: `POST /api/utils/calcola-cf`
    - Input: nome, cognome, data_nascita (GG/MM/AAAA), luogo_nascita, sesso (M/F)
    - Output: codice fiscale calcolato o messaggio di errore
+   - **Implementato in**:
+     - ✅ Form registrazione atleta adulto (admin)
+     - ✅ Profilo atleta (atleta PRO)
+     - ✅ Profilo coach (allenatore)
+     - ✅ Profilo dirigente
 
-3. **Form Registrazione Atleta Adulto Aggiornato** ✅
-   - Nuovo campo: Sesso (M/F) con toggle buttons
-   - Nuovo campo: Data di Nascita (GG/MM/AAAA)
-   - Nuovo campo: Luogo di Nascita (comune)
-   - Pulsante "Calcola" per generare automaticamente il CF
-   - Campi CF ancora editabili manualmente
+3. **Campo Sesso (M/F)** ✅
+   - Aggiunto in tutti i profili: atleta, coach, dirigente
+   - Toggle buttons M/F con stile coerente
+   - Salvato nel database e utilizzato per calcolo CF
 
 4. **Rimozione Icone QR dalla Lista Atleti** ✅
    - Rimosse le piccole icone QR code prima del nome
@@ -118,3 +121,6 @@ Sistema di gestione completo per società sportive italiane (pallavolo, basket) 
 - `/app/backend/requirements.txt`: Aggiunto python-codicefiscale
 - `/app/frontend/app/admin/athletes.tsx`: Form CF aggiornato, rimosso QR icon, nuovi stili
 - `/app/frontend/app/admin/athlete/[id].tsx`: Pulsante elimina, modal conferma, funzione delete
+- `/app/frontend/app/athlete/profile.tsx`: Campo sesso, pulsante calcola CF, nuovi stili
+- `/app/frontend/app/coach/profile.tsx`: Campo sesso, pulsante calcola CF, nuovi stili
+- `/app/frontend/app/dirigente/profile.tsx`: Campo sesso, pulsante calcola CF, nuovi stili
