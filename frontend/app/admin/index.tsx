@@ -54,6 +54,7 @@ interface PendingCount {
 interface SocietySettings {
   name: string;
   logo: string | null;
+  sport_image: string | null;
 }
 
 interface Birthday {
