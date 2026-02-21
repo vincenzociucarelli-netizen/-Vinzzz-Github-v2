@@ -423,10 +423,14 @@ export default function PrimeSquadrePage() {
                 <Text style={styles.athleteName}>
                   {athlete.last_name} {athlete.first_name}
                 </Text>
-                {/* Badge: Coach (orange) or Team Name (blue) */}
+                {/* Badge: Coach (orange), Dirigente (green), or Team Name (blue for athletes) */}
                 {athlete.type === 'coach' ? (
                   <View style={[styles.typeBadgeInline, { backgroundColor: '#FF9800' }]}>
                     <Text style={styles.typeBadgeTextInline}>Coach</Text>
+                  </View>
+                ) : athlete.type === 'dirigente' ? (
+                  <View style={[styles.typeBadgeInline, { backgroundColor: '#4CAF50' }]}>
+                    <Text style={styles.typeBadgeTextInline}>{athlete.team_name || 'Dirigente'}</Text>
                   </View>
                 ) : athlete.team_name ? (
                   <View style={[styles.typeBadgeInline, { backgroundColor: '#2196F3' }]}>
