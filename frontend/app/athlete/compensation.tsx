@@ -974,55 +974,33 @@ export default function AthleteCompensation() {
 
               {/* Signature Pad */}
               <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
-              {Platform.OS === 'web' ? (
-                <View style={{ 
-                  borderWidth: 2, 
-                  borderColor: '#ccc', 
-                  borderRadius: 8, 
-                  height: 200, 
-                  backgroundColor: '#fff',
-                  marginBottom: 16 
-                }}>
-                  {showSignatureModal && SignatureCanvasWeb && (
-                    <SignatureCanvasWeb
-                      ref={signatureRef}
-                      canvasProps={{
-                        width: 350,
-                        height: 200,
-                        style: { 
-                          width: '100%', 
-                          height: '100%',
-                          borderRadius: 8
-                        }
-                      }}
-                      onEnd={() => {
-                        if (signatureRef.current && !signatureRef.current.isEmpty()) {
-                          const dataUrl = signatureRef.current.toDataURL('image/png');
-                          setSignature(dataUrl);
-                        }
-                      }}
-                    />
-                  )}
-                </View>
-              ) : (
-                <SignaturePadInline
-                  ref={signatureRef}
-                  onSave={(sig) => setSignature(sig)}
-                  onClear={() => setSignature(null)}
-                  height={200}
-                />
-              )}
+              <View style={{ 
+                borderWidth: 2, 
+                borderColor: '#ccc', 
+                borderRadius: 8, 
+                height: 200, 
+                backgroundColor: '#fff',
+                marginBottom: 16,
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <Text style={{ color: '#999' }}>Area firma (in caricamento...)</Text>
+              </View>
               
               <TouchableOpacity 
-                style={{ alignSelf: 'flex-end', marginBottom: 16 }}
+                style={{ 
+                  backgroundColor: '#007AFF', 
+                  padding: 12, 
+                  borderRadius: 8, 
+                  alignItems: 'center',
+                  marginBottom: 16 
+                }}
                 onPress={() => {
-                  if (signatureRef.current?.clear) {
-                    signatureRef.current.clear();
-                  }
-                  setSignature(null);
+                  // Test: set a dummy signature
+                  setSignature('data:image/png;base64,TEST');
                 }}
               >
-                <Text style={{ color: '#007AFF' }}>Cancella firma</Text>
+                <Text style={{ color: '#fff', fontWeight: '600' }}>Simula Firma (Test)</Text>
               </TouchableOpacity>
 
               {/* Confirm Buttons */}
