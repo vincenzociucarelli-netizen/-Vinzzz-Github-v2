@@ -189,8 +189,8 @@ export default function PrimeSquadrePage() {
     setConfigForm({
       monthly_compensation: '',
       other_annual_compensation: '',
-      contract_start_date: '01/09/2025',
-      contract_end_date: '31/05/2026',
+      contract_start_date: '',
+      contract_end_date: '',
       fees_waived: false,
     });
     setShowConfigModal(true);
