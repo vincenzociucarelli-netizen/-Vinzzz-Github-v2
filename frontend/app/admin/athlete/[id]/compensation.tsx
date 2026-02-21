@@ -1226,4 +1226,25 @@ const styles = StyleSheet.create({
   bankInputHalf: {
     flex: 1,
   },
+  // Info Section Styles (same as Coach/Dirigente)
+  infoSection: {
+    marginTop: 16,
+    marginBottom: 16,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#90CAF9',
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1565C0',
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 13,
+    color: '#333',
+    lineHeight: 22,
+  },
 });
