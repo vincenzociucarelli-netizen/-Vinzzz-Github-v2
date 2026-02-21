@@ -18,6 +18,13 @@ import io
 import qrcode
 from bson import ObjectId
 
+# Codice Fiscale calculation
+try:
+    from codicefiscale import codicefiscale
+    CF_AVAILABLE = True
+except ImportError:
+    CF_AVAILABLE = False
+
 # PDF generation imports
 try:
     from reportlab.lib.pagesizes import A4
