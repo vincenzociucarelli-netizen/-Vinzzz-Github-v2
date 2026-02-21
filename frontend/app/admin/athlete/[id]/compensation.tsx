@@ -138,10 +138,10 @@ export default function AthleteCompensation() {
       setAthlete(athleteData);
       setTeam(teamRes.data);
       
-      // Load compensation settings - convert dates to Italian format
-      setMonthlyCompensation(athleteData.monthly_compensation?.toString() || '0');
-      setOtherAnnualCompensation(athleteData.other_annual_compensation?.toString() || '0');
-      setPriorCompensation(athleteData.prior_compensation?.toString() || '0');
+      // Load compensation settings - convert dates to Italian format (empty instead of 0)
+      setMonthlyCompensation(athleteData.monthly_compensation ? athleteData.monthly_compensation.toString() : '');
+      setOtherAnnualCompensation(athleteData.other_annual_compensation ? athleteData.other_annual_compensation.toString() : '');
+      setPriorCompensation(athleteData.prior_compensation ? athleteData.prior_compensation.toString() : '');
       setContractStartDate(formatDateToItalian(athleteData.contract_start_date));
       setContractEndDate(formatDateToItalian(athleteData.contract_end_date));
       
