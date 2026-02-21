@@ -182,7 +182,7 @@ export default function CoachCompensation() {
         .reduce((sum: number, r: CompensationRecord) => sum + (r.amount_gross || r.amount || 0), 0);
       
       // Add prior compensation if this is the first year of the contract
-      const priorComp = profileRes.data.other_annual_compensation || 0;
+      const priorComp = athleteData.other_annual_compensation || 0;
       const total = (currentYear === startYear) ? totalFromReceipts + priorComp : totalFromReceipts;
       setYearlyTotal(total);
       
