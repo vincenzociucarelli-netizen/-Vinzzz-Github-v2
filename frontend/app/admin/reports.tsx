@@ -182,7 +182,7 @@ export default function ReportsPage() {
             <View style={styles.breakdownRow}>
               <View style={styles.breakdownItem}>
                 <View style={[styles.breakdownIcon, { backgroundColor: '#007AFF' }]}>
-                  <Ionicons name="person" size={16} color="#fff" />
+                  <Ionicons name="person" size={24} color="#fff" />
                 </View>
                 <Text style={styles.breakdownLabel}>Coach</Text>
                 <Text style={styles.breakdownCount}>{summary.breakdown.coach.count}</Text>
@@ -191,7 +191,7 @@ export default function ReportsPage() {
 
               <View style={styles.breakdownItem}>
                 <View style={[styles.breakdownIcon, { backgroundColor: '#5856D6' }]}>
-                  <Ionicons name="briefcase" size={16} color="#fff" />
+                  <Ionicons name="briefcase" size={24} color="#fff" />
                 </View>
                 <Text style={styles.breakdownLabel}>Dirigenti</Text>
                 <Text style={styles.breakdownCount}>{summary.breakdown.dirigente.count}</Text>
@@ -202,7 +202,7 @@ export default function ReportsPage() {
             <View style={styles.breakdownRow}>
               <View style={styles.breakdownItem}>
                 <View style={[styles.breakdownIcon, { backgroundColor: '#34C759' }]}>
-                  <Ionicons name="fitness" size={16} color="#fff" />
+                  <Ionicons name="fitness" size={24} color="#fff" />
                 </View>
                 <Text style={styles.breakdownLabel}>Atleti</Text>
                 <Text style={styles.breakdownCount}>{summary.breakdown.atleta.count}</Text>
@@ -211,7 +211,7 @@ export default function ReportsPage() {
 
               <View style={styles.breakdownItem}>
                 <View style={[styles.breakdownIcon, { backgroundColor: '#FF9500' }]}>
-                  <Ionicons name="trophy" size={16} color="#fff" />
+                  <Ionicons name="trophy" size={24} color="#fff" />
                 </View>
                 <Text style={styles.breakdownLabel}>Atleti PRO</Text>
                 <Text style={styles.breakdownCount}>{summary.breakdown.atleta_pro.count}</Text>
