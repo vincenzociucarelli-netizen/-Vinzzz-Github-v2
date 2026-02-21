@@ -278,8 +278,52 @@ export default function AthleteCompensation() {
       openDeclarationModalForMonth('5000', month, targetYear);
     } else {
       console.log('Opening signature modal');
-      setShowSignatureModal(true);
+      // Use alert for web to avoid modal issues
+      if (Platform.OS === 'web') {
+        const confirmed = window.confirm(
+          `Vuoi firmare la quietanza per ${MONTH_NAMES[month]} ${targetYear}?\n\n` +
+          `Compenso: € ${(profile?.monthly_compensation || 0).toFixed(2)}\n\n` +
+          `Clicca OK per confermare la firma.`
+        );
+        if (confirmed) {
+          // Direct sign without signature pad
+          setSignature('data:image/png;base64,FIRMA_WEB');
+          handleSignDirect(month, targetYear);
+        }
+      } else {
+        setShowSignatureModal(true);
+      }
       console.log('Signature modal state set to true');
+    }
+  };
+  
+  // Direct sign function for web
+  const handleSignDirect = async (month: number, year: number) => {
+    setSigning(true);
+    try {
+      const response = await api.post(`/athletes/${athleteId}/compensation/receipt-sign`, {
+        month,
+        year,
+        amount_gross: profile?.monthly_compensation || 0,
+        signature_base64: 'data:image/png;base64,FIRMA_WEB_DIRETTA'
+      });
+      
+      if (Platform.OS === 'web') {
+        window.alert('Quietanza firmata con successo!');
+      } else {
+        Alert.alert('Successo', 'Quietanza firmata con successo!');
+      }
+      
+      loadData(); // Reload to update status
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.detail || 'Errore durante la firma';
+      if (Platform.OS === 'web') {
+        window.alert('Errore: ' + errorMsg);
+      } else {
+        Alert.alert('Errore', errorMsg);
+      }
+    } finally {
+      setSigning(false);
     }
   };
 
