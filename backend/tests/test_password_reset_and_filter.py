@@ -75,31 +75,36 @@ class TestAdminResetAthletePassword:
     
     def test_reset_password_for_athlete_without_email(self, auth_headers):
         """Test reset password returns error when athlete has no email"""
-        # First, get all athletes and find one without email
-        response = requests.get(f"{BASE_URL}/api/athletes", headers=auth_headers)
-        assert response.status_code == 200
+        # First create a test athlete WITHOUT email
+        create_response = requests.post(
+            f"{BASE_URL}/api/athletes/adult",
+            headers=auth_headers,
+            json={
+                "first_name": "Test",
+                "last_name": "NoEmail",
+                # No email field
+            }
+        )
         
-        athletes = response.json()
-        athlete_without_email = None
+        if create_response.status_code not in [200, 201]:
+            pytest.skip(f"Could not create test athlete: {create_response.text}")
         
-        for athlete in athletes:
-            if not athlete.get('email'):
-                athlete_without_email = athlete
-                break
+        athlete_id = create_response.json().get("id")
         
-        if not athlete_without_email:
-            pytest.skip("No athlete without email found for testing")
-        
+        # Try to reset password
         response = requests.post(
-            f"{BASE_URL}/api/admin/athletes/{athlete_without_email['id']}/reset-password",
+            f"{BASE_URL}/api/admin/athletes/{athlete_id}/reset-password",
             headers=auth_headers,
             json={"send_email": True}
         )
         
         # Should return 400 because athlete has no email
-        assert response.status_code == 400, f"Expected 400, got {response.status_code}: {response.text}"
+        assert response.status_code == 400, f"Expected 400 for no email, got {response.status_code}: {response.text}"
         assert "email" in response.json().get("detail", "").lower()
         print(f"✓ Correctly returns error for athlete without email: {response.json()['detail']}")
+        
+        # Cleanup: delete test athlete
+        requests.delete(f"{BASE_URL}/api/athletes/{athlete_id}", headers=auth_headers)
     
     def test_reset_password_for_athlete_with_email(self, auth_headers):
         """Test reset password works for athlete with email"""
