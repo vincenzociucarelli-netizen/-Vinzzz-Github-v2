@@ -9445,16 +9445,29 @@ async def update_prime_squadre_athlete(
 
 @api_router.post("/prime-squadre/athletes/{athlete_id}/disable")
 async def disable_athlete_compensation(athlete_id: str, current_user = Depends(get_current_user)):
-    """Disable compensation for an athlete (remove from Prime Squadre)"""
+    """Disable compensation for an athlete/coach (remove from Prime Squadre)"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può gestire Prime Squadre")
     
+    # Try athletes first
     result = await db.athletes.update_one(
         {"id": athlete_id},
         {"$set": {"is_compensated": False, "monthly_compensation": 0}}
     )
     
-    if result.modified_count == 0:
+    if result.modified_count > 0:
+        return {"message": "Atleta rimosso da Prime Squadre"}
+    
+    # Try coaches
+    result = await db.users.update_one(
+        {"id": athlete_id, "role": "coach"},
+        {"$set": {"is_compensated": False, "monthly_compensation": 0}}
+    )
+    
+    if result.modified_count > 0:
+        return {"message": "Coach rimosso da Prime Squadre"}
+    
+    raise HTTPException(status_code=404, detail="Membro non trovato")
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
     return {"message": "Atleta rimosso da Prime Squadre", "athlete_id": athlete_id}
