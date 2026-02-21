@@ -2245,14 +2245,6 @@ export default function AdminAthleteDetail() {
                           </Text>
                         </View>
                       )}
-                      {(athlete.iban_holder_last_name || athlete.iban_holder_first_name) && (
-                        <View style={styles.compensationStatItem}>
-                          <Text style={styles.compensationStatLabel}>Intestatario</Text>
-                          <Text style={styles.compensationStatDate}>
-                            {athlete.iban_holder_last_name} {athlete.iban_holder_first_name}
-                          </Text>
-                        </View>
-                      )}
                     </View>
                   )}
 
