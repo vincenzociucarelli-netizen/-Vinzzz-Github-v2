@@ -652,7 +652,7 @@ export default function CoachCompensation() {
   const renderMonthCard = (month: number, year?: number) => {
     const displayYear = year || currentYear;
     const status = getMonthStatus(month, displayYear);
-    const record = records.find(r => r.month === month && r.year === displayYear);
+    const record = records.find(r => matchesMonth(r.month, month) && r.year === displayYear);
     const monthlyAmount = profile?.monthly_compensation || 0;
     
     // Check if threshold was exceeded in this specific month (for badge)
