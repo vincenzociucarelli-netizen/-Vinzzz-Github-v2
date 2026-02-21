@@ -601,7 +601,15 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/athletes')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#F3E5F5' }]}>
-              <Text style={{ fontSize: 26 }}>{Icons.people}</Text>
+              {society.sport_image ? (
+                <Image 
+                  source={{ uri: `data:image/jpeg;base64,${society.sport_image}` }}
+                  style={{ width: 40, height: 40, borderRadius: 8 }}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Text style={{ fontSize: 26 }}>{Icons.people}</Text>
+              )}
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Atleti</Text>
