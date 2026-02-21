@@ -373,12 +373,14 @@ export default function CoachCompensation() {
         exceeded_15000: exceeded15000,
       });
       
+      // Close modal FIRST, then show success message
+      setShowSignatureModal(false);
+      
       Alert.alert(
         'Quietanza Firmata',
         `Quietanza firmata con successo!\n\nLordo: € ${response.data.amount_gross.toFixed(2)}\nNetto: € ${response.data.amount_net.toFixed(2)}\n\nTotale annuo: € ${response.data.yearly_total.toFixed(2)}`
       );
       
-      setShowSignatureModal(false);
       loadData();
       
     } catch (error: any) {
