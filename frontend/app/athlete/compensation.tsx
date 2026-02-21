@@ -808,6 +808,58 @@ export default function CoachCompensation() {
             </View>
           </View>
           
+          {/* Compensation Acceptance Banner */}
+          {(profile?.monthly_compensation || 0) > 0 && !profile?.compensation_accepted && (
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#FFF3CD',
+                padding: 12,
+                borderRadius: 8,
+                marginBottom: 12,
+                borderWidth: 1,
+                borderColor: '#FF9800',
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+              onPress={handleAcceptCompensation}
+              disabled={acceptingCompensation}
+              data-testid="accept-compensation-btn"
+            >
+              <Text style={{ fontSize: 24, marginRight: 10 }}>⚠️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#856404' }}>Accettazione Compenso Richiesta</Text>
+                <Text style={{ fontSize: 12, color: '#856404', marginTop: 2 }}>
+                  La società propone €{profile?.monthly_compensation}/mese. Tocca per accettare.
+                </Text>
+              </View>
+              {acceptingCompensation ? (
+                <ActivityIndicator size="small" color="#856404" />
+              ) : (
+                <Ionicons name="checkmark-circle" size={24} color="#28a745" />
+              )}
+            </TouchableOpacity>
+          )}
+          
+          {/* Compensation Accepted Badge */}
+          {(profile?.monthly_compensation || 0) > 0 && profile?.compensation_accepted && (
+            <View style={{
+              backgroundColor: '#D4EDDA',
+              padding: 12,
+              borderRadius: 8,
+              marginBottom: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}>
+              <Ionicons name="checkmark-circle" size={24} color="#28a745" style={{ marginRight: 10 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#155724' }}>Compenso Accettato</Text>
+                <Text style={{ fontSize: 12, color: '#155724' }}>
+                  Hai accettato €{profile?.monthly_compensation}/mese
+                </Text>
+              </View>
+            </View>
+          )}
+          
           {/* Contract Period - Full dates */}
           {profile?.contract_start_date && profile?.contract_end_date && (
             <View style={{ 
