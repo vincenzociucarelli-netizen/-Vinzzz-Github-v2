@@ -437,7 +437,14 @@ export default function PrimeSquadrePage() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={(e) => { e.stopPropagation(); router.push(`/admin/athlete/${athlete.id}/compensation`); }}
+                  onPress={(e) => { 
+                    e.stopPropagation(); 
+                    if (athlete.type === 'coach') {
+                      router.push(`/admin/coach/${athlete.id}/compensation`);
+                    } else {
+                      router.push(`/admin/athlete/${athlete.id}/compensation`);
+                    }
+                  }}
                 >
                   <Text style={styles.actionButtonText}>📋</Text>
                 </TouchableOpacity>
