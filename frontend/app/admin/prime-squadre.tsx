@@ -339,6 +339,14 @@ export default function PrimeSquadrePage() {
                     Compenso: €{athlete.monthly_compensation || 0}/mese
                     {athlete.fees_waived && ' • Quote esenti'}
                   </Text>
+                  {/* Status accettazione */}
+                  {(athlete.monthly_compensation || 0) > 0 && (
+                    <Text style={[styles.acceptanceStatus, { 
+                      color: athlete.compensation_accepted ? '#4CAF50' : '#FF9800'
+                    }]}>
+                      {athlete.compensation_accepted ? '✓ Accettato dall\'atleta' : '⏳ In attesa di accettazione'}
+                    </Text>
+                  )}
                   {athlete.compensation_summary && (
                     <Text style={styles.yearlyText}>
                       Anno: €{athlete.compensation_summary.yearly_total.toLocaleString()} ({athlete.compensation_summary.months_received} mesi)
@@ -346,7 +354,7 @@ export default function PrimeSquadrePage() {
                   )}
                   {athlete.contract_start_date && athlete.contract_end_date && (
                     <Text style={styles.contractText}>
-                      Contratto: {athlete.contract_start_date.substring(5)} → {athlete.contract_end_date.substring(5)}
+                      Contratto: {isoToItalian(athlete.contract_start_date)} → {isoToItalian(athlete.contract_end_date)}
                     </Text>
                   )}
                 </View>
