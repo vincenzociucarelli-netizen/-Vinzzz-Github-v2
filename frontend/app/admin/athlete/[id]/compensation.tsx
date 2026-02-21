@@ -474,7 +474,8 @@ export default function AthleteCompensation() {
                 value={monthlyCompensation}
                 onChangeText={setMonthlyCompensation}
                 keyboardType="decimal-pad"
-                placeholder="0"
+                placeholder="Inserisci importo"
+                placeholderTextColor="#C0C0C0"
               />
 
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>📋 Compensi Pregressi (€)</Text>
@@ -483,7 +484,8 @@ export default function AthleteCompensation() {
                 value={otherAnnualCompensation}
                 onChangeText={setOtherAnnualCompensation}
                 keyboardType="decimal-pad"
-                placeholder="0"
+                placeholder="Inserisci importo"
+                placeholderTextColor="#C0C0C0"
               />
               <Text style={styles.inputHint}>
                 Importo percepito dall'atleta prima di questo contratto
