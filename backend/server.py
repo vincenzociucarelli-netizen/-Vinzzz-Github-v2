@@ -9298,6 +9298,7 @@ class PrimeSquadreAthleteUpdate(BaseModel):
     contract_start_date: Optional[str] = None
     contract_end_date: Optional[str] = None
     fees_waived: Optional[bool] = None
+    compensation_accepted: Optional[bool] = None  # Accettazione da parte dell'atleta
 
 
 @api_router.patch("/prime-squadre/athletes/{athlete_id}")
