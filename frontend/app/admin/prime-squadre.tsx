@@ -442,14 +442,16 @@ export default function PrimeSquadrePage() {
                   <Text style={styles.inputPrefix}>€</Text>
                   <TextInput
                     style={styles.formInput}
-                    placeholder="0"
+                    placeholder="Inserisci importo"
                     keyboardType="numeric"
                     value={configForm.monthly_compensation}
                     onChangeText={(v) => setConfigForm({...configForm, monthly_compensation: v})}
+                    onFocus={() => handleAmountFocus('monthly_compensation')}
+                    onBlur={() => handleAmountBlur('monthly_compensation')}
                   />
                   <Text style={styles.inputSuffix}>/mese</Text>
                 </View>
-                <Text style={styles.formHint}>Lascia 0 se l'atleta non percepisce compensi</Text>
+                <Text style={styles.formHint}>Lascia vuoto se l'atleta non percepisce compensi</Text>
               </View>
 
               {/* Compensi Pregressi */}
@@ -459,10 +461,12 @@ export default function PrimeSquadrePage() {
                   <Text style={styles.inputPrefix}>€</Text>
                   <TextInput
                     style={styles.formInput}
-                    placeholder="0"
+                    placeholder="Inserisci importo"
                     keyboardType="numeric"
                     value={configForm.other_annual_compensation}
                     onChangeText={(v) => setConfigForm({...configForm, other_annual_compensation: v})}
+                    onFocus={() => handleAmountFocus('other_annual_compensation')}
+                    onBlur={() => handleAmountBlur('other_annual_compensation')}
                   />
                 </View>
                 <Text style={styles.formHint}>Compensi da altre ASD nell'anno corrente (per calcolo soglie €5K/€15K)</Text>
@@ -476,7 +480,7 @@ export default function PrimeSquadrePage() {
                     <Text style={styles.dateLabel}>Inizio</Text>
                     <TextInput
                       style={styles.dateInput}
-                      placeholder="2025-09-01"
+                      placeholder="gg/mm/aaaa"
                       value={configForm.contract_start_date}
                       onChangeText={(v) => setConfigForm({...configForm, contract_start_date: v})}
                     />
@@ -485,13 +489,13 @@ export default function PrimeSquadrePage() {
                     <Text style={styles.dateLabel}>Fine</Text>
                     <TextInput
                       style={styles.dateInput}
-                      placeholder="2026-05-31"
+                      placeholder="gg/mm/aaaa"
                       value={configForm.contract_end_date}
                       onChangeText={(v) => setConfigForm({...configForm, contract_end_date: v})}
                     />
                   </View>
                 </View>
-                <Text style={styles.formHint}>Formato: AAAA-MM-GG</Text>
+                <Text style={styles.formHint}>Formato: gg/mm/aaaa</Text>
               </View>
 
               {/* Quote Esenti */}
