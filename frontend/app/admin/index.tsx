@@ -572,7 +572,15 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/dirigenti')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E8F4FD' }]}>
-              <Text style={{ fontSize: 26 }}>{Icons.business}</Text>
+              {society.logo ? (
+                <Image 
+                  source={{ uri: `data:image/jpeg;base64,${society.logo}` }}
+                  style={{ width: 40, height: 40, borderRadius: 8 }}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Text style={{ fontSize: 26 }}>{Icons.business}</Text>
+              )}
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>{society.name || 'Società'}</Text>
