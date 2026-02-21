@@ -331,7 +331,12 @@ export default function PrimeSquadrePage() {
     const fullName = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase();
     const reversedName = `${a.last_name || ''} ${a.first_name || ''}`.toLowerCase();
     const teamName = (a.team_name || '').toLowerCase();
-    const typeLabel = (a.type === 'coach' ? 'coach allenatore' : 'atleta').toLowerCase();
+    // Include all type labels for search
+    const typeLabel = (
+      a.type === 'coach' ? 'coach allenatore' : 
+      a.type === 'dirigente' ? 'dirigente direttore' : 
+      'atleta'
+    ).toLowerCase();
     // Search in multiple fields
     return fullName.includes(query) || 
            reversedName.includes(query) || 
