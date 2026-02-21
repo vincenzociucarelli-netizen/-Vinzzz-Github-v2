@@ -876,7 +876,7 @@ export default function CoachScreen() {
                       </Text>
                     ) : item.type === 'rifinitura' ? (
                       <Text style={[styles.commitmentItemTitle, { color: '#9C27B0' }]}>
-                        🏠 Rifinitura {abbreviateTeamName(item.team_name)}
+                        🏠 Rifinitura pre-gara {abbreviateTeamName(item.team_name)}
                       </Text>
                     ) : (
                       <View style={styles.matchTitleContainer}>
@@ -929,7 +929,7 @@ export default function CoachScreen() {
                       </Text>
                     ) : item.type === 'rifinitura' ? (
                       <Text style={[styles.commitmentItemTitle, { color: '#9C27B0' }]}>
-                        🏠 Rifinitura {abbreviateTeamName(item.team_name)}
+                        🏠 Rifinitura pre-gara {abbreviateTeamName(item.team_name)}
                       </Text>
                     ) : (
                       <View style={styles.matchTitleContainer}>
@@ -982,7 +982,7 @@ export default function CoachScreen() {
                       </Text>
                     ) : item.type === 'rifinitura' ? (
                       <Text style={[styles.commitmentItemTitle, { color: '#9C27B0' }]}>
-                        🏠 Rifinitura {abbreviateTeamName(item.team_name)}
+                        🏠 Rifinitura pre-gara {abbreviateTeamName(item.team_name)}
                       </Text>
                     ) : (
                       <View style={styles.matchTitleContainer}>
