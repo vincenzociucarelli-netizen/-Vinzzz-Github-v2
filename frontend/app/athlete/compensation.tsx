@@ -765,8 +765,11 @@ export default function AthleteCompensation() {
               </View>
               <Text style={{ fontSize: 18, color: '#007AFF', fontWeight: 'bold', marginTop: 4, textAlign: 'center' }}>
                 {(() => {
-                  const startParts = profile.contract_start_date!.split('-');
-                  const endParts = profile.contract_end_date!.split('-');
+                  // Clean dates from ISO format (remove T00:00:00 part)
+                  const cleanStart = profile.contract_start_date!.split('T')[0];
+                  const cleanEnd = profile.contract_end_date!.split('T')[0];
+                  const startParts = cleanStart.split('-');
+                  const endParts = cleanEnd.split('-');
                   const startFormatted = `${startParts[2]}/${startParts[1]}/${startParts[0]}`;
                   const endFormatted = `${endParts[2]}/${endParts[1]}/${endParts[0]}`;
                   return `${startFormatted} - ${endFormatted}`;
