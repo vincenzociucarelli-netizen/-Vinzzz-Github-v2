@@ -777,6 +777,18 @@ export default function AthleteCompensation() {
             </View>
           </View>
         )}
+
+        {/* Info Section - Same as Coach/Dirigente */}
+        <View style={styles.infoSection}>
+          <Text style={styles.infoTitle}>ℹ️ Informazioni Importanti</Text>
+          <Text style={styles.infoText}>
+            • Fino a €5.000/anno: compenso esente da tasse e contributi{'\n'}
+            • Da €5.000 a €15.000: soggetto a contributi previdenziali{'\n'}
+            • Oltre €15.000: soggetto anche a imposizione fiscale IRPEF{'\n'}
+            • La firma della quietanza genera un PDF inviato via email{'\n'}
+            • Al superamento delle soglie è richiesta una dichiarazione
+          </Text>
+        </View>
       </ScrollView>
 
       {/* Receipt Modal - READ ONLY for Admin */}
