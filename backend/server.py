@@ -4254,7 +4254,8 @@ async def sign_athlete_compensation_receipt_with_signature(
     receipt_data = {
         "athlete_id": athlete_id,
         "society_id": athlete.get("society_id"),
-        "month": month_name,
+        "month": month,  # Store as integer (1-12) for consistent filtering
+        "month_name": month_name,  # Keep month name for display
         "year": year,
         "signed": True,
         "signed_date": now,
@@ -4268,7 +4269,7 @@ async def sign_athlete_compensation_receipt_with_signature(
     }
     
     await db.athlete_compensation_receipts.update_one(
-        {"athlete_id": athlete_id, "month": month_name, "year": year},
+        {"athlete_id": athlete_id, "month": month, "year": year},
         {"$set": receipt_data},
         upsert=True
     )
