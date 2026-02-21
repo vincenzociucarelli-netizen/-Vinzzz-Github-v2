@@ -251,8 +251,8 @@ export default function PrimeSquadrePage() {
     setConfigForm({
       monthly_compensation: String(athlete.monthly_compensation || 0),
       other_annual_compensation: String(athlete.other_annual_compensation || 0),
-      contract_start_date: athlete.contract_start_date || '2025-09-01',
-      contract_end_date: athlete.contract_end_date || '2026-05-31',
+      contract_start_date: isoToItalian(athlete.contract_start_date || '2025-09-01'),
+      contract_end_date: isoToItalian(athlete.contract_end_date || '2026-05-31'),
       fees_waived: athlete.fees_waived || false,
     });
     setShowConfigModal(true);
