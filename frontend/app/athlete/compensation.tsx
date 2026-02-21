@@ -964,7 +964,37 @@ export default function AthleteCompensation() {
 
               {/* Signature Pad */}
               <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
-              {showSignatureModal && (
+              {Platform.OS === 'web' ? (
+                <View style={{ 
+                  borderWidth: 2, 
+                  borderColor: '#ccc', 
+                  borderRadius: 8, 
+                  height: 200, 
+                  backgroundColor: '#fff',
+                  marginBottom: 16 
+                }}>
+                  {showSignatureModal && SignatureCanvasWeb && (
+                    <SignatureCanvasWeb
+                      ref={signatureRef}
+                      canvasProps={{
+                        width: 350,
+                        height: 200,
+                        style: { 
+                          width: '100%', 
+                          height: '100%',
+                          borderRadius: 8
+                        }
+                      }}
+                      onEnd={() => {
+                        if (signatureRef.current && !signatureRef.current.isEmpty()) {
+                          const dataUrl = signatureRef.current.toDataURL('image/png');
+                          setSignature(dataUrl);
+                        }
+                      }}
+                    />
+                  )}
+                </View>
+              ) : (
                 <SignaturePadInline
                   ref={signatureRef}
                   onSave={(sig) => setSignature(sig)}
@@ -972,6 +1002,18 @@ export default function AthleteCompensation() {
                   height={200}
                 />
               )}
+              
+              <TouchableOpacity 
+                style={{ alignSelf: 'flex-end', marginBottom: 16 }}
+                onPress={() => {
+                  if (signatureRef.current?.clear) {
+                    signatureRef.current.clear();
+                  }
+                  setSignature(null);
+                }}
+              >
+                <Text style={{ color: '#007AFF' }}>Cancella firma</Text>
+              </TouchableOpacity>
 
               {/* Confirm Buttons */}
               <View style={styles.modalButtons}>
