@@ -4207,6 +4207,39 @@ async def sign_athlete_compensation_receipt(athlete_id: str, data: dict, current
     return {"message": "Quietanza aggiornata"}
 
 
+@api_router.post("/athletes/{athlete_id}/accept-compensation")
+async def accept_athlete_compensation(athlete_id: str, current_user = Depends(get_current_user)):
+    """Athlete accepts the compensation offer - can be called by athlete themselves or admin"""
+    # Allow athletes to accept their own compensation, or admin to do it for them
+    is_own_profile = current_user.get("athlete_id") == athlete_id
+    is_admin = current_user["role"] == UserRole.ADMIN
+    
+    if not is_own_profile and not is_admin:
+        raise HTTPException(status_code=403, detail="Solo l'atleta può accettare il proprio compenso")
+    
+    # Verify athlete exists and is compensated
+    athlete = await db.athletes.find_one({"id": athlete_id, "is_compensated": True})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato in Prime Squadre")
+    
+    # Check if already accepted
+    if athlete.get("compensation_accepted"):
+        return {"message": "Compenso già accettato", "already_accepted": True}
+    
+    # Update athlete record
+    now = datetime.utcnow()
+    
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "compensation_accepted": True,
+            "compensation_accepted_date": now,
+        }}
+    )
+    
+    return {"message": "Compenso accettato con successo", "accepted_date": now.isoformat()}
+
+
 @api_router.post("/athletes/{athlete_id}/compensation/receipt-sign")
 async def sign_athlete_compensation_receipt_with_signature(
     athlete_id: str, 
