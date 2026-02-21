@@ -533,6 +533,8 @@ class Athlete(BaseModel):
     contract_start_date: Optional[str] = None  # Data inizio contratto (ISO string)
     contract_end_date: Optional[str] = None  # Data fine contratto (ISO string)
     fees_waived: bool = False  # Se true, l'atleta non paga le quote
+    compensation_accepted: bool = False  # Accettazione compenso da parte dell'atleta
+    compensation_accepted_date: Optional[datetime] = None  # Data accettazione compenso
     # Dati bancari/economici (per atleti che percepiscono compenso)
     iban: Optional[str] = None  # IBAN per pagamento compensi
     bank_name: Optional[str] = None  # Nome banca
