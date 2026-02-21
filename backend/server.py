@@ -1886,6 +1886,14 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
         assigned_teams = d.get("assigned_teams", [])
         assigned_team_names = [team_dict.get(tid, "Squadra sconosciuta") for tid in assigned_teams if tid in team_dict]
         
+        # Handle contract dates - they may be datetime objects or strings
+        contract_start = d.get("contract_start_date")
+        contract_end = d.get("contract_end_date")
+        if contract_start and hasattr(contract_start, 'strftime'):
+            contract_start = contract_start.strftime("%Y-%m-%d")
+        if contract_end and hasattr(contract_end, 'strftime'):
+            contract_end = contract_end.strftime("%Y-%m-%d")
+        
         result.append({
             "id": d["id"],
             "email": d["email"],
@@ -1900,6 +1908,11 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
             "qualification": d.get("qualification", ""),
             "assigned_teams": assigned_teams,
             "assigned_team_names": assigned_team_names,
+            "monthly_compensation": d.get("monthly_compensation", 0),
+            "other_annual_compensation": d.get("other_annual_compensation", 0),
+            "contract_start_date": contract_start,
+            "contract_end_date": contract_end,
+            "fees_waived": d.get("fees_waived", False),
         })
     
     return result
