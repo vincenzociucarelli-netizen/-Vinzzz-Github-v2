@@ -582,6 +582,7 @@ class AthleteUpdate(BaseModel):
     date_of_birth: Optional[str] = None
     birth_place: Optional[str] = None
     birth_province: Optional[str] = None
+    gender: Optional[str] = None  # M or F - for Codice Fiscale calculation
     fiscal_code: Optional[str] = None
     email: Optional[str] = None
     phone_athlete: Optional[str] = None
