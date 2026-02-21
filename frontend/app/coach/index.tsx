@@ -918,14 +918,18 @@ export default function CoachScreen() {
               commitments.tomorrow.map((item, idx) => (
                 <View key={idx} style={styles.commitmentItem}>
                   <Ionicons 
-                    name={item.type === 'training' ? 'fitness' : 'trophy'} 
+                    name={item.type === 'training' ? 'fitness' : item.type === 'rifinitura' ? 'sunny' : 'trophy'} 
                     size={16} 
-                    color={item.type === 'training' ? '#007AFF' : '#FF9500'} 
+                    color={item.type === 'training' ? '#007AFF' : item.type === 'rifinitura' ? '#9C27B0' : '#FF9500'} 
                   />
                   <View style={styles.commitmentItemContent}>
                     {item.type === 'training' ? (
                       <Text style={styles.commitmentItemTitle}>
                         Allenamento {abbreviateTeamName(item.team_name)}
+                      </Text>
+                    ) : item.type === 'rifinitura' ? (
+                      <Text style={[styles.commitmentItemTitle, { color: '#9C27B0' }]}>
+                        🏠 Rifinitura {abbreviateTeamName(item.team_name)}
                       </Text>
                     ) : (
                       <View style={styles.matchTitleContainer}>
@@ -934,7 +938,7 @@ export default function CoachScreen() {
                       </View>
                     )}
                     <Text style={styles.commitmentItemDetails}>
-                      {item.type === 'training' 
+                      {item.type === 'training' || item.type === 'rifinitura'
                         ? `${item.time_start} - ${item.time_end}` 
                         : `ore ${item.time}`} • {item.venue}
                       {item.city ? ` - ${item.city}` : ''}
