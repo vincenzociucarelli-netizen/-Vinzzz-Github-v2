@@ -10040,6 +10040,56 @@ async def get_monthly_compensation_summary(
 async def root():
     return {"message": "Athlete Attendance API"}
 
+# Calculate Codice Fiscale
+class CalcolaCodiceFiscaleRequest(BaseModel):
+    nome: str
+    cognome: str
+    data_nascita: str  # formato GG/MM/AAAA o YYYY-MM-DD
+    luogo_nascita: str  # nome del comune
+    sesso: str  # M o F
+
+@api_router.post("/utils/calcola-cf")
+async def calcola_codice_fiscale(data: CalcolaCodiceFiscaleRequest):
+    """Calcola il Codice Fiscale italiano dato nome, cognome, data/luogo nascita e sesso"""
+    if not CF_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Libreria codice fiscale non disponibile")
+    
+    try:
+        # Converti la data nel formato corretto (GG/MM/AAAA)
+        data_nascita = data.data_nascita
+        if '-' in data_nascita:
+            # Converte da YYYY-MM-DD a GG/MM/AAAA
+            parts = data_nascita.split('-')
+            if len(parts) == 3:
+                data_nascita = f"{parts[2]}/{parts[1]}/{parts[0]}"
+        
+        # Calcola il CF
+        result = codicefiscale.encode(
+            lastname=data.cognome.upper(),
+            firstname=data.nome.upper(),
+            gender=data.sesso.upper(),
+            birthdate=data_nascita,
+            birthplace=data.luogo_nascita
+        )
+        
+        if result and 'code' in result:
+            return {
+                "codice_fiscale": result['code'],
+                "success": True
+            }
+        else:
+            return {
+                "codice_fiscale": None,
+                "success": False,
+                "error": "Impossibile calcolare il CF. Verifica il luogo di nascita."
+            }
+    except Exception as e:
+        return {
+            "codice_fiscale": None,
+            "success": False,
+            "error": f"Errore nel calcolo: {str(e)}. Verifica che il comune sia corretto."
+        }
+
 @api_router.get("/health")
 async def api_health():
     """Health check endpoint for Kubernetes"""
