@@ -714,7 +714,7 @@ export default function CoachCompensation() {
         
         {status === 'signed' && record && (
           <Text style={styles.signedDate}>
-            Firmata il {new Date(record.receipt_signed_date || record.received_date || '').toLocaleDateString('it-IT')}
+            Firmata il {new Date(record.signed_date || record.received_date || '').toLocaleDateString('it-IT')}
           </Text>
         )}
         
