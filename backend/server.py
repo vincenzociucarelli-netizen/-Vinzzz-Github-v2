@@ -9394,18 +9394,25 @@ async def update_prime_squadre_athlete(
     data: PrimeSquadreAthleteUpdate,
     current_user = Depends(get_current_user)
 ):
-    """Update Prime Squadre athlete configuration (compensation, contract dates, fees)"""
+    """Update Prime Squadre athlete/coach configuration (compensation, contract dates, fees)"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può modificare Prime Squadre")
     
-    # Verify athlete is in Prime Squadre
-    athlete = await db.athletes.find_one({"id": athlete_id, "is_compensated": True})
-    if not athlete:
-        raise HTTPException(status_code=404, detail="Atleta non trovato in Prime Squadre")
+    # Try to find in athletes first
+    member = await db.athletes.find_one({"id": athlete_id, "is_compensated": True})
+    collection = db.athletes
+    
+    # If not found, try coaches
+    if not member:
+        member = await db.users.find_one({"id": athlete_id, "role": "coach", "is_compensated": True})
+        collection = db.users
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Membro non trovato in Prime Squadre")
     
     update_dict = {}
     if data.monthly_compensation is not None:
-        old_compensation = athlete.get("monthly_compensation", 0)
+        old_compensation = member.get("monthly_compensation", 0)
         update_dict["monthly_compensation"] = data.monthly_compensation
         # Reset acceptance if compensation amount changed
         if old_compensation != data.monthly_compensation:
@@ -9425,13 +9432,13 @@ async def update_prime_squadre_athlete(
             update_dict["compensation_accepted_date"] = datetime.utcnow()
     
     if update_dict:
-        await db.athletes.update_one(
+        await collection.update_one(
             {"id": athlete_id},
             {"$set": update_dict}
         )
     
-    # Return updated athlete
-    updated = await db.athletes.find_one({"id": athlete_id})
+    # Return updated member
+    updated = await collection.find_one({"id": athlete_id})
     clean_mongo_docs([updated])
     return updated
 
