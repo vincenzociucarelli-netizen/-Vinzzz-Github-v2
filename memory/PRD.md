@@ -124,3 +124,50 @@ Sistema di gestione completo per società sportive italiane (pallavolo, basket) 
 - `/app/frontend/app/athlete/profile.tsx`: Campo sesso, pulsante calcola CF, nuovi stili
 - `/app/frontend/app/coach/profile.tsx`: Campo sesso, pulsante calcola CF, nuovi stili
 - `/app/frontend/app/dirigente/profile.tsx`: Campo sesso, pulsante calcola CF, nuovi stili
+
+
+
+## Session 2025-12-20 (Bug Fixes - Ricevute Atleti PRO)
+
+### Critical Bug Fixes Implemented
+1. **Fix ricevute firmate che scompaiono dopo reload** ✅
+   - **Problema**: Il frontend usava `receipt_signed` ma il backend ritorna `signed`
+   - **Soluzione**: Aggiornato l'interface `CompensationRecord` e tutti i riferimenti nel frontend
+   - **File**: `/app/frontend/app/athlete/compensation.tsx`
+
+2. **Fix formato mese nelle ricevute** ✅
+   - **Problema**: Il backend salvava `month: "Settembre"` (stringa) invece di `month: 9` (numero)
+   - **Soluzione**: Corretto backend per salvare numero + aggiunto `matchesMonth()` helper nel frontend per supporto legacy
+   - **File**: `/app/backend/server.py` (riga ~4257-4273), `/app/frontend/app/athlete/compensation.tsx`
+
+3. **Fix campo gender non salvato** ✅
+   - **Problema**: Il campo `gender` per il Codice Fiscale non veniva accettato dai modelli Pydantic
+   - **Soluzione**: Aggiunto `gender: Optional[str] = None` ai modelli `UserProfileUpdate` e `AthleteUpdate`
+   - **File**: `/app/backend/server.py`
+
+### Files Modified
+- `/app/backend/server.py`:
+  - Linea ~587: Aggiunto `gender` a `AthleteUpdate`
+  - Linea ~1217: Aggiunto `gender` a `UserProfileUpdate`  
+  - Linea ~1259: Handling gender in update_me()
+  - Linea ~4257-4273: Corretto storage mese come numero intero
+  - Linea ~4688-4690: Handling gender in update_athlete()
+
+- `/app/frontend/app/athlete/compensation.tsx`:
+  - Linea ~25-32: Aggiunta funzione `matchesMonth()` per compatibilità legacy
+  - Linea ~34-46: Aggiornata interface con `signed` invece di `receipt_signed`
+  - Tutte le occorrenze di `receipt_signed` → `signed`
+  - Tutte le occorrenze di filtro per mese ora usano `matchesMonth()`
+
+### Pending Issues
+1. **P0**: Bug "doppio click" per aprire modal firma (richiede ulteriore investigazione state management)
+2. **P1**: Verificare funzione "Elimina Atleta" (implementata ma non testata)
+3. **P2**: Parent login non funzionante
+4. **P2**: @expo/vector-icons non renderizza su web
+
+### Known Environment Issues
+- **Expo tunnel watcher limit**: L'ambiente ha un limite di inotify watchers che impedisce l'avvio di Expo con hot-reload. Il backend funziona correttamente.
+
+### Test Status
+- **Backend API**: ✅ Testato con curl - gender salva correttamente
+- **Frontend**: ⚠️ Non testabile a causa del problema inotify watchers
