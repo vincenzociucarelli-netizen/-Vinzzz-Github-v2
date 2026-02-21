@@ -153,6 +153,33 @@ export default function AdminAthletes() {
     }
   };
 
+  // Calculate Codice Fiscale
+  const handleCalculateCF = async () => {
+    if (!adultForm.first_name || !adultForm.last_name || !adultForm.date_of_birth || !adultForm.place_of_birth || !adultForm.gender) {
+      showAlert('Dati mancanti', 'Compila Nome, Cognome, Sesso, Data e Luogo di Nascita per calcolare il CF');
+      return;
+    }
+
+    try {
+      const response = await api.post('/utils/calcola-cf', {
+        nome: adultForm.first_name,
+        cognome: adultForm.last_name,
+        data_nascita: adultForm.date_of_birth,
+        luogo_nascita: adultForm.place_of_birth,
+        sesso: adultForm.gender,
+      });
+
+      if (response.data.success && response.data.codice_fiscale) {
+        setAdultForm({...adultForm, fiscal_code: response.data.codice_fiscale});
+        showAlert('Successo', `Codice Fiscale calcolato: ${response.data.codice_fiscale}`);
+      } else {
+        showAlert('Errore', response.data.error || 'Impossibile calcolare il CF. Verifica il luogo di nascita.');
+      }
+    } catch (error: any) {
+      showAlert('Errore', 'Errore nel calcolo del Codice Fiscale');
+    }
+  };
+
   const loadData = async () => {
     try {
       const [athletesRes, teamsRes] = await Promise.all([
