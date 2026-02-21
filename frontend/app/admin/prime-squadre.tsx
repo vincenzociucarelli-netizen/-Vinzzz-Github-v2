@@ -772,6 +772,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 4,
   },
+  typeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  typeBadgeText: {
+    fontSize: 11,
+    color: '#fff',
+    fontWeight: '600',
+  },
   athleteActions: {
     flexDirection: 'row',
     gap: 8,
