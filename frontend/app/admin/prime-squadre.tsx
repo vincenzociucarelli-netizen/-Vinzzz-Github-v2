@@ -509,6 +509,7 @@ export default function PrimeSquadrePage() {
                     <TextInput
                       style={styles.dateInput}
                       placeholder="gg/mm/aaaa"
+                      placeholderTextColor="#C0C0C0"
                       value={configForm.contract_start_date}
                       onChangeText={(v) => setConfigForm({...configForm, contract_start_date: formatDateWithSlashes(v)})}
                       keyboardType="numeric"
@@ -520,6 +521,7 @@ export default function PrimeSquadrePage() {
                     <TextInput
                       style={styles.dateInput}
                       placeholder="gg/mm/aaaa"
+                      placeholderTextColor="#C0C0C0"
                       value={configForm.contract_end_date}
                       onChangeText={(v) => setConfigForm({...configForm, contract_end_date: formatDateWithSlashes(v)})}
                       keyboardType="numeric"
