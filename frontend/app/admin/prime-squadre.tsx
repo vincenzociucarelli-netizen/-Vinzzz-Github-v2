@@ -347,7 +347,7 @@ export default function PrimeSquadrePage() {
             <TouchableOpacity 
               key={athlete.id} 
               style={styles.athleteCard}
-              onPress={() => router.push(`/admin/prime-squadre/${athlete.id}`)}
+              onPress={() => router.push(`/admin/athlete/${athlete.id}`)}
               activeOpacity={0.7}
             >
               <View style={styles.athleteInfo}>
@@ -391,7 +391,7 @@ export default function PrimeSquadrePage() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={(e) => { e.stopPropagation(); router.push(`/admin/prime-squadre/${athlete.id}`); }}
+                  onPress={(e) => { e.stopPropagation(); router.push(`/admin/athlete/${athlete.id}`); }}
                 >
                   <Text style={styles.actionButtonText}>📋</Text>
                 </TouchableOpacity>
