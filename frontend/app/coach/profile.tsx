@@ -46,6 +46,7 @@ export default function CoachProfile() {
     place_of_birth: '',
     province_of_birth: '',
     birth_province: '',
+    gender: '' as '' | 'M' | 'F',
     fiscal_code: '',
     address: '',
     city: '',
