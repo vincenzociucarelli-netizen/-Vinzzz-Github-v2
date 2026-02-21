@@ -714,8 +714,13 @@ export default function CoachCompensation() {
           styles.monthCard,
           getCardStyle(),
         ]}
-        onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
-        disabled={status === 'future'}
+        onPress={() => {
+          if (status === 'pending' || status === 'blocked') {
+            handleOpenSignature(month, displayYear);
+          }
+        }}
+        disabled={status === 'future' || status === 'signed'}
+        activeOpacity={0.7}
         data-testid={`month-card-${displayYear}-${month}`}
       >
         {/* Threshold Badge - positioned at top right */}
