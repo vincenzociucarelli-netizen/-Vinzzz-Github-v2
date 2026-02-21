@@ -6301,7 +6301,7 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
                     "time_start": rifinitura.get("timeStart", ""),
                     "time_end": rifinitura.get("timeEnd", ""),
                     "venue": rifinitura.get("venue", ""),
-                    "title": f"Rifinitura {rif_info['team_name']}"
+                    "title": f"Rifinitura pre-gara {rif_info['team_name']}"
                 })
     
     # Check trainings for upcoming days (days 4-7)
@@ -6352,7 +6352,7 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
                     "time_start": rifinitura.get("timeStart", ""),
                     "time_end": rifinitura.get("timeEnd", ""),
                     "venue": rifinitura.get("venue", ""),
-                    "title": f"Rifinitura {rif_info['team_name']}"
+                    "title": f"Rifinitura pre-gara {rif_info['team_name']}"
                 })
     
     for match in matches:
