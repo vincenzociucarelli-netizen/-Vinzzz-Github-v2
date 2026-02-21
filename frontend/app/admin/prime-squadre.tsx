@@ -469,13 +469,8 @@ export default function PrimeSquadrePage() {
                   style={styles.actionButton}
                   onPress={(e) => { 
                     e.stopPropagation(); 
-                    if (athlete.type === 'coach') {
-                      router.push(`/admin/coach/${athlete.id}/compensation`);
-                    } else if (athlete.type === 'dirigente') {
-                      router.push(`/admin/director/${athlete.id}/compensation`);
-                    } else {
-                      router.push(`/admin/athlete/${athlete.id}/compensation`);
-                    }
+                    // Use Prime Squadre page for all types
+                    router.push(`/admin/prime-squadre/${athlete.id}`);
                   }}
                 >
                   <Text style={styles.actionButtonText}>📋</Text>
