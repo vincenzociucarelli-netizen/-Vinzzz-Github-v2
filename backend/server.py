@@ -9507,7 +9507,7 @@ async def update_prime_squadre_athlete(
     data: PrimeSquadreAthleteUpdate,
     current_user = Depends(get_current_user)
 ):
-    """Update Prime Squadre athlete/coach configuration (compensation, contract dates, fees)"""
+    """Update Prime Squadre athlete/coach/dirigente configuration (compensation, contract dates, fees)"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può modificare Prime Squadre")
     
@@ -9518,6 +9518,20 @@ async def update_prime_squadre_athlete(
     # If not found, try coaches
     if not member:
         member = await db.users.find_one({"id": athlete_id, "role": "coach", "is_compensated": True})
+        collection = db.users
+    
+    # If not found, try dirigenti (admin or viewer roles with is_compensated flag)
+    if not member:
+        member = await db.users.find_one({
+            "id": athlete_id, 
+            "role": {"$in": ["admin", "viewer"]}, 
+            "is_compensated": True
+        })
+        collection = db.users
+    
+    # Fallback: try any user with is_compensated flag (for flexibility)
+    if not member:
+        member = await db.users.find_one({"id": athlete_id, "is_compensated": True})
         collection = db.users
     
     if not member:
