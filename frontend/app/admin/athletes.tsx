@@ -1038,6 +1038,58 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 18,
   },
+  // Codice Fiscale Form
+  cfRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  genderButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  genderBtn: {
+    width: 48,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#F9F9F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  genderBtnActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  genderBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#666',
+  },
+  genderBtnTextActive: {
+    color: '#fff',
+  },
+  cfCalculateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  calculateCfBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#34C759',
+    paddingHorizontal: 16,
+    height: 44,
+    borderRadius: 10,
+    gap: 6,
+  },
+  calculateCfBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   // Buttons
   cancelBtn: {
     flex: 1,
