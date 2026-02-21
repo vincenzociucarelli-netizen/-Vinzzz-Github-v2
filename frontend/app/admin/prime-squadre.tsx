@@ -418,7 +418,8 @@ export default function PrimeSquadrePage() {
             
             <TextInput
               style={styles.searchInput}
-              placeholder="Cerca atleta..."
+              placeholder="Cerca per nome o squadra (es. B/1)..."
+              placeholderTextColor="#999"
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
