@@ -1079,7 +1079,7 @@ export default function CoachCompensation() {
         visible={showSignatureModal}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setShowSignatureModal(false)}
+        onRequestClose={closeSignatureModal}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
