@@ -836,8 +836,58 @@ export default function AthleteProfile() {
         {/* Fiscal Data */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>💼 Dati Fiscali</Text>
-          {renderField('Codice Fiscale', profileData.fiscal_code, 'fiscal_code')}
-          {renderField('N° Tesserino Allenatore', profileData.athlete_license_number, 'athlete_license_number')}
+          
+          {/* Gender Selection */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>Sesso</Text>
+            {editing ? (
+              <View style={styles.genderButtons}>
+                <TouchableOpacity 
+                  style={[styles.genderBtn, editData.gender === 'M' && styles.genderBtnActive]}
+                  onPress={() => setEditData({...editData, gender: 'M'})}
+                >
+                  <Text style={[styles.genderBtnText, editData.gender === 'M' && styles.genderBtnTextActive]}>M</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.genderBtn, editData.gender === 'F' && styles.genderBtnActive]}
+                  onPress={() => setEditData({...editData, gender: 'F'})}
+                >
+                  <Text style={[styles.genderBtnText, editData.gender === 'F' && styles.genderBtnTextActive]}>F</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={styles.fieldValue}>{profileData.gender || '-'}</Text>
+            )}
+          </View>
+
+          {/* Codice Fiscale with Calculate Button */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>Codice Fiscale</Text>
+            {editing ? (
+              <View style={styles.cfCalculateRow}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={editData.fiscal_code || ''}
+                  onChangeText={(text) => setEditData({...editData, fiscal_code: text.toUpperCase()})}
+                  autoCapitalize="characters"
+                  maxLength={16}
+                  placeholder="CODICE FISCALE"
+                />
+                <TouchableOpacity 
+                  style={styles.calculateCfBtn}
+                  onPress={handleCalculateCF}
+                  disabled={!editData.gender || !editData.date_of_birth || !editData.place_of_birth || !editData.first_name || !editData.last_name}
+                >
+                  <Ionicons name="calculator" size={18} color="#fff" />
+                  <Text style={styles.calculateCfBtnText}>Calcola</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={styles.fieldValue}>{profileData.fiscal_code || '-'}</Text>
+            )}
+          </View>
+
+          {renderField('N° Tesserino', profileData.athlete_license_number, 'athlete_license_number')}
         </View>
 
         {/* Compensation Info */}
