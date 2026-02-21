@@ -53,6 +53,27 @@ interface ConfigFormData {
   fees_waived: boolean;
 }
 
+// Helper functions for date conversion
+const isoToItalian = (isoDate: string): string => {
+  if (!isoDate) return '';
+  // Convert YYYY-MM-DD to DD/MM/YYYY
+  const parts = isoDate.split('T')[0].split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return isoDate;
+};
+
+const italianToIso = (italianDate: string): string => {
+  if (!italianDate) return '';
+  // Convert DD/MM/YYYY to YYYY-MM-DD
+  const parts = italianDate.split('/');
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+  return italianDate;
+};
+
 export default function PrimeSquadrePage() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
