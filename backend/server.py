@@ -1254,6 +1254,8 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
         update_dict["place_of_birth"] = data.place_of_birth
     if data.birth_province is not None:
         update_dict["birth_province"] = data.birth_province
+    if data.gender is not None:
+        update_dict["gender"] = data.gender.upper()  # Store as uppercase M/F
     if data.fiscal_code is not None:
         update_dict["fiscal_code"] = data.fiscal_code
     if data.address is not None:
