@@ -72,21 +72,47 @@ export default function AthleteCompensationDetailPage() {
     if (!id) return;
     
     try {
-      const [athleteRes, recordsRes, thresholdRes, societyRes] = await Promise.all([
-        api.get(`/athletes/${id}`),
+      // First try to get member from prime-squadre (works for all types)
+      let memberData = null;
+      try {
+        // Try athletes first
+        const athleteRes = await api.get(`/athletes/${id}`);
+        memberData = athleteRes.data;
+      } catch (e: any) {
+        if (e.response?.status === 404) {
+          // Try users (coaches and dirigenti)
+          try {
+            const userRes = await api.get(`/users/${id}`);
+            memberData = userRes.data;
+            // Map user data to athlete-like structure
+            memberData.first_name = memberData.full_name?.split(' ')[0] || '';
+            memberData.last_name = memberData.full_name?.split(' ').slice(1).join(' ') || '';
+          } catch (e2) {
+            console.error('User not found either:', e2);
+          }
+        }
+      }
+      
+      if (!memberData) {
+        showAlert('Errore', 'Membro non trovato in Prime Squadre');
+        router.back();
+        return;
+      }
+      
+      const [recordsRes, thresholdRes, societyRes] = await Promise.all([
         api.get(`/prime-squadre/athletes/${id}/compensation`),
         api.get(`/prime-squadre/athletes/${id}/threshold-status/${selectedYear}`),
         api.get('/settings/society'),
       ]);
       
-      setAthlete(athleteRes.data);
+      setAthlete(memberData);
       setRecords(recordsRes.data);
       setThresholdStatus(thresholdRes.data);
       setSportImage(societyRes.data.sport_image || null);
     } catch (error: any) {
       console.error('Error loading data:', error);
       if (error.response?.status === 404) {
-        showAlert('Errore', 'Atleta non trovato in Prime Squadre');
+        showAlert('Errore', 'Dati non trovati');
         router.back();
       }
     }
