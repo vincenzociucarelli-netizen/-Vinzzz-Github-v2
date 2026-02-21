@@ -171,3 +171,38 @@ Sistema di gestione completo per società sportive italiane (pallavolo, basket) 
 ### Test Status
 - **Backend API**: ✅ Testato con curl - gender salva correttamente
 - **Frontend**: ⚠️ Non testabile a causa del problema inotify watchers
+
+## Session 2026-02-21 (Password Reset & Filter Fix)
+
+### New Features Implemented
+1. **Admin Reset Password per Atleti** ✅
+   - **Endpoint**: `POST /api/admin/athletes/{athlete_id}/reset-password`
+   - **Funzionalità**: L'admin può inviare email di reset password agli atleti con email registrata
+   - **Frontend**: Pulsante "Invia Email Reset Password" nella pagina dettaglio atleta
+   - **Modal conferma**: Mostra email atleta prima dell'invio
+   - **Email**: Inviata via Brevo con codice di reset
+   - **File modificati**:
+     - `/app/backend/server.py`: Linee 2048-2110 (nuovo endpoint)
+     - `/app/frontend/app/admin/athlete/[id].tsx`: State, handler, pulsante, modal
+
+2. **Fix Filtro Ricerca Prime Squadre** ✅
+   - **Problema**: Il filtro non funzionava dopo l'aggiunta dei coach
+   - **Soluzione**: Migliorata logica filtro per cercare in più campi
+   - **Campi ricercabili**: nome, cognome, nome squadra, tipo (atleta/coach)
+   - **Supporto query vuota**: Mostra tutti i risultati se nessuna ricerca
+   - **File modificato**: `/app/frontend/app/admin/prime-squadre.tsx` (linee 303-315)
+
+### Test Results
+- `/app/test_reports/iteration_12.json`
+- **Backend**: 100% (11 passed, 1 skipped)
+- **Frontend**: Verificato via code review
+- **Email service**: Confermato invio email via Brevo logs
+
+### Pending Issues
+1. **P1**: Bug "doppio click" per aprire modal firma
+2. **P1**: Verificare funzione "Elimina Atleta"
+3. **P2**: Parent login non funzionante
+4. **P2**: @expo/vector-icons non renderizza su web
+
+### Last Updated
+2026-02-21: Implementato reset password admin + fix filtro Prime Squadre
