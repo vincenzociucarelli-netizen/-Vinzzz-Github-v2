@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
@@ -27,6 +28,10 @@ interface ReportSummary {
   total_amount: number;
 }
 
+interface SocietySettings {
+  sport_image: string | null;
+}
+
 const MONTHS = [
   'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
@@ -39,6 +44,20 @@ export default function ReportsPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [summary, setSummary] = useState<ReportSummary | null>(null);
+  const [society, setSociety] = useState<SocietySettings>({ sport_image: null });
+
+  // Load society settings on mount
+  useEffect(() => {
+    const loadSociety = async () => {
+      try {
+        const res = await api.get('/settings/society');
+        setSociety({ sport_image: res.data.sport_image || null });
+      } catch (error) {
+        console.log('Error loading society settings');
+      }
+    };
+    loadSociety();
+  }, []);
 
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
