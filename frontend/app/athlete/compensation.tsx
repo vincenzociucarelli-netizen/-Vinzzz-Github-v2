@@ -205,6 +205,12 @@ export default function CoachCompensation() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
 
   const handleOpenSignature = (month: number, year?: number) => {
+    // Prevent action if still loading
+    if (loading) {
+      console.log('Still loading, ignoring click');
+      return;
+    }
+    
     const targetYear = year || currentYear;
     
     // Calculate if this month will exceed thresholds
