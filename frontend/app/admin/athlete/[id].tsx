@@ -402,6 +402,30 @@ export default function AdminAthleteDetail() {
     }
   };
 
+  // Reset account password (for athlete login) - sends email with reset link
+  const handleResetAccountPassword = async () => {
+    if (!athlete?.email) {
+      showAlert('Errore', 'L\'atleta non ha un indirizzo email registrato. Aggiungi prima un\'email valida.');
+      return;
+    }
+    
+    setResettingAccountPassword(true);
+    try {
+      const response = await api.post(`/admin/athletes/${id}/reset-password`, {
+        send_email: true
+      });
+      showAlert(
+        '✅ Email Inviata', 
+        `Email di reset password inviata a ${response.data.email}.\n\nL'atleta riceverà un codice da inserire per impostare una nuova password.`
+      );
+      setResetAccountPasswordVisible(false);
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Impossibile inviare l\'email di reset password');
+    } finally {
+      setResettingAccountPassword(false);
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     try {
       return format(new Date(dateStr), 'dd/MM/yyyy', { locale: it });
