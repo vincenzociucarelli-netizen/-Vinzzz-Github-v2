@@ -301,10 +301,17 @@ export default function PrimeSquadrePage() {
   };
 
   const filteredAllAthletes = allAthletes.filter(a => {
-    const query = searchQuery.toLowerCase();
-    const fullName = `${a.first_name} ${a.last_name}`.toLowerCase();
+    if (!searchQuery.trim()) return true; // Show all if no search query
+    const query = searchQuery.toLowerCase().trim();
+    const fullName = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase();
+    const reversedName = `${a.last_name || ''} ${a.first_name || ''}`.toLowerCase();
     const teamName = (a.team_name || '').toLowerCase();
-    return fullName.includes(query) || teamName.includes(query);
+    const typeLabel = (a.type === 'coach' ? 'coach allenatore' : 'atleta').toLowerCase();
+    // Search in multiple fields
+    return fullName.includes(query) || 
+           reversedName.includes(query) || 
+           teamName.includes(query) ||
+           typeLabel.includes(query);
   });
 
   return (
