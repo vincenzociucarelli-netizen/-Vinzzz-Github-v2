@@ -16,6 +16,16 @@ import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import SignaturePadInline from '../../src/components/SignaturePadInline';
 
+// Web-only signature canvas
+let SignatureCanvasWeb: any = null;
+if (Platform.OS === 'web') {
+  try {
+    SignatureCanvasWeb = require('react-signature-canvas').default;
+  } catch (e) {
+    console.warn('react-signature-canvas not available');
+  }
+}
+
 const MONTH_NAMES = [
   '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
