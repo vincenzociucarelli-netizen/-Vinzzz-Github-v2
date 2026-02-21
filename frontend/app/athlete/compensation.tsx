@@ -114,8 +114,10 @@ export default function CoachCompensation() {
   const signatureRef = useRef<any>(null);
 
   useEffect(() => {
-    loadData();
-  }, [currentYear]);
+    if (athleteId) {
+      loadData();
+    }
+  }, [currentYear, athleteId]);
 
   const loadData = async () => {
     // Check if athleteId is available
