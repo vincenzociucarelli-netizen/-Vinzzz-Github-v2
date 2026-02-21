@@ -271,6 +271,33 @@ export default function CoachProfile() {
     }
   };
 
+  // Calculate Codice Fiscale
+  const handleCalculateCF = async () => {
+    if (!editData.first_name || !editData.last_name || !editData.date_of_birth || !editData.place_of_birth || !editData.gender) {
+      showAlert('Dati mancanti', 'Compila Nome, Cognome, Sesso, Data e Luogo di Nascita per calcolare il CF');
+      return;
+    }
+
+    try {
+      const response = await api.post('/utils/calcola-cf', {
+        nome: editData.first_name,
+        cognome: editData.last_name,
+        data_nascita: editData.date_of_birth,
+        luogo_nascita: editData.place_of_birth,
+        sesso: editData.gender,
+      });
+
+      if (response.data.success && response.data.codice_fiscale) {
+        setEditData({...editData, fiscal_code: response.data.codice_fiscale});
+        showAlert('Successo', `Codice Fiscale calcolato: ${response.data.codice_fiscale}`);
+      } else {
+        showAlert('Errore', response.data.error || 'Impossibile calcolare il CF. Verifica il luogo di nascita.');
+      }
+    } catch (error: any) {
+      showAlert('Errore', 'Errore nel calcolo del Codice Fiscale');
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -290,6 +317,7 @@ export default function CoachProfile() {
         date_of_birth: isoDate,
         place_of_birth: editData.place_of_birth,
         birth_province: editData.province_of_birth,
+        gender: editData.gender,
         fiscal_code: editData.fiscal_code,
         address: editData.address,
         city: editData.city,
