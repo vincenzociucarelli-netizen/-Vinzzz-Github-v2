@@ -9318,7 +9318,12 @@ async def update_prime_squadre_athlete(
     
     update_dict = {}
     if data.monthly_compensation is not None:
+        old_compensation = athlete.get("monthly_compensation", 0)
         update_dict["monthly_compensation"] = data.monthly_compensation
+        # Reset acceptance if compensation amount changed
+        if old_compensation != data.monthly_compensation:
+            update_dict["compensation_accepted"] = False
+            update_dict["compensation_accepted_date"] = None
     if data.other_annual_compensation is not None:
         update_dict["other_annual_compensation"] = data.other_annual_compensation
     if data.contract_start_date is not None:
@@ -9327,6 +9332,10 @@ async def update_prime_squadre_athlete(
         update_dict["contract_end_date"] = data.contract_end_date
     if data.fees_waived is not None:
         update_dict["fees_waived"] = data.fees_waived
+    if data.compensation_accepted is not None:
+        update_dict["compensation_accepted"] = data.compensation_accepted
+        if data.compensation_accepted:
+            update_dict["compensation_accepted_date"] = datetime.utcnow()
     
     if update_dict:
         await db.athletes.update_one(
