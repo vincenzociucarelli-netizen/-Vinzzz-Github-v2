@@ -182,7 +182,7 @@ export default function ReportsPage() {
             <View style={styles.breakdownRow}>
               <View style={styles.breakdownItem}>
                 <View style={[styles.breakdownIcon, { backgroundColor: '#64B5F6' }]}>
-                  <Ionicons name="school" size={24} color="#fff" />
+                  <Ionicons name="clipboard" size={24} color="#fff" />
                 </View>
                 <Text style={styles.breakdownLabel}>Coach</Text>
                 <Text style={styles.breakdownCount}>{summary.breakdown.coach.count}</Text>
