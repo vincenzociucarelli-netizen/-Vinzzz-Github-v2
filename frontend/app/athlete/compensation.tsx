@@ -964,12 +964,14 @@ export default function AthleteCompensation() {
 
               {/* Signature Pad */}
               <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
-              <SignaturePadInline
-                ref={signatureRef}
-                onSave={(sig) => setSignature(sig)}
-                onClear={() => setSignature(null)}
-                height={200}
-              />
+              {showSignatureModal && (
+                <SignaturePadInline
+                  ref={signatureRef}
+                  onSave={(sig) => setSignature(sig)}
+                  onClear={() => setSignature(null)}
+                  height={200}
+                />
+              )}
 
               {/* Confirm Buttons */}
               <View style={styles.modalButtons}>
