@@ -160,7 +160,7 @@ export default function PrimeSquadrePage() {
         .filter((a: Athlete) => !primeSquadreIds.includes(a.id) && !a.is_compensated)
         .map((a: Athlete) => ({ ...a, type: 'athlete' as const }));
       
-      // Coaches - add type and format for display
+      // Coaches - add type and format for display, including existing contract data
       const availableCoaches = coachesRes.data
         .filter((c: any) => !primeSquadreIds.includes(c.id))
         .map((c: any) => ({
@@ -169,6 +169,12 @@ export default function PrimeSquadrePage() {
           last_name: c.last_name || c.full_name?.split(' ').slice(1).join(' ') || '',
           team_name: c.teams?.map((t: any) => t.name).join(', ') || 'Coach',
           type: 'coach' as const,
+          // Include existing contract data
+          monthly_compensation: c.monthly_compensation || 0,
+          other_annual_compensation: c.other_annual_compensation || 0,
+          contract_start_date: c.contract_start_date || '',
+          contract_end_date: c.contract_end_date || '',
+          fees_waived: c.fees_waived || false,
         }));
       
       // Combine both lists
