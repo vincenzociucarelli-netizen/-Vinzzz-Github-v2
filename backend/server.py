@@ -2046,6 +2046,77 @@ async def admin_reset_password(user_id: str, data: AdminResetPassword, current_u
     
     return {"message": f"Password resettata per {user.get('full_name', user.get('email'))}"}
 
+class AdminResetAthletePasswordRequest(BaseModel):
+    send_email: bool = True  # If true, send reset link via email
+
+@api_router.post("/admin/athletes/{athlete_id}/reset-password")
+async def admin_reset_athlete_password(athlete_id: str, data: AdminResetAthletePasswordRequest, current_user = Depends(get_current_user)):
+    """Admin can reset an athlete's password and send reset link via email"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può resettare le password degli atleti")
+    
+    # Find the athlete
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Get athlete email
+    athlete_email = athlete.get("email")
+    if not athlete_email:
+        raise HTTPException(status_code=400, detail="L'atleta non ha un indirizzo email registrato. Aggiungi prima un'email valida.")
+    
+    # Find user account linked to this athlete (by email)
+    user = await db.users.find_one({"email": athlete_email.lower()})
+    if not user:
+        # Create user account for athlete if not exists
+        user_id = str(ObjectId())
+        user = {
+            "id": user_id,
+            "email": athlete_email.lower(),
+            "password_hash": hash_password(generate_reset_token()[:12]),  # Random initial password
+            "role": "athlete",
+            "full_name": f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}".strip() or athlete.get("full_name", "Atleta"),
+            "status": UserStatus.APPROVED,
+            "society_id": athlete.get("society_id"),
+            "athlete_id": athlete_id,
+            "created_at": datetime.utcnow(),
+        }
+        await db.users.insert_one(user)
+    
+    # Generate reset token
+    reset_token = generate_reset_token()
+    reset_expires = datetime.utcnow() + timedelta(hours=24)  # 24 hours for admin-initiated reset
+    
+    # Store token in database
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "password_reset_token": reset_token,
+            "password_reset_expires": reset_expires,
+            "athlete_id": athlete_id,  # Ensure link is maintained
+        }}
+    )
+    
+    if data.send_email:
+        # Send email with reset code
+        try:
+            await send_password_reset_email(
+                to_email=athlete_email,
+                reset_token=reset_token,
+                user_name=f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}".strip() or athlete.get("full_name", "Atleta")
+            )
+        except Exception as e:
+            logging.error(f"Failed to send reset email to athlete: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Errore nell'invio dell'email: {str(e)}")
+    
+    athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}".strip() or athlete.get("full_name", "Atleta")
+    return {
+        "success": True,
+        "message": f"Email di reset password inviata a {athlete_email}",
+        "athlete_name": athlete_name,
+        "email": athlete_email,
+    }
+
 @api_router.patch("/users/{user_id}/status")
 async def update_user_status(user_id: str, data: UserUpdateStatus, current_user = Depends(get_current_user)):
     """Approve, reject or suspend a user"""
