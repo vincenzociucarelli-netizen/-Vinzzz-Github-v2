@@ -147,13 +147,34 @@ export default function PrimeSquadrePage() {
 
   const loadAllAthletes = async () => {
     try {
-      const res = await api.get('/athletes');
+      // Load both athletes and coaches
+      const [athletesRes, coachesRes] = await Promise.all([
+        api.get('/athletes'),
+        api.get('/coaches'),
+      ]);
+      
       // Filter out athletes already in Prime Squadre
       const primeSquadreIds = athletes.map(a => a.id);
-      const available = res.data.filter((a: Athlete) => !primeSquadreIds.includes(a.id) && !a.is_compensated);
-      setAllAthletes(available);
+      
+      const availableAthletes = athletesRes.data
+        .filter((a: Athlete) => !primeSquadreIds.includes(a.id) && !a.is_compensated)
+        .map((a: Athlete) => ({ ...a, type: 'athlete' as const }));
+      
+      // Coaches - add type and format for display
+      const availableCoaches = coachesRes.data
+        .filter((c: any) => !primeSquadreIds.includes(c.id))
+        .map((c: any) => ({
+          id: c.id,
+          first_name: c.first_name || c.full_name?.split(' ')[0] || '',
+          last_name: c.last_name || c.full_name?.split(' ').slice(1).join(' ') || '',
+          team_name: c.teams?.map((t: any) => t.name).join(', ') || 'Coach',
+          type: 'coach' as const,
+        }));
+      
+      // Combine both lists
+      setAllAthletes([...availableAthletes, ...availableCoaches]);
     } catch (error) {
-      console.error('Error loading athletes:', error);
+      console.error('Error loading athletes and coaches:', error);
     }
   };
 
