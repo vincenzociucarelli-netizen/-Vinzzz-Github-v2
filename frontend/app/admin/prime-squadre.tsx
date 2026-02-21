@@ -528,16 +528,16 @@ export default function PrimeSquadrePage() {
                         <Text style={styles.athleteListTeam}>{athlete.team_name}</Text>
                       )}
                     </View>
-                    <View style={[styles.typeBadge, { backgroundColor: athlete.type === 'coach' ? '#FF9800' : '#2196F3' }]}>
+                    <View style={[styles.typeBadge, { backgroundColor: athlete.type === 'coach' ? '#FF9800' : athlete.type === 'dirigente' ? '#4CAF50' : '#2196F3' }]}>
                       <Text style={styles.typeBadgeText}>
-                        {athlete.type === 'coach' ? 'Coach' : 'Atleta'}
+                        {athlete.type === 'coach' ? 'Coach' : athlete.type === 'dirigente' ? 'Dirigente' : 'Atleta'}
                       </Text>
                     </View>
                   </View>
                 </TouchableOpacity>
               ))}
               {filteredAllAthletes.length === 0 && (
-                <Text style={styles.noResults}>Nessun atleta o coach trovato</Text>
+                <Text style={styles.noResults}>Nessun atleta, coach o dirigente trovato</Text>
               )}
             </ScrollView>
             
