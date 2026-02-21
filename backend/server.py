@@ -6332,6 +6332,28 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
                         "title": f"Allenamento {team_name}"
                     })
     
+    # Add rifinitura for upcoming days with home matches
+    for day_offset in range(3, 7):
+        target_date = today + timedelta(days=day_offset)
+        date_str = target_date.strftime("%d/%m")
+        day_name = get_day_name(target_date)
+        
+        for team_id in team_ids:
+            if (team_id, date_str) in home_match_rifinitura:
+                rif_info = home_match_rifinitura[(team_id, date_str)]
+                rifinitura = rif_info["rifinitura"]
+                result["upcoming"].append({
+                    "type": "rifinitura",
+                    "team_id": team_id,
+                    "team_name": rif_info["team_name"],
+                    "date": date_str,
+                    "day_name": day_name,
+                    "time_start": rifinitura.get("timeStart", ""),
+                    "time_end": rifinitura.get("timeEnd", ""),
+                    "venue": rifinitura.get("venue", ""),
+                    "title": f"Rifinitura {rif_info['team_name']}"
+                })
+    
     for match in matches:
         match_date = match.get("date")
         if isinstance(match_date, str):
