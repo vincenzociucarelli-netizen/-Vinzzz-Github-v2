@@ -272,7 +272,7 @@ export default function CoachCompensation() {
     }
     
     // Check if this month is already signed
-    const existingRecord = records.find(r => r.month === month && r.year === targetYear && r.signed);
+    const existingRecord = records.find(r => matchesMonth(r.month, month) && r.year === targetYear && r.signed);
     if (existingRecord) {
       Alert.alert('Già firmata', 'La quietanza per questo mese è già stata firmata.');
       return;
