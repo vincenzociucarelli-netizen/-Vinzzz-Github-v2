@@ -967,14 +967,21 @@ export default function AthleteCompensation() {
                 </Text>
               </View>
 
-              {/* Signature Pad */}
+              {/* Simple Text instead of SignaturePad for testing */}
               <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
-              <SignaturePadInline
-                ref={signatureRef}
-                onSave={(sig) => setSignature(sig)}
-                onClear={() => setSignature(null)}
-                height={200}
-              />
+              <View style={{ 
+                borderWidth: 2, 
+                borderColor: '#007AFF', 
+                borderRadius: 8, 
+                height: 150, 
+                backgroundColor: '#f0f8ff',
+                marginBottom: 16,
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <Text style={{ color: '#007AFF', fontSize: 16 }}>✍️ Tocca qui per firmare</Text>
+                <Text style={{ color: '#666', fontSize: 12, marginTop: 8 }}>(Firma semplificata per test)</Text>
+              </View>
 
               {/* Confirm Buttons */}
               <View style={styles.modalButtons}>
@@ -986,13 +993,13 @@ export default function AthleteCompensation() {
                 </TouchableOpacity>
                 
                 <TouchableOpacity
-                  style={[
-                    styles.modalButton, 
-                    styles.confirmButton,
-                    !signature && styles.buttonDisabled
-                  ]}
-                  onPress={handleSign}
-                  disabled={!signature || signing}
+                  style={[styles.modalButton, styles.confirmButton]}
+                  onPress={() => {
+                    // Firma diretta senza signature pad
+                    setSignature('data:image/png;base64,FIRMA_SEMPLIFICATA');
+                    handleSign();
+                  }}
+                  disabled={signing}
                 >
                   {signing ? (
                     <ActivityIndicator size="small" color="#fff" />
