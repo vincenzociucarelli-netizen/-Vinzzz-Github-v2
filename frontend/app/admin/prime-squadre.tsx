@@ -278,9 +278,12 @@ export default function PrimeSquadrePage() {
     setShowConfigModal(true);
   };
 
-  const filteredAllAthletes = allAthletes.filter(a =>
-    `${a.first_name} ${a.last_name}`.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAllAthletes = allAthletes.filter(a => {
+    const query = searchQuery.toLowerCase();
+    const fullName = `${a.first_name} ${a.last_name}`.toLowerCase();
+    const teamName = (a.team_name || '').toLowerCase();
+    return fullName.includes(query) || teamName.includes(query);
+  });
 
   return (
     <View style={styles.container}>
