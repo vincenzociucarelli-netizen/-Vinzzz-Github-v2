@@ -449,7 +449,7 @@ export default function CoachCompensation() {
       });
       
       // Close modal FIRST, then show success message
-      setShowSignatureModal(false);
+      closeSignatureModal();
       
       Alert.alert(
         'Quietanza Firmata',
