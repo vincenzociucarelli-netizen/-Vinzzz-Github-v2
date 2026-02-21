@@ -941,14 +941,9 @@ export default function AthleteCompensation() {
         </View>
       </ScrollView>
 
-      {/* Signature Modal for Receipts */}
-      <Modal
-        visible={showSignatureModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowSignatureModal(false)}
-      >
-        <View style={styles.modalOverlay}>
+      {/* Signature Modal for Receipts - Using conditional View instead of Modal for web */}
+      {showSignatureModal && (
+        <View style={[styles.modalOverlay, { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000 }]}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
@@ -974,40 +969,42 @@ export default function AthleteCompensation() {
 
               {/* Signature Pad */}
               <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
-              <View style={{ 
-                borderWidth: 2, 
-                borderColor: '#ccc', 
-                borderRadius: 8, 
-                height: 200, 
-                backgroundColor: '#fff',
-                marginBottom: 16,
-                justifyContent: 'center',
-                alignItems: 'center'
-              }}>
-                <Text style={{ color: '#999' }}>Area firma (in caricamento...)</Text>
-              </View>
-              
-              <TouchableOpacity 
-                style={{ 
-                  backgroundColor: '#007AFF', 
-                  padding: 12, 
-                  borderRadius: 8, 
-                  alignItems: 'center',
-                  marginBottom: 16 
-                }}
-                onPress={() => {
-                  // Test: set a dummy signature
-                  setSignature('data:image/png;base64,TEST');
-                }}
-              >
-                <Text style={{ color: '#fff', fontWeight: '600' }}>Simula Firma (Test)</Text>
-              </TouchableOpacity>
+              <SignaturePadInline
+                ref={signatureRef}
+                onSave={(sig) => setSignature(sig)}
+                onClear={() => setSignature(null)}
+                height={200}
+              />
 
               {/* Confirm Buttons */}
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.cancelButton]}
                   onPress={() => setShowSignatureModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Annulla</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.modalButton, 
+                    styles.confirmButton,
+                    !signature && styles.buttonDisabled
+                  ]}
+                  onPress={handleSign}
+                  disabled={!signature || signing}
+                >
+                  {signing ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.confirmButtonText}>Firma Quietanza</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      )}
                 >
                   <Text style={styles.cancelButtonText}>Annulla</Text>
                 </TouchableOpacity>
