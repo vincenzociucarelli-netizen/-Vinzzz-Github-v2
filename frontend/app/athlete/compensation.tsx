@@ -277,7 +277,7 @@ export default function CoachCompensation() {
       setSigningDeclaration(true);
       
       // Use the compensation receipt endpoint which now generates the correct threshold document
-      const response = await api.post(`/athletes/${athleteId}/compensation/receipt`, {
+      const response = await api.post(`/athletes/${athleteId}/compensation/receipt-sign`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile?.monthly_compensation || 0,
@@ -340,7 +340,7 @@ export default function CoachCompensation() {
       
       console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYear, selectedYear });
       
-      const response = await api.post(`/athletes/${athleteId}/compensation/receipt`, {
+      const response = await api.post(`/athletes/${athleteId}/compensation/receipt-sign`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile.monthly_compensation,
