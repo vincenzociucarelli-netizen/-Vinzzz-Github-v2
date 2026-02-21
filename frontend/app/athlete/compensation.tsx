@@ -23,7 +23,7 @@ const MONTH_NAMES = [
 
 interface CompensationRecord {
   id: string;
-  month: number;
+  month: number | string;  // Can be number (1-12) or string ("Gennaio", etc.)
   year: number;
   amount_gross?: number;
   amount_net?: number;
@@ -31,8 +31,8 @@ interface CompensationRecord {
   deductions?: number;
   received: boolean;
   received_date?: string;
-  receipt_signed: boolean;
-  receipt_signed_date?: string;
+  signed: boolean;  // Backend returns 'signed', not 'receipt_signed'
+  signed_date?: string;
   receipt_document_id?: string;
   exceeded_5000: boolean;
   exceeded_15000: boolean;
