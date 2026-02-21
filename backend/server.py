@@ -1191,7 +1191,8 @@ async def login(credentials: UserLogin):
             "email": user["email"], 
             "role": user["role"], 
             "full_name": user["full_name"],
-            "status": user_status
+            "status": user_status,
+            "profile_photo": user.get("profile_photo")
         }
     )
 
