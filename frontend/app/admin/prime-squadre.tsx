@@ -183,12 +183,12 @@ export default function PrimeSquadrePage() {
       // First enable the athlete in Prime Squadre
       await api.post(`/prime-squadre/athletes/${athleteToAdd.id}/enable`);
       
-      // Then update their configuration
+      // Then update their configuration (convert dates to ISO format)
       await api.patch(`/prime-squadre/athletes/${athleteToAdd.id}`, {
         monthly_compensation: parseFloat(configForm.monthly_compensation) || 0,
         other_annual_compensation: parseFloat(configForm.other_annual_compensation) || 0,
-        contract_start_date: configForm.contract_start_date,
-        contract_end_date: configForm.contract_end_date,
+        contract_start_date: italianToIso(configForm.contract_start_date),
+        contract_end_date: italianToIso(configForm.contract_end_date),
         fees_waived: configForm.fees_waived,
       });
       
