@@ -38,7 +38,7 @@ interface CompensationRecord {
   exceeded_15000: boolean;
 }
 
-interface CoachProfile {
+interface AthleteProfile {
   id: string;
   full_name: string;
   fiscal_code?: string;
@@ -80,7 +80,7 @@ export default function CoachCompensation() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<CoachProfile | null>(null);
+  const [profile, setProfile] = useState<AthleteProfile | null>(null);
   const [records, setRecords] = useState<CompensationRecord[]>([]);
   const [yearlyTotal, setYearlyTotal] = useState(0);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
