@@ -16,16 +16,6 @@ import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import SignaturePadInline from '../../src/components/SignaturePadInline';
 
-// Web-only signature canvas
-let SignatureCanvasWeb: any = null;
-if (Platform.OS === 'web') {
-  try {
-    SignatureCanvasWeb = require('react-signature-canvas').default;
-  } catch (e) {
-    console.warn('react-signature-canvas not available');
-  }
-}
-
 const MONTH_NAMES = [
   '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
@@ -48,7 +38,7 @@ interface CompensationRecord {
   exceeded_15000: boolean;
 }
 
-interface AthleteProfile {
+interface CoachProfile {
   id: string;
   full_name: string;
   fiscal_code?: string;
@@ -60,7 +50,7 @@ interface AthleteProfile {
 }
 
 interface ThresholdStatus {
-  athlete_id: string;
+  coach_id: string;
   year: number;
   monthly_compensation: number;
   yearly_total: number;
@@ -86,12 +76,11 @@ interface ThresholdStatus {
   block_reason?: string;
 }
 
-export default function AthleteCompensation() {
+export default function CoachCompensation() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
-  const [athleteId, setAthleteId] = useState<string | null>(null);
-  const [profile, setProfile] = useState<AthleteProfile | null>(null);
+  const [profile, setProfile] = useState<CoachProfile | null>(null);
   const [records, setRecords] = useState<CompensationRecord[]>([]);
   const [yearlyTotal, setYearlyTotal] = useState(0);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -129,39 +118,23 @@ export default function AthleteCompensation() {
     try {
       setLoading(true);
       
-      // Load profile and get athlete_id
+      // Load profile
       const profileRes = await api.get('/auth/me');
-      const userData = profileRes.data;
-      
-      // For athlete users, get the athlete_id from their record
-      let currentAthleteId = userData.athlete_id || userData.id;
-      setAthleteId(currentAthleteId);
-      
-      // If user has athlete_id, fetch full athlete data
-      if (userData.athlete_id) {
-        const athleteRes = await api.get(`/athletes/${userData.athlete_id}`);
-        setProfile(athleteRes.data);
-      } else {
-        setProfile(userData);
-      }
-      
-      const profileData = userData.athlete_id 
-        ? (await api.get(`/athletes/${userData.athlete_id}`)).data 
-        : userData;
+      setProfile(profileRes.data);
       
       // Parse contract dates
       let startYear = null;
       let endYear = null;
-      if (profileData.contract_start_date) {
-        const startParts = profileData.contract_start_date.split('-');
+      if (profileRes.data.contract_start_date) {
+        const startParts = profileRes.data.contract_start_date.split('-');
         if (startParts.length === 3) {
           startYear = parseInt(startParts[0]);
           setContractStartYear(startYear);
           setContractStartMonth(parseInt(startParts[1]));
         }
       }
-      if (profileData.contract_end_date) {
-        const endParts = profileData.contract_end_date.split('-');
+      if (profileRes.data.contract_end_date) {
+        const endParts = profileRes.data.contract_end_date.split('-');
         if (endParts.length === 3) {
           endYear = parseInt(endParts[0]);
           setContractEndYear(endYear);
@@ -170,29 +143,29 @@ export default function AthleteCompensation() {
       }
       
       // Set prior compensation
-      setPriorCompensation(profileData.other_annual_compensation || 0);
+      setPriorCompensation(profileRes.data.other_annual_compensation || 0);
       
-      // Load ALL compensation records
-      const recordsRes = await api.get(`/athletes/${currentAthleteId}/compensation/receipts`);
+      // Load ALL compensation records (not filtered by year)
+      const recordsRes = await api.get(`/coach/${user?.id}/compensation`);
       setRecords(recordsRes.data || []);
       
       // Calculate yearly total for current display year (including prior compensation for first year)
       const totalFromReceipts = (recordsRes.data || [])
-        .filter((r: CompensationRecord) => r.year === currentYear && r.signed)
-        .reduce((sum: number, r: CompensationRecord) => sum + (r.amount || 0), 0);
+        .filter((r: CompensationRecord) => r.year === currentYear && r.receipt_signed)
+        .reduce((sum: number, r: CompensationRecord) => sum + (r.amount_gross || r.amount || 0), 0);
       
       // Add prior compensation if this is the first year of the contract
-      const priorComp = profileData.other_annual_compensation || 0;
+      const priorComp = profileRes.data.other_annual_compensation || 0;
       const total = (currentYear === startYear) ? totalFromReceipts + priorComp : totalFromReceipts;
       setYearlyTotal(total);
       
       // Load threshold status for contract start year (where thresholds matter most)
       const thresholdYear = startYear || currentYear;
       try {
-        const thresholdRes = await api.get(`/prime-squadre/athletes/${currentAthleteId}/threshold-status/${thresholdYear}`);
+        const thresholdRes = await api.get(`/coach/${user?.id}/threshold-status/${thresholdYear}`);
         setThresholdStatus(thresholdRes.data);
       } catch (err) {
-        console.log('Threshold status not available:', err);
+        console.log('Error loading threshold status:', err);
       }
       
     } catch (error) {
@@ -206,7 +179,6 @@ export default function AthleteCompensation() {
 
   const handleOpenSignature = (month: number, year?: number) => {
     const targetYear = year || currentYear;
-    console.log('handleOpenSignature called:', { month, targetYear });
     
     // Calculate if this month will exceed thresholds
     const monthlyAmount = profile?.monthly_compensation || 0;
@@ -228,11 +200,10 @@ export default function AthleteCompensation() {
     const newTotal = yearTotalBeforeThis + monthlyAmount;
     
     // Check if THIS month will be the first to exceed thresholds
-    // NOTE: Thresholds only apply if athlete is in Prime Squadre (thresholdStatus exists)
-    const willExceed5k = thresholdStatus && newTotal > 5000 && yearTotalBeforeThis <= 5000;
-    const willExceed15k = thresholdStatus && newTotal > 15000 && yearTotalBeforeThis <= 15000;
+    const willExceed5k = newTotal > 5000 && yearTotalBeforeThis <= 5000;
+    const willExceed15k = newTotal > 15000 && yearTotalBeforeThis <= 15000;
     
-    console.log('Threshold check for modal:', { yearTotalBeforeThis, monthlyAmount, newTotal, willExceed5k, willExceed15k, hasPrimeSquadre: !!thresholdStatus });
+    console.log('Threshold check for modal:', { yearTotalBeforeThis, monthlyAmount, newTotal, willExceed5k, willExceed15k });
     
     // Check if blocked by threshold (already exceeded but not declared)
     if (thresholdStatus?.is_blocked) {
@@ -264,63 +235,17 @@ export default function AthleteCompensation() {
       return;
     }
     
-    console.log('Setting modal state...', { month, targetYear, willExceed5k, willExceed15k });
     setSelectedMonth(month);
     setSelectedYear(targetYear);
     setSignature(null);
     
     // If this month will exceed a threshold, show declaration modal instead
     if (willExceed15k) {
-      console.log('Opening 15k declaration modal');
       openDeclarationModalForMonth('15000', month, targetYear);
     } else if (willExceed5k) {
-      console.log('Opening 5k declaration modal');
       openDeclarationModalForMonth('5000', month, targetYear);
     } else {
-      console.log('Opening signature modal');
-      // Use native Alert for both web and mobile
-      Alert.alert(
-        'Conferma Firma',
-        `Vuoi firmare la quietanza per ${MONTH_NAMES[month]} ${targetYear}?\n\nCompenso: € ${(profile?.monthly_compensation || 0).toFixed(2)}`,
-        [
-          { text: 'Annulla', style: 'cancel' },
-          { 
-            text: 'Firma', 
-            onPress: () => handleSignDirect(month, targetYear)
-          }
-        ]
-      );
-      console.log('Signature modal state set to true');
-    }
-  };
-  
-  // Direct sign function for web
-  const handleSignDirect = async (month: number, year: number) => {
-    setSigning(true);
-    try {
-      const response = await api.post(`/athletes/${athleteId}/compensation/receipt-sign`, {
-        month,
-        year,
-        amount_gross: profile?.monthly_compensation || 0,
-        signature_base64: 'data:image/png;base64,FIRMA_WEB_DIRETTA'
-      });
-      
-      if (Platform.OS === 'web') {
-        window.alert('Quietanza firmata con successo!');
-      } else {
-        Alert.alert('Successo', 'Quietanza firmata con successo!');
-      }
-      
-      loadData(); // Reload to update status
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.detail || 'Errore durante la firma';
-      if (Platform.OS === 'web') {
-        window.alert('Errore: ' + errorMsg);
-      } else {
-        Alert.alert('Errore', errorMsg);
-      }
-    } finally {
-      setSigning(false);
+      setShowSignatureModal(true);
     }
   };
 
@@ -348,8 +273,8 @@ export default function AthleteCompensation() {
     try {
       setSigningDeclaration(true);
       
-      // Use the receipt-sign endpoint which generates the correct threshold document
-      const response = await api.post(`/athletes/${athleteId}/compensation/receipt-sign`, {
+      // Use the compensation receipt endpoint which now generates the correct threshold document
+      const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile?.monthly_compensation || 0,
@@ -363,7 +288,7 @@ export default function AthleteCompensation() {
       
       Alert.alert(
         'Dichiarazione Firmata',
-        `Comunicazione di superamento soglia € ${thresholdAmount} per ${monthName} ${selectedYear} firmata con successo!\n\nUna copia è stata inviata alla tua email e alla società.`
+        `Comunicazione di superamento soglia € ${thresholdAmount} per ${monthName} ${selectedYear} firmata con successo!\n\nCompreso lordo: € ${response.data.amount_gross.toFixed(2)}\nTotale annuo: € ${response.data.yearly_total.toFixed(2)}\n\nUna copia è stata inviata alla tua email e alla società.`
       );
       
       setShowDeclarationModal(false);
@@ -412,7 +337,7 @@ export default function AthleteCompensation() {
       
       console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYear, selectedYear });
       
-      const response = await api.post(`/athletes/${athleteId}/compensation/receipt-sign`, {
+      const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile.monthly_compensation,
@@ -707,25 +632,16 @@ export default function AthleteCompensation() {
     };
     
     return (
-      <div
+      <TouchableOpacity
         key={`${displayYear}-${month}`}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (status === 'pending' || status === 'blocked') {
-            handleOpenSignature(month, displayYear);
-          }
-        }}
-        style={{
-          cursor: status === 'future' ? 'default' : 'pointer',
-          opacity: status === 'future' ? 0.5 : 1,
-        }}
-        data-testid={`month-card-${displayYear}-${month}`}
-      >
-        <View style={[
+        style={[
           styles.monthCard,
           getCardStyle(),
-        ]}>
+        ]}
+        onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
+        disabled={status === 'future'}
+        data-testid={`month-card-${displayYear}-${month}`}
+      >
         {/* Threshold Badge - positioned at top right */}
         {(exceeded5k || exceeded15k) && (
           <View style={{
@@ -778,8 +694,7 @@ export default function AthleteCompensation() {
         {status === 'future' && (
           <Text style={styles.futureText}>Non disponibile</Text>
         )}
-        </View>
-      </div>
+      </TouchableOpacity>
     );
   };
 
@@ -806,12 +721,12 @@ export default function AthleteCompensation() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Athlete Name and Profile Link */}
+        {/* Coach Name and Profile Link */}
         <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <Ionicons name="person-circle" size={50} color="#007AFF" />
             <View style={{ marginLeft: 12, flex: 1 }}>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Athlete'}</Text>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Coach'}</Text>
               <Text style={{ fontSize: 13, color: '#666' }}>Compenso mensile: €{(profile?.monthly_compensation || 0).toFixed(2)}</Text>
             </View>
           </View>
@@ -833,11 +748,8 @@ export default function AthleteCompensation() {
               </View>
               <Text style={{ fontSize: 18, color: '#007AFF', fontWeight: 'bold', marginTop: 4, textAlign: 'center' }}>
                 {(() => {
-                  // Clean dates from ISO format (remove T00:00:00 part)
-                  const cleanStart = profile.contract_start_date!.split('T')[0];
-                  const cleanEnd = profile.contract_end_date!.split('T')[0];
-                  const startParts = cleanStart.split('-');
-                  const endParts = cleanEnd.split('-');
+                  const startParts = profile.contract_start_date!.split('-');
+                  const endParts = profile.contract_end_date!.split('-');
                   const startFormatted = `${startParts[2]}/${startParts[1]}/${startParts[0]}`;
                   const endFormatted = `${endParts[2]}/${endParts[1]}/${endParts[0]}`;
                   return `${startFormatted} - ${endFormatted}`;
@@ -848,7 +760,7 @@ export default function AthleteCompensation() {
           
           <TouchableOpacity 
             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F8FF', padding: 10, borderRadius: 8 }}
-            onPress={() => router.push('/athlete/profile')}
+            onPress={() => router.push('/coach/profile')}
           >
             <Ionicons name="create-outline" size={18} color="#007AFF" />
             <Text style={{ marginLeft: 8, color: '#007AFF', fontWeight: '500' }}>Il Mio Profilo</Text>
@@ -992,9 +904,14 @@ export default function AthleteCompensation() {
         </View>
       </ScrollView>
 
-      {/* Signature Modal for Receipts - Using conditional View instead of Modal for web */}
-      {showSignatureModal && (
-        <View style={[styles.modalOverlay, { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000 }]}>
+      {/* Signature Modal for Receipts */}
+      <Modal
+        visible={showSignatureModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowSignatureModal(false)}
+      >
+        <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
@@ -1018,21 +935,14 @@ export default function AthleteCompensation() {
                 </Text>
               </View>
 
-              {/* Simple Text instead of SignaturePad for testing */}
+              {/* Signature Pad */}
               <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
-              <View style={{ 
-                borderWidth: 2, 
-                borderColor: '#007AFF', 
-                borderRadius: 8, 
-                height: 150, 
-                backgroundColor: '#f0f8ff',
-                marginBottom: 16,
-                justifyContent: 'center',
-                alignItems: 'center'
-              }}>
-                <Text style={{ color: '#007AFF', fontSize: 16 }}>✍️ Tocca qui per firmare</Text>
-                <Text style={{ color: '#666', fontSize: 12, marginTop: 8 }}>(Firma semplificata per test)</Text>
-              </View>
+              <SignaturePadInline
+                ref={signatureRef}
+                onSave={(sig) => setSignature(sig)}
+                onClear={() => setSignature(null)}
+                height={200}
+              />
 
               {/* Confirm Buttons */}
               <View style={styles.modalButtons}>
@@ -1044,13 +954,13 @@ export default function AthleteCompensation() {
                 </TouchableOpacity>
                 
                 <TouchableOpacity
-                  style={[styles.modalButton, styles.confirmButton]}
-                  onPress={() => {
-                    // Firma diretta senza signature pad
-                    setSignature('data:image/png;base64,FIRMA_SEMPLIFICATA');
-                    handleSign();
-                  }}
-                  disabled={signing}
+                  style={[
+                    styles.modalButton, 
+                    styles.confirmButton,
+                    !signature && styles.buttonDisabled
+                  ]}
+                  onPress={handleSign}
+                  disabled={!signature || signing}
                 >
                   {signing ? (
                     <ActivityIndicator size="small" color="#fff" />
@@ -1062,7 +972,7 @@ export default function AthleteCompensation() {
             </ScrollView>
           </View>
         </View>
-      )}
+      </Modal>
 
       {/* Declaration Modal */}
       <Modal
