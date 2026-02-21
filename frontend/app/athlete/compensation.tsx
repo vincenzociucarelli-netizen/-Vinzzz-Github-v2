@@ -340,17 +340,14 @@ export default function CoachCompensation() {
       return;
     }
     
-    setSelectedMonth(month);
-    setSelectedYear(targetYear);
-    setSignature(null);
-    
     // If this month will exceed a threshold, show declaration modal instead
     if (willExceed15k) {
       openDeclarationModalForMonth('15000', month, targetYear);
     } else if (willExceed5k) {
       openDeclarationModalForMonth('5000', month, targetYear);
     } else {
-      setShowSignatureModal(true);
+      // Open signature modal with all state in one update to prevent re-renders
+      openSignatureModal(month, targetYear);
     }
   };
 
@@ -358,8 +355,8 @@ export default function CoachCompensation() {
   const openDeclarationModalForMonth = (type: '5000' | '15000', month: number, year: number) => {
     setDeclarationType(type);
     setDeclarationSignature(null);
-    setSelectedMonth(month);
-    setSelectedYear(year);
+    // Also set selected month/year in signature modal state for when declaration is done
+    setSignatureModalState(prev => ({ ...prev, month, year }));
     setShowDeclarationModal(true);
   };
 
