@@ -76,6 +76,24 @@ const italianToIso = (italianDate: string): string => {
   return italianDate;
 };
 
+// Auto-format date with slashes as user types (dd/mm/yyyy)
+const formatDateWithSlashes = (text: string): string => {
+  // Remove any non-digit characters
+  const digits = text.replace(/\D/g, '');
+  
+  // Limit to 8 digits (ddmmyyyy)
+  const limited = digits.slice(0, 8);
+  
+  // Add slashes automatically
+  if (limited.length <= 2) {
+    return limited;
+  } else if (limited.length <= 4) {
+    return `${limited.slice(0, 2)}/${limited.slice(2)}`;
+  } else {
+    return `${limited.slice(0, 2)}/${limited.slice(2, 4)}/${limited.slice(4)}`;
+  }
+};
+
 export default function PrimeSquadrePage() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
