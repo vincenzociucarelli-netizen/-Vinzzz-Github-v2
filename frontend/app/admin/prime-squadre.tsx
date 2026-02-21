@@ -212,14 +212,15 @@ export default function PrimeSquadrePage() {
 
   const handleAddAthlete = async (athlete: Athlete) => {
     // Instead of immediately adding, show config modal
+    // Pre-populate with existing contract data if available
     setAthleteToAdd(athlete);
     setShowAddModal(false);
     setConfigForm({
-      monthly_compensation: '',
-      other_annual_compensation: '',
-      contract_start_date: '',
-      contract_end_date: '',
-      fees_waived: false,
+      monthly_compensation: athlete.monthly_compensation ? String(athlete.monthly_compensation) : '',
+      other_annual_compensation: athlete.other_annual_compensation ? String(athlete.other_annual_compensation) : '',
+      contract_start_date: athlete.contract_start_date ? isoToItalian(athlete.contract_start_date) : '',
+      contract_end_date: athlete.contract_end_date ? isoToItalian(athlete.contract_end_date) : '',
+      fees_waived: athlete.fees_waived || false,
     });
     setShowConfigModal(true);
   };
