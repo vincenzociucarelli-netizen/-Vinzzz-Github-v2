@@ -398,9 +398,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   breakdownIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
