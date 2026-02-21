@@ -149,7 +149,7 @@ export default function CoachCompensation() {
       setPriorCompensation(profileRes.data.other_annual_compensation || 0);
       
       // Load ALL compensation records (not filtered by year)
-      const recordsRes = await api.get(`/athletes/${athleteId}/compensation`);
+      const recordsRes = await api.get(`/athletes/${athleteId}/compensation/receipts`);
       setRecords(recordsRes.data || []);
       
       // Calculate yearly total for current display year (including prior compensation for first year)
@@ -277,7 +277,7 @@ export default function CoachCompensation() {
       setSigningDeclaration(true);
       
       // Use the compensation receipt endpoint which now generates the correct threshold document
-      const response = await api.post(`/athletes/${athleteId}/compensation/receipt-sign`, {
+      const response = await api.post(`/athletes/${athleteId}/compensation/receipts/receipt-sign`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile?.monthly_compensation || 0,
@@ -340,7 +340,7 @@ export default function CoachCompensation() {
       
       console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYear, selectedYear });
       
-      const response = await api.post(`/athletes/${athleteId}/compensation/receipt-sign`, {
+      const response = await api.post(`/athletes/${athleteId}/compensation/receipts/receipt-sign`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile.monthly_compensation,
