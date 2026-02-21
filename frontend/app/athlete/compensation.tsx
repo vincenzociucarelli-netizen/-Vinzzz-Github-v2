@@ -224,7 +224,7 @@ export default function CoachCompensation() {
     }
     
     // Calculate total before this month
-    const yearRecords = records.filter(r => r.year === targetYear && r.receipt_signed);
+    const yearRecords = records.filter(r => r.year === targetYear && r.signed);
     const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
     const yearTotalBeforeThis = (targetYear === contractStartYear) 
       ? yearTotalFromReceipts + priorComp 
