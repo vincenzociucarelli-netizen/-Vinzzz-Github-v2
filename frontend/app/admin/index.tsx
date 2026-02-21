@@ -806,7 +806,15 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/profile')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E3F2FD' }]}>
-              <Text style={{ fontSize: 26 }}>{Icons.person}</Text>
+              {user?.profile_photo ? (
+                <Image 
+                  source={{ uri: `data:image/jpeg;base64,${user.profile_photo}` }}
+                  style={{ width: 40, height: 40, borderRadius: 20 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={{ fontSize: 26 }}>{Icons.person}</Text>
+              )}
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Il Mio Profilo</Text>
