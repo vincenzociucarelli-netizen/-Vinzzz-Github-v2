@@ -379,16 +379,30 @@ export default function PrimeSquadrePage() {
             <TouchableOpacity 
               key={athlete.id} 
               style={styles.athleteCard}
-              onPress={() => router.push(`/admin/athlete/${athlete.id}/compensation`)}
+              onPress={() => {
+                // Route to correct compensation page based on type
+                if (athlete.type === 'coach') {
+                  router.push(`/admin/coach/${athlete.id}/compensation`);
+                } else {
+                  router.push(`/admin/athlete/${athlete.id}/compensation`);
+                }
+              }}
               activeOpacity={0.7}
             >
               <View style={styles.athleteInfo}>
                 <Text style={styles.athleteName}>
                   {athlete.last_name} {athlete.first_name}
                 </Text>
-                {athlete.team_name && (
-                  <Text style={styles.athleteTeam}>{athlete.team_name}</Text>
-                )}
+                {/* Badge: Coach (orange) or Team Name (blue) */}
+                {athlete.type === 'coach' ? (
+                  <View style={[styles.typeBadgeInline, { backgroundColor: '#FF9800' }]}>
+                    <Text style={styles.typeBadgeTextInline}>Coach</Text>
+                  </View>
+                ) : athlete.team_name ? (
+                  <View style={[styles.typeBadgeInline, { backgroundColor: '#2196F3' }]}>
+                    <Text style={styles.typeBadgeTextInline}>{athlete.team_name}</Text>
+                  </View>
+                ) : null}
                 <View style={styles.compensationInfo}>
                   <Text style={styles.compensationText}>
                     Compenso: €{athlete.monthly_compensation || 0}/mese
