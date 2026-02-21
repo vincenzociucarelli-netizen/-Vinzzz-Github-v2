@@ -2003,6 +2003,27 @@ export default function AdminAthleteDetail() {
               </TouchableOpacity>
             )}
 
+            {/* Reset Account Password Button - For athletes with email */}
+            {(athlete as any).email && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>🔑 Password Accesso App</Text>
+                <Text style={styles.cardSubtitle}>
+                  Invia un'email all'atleta con un link per reimpostare la password di accesso all'app
+                </Text>
+                <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
+                  Email: {(athlete as any).email}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.resetDataPasswordBtn, { backgroundColor: '#007AFF' }]}
+                  onPress={() => setResetAccountPasswordVisible(true)}
+                  data-testid="reset-account-password-btn"
+                >
+                  <Ionicons name="mail-outline" size={20} color="#fff" />
+                  <Text style={styles.resetDataPasswordBtnText}>Invia Email Reset Password</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Detach/Reattach Parents Button - Only for adult athletes */}
             {!athlete.is_minor && (
               <View style={styles.parentsActionSection}>
