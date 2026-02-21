@@ -86,12 +86,26 @@ export default function PrimeSquadrePage() {
   const [athleteToAdd, setAthleteToAdd] = useState<Athlete | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [configForm, setConfigForm] = useState<ConfigFormData>({
-    monthly_compensation: '0',
-    other_annual_compensation: '0',
-    contract_start_date: '2025-09-01',
-    contract_end_date: '2026-05-31',
+    monthly_compensation: '',
+    other_annual_compensation: '',
+    contract_start_date: '01/09/2025',
+    contract_end_date: '31/05/2026',
     fees_waived: false,
   });
+
+  // Handle focus on amount fields - clear if zero
+  const handleAmountFocus = (field: 'monthly_compensation' | 'other_annual_compensation') => {
+    if (configForm[field] === '0' || configForm[field] === '') {
+      setConfigForm({...configForm, [field]: ''});
+    }
+  };
+
+  // Handle blur on amount fields - set to 0 if empty
+  const handleAmountBlur = (field: 'monthly_compensation' | 'other_annual_compensation') => {
+    if (configForm[field] === '') {
+      setConfigForm({...configForm, [field]: '0'});
+    }
+  };
 
   const loadData = async () => {
     try {
