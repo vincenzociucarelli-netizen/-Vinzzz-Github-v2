@@ -468,7 +468,15 @@ export default function TeamsScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="basketball-outline" size={64} color="#ccc" />
+            {sportImage ? (
+              <Image 
+                source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
+                style={{ width: 80, height: 80, borderRadius: 12, marginBottom: 8 }}
+                resizeMode="contain"
+              />
+            ) : (
+              <Ionicons name="basketball-outline" size={64} color="#ccc" />
+            )}
             <Text style={styles.emptyText}>Nessuna squadra</Text>
             <Text style={styles.emptySubtext}>Tocca + per creare una squadra</Text>
           </View>
