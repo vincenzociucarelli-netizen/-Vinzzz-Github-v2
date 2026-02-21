@@ -775,8 +775,11 @@ export default function CoachCompensation() {
               </View>
               <Text style={{ fontSize: 18, color: '#007AFF', fontWeight: 'bold', marginTop: 4, textAlign: 'center' }}>
                 {(() => {
-                  const startParts = profile.contract_start_date!.split('-');
-                  const endParts = profile.contract_end_date!.split('-');
+                  // Clean dates from ISO format (remove T00:00:00 part)
+                  const startClean = profile.contract_start_date!.split('T')[0];
+                  const endClean = profile.contract_end_date!.split('T')[0];
+                  const startParts = startClean.split('-');
+                  const endParts = endClean.split('-');
                   const startFormatted = `${startParts[2]}/${startParts[1]}/${startParts[0]}`;
                   const endFormatted = `${endParts[2]}/${endParts[1]}/${endParts[0]}`;
                   return `${startFormatted} - ${endFormatted}`;
@@ -787,7 +790,7 @@ export default function CoachCompensation() {
           
           <TouchableOpacity 
             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F8FF', padding: 10, borderRadius: 8 }}
-            onPress={() => router.push('/coach/profile')}
+            onPress={() => router.push('/athlete/profile')}
           >
             <Ionicons name="create-outline" size={18} color="#007AFF" />
             <Text style={{ marginLeft: 8, color: '#007AFF', fontWeight: '500' }}>Il Mio Profilo</Text>
