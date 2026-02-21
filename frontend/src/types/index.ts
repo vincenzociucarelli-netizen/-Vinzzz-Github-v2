@@ -4,6 +4,7 @@ export interface User {
   role: 'admin' | 'viewer' | 'coach' | 'parent' | 'athlete';
   full_name: string;
   status?: string;
+  profile_photo?: string;
 }
 
 export interface TrainingSession {
