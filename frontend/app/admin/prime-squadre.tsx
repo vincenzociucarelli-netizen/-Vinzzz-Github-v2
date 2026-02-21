@@ -490,9 +490,9 @@ export default function PrimeSquadrePage() {
                         <Text style={styles.athleteListTeam}>{athlete.team_name}</Text>
                       )}
                     </View>
-                    <View style={[styles.typeBadge, { backgroundColor: athlete.type === 'coach' ? '#64B5F6' : '#81C784' }]}>
+                    <View style={[styles.typeBadge, { backgroundColor: athlete.type === 'coach' ? '#FF9800' : '#2196F3' }]}>
                       <Text style={styles.typeBadgeText}>
-                        {athlete.type === 'coach' ? '🏋️ Coach' : '⚽ Atleta'}
+                        {athlete.type === 'coach' ? 'Coach' : 'Atleta'}
                       </Text>
                     </View>
                   </View>
