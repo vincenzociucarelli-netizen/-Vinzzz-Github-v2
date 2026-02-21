@@ -707,16 +707,25 @@ export default function AthleteCompensation() {
     };
     
     return (
-      <TouchableOpacity
+      <div
         key={`${displayYear}-${month}`}
-        style={[
-          styles.monthCard,
-          getCardStyle(),
-        ]}
-        onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
-        disabled={status === 'future'}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (status === 'pending' || status === 'blocked') {
+            handleOpenSignature(month, displayYear);
+          }
+        }}
+        style={{
+          cursor: status === 'future' ? 'default' : 'pointer',
+          opacity: status === 'future' ? 0.5 : 1,
+        }}
         data-testid={`month-card-${displayYear}-${month}`}
       >
+        <View style={[
+          styles.monthCard,
+          getCardStyle(),
+        ]}>
         {/* Threshold Badge - positioned at top right */}
         {(exceeded5k || exceeded15k) && (
           <View style={{
