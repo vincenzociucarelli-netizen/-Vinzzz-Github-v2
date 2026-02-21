@@ -33,6 +33,7 @@ interface Athlete {
     months_received: number;
     monthly_amount: number;
   };
+  type?: 'athlete' | 'coach';  // To distinguish between athletes and coaches
 }
 
 interface PrimeSquadreStats {
