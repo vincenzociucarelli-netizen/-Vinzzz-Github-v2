@@ -195,9 +195,20 @@ export default function AthleteCompensationDetailPage() {
       >
         {/* Athlete Info Card */}
         <View style={styles.athleteCard}>
-          <Text style={styles.athleteName}>{athlete.last_name} {athlete.first_name}</Text>
-          {athlete.team_name && <Text style={styles.athleteTeam}>{athlete.team_name}</Text>}
-          {athlete.fiscal_code && <Text style={styles.fiscalCode}>CF: {athlete.fiscal_code}</Text>}
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {sportImage && (
+              <Image 
+                source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
+                style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }}
+                resizeMode="contain"
+              />
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.athleteName}>{athlete.last_name} {athlete.first_name}</Text>
+              {athlete.team_name && <Text style={styles.athleteTeam}>{athlete.team_name}</Text>}
+              {athlete.fiscal_code && <Text style={styles.fiscalCode}>CF: {athlete.fiscal_code}</Text>}
+            </View>
+          </View>
           <View style={styles.compensationBadge}>
             <Text style={styles.compensationBadgeText}>€{athlete.monthly_compensation || 0}/mese</Text>
           </View>
