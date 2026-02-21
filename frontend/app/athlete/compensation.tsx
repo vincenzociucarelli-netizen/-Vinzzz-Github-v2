@@ -778,7 +778,8 @@ export default function AthleteCompensation() {
         {status === 'future' && (
           <Text style={styles.futureText}>Non disponibile</Text>
         )}
-      </TouchableOpacity>
+        </View>
+      </div>
     );
   };
 
