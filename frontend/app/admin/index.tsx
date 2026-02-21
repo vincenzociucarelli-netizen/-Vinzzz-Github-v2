@@ -19,9 +19,9 @@ import api from '../../src/services/api';
 const Icons = {
   calendar: '📅',
   business: '🏢',
-  people: '👥',
-  fitness: '🏋️',
-  family: '👨‍👩‍👧',
+  people: '⚽',      // Changed: Atleti - pallone da calcio/sport
+  fitness: '🏋️',    // Coach con pesi
+  family: '👨‍👩‍👦',    // Changed: Famiglia più moderna
   layers: '📚',
   search: '🔍',
   clipboard: '📋',
