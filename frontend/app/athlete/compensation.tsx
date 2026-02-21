@@ -348,7 +348,7 @@ export default function CoachCompensation() {
       const priorComp = profile.other_annual_compensation || 0;
       
       // Calculate total for the selected year (not current display year)
-      const yearRecords = records.filter(r => r.year === selectedYear && r.receipt_signed);
+      const yearRecords = records.filter(r => r.year === selectedYear && r.signed);
       const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
       
       // Get contract start year to determine if prior compensation applies
