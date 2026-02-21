@@ -121,9 +121,9 @@ export default function CoachCompensation() {
     try {
       setLoading(true);
       
-      // Load profile and get athleteId
-      const profileRes = await api.get('/auth/me');
-      const currentAthleteId = profileRes.data.athlete_id;
+      // Load user profile to get athleteId
+      const userRes = await api.get('/auth/me');
+      const currentAthleteId = userRes.data.athlete_id;
       
       if (!currentAthleteId) {
         console.error('No athleteId in user profile');
@@ -132,21 +132,36 @@ export default function CoachCompensation() {
       }
       
       setAthleteId(currentAthleteId);
-      setProfile(profileRes.data);
       
-      // Parse contract dates
+      // Load athlete data (which has contract dates and compensation)
+      const athleteRes = await api.get(`/athletes/${currentAthleteId}`);
+      const athleteData = athleteRes.data;
+      
+      // Merge user data with athlete data for profile
+      setProfile({
+        ...userRes.data,
+        ...athleteData,
+        monthly_compensation: athleteData.monthly_compensation || 0,
+        contract_start_date: athleteData.contract_start_date,
+        contract_end_date: athleteData.contract_end_date,
+        other_annual_compensation: athleteData.other_annual_compensation || 0,
+      });
+      
+      // Parse contract dates from ATHLETE data
       let startYear = null;
       let endYear = null;
-      if (profileRes.data.contract_start_date) {
-        const startParts = profileRes.data.contract_start_date.split('-');
+      if (athleteData.contract_start_date) {
+        const dateStr = athleteData.contract_start_date.split('T')[0]; // Remove time part
+        const startParts = dateStr.split('-');
         if (startParts.length === 3) {
           startYear = parseInt(startParts[0]);
           setContractStartYear(startYear);
           setContractStartMonth(parseInt(startParts[1]));
         }
       }
-      if (profileRes.data.contract_end_date) {
-        const endParts = profileRes.data.contract_end_date.split('-');
+      if (athleteData.contract_end_date) {
+        const dateStr = athleteData.contract_end_date.split('T')[0]; // Remove time part
+        const endParts = dateStr.split('-');
         if (endParts.length === 3) {
           endYear = parseInt(endParts[0]);
           setContractEndYear(endYear);
@@ -154,8 +169,8 @@ export default function CoachCompensation() {
         }
       }
       
-      // Set prior compensation
-      setPriorCompensation(profileRes.data.other_annual_compensation || 0);
+      // Set prior compensation from athlete data
+      setPriorCompensation(athleteData.other_annual_compensation || 0);
       
       // Load ALL compensation records using the athleteId we just got
       const recordsRes = await api.get(`/athletes/${currentAthleteId}/compensation/receipts`);
