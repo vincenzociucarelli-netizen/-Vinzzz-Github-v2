@@ -534,6 +534,68 @@ export default function AdminAthletes() {
                 autoCapitalize="none"
               />
 
+              {/* Sezione Codice Fiscale */}
+              <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Codice Fiscale (opzionale)</Text>
+              
+              <View style={styles.cfRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>Sesso</Text>
+                  <View style={styles.genderButtons}>
+                    <TouchableOpacity 
+                      style={[styles.genderBtn, adultForm.gender === 'M' && styles.genderBtnActive]}
+                      onPress={() => setAdultForm({...adultForm, gender: 'M'})}
+                    >
+                      <Text style={[styles.genderBtnText, adultForm.gender === 'M' && styles.genderBtnTextActive]}>M</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.genderBtn, adultForm.gender === 'F' && styles.genderBtnActive]}
+                      onPress={() => setAdultForm({...adultForm, gender: 'F'})}
+                    >
+                      <Text style={[styles.genderBtnText, adultForm.gender === 'F' && styles.genderBtnTextActive]}>F</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={{ flex: 2, marginLeft: 12 }}>
+                  <Text style={styles.inputLabel}>Data di Nascita</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={adultForm.date_of_birth}
+                    onChangeText={(v) => setAdultForm({...adultForm, date_of_birth: formatDateInput(v)})}
+                    placeholder="GG/MM/AAAA"
+                    maxLength={10}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.inputLabel}>Luogo di Nascita (Comune)</Text>
+              <TextInput
+                style={styles.input}
+                value={adultForm.place_of_birth}
+                onChangeText={(v) => setAdultForm({...adultForm, place_of_birth: v})}
+                placeholder="Es: Roma, Perugia, Milano..."
+                autoCapitalize="words"
+              />
+
+              <View style={styles.cfCalculateRow}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={adultForm.fiscal_code}
+                  onChangeText={(v) => setAdultForm({...adultForm, fiscal_code: v.toUpperCase()})}
+                  placeholder="CODICE FISCALE"
+                  autoCapitalize="characters"
+                  maxLength={16}
+                />
+                <TouchableOpacity 
+                  style={styles.calculateCfBtn}
+                  onPress={handleCalculateCF}
+                  disabled={!adultForm.gender || !adultForm.date_of_birth || !adultForm.place_of_birth || !adultForm.first_name || !adultForm.last_name}
+                >
+                  <Ionicons name="calculator" size={20} color="#fff" />
+                  <Text style={styles.calculateCfBtnText}>Calcola</Text>
+                </TouchableOpacity>
+              </View>
+
               {/* Squadra - opzionale */}
               <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Squadra (opzionale)</Text>
               <View style={styles.pickerContainer}>
