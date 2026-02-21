@@ -1087,7 +1087,7 @@ export default function CoachCompensation() {
               <Text style={styles.modalTitle}>
                 Quietanza {MONTH_NAMES[selectedMonth || 0]} {selectedYear}
               </Text>
-              <TouchableOpacity onPress={() => setShowSignatureModal(false)}>
+              <TouchableOpacity onPress={closeSignatureModal}>
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
