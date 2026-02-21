@@ -74,7 +74,7 @@ interface ExpiringCertificates {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, refreshUser } = useAuthStore();
   const [stats, setStats] = useState<Stats | null>(null);
   const [pendingCounts, setPendingCounts] = useState<PendingCount>({ dirigenti: 0, coaches: 0, parents: 0 });
   const [pendingAthletes, setPendingAthletes] = useState<any[]>([]);
@@ -87,6 +87,11 @@ export default function AdminDashboard() {
   const [processingDeletion, setProcessingDeletion] = useState<string | null>(null);
   const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
   const [proEnabled, setProEnabled] = useState<boolean>(false);
+
+  // Refresh user data on mount to get profile_photo
+  useEffect(() => {
+    refreshUser();
+  }, []);
 
   const loadStats = async () => {
     try {
