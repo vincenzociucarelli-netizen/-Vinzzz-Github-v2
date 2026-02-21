@@ -604,7 +604,7 @@ export default function CoachCompensation() {
 
   // Find first month where each threshold was exceeded (for highlighting subsequent months)
   const getThresholdMonths = () => {
-    const signedRecords = records.filter(r => r.receipt_signed);
+    const signedRecords = records.filter(r => r.signed);
     const sorted = [...signedRecords].sort((a, b) => {
       if (a.year !== b.year) return a.year - b.year;
       return a.month - b.month;
