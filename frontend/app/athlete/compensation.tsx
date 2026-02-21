@@ -213,6 +213,38 @@ export default function CoachCompensation() {
   };
 
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [acceptingCompensation, setAcceptingCompensation] = useState(false);
+
+  // Handler for accepting compensation proposal
+  const handleAcceptCompensation = async () => {
+    if (!athleteId) return;
+    
+    try {
+      setAcceptingCompensation(true);
+      await api.patch(`/prime-squadre/athletes/${athleteId}`, {
+        compensation_accepted: true
+      });
+      
+      // Update local profile state
+      setProfile(prev => prev ? { ...prev, compensation_accepted: true } : null);
+      
+      if (Platform.OS === 'web') {
+        window.alert('Compenso accettato con successo!');
+      } else {
+        Alert.alert('Successo', 'Compenso accettato con successo!');
+      }
+    } catch (error: any) {
+      console.error('Error accepting compensation:', error);
+      const message = error.response?.data?.detail || 'Impossibile accettare il compenso. Riprova.';
+      if (Platform.OS === 'web') {
+        window.alert(`Errore: ${message}`);
+      } else {
+        Alert.alert('Errore', message);
+      }
+    } finally {
+      setAcceptingCompensation(false);
+    }
+  };
 
   const handleOpenSignature = (month: number, year?: number) => {
     // Prevent action if still loading
