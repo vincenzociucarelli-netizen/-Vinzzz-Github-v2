@@ -146,7 +146,7 @@ export default function CoachCompensation() {
       setPriorCompensation(profileRes.data.other_annual_compensation || 0);
       
       // Load ALL compensation records (not filtered by year)
-      const recordsRes = await api.get(`/coach/${user?.id}/compensation`);
+      const recordsRes = await api.get(`/athletes/${athleteId}/compensation`);
       setRecords(recordsRes.data || []);
       
       // Calculate yearly total for current display year (including prior compensation for first year)
@@ -162,7 +162,7 @@ export default function CoachCompensation() {
       // Load threshold status for contract start year (where thresholds matter most)
       const thresholdYear = startYear || currentYear;
       try {
-        const thresholdRes = await api.get(`/coach/${user?.id}/threshold-status/${thresholdYear}`);
+        const thresholdRes = await api.get(`/athletes/${athleteId}/threshold-status/${thresholdYear}`);
         setThresholdStatus(thresholdRes.data);
       } catch (err) {
         console.log('Error loading threshold status:', err);
@@ -274,7 +274,7 @@ export default function CoachCompensation() {
       setSigningDeclaration(true);
       
       // Use the compensation receipt endpoint which now generates the correct threshold document
-      const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
+      const response = await api.post(`/athletes/${athleteId}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile?.monthly_compensation || 0,
@@ -337,7 +337,7 @@ export default function CoachCompensation() {
       
       console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYear, selectedYear });
       
-      const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
+      const response = await api.post(`/athletes/${athleteId}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: profile.monthly_compensation,
