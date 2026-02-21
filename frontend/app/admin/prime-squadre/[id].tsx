@@ -66,20 +66,23 @@ export default function AthleteCompensationDetailPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showSignModal, setShowSignModal] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [sportImage, setSportImage] = useState<string | null>(null);
 
   const loadData = async () => {
     if (!id) return;
     
     try {
-      const [athleteRes, recordsRes, thresholdRes] = await Promise.all([
+      const [athleteRes, recordsRes, thresholdRes, societyRes] = await Promise.all([
         api.get(`/athletes/${id}`),
         api.get(`/prime-squadre/athletes/${id}/compensation`),
         api.get(`/prime-squadre/athletes/${id}/threshold-status/${selectedYear}`),
+        api.get('/settings/society'),
       ]);
       
       setAthlete(athleteRes.data);
       setRecords(recordsRes.data);
       setThresholdStatus(thresholdRes.data);
+      setSportImage(societyRes.data.sport_image || null);
     } catch (error: any) {
       console.error('Error loading data:', error);
       if (error.response?.status === 404) {
