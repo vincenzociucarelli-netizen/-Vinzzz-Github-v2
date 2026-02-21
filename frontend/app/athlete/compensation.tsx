@@ -165,7 +165,7 @@ export default function CoachCompensation() {
       // Load threshold status for contract start year (where thresholds matter most)
       const thresholdYear = startYear || currentYear;
       try {
-        const thresholdRes = await api.get(`/athletes/${athleteId}/threshold-status/${thresholdYear}`);
+        const thresholdRes = await api.get(`/prime-squadre/athletes/${athleteId}/threshold-status/${thresholdYear}`);
         setThresholdStatus(thresholdRes.data);
       } catch (err) {
         console.log('Error loading threshold status:', err);
