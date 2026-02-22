@@ -41,7 +41,7 @@ interface CompensationRecord {
   deductions?: number;
   received: boolean;
   received_date?: string;
-  receipt_signed: boolean;  // Backend saves as receipt_signed for collaboratorees
+  receipt_signed: boolean;  // Backend saves as receipt_signed for collaboratori
   receipt_signed_date?: string;
   receipt_document_id?: string;
   exceeded_5000: boolean;
