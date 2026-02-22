@@ -105,6 +105,7 @@ class UserRole:
     ADMIN = "admin"
     VIEWER = "viewer"  # Dirigente solo visualizzazione
     COACH = "coach"
+    COLLABORATORE = "collaboratore"  # Collaboratori (groundskeepers, secretaries, etc.)
     PARENT = "parent"
     ATHLETE = "athlete"
 
