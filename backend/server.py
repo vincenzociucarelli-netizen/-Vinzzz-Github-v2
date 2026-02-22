@@ -9848,7 +9848,7 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
     
     # Add prior compensation if this is the first year of contract
-    contract_start = athlete.get("contract_start_date")
+    contract_start = member.get("contract_start_date")
     contract_start_year = None
     if contract_start:
         if isinstance(contract_start, str):
