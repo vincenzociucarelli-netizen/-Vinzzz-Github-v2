@@ -251,7 +251,7 @@ export default function AthleteCompensationDetailPage() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Compensi Atleta</Text>
+        <Text style={styles.headerTitle}>Compensi {athlete.role === 'coach' ? 'Coach' : athlete.role === 'admin' ? 'Dirigente' : 'Atleta'}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -259,7 +259,7 @@ export default function AthleteCompensationDetailPage() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Athlete Info Card */}
+        {/* Athlete Info Card with Total */}
         <View style={styles.athleteCard}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {sportImage && (
@@ -270,15 +270,51 @@ export default function AthleteCompensationDetailPage() {
               />
             )}
             <View style={{ flex: 1 }}>
-              <Text style={styles.athleteName}>{athlete.last_name} {athlete.first_name}</Text>
+              <Text style={styles.athleteName}>{athlete.last_name || ''} {athlete.first_name || athlete.full_name || ''}</Text>
               {athlete.team_name && <Text style={styles.athleteTeam}>{athlete.team_name}</Text>}
               {athlete.fiscal_code && <Text style={styles.fiscalCode}>CF: {athlete.fiscal_code}</Text>}
             </View>
           </View>
-          <View style={styles.compensationBadge}>
-            <Text style={styles.compensationBadgeText}>€{athlete.monthly_compensation || 0}/mese</Text>
+          {/* Total Year Amount */}
+          <View style={{ backgroundColor: '#E8F5E9', padding: 16, borderRadius: 12, marginTop: 16, alignItems: 'center' }}>
+            <Text style={{ fontSize: 14, color: '#388E3C', fontWeight: '600' }}>TOTALE ANNO {selectedYear}</Text>
+            <Text style={{ fontSize: 28, color: '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>
+              € {totalYearAmount.toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+            </Text>
           </View>
         </View>
+
+        {/* Threshold Warnings */}
+        {thresholdStatus && thresholdStatus.thresholds['5000'].exceeded && (
+          <View style={{ backgroundColor: '#FFF3E0', borderLeftWidth: 4, borderLeftColor: '#FF9800', padding: 16, marginBottom: 16, borderRadius: 8 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#E65100' }}>
+              ⚠️ Supera soglia €5.000 - Contributi previdenziali
+            </Text>
+            <Text style={{ fontSize: 13, color: '#795548', marginTop: 4 }}>
+              Superata la soglia di €5.000, i compensi sono soggetti a contributi previdenziali INPS.
+            </Text>
+          </View>
+        )}
+        {thresholdStatus && thresholdStatus.thresholds['15000'].exceeded && (
+          <View style={{ backgroundColor: '#FFEBEE', borderLeftWidth: 4, borderLeftColor: '#f44336', padding: 16, marginBottom: 16, borderRadius: 8 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#C62828' }}>
+              🚨 Supera soglia €15.000 - Tassazione completa
+            </Text>
+            <Text style={{ fontSize: 13, color: '#795548', marginTop: 4 }}>
+              Superata la soglia di €15.000, i compensi sono soggetti a tassazione completa.
+            </Text>
+          </View>
+        )}
+        {thresholdStatus && thresholdStatus.thresholds['5000'].approaching && !thresholdStatus.thresholds['5000'].exceeded && (
+          <View style={{ backgroundColor: '#FFFDE7', borderLeftWidth: 4, borderLeftColor: '#FFC107', padding: 16, marginBottom: 16, borderRadius: 8 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#F57F17' }}>
+              ⚡ In avvicinamento alla soglia €5.000
+            </Text>
+            <Text style={{ fontSize: 13, color: '#795548', marginTop: 4 }}>
+              Attenzione: stai per raggiungere la soglia di €5.000.
+            </Text>
+          </View>
+        )}
 
         {/* Year Selector */}
         <View style={styles.yearSelector}>
@@ -297,42 +333,33 @@ export default function AthleteCompensationDetailPage() {
           </TouchableOpacity>
         </View>
 
-        {/* Threshold Status */}
-        {thresholdStatus && (
-          <View style={styles.thresholdCard}>
-            <Text style={styles.thresholdTitle}>Soglie Fiscali {selectedYear}</Text>
-            <View style={styles.thresholdRow}>
-              <Text style={styles.thresholdLabel}>Totale Anno:</Text>
-              <Text style={styles.thresholdValue}>€{thresholdStatus.yearly_total.toLocaleString()}</Text>
+        {/* Contract Info Card */}
+        {contractInfo && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#e0e0e0' }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 12 }}>📋 Dettaglio Contratto {selectedYear}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ color: '#666' }}>Mesi nel contratto:</Text>
+              <Text style={{ fontWeight: '600' }}>{contractInfo.startMonthName} - {contractInfo.endMonthName} ({contractInfo.monthCount} mesi)</Text>
             </View>
-            <View style={styles.thresholdRow}>
-              <Text style={styles.thresholdLabel}>Soglia €5.000:</Text>
-              <Text style={[styles.thresholdStatus, { 
-                color: thresholdStatus.thresholds['5000'].exceeded ? '#f44336' : 
-                       thresholdStatus.thresholds['5000'].approaching ? '#FF9800' : '#4CAF50'
-              }]}>
-                {thresholdStatus.thresholds['5000'].exceeded ? '⚠️ Superata' :
-                 thresholdStatus.thresholds['5000'].approaching ? '⚡ In avvicinamento' : '✓ OK'}
-              </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ color: '#666' }}>Compenso mensile:</Text>
+              <Text style={{ fontWeight: '600' }}>€{contractInfo.monthlyComp.toLocaleString('it-IT')}</Text>
             </View>
-            <View style={styles.thresholdRow}>
-              <Text style={styles.thresholdLabel}>Soglia €15.000:</Text>
-              <Text style={[styles.thresholdStatus, { 
-                color: thresholdStatus.thresholds['15000'].exceeded ? '#f44336' : 
-                       thresholdStatus.thresholds['15000'].approaching ? '#FF9800' : '#4CAF50'
-              }]}>
-                {thresholdStatus.thresholds['15000'].exceeded ? '⚠️ Superata' :
-                 thresholdStatus.thresholds['15000'].approaching ? '⚡ In avvicinamento' : '✓ OK'}
-              </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ color: '#666' }}>Totale da contratto:</Text>
+              <Text style={{ fontWeight: '600', color: '#2196F3' }}>€{contractInfo.yearlyTotal.toLocaleString('it-IT')}</Text>
             </View>
+            {priorCompensation > 0 && contractInfo.isStartYear && (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ color: '#666' }}>Compensi da altre ASD:</Text>
+                <Text style={{ fontWeight: '600', color: '#FF9800' }}>€{priorCompensation.toLocaleString('it-IT')}</Text>
+              </View>
+            )}
           </View>
         )}
 
         {/* Monthly Grid - READ ONLY for Admin */}
         <Text style={styles.sectionTitle}>Quietanze Mensili</Text>
-        <Text style={{ fontSize: 12, color: '#666', marginBottom: 12, textAlign: 'center' }}>
-          (Modalità lettura - Le quietanze vengono firmate dall'atleta/coach)
-        </Text>
         <View style={styles.monthsGrid}>
           {Array.from({ length: 12 }, (_, i) => i + 1).map(month => {
             const status = getMonthStatus(month);
