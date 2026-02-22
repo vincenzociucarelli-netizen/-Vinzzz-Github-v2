@@ -796,48 +796,9 @@ export default function DirigenteProfile() {
         </View>
 
         {/* Documento e Dati Bancari */}
-          {signedReceipts.length > 0 && (
-            <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#eee' }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 10 }}>
-                📋 Quietanze Firmate ({signedReceipts.length})
-              </Text>
-              {(() => {
-                const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
-                  
-                  // Sort by date and find threshold crossings per year
-                  const sorted = [...signedReceipts].sort((a, b) => {
-                    if (a.year !== b.year) return a.year - b.year;
-                    return a.month - b.month;
-                  });
-                  
-                  const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
-                  for (const r of sorted) {
-                    if (!thresholdsByYear[r.year]) {
-                      thresholdsByYear[r.year] = { first5k: null, first15k: null };
-                    }
-                    if (r.exceeded_5000 && thresholdsByYear[r.year].first5k === null) {
-                      thresholdsByYear[r.year].first5k = r.month;
-                    }
-                    if (r.exceeded_15000 && thresholdsByYear[r.year].first15k === null) {
-                      thresholdsByYear[r.year].first15k = r.month;
-                    }
-                  }
-                  
-                  // Display newest first
-                  const sortedForDisplay = [...sorted].reverse();
-                  
-                  return sortedForDisplay.map((r) => {
-                    const yearThresholds = thresholdsByYear[r.year] || { first5k: null, first15k: null };
-                    const isAfter15k = yearThresholds.first15k !== null && r.month >= yearThresholds.first15k;
-                    const isAfter5k = yearThresholds.first5k !== null && r.month >= yearThresholds.first5k;
-                    
-                    let bgColor = '#F0FFF4'; // green
-                    let borderColor = '#34C759';
-                    if (isAfter15k) {
-                      bgColor = '#FFF3E0';
-                      borderColor = '#E65100';
-                    } else if (isAfter5k) {
-                      bgColor = '#FFF8E1';
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>🏦 Documento e Dati Bancari</Text>
                       borderColor = '#F9A825';
                     }
                     
