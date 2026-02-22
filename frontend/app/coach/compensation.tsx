@@ -958,7 +958,7 @@ export default function CoachCompensation() {
         visible={showSignatureModal}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setShowSignatureModal(false)}
+        onRequestClose={closeSignatureModal}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -966,7 +966,7 @@ export default function CoachCompensation() {
               <Text style={styles.modalTitle}>
                 Quietanza {MONTH_NAMES[selectedMonth || 0]} {selectedYear}
               </Text>
-              <TouchableOpacity onPress={() => setShowSignatureModal(false)}>
+              <TouchableOpacity onPress={closeSignatureModal}>
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
@@ -997,7 +997,7 @@ export default function CoachCompensation() {
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setShowSignatureModal(false)}
+                  onPress={closeSignatureModal}
                 >
                   <Text style={styles.cancelButtonText}>Annulla</Text>
                 </TouchableOpacity>
