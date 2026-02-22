@@ -7252,21 +7252,28 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
     coach_email = coach.get('email')
     
     if coach_email:
+    # Email al coach SOLO per superamento soglie €5.000/€15.000
+    # Le quietanze mensili standard vanno solo in archivio
+    if coach_email and (first_time_exceeded_5000 or first_time_exceeded_15000):
         try:
             import base64
             
-            # Email to coach
+            alert_emoji = "🚨" if first_time_exceeded_15000 else "⚠️"
+            threshold_text = "€15.000" if first_time_exceeded_15000 else "€5.000"
+            
+            # Email to coach for threshold crossing
             body = f"""
             <html>
             <body>
-            <h2>Quietanza Compenso Sportivo - {month_name} {request.year}</h2>
+            <h2>{alert_emoji} Comunicazione Superamento Soglia {threshold_text} - {month_name} {request.year}</h2>
             <p>Gentile {coach.get('full_name', 'Collaboratore')},</p>
-            <p>In allegato trova la quietanza del compenso sportivo dilettantistico firmata per il mese di {month_name} {request.year}.</p>
+            <p>Con la quietanza del mese di {month_name} {request.year}, hai superato la soglia di {threshold_text} di compensi sportivi dilettantistici.</p>
             <p><strong>Riepilogo:</strong></p>
             <ul>
             <li>Compenso lordo: € {request.amount_gross:.2f}</li>
             <li>Totale annuo progressivo: € {new_total:.2f}</li>
             </ul>
+            <p><em>In allegato la comunicazione firmata.</em></p>
             <hr>
             <p><em>Documento generato automaticamente da RegistraTEAM</em></p>
             </body>
@@ -7279,7 +7286,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             # Send to coach
             result = await send_email_with_pdf(
                 to_email=coach_email,
-                subject=f"Quietanza Compenso - {month_name} {request.year} - {society_name}",
+                subject=f"{alert_emoji} Superamento {threshold_text} - {month_name} {request.year} - {society_name}",
                 html_content=body,
                 pdf_base64=encoded_pdf,
                 pdf_filename=pdf_filename,
@@ -7287,15 +7294,45 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             )
             
             if result.get("success"):
-                logging.info(f"Compensation receipt email sent to {coach_email} via {result.get('provider', 'unknown')}")
+                logging.info(f"Threshold notification email sent to {coach_email} via {result.get('provider', 'unknown')}")
             else:
-                logging.error(f"Error sending receipt email to coach: {result.get('error')}")
+                logging.error(f"Error sending threshold email to coach: {result.get('error')}")
         except Exception as e:
-            logging.error(f"Error sending receipt email to coach: {e}")
+            logging.error(f"Error sending threshold email to coach: {e}")
     
-    # NOTE: Email to admin/society removed - documents are now available in the Archive section
-    # if admin_email and admin_email != coach_email:
-    #     ... (email sending removed)
+    # Email to admin SOLO per superamento soglie €5.000/€15.000
+    if admin_email and (first_time_exceeded_5000 or first_time_exceeded_15000):
+        try:
+            import base64
+            
+            alert_emoji = "🚨" if first_time_exceeded_15000 else "⚠️"
+            threshold_text = "€15.000" if first_time_exceeded_15000 else "€5.000"
+            urgency = "URGENTE" if first_time_exceeded_15000 else "ATTENZIONE"
+            
+            admin_body = f"""
+            <html>
+            <body>
+            <h2>{alert_emoji} {urgency}: Coach ha superato {threshold_text} - Anno {request.year}</h2>
+            <p>Il coach <strong>{coach.get('full_name', '')}</strong> ha superato la soglia di {threshold_text} di compensi sportivi dilettantistici.</p>
+            <p><strong>Totale annuo raggiunto: €{new_total:.2f}</strong></p>
+            <p>In allegato la Comunicazione di Superamento firmata dal collaboratore.</p>
+            </body>
+            </html>
+            """
+            
+            encoded_pdf = base64.b64encode(pdf_bytes).decode()
+            
+            result = await send_email_with_pdf(
+                to_email=admin_email,
+                subject=f"[RegistraTEAM] {alert_emoji} {coach.get('full_name', 'Coach')} - Superamento {threshold_text}",
+                html_content=admin_body,
+                pdf_base64=encoded_pdf,
+                pdf_filename=pdf_filename
+            )
+            if result.get('success'):
+                logging.info(f"Threshold notification sent to admin {admin_email}")
+        except Exception as e:
+            logging.error(f"Error sending threshold email to admin: {e}")
     
     # Check if this is the FIRST time exceeding €5.000 threshold this year
     # Generate and send "COMUNICAZIONE DI SUPERAMENTO DELLA SOGLIA" document
