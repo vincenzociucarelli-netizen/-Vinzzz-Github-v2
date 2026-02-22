@@ -7382,29 +7382,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                     if result.get('success'):
                         logging.info(f"Threshold €5.000 communication sent to {coach_email}")
                 
-                # Send threshold document to admin
-                if admin_email:
-                    admin_threshold_body = f"""
-                    <html>
-                    <body>
-                    <h2>⚠️ NOTIFICA: Coach ha superato €5.000 - Anno {request.year}</h2>
-                    <p>Il coach <strong>{coach.get('full_name', '')}</strong> ha superato la soglia di €5.000 di compensi sportivi dilettantistici.</p>
-                    <p><strong>Totale annuo raggiunto: €{new_total:.2f}</strong></p>
-                    <p>In allegato la Comunicazione di Superamento firmata dal collaboratore.</p>
-                    <p>Ricordiamo che da questo momento i compensi eccedenti sono soggetti agli obblighi previdenziali.</p>
-                    </body>
-                    </html>
-                    """
-                    
-                    result = await send_email_with_pdf(
-                        to_email=admin_email,
-                        subject=f"⚠️ {coach.get('full_name', 'Coach')} - Superamento €5.000 Anno {request.year}",
-                        body=admin_threshold_body,
-                        pdf_base64=threshold_pdf_b64,
-                        filename=threshold_filename
-                    )
-                    if result.get('success'):
-                        logging.info(f"Threshold €5.000 notification sent to admin {admin_email}")
+                # NOTE: Email to admin removed - threshold documents available in Archive
                 
             except Exception as e:
                 logging.error(f"Error generating threshold €5.000 document: {e}")
