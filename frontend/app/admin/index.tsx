@@ -729,10 +729,17 @@ export default function AdminDashboard() {
             </TouchableOpacity>
           )}
 
-          {/* Report Mensile Quietanze */}
+          {/* Report Mensile Quietanze - PRO Feature */}
           <TouchableOpacity
-            style={styles.menuCard}
-            onPress={() => router.push('/admin/reports')}
+            style={[styles.menuCard, { opacity: 0.7, borderWidth: 1, borderColor: '#ccc', borderStyle: 'dashed' }]}
+            onPress={() => {
+              const message = `📊 REPORT QUIETANZE\n\nRiepilogo mensile di tutti i compensi firmati.\n\nQuesta funzionalità sarà disponibile nella versione PRO.`;
+              if (Platform.OS === 'web') {
+                window.alert(message);
+              } else {
+                Alert.alert('📊 Report Quietanze', message, [{ text: 'Ho capito', style: 'default' }]);
+              }
+            }}
             data-testid="reports-menu-card"
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
@@ -742,7 +749,12 @@ export default function AdminDashboard() {
               <Text style={styles.menuCardTitle}>Report Quietanze</Text>
               <Text style={styles.menuCardSubtitle}>Riepilogo mensile compensi firmati</Text>
             </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ backgroundColor: '#FFD700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
+                <Text style={{ fontSize: 10, color: '#333', fontWeight: 'bold' }}>PRO</Text>
+              </View>
+              <Text style={{ fontSize: 16 }}>🔒</Text>
+            </View>
           </TouchableOpacity>
 
           {/* Ricerca Avanzata Atleti */}
