@@ -7251,7 +7251,6 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
     # Send emails
     coach_email = coach.get('email')
     
-    if coach_email:
     # Email al coach SOLO per superamento soglie €5.000/€15.000
     # Le quietanze mensili standard vanno solo in archivio
     if coach_email and (first_time_exceeded_5000 or first_time_exceeded_15000):
