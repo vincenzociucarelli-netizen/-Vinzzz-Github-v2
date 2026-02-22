@@ -423,7 +423,8 @@ export default function CoachCompensation() {
       return 'future';
     }
     
-    const record = records.find(r => r.month === month && r.year === checkYear);
+    // Use matchesMonth helper for legacy support
+    const record = records.find(r => matchesMonth(r.month, month) && r.year === checkYear);
     if (record?.receipt_signed) {
       return 'signed';
     }
