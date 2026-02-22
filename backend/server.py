@@ -4487,20 +4487,9 @@ async def sign_athlete_compensation_receipt_with_signature(
         except Exception as e:
             logging.error(f"Error sending athlete receipt email: {e}")
     
-    if admin_email and admin_email != recipient_email:
-        try:
-            import base64 as b64
-            admin_body = f"""<html><body>
-            <h2>Quietanza Firmata - {athlete.get('full_name', 'Atleta')}</h2>
-            <p>L'atleta <strong>{athlete.get('full_name', 'N/D')}</strong> ha firmato la quietanza per {month_name} {year}.</p>
-            <ul><li>Compenso lordo: € {amount_gross:.2f}</li><li>Totale annuo: € {new_total:.2f}</li></ul>
-            {'<p style="color:orange;"><strong>⚠️ Superata soglia €5.000</strong></p>' if first_time_exceeded_5000 else ''}
-            {'<p style="color:red;"><strong>🚨 Superata soglia €15.000</strong></p>' if first_time_exceeded_15000 else ''}
-            </body></html>"""
-            encoded_pdf = b64.b64encode(pdf_bytes).decode()
-            await send_email_with_pdf(to_email=admin_email, subject=f"[RegistraTEAM] Quietanza firmata - {athlete.get('full_name', 'Atleta')} - {month_name} {year}", html_content=admin_body, pdf_base64=encoded_pdf, pdf_filename=pdf_filename)
-        except Exception as e:
-            logging.error(f"Error sending admin receipt email: {e}")
+    # NOTE: Email to admin removed - documents available in Archive section
+    # if admin_email and admin_email != recipient_email:
+    #     ... (email sending removed)
     
     return {
         "message": "Quietanza firmata con successo", 
