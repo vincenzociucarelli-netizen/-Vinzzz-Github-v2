@@ -234,8 +234,8 @@ class TestDirigenteCompensation:
         
         # Find the section after the endpoint and verify protection exists
         endpoint_pos = content.find(dirigente_endpoint)
-        # Look in the next 5000 characters for the protection check (function is longer)
-        section = content[endpoint_pos:endpoint_pos + 5000]
+        # Look in the next 10000 characters for the protection check (function spans ~160 lines)
+        section = content[endpoint_pos:endpoint_pos + 10000]
         
         resign_check = 'existing.get("receipt_signed")'
         error_message = 'Quietanza per'
