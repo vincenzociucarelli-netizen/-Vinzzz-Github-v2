@@ -129,8 +129,8 @@ class TestCoachCompensationReceiptSignature:
         """
         headers = {"Authorization": f"Bearer {admin_auth_token}"}
         
-        # Get a coach
-        coaches_response = requests.get(f"{BASE_URL}/api/coaches", headers=headers)
+        # Get coaches list
+        coaches_response = requests.get(f"{BASE_URL}/api/users/coaches", headers=headers)
         if coaches_response.status_code != 200:
             pytest.skip("Cannot get coaches list")
         
