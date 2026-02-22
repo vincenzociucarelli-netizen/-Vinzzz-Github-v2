@@ -105,7 +105,7 @@ class TestCoachCompensationReceiptSignature:
     def test_get_coach_list(self, admin_auth_token):
         """Get list of coaches to test with"""
         headers = {"Authorization": f"Bearer {admin_auth_token}"}
-        response = requests.get(f"{BASE_URL}/api/coaches", headers=headers)
+        response = requests.get(f"{BASE_URL}/api/users/coaches", headers=headers)
         
         assert response.status_code == 200
         coaches = response.json()
