@@ -205,79 +205,67 @@ Sistema di gestione completo per società sportive italiane (pallavolo, basket) 
 4. **P2**: @expo/vector-icons non renderizza su web
 
 ### Last Updated
-2026-02-22: Bug fixes + Firma Privacy Maggiorenni (Atleti adulti, Coach, Dirigenti)
+2026-02-22: Bug fixes + Firma Privacy completa (Maggiorenni + Genitore minorenni)
 
-## Session 2026-02-22 (Bug Fixes - Profilo Atleta & Firma Coach)
+## Session 2026-02-22 (Bug Fixes + Privacy Module)
 
 ### Bug Fixes Implementati
 1. **Fix A - Foto Profilo Atleta Non Memorizzata** ✅
-   - **Problema**: La foto veniva salvata in `athletes.athlete_photo` ma `/api/auth/me` leggeva solo da `users`
-   - **Soluzione**: Modificato endpoint GET `/auth/me` per recuperare `athlete_photo` e `athlete_photo_artistic` dalla collection `athletes` se l'utente ha ruolo `athlete`
    - **File**: `/app/backend/server.py` linee 1201-1223
 
 2. **Fix C - Layout "Mesi nel contratto"** ✅
-   - **Problema**: Label e valore sulla stessa riga causavano wrapping brutto
-   - **Soluzione**: Applicato `flexDirection: 'column'` alle View contenenti "Mesi nel contratto" e "Compenso da contratto"
-   - **File**: `/app/frontend/app/athlete/compensation.tsx` linee 947-954, 984-991
-   - **File**: `/app/frontend/app/coach/compensation.tsx` linee 830-837, 867-874
+   - **File**: `/app/frontend/app/athlete/compensation.tsx`, `/app/frontend/app/coach/compensation.tsx`
 
 3. **Fix D - Pulsanti Firma Non Visibili** ✅
-   - **Problema**: I pulsanti sotto la firma erano nascosti/tagliati
-   - **Soluzione**: Aggiunto `paddingBottom: 40` allo stile `modalScroll`
-   - **File**: `/app/frontend/app/athlete/compensation.tsx` linea 1491
-   - **File**: `/app/frontend/app/coach/compensation.tsx` linea 1368
+   - **File**: stessi file sopra, stile `modalScroll`
 
 4. **Fix Bug Doppio Click Firma Coach** ✅
-   - **Problema**: Servivano 2 click per aprire il modale firma e lo stato non persisteva
-   - **Soluzione**: Consolidato lo state management del modale in un unico oggetto `signatureModalState` per evitare race conditions
-   - **Aggiunto**: Helper `matchesMonth()` per supportare formati legacy del campo month
-   - **File**: `/app/frontend/app/coach/compensation.tsx` linee 24-50 (interface), 104-145 (state), 218-290 (handlers)
+   - **File**: `/app/frontend/app/coach/compensation.tsx`
 
 ### Test Results Bug Fixes
-- `/app/test_reports/iteration_13.json`
-- **Backend**: 100% (9 tests passed)
-- **Frontend**: Code review verificato
+- `/app/test_reports/iteration_13.json` - Backend 100%
 
 ---
 
-## Nuova Funzionalità: Firma Privacy Maggiorenni (In Progress)
+## Nuova Funzionalità: Firma Privacy COMPLETA ✅
 
-### Implementato
-1. **Componente AdultPrivacyModal** ✅
-   - **File**: `/app/frontend/src/components/AdultPrivacyModal.tsx`
-   - **Contenuto**: Modale con informativa privacy GDPR, liberatoria, consensi al trattamento dati
-   - **Caratteristiche**:
-     - Supporta 3 ruoli: `athlete`, `coach`, `dirigente`
-     - Testo differenziato per ruolo (es. consenso compensi solo per coach/dirigenti)
-     - Firma digitale con react-signature-canvas
-     - Design gentile e accogliente come richiesto
+### 1. Privacy Maggiorenni (Atleti adulti, Coach, Dirigenti)
+- **Componente**: `/app/frontend/src/components/AdultPrivacyModal.tsx`
+- **Contenuto aggiornato**:
+  - ✓ Consenso trattamento dati per attività sportiva
+  - ✓ Comunicazione dati a Federazioni (FIPAV) e EPS per tesseramento
+  - ✓ Utilizzo foto/video su social (Facebook, Instagram, TikTok, YouTube)
+  - ✓ Comunicazione dati ad assicurazioni e enti sanitari
+  - ✓ Per coach/dirigenti: consenso trattamento dati compensi
+- **Integrazione**:
+  - Coach Profile: `/app/frontend/app/coach/profile.tsx`
+  - Dirigente Profile: `/app/frontend/app/dirigente/profile.tsx`
+  - Atleta adulto (18+): `/app/frontend/app/athlete/profile.tsx`
 
-2. **Backend - Campo privacy_accepted** ✅
-   - **File**: `/app/backend/server.py`
-   - Aggiunto `privacy_accepted` a `UserProfileUpdate`
-   - Endpoint PUT `/auth/me` salva `privacy_accepted` e `privacy_accepted_date`
+### 2. Privacy Genitore (per atleti minorenni a fine prova)
+- **File**: `/app/frontend/app/parent/index.tsx`
+- **Contenuto aggiornato**:
+  - ✓ Consenso trattamento dati del minore
+  - ✓ Comunicazione dati a Federazioni (FIPAV) e EPS per tesseramento
+  - ✓ Utilizzo foto/video sui social e materiale promozionale
+  - ✓ Comunicazione dati ad assicurazioni e enti sanitari
+- **Workflow**: A fine periodo di prova, genitore può:
+  1. Firmare privacy e confermare iscrizione
+  2. Rinunciare e richiedere cancellazione dati
 
-3. **Frontend - Integrazione nei profili** ✅
-   - **Coach Profile** (`/app/frontend/app/coach/profile.tsx`):
-     - Modale appare automaticamente se privacy non accettata
-     - Salva stato via API `/auth/me`
-   - **Dirigente Profile** (`/app/frontend/app/dirigente/profile.tsx`):
-     - Stessa logica del coach
-   - **Atleta Profile** (`/app/frontend/app/athlete/profile.tsx`):
-     - Verifica se atleta è maggiorenne (18+) dalla data di nascita
-     - Modale appare solo per atleti adulti
+### Backend
+- **File**: `/app/backend/server.py`
+- Aggiunto campo `privacy_accepted` a `UserProfileUpdate`
+- Endpoint `PUT /auth/me` salva `privacy_accepted` e `privacy_accepted_date`
 
-### Da Testare
-- [ ] Login come coach -> verificare modale privacy appare
-- [ ] Login come dirigente -> verificare modale privacy appare
-- [ ] Login come atleta adulto (18+) -> verificare modale privacy appare
-- [ ] Firma e conferma -> verificare salvataggio in DB
-- [ ] Ricarica pagina -> modale non deve riapparire se già firmato
+---
 
-### Da Implementare (Prossima Sessione)
-1. **Firma Privacy Genitore a Fine Periodo Prova**
-   - Modificare `/app/frontend/app/parent/index.tsx`
-   - Il genitore deve confermare e firmare privacy oppure rinunciare e cancellare dati
+### Da Testare (Prossima sessione)
+- [ ] Login come coach → modale privacy appare
+- [ ] Login come dirigente → modale privacy appare
+- [ ] Login come atleta adulto (18+) → modale privacy appare
+- [ ] Login come genitore con atleta in prova → workflow privacy/rinuncia
+- [ ] Firma e conferma → salvataggio in DB verificato
 
 ### Pending Issues
 1. **P2**: Parent login non funzionante
