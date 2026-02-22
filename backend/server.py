@@ -4405,19 +4405,31 @@ async def sign_athlete_compensation_receipt_with_signature(
     await db.signed_documents.insert_one(document_record)
     
     # Check if receipt already exists and is signed
+    # Search by both number and string (legacy format) for the month
     existing_receipt = await db.athlete_compensation_receipts.find_one({
         "athlete_id": athlete_id, 
-        "month": month, 
+        "$or": [
+            {"month": month},  # Number format (10, 11, 12)
+            {"month": month_name}  # String format ("Ottobre", "Novembre", etc.)
+        ],
         "year": year
     })
     
     if existing_receipt and existing_receipt.get("signed"):
+        signed_date = existing_receipt.get('signed_date')
+        if signed_date:
+            if isinstance(signed_date, str):
+                date_str = signed_date[:10]
+            else:
+                date_str = signed_date.strftime('%d/%m/%Y')
+        else:
+            date_str = 'data sconosciuta'
         raise HTTPException(
             status_code=400, 
-            detail=f"Quietanza per {month_name} {year} già firmata il {existing_receipt.get('signed_date', 'data sconosciuta')}"
+            detail=f"Quietanza per {month_name} {year} già firmata il {date_str}"
         )
     
-    # Update receipt record
+    # Update receipt record - also handle legacy records by matching both formats
     receipt_data = {
         "athlete_id": athlete_id,
         "society_id": athlete.get("society_id"),
@@ -4435,11 +4447,19 @@ async def sign_athlete_compensation_receipt_with_signature(
         "updated_at": now,
     }
     
-    await db.athlete_compensation_receipts.update_one(
-        {"athlete_id": athlete_id, "month": month, "year": year},
-        {"$set": receipt_data},
-        upsert=True
+    # Update using $or to match both legacy string format and new number format
+    result = await db.athlete_compensation_receipts.update_one(
+        {
+            "athlete_id": athlete_id, 
+            "$or": [{"month": month}, {"month": month_name}],
+            "year": year
+        },
+        {"$set": receipt_data}
     )
+    
+    # If no existing record was updated, insert new one
+    if result.matched_count == 0:
+        await db.athlete_compensation_receipts.insert_one(receipt_data)
     
     # Send emails
     athlete_email = athlete.get('email')
