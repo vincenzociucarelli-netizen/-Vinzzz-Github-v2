@@ -1392,6 +1392,18 @@ export default function AthleteProfile() {
         title={selectedPhotoTitle}
         onClose={() => setPhotoViewerVisible(false)}
       />
+
+      {/* Adult Privacy Modal (only for athletes 18+) */}
+      {isAdult && (
+        <AdultPrivacyModal
+          visible={showPrivacyModal}
+          onClose={() => setShowPrivacyModal(false)}
+          onSign={handlePrivacySign}
+          signerName={profileData.full_name || `${profileData.first_name} ${profileData.last_name}`}
+          signerRole="athlete"
+          societyName={societyName}
+        />
+      )}
     </View>
   );
 }
