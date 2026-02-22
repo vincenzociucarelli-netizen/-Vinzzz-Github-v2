@@ -129,35 +129,79 @@ export default function AthleteCompensation() {
 
   const loadData = async () => {
     try {
-      const [athleteRes, teamRes] = await Promise.all([
-        api.get(`/athletes/${id}`),
-        api.get(`/athletes/${id}/team`).catch(() => ({ data: null })),
-      ]);
+      // Try to load as athlete first, then as user (coach/dirigente)
+      let memberData = null;
+      let memberType = 'athlete';
       
-      const athleteData = athleteRes.data;
-      setAthlete(athleteData);
-      setTeam(teamRes.data);
+      try {
+        const athleteRes = await api.get(`/athletes/${id}`);
+        memberData = athleteRes.data;
+        memberType = 'athlete';
+      } catch (e: any) {
+        if (e.response?.status === 404) {
+          // Try as user (coach or dirigente)
+          try {
+            const userRes = await api.get(`/users/${id}`);
+            memberData = userRes.data;
+            memberType = userRes.data.role === 'coach' ? 'coach' : 'dirigente';
+            // Map user fields to athlete-like structure
+            memberData.first_name = memberData.full_name?.split(' ')[0] || '';
+            memberData.last_name = memberData.full_name?.split(' ').slice(1).join(' ') || '';
+          } catch (e2) {
+            throw new Error('Membro non trovato');
+          }
+        } else {
+          throw e;
+        }
+      }
+      
+      if (!memberData) {
+        showAlert('Errore', 'Membro non trovato');
+        router.back();
+        return;
+      }
+      
+      setAthlete(memberData);
+      setMemberType(memberType);
+      
+      // Load team if athlete
+      if (memberType === 'athlete' && memberData.team_id) {
+        try {
+          const teamRes = await api.get(`/athletes/${id}/team`);
+          setTeam(teamRes.data);
+        } catch (e) {
+          setTeam(null);
+        }
+      }
       
       // Load compensation settings - convert dates to Italian format (empty instead of 0)
-      setMonthlyCompensation(athleteData.monthly_compensation ? athleteData.monthly_compensation.toString() : '');
-      setOtherAnnualCompensation(athleteData.other_annual_compensation ? athleteData.other_annual_compensation.toString() : '');
-      setPriorCompensation(athleteData.prior_compensation ? athleteData.prior_compensation.toString() : '');
-      setContractStartDate(formatDateToItalian(athleteData.contract_start_date));
-      setContractEndDate(formatDateToItalian(athleteData.contract_end_date));
+      setMonthlyCompensation(memberData.monthly_compensation ? memberData.monthly_compensation.toString() : '');
+      setOtherAnnualCompensation(memberData.other_annual_compensation ? memberData.other_annual_compensation.toString() : '');
+      setPriorCompensation(memberData.prior_compensation ? memberData.prior_compensation.toString() : '');
+      setContractStartDate(formatDateToItalian(memberData.contract_start_date));
+      setContractEndDate(formatDateToItalian(memberData.contract_end_date));
       
       // Bank info
-      setIban(athleteData.iban || '');
-      setIbanHolderFirstName(athleteData.iban_holder_first_name || '');
-      setIbanHolderLastName(athleteData.iban_holder_last_name || '');
-      setBankName(athleteData.bank_name || '');
+      setIban(memberData.iban || '');
+      setIbanHolderFirstName(memberData.iban_holder_first_name || '');
+      setIbanHolderLastName(memberData.iban_holder_last_name || '');
+      setBankName(memberData.bank_name || '');
       
-      // Load signed receipts
+      // Load signed receipts based on member type
       try {
-        const compensationRes = await api.get(`/athletes/${id}/compensation/receipts`);
-        if (Array.isArray(compensationRes.data)) {
-          setSignedReceipts(compensationRes.data);
-        } else if (compensationRes.data?.records) {
-          setSignedReceipts(compensationRes.data.records);
+        if (memberType === 'athlete') {
+          const compensationRes = await api.get(`/athletes/${id}/compensation/receipts`);
+          if (Array.isArray(compensationRes.data)) {
+            setSignedReceipts(compensationRes.data);
+          } else if (compensationRes.data?.records) {
+            setSignedReceipts(compensationRes.data.records);
+          }
+        } else {
+          // For coach/dirigente, use prime-squadre endpoint
+          const compensationRes = await api.get(`/prime-squadre/athletes/${id}/compensation`);
+          if (Array.isArray(compensationRes.data)) {
+            setSignedReceipts(compensationRes.data);
+          }
         }
       } catch (e) {
         setSignedReceipts([]);
