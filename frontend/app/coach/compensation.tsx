@@ -217,8 +217,6 @@ export default function CoachCompensation() {
     }
   };
 
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-
   const handleOpenSignature = (month: number, year?: number) => {
     // Prevent action if still loading
     if (loading) {
