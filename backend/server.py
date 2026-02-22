@@ -10492,6 +10492,185 @@ async def calcola_codice_fiscale(data: CalcolaCodiceFiscaleRequest):
             "error": f"Errore nel calcolo: {str(e)}. Verifica che il comune sia corretto."
         }
 
+# =====================================================
+# ARCHIVIO DOCUMENTI FIRMATI
+# =====================================================
+
+class DocumentFilter(BaseModel):
+    season: Optional[str] = None  # Format: "2024-2025"
+    figure_type: Optional[str] = None  # coach, dirigente, atleta, collaboratore
+    search: Optional[str] = None  # Search by name
+
+@api_router.get("/documents/archive")
+async def get_documents_archive(
+    season: Optional[str] = None,
+    figure_type: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20,
+    current_user = Depends(get_current_user)
+):
+    """Get archived signed documents with filters - Admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può visualizzare l'archivio")
+    
+    query = {}
+    
+    # Filter by season (e.g., "2024-2025" -> years 2024 and 2025)
+    if season:
+        try:
+            years = [int(y) for y in season.split("-")]
+            query["year"] = {"$in": years}
+        except:
+            pass
+    
+    # Filter by figure type
+    if figure_type:
+        if figure_type == "coach":
+            query["coach_id"] = {"$exists": True, "$ne": None}
+            query["dirigente_id"] = {"$exists": False}
+            query["athlete_id"] = {"$exists": False}
+        elif figure_type == "dirigente":
+            query["dirigente_id"] = {"$exists": True, "$ne": None}
+        elif figure_type == "atleta":
+            query["athlete_id"] = {"$exists": True, "$ne": None}
+        elif figure_type == "collaboratore":
+            query["collaboratore_id"] = {"$exists": True, "$ne": None}
+    
+    # Search by name
+    if search:
+        query["$or"] = [
+            {"coach_name": {"$regex": search, "$options": "i"}},
+            {"dirigente_name": {"$regex": search, "$options": "i"}},
+            {"athlete_name": {"$regex": search, "$options": "i"}},
+            {"collaboratore_name": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # Get total count
+    total = await db.signed_documents.count_documents(query)
+    
+    # Get documents with pagination
+    skip = (page - 1) * limit
+    documents = []
+    async for doc in db.signed_documents.find(query).sort("signed_at", -1).skip(skip).limit(limit):
+        doc.pop("_id", None)
+        documents.append({
+            "id": doc.get("id"),
+            "document_type": doc.get("document_type"),
+            "document_title": doc.get("document_title"),
+            "figure_type": "coach" if doc.get("coach_id") else "dirigente" if doc.get("dirigente_id") else "atleta" if doc.get("athlete_id") else "collaboratore",
+            "figure_name": doc.get("coach_name") or doc.get("dirigente_name") or doc.get("athlete_name") or doc.get("collaboratore_name") or "N/A",
+            "month": doc.get("month"),
+            "year": doc.get("year"),
+            "amount_gross": doc.get("amount_gross"),
+            "signed_at": doc.get("signed_at").isoformat() if doc.get("signed_at") else None,
+            "pdf_filename": doc.get("pdf_filename")
+        })
+    
+    # Get available seasons for filter
+    seasons = set()
+    async for doc in db.signed_documents.find({}, {"year": 1}):
+        year = doc.get("year")
+        if year:
+            seasons.add(f"{year-1}-{year}")
+            seasons.add(f"{year}-{year+1}")
+    
+    return {
+        "documents": documents,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+        "available_seasons": sorted(list(seasons), reverse=True)
+    }
+
+@api_router.get("/documents/download/{document_id}")
+async def download_document(
+    document_id: str,
+    current_user = Depends(get_current_user)
+):
+    """Download a signed document PDF"""
+    doc = await db.signed_documents.find_one({"id": document_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Documento non trovato")
+    
+    # Check permissions: admin can download all, others only their own
+    is_admin = current_user["role"] == UserRole.ADMIN
+    is_owner = (
+        doc.get("coach_id") == current_user.get("coach_id") or
+        doc.get("dirigente_id") == current_user.get("dirigente_id") or
+        doc.get("athlete_id") == current_user.get("athlete_id") or
+        doc.get("collaboratore_id") == current_user.get("collaboratore_id") or
+        str(doc.get("coach_id")) == str(current_user.get("id")) or
+        str(doc.get("dirigente_id")) == str(current_user.get("id"))
+    )
+    
+    if not is_admin and not is_owner:
+        raise HTTPException(status_code=403, detail="Non autorizzato a scaricare questo documento")
+    
+    pdf_path = doc.get("pdf_path")
+    if not pdf_path or not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail="File PDF non trovato")
+    
+    return FileResponse(
+        path=pdf_path,
+        filename=doc.get("pdf_filename", f"documento_{document_id}.pdf"),
+        media_type="application/pdf"
+    )
+
+@api_router.get("/documents/my-documents")
+async def get_my_documents(
+    current_user = Depends(get_current_user)
+):
+    """Get documents signed by the current user"""
+    user_id = current_user.get("id")
+    role = current_user.get("role")
+    
+    query = {}
+    
+    # Build query based on role
+    if role == UserRole.COACH:
+        # Get coach_id from coaches collection
+        coach = await db.coaches.find_one({"user_id": user_id})
+        if coach:
+            query["coach_id"] = coach.get("id")
+    elif role == "dirigente":
+        dirigente = await db.dirigenti.find_one({"user_id": user_id})
+        if dirigente:
+            query["dirigente_id"] = dirigente.get("id")
+    elif role == "collaboratore":
+        collaboratore = await db.collaboratori.find_one({"user_id": user_id})
+        if collaboratore:
+            query["collaboratore_id"] = collaboratore.get("id")
+    elif role == "athlete":
+        athlete = await db.athletes.find_one({"user_id": user_id})
+        if athlete:
+            query["athlete_id"] = athlete.get("id")
+    else:
+        return {"documents": [], "total": 0}
+    
+    if not query:
+        return {"documents": [], "total": 0}
+    
+    documents = []
+    async for doc in db.signed_documents.find(query).sort("signed_at", -1):
+        doc.pop("_id", None)
+        documents.append({
+            "id": doc.get("id"),
+            "document_type": doc.get("document_type"),
+            "document_title": doc.get("document_title"),
+            "month": doc.get("month"),
+            "year": doc.get("year"),
+            "amount_gross": doc.get("amount_gross"),
+            "signed_at": doc.get("signed_at").isoformat() if doc.get("signed_at") else None,
+            "pdf_filename": doc.get("pdf_filename")
+        })
+    
+    return {
+        "documents": documents,
+        "total": len(documents)
+    }
+
 @api_router.get("/health")
 async def api_health():
     """Health check endpoint for Kubernetes"""
