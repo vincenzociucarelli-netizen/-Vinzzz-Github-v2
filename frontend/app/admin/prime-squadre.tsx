@@ -469,8 +469,8 @@ export default function PrimeSquadrePage() {
                   style={styles.actionButton}
                   onPress={(e) => { 
                     e.stopPropagation(); 
-                    // Use Prime Squadre page for all types
-                    router.push(`/admin/prime-squadre/${athlete.id}`);
+                    // Use unified compensation page for all types
+                    router.push(`/admin/athlete/${athlete.id}/compensation`);
                   }}
                 >
                   <Text style={styles.actionButtonText}>📋</Text>
