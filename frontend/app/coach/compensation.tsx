@@ -298,8 +298,8 @@ export default function CoachCompensation() {
   const openDeclarationModalForMonth = (type: '5000' | '15000', month: number, year: number) => {
     setDeclarationType(type);
     setDeclarationSignature(null);
-    setSelectedMonth(month);
-    setSelectedYear(year);
+    // Also set selected month/year in signature modal state for when declaration is done
+    setSignatureModalState(prev => ({ ...prev, month, year }));
     setShowDeclarationModal(true);
   };
 
