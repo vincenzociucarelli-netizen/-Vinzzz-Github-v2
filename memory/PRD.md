@@ -205,4 +205,50 @@ Sistema di gestione completo per società sportive italiane (pallavolo, basket) 
 4. **P2**: @expo/vector-icons non renderizza su web
 
 ### Last Updated
-2026-02-21: Implementato reset password admin + fix filtro Prime Squadre
+2026-02-22: Bug fixes foto profilo atleta, layout compensi, pulsanti firma, bug doppio click coach
+
+## Session 2026-02-22 (Bug Fixes - Profilo Atleta & Firma Coach)
+
+### Bug Fixes Implementati
+1. **Fix A - Foto Profilo Atleta Non Memorizzata** ✅
+   - **Problema**: La foto veniva salvata in `athletes.athlete_photo` ma `/api/auth/me` leggeva solo da `users`
+   - **Soluzione**: Modificato endpoint GET `/auth/me` per recuperare `athlete_photo` e `athlete_photo_artistic` dalla collection `athletes` se l'utente ha ruolo `athlete`
+   - **File**: `/app/backend/server.py` linee 1201-1223
+
+2. **Fix C - Layout "Mesi nel contratto"** ✅
+   - **Problema**: Label e valore sulla stessa riga causavano wrapping brutto
+   - **Soluzione**: Applicato `flexDirection: 'column'` alle View contenenti "Mesi nel contratto" e "Compenso da contratto"
+   - **File**: `/app/frontend/app/athlete/compensation.tsx` linee 947-954, 984-991
+   - **File**: `/app/frontend/app/coach/compensation.tsx` linee 830-837, 867-874
+
+3. **Fix D - Pulsanti Firma Non Visibili** ✅
+   - **Problema**: I pulsanti sotto la firma erano nascosti/tagliati
+   - **Soluzione**: Aggiunto `paddingBottom: 40` allo stile `modalScroll`
+   - **File**: `/app/frontend/app/athlete/compensation.tsx` linea 1491
+   - **File**: `/app/frontend/app/coach/compensation.tsx` linea 1368
+
+4. **Fix Bug Doppio Click Firma Coach** ✅
+   - **Problema**: Servivano 2 click per aprire il modale firma e lo stato non persisteva
+   - **Soluzione**: Consolidato lo state management del modale in un unico oggetto `signatureModalState` per evitare race conditions
+   - **Aggiunto**: Helper `matchesMonth()` per supportare formati legacy del campo month
+   - **File**: `/app/frontend/app/coach/compensation.tsx` linee 24-50 (interface), 104-145 (state), 218-290 (handlers)
+
+### Test Results
+- `/app/test_reports/iteration_13.json`
+- **Backend**: 100% (9 tests passed)
+- **Frontend**: Code review verificato (TouchableOpacity limitation impedisce test Playwright automatizzati)
+
+### Richieste Utente per Prossima Sessione
+1. **Firma Privacy Genitore**: A fine periodo di prova, genitore deve confermare e firmare privacy
+2. **Firma Privacy Maggiorenne**: Creare modulo per atleti adulti, coach e dirigenti da firmare alla conferma iscrizione
+3. **Modulo Privacy**: Basarsi sul modulo esistente per minorenni
+
+### Pending Issues
+1. **P2**: Parent login non funzionante
+2. **P2**: @expo/vector-icons non renderizza su web
+
+### Upcoming Features
+1. **P1**: Firma privacy genitore a fine periodo prova
+2. **P1**: Firma privacy per maggiorenni (atleti, coach, dirigenti)
+3. **P2**: Season renewal workflow
+4. **P3**: Refactor server.py into modular routes
