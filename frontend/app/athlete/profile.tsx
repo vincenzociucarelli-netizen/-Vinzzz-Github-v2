@@ -172,6 +172,40 @@ export default function AthleteProfile() {
       // Load profile photo (athletes use athlete_photo, users use profile_photo)
       setProfilePhoto(data.athlete_photo || data.profile_photo || null);
       setProfilePhotoArtistic(data.athlete_photo_artistic || data.profile_photo_artistic || null);
+      
+      // Check if athlete is adult (18+) and needs privacy consent
+      if (data.date_of_birth) {
+        const dob = new Date(data.date_of_birth);
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+          age--;
+        }
+        const isAdultAthlete = age >= 18;
+        setIsAdult(isAdultAthlete);
+        
+        // Adult athletes need to sign privacy themselves
+        if (isAdultAthlete) {
+          const isPrivacyAccepted = data.privacy_accepted || false;
+          setPrivacyAccepted(isPrivacyAccepted);
+          if (!isPrivacyAccepted) {
+            // Small delay to ensure UI is ready
+            setTimeout(() => setShowPrivacyModal(true), 500);
+          }
+          
+          // Load society name
+          try {
+            const societyRes = await api.get('/settings/society');
+            if (societyRes.data?.name) {
+              setSocietyName(societyRes.data.name);
+            }
+          } catch (e) {
+            console.log('Using default society name');
+          }
+        }
+      }
+      
       // Load signed receipts
       try {
         const athleteId = data.athlete_id || data.id;
@@ -184,6 +218,36 @@ export default function AthleteProfile() {
       console.error('Error loading profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle privacy signature for adult athletes
+  const handlePrivacySign = async (signatureBase64: string) => {
+    try {
+      // Save privacy acceptance with signature to the athlete record
+      const athleteId = profileData.athlete_id || user?.athlete_id || user?.id;
+      await api.put(`/athletes/${athleteId}`, {
+        privacy_accepted: true,
+      });
+      
+      // Update local state
+      setPrivacyAccepted(true);
+      setShowPrivacyModal(false);
+      
+      Alert.alert(
+        'Privacy Confermata',
+        'Grazie! La tua conferma privacy è stata registrata con successo.',
+        [{ text: 'OK' }]
+      );
+      
+      // Reload profile to get updated data
+      loadProfile();
+    } catch (error: any) {
+      console.error('Error signing privacy:', error);
+      Alert.alert(
+        'Errore',
+        error.response?.data?.detail || 'Impossibile salvare la conferma privacy. Riprova.'
+      );
     }
   };
 
