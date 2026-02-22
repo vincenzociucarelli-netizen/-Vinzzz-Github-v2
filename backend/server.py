@@ -245,6 +245,29 @@ class DirigenteCompensation(BaseModel):
     exceeded_15000_declaration_id: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+class CollaboratoreCompensation(BaseModel):
+    """Monthly compensation record for collaboratori"""
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    collaboratore_id: str
+    month: int  # 1-12
+    year: int
+    amount_gross: float
+    amount_net: float
+    deductions: float = 0.0
+    received: bool = False
+    received_date: Optional[datetime] = None
+    receipt_signed: bool = False
+    receipt_signature_base64: Optional[str] = None
+    receipt_document_id: Optional[str] = None
+    receipt_signed_date: Optional[datetime] = None
+    exceeded_5000: bool = False
+    exceeded_5000_date: Optional[datetime] = None
+    exceeded_5000_declaration_id: Optional[str] = None
+    exceeded_15000: bool = False
+    exceeded_15000_date: Optional[datetime] = None
+    exceeded_15000_declaration_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
 
 class AtletaProCompensation(BaseModel):
     """Monthly compensation record for professional athletes (Atleti PRO)"""
