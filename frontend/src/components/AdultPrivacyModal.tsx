@@ -129,25 +129,35 @@ export const AdultPrivacyModal: React.FC<AdultPrivacyModalProps> = ({
                 <Ionicons name="checkbox" size={18} color="#007AFF" />
                 <Text style={styles.consentText}>
                   al trattamento dei propri dati personali per le finalità strettamente connesse 
-                  e necessarie all'attività sportiva dilettantistica (tesseramento, gestione 
-                  amministrativa, comunicazioni relative all'attività);
+                  e necessarie all'attività sportiva dilettantistica (gestione amministrativa, 
+                  comunicazioni relative all'attività sportiva);
                 </Text>
               </View>
 
               <View style={styles.consentItem}>
                 <Ionicons name="checkbox" size={18} color="#007AFF" />
                 <Text style={styles.consentText}>
-                  all'utilizzo di proprie immagini e/o video per finalità promozionali e 
-                  comunicative della società, sia su supporti tradizionali che digitali 
-                  (sito web, social network, materiale promozionale);
+                  alla comunicazione dei propri dati personali alla Federazione Sportiva di 
+                  appartenenza (FIPAV o altra federazione) o ad Enti di Promozione Sportiva (EPS) 
+                  ai fini del tesseramento e della partecipazione alle attività federali;
                 </Text>
               </View>
 
               <View style={styles.consentItem}>
                 <Ionicons name="checkbox" size={18} color="#007AFF" />
                 <Text style={styles.consentText}>
-                  alla comunicazione dei dati a federazioni, enti di promozione sportiva, 
-                  assicurazioni e altri soggetti necessari per lo svolgimento dell'attività sportiva;
+                  all'utilizzo di proprie immagini fotografiche e/o video per finalità 
+                  promozionali e comunicative della società sui canali social (Facebook, 
+                  Instagram, TikTok, YouTube e altri), sul sito web e su materiale promozionale 
+                  cartaceo e digitale;
+                </Text>
+              </View>
+
+              <View style={styles.consentItem}>
+                <Ionicons name="checkbox" size={18} color="#007AFF" />
+                <Text style={styles.consentText}>
+                  alla comunicazione dei dati ad assicurazioni, enti sanitari e altri soggetti 
+                  necessari per lo svolgimento dell'attività sportiva e la tutela della salute;
                 </Text>
               </View>
 
