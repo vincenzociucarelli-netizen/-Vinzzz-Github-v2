@@ -12,14 +12,23 @@ Sistema di gestione completo per società sportive italiane (pallavolo, basket) 
 ---
 
 ## 🔒 MODULO PRO (BLOCCATO - Prossimamente)
-Le seguenti funzionalità sono state bloccate e saranno disponibili nella versione PRO:
-- Compensi e quietanze (atleti, coach, dirigenti, collaboratori)
-- Soglie fiscali €5.000 / €15.000
-- Prime Squadre (gestione contratti retribuiti)
-- Report Quietanze mensili
-- Firma digitale quietanze
+Le seguenti funzionalità sono bloccate e saranno disponibili nella versione PRO:
+- Compensi **Atleti** (rimosso - atleti PRO non esistono più)
+- Prime Squadre (gestione atleti retribuiti)
 
 **File di backup**: `/app/frontend/app/_pro_backup/`
+
+---
+
+## ✅ COMPENSI ATTIVI (Coach, Dirigenti, Collaboratori)
+Le seguenti funzionalità rimangono **ATTIVE**:
+- Compensi Coach/Allenatori
+- Compensi Dirigenti
+- Compensi Collaboratori (da implementare)
+- Quietanze mensili con firma digitale
+- Soglie fiscali €5.000 / €15.000
+- Documenti di superamento soglie
+- Report compensi (per staff)
 
 ---
 
