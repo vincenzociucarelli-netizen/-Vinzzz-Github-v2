@@ -211,6 +211,21 @@ export default function CoachCompensation() {
         }
       }
       
+      // Set initial display year based on contract (show start year first if contract spans multiple years)
+      const now = new Date();
+      const currentActualYear = now.getFullYear();
+      if (startYear && endYear && startYear !== endYear) {
+        // Multi-year contract - show the year that's most relevant
+        if (startYear <= currentActualYear && currentActualYear <= endYear) {
+          setCurrentYear(currentActualYear);
+        } else {
+          setCurrentYear(startYear);
+        }
+      } else if (startYear) {
+        // Single year contract
+        setCurrentYear(startYear);
+      }
+      
       // Set prior compensation from athlete data
       setPriorCompensation(athleteData.other_annual_compensation || 0);
       
