@@ -336,41 +336,6 @@ export default function AthleteCompensationDetailPage() {
       </ScrollView>
 
       {/* Sign Modal */}
-      <Modal visible={showSignModal} animationType="fade" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Firma Quietanza</Text>
-            <Text style={styles.modalSubtitle}>
-              {MONTHS[selectedMonth || 0]} {selectedYear}
-            </Text>
-            <Text style={styles.modalAmount}>
-              Importo: €{athlete.monthly_compensation || 0}
-            </Text>
-            
-            <Text style={styles.modalNote}>
-              Cliccando "Firma" confermi di aver ricevuto il compenso mensile indicato.
-            </Text>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowSignModal(false);
-                  setSelectedMonth(null);
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Annulla</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={() => selectedMonth && handleSignReceipt(selectedMonth)}
-              >
-                <Text style={styles.confirmButtonText}>Firma</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
