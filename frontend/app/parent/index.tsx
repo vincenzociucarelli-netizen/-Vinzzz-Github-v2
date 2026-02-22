@@ -198,15 +198,19 @@ export default function ParentDashboard() {
     setProcessingTrial(true);
     try {
       // First, sign the document digitally
-      const privacyText = `Il/La sottoscritto/a ${user.full_name}, in qualità di genitore/tutore dell'atleta ${athleteName}, dichiara di aver letto e compreso l'informativa sulla privacy ai sensi del Regolamento UE 2016/679 (GDPR) e del D.Lgs. 196/2003 e successive modificazioni.
+      const privacyText = `Il/La sottoscritto/a ${user.full_name}, in qualità di genitore/tutore dell'atleta minorenne ${athleteName}, dichiara di aver letto e compreso l'informativa sulla privacy ai sensi del Regolamento UE 2016/679 (GDPR) e del D.Lgs. 196/2003 e successive modificazioni.
 
-Autorizza il trattamento dei dati personali propri e del minore per le finalità connesse all'attività sportiva, incluse:
-- Gestione dell'iscrizione e tesseramento
-- Comunicazioni relative all'attività sportiva
-- Pubblicazione di foto/video su canali ufficiali della società
-- Adempimenti assicurativi e federali
+PRESTA IL PROPRIO CONSENSO:
 
-L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la società.`;
+✓ Al trattamento dei dati personali propri e del minore per le finalità strettamente connesse e necessarie all'attività sportiva dilettantistica (gestione amministrativa, comunicazioni relative all'attività sportiva);
+
+✓ Alla comunicazione dei dati personali del minore alla Federazione Sportiva di appartenenza (FIPAV o altra federazione) o ad Enti di Promozione Sportiva (EPS) ai fini del tesseramento e della partecipazione alle attività federali;
+
+✓ All'utilizzo delle immagini fotografiche e/o video del minore per finalità promozionali e comunicative della società sui canali social (Facebook, Instagram, TikTok, YouTube e altri), sul sito web e su materiale promozionale cartaceo e digitale;
+
+✓ Alla comunicazione dei dati ad assicurazioni, enti sanitari e altri soggetti necessari per lo svolgimento dell'attività sportiva e la tutela della salute del minore.
+
+L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la società ed è revocabile in qualsiasi momento mediante comunicazione scritta.`;
 
       await api.post('/documents/sign', {
         document_type: 'privacy_consent',
