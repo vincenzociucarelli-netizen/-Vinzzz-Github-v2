@@ -990,7 +990,7 @@ export default function CoachCompensation() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalScroll}>
+            <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: 20 }}>
               {/* Receipt Preview */}
               <View style={styles.receiptPreview}>
                 <Text style={styles.receiptTitle}>QUIETANZA COMPENSO SPORTIVO DILETTANTISTICO</Text>
@@ -1011,33 +1011,33 @@ export default function CoachCompensation() {
                 onClear={() => setSignature(null)}
                 height={200}
               />
-
-              {/* Confirm Buttons */}
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={closeSignatureModal}
-                >
-                  <Text style={styles.cancelButtonText}>Annulla</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[
-                    styles.modalButton, 
-                    styles.confirmButton,
-                    !signature && styles.buttonDisabled
-                  ]}
-                  onPress={handleSign}
-                  disabled={!signature || signing}
-                >
-                  {signing ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.confirmButtonText}>Firma Quietanza</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
             </ScrollView>
+
+            {/* Confirm Buttons - OUTSIDE ScrollView for fixed position */}
+            <View style={styles.modalButtonsFixed}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={closeSignatureModal}
+              >
+                <Text style={styles.cancelButtonText}>Annulla</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.modalButton, 
+                  styles.confirmButton,
+                  !signature && styles.buttonDisabled
+                ]}
+                onPress={handleSign}
+                disabled={!signature || signing}
+              >
+                {signing ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>Firma Quietanza</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
