@@ -48,9 +48,14 @@ interface Athlete {
   id: string;
   first_name: string;
   last_name: string;
+  full_name?: string;
   team_name?: string;
   monthly_compensation?: number;
+  other_annual_compensation?: number;
+  contract_start_date?: string;
+  contract_end_date?: string;
   fiscal_code?: string;
+  role?: string;
 }
 
 const MONTHS = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 
