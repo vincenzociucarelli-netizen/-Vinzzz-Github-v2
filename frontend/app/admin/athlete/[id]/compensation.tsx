@@ -727,26 +727,26 @@ export default function AthleteCompensation() {
                     </View>
                     
                     <View style={{ backgroundColor: '#f8f8f8', padding: 12, borderRadius: 10 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <Text style={{ fontSize: 13, color: '#666' }}>Mesi nel contratto:</Text>
-                        <Text style={{ fontSize: 13, color: '#333' }}>{firstMonthName} - {lastMonthName} ({data.months} mesi)</Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'nowrap' }}>
+                        <Text style={{ fontSize: 13, color: '#666', flexShrink: 0 }}>Mesi nel contratto:</Text>
+                        <Text style={{ fontSize: 13, color: '#333', textAlign: 'right', flexShrink: 1 }}>{firstMonthName} - {lastMonthName} ({data.months} mesi)</Text>
                       </View>
                       
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <Text style={{ fontSize: 13, color: '#666' }}>Compenso da contratto:</Text>
-                        <Text style={{ fontSize: 13, color: '#333' }}>€{monthlyCompensation} × {data.months} = €{data.total.toLocaleString('it-IT')}</Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'nowrap' }}>
+                        <Text style={{ fontSize: 13, color: '#666', flexShrink: 0 }}>Compenso da contratto:</Text>
+                        <Text style={{ fontSize: 13, color: '#333', textAlign: 'right', flexShrink: 1 }}>€{monthlyCompensation} × {data.months} = €{data.total.toLocaleString('it-IT')}</Text>
                       </View>
                       
                       {data.prior > 0 && (
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, backgroundColor: 'rgba(184, 134, 11, 0.1)', marginHorizontal: -12, paddingHorizontal: 12, paddingVertical: 6 }}>
-                          <Text style={{ fontSize: 13, color: '#B8860B', fontWeight: '500' }}>+ Pregressi dichiarati:</Text>
-                          <Text style={{ fontSize: 13, color: '#B8860B', fontWeight: '600' }}>€{data.prior.toLocaleString('it-IT')}</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, backgroundColor: 'rgba(184, 134, 11, 0.1)', marginHorizontal: -12, paddingHorizontal: 12, paddingVertical: 6, flexWrap: 'nowrap' }}>
+                          <Text style={{ fontSize: 13, color: '#B8860B', fontWeight: '500', flexShrink: 0 }}>+ Pregressi dichiarati:</Text>
+                          <Text style={{ fontSize: 13, color: '#B8860B', fontWeight: '600', textAlign: 'right', flexShrink: 1 }}>€{data.prior.toLocaleString('it-IT')}</Text>
                         </View>
                       )}
                       
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#ddd', marginTop: 4 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e' }}>TOTALE ANNO:</Text>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: exceeds5K ? (exceeds15K ? '#D32F2F' : '#E65100') : '#2E7D32' }}>€{yearTotal.toLocaleString('it-IT')}</Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#ddd', marginTop: 4, flexWrap: 'nowrap' }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e', flexShrink: 0 }}>TOTALE ANNO:</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: exceeds5K ? (exceeds15K ? '#D32F2F' : '#E65100') : '#2E7D32', textAlign: 'right', flexShrink: 1 }}>€{yearTotal.toLocaleString('it-IT')}</Text>
                       </View>
                     </View>
                     
