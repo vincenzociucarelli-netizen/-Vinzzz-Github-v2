@@ -9807,7 +9807,7 @@ async def sign_athlete_compensation_receipt(
 
 @api_router.get("/prime-squadre/athletes/{athlete_id}/threshold-status/{year}")
 async def get_athlete_threshold_status(athlete_id: str, year: int, current_user = Depends(get_current_user)):
-    """Get threshold status for an athlete in a specific year"""
+    """Get threshold status for an athlete/coach/dirigente in a specific year"""
     # Allow admin or the athlete viewing their own threshold status
     if current_user["role"] == "athlete":
         if current_user.get("athlete_id") != athlete_id and current_user["id"] != athlete_id:
@@ -9815,20 +9815,37 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
     elif current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
-    athlete = await db.athletes.find_one({"id": athlete_id, "is_compensated": True})
-    if not athlete:
-        raise HTTPException(status_code=404, detail="Atleta non trovato in Prime Squadre")
+    # Try athletes first
+    member = await db.athletes.find_one({"id": athlete_id, "is_compensated": True})
+    member_type = "athlete"
     
-    monthly_compensation = athlete.get("monthly_compensation", 0) or 0
-    prior_compensation = athlete.get("other_annual_compensation", 0) or 0
+    # If not found, try users (coaches and dirigenti)
+    if not member:
+        member = await db.users.find_one({"id": athlete_id, "is_compensated": True})
+        member_type = "user"
     
-    yearly_records = await db.atleta_pro_compensations.find({
-        "atleta_id": athlete_id,
-        "year": year,
-        "receipt_signed": True
-    }).to_list(12)
+    if not member:
+        raise HTTPException(status_code=404, detail="Membro non trovato in Prime Squadre")
     
-    yearly_total = sum(r.get("amount_gross", 0) for r in yearly_records)
+    monthly_compensation = member.get("monthly_compensation", 0) or 0
+    prior_compensation = member.get("other_annual_compensation", 0) or 0
+    
+    # Get records based on member type
+    if member_type == "athlete":
+        yearly_records = await db.atleta_pro_compensations.find({
+            "atleta_id": athlete_id,
+            "year": year,
+            "receipt_signed": True
+        }).to_list(12)
+    else:
+        # For coaches/dirigenti, use coach_compensations or similar
+        yearly_records = await db.coach_compensations.find({
+            "coach_id": athlete_id,
+            "year": year,
+            "signed": True
+        }).to_list(12)
+    
+    yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
     
     # Add prior compensation if this is the first year of contract
     contract_start = athlete.get("contract_start_date")
