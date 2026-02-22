@@ -1488,6 +1488,7 @@ const styles = StyleSheet.create({
   },
   modalScroll: {
     padding: 16,
+    paddingBottom: 40,  // Extra padding to ensure buttons are visible above keyboard/bottom
   },
   receiptPreview: {
     backgroundColor: '#f9f9f9',
