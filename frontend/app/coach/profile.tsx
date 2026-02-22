@@ -1365,6 +1365,16 @@ export default function CoachProfile() {
         </View>
       )}
 
+      {/* Adult Privacy Modal */}
+      <AdultPrivacyModal
+        visible={showPrivacyModal}
+        onClose={() => setShowPrivacyModal(false)}
+        onSign={handlePrivacySign}
+        signerName={profileData.full_name || `${profileData.first_name} ${profileData.last_name}`}
+        signerRole="coach"
+        societyName={societyName}
+      />
+
       {/* Photo Viewer for documents */}
       <PhotoViewer
         visible={photoViewerVisible}
