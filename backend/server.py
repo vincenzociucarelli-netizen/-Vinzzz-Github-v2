@@ -9511,7 +9511,7 @@ async def create_collaboratore(data: CollaboratoreCreate, current_user = Depends
     collaboratore = {
         "id": collaboratore_id,
         "email": data.email.lower(),
-        "password": hashed_password,
+        "password_hash": hashed_password,
         "full_name": data.full_name,
         "role": UserRole.COLLABORATORE,
         "fiscal_code": data.fiscal_code,
