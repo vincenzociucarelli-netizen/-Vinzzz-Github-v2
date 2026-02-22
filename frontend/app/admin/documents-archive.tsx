@@ -45,6 +45,7 @@ const FIGURE_TYPES = [
   { value: 'coach', label: 'Coach' },
   { value: 'dirigente', label: 'Dirigenti' },
   { value: 'collaboratore', label: 'Collaboratori' },
+  { value: 'genitore', label: 'Genitori' },
   { value: 'atleta', label: 'Atleti' },
 ];
 
