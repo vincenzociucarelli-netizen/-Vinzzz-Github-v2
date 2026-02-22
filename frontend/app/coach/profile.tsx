@@ -970,34 +970,31 @@ export default function CoachProfile() {
             </View>
           )}
 
-          {/* Link to Compensation Page with Receipts */}
-          {profileData.monthly_compensation > 0 && profileData.compensation_accepted && (
+          {/* Link to Compensation Page - PRO Feature LOCKED */}
+          {profileData.monthly_compensation > 0 && (
             <TouchableOpacity
-              style={styles.compensationLinkButton}
-              onPress={() => router.push('/coach/compensation')}
+              style={[styles.compensationLinkButton, { backgroundColor: '#f8f9fa', borderColor: '#ddd', borderWidth: 1, borderStyle: 'dashed' }]}
+              onPress={() => {
+                Alert.alert(
+                  '🔒 Modulo PRO',
+                  'La gestione dei compensi e delle quietanze sarà disponibile nella versione PRO.',
+                  [{ text: 'Ho capito', style: 'default' }]
+                );
+              }}
               data-testid="compensation-receipts-btn"
             >
-              <Ionicons name="document-text" size={20} color="#007AFF" />
-              <Text style={styles.compensationLinkText}>Quietanze Mensili</Text>
-              <Ionicons name="chevron-forward" size={20} color="#007AFF" />
+              <Ionicons name="lock-closed" size={20} color="#6c757d" />
+              <Text style={[styles.compensationLinkText, { color: '#6c757d' }]}>Quietanze Mensili</Text>
+              <View style={{ backgroundColor: '#FFD700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
+                <Text style={{ fontSize: 10, color: '#333', fontWeight: 'bold' }}>PRO</Text>
+              </View>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Registro Quietanze Compatto */}
-        {profileData.monthly_compensation > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>📅 Registro Quietanze</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-              {(() => {
-                // Find first month where each threshold was exceeded PER YEAR
-                const sortedReceipts = [...signedReceipts]
-                  .filter(r => r.receipt_signed)
-                  .sort((a, b) => {
-                    if (a.year !== b.year) return a.year - b.year;
-                    return a.month - b.month;
-                  });
-                
+        {/* Note: Registro Quietanze rimosso - fa parte del modulo PRO */}
+
+        {/* Signed Documents Section */}
                 // Track thresholds PER YEAR (they reset each calendar year)
                 const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
                 
