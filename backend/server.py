@@ -9294,9 +9294,45 @@ async def sign_dirigente_compensation_receipt(
         except Exception as e:
             logging.error(f"Error sending receipt email to dirigente: {e}")
     
-    # NOTE: Email to admin removed - documents available in Archive section
-    # if admin_email and admin_email != dirigente_email:
-    #     ... (email sending removed)
+    # Send email to admin ONLY for threshold documents (€5.000 or €15.000)
+    if admin_email and (first_time_exceeded_5000 or first_time_exceeded_15000):
+        try:
+            alert_emoji = "🚨" if first_time_exceeded_15000 else "⚠️"
+            threshold_text = "€15.000" if first_time_exceeded_15000 else "€5.000"
+            urgency = "URGENTE" if first_time_exceeded_15000 else "ATTENZIONE"
+            
+            admin_body = f"""
+            <html>
+            <body>
+            <h2>{alert_emoji} {urgency}: Dirigente ha superato {threshold_text}</h2>
+            <p>Il dirigente <strong>{dirigente.get('full_name', 'N/D')}</strong> ha superato la soglia di {threshold_text} di compensi sportivi per {month_name} {request.year}.</p>
+            <p><strong>Dettagli:</strong></p>
+            <ul>
+            <li>Compenso lordo: € {request.amount_gross:.2f}</li>
+            <li>Totale annuo progressivo: € {new_total:.2f}</li>
+            </ul>
+            <hr>
+            <p><em>In allegato il documento firmato.</em></p>
+            </body>
+            </html>
+            """
+            
+            encoded_pdf = base64.b64encode(pdf_bytes).decode()
+            
+            result = await send_email_with_pdf(
+                to_email=admin_email,
+                subject=f"[RegistraTEAM] {alert_emoji} Dirigente superato {threshold_text} - {dirigente.get('full_name', 'Dirigente')}",
+                html_content=admin_body,
+                pdf_base64=encoded_pdf,
+                pdf_filename=pdf_filename
+            )
+            
+            if result.get("success"):
+                logging.info(f"Dirigente threshold notification sent to admin {admin_email}")
+            else:
+                logging.error(f"Error sending threshold email to admin: {result.get('error')}")
+        except Exception as e:
+            logging.error(f"Error sending threshold email to admin: {e}")
     
     # Notify admin if thresholds exceeded
     if first_time_exceeded_5000:
