@@ -364,13 +364,13 @@ export default function CoachCompensation() {
       const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
       
       // Get contract start year to determine if prior compensation applies
-      let contractStartYear = null;
+      let contractStartYearLocal = null;
       if (profile.contract_start_date) {
-        contractStartYear = parseInt(profile.contract_start_date.split('-')[0]);
+        contractStartYearLocal = parseInt(profile.contract_start_date.split('-')[0]);
       }
       
       // Include prior compensation only for the first year of contract
-      const yearTotalBeforeThis = (selectedYear === contractStartYear) 
+      const yearTotalBeforeThis = (selectedYear === contractStartYearLocal) 
         ? yearTotalFromReceipts + priorComp 
         : yearTotalFromReceipts;
       
@@ -380,7 +380,7 @@ export default function CoachCompensation() {
       const exceeded5000 = newTotal > 5000 && yearTotalBeforeThis <= 5000;
       const exceeded15000 = newTotal > 15000 && yearTotalBeforeThis <= 15000;
       
-      console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYear, selectedYear });
+      console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYearLocal, selectedYear });
       
       const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
@@ -391,12 +391,14 @@ export default function CoachCompensation() {
         exceeded_15000: exceeded15000,
       });
       
+      // Close modal FIRST, then show success message
+      closeSignatureModal();
+      
       Alert.alert(
         'Quietanza Firmata',
         `Quietanza firmata con successo!\n\nLordo: € ${response.data.amount_gross.toFixed(2)}\nNetto: € ${response.data.amount_net.toFixed(2)}\n\nTotale annuo: € ${response.data.yearly_total.toFixed(2)}`
       );
       
-      setShowSignatureModal(false);
       loadData();
       
     } catch (error: any) {
