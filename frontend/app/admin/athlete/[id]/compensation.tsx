@@ -727,26 +727,26 @@ export default function AthleteCompensation() {
                     </View>
                     
                     <View style={{ backgroundColor: '#f8f8f8', padding: 12, borderRadius: 10 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' }}>
-                        <Text style={{ fontSize: 12, color: '#666' }} numberOfLines={1}>Mesi nel contratto:</Text>
-                        <Text style={{ fontSize: 12, color: '#333', marginLeft: 8 }} numberOfLines={1}>{firstMonthName.substring(0,3)} - {lastMonthName.substring(0,3)} ({data.months} mesi)</Text>
+                      <View style={{ marginBottom: 8 }}>
+                        <Text style={{ fontSize: 13, color: '#666' }}>Mesi nel contratto:</Text>
+                        <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>{firstMonthName} - {lastMonthName} ({data.months} mesi)</Text>
                       </View>
                       
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' }}>
-                        <Text style={{ fontSize: 12, color: '#666' }} numberOfLines={1}>Compenso da contratto:</Text>
-                        <Text style={{ fontSize: 12, color: '#333', marginLeft: 8 }} numberOfLines={1}>€{monthlyCompensation} × {data.months} = €{data.total.toLocaleString('it-IT')}</Text>
+                      <View style={{ marginBottom: 8 }}>
+                        <Text style={{ fontSize: 13, color: '#666' }}>Compenso da contratto:</Text>
+                        <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>€{monthlyCompensation} × {data.months} = €{data.total.toLocaleString('it-IT')}</Text>
                       </View>
                       
                       {data.prior > 0 && (
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, backgroundColor: 'rgba(184, 134, 11, 0.1)', marginHorizontal: -12, paddingHorizontal: 12, paddingVertical: 6, alignItems: 'center' }}>
-                          <Text style={{ fontSize: 12, color: '#B8860B', fontWeight: '500' }} numberOfLines={1}>+ Pregressi dichiarati:</Text>
-                          <Text style={{ fontSize: 12, color: '#B8860B', fontWeight: '600', marginLeft: 8 }} numberOfLines={1}>€{data.prior.toLocaleString('it-IT')}</Text>
+                        <View style={{ marginBottom: 8, backgroundColor: 'rgba(184, 134, 11, 0.1)', marginHorizontal: -12, paddingHorizontal: 12, paddingVertical: 8 }}>
+                          <Text style={{ fontSize: 13, color: '#B8860B' }}>+ Pregressi dichiarati:</Text>
+                          <Text style={{ fontSize: 14, color: '#B8860B', fontWeight: '600' }}>€{data.prior.toLocaleString('it-IT')}</Text>
                         </View>
                       )}
                       
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#ddd', marginTop: 4, alignItems: 'center' }}>
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }} numberOfLines={1}>TOTALE ANNO:</Text>
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: exceeds5K ? (exceeds15K ? '#D32F2F' : '#E65100') : '#2E7D32', marginLeft: 8 }} numberOfLines={1}>€{yearTotal.toLocaleString('it-IT')}</Text>
+                      <View style={{ paddingTop: 8, borderTopWidth: 1, borderTopColor: '#ddd', marginTop: 4 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e' }}>TOTALE ANNO:</Text>
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: exceeds5K ? (exceeds15K ? '#D32F2F' : '#E65100') : '#2E7D32' }}>€{yearTotal.toLocaleString('it-IT')}</Text>
                       </View>
                     </View>
                     
