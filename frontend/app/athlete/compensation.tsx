@@ -981,11 +981,11 @@ export default function CoachCompensation() {
               return (
                 <View key={`summary-${contractEndYear}`} style={[styles.summaryCard, { marginBottom: 16 }]}>
                   <Text style={styles.summaryTitle}>📊 Anno {contractEndYear} (Fine Contratto)</Text>
-                  <View style={{ marginBottom: 8 }}>
+                  <View style={{ marginBottom: 8, flexDirection: 'column' }}>
                     <Text style={styles.summaryLabel}>Mesi nel contratto:</Text>
                     <Text style={styles.summaryValue}>Gennaio - {MONTH_NAMES[contractEndMonth]} ({summary.monthCount} mesi)</Text>
                   </View>
-                  <View style={styles.summaryRow}>
+                  <View style={{ marginBottom: 8, flexDirection: 'column' }}>
                     <Text style={styles.summaryLabel}>Compenso da contratto:</Text>
                     <Text style={styles.summaryValue}>€{summary.monthlyComp} × {summary.monthCount} = €{summary.yearlyFromContract.toLocaleString()}</Text>
                   </View>
