@@ -168,6 +168,7 @@ export default function DocumentsArchive() {
       case 'coach': return '#2196F3';
       case 'dirigente': return '#9C27B0';
       case 'collaboratore': return '#FF9800';
+      case 'genitore': return '#E91E63';
       case 'atleta': return '#4CAF50';
       default: return '#757575';
     }
@@ -178,6 +179,7 @@ export default function DocumentsArchive() {
       case 'coach': return 'Coach';
       case 'dirigente': return 'Dirigente';
       case 'collaboratore': return 'Collaboratore';
+      case 'genitore': return 'Genitore';
       case 'atleta': return 'Atleta';
       default: return type;
     }
