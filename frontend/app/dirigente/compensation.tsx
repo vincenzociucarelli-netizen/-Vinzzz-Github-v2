@@ -33,7 +33,7 @@ const matchesMonth = (recordMonth: number | string, targetMonth: number): boolea
 
 interface CompensationRecord {
   id: string;
-  month: number;
+  month: number | string;  // Can be number (1-12) or string ("Gennaio", etc.) for legacy data
   year: number;
   amount_gross?: number;
   amount_net?: number;
@@ -229,7 +229,8 @@ export default function DirigenteCompensation() {
       return;
     }
     
-    const existingRecord = records.find(r => r.month === month && r.year === targetYear && r.receipt_signed);
+    // Use matchesMonth helper for legacy data support
+    const existingRecord = records.find(r => matchesMonth(r.month, month) && r.year === targetYear && r.receipt_signed);
     if (existingRecord) {
       Alert.alert('Già firmata', 'La quietanza per questo mese è già stata firmata.');
       return;
@@ -364,7 +365,8 @@ export default function DirigenteCompensation() {
       return 'future';
     }
     
-    const record = records.find(r => r.month === month && r.year === checkYear);
+    // Use matchesMonth helper for legacy data support
+    const record = records.find(r => matchesMonth(r.month, month) && r.year === checkYear);
     if (record?.receipt_signed) {
       return 'signed';
     }
@@ -579,7 +581,8 @@ export default function DirigenteCompensation() {
   const renderMonthCard = (month: number, year?: number) => {
     const displayYear = year || currentYear;
     const status = getMonthStatus(month, displayYear);
-    const record = records.find(r => r.month === month && r.year === displayYear);
+    // Use matchesMonth helper for legacy data support
+    const record = records.find(r => matchesMonth(r.month, month) && r.year === displayYear);
     const monthlyAmount = profile?.monthly_compensation || 0;
     
     const exceeded5k = record?.exceeded_5000 === true;
