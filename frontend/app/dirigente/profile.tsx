@@ -756,50 +756,37 @@ export default function DirigenteProfile() {
             </View>
           )}
           
-          {/* Link to Compensation Page - PRO Feature LOCKED */}
-          {profileData.monthly_compensation > 0 && (
+          {/* Link to Compensation Page with Digital Signatures */}
+          {profileData.monthly_compensation > 0 && profileData.compensation_accepted && (
             <TouchableOpacity
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: '#f8f9fa',
+                backgroundColor: '#F3E5F5',
                 padding: 14,
                 borderRadius: 10,
                 marginTop: 12,
                 borderWidth: 1,
-                borderColor: '#ddd',
+                borderColor: '#8E44AD',
                 borderStyle: 'dashed',
               }}
-              onPress={() => {
-                Alert.alert(
-                  '🔒 Modulo PRO',
-                  'La gestione dei compensi e delle quietanze sarà disponibile nella versione PRO.',
-                  [{ text: 'Ho capito', style: 'default' }]
-                );
-              }}
+              onPress={() => router.push('/dirigente/compensation')}
               data-testid="go-to-compensation-btn"
             >
-              <Ionicons name="lock-closed" size={24} color="#6c757d" />
+              <Ionicons name="receipt-outline" size={24} color="#8E44AD" />
               <View style={{ marginLeft: 12, flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#6c757d' }}>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#8E44AD' }}>
                   Firma Quietanze Mensili
                 </Text>
-                <Text style={{ fontSize: 13, color: '#999', marginTop: 2 }}>
-                  Modulo PRO - Prossimamente
+                <Text style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
+                  Genera e firma le quietanze dei compensi sportivi
                 </Text>
               </View>
-              <View style={{ backgroundColor: '#FFD700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
-                <Text style={{ fontSize: 10, color: '#333', fontWeight: 'bold' }}>PRO</Text>
-              </View>
+              <Ionicons name="chevron-forward" size={22} color="#8E44AD" />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Documento e Dati Bancari */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>🏦 Documento e Dati Bancari</Text>
-                      borderColor = '#F9A825';
         {/* Documento e Dati Bancari */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
