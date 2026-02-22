@@ -7304,45 +7304,9 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         except Exception as e:
             logging.error(f"Error sending receipt email to coach: {e}")
     
-    # Send copy to admin
-    if admin_email and admin_email != coach_email:
-        try:
-            import base64
-            
-            admin_body = f"""
-            <html>
-            <body>
-            <h2>Quietanza Compenso Firmata - {coach.get('full_name', 'Coach')}</h2>
-            <p>Il collaboratore <strong>{coach.get('full_name', 'N/D')}</strong> ha firmato la quietanza del compenso sportivo per {month_name} {request.year}.</p>
-            <p><strong>Dettagli:</strong></p>
-            <ul>
-            <li>Compenso lordo: € {request.amount_gross:.2f}</li>
-            <li>Totale annuo progressivo: € {new_total:.2f}</li>
-            </ul>
-            {'<p style="color: orange;"><strong>⚠️ ATTENZIONE: Il collaboratore ha superato la soglia di €5.000</strong></p>' if first_time_exceeded_5000 else ''}
-            {'<p style="color: red;"><strong>🚨 URGENTE: Il collaboratore ha superato la soglia di €15.000</strong></p>' if first_time_exceeded_15000 else ''}
-            <hr>
-            <p><em>In allegato il documento firmato.</em></p>
-            </body>
-            </html>
-            """
-            
-            encoded_pdf = base64.b64encode(pdf_bytes).decode()
-            
-            result = await send_email_with_pdf(
-                to_email=admin_email,
-                subject=f"[RegistraTEAM] Quietanza firmata - {coach.get('full_name', 'Coach')} - {month_name} {request.year}",
-                html_content=admin_body,
-                pdf_base64=encoded_pdf,
-                pdf_filename=pdf_filename
-            )
-            
-            if result.get("success"):
-                logging.info(f"Receipt copy sent to admin {admin_email} via {result.get('provider', 'unknown')}")
-            else:
-                logging.error(f"Error sending receipt email to admin: {result.get('error')}")
-        except Exception as e:
-            logging.error(f"Error sending receipt email to admin: {e}")
+    # NOTE: Email to admin/society removed - documents are now available in the Archive section
+    # if admin_email and admin_email != coach_email:
+    #     ... (email sending removed)
     
     # Check if this is the FIRST time exceeding €5.000 threshold this year
     # Generate and send "COMUNICAZIONE DI SUPERAMENTO DELLA SOGLIA" document
