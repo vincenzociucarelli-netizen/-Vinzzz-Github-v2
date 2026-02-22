@@ -745,6 +745,22 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
+          {/* Archivio Documenti Firmati */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/documents-archive')}
+            data-testid="documents-archive-menu-card"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#F3E5F5' }]}>
+              <Text style={{ fontSize: 26 }}>📁</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Archivio Documenti</Text>
+              <Text style={styles.menuCardSubtitle}>Quietanze e documenti firmati</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
           {/* Ricerca Avanzata Atleti */}
           <TouchableOpacity
             style={styles.menuCard}
