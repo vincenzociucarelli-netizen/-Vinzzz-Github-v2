@@ -94,6 +94,11 @@ export default function CoachProfile() {
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [profilePhotoArtistic, setProfilePhotoArtistic] = useState(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
+  
+  // Privacy consent state
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
 
   const loadProfile = async () => {
     try {
