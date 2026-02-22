@@ -9257,43 +9257,9 @@ async def sign_dirigente_compensation_receipt(
         except Exception as e:
             logging.error(f"Error sending receipt email to dirigente: {e}")
     
-    # Send copy to admin
-    if admin_email and admin_email != dirigente_email:
-        try:
-            admin_body = f"""
-            <html>
-            <body>
-            <h2>Quietanza Compenso Firmata - {dirigente.get('full_name', 'Dirigente')}</h2>
-            <p>Il dirigente <strong>{dirigente.get('full_name', 'N/D')}</strong> ha firmato la quietanza del compenso sportivo per {month_name} {request.year}.</p>
-            <p><strong>Dettagli:</strong></p>
-            <ul>
-            <li>Compenso lordo: € {request.amount_gross:.2f}</li>
-            <li>Totale annuo progressivo: € {new_total:.2f}</li>
-            </ul>
-            {'<p style="color: orange;"><strong>⚠️ ATTENZIONE: Il dirigente ha superato la soglia di €5.000</strong></p>' if first_time_exceeded_5000 else ''}
-            {'<p style="color: red;"><strong>🚨 URGENTE: Il dirigente ha superato la soglia di €15.000</strong></p>' if first_time_exceeded_15000 else ''}
-            <hr>
-            <p><em>In allegato il documento firmato.</em></p>
-            </body>
-            </html>
-            """
-            
-            encoded_pdf = base64.b64encode(pdf_bytes).decode()
-            
-            result = await send_email_with_pdf(
-                to_email=admin_email,
-                subject=f"[RegistraTEAM] Quietanza firmata - {dirigente.get('full_name', 'Dirigente')} - {month_name} {request.year}",
-                html_content=admin_body,
-                pdf_base64=encoded_pdf,
-                pdf_filename=pdf_filename
-            )
-            
-            if result.get("success"):
-                logging.info(f"Dirigente receipt copy sent to admin {admin_email}")
-            else:
-                logging.error(f"Error sending dirigente receipt email to admin: {result.get('error')}")
-        except Exception as e:
-            logging.error(f"Error sending dirigente receipt email to admin: {e}")
+    # NOTE: Email to admin removed - documents available in Archive section
+    # if admin_email and admin_email != dirigente_email:
+    #     ... (email sending removed)
     
     # Notify admin if thresholds exceeded
     if first_time_exceeded_5000:
