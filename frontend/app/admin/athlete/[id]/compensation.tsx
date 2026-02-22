@@ -442,10 +442,17 @@ export default function AthleteCompensation() {
   if (!athlete) {
     return (
       <View style={styles.errorContainer}>
-        <Text>Atleta non trovato</Text>
+        <Text>Membro non trovato</Text>
       </View>
     );
   }
+
+  // Get member type label
+  const getMemberTypeLabel = () => {
+    if (memberType === 'coach') return 'Coach';
+    if (memberType === 'dirigente') return 'Dirigente';
+    return 'Atleta';
+  };
 
   const breakdown = getCompensationBreakdown();
   const contractMonths = getContractMonths();
@@ -459,7 +466,7 @@ export default function AthleteCompensation() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Compensi Atleta</Text>
+          <Text style={styles.headerTitle}>Compensi {getMemberTypeLabel()}</Text>
           <Text style={styles.headerSubtitle}>{athlete.first_name} {athlete.last_name}</Text>
         </View>
         <View style={{ width: 40 }} />
