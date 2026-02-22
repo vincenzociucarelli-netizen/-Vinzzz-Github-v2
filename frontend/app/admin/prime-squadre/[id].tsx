@@ -64,8 +64,6 @@ export default function AthleteCompensationDetailPage() {
   const [records, setRecords] = useState<CompensationRecord[]>([]);
   const [thresholdStatus, setThresholdStatus] = useState<ThresholdStatus | null>(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [showSignModal, setShowSignModal] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [sportImage, setSportImage] = useState<string | null>(null);
 
   const loadData = async () => {
