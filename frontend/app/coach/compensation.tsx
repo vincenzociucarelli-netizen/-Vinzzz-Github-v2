@@ -209,6 +209,7 @@ export default function CoachCompensation() {
       
       // Load ALL compensation records (not filtered by year)
       const recordsRes = await api.get(`/coach/${user?.id}/compensation`);
+      console.log('Loaded coach compensation records:', recordsRes.data);
       setRecords(recordsRes.data || []);
       
       // Calculate yearly total for current display year (including prior compensation for first year)
