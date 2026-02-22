@@ -1059,18 +1059,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   compensationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
   compensationLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
+    marginBottom: 2,
   },
   compensationValue: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#333',
   },
@@ -1082,9 +1082,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   compensationTotalLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#B8860B',
+    marginBottom: 2,
   },
   compensationTotalValue: {
     fontSize: 20,
