@@ -184,6 +184,26 @@ export default function CoachCompensation() {
         }
       }
       
+      // Set initial display year based on contract (show start year first if contract spans multiple years)
+      // Only set if this is the first load (currentYear hasn't been changed by user)
+      const now = new Date();
+      const currentActualYear = now.getFullYear();
+      if (startYear && endYear && startYear !== endYear) {
+        // Multi-year contract - show the year that's most relevant
+        if (startYear === currentActualYear || endYear === currentActualYear) {
+          // If current year is part of contract, show it
+          // Otherwise, show start year (where most records likely are)
+          if (startYear <= currentActualYear && currentActualYear <= endYear) {
+            setCurrentYear(currentActualYear);
+          } else {
+            setCurrentYear(startYear);
+          }
+        } else {
+          // Contract is in the past or future, show start year
+          setCurrentYear(startYear);
+        }
+      }
+      
       // Set prior compensation
       setPriorCompensation(profileRes.data.other_annual_compensation || 0);
       
