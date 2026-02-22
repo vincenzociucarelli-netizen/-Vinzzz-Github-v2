@@ -4404,6 +4404,19 @@ async def sign_athlete_compensation_receipt_with_signature(
     }
     await db.signed_documents.insert_one(document_record)
     
+    # Check if receipt already exists and is signed
+    existing_receipt = await db.athlete_compensation_receipts.find_one({
+        "athlete_id": athlete_id, 
+        "month": month, 
+        "year": year
+    })
+    
+    if existing_receipt and existing_receipt.get("signed"):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Quietanza per {month_name} {year} già firmata il {existing_receipt.get('signed_date', 'data sconosciuta')}"
+        )
+    
     # Update receipt record
     receipt_data = {
         "athlete_id": athlete_id,
