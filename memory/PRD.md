@@ -205,7 +205,7 @@ Sistema di gestione completo per società sportive italiane (pallavolo, basket) 
 4. **P2**: @expo/vector-icons non renderizza su web
 
 ### Last Updated
-2026-02-22: Bug fixes foto profilo atleta, layout compensi, pulsanti firma, bug doppio click coach
+2026-02-22: Bug fixes + Firma Privacy Maggiorenni (Atleti adulti, Coach, Dirigenti)
 
 ## Session 2026-02-22 (Bug Fixes - Profilo Atleta & Firma Coach)
 
@@ -233,15 +233,51 @@ Sistema di gestione completo per società sportive italiane (pallavolo, basket) 
    - **Aggiunto**: Helper `matchesMonth()` per supportare formati legacy del campo month
    - **File**: `/app/frontend/app/coach/compensation.tsx` linee 24-50 (interface), 104-145 (state), 218-290 (handlers)
 
-### Test Results
+### Test Results Bug Fixes
 - `/app/test_reports/iteration_13.json`
 - **Backend**: 100% (9 tests passed)
-- **Frontend**: Code review verificato (TouchableOpacity limitation impedisce test Playwright automatizzati)
+- **Frontend**: Code review verificato
 
-### Richieste Utente per Prossima Sessione
-1. **Firma Privacy Genitore**: A fine periodo di prova, genitore deve confermare e firmare privacy
-2. **Firma Privacy Maggiorenne**: Creare modulo per atleti adulti, coach e dirigenti da firmare alla conferma iscrizione
-3. **Modulo Privacy**: Basarsi sul modulo esistente per minorenni
+---
+
+## Nuova Funzionalità: Firma Privacy Maggiorenni (In Progress)
+
+### Implementato
+1. **Componente AdultPrivacyModal** ✅
+   - **File**: `/app/frontend/src/components/AdultPrivacyModal.tsx`
+   - **Contenuto**: Modale con informativa privacy GDPR, liberatoria, consensi al trattamento dati
+   - **Caratteristiche**:
+     - Supporta 3 ruoli: `athlete`, `coach`, `dirigente`
+     - Testo differenziato per ruolo (es. consenso compensi solo per coach/dirigenti)
+     - Firma digitale con react-signature-canvas
+     - Design gentile e accogliente come richiesto
+
+2. **Backend - Campo privacy_accepted** ✅
+   - **File**: `/app/backend/server.py`
+   - Aggiunto `privacy_accepted` a `UserProfileUpdate`
+   - Endpoint PUT `/auth/me` salva `privacy_accepted` e `privacy_accepted_date`
+
+3. **Frontend - Integrazione nei profili** ✅
+   - **Coach Profile** (`/app/frontend/app/coach/profile.tsx`):
+     - Modale appare automaticamente se privacy non accettata
+     - Salva stato via API `/auth/me`
+   - **Dirigente Profile** (`/app/frontend/app/dirigente/profile.tsx`):
+     - Stessa logica del coach
+   - **Atleta Profile** (`/app/frontend/app/athlete/profile.tsx`):
+     - Verifica se atleta è maggiorenne (18+) dalla data di nascita
+     - Modale appare solo per atleti adulti
+
+### Da Testare
+- [ ] Login come coach -> verificare modale privacy appare
+- [ ] Login come dirigente -> verificare modale privacy appare
+- [ ] Login come atleta adulto (18+) -> verificare modale privacy appare
+- [ ] Firma e conferma -> verificare salvataggio in DB
+- [ ] Ricarica pagina -> modale non deve riapparire se già firmato
+
+### Da Implementare (Prossima Sessione)
+1. **Firma Privacy Genitore a Fine Periodo Prova**
+   - Modificare `/app/frontend/app/parent/index.tsx`
+   - Il genitore deve confermare e firmare privacy oppure rinunciare e cancellare dati
 
 ### Pending Issues
 1. **P2**: Parent login non funzionante
