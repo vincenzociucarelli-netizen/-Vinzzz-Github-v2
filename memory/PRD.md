@@ -3,51 +3,97 @@
 ## Original Problem Statement
 Sistema di gestione completo per società sportive italiane (pallavolo, basket) che include:
 - Gestione atleti (minori e adulti)
-- Gestione allenatori con compensi e quietanze
-- Gestione dirigenti con compensi
-- Modulo Prime Squadre per atleti professionisti
+- Gestione allenatori
+- Gestione dirigenti
+- Gestione collaboratori
 - Importazione partite da federazioni (FIPAV, FIP)
-- Sistema di pagamento quote e fatturazione
+- Sistema presenze e comunicazioni
 
-## Implemented Features (Session 2026-02-20 - 2026-02-21)
+---
 
-### Core Modules
-1. **User Authentication** - Login/Registration per admin, coach, parent, athlete
-2. **Team Management** - CRUD squadre con prima squadra, rifinitura, sessioni allenamento
-3. **Athlete Management** - Registrazione minori/adulti, tipi quota/retribuito
-4. **Coach Compensation** - Gestione compensi, firma digitale quietanze, PDF
-5. **Director (Dirigente) Compensation** - Replicato da coach module
-6. **Prime Squadre Module** - Per atleti professionisti con soglie fiscali
-7. **Federation Importer** - FIPAV (volleyball) e FIP (basketball)
-8. **Monthly Reports** - PDF consolidato quietanze firmate
+## 🔒 MODULO PRO (BLOCCATO - Prossimamente)
+Le seguenti funzionalità sono state bloccate e saranno disponibili nella versione PRO:
+- Compensi e quietanze (atleti, coach, dirigenti, collaboratori)
+- Soglie fiscali €5.000 / €15.000
+- Prime Squadre (gestione contratti retribuiti)
+- Report Quietanze mensili
+- Firma digitale quietanze
 
-### Athlete Compensation Module ✅
-- Backend: create-account, receipts, receipt-sign, transform-photo
-- Frontend: /athlete dashboard, /athlete/compensation, /athlete/profile
-- Permessi: Admin solo lettura, Atleta può firmare
-- **NEW**: Calcoli annuali dettagliati con soglie €5K e €15K
+**File di backup**: `/app/frontend/app/_pro_backup/`
 
-### Club Sport Image Upload ✅
-- Nuovo campo `sport_image` in society settings
-- UI in admin settings per upload/rimozione immagine
-- API: GET/PATCH /settings/society con sport_image
+---
 
-### UI/UX Improvements (Session 2026-02-21) ✅
-1. **Badge PRO**: Atleti retribuiti mostrano badge "PRO" dorato invece di '€'
-2. **Formato Date Italiano**: Tutti i campi data mostrano formato `GG/MM/AAAA`
-3. **Form Semplificato**: Registrazione atleta adulto con solo 3 campi (Nome, Cognome, Email)
+## APP BASE (Attiva)
 
-## Bug Fixes
-### Session 2026-02-20
-1. ✅ **Formato date**: "01T00:00:00/12/2025" → "01/12/2025"
-2. ✅ **Upload foto atleta**: Atleta può caricare propria foto
-3. ✅ **Permessi admin quietanze**: Admin solo visualizzazione
-4. ✅ **Login genitori**: Verificato funzionante
-5. ✅ **Rate pagate in rosso**: Fix logica merge pagamenti
+### Figure Supportate
+1. **Genitori** - Registrano figli minorenni a periodo di prova
+2. **Atleti Maggiorenni** - Si registrano autonomamente (DA IMPLEMENTARE)
+3. **Coach/Allenatori** - Con tessera federale
+4. **Dirigenti** - Staff direttivo
+5. **Collaboratori** - Preparazione campo, trasporti, pulizie, segreteria (DA IMPLEMENTARE)
 
-### Session 2026-02-21
-6. ✅ **getContractMonths()**: Convertire date da formato italiano prima di creare Date objects
-7. ✅ **isEditing→editing**: Corretto nome variabile nelle condizioni di rendering
+### Funzionalità Attive
+- ✅ Registrazione atleti (minorenni con genitore)
+- ✅ Gestione squadre/categorie
+- ✅ Profili utenti
+- ✅ Comunicazioni/avvisi
+- ✅ Calendario partite
+- ✅ Importazione partite da federazione
+- ✅ Upload foto profilo
+- ✅ Privacy e consensi
+
+---
+
+## Session 2026-02-22 - BLOCCO MODULO PRO
+
+### Modifiche Effettuate
+1. **Pagine sostituite con schermata lucchetto**:
+   - `/athlete/compensation.tsx` → ProFeatureLock
+   - `/coach/compensation.tsx` → ProFeatureLock
+   - `/dirigente/compensation.tsx` → ProFeatureLock
+   - `/admin/prime-squadre.tsx` → ProFeatureLock
+   - `/admin/prime-squadre/[id].tsx` → ProFeatureLock
+   - `/admin/athlete/[id]/compensation.tsx` → ProFeatureLock
+
+2. **Componente creato**: `/src/components/ProFeatureLock.tsx`
+   - Schermata con lucchetto e messaggio "Prossimamente"
+   - Badge PRO dorato
+   - Pulsante torna indietro
+
+3. **Voci menu bloccate**:
+   - Admin: Report Quietanze → alert PRO
+   - Coach Profile: Quietanze Mensili → alert PRO
+   - Dirigente Profile: Firma Quietanze → alert PRO
+
+---
+
+## PROSSIMI TASK
+
+### P0 - Priorità Alta
+1. **Registrazione Atleta Maggiorenne**
+   - Nuovo flusso: "Sono un atleta maggiorenne"
+   - Senza genitore, si registra da solo
+   - Periodo di prova come i minorenni
+
+2. **Nuova Figura: Collaboratori**
+   - Ruolo: `collaboratore`
+   - Campi: nome, contatti, documento, IBAN
+   - Tipo attività: Preparazione campo, Trasporti, Pulizie, Segreteria, Altro
+   - Associazione: Squadra / Palestra / Entrambi
+
+### P1 - Medio termine
+- Gestione presenze/allenamenti
+- Notifiche push
+- Miglioramenti UI
+
+### P2 - Backlog
+- Preparazione per pubblicazione Store (iOS/Android)
+- Privacy policy e termini di servizio
+- Icone e screenshot per store
+
+---
+
+## Implementazioni Precedenti (Reference)
 8. ✅ **Backend team null check**: Evitato errore 500 quando team non assegnato
 9. ✅ **Athlete model Optional fields**: date_of_birth, is_minor, team_id ora opzionali
 
