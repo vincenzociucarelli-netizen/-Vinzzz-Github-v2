@@ -174,9 +174,16 @@ Le seguenti funzionalità rimangono **ATTIVE**:
    - **Archivio + Email (firmatario + admin)**:
      - Superamento soglia €5.000 Coach/Dirigente
      - Superamento soglia €15.000 Coach/Dirigente
-   - **Privacy (Archivio + Email al firmatario)** - DA IMPLEMENTARE:
-     - Atleta/Genitore: firma alla fine del periodo prova
-     - Coach/Dirigente/Collaboratore: firma all'iscrizione
+   - **Archivio + Email (solo firmatario)**:
+     - Privacy Genitore/Atleta (alla fine del periodo di prova)
+     - Privacy Coach/Dirigente/Collaboratore (all'iscrizione)
+
+5. **Firma Privacy Genitori - IMPLEMENTATA** ✅
+   - Endpoint `/documents/sign` aggiornato per salvare PDF su disco
+   - Aggiunto `parent_id`, `parent_name`, `athlete_id`, `athlete_name` al record
+   - Email inviata al genitore firmatario con PDF allegato
+   - NO email all'admin (disponibile solo in archivio)
+   - Filtro "Genitori" aggiunto all'archivio documenti
 
 ### Bug Fix Precedenti (stessa sessione) ✅
 - Backend Dirigente: protezione ri-firma quietanze
