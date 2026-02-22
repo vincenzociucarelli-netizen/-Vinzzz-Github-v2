@@ -7712,35 +7712,9 @@ Luogo e data: _________________, {now.strftime('%d/%m/%Y')}
             if email_sent:
                 logging.info(f"Declaration email sent to {coach_email}")
         
-        # Send separate notification to admin
-        if admin_email and admin_email != coach_email:
-            alert_emoji = "⚠️" if request.threshold_type == "5000" else "🚨"
-            urgency = "ATTENZIONE" if request.threshold_type == "5000" else "URGENTE"
-            
-            admin_body = f"""
-            <html>
-            <body>
-            <h2>{alert_emoji} {urgency}: Dichiarazione Superamento Soglia € {threshold_amount:,.0f}</h2>
-            <p>Il collaboratore <strong>{coach.get('full_name', 'N/D')}</strong> ha firmato la dichiarazione di superamento della soglia {declaration_type.lower()} di € {threshold_amount:,.2f}.</p>
-            <p><strong>Dettagli:</strong></p>
-            <ul>
-            <li>Anno: {request.year}</li>
-            <li>Soglia superata: € {threshold_amount:,.2f}</li>
-            <li>Totale compensi: € {yearly_total:,.2f}</li>
-            <li>Data firma: {now.strftime('%d/%m/%Y %H:%M')}</li>
-            </ul>
-            <p><em>In allegato il documento firmato.</em></p>
-            </body>
-            </html>
-            """
-            
-            await send_email_with_pdf(
-                to_email=admin_email,
-                subject=f"[RegistraTEAM] {alert_emoji} Dichiarazione €{threshold_amount:,.0f} - {coach.get('full_name', 'Coach')}",
-                html_content=admin_body,
-                pdf_base64=pdf_base64,
-                pdf_filename=pdf_filename
-            )
+        # NOTE: Email to admin removed - documents available in Archive section
+        # if admin_email and admin_email != coach_email:
+        #     ... (email sending removed)
     except Exception as e:
         logging.error(f"Error sending declaration email: {e}")
     
