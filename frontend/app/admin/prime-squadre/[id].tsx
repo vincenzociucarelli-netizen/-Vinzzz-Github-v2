@@ -288,24 +288,20 @@ export default function AthleteCompensationDetailPage() {
           </View>
         )}
 
-        {/* Monthly Grid */}
+        {/* Monthly Grid - READ ONLY for Admin */}
         <Text style={styles.sectionTitle}>Quietanze Mensili</Text>
+        <Text style={{ fontSize: 12, color: '#666', marginBottom: 12, textAlign: 'center' }}>
+          (Modalità lettura - Le quietanze vengono firmate dall'atleta/coach)
+        </Text>
         <View style={styles.monthsGrid}>
           {Array.from({ length: 12 }, (_, i) => i + 1).map(month => {
             const status = getMonthStatus(month);
             const record = yearRecords.find(r => r.month === month);
             
             return (
-              <TouchableOpacity
+              <View
                 key={month}
                 style={[styles.monthCard, { borderColor: getMonthColor(status) }]}
-                onPress={() => {
-                  if (status === 'available' || status === 'approaching_5k') {
-                    setSelectedMonth(month);
-                    setShowSignModal(true);
-                  }
-                }}
-                disabled={status === 'future' || status === 'signed' || status === 'exceeded_5k' || status === 'exceeded_15k'}
               >
                 <Text style={styles.monthName}>{MONTHS[month].substring(0, 3)}</Text>
                 {record?.receipt_signed ? (
@@ -318,11 +314,11 @@ export default function AthleteCompensationDetailPage() {
                 ) : status === 'future' ? (
                   <Text style={styles.futureLabel}>🕐</Text>
                 ) : (
-                  <Text style={styles.signLabel}>Firma</Text>
+                  <Text style={[styles.signLabel, { color: '#999' }]}>In attesa</Text>
                 )}
                 {status === 'exceeded_5k' && <Text style={styles.thresholdBadge}>{'>5K'}</Text>}
                 {status === 'exceeded_15k' && <Text style={styles.thresholdBadge}>{'>15K'}</Text>}
-              </TouchableOpacity>
+              </View>
             );
           })}
         </View>
