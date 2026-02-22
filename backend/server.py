@@ -9459,6 +9459,346 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     }
 
 
+# ==================== COLLABORATORI ENDPOINTS ====================
+
+@api_router.get("/collaboratori")
+async def get_collaboratori(current_user = Depends(get_current_user)):
+    """Get list of all collaboratori"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i collaboratori")
+    
+    collaboratori = await db.users.find({"role": UserRole.COLLABORATORE}).to_list(100)
+    clean_mongo_docs(collaboratori)
+    return {"collaboratori": collaboratori}
+
+@api_router.get("/collaboratore/{collaboratore_id}")
+async def get_collaboratore(collaboratore_id: str, current_user = Depends(get_current_user)):
+    """Get single collaboratore details"""
+    if current_user["role"] != UserRole.ADMIN and current_user["id"] != collaboratore_id:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    collaboratore = await db.users.find_one({"id": collaboratore_id, "role": UserRole.COLLABORATORE})
+    if not collaboratore:
+        raise HTTPException(status_code=404, detail="Collaboratore non trovato")
+    
+    collaboratore.pop("_id", None)
+    collaboratore.pop("password", None)
+    return collaboratore
+
+@api_router.get("/collaboratore/{collaboratore_id}/compensation")
+async def get_collaboratore_compensation(collaboratore_id: str, current_user = Depends(get_current_user)):
+    """Get compensation records for a collaboratore"""
+    if current_user["role"] != UserRole.ADMIN and current_user["id"] != collaboratore_id:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    collaboratore = await db.users.find_one({"id": collaboratore_id, "role": UserRole.COLLABORATORE})
+    if not collaboratore:
+        raise HTTPException(status_code=404, detail="Collaboratore non trovato")
+    
+    records = await db.collaboratore_compensations.find({"collaboratore_id": collaboratore_id}).to_list(100)
+    clean_mongo_docs(records)
+    
+    return {
+        "collaboratore": {
+            "id": collaboratore["id"],
+            "full_name": collaboratore.get("full_name", ""),
+            "email": collaboratore.get("email", ""),
+            "monthly_compensation": collaboratore.get("monthly_compensation", 0),
+            "contract_start_date": collaboratore.get("contract_start_date"),
+            "prior_year_compensation": collaboratore.get("prior_year_compensation", 0),
+            "fiscal_code": collaboratore.get("fiscal_code", ""),
+            "activity_type": collaboratore.get("activity_type", "")
+        },
+        "records": records
+    }
+
+@api_router.post("/collaboratore/{collaboratore_id}/compensation/receipt")
+async def sign_collaboratore_compensation_receipt(
+    collaboratore_id: str,
+    request: CompensationReceiptRequest,
+    current_user = Depends(get_current_user)
+):
+    """Collaboratore firma la quietanza mensile di compenso sportivo"""
+    if current_user["role"] != UserRole.COLLABORATORE or current_user["id"] != collaboratore_id:
+        raise HTTPException(status_code=403, detail="Solo il collaboratore può firmare le proprie quietanze")
+    
+    collaboratore = await db.users.find_one({"id": collaboratore_id, "role": UserRole.COLLABORATORE})
+    if not collaboratore:
+        raise HTTPException(status_code=404, detail="Collaboratore non trovato")
+    
+    # Check if already signed
+    existing = await db.collaboratore_compensations.find_one({
+        "collaboratore_id": collaboratore_id,
+        "year": request.year,
+        "$or": [{"month": request.month}, {"month": MONTH_NAMES[request.month] if request.month <= 12 else request.month}]
+    })
+    
+    if existing and existing.get("receipt_signed"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Quietanza per {MONTH_NAMES[request.month]} {request.year} già firmata"
+        )
+    
+    # Get society info
+    society = await db.societies.find_one()
+    society_name = society.get("name", "PALLAVOLO PERUGIA SSD A RL") if society else "PALLAVOLO PERUGIA SSD A RL"
+    settings = await db.settings.find_one({"type": "society"})
+    admin_email = settings.get("admin_email") if settings else None
+    
+    # Calculate yearly total
+    yearly_records = await db.collaboratore_compensations.find({
+        "collaboratore_id": collaboratore_id,
+        "year": request.year,
+        "receipt_signed": True
+    }).to_list(12)
+    
+    yearly_total = sum(r.get("amount_gross", 0) for r in yearly_records)
+    prior_compensation = collaboratore.get("prior_year_compensation", 0)
+    
+    contract_start = collaboratore.get("contract_start_date")
+    if contract_start:
+        contract_year = int(contract_start.split('-')[0]) if isinstance(contract_start, str) else contract_start.year
+        if contract_year == request.year:
+            yearly_total += prior_compensation
+    
+    new_total = yearly_total + request.amount_gross
+    
+    # Check thresholds
+    first_time_exceeded_5000 = yearly_total < 5000 and new_total >= 5000
+    first_time_exceeded_15000 = yearly_total < 15000 and new_total >= 15000
+    
+    # Calculate net amount
+    amount_net = request.amount_gross
+    deductions = 0.0
+    
+    if new_total > 5000:
+        taxable = request.amount_gross if yearly_total >= 5000 else (new_total - 5000)
+        deductions = taxable * 0.2345 if new_total <= 15000 else taxable * 0.40
+        amount_net = request.amount_gross - deductions
+    
+    now = datetime.utcnow()
+    month_name = MONTH_NAMES[request.month]
+    receipt_id = str(uuid.uuid4())
+    
+    # Generate PDF
+    try:
+        pdf_bytes = generate_receipt_pdf(
+            receipt_type="collaboratore",
+            collaborator_name=collaboratore.get("full_name", ""),
+            collaborator_fiscal_code=collaboratore.get("fiscal_code", ""),
+            society_name=society_name,
+            month=request.month,
+            month_name=month_name,
+            year=request.year,
+            amount_gross=request.amount_gross,
+            amount_net=amount_net,
+            deductions=deductions,
+            signature_base64=request.signature_base64,
+            exceeded_5000=first_time_exceeded_5000,
+            exceeded_15000=first_time_exceeded_15000,
+            yearly_total=new_total,
+            prior_compensation=prior_compensation
+        )
+    except Exception as e:
+        logging.error(f"Error generating collaboratore receipt PDF: {e}")
+        raise HTTPException(status_code=500, detail="Errore generazione PDF")
+    
+    # Save PDF
+    pdf_filename = f"quietanza_collaboratore_{collaboratore_id}_{request.year}_{request.month:02d}_{receipt_id}.pdf"
+    pdf_path = os.path.join(SIGNED_DOCS_DIR, pdf_filename)
+    with open(pdf_path, 'wb') as f:
+        f.write(pdf_bytes)
+    
+    # Store document record
+    document_record = {
+        "id": receipt_id,
+        "document_type": "collaboratore_compensation_receipt",
+        "document_title": f"Quietanza Compenso - {month_name} {request.year}",
+        "collaboratore_id": collaboratore_id,
+        "collaboratore_name": collaboratore.get("full_name", ""),
+        "month": request.month,
+        "year": request.year,
+        "amount_gross": request.amount_gross,
+        "amount_net": amount_net,
+        "deductions": deductions,
+        "yearly_total": new_total,
+        "exceeded_5000": first_time_exceeded_5000,
+        "exceeded_15000": first_time_exceeded_15000,
+        "pdf_path": pdf_path,
+        "pdf_filename": pdf_filename,
+        "signed_at": now
+    }
+    await db.signed_documents.insert_one(document_record)
+    
+    # Update or create compensation record
+    if existing:
+        if existing.get("receipt_signed"):
+            raise HTTPException(status_code=400, detail=f"Quietanza già firmata")
+        
+        await db.collaboratore_compensations.update_one(
+            {"id": existing["id"]},
+            {"$set": {
+                "amount_gross": request.amount_gross,
+                "amount_net": amount_net,
+                "deductions": deductions,
+                "received": True,
+                "received_date": now,
+                "receipt_signed": True,
+                "receipt_signature_base64": request.signature_base64,
+                "receipt_document_id": receipt_id,
+                "receipt_signed_date": now,
+                "exceeded_5000": first_time_exceeded_5000,
+                "exceeded_5000_date": now if first_time_exceeded_5000 else None,
+                "exceeded_15000": first_time_exceeded_15000,
+                "exceeded_15000_date": now if first_time_exceeded_15000 else None
+            }}
+        )
+    else:
+        new_record = CollaboratoreCompensation(
+            collaboratore_id=collaboratore_id,
+            month=request.month,
+            year=request.year,
+            amount_gross=request.amount_gross,
+            amount_net=amount_net,
+            deductions=deductions,
+            received=True,
+            received_date=now,
+            receipt_signed=True,
+            receipt_signature_base64=request.signature_base64,
+            receipt_document_id=receipt_id,
+            receipt_signed_date=now,
+            exceeded_5000=first_time_exceeded_5000,
+            exceeded_5000_date=now if first_time_exceeded_5000 else None,
+            exceeded_15000=first_time_exceeded_15000,
+            exceeded_15000_date=now if first_time_exceeded_15000 else None
+        )
+        await db.collaboratore_compensations.insert_one(new_record.dict())
+    
+    # Send emails
+    collaboratore_email = collaboratore.get('email')
+    
+    # Email ONLY for threshold crossing (€5.000 or €15.000)
+    if collaboratore_email and (first_time_exceeded_5000 or first_time_exceeded_15000):
+        try:
+            alert_emoji = "🚨" if first_time_exceeded_15000 else "⚠️"
+            threshold_text = "€15.000" if first_time_exceeded_15000 else "€5.000"
+            
+            body = f"""
+            <html><body>
+            <h2>{alert_emoji} Comunicazione Superamento Soglia {threshold_text}</h2>
+            <p>Gentile {collaboratore.get('full_name', 'Collaboratore')},</p>
+            <p>Con la quietanza di {month_name} {request.year}, hai superato la soglia di {threshold_text}.</p>
+            <ul><li>Compenso: € {request.amount_gross:.2f}</li><li>Totale annuo: € {new_total:.2f}</li></ul>
+            <hr><p><em>Documento generato da RegistraTEAM</em></p>
+            </body></html>
+            """
+            
+            encoded_pdf = base64.b64encode(pdf_bytes).decode()
+            await send_email_with_pdf(
+                to_email=collaboratore_email,
+                subject=f"{alert_emoji} Superamento {threshold_text} - {month_name} {request.year}",
+                html_content=body,
+                pdf_base64=encoded_pdf,
+                pdf_filename=pdf_filename
+            )
+        except Exception as e:
+            logging.error(f"Error sending collaboratore threshold email: {e}")
+    
+    # Email to admin for threshold crossing
+    if admin_email and (first_time_exceeded_5000 or first_time_exceeded_15000):
+        try:
+            alert_emoji = "🚨" if first_time_exceeded_15000 else "⚠️"
+            threshold_text = "€15.000" if first_time_exceeded_15000 else "€5.000"
+            
+            admin_body = f"""
+            <html><body>
+            <h2>{alert_emoji} Collaboratore ha superato {threshold_text}</h2>
+            <p>Il collaboratore <strong>{collaboratore.get('full_name', '')}</strong> ha superato la soglia.</p>
+            <p>Totale annuo: € {new_total:.2f}</p>
+            </body></html>
+            """
+            
+            encoded_pdf = base64.b64encode(pdf_bytes).decode()
+            await send_email_with_pdf(
+                to_email=admin_email,
+                subject=f"[RegistraTEAM] {alert_emoji} Collaboratore superato {threshold_text}",
+                html_content=admin_body,
+                pdf_base64=encoded_pdf,
+                pdf_filename=pdf_filename
+            )
+        except Exception as e:
+            logging.error(f"Error sending admin threshold email: {e}")
+    
+    return {
+        "success": True,
+        "receipt_id": receipt_id,
+        "month": request.month,
+        "year": request.year,
+        "amount_gross": request.amount_gross,
+        "amount_net": amount_net,
+        "deductions": deductions,
+        "yearly_total": new_total,
+        "exceeded_5000": first_time_exceeded_5000,
+        "exceeded_15000": first_time_exceeded_15000,
+        "message": "Quietanza firmata e salvata in archivio"
+    }
+
+@api_router.get("/collaboratore/{collaboratore_id}/compensation/annual/{year}")
+async def get_collaboratore_annual_compensation(
+    collaboratore_id: str,
+    year: int,
+    current_user = Depends(get_current_user)
+):
+    """Get annual compensation status for collaboratore"""
+    if current_user["role"] != UserRole.ADMIN and current_user["id"] != collaboratore_id:
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    collaboratore = await db.users.find_one({"id": collaboratore_id, "role": UserRole.COLLABORATORE})
+    if not collaboratore:
+        raise HTTPException(status_code=404, detail="Collaboratore non trovato")
+    
+    monthly_compensation = collaboratore.get("monthly_compensation", 0)
+    prior_compensation = collaboratore.get("prior_year_compensation", 0)
+    
+    yearly_records = await db.collaboratore_compensations.find({
+        "collaboratore_id": collaboratore_id,
+        "year": year,
+        "receipt_signed": True
+    }).to_list(12)
+    
+    yearly_total = sum(r.get("amount_gross", 0) for r in yearly_records)
+    
+    contract_start = collaboratore.get("contract_start_date")
+    if contract_start:
+        contract_year = int(contract_start.split('-')[0]) if isinstance(contract_start, str) else contract_start.year
+        if contract_year == year:
+            yearly_total += prior_compensation
+    
+    exceeded_5000 = next((r for r in yearly_records if r.get("exceeded_5000")), None)
+    exceeded_15000 = next((r for r in yearly_records if r.get("exceeded_15000")), None)
+    
+    next_total = yearly_total + monthly_compensation
+    
+    return {
+        "collaboratore_id": collaboratore_id,
+        "year": year,
+        "monthly_compensation": monthly_compensation,
+        "prior_compensation": prior_compensation,
+        "yearly_total": yearly_total,
+        "thresholds": {
+            "5000": {
+                "threshold": 5000,
+                "needs_warning": yearly_total < 5000 and next_total > 4500,
+                "declaration_signed": exceeded_5000 is not None
+            },
+            "15000": {
+                "threshold": 15000,
+                "needs_warning": yearly_total < 15000 and next_total > 14500,
+                "declaration_signed": exceeded_15000 is not None
+            }
+        }
+    }
+
 
 # ==================== PRIME SQUADRE (ATLETI PRO) ENDPOINTS ====================
 
