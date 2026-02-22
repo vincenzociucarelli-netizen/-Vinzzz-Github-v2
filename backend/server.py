@@ -10481,6 +10481,8 @@ async def get_documents_archive(
             query["athlete_id"] = {"$exists": True, "$ne": None}
         elif figure_type == "collaboratore":
             query["collaboratore_id"] = {"$exists": True, "$ne": None}
+        elif figure_type == "genitore":
+            query["parent_id"] = {"$exists": True, "$ne": None}
     
     # Search by name
     if search:
@@ -10488,7 +10490,9 @@ async def get_documents_archive(
             {"coach_name": {"$regex": search, "$options": "i"}},
             {"dirigente_name": {"$regex": search, "$options": "i"}},
             {"athlete_name": {"$regex": search, "$options": "i"}},
-            {"collaboratore_name": {"$regex": search, "$options": "i"}}
+            {"collaboratore_name": {"$regex": search, "$options": "i"}},
+            {"parent_name": {"$regex": search, "$options": "i"}},
+            {"signer_name": {"$regex": search, "$options": "i"}}
         ]
     
     # Get total count
