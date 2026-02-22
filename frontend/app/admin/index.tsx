@@ -643,6 +643,22 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
+          {/* Collaboratori */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/collaboratori')}
+            data-testid="collaboratori-menu-card"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E0F7FA' }]}>
+              <Text style={{ fontSize: 26 }}>👷</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Collaboratori</Text>
+              <Text style={styles.menuCardSubtitle}>Staff e personale</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
           {/* Genitori */}
           <TouchableOpacity
             style={styles.menuCard}
