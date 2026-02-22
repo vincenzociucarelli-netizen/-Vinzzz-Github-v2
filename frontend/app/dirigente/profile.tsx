@@ -1099,6 +1099,16 @@ export default function DirigenteProfile() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Adult Privacy Modal */}
+      <AdultPrivacyModal
+        visible={showPrivacyModal}
+        onClose={() => setShowPrivacyModal(false)}
+        onSign={handlePrivacySign}
+        signerName={profileData.full_name || `${profileData.first_name} ${profileData.last_name}`}
+        signerRole="dirigente"
+        societyName={societyName}
+      />
     </View>
   );
 }
