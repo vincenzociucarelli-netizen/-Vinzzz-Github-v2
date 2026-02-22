@@ -16,7 +16,7 @@ Le seguenti funzionalità sono bloccate e saranno disponibili nella versione PRO
 - Compensi **Atleti** (rimosso - atleti PRO non esistono più)
 - Prime Squadre (gestione atleti retribuiti)
 
-**File di backup**: `/app/frontend/app/_pro_backup/`
+**File di backup**: `/app/frontend/_pro_backup/` (spostato fuori da /app per evitare errori bundling)
 
 ---
 
@@ -79,16 +79,23 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 ## PROSSIMI TASK
 
 ### P0 - Priorità Alta
-1. **Registrazione Atleta Maggiorenne**
-   - Nuovo flusso: "Sono un atleta maggiorenne"
-   - Senza genitore, si registra da solo
-   - Periodo di prova come i minorenni
+1. **Archivio Documenti Firmati** (NUOVO)
+   - **Lato Admin**: Sezione "Archivio Documenti" con filtri per stagione e figura
+   - **Lato Utente**: Ogni figura vede i propri documenti firmati ("I Miei Documenti")
+   - **Rimuovere** invio email alla società (resta solo email a chi firma)
+   - I documenti sono già salvati in `/app/backend/signed_documents/`
 
 2. **Nuova Figura: Collaboratori**
    - Ruolo: `collaboratore`
    - Campi: nome, contatti, documento, IBAN
    - Tipo attività: Preparazione campo, Trasporti, Pulizie, Segreteria, Altro
    - Associazione: Squadra / Palestra / Entrambi
+   - Copiare struttura Coach (Solution A)
+
+3. **Registrazione Atleta Maggiorenne**
+   - Nuovo flusso: "Sono un atleta maggiorenne"
+   - Senza genitore, si registra da solo
+   - Periodo di prova come i minorenni
 
 ### P1 - Medio termine
 - Gestione presenze/allenamenti
@@ -140,7 +147,34 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 ```
 
 ## Last Updated
-2026-02-21: Completate 3 modifiche UI/UX (badge PRO, formato date, form semplificato) con 4 bug fix correlati
+2026-02-22: Bug fix modulo compensi Coach/Dirigente (protezione ri-firma, modal buttons, legacy month format)
+
+## Session 2026-02-22 - Bug Fix Compensi Coach/Dirigente
+
+### Bug Fix Completati ✅
+
+1. **Backend - Protezione ri-firma quietanze Dirigente** ✅
+   - **Problema**: Il backend Dirigente permetteva di ri-firmare quietanze già firmate, sovrascrivendo la data originale
+   - **Soluzione**: Aggiunta protezione alle linee 9256-9263 di `server.py`
+   - **Test**: 10/10 test passati
+
+2. **Frontend - Modal buttons fuori schermo** ✅
+   - **Problema**: I pulsanti "Conferma/Annulla" nei modal erano dentro ScrollView e venivano tagliati
+   - **Soluzione**: Spostati fuori dalla ScrollView con stile `modalButtonsFixed`
+   - **Files**: `coach/compensation.tsx`, `dirigente/compensation.tsx`
+
+3. **Frontend - Supporto dati legacy Dirigente** ✅
+   - **Problema**: Il campo `month` poteva essere stringa ("Settembre") o numero (9)
+   - **Soluzione**: Aggiunto helper `matchesMonth()` in `dirigente/compensation.tsx`
+
+4. **Fix cartella _pro_backup** ✅
+   - **Problema**: Metro bundler cercava di includere i file di backup causando errori
+   - **Soluzione**: Spostata da `/app/frontend/app/_pro_backup` a `/app/frontend/_pro_backup`
+
+### Test Report
+- `/app/test_reports/iteration_14.json` - Backend compensation protection tests (100% PASS)
+
+---
 
 ## Session 2026-02-21 (Late Night Update)
 
