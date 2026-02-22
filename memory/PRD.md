@@ -147,32 +147,36 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 ```
 
 ## Last Updated
-2026-02-22: Bug fix modulo compensi Coach/Dirigente (protezione ri-firma, modal buttons, legacy month format)
+2026-02-22: Archivio Documenti Firmati completato + rimozione email alla società
 
-## Session 2026-02-22 - Bug Fix Compensi Coach/Dirigente
+## Session 2026-02-22 - Archivio Documenti Firmati
 
-### Bug Fix Completati ✅
+### Funzionalità Completate ✅
 
-1. **Backend - Protezione ri-firma quietanze Dirigente** ✅
-   - **Problema**: Il backend Dirigente permetteva di ri-firmare quietanze già firmate, sovrascrivendo la data originale
-   - **Soluzione**: Aggiunta protezione alle linee 9256-9263 di `server.py`
-   - **Test**: 10/10 test passati
+1. **Backend - Endpoint Archivio Documenti**
+   - `GET /api/documents/archive` - Lista documenti con filtri (stagione, figura, ricerca)
+   - `GET /api/documents/download/{id}` - Download PDF documento
+   - `GET /api/documents/my-documents` - Documenti dell'utente corrente
 
-2. **Frontend - Modal buttons fuori schermo** ✅
-   - **Problema**: I pulsanti "Conferma/Annulla" nei modal erano dentro ScrollView e venivano tagliati
-   - **Soluzione**: Spostati fuori dalla ScrollView con stile `modalButtonsFixed`
-   - **Files**: `coach/compensation.tsx`, `dirigente/compensation.tsx`
+2. **Frontend Admin - Pagina Archivio**
+   - `/app/frontend/app/admin/documents-archive.tsx`
+   - Filtri per stagione e tipo figura (coach, dirigente, collaboratore, atleta)
+   - Ricerca per nome
+   - Paginazione
+   - Download PDF diretto
 
-3. **Frontend - Supporto dati legacy Dirigente** ✅
-   - **Problema**: Il campo `month` poteva essere stringa ("Settembre") o numero (9)
-   - **Soluzione**: Aggiunto helper `matchesMonth()` in `dirigente/compensation.tsx`
+3. **Dashboard Admin - Link Archivio**
+   - Aggiunto "📁 Archivio Documenti" nel menu principale
 
-4. **Fix cartella _pro_backup** ✅
-   - **Problema**: Metro bundler cercava di includere i file di backup causando errori
-   - **Soluzione**: Spostata da `/app/frontend/app/_pro_backup` a `/app/frontend/_pro_backup`
+4. **Rimozione Email alla Società**
+   - Rimosso invio email admin per: quietanze coach, quietanze dirigente, quietanze atleta, soglie €5.000/€15.000
+   - L'utente che firma riceve comunque la sua email con il PDF
+   - I documenti sono ora consultabili nell'Archivio
 
-### Test Report
-- `/app/test_reports/iteration_14.json` - Backend compensation protection tests (100% PASS)
+### Bug Fix Precedenti (stessa sessione) ✅
+- Backend Dirigente: protezione ri-firma quietanze
+- Frontend Modal: pulsanti fuori ScrollView
+- Frontend: helper `matchesMonth()` per dati legacy
 
 ---
 
