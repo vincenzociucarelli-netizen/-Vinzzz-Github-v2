@@ -1209,6 +1209,17 @@ async def get_me(current_user = Depends(get_current_user)):
     # Remove sensitive fields
     user.pop("password_hash", None)
     user.pop("hashed_password", None)
+    
+    # For athletes, also get photo from athletes collection (saved by transform-photo endpoint)
+    if user.get("role") == "athlete" and user.get("athlete_id"):
+        athlete = await db.athletes.find_one({"id": user["athlete_id"]})
+        if athlete:
+            # Merge athlete photo fields into user response
+            if athlete.get("athlete_photo"):
+                user["athlete_photo"] = athlete["athlete_photo"]
+            if athlete.get("athlete_photo_artistic"):
+                user["athlete_photo_artistic"] = athlete["athlete_photo_artistic"]
+    
     return user
 
 class UserProfileUpdate(BaseModel):
