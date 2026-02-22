@@ -410,8 +410,8 @@ export default function PrimeSquadrePage() {
               key={athlete.id} 
               style={styles.athleteCard}
               onPress={() => {
-                // Route to Prime Squadre compensation page (handles all types)
-                router.push(`/admin/prime-squadre/${athlete.id}`);
+                // Route to unified compensation page (handles all types: athletes, coaches, dirigenti)
+                router.push(`/admin/athlete/${athlete.id}/compensation`);
               }}
               activeOpacity={0.7}
             >
