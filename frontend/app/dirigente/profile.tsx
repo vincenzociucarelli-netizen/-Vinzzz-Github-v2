@@ -48,6 +48,11 @@ export default function DirigenteProfile() {
   const [profilePhotoArtistic, setProfilePhotoArtistic] = useState<string | null>(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
   
+  // Privacy consent state
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
+  
   // Signed receipts for compact view
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
   
