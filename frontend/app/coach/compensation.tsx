@@ -21,9 +21,19 @@ const MONTH_NAMES = [
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
 ];
 
+// Helper to compare month values - handles both number and legacy string formats
+const matchesMonth = (recordMonth: number | string, targetMonth: number): boolean => {
+  if (typeof recordMonth === 'number') {
+    return recordMonth === targetMonth;
+  }
+  // Legacy: month stored as string name (e.g., "Settembre")
+  const monthIndex = MONTH_NAMES.indexOf(recordMonth);
+  return monthIndex === targetMonth;
+};
+
 interface CompensationRecord {
   id: string;
-  month: number;
+  month: number | string;  // Can be number (1-12) or string ("Gennaio", etc.)
   year: number;
   amount_gross?: number;
   amount_net?: number;
@@ -31,7 +41,7 @@ interface CompensationRecord {
   deductions?: number;
   received: boolean;
   received_date?: string;
-  receipt_signed: boolean;
+  receipt_signed: boolean;  // Backend saves as receipt_signed for coaches
   receipt_signed_date?: string;
   receipt_document_id?: string;
   exceeded_5000: boolean;
