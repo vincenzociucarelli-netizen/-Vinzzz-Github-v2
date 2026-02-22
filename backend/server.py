@@ -1248,6 +1248,8 @@ class UserProfileUpdate(BaseModel):
     # Profile photo
     profile_photo: Optional[str] = None
     profile_photo_artistic: Optional[str] = None
+    # Privacy consent (for adult users: athletes, coaches, directors)
+    privacy_accepted: Optional[bool] = None
 
 @api_router.patch("/auth/me")
 async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_user)):
