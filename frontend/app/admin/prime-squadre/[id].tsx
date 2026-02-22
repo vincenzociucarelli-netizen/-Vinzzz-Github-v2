@@ -136,24 +136,6 @@ export default function AthleteCompensationDetailPage() {
     }
   };
 
-  const handleSignReceipt = async (month: number) => {
-    try {
-      // For now, create a simple signature (in production, this would be a canvas signature)
-      const response = await api.post(`/prime-squadre/athletes/${id}/compensation/receipt`, {
-        year: selectedYear,
-        month: month,
-        signature_base64: 'ADMIN_SIGNATURE_PLACEHOLDER' // In production, capture actual signature
-      });
-      
-      showAlert('Successo', `Quietanza per ${MONTHS[month]} firmata con successo`);
-      setShowSignModal(false);
-      setSelectedMonth(null);
-      loadData();
-    } catch (error: any) {
-      showAlert('Errore', error.response?.data?.detail || 'Impossibile firmare la quietanza');
-    }
-  };
-
   const getMonthStatus = (month: number): 'signed' | 'available' | 'future' | 'approaching_5k' | 'exceeded_5k' | 'exceeded_15k' => {
     const record = records.find(r => r.month === month && r.year === selectedYear);
     const now = new Date();
