@@ -149,7 +149,47 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 ## Last Updated
 2026-02-22: Archivio Documenti Firmati completato + rimozione email alla società
 
-## Session 2026-02-22 - Archivio Documenti Firmati
+## Session 2026-02-22 - Implementazione Collaboratori
+
+### Funzionalità Completate ✅
+
+1. **Backend - Modello e Ruolo Collaboratore**
+   - Aggiunto `UserRole.COLLABORATORE` al sistema
+   - Creato modello `CollaboratoreCompensation`
+   - Collection: `collaboratore_compensations`
+
+2. **Backend - Endpoint CRUD Collaboratori**
+   - `GET /api/collaboratori` - Lista tutti
+   - `POST /api/collaboratori` - Crea nuovo
+   - `GET /api/collaboratore/{id}` - Dettaglio singolo
+   - `PUT /api/collaboratore/{id}` - Aggiorna
+   - `DELETE /api/collaboratore/{id}` - Elimina
+
+3. **Backend - Endpoint Compensi Collaboratori**
+   - `GET /api/collaboratore/{id}/compensation` - Storico compensi
+   - `POST /api/collaboratore/{id}/compensation/receipt` - Firma quietanza
+   - `GET /api/collaboratore/{id}/compensation/annual/{year}` - Status annuale
+
+4. **Frontend - Pagine Collaboratore**
+   - `/app/frontend/app/collaboratore/index.tsx` - Dashboard
+   - `/app/frontend/app/collaboratore/compensation.tsx` - Firma quietanze
+   - `/app/frontend/app/collaboratore/profile.tsx` - Profilo
+
+5. **Frontend - Admin**
+   - `/app/frontend/app/admin/collaboratori.tsx` - Gestione collaboratori
+   - Menu "Collaboratori" aggiunto al dashboard admin
+
+6. **Login redirect per ruolo collaboratore**
+
+### Politica Email Collaboratori (come Coach)
+- Quietanze mensili → Solo archivio
+- Superamento €5.000/€15.000 → Archivio + Email (firmatario + admin)
+
+### Account Test
+- Email: `mario.collab@test.com`
+- Password: `Test1234`
+
+---
 
 ### Funzionalità Completate ✅
 
