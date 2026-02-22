@@ -168,11 +168,13 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 3. **Dashboard Admin - Link Archivio**
    - Aggiunto "📁 Archivio Documenti" nel menu principale
 
-4. **Email Soglie €5.000/€15.000 - RIPRISTINATE**
-   - Email admin + firmatario per superamento soglie (documenti critici)
-   - Coach: soglie €5.000 e €15.000
-   - Dirigente: soglie €5.000 e €15.000
-   - Le quietanze mensili normali vanno solo in archivio (no email admin)
+4. **Politica Email Documenti**
+   - **Solo Archivio (NO email)**:
+     - Privacy
+     - Quietanze mensili standard Coach/Dirigente/Atleta
+   - **Archivio + Email (firmatario + admin)**:
+     - Superamento soglia €5.000 Coach/Dirigente
+     - Superamento soglia €15.000 Coach/Dirigente
 
 ### Bug Fix Precedenti (stessa sessione) ✅
 - Backend Dirigente: protezione ri-firma quietanze
