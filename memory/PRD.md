@@ -168,10 +168,11 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 3. **Dashboard Admin - Link Archivio**
    - Aggiunto "📁 Archivio Documenti" nel menu principale
 
-4. **Rimozione Email alla Società**
-   - Rimosso invio email admin per: quietanze coach, quietanze dirigente, quietanze atleta, soglie €5.000/€15.000
-   - L'utente che firma riceve comunque la sua email con il PDF
-   - I documenti sono ora consultabili nell'Archivio
+4. **Email Soglie €5.000/€15.000 - RIPRISTINATE**
+   - Email admin + firmatario per superamento soglie (documenti critici)
+   - Coach: soglie €5.000 e €15.000
+   - Dirigente: soglie €5.000 e €15.000
+   - Le quietanze mensili normali vanno solo in archivio (no email admin)
 
 ### Bug Fix Precedenti (stessa sessione) ✅
 - Backend Dirigente: protezione ri-firma quietanze
