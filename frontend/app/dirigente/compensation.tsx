@@ -21,6 +21,16 @@ const MONTH_NAMES = [
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
 ];
 
+// Helper to compare month values - handles both number and legacy string formats
+const matchesMonth = (recordMonth: number | string, targetMonth: number): boolean => {
+  if (typeof recordMonth === 'number') {
+    return recordMonth === targetMonth;
+  }
+  // Legacy: month stored as string name (e.g., "Settembre")
+  const monthIndex = MONTH_NAMES.indexOf(recordMonth);
+  return monthIndex === targetMonth;
+};
+
 interface CompensationRecord {
   id: string;
   month: number;

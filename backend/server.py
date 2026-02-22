@@ -9255,6 +9255,13 @@ async def sign_dirigente_compensation_receipt(
     
     # Update or create compensation record
     if existing:
+        # If already signed, don't allow re-signing (preserve original date)
+        if existing.get("receipt_signed"):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Quietanza per {month_names[request.month]} {request.year} già firmata il {existing.get('receipt_signed_date', 'data sconosciuta')}"
+            )
+        
         await db.dirigente_compensations.update_one(
             {"id": existing["id"]},
             {"$set": {
