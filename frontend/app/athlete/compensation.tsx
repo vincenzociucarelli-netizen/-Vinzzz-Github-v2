@@ -1553,6 +1553,16 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 30,
   },
+  modalButtonsFixed: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: 16,
+    paddingBottom: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    backgroundColor: '#fff',
+  },
   modalButton: {
     flex: 1,
     paddingVertical: 14,
