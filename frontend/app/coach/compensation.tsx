@@ -220,6 +220,12 @@ export default function CoachCompensation() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
 
   const handleOpenSignature = (month: number, year?: number) => {
+    // Prevent action if still loading
+    if (loading) {
+      console.log('Still loading, ignoring click');
+      return;
+    }
+    
     const targetYear = year || currentYear;
     
     // Calculate if this month will exceed thresholds
@@ -227,15 +233,15 @@ export default function CoachCompensation() {
     const priorComp = profile?.other_annual_compensation || 0;
     
     // Get contract start year
-    let contractStartYear = null;
+    let contractStartYearLocal = null;
     if (profile?.contract_start_date) {
-      contractStartYear = parseInt(profile.contract_start_date.split('-')[0]);
+      contractStartYearLocal = parseInt(profile.contract_start_date.split('-')[0]);
     }
     
-    // Calculate total before this month
+    // Calculate total before this month - use matchesMonth helper for legacy support
     const yearRecords = records.filter(r => r.year === targetYear && r.receipt_signed);
     const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
-    const yearTotalBeforeThis = (targetYear === contractStartYear) 
+    const yearTotalBeforeThis = (targetYear === contractStartYearLocal) 
       ? yearTotalFromReceipts + priorComp 
       : yearTotalFromReceipts;
     
@@ -270,16 +276,12 @@ export default function CoachCompensation() {
       return;
     }
     
-    // Check if this month is already signed
-    const existingRecord = records.find(r => r.month === month && r.year === targetYear && r.receipt_signed);
+    // Check if this month is already signed - use matchesMonth for legacy support
+    const existingRecord = records.find(r => matchesMonth(r.month, month) && r.year === targetYear && r.receipt_signed);
     if (existingRecord) {
       Alert.alert('Già firmata', 'La quietanza per questo mese è già stata firmata.');
       return;
     }
-    
-    setSelectedMonth(month);
-    setSelectedYear(targetYear);
-    setSignature(null);
     
     // If this month will exceed a threshold, show declaration modal instead
     if (willExceed15k) {
@@ -287,7 +289,8 @@ export default function CoachCompensation() {
     } else if (willExceed5k) {
       openDeclarationModalForMonth('5000', month, targetYear);
     } else {
-      setShowSignatureModal(true);
+      // Open signature modal with all state in one update to prevent re-renders
+      openSignatureModal(month, targetYear);
     }
   };
 
