@@ -71,6 +71,7 @@ export default function AthleteCompensation() {
   const [saving, setSaving] = useState(false);
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [team, setTeam] = useState<any>(null);
+  const [memberType, setMemberType] = useState<'athlete' | 'coach' | 'dirigente'>('athlete');
   
   // Compensation settings
   const [editing, setEditing] = useState(false);
