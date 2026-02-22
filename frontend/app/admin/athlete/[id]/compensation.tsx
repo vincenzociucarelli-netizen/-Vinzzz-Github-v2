@@ -671,13 +671,22 @@ export default function AthleteCompensation() {
               {iban && (
                 <View style={styles.bankInfoBox}>
                   <Text style={styles.bankInfoTitle}>🏦 Dati Bancari</Text>
-                  <Text style={styles.bankInfoText}>IBAN: {iban}</Text>
+                  <View style={{ marginBottom: 6 }}>
+                    <Text style={{ fontSize: 13, color: '#666' }}>IBAN:</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: '#333' }}>{iban}</Text>
+                  </View>
                   {(ibanHolderFirstName || ibanHolderLastName) && (
-                    <Text style={styles.bankInfoText}>
-                      Intestatario: {ibanHolderLastName} {ibanHolderFirstName}
-                    </Text>
+                    <View style={{ marginBottom: 6 }}>
+                      <Text style={{ fontSize: 13, color: '#666' }}>Intestatario:</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '500', color: '#333' }}>{ibanHolderLastName} {ibanHolderFirstName}</Text>
+                    </View>
                   )}
-                  {bankName && <Text style={styles.bankInfoText}>Banca: {bankName}</Text>}
+                  {bankName && (
+                    <View style={{ marginBottom: 6 }}>
+                      <Text style={{ fontSize: 13, color: '#666' }}>Banca:</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '500', color: '#333' }}>{bankName}</Text>
+                    </View>
+                  )}
                 </View>
               )}
             </View>
