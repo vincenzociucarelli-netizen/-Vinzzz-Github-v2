@@ -20,6 +20,7 @@ import { Ionicons } from '../../src/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
 import PhotoViewer from '../../src/components/PhotoViewer';
+import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
