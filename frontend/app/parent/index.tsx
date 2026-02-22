@@ -785,7 +785,14 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
           }}
           onSign={handleSignPrivacy}
           documentTitle={`Consenso Privacy - ${signingAthlete.full_name || signingAthlete.athleteName}`}
-          documentText={`Il/La sottoscritto/a ${user.full_name}, in qualità di genitore/tutore dell'atleta ${signingAthlete.full_name || signingAthlete.athleteName}, dichiara di aver letto e compreso l'informativa sulla privacy ai sensi del GDPR e autorizza il trattamento dei dati personali per le finalità connesse all'attività sportiva.`}
+          documentText={`Il/La sottoscritto/a ${user.full_name}, in qualità di genitore/tutore dell'atleta minorenne ${signingAthlete.full_name || signingAthlete.athleteName}, dichiara di aver letto e compreso l'informativa sulla privacy (GDPR) e presta il proprio consenso a:
+
+• Trattamento dati per attività sportiva
+• Comunicazione dati a Federazioni/EPS per tesseramento
+• Utilizzo immagini/video sui social e materiale promozionale
+• Comunicazione dati ad assicurazioni ed enti sanitari
+
+Firma qui sotto per confermare.`}
           signerName={user.full_name}
         />
       )}
