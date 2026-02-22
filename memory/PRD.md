@@ -170,11 +170,13 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 
 4. **Politica Email Documenti**
    - **Solo Archivio (NO email)**:
-     - Privacy
-     - Quietanze mensili standard Coach/Dirigente/Atleta
+     - Quietanze mensili standard Coach/Dirigente
    - **Archivio + Email (firmatario + admin)**:
      - Superamento soglia €5.000 Coach/Dirigente
      - Superamento soglia €15.000 Coach/Dirigente
+   - **Privacy (Archivio + Email al firmatario)** - DA IMPLEMENTARE:
+     - Atleta/Genitore: firma alla fine del periodo prova
+     - Coach/Dirigente/Collaboratore: firma all'iscrizione
 
 ### Bug Fix Precedenti (stessa sessione) ✅
 - Backend Dirigente: protezione ri-firma quietanze
