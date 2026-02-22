@@ -172,8 +172,63 @@ export default function AthleteCompensationDetailPage() {
     }
   };
 
+  // Calculate contract info for a specific year
+  const getContractInfoForYear = (year: number) => {
+    if (!athlete) return null;
+    
+    const startDate = athlete.contract_start_date ? new Date(athlete.contract_start_date) : null;
+    const endDate = athlete.contract_end_date ? new Date(athlete.contract_end_date) : null;
+    
+    if (!startDate || !endDate) return null;
+    
+    const startYear = startDate.getFullYear();
+    const endYear = endDate.getFullYear();
+    
+    // Check if this year is within the contract period
+    if (year < startYear || year > endYear) return null;
+    
+    let startMonth = 1;
+    let endMonth = 12;
+    let isStartYear = false;
+    let isEndYear = false;
+    
+    if (year === startYear) {
+      startMonth = startDate.getMonth() + 1; // 1-indexed
+      isStartYear = true;
+    }
+    if (year === endYear) {
+      endMonth = endDate.getMonth() + 1; // 1-indexed
+      isEndYear = true;
+    }
+    
+    const monthCount = endMonth - startMonth + 1;
+    const monthlyComp = athlete.monthly_compensation || 0;
+    const yearlyTotal = monthCount * monthlyComp;
+    
+    // Format month range
+    const startMonthName = MONTHS[startMonth];
+    const endMonthName = MONTHS[endMonth];
+    
+    return {
+      startMonth,
+      endMonth,
+      monthCount,
+      monthlyComp,
+      yearlyTotal,
+      isStartYear,
+      isEndYear,
+      startMonthName,
+      endMonthName,
+    };
+  };
+
   const yearRecords = records.filter(r => r.year === selectedYear);
   const totalSigned = yearRecords.filter(r => r.receipt_signed).reduce((sum, r) => sum + r.amount_gross, 0);
+  const contractInfo = getContractInfoForYear(selectedYear);
+
+  // Calculate total year amount (from thresholdStatus or contract info)
+  const totalYearAmount = thresholdStatus?.yearly_total || 0;
+  const priorCompensation = athlete?.other_annual_compensation || 0;
 
   if (!athlete) {
     return (
