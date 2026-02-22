@@ -1367,6 +1367,12 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
             )
             await db.admin_notifications.insert_one(notification.dict())
     
+    # Handle privacy acceptance for adult users
+    if data.privacy_accepted is not None:
+        update_dict["privacy_accepted"] = data.privacy_accepted
+        if data.privacy_accepted:
+            update_dict["privacy_accepted_date"] = datetime.utcnow()
+    
     if update_dict:
         await db.users.update_one(
             {"id": current_user["id"]},
