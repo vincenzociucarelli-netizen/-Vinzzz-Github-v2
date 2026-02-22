@@ -9471,6 +9471,102 @@ async def get_collaboratori(current_user = Depends(get_current_user)):
     clean_mongo_docs(collaboratori)
     return {"collaboratori": collaboratori}
 
+class CollaboratoreCreate(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    fiscal_code: Optional[str] = None
+    phone: Optional[str] = None
+    activity_type: Optional[str] = None  # Preparazione campo, Trasporti, Pulizie, Segreteria, Altro
+    monthly_compensation: float = 0
+    contract_start_date: Optional[str] = None
+    prior_year_compensation: float = 0
+    iban: Optional[str] = None
+
+class CollaboratoreUpdate(BaseModel):
+    full_name: Optional[str] = None
+    fiscal_code: Optional[str] = None
+    phone: Optional[str] = None
+    activity_type: Optional[str] = None
+    monthly_compensation: Optional[float] = None
+    contract_start_date: Optional[str] = None
+    prior_year_compensation: Optional[float] = None
+    iban: Optional[str] = None
+    is_active: Optional[bool] = None
+
+@api_router.post("/collaboratori")
+async def create_collaboratore(data: CollaboratoreCreate, current_user = Depends(get_current_user)):
+    """Create a new collaboratore"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può creare collaboratori")
+    
+    # Check if email already exists
+    existing = await db.users.find_one({"email": data.email.lower()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email già registrata")
+    
+    collaboratore_id = str(uuid.uuid4())
+    hashed_password = hash_password(data.password)
+    
+    collaboratore = {
+        "id": collaboratore_id,
+        "email": data.email.lower(),
+        "password": hashed_password,
+        "full_name": data.full_name,
+        "role": UserRole.COLLABORATORE,
+        "fiscal_code": data.fiscal_code,
+        "phone": data.phone,
+        "activity_type": data.activity_type,
+        "monthly_compensation": data.monthly_compensation,
+        "contract_start_date": data.contract_start_date,
+        "prior_year_compensation": data.prior_year_compensation,
+        "iban": data.iban,
+        "is_active": True,
+        "created_at": datetime.utcnow()
+    }
+    
+    await db.users.insert_one(collaboratore)
+    
+    collaboratore.pop("_id", None)
+    collaboratore.pop("password", None)
+    
+    return {"message": "Collaboratore creato con successo", "collaboratore": collaboratore}
+
+@api_router.put("/collaboratore/{collaboratore_id}")
+async def update_collaboratore(collaboratore_id: str, data: CollaboratoreUpdate, current_user = Depends(get_current_user)):
+    """Update a collaboratore"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare collaboratori")
+    
+    collaboratore = await db.users.find_one({"id": collaboratore_id, "role": UserRole.COLLABORATORE})
+    if not collaboratore:
+        raise HTTPException(status_code=404, detail="Collaboratore non trovato")
+    
+    update_data = {k: v for k, v in data.dict().items() if v is not None}
+    if update_data:
+        await db.users.update_one({"id": collaboratore_id}, {"$set": update_data})
+    
+    updated = await db.users.find_one({"id": collaboratore_id})
+    updated.pop("_id", None)
+    updated.pop("password", None)
+    
+    return {"message": "Collaboratore aggiornato", "collaboratore": updated}
+
+@api_router.delete("/collaboratore/{collaboratore_id}")
+async def delete_collaboratore(collaboratore_id: str, current_user = Depends(get_current_user)):
+    """Delete a collaboratore"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare collaboratori")
+    
+    result = await db.users.delete_one({"id": collaboratore_id, "role": UserRole.COLLABORATORE})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Collaboratore non trovato")
+    
+    # Also delete compensation records
+    await db.collaboratore_compensations.delete_many({"collaboratore_id": collaboratore_id})
+    
+    return {"message": "Collaboratore eliminato"}
+
 @api_router.get("/collaboratore/{collaboratore_id}")
 async def get_collaboratore(collaboratore_id: str, current_user = Depends(get_current_user)):
     """Get single collaboratore details"""
