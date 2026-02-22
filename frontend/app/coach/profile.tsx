@@ -970,29 +970,19 @@ export default function CoachProfile() {
             </View>
           )}
 
-          {/* Link to Compensation Page - PRO Feature LOCKED */}
-          {profileData.monthly_compensation > 0 && (
+          {/* Link to Compensation Page with Receipts */}
+          {profileData.monthly_compensation > 0 && profileData.compensation_accepted && (
             <TouchableOpacity
-              style={[styles.compensationLinkButton, { backgroundColor: '#f8f9fa', borderColor: '#ddd', borderWidth: 1, borderStyle: 'dashed' }]}
-              onPress={() => {
-                Alert.alert(
-                  '🔒 Modulo PRO',
-                  'La gestione dei compensi e delle quietanze sarà disponibile nella versione PRO.',
-                  [{ text: 'Ho capito', style: 'default' }]
-                );
-              }}
+              style={styles.compensationLinkButton}
+              onPress={() => router.push('/coach/compensation')}
               data-testid="compensation-receipts-btn"
             >
-              <Ionicons name="lock-closed" size={20} color="#6c757d" />
-              <Text style={[styles.compensationLinkText, { color: '#6c757d' }]}>Quietanze Mensili</Text>
-              <View style={{ backgroundColor: '#FFD700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
-                <Text style={{ fontSize: 10, color: '#333', fontWeight: 'bold' }}>PRO</Text>
-              </View>
+              <Ionicons name="document-text" size={20} color="#007AFF" />
+              <Text style={styles.compensationLinkText}>Quietanze Mensili</Text>
+              <Ionicons name="chevron-forward" size={20} color="#007AFF" />
             </TouchableOpacity>
           )}
         </View>
-
-        {/* Note: Registro Quietanze rimosso - fa parte del modulo PRO */}
 
         {/* Documento e Dati Bancari */}
         <View style={styles.card}>
