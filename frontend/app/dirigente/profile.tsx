@@ -202,6 +202,35 @@ export default function DirigenteProfile() {
     }
   };
 
+  // Handle privacy signature
+  const handlePrivacySign = async (signatureBase64: string) => {
+    try {
+      // Save privacy acceptance with signature
+      await api.put('/auth/me', {
+        privacy_accepted: true,
+      });
+      
+      // Update local state
+      setPrivacyAccepted(true);
+      setShowPrivacyModal(false);
+      
+      Alert.alert(
+        'Privacy Confermata',
+        'Grazie! La tua conferma privacy è stata registrata con successo.',
+        [{ text: 'OK' }]
+      );
+      
+      // Reload profile to get updated data
+      loadProfile();
+    } catch (error: any) {
+      console.error('Error signing privacy:', error);
+      Alert.alert(
+        'Errore',
+        error.response?.data?.detail || 'Impossibile salvare la conferma privacy. Riprova.'
+      );
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
