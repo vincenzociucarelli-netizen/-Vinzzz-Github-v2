@@ -10591,6 +10591,12 @@ async def get_my_documents(
         athlete = await db.athletes.find_one({"user_id": user_id})
         if athlete:
             query["athlete_id"] = athlete.get("id")
+    elif role == "parent":
+        # Parent can see documents they signed (privacy consents for their children)
+        query["$or"] = [
+            {"parent_id": user_id},
+            {"signer_id": user_id}
+        ]
     else:
         return {"documents": [], "total": 0}
     
@@ -10607,6 +10613,7 @@ async def get_my_documents(
             "month": doc.get("month"),
             "year": doc.get("year"),
             "amount_gross": doc.get("amount_gross"),
+            "athlete_name": doc.get("athlete_name"),
             "signed_at": doc.get("signed_at").isoformat() if doc.get("signed_at") else None,
             "pdf_filename": doc.get("pdf_filename")
         })
