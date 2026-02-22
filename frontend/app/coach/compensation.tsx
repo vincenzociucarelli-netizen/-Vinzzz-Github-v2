@@ -1106,34 +1106,34 @@ export default function CoachCompensation() {
                 onClear={() => setDeclarationSignature(null)}
                 height={200}
               />
-
-              {/* Confirm Buttons */}
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setShowDeclarationModal(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Annulla</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[
-                    styles.modalButton, 
-                    styles.confirmButton,
-                    declarationType === '15000' && { backgroundColor: '#721C24' },
-                    !declarationSignature && styles.buttonDisabled
-                  ]}
-                  onPress={handleSignDeclaration}
-                  disabled={!declarationSignature || signingDeclaration}
-                >
-                  {signingDeclaration ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.confirmButtonText}>Firma Dichiarazione</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
             </ScrollView>
+
+            {/* Confirm Buttons - OUTSIDE ScrollView for fixed position */}
+            <View style={styles.modalButtonsFixed}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowDeclarationModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Annulla</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.modalButton, 
+                  styles.confirmButton,
+                  declarationType === '15000' && { backgroundColor: '#721C24' },
+                  !declarationSignature && styles.buttonDisabled
+                ]}
+                onPress={handleSignDeclaration}
+                disabled={!declarationSignature || signingDeclaration}
+              >
+                {signingDeclaration ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>Firma Dichiarazione</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
