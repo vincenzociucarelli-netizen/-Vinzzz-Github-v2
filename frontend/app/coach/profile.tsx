@@ -171,6 +171,25 @@ export default function CoachProfile() {
       // Load profile photo
       setProfilePhoto(data.profile_photo || null);
       setProfilePhotoArtistic(data.profile_photo_artistic || null);
+      
+      // Load privacy status and show modal if not accepted
+      const isPrivacyAccepted = data.privacy_accepted || false;
+      setPrivacyAccepted(isPrivacyAccepted);
+      if (!isPrivacyAccepted) {
+        // Small delay to ensure UI is ready
+        setTimeout(() => setShowPrivacyModal(true), 500);
+      }
+      
+      // Load society name
+      try {
+        const societyRes = await api.get('/settings/society');
+        if (societyRes.data?.name) {
+          setSocietyName(societyRes.data.name);
+        }
+      } catch (e) {
+        console.log('Using default society name');
+      }
+      
       // Load signed receipts
       try {
         const receiptsRes = await api.get(`/coach/${data.id}/compensation`);
