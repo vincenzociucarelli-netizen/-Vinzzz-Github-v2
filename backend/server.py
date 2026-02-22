@@ -8798,7 +8798,6 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
     # Get society info
     society = await db.societies.find_one()
     society_name = society.get("name", "PALLAVOLO PERUGIA SSD A RL") if society else "PALLAVOLO PERUGIA SSD A RL"
-    society_email = society.get("email") if society else None
     
     # Generate PDF
     try:
@@ -8814,25 +8813,55 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
         logging.error(f"Error generating PDF: {e}")
         raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
     
+    # Generate file path and save PDF to disk
+    document_id = str(uuid.uuid4())
+    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_doc_type = request.document_type.replace(" ", "_").lower()
+    filename = f"{safe_doc_type}_{document_id}_{timestamp_str}.pdf"
+    pdf_path = os.path.join(SIGNED_DOCS_DIR, filename)
+    
+    with open(pdf_path, 'wb') as f:
+        f.write(pdf_bytes)
+    
+    # Determine figure type and IDs based on document type and related entity
+    parent_id = None
+    parent_name = None
+    athlete_id = None
+    athlete_name = None
+    
+    # If this is a privacy consent for an athlete
+    if request.document_type == "privacy_consent" and request.related_entity_id:
+        athlete = await db.athletes.find_one({"id": request.related_entity_id})
+        if athlete:
+            athlete_id = athlete.get("id")
+            athlete_name = athlete.get("full_name")
+        
+        # If signer is a parent
+        if current_user.get("role") == "parent":
+            parent_id = current_user.get("id")
+            parent_name = current_user.get("full_name", request.signer_name)
+    
     # Store signed document record in database
     document_record = {
-        "id": str(uuid.uuid4()),
+        "id": document_id,
         "document_type": request.document_type,
         "document_title": request.document_title,
         "signer_name": request.signer_name,
         "signer_email": request.signer_email,
         "signer_id": current_user["id"],
         "related_entity_id": request.related_entity_id,
+        "parent_id": parent_id,
+        "parent_name": parent_name,
+        "athlete_id": athlete_id,
+        "athlete_name": athlete_name,
         "signed_at": datetime.utcnow(),
-        "pdf_base64": base64.b64encode(pdf_bytes).decode('utf-8'),
+        "pdf_path": pdf_path,
+        "pdf_filename": filename,
         "additional_data": request.additional_data
     }
     await db.signed_documents.insert_one(document_record)
     
-    # Send email with PDF attachment
-    timestamp_str = datetime.now().strftime("%d-%m-%Y_%H-%M")
-    filename = f"documento_firmato_{timestamp_str}.pdf"
-    
+    # Send email with PDF attachment to signer
     email_body = f"""
     <html>
     <body style="font-family: Arial, sans-serif;">
@@ -8876,39 +8905,7 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
     except Exception as e:
         logging.error(f"Error sending email to signer: {e}")
     
-    # Send copy to society admin if different email
-    if society_email and society_email != request.signer_email:
-        try:
-            admin_body = f"""
-            <html>
-            <body style="font-family: Arial, sans-serif;">
-            <h2 style="color: #FF9500;">{society_name}</h2>
-            <p><strong>Nuovo documento firmato</strong></p>
-            <p>Tipo documento: {request.document_type}</p>
-            <p>Titolo: {request.document_title}</p>
-            <p>Firmato da: {request.signer_name}</p>
-            <p>Email: {request.signer_email}</p>
-            <p>Data firma: {datetime.now().strftime("%d/%m/%Y alle %H:%M")}</p>
-            <br>
-            <p>Il documento firmato è allegato a questa email.</p>
-            </body>
-            </html>
-            """
-            
-            result = await send_email_with_pdf(
-                to_email=society_email,
-                subject=f"[Copia] Documento firmato da {request.signer_name}: {request.document_title}",
-                html_content=admin_body,
-                pdf_base64=encoded_pdf,
-                pdf_filename=filename
-            )
-            
-            if result.get("success"):
-                logging.info(f"Signed document copy sent to admin {society_email} via {result.get('provider', 'unknown')}")
-            else:
-                logging.error(f"Error sending email to admin: {result.get('error')}")
-        except Exception as e:
-            logging.error(f"Error sending email to admin: {e}")
+    # NOTE: No email to admin for privacy documents - available in Archive section
     
     return {
         "success": True,
