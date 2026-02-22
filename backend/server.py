@@ -9244,19 +9244,25 @@ async def sign_dirigente_compensation_receipt(
     # Send emails
     dirigente_email = dirigente.get('email')
     
-    if dirigente_email:
+    # Email al dirigente SOLO per superamento soglie €5.000/€15.000
+    # Le quietanze mensili standard vanno solo in archivio
+    if dirigente_email and (first_time_exceeded_5000 or first_time_exceeded_15000):
         try:
+            alert_emoji = "🚨" if first_time_exceeded_15000 else "⚠️"
+            threshold_text = "€15.000" if first_time_exceeded_15000 else "€5.000"
+            
             body = f"""
             <html>
             <body>
-            <h2>Quietanza Compenso Sportivo - {month_name} {request.year}</h2>
+            <h2>{alert_emoji} Comunicazione Superamento Soglia {threshold_text} - {month_name} {request.year}</h2>
             <p>Gentile {dirigente.get('full_name', 'Collaboratore')},</p>
-            <p>In allegato trova la quietanza del compenso sportivo dilettantistico firmata per il mese di {month_name} {request.year}.</p>
+            <p>Con la quietanza del mese di {month_name} {request.year}, hai superato la soglia di {threshold_text} di compensi sportivi dilettantistici.</p>
             <p><strong>Riepilogo:</strong></p>
             <ul>
             <li>Compenso lordo: € {request.amount_gross:.2f}</li>
             <li>Totale annuo progressivo: € {new_total:.2f}</li>
             </ul>
+            <p><em>In allegato la comunicazione firmata.</em></p>
             <hr>
             <p><em>Documento generato automaticamente da RegistraTEAM</em></p>
             </body>
@@ -9267,7 +9273,7 @@ async def sign_dirigente_compensation_receipt(
             
             result = await send_email_with_pdf(
                 to_email=dirigente_email,
-                subject=f"Quietanza Compenso Dirigente - {month_name} {request.year} - {society_name}",
+                subject=f"{alert_emoji} Superamento {threshold_text} - {month_name} {request.year} - {society_name}",
                 html_content=body,
                 pdf_base64=encoded_pdf,
                 pdf_filename=pdf_filename,
@@ -9275,11 +9281,11 @@ async def sign_dirigente_compensation_receipt(
             )
             
             if result.get("success"):
-                logging.info(f"Dirigente compensation receipt email sent to {dirigente_email} via {result.get('provider', 'unknown')}")
+                logging.info(f"Dirigente threshold email sent to {dirigente_email} via {result.get('provider', 'unknown')}")
             else:
-                logging.error(f"Error sending receipt email to dirigente: {result.get('error')}")
+                logging.error(f"Error sending threshold email to dirigente: {result.get('error')}")
         except Exception as e:
-            logging.error(f"Error sending receipt email to dirigente: {e}")
+            logging.error(f"Error sending threshold email to dirigente: {e}")
     
     # Send email to admin ONLY for threshold documents (€5.000 or €15.000)
     if admin_email and (first_time_exceeded_5000 or first_time_exceeded_15000):
