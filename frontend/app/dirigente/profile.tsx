@@ -829,6 +829,74 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           )}
         </View>
 
+        {/* I Miei Documenti */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>📁 I Miei Documenti</Text>
+          </View>
+          
+          {myDocuments.length === 0 ? (
+            <Text style={{ color: '#666', fontStyle: 'italic', paddingVertical: 10 }}>
+              Nessun documento firmato
+            </Text>
+          ) : (
+            <>
+              {myDocuments.slice(0, 5).map((doc: any, index: number) => (
+                <View key={doc.id || index} style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingVertical: 10,
+                  borderBottomWidth: index < myDocuments.length - 1 ? 1 : 0,
+                  borderBottomColor: '#f0f0f0',
+                }}>
+                  <Ionicons 
+                    name={doc.document_type === 'privacy_consent' ? 'shield-checkmark' : 'document-text'} 
+                    size={24} 
+                    color={doc.document_type === 'privacy_consent' ? '#4CAF50' : '#8E44AD'} 
+                  />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: '#333' }}>
+                      {doc.document_title}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+                      {doc.signed_at ? new Date(doc.signed_at).toLocaleDateString('it-IT') : ''}
+                    </Text>
+                  </View>
+                  {doc.pdf_filename && (
+                    <TouchableOpacity
+                      onPress={async () => {
+                        try {
+                          const token = await AsyncStorage.getItem('token');
+                          const apiUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
+                          // Open in new window for web, or use linking for mobile
+                          if (typeof window !== 'undefined') {
+                            const response = await fetch(`${apiUrl}/documents/download/${doc.id}`, {
+                              headers: { Authorization: `Bearer ${token}` }
+                            });
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            window.open(url, '_blank');
+                          }
+                        } catch (err) {
+                          console.error('Download error:', err);
+                        }
+                      }}
+                      style={{ padding: 8 }}
+                    >
+                      <Ionicons name="download-outline" size={20} color="#8E44AD" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+              {myDocuments.length > 5 && (
+                <Text style={{ color: '#8E44AD', textAlign: 'center', marginTop: 10 }}>
+                  + altri {myDocuments.length - 5} documenti
+                </Text>
+              )}
+            </>
+          )}
+        </View>
+
         {/* Documento e Dati Bancari */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
