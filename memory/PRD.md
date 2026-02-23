@@ -147,7 +147,42 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 ```
 
 ## Last Updated
-2026-02-22: Archivio Documenti Firmati completato + rimozione email alla società
+2026-02-23: Bug fix Profilo Dirigente e Archivio Documenti
+
+## Session 2026-02-23 - Bug Fix Profilo Dirigente e Archivio
+
+### Bug Risolti ✅
+
+1. **Bug A.1 - Download Documenti nel Profilo Dirigente**
+   - **Problema**: Mancava l'import di `AsyncStorage` nel file
+   - **Soluzione**: Aggiunto import + definita costante `API_URL`
+   - **File**: `/app/frontend/app/dirigente/profile.tsx`
+
+2. **Bug A.2 - Link "Vedi Tutti i Documenti"**
+   - **Problema**: Non c'era modo di vedere tutti i documenti personali
+   - **Soluzione**: Aggiunto Modal con lista completa + paginazione (mostra solo 3 iniziali)
+   - **File**: `/app/frontend/app/dirigente/profile.tsx`
+
+3. **Bug B - Immagine Documento Identità nel Profilo View**
+   - **Problema**: Mancava lo stile `docImage` per visualizzare le immagini
+   - **Soluzione**: Aggiunto stile `docImage` nella sezione StyleSheet
+   - **File**: `/app/frontend/app/dirigente/profile.tsx`
+
+4. **Bug D - Admin Archive non mostrava Coach/Dirigente**
+   - **Problema**: L'URL dell'API mancava del prefisso `/api`
+   - **Soluzione**: Corretti URL da `/documents/archive` a `/api/documents/archive`
+   - **File**: `/app/frontend/app/admin/documents-archive.tsx`
+
+### Test Results
+- `/app/test_reports/iteration_15.json` - 13/13 test passati (backend only)
+- Archive endpoint: 37 documenti totali (10 coach, 11 dirigente)
+- Download endpoint: Restituisce PDF correttamente
+
+### Note
+- Frontend Ngrok tunnel instabile durante il test
+- Backend completamente funzionante e verificato
+
+---
 
 ## Session 2026-02-22 - Implementazione Collaboratori
 
