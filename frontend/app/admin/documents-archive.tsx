@@ -70,12 +70,32 @@ export default function DocumentsArchive() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [availableSeasons, setAvailableSeasons] = useState<string[]>([]);
+  const [teams, setTeams] = useState<{id: string, name: string}[]>([]);
   
   // Filters
   const [selectedSeason, setSelectedSeason] = useState<string>('');
   const [selectedFigureType, setSelectedFigureType] = useState<string>('');
+  const [selectedDocumentType, setSelectedDocumentType] = useState<string>('');
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Load teams for filter
+  const loadTeams = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+      const response = await fetch(`${API_URL}/api/teams`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTeams(Array.isArray(data) ? data : data.teams || []);
+      }
+    } catch (error) {
+      console.error('Error loading teams:', error);
+    }
+  };
 
   const loadDocuments = useCallback(async (pageNum: number = 1, resetList: boolean = false) => {
     try {
@@ -91,6 +111,8 @@ export default function DocumentsArchive() {
       params.append('limit', '20');
       if (selectedSeason) params.append('season', selectedSeason);
       if (selectedFigureType) params.append('figure_type', selectedFigureType);
+      if (selectedDocumentType) params.append('document_type', selectedDocumentType);
+      if (selectedTeamId) params.append('team_id', selectedTeamId);
       if (searchQuery) params.append('search', searchQuery);
 
       const response = await fetch(`${API_URL}/api/documents/archive?${params.toString()}`, {
