@@ -56,6 +56,9 @@ export default function DirigenteProfile() {
   // Signed receipts for compact view
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
   
+  // My documents (privacy, receipts, etc.)
+  const [myDocuments, setMyDocuments] = useState<any[]>([]);
+  
   // Profile data
   const [profileData, setProfileData] = useState({
     email: '',
