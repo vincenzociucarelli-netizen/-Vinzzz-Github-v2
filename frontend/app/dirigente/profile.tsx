@@ -182,10 +182,9 @@ export default function DirigenteProfile() {
       // Load privacy status and show modal if not accepted
       const isPrivacyAccepted = data.privacy_accepted || false;
       setPrivacyAccepted(isPrivacyAccepted);
-      if (!isPrivacyAccepted) {
-        // Small delay to ensure UI is ready
-        setTimeout(() => setShowPrivacyModal(true), 500);
-      }
+      // Privacy will be shown when user clicks Save, not automatically
+      // Save privacy state for later use
+      setPrivacyAccepted(isPrivacyAccepted);
       
       // Load society name
       try {
