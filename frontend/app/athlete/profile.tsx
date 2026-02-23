@@ -106,11 +106,7 @@ export default function AthleteProfile() {
   const [profilePhotoArtistic, setProfilePhotoArtistic] = useState(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
   
-  // Privacy consent state (for adult athletes only)
-  const [isAdult, setIsAdult] = useState(false);
-  const [privacyAccepted, setPrivacyAccepted] = useState(false);
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
+  // Note: Trial and privacy state is declared above
 
   const loadProfile = async () => {
     try {
