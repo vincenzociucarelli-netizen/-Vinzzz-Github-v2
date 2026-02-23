@@ -9007,17 +9007,35 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
     elif user_role == UserRole.COLLABORATORE:
         collaboratore_id = current_user["id"]
         collaboratore_name = request.signer_name
+    elif user_role == UserRole.ADMIN:  # Admin is also a Dirigente
+        dirigente_id = current_user["id"]
+        dirigente_name = request.signer_name
     
-    # Also check additional_data for role override
+    # Also check additional_data for role override (takes priority)
     if request.additional_data:
         role_from_data = request.additional_data.get("role", "")
         if role_from_data == "coach":
+            # Reset others
+            dirigente_id = None
+            dirigente_name = None
+            collaboratore_id = None
+            collaboratore_name = None
             coach_id = current_user["id"]
             coach_name = request.signer_name
         elif role_from_data == "dirigente":
+            # Reset others
+            coach_id = None
+            coach_name = None
+            collaboratore_id = None
+            collaboratore_name = None
             dirigente_id = current_user["id"]
             dirigente_name = request.signer_name
         elif role_from_data == "collaboratore":
+            # Reset others
+            coach_id = None
+            coach_name = None
+            dirigente_id = None
+            dirigente_name = None
             collaboratore_id = current_user["id"]
             collaboratore_name = request.signer_name
     
