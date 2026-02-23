@@ -874,7 +874,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                       onPress={async () => {
                         try {
                           const token = await AsyncStorage.getItem('token');
-                          const apiUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://collaboratori-prep.preview.emergentagent.com';
+                          const apiUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://collab-module-dev.preview.emergentagent.com';
                           const downloadUrl = `${apiUrl}/api/documents/download/${doc.id}`;
                           
                           // Fetch with auth and download
