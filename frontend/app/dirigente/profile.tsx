@@ -12,6 +12,7 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -21,6 +22,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
 import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://collab-module-dev.preview.emergentagent.com';
 
