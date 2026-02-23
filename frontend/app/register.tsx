@@ -116,23 +116,39 @@ export default function Register() {
       return;
     }
 
-    if (!inviteCode && role !== 'parent') {
+    // Invite code required for coach, viewer, and athlete
+    if (!inviteCode && (role !== 'parent')) {
       showAlert('Errore', 'Inserisci il codice invito');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await api.post('/auth/register', {
-        email: email.trim().toLowerCase(),
-        password,
-        full_name: `${lastName.trim().toUpperCase()} ${firstName.trim()}`,
-        first_name: firstName.trim(),
-        last_name: lastName.trim().toUpperCase(),
-        phone: phone.trim(),
-        role: role,
-        invite_code: inviteCode.trim().toUpperCase(),
-      });
+      let response;
+      
+      if (role === 'athlete') {
+        // Use the adult athlete registration endpoint
+        response = await api.post('/auth/register-adult-athlete', {
+          email: email.trim().toLowerCase(),
+          password,
+          first_name: firstName.trim(),
+          last_name: lastName.trim().toUpperCase(),
+          phone: phone.trim(),
+          invite_code: inviteCode.trim().toUpperCase(),
+        });
+      } else {
+        // Use the standard registration endpoint
+        response = await api.post('/auth/register', {
+          email: email.trim().toLowerCase(),
+          password,
+          full_name: `${lastName.trim().toUpperCase()} ${firstName.trim()}`,
+          first_name: firstName.trim(),
+          last_name: lastName.trim().toUpperCase(),
+          phone: phone.trim(),
+          role: role,
+          invite_code: inviteCode.trim().toUpperCase(),
+        });
+      }
 
       if (response.data.token) {
         setUser({ ...response.data.user, token: response.data.token });
@@ -146,6 +162,12 @@ export default function Register() {
               if (role === 'coach') router.replace('/coach');
               else router.replace('/dirigente');
             }
+          );
+        } else if (role === 'athlete') {
+          showAlert(
+            '✅ Registrazione completata!',
+            'Benvenuto! Sei registrato come atleta maggiorenne.\n\n🏃 Hai 7 giorni di prova. L\'amministratore ti assegnerà a una squadra.',
+            () => router.replace('/athlete')
           );
         } else {
           showAlert(
