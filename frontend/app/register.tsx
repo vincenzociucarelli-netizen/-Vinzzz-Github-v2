@@ -175,13 +175,32 @@ export default function Register() {
           setRole('parent');
           setStep('form'); // Parent goes directly to form
         }}
+        data-testid="role-parent-btn"
       >
         <View style={[styles.roleIcon, { backgroundColor: '#E3F2FD' }]}>
           <Ionicons name="people" size={32} color="#007AFF" />
         </View>
         <View style={styles.roleCardContent}>
-          <Text style={styles.roleCardTitle}>Genitore / Atleta</Text>
+          <Text style={styles.roleCardTitle}>Genitore / Atleta Minorenne</Text>
           <Text style={styles.roleCardDesc}>Gestisci gli atleti della tua famiglia</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={24} color="#ccc" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.roleCard}
+        onPress={() => {
+          setRole('athlete');
+          setStep('form'); // Adult athlete goes directly to form
+        }}
+        data-testid="role-adult-athlete-btn"
+      >
+        <View style={[styles.roleIcon, { backgroundColor: '#FFF8E1' }]}>
+          <Ionicons name="person" size={32} color="#FF9800" />
+        </View>
+        <View style={styles.roleCardContent}>
+          <Text style={styles.roleCardTitle}>Atleta Maggiorenne (18+)</Text>
+          <Text style={styles.roleCardDesc}>Registrati autonomamente come atleta adulto</Text>
         </View>
         <Ionicons name="chevron-forward" size={24} color="#ccc" />
       </TouchableOpacity>
@@ -192,6 +211,7 @@ export default function Register() {
           setRole('coach');
           setStep('form'); // Coach goes directly to form
         }}
+        data-testid="role-coach-btn"
       >
         <View style={[styles.roleIcon, { backgroundColor: '#E8F5E9' }]}>
           <Ionicons name="fitness" size={32} color="#4CAF50" />
@@ -209,6 +229,7 @@ export default function Register() {
           setRole('viewer');
           setStep('form'); // Dirigente goes directly to form
         }}
+        data-testid="role-dirigente-btn"
       >
         <View style={[styles.roleIcon, { backgroundColor: '#F3E5F5' }]}>
           <Ionicons name="briefcase" size={32} color="#9C27B0" />
