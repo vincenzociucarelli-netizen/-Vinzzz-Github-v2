@@ -1193,6 +1193,129 @@ async def register(user_data: UserCreate):
         }
     )
 
+# Modello per registrazione atleta maggiorenne (self-registration)
+class AdultAthleteRegister(BaseModel):
+    email: str
+    password: str
+    first_name: str
+    last_name: str
+    phone: str
+    invite_code: str  # Required to join a society
+    date_of_birth: Optional[str] = None  # YYYY-MM-DD format, optional initially
+    fiscal_code: Optional[str] = None
+    gender: Optional[str] = None  # 'M' or 'F'
+
+@api_router.post("/auth/register-adult-athlete", response_model=TokenResponse)
+async def register_adult_athlete(data: AdultAthleteRegister):
+    """
+    Self-registration for adult athletes (18+).
+    Creates both a user account and an athlete record.
+    The athlete starts in 'trial' status for 7 days.
+    """
+    # Check if email already exists
+    existing_user = await db.users.find_one({"email": data.email.lower()})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email già registrata")
+    
+    # Validate invite code and get society
+    if not data.invite_code:
+        raise HTTPException(status_code=400, detail="Codice invito richiesto")
+    
+    society = await db.societies.find_one({"invite_code": data.invite_code.upper()})
+    if not society:
+        raise HTTPException(status_code=400, detail="Codice invito non valido")
+    if not society.get("is_active", True):
+        raise HTTPException(status_code=400, detail="Questa società non è più attiva")
+    
+    society_id = society["id"]
+    
+    # Parse and validate date of birth if provided
+    dob = None
+    if data.date_of_birth:
+        try:
+            dob = datetime.fromisoformat(data.date_of_birth)
+            age = (datetime.utcnow() - dob).days // 365
+            if age < 18:
+                raise HTTPException(status_code=400, detail="Devi essere maggiorenne (18+ anni) per registrarti come atleta adulto")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato data di nascita non valido. Usa YYYY-MM-DD")
+    
+    # Generate unique athlete code
+    athlete_code = await generate_unique_athlete_code(
+        data.last_name,
+        data.first_name,
+        "ADULTO",  # No team yet
+        society_id
+    )
+    
+    # Create athlete record
+    athlete_id = str(ObjectId())
+    qr_code = generate_qr_code(athlete_id)
+    
+    full_name = f"{data.first_name} {data.last_name}"
+    trial_end = datetime.utcnow() + timedelta(days=7)
+    
+    athlete_dict = {
+        "id": athlete_id,
+        "parent_id": None,  # No parent for adult athletes
+        "society_id": society_id,
+        "athlete_code": athlete_code,
+        "full_name": full_name,
+        "first_name": data.first_name,
+        "last_name": data.last_name,
+        "date_of_birth": dob,
+        "is_minor": False,
+        "fiscal_code": data.fiscal_code,
+        "gender": data.gender,
+        "email": data.email.lower(),
+        "phone_athlete": data.phone,
+        "team_id": None,  # Will be assigned by admin
+        "qr_code": qr_code,
+        "status": "trial",  # Adult athletes start in trial like minors
+        "athlete_type": "quota",  # Default to quota-paying athlete
+        "parents_detached": True,  # No parents for adult athletes
+        "created_at": datetime.utcnow(),
+        "registration_date": datetime.utcnow(),
+        "trial_end_date": trial_end,
+        "privacy_accepted": False,  # Will accept privacy on first login
+    }
+    
+    await db.athletes.insert_one(athlete_dict)
+    
+    # Create user account
+    user = User(
+        email=data.email.lower(),
+        password_hash=hash_password(data.password),
+        role="athlete",  # Adult athletes have 'athlete' role
+        full_name=full_name,
+        status=UserStatus.APPROVED,  # Auto-approved
+        society_id=society_id,
+        first_name=data.first_name,
+        last_name=data.last_name,
+        phone=data.phone
+    )
+    
+    user_dict = user.dict()
+    user_dict["athlete_id"] = athlete_id  # Link user to athlete record
+    
+    await db.users.insert_one(user_dict)
+    
+    # Generate token
+    token = create_token(user.id, "athlete")
+    
+    return TokenResponse(
+        token=token,
+        user={
+            "id": user.id,
+            "email": user.email,
+            "role": "athlete",
+            "full_name": user.full_name,
+            "status": UserStatus.APPROVED,
+            "society_id": society_id,
+            "athlete_id": athlete_id
+        }
+    )
+
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
     user = await db.users.find_one({"email": credentials.email})
