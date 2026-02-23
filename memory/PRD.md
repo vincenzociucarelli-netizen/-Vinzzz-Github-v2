@@ -147,7 +147,35 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 ```
 
 ## Last Updated
-2026-02-23: Registrazione Atleta Maggiorenne implementata
+2026-02-23: Firma Privacy PDF per Coach/Collaboratore implementata
+
+## Session 2026-02-23 - Firma Privacy PDF
+
+### Implementazione Firma Privacy con PDF ✅
+
+1. **Backend - Endpoint `/documents/sign` Migliorato**
+   - Aggiunta logica per salvare `coach_id`, `dirigente_id`, `collaboratore_id` in base al ruolo utente
+   - I documenti firmati ora appaiono correttamente nell'archivio Admin filtrati per tipo figura
+   - **File**: `/app/backend/server.py` linee 8991-9045
+
+2. **Frontend - Coach Privacy (`coach/profile.tsx`)**
+   - `handlePrivacySign` ora genera PDF completo via `/documents/sign`
+   - Include testo informativa privacy con dati anagrafici
+   - Email di conferma automatica
+   - Aggiunta funzione `formatDate` per formattazione date
+   - **File**: `/app/frontend/app/coach/profile.tsx`
+
+3. **Frontend - Collaboratore Privacy (`collaboratore/profile.tsx`)**
+   - Stesso flusso del Coach con testo specifico per Collaboratore
+   - PDF firmato + email + archivio
+   - **File**: `/app/frontend/app/collaboratore/profile.tsx`
+
+### Test Effettuati ✅
+- Registrazione Coach: `coach.test.privacy@test.com` / `Test1234`
+- Firma privacy: Documento creato con ID `1cd79d8c-cbcf-405f-b446-ec64b0c83031`
+- Archivio Admin: Documento appare con `figure_type: coach`
+
+---
 
 ## Session 2026-02-23 - Registrazione Atleta Maggiorenne
 
