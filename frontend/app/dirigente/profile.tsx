@@ -198,6 +198,16 @@ export default function DirigenteProfile() {
       } catch (err) {
         console.log('No compensation data');
       }
+      
+      // Load my signed documents (privacy, receipts, etc.)
+      try {
+        const docsRes = await api.get('/documents/my-documents');
+        if (docsRes.data?.documents) {
+          setMyDocuments(docsRes.data.documents);
+        }
+      } catch (err) {
+        console.log('No documents found');
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
