@@ -307,7 +307,7 @@ export default function Register() {
       </TouchableOpacity>
 
       <Text style={styles.formTitle}>
-        Registrazione {role === 'parent' ? 'Genitore' : role === 'coach' ? 'Coach' : 'Dirigente'}
+        Registrazione {role === 'parent' ? 'Genitore' : role === 'coach' ? 'Coach' : role === 'athlete' ? 'Atleta Maggiorenne' : 'Dirigente'}
       </Text>
 
       {/* Invite code for all roles (inline) */}
@@ -321,6 +321,7 @@ export default function Register() {
           onChangeText={(text) => setInviteCode(text.toUpperCase())}
           autoCapitalize="characters"
           maxLength={8}
+          data-testid="invite-code-input"
         />
       </View>
 
