@@ -839,7 +839,11 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>📁 I Miei Documenti</Text>
             {myDocuments.length > 0 && (
-              <Text style={{ color: '#666', fontSize: 12 }}>{myDocuments.length} totali</Text>
+              <TouchableOpacity onPress={() => setShowAllDocumentsModal(true)}>
+                <Text style={{ color: '#8E44AD', fontSize: 12, fontWeight: '600' }}>
+                  {myDocuments.length} totali - Vedi tutti →
+                </Text>
+              </TouchableOpacity>
             )}
           </View>
           
@@ -849,12 +853,12 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </Text>
           ) : (
             <>
-              {myDocuments.map((doc: any, index: number) => (
+              {myDocuments.slice(0, 3).map((doc: any, index: number) => (
                 <View key={doc.id || index} style={{
                   flexDirection: 'row',
                   alignItems: 'center',
                   paddingVertical: 12,
-                  borderBottomWidth: index < myDocuments.length - 1 ? 1 : 0,
+                  borderBottomWidth: index < Math.min(myDocuments.length, 3) - 1 ? 1 : 0,
                   borderBottomColor: '#f0f0f0',
                 }}>
                   <Ionicons 
@@ -879,8 +883,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                       onPress={async () => {
                         try {
                           const token = await AsyncStorage.getItem('token');
-                          const apiUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://collab-module-dev.preview.emergentagent.com';
-                          const downloadUrl = `${apiUrl}/api/documents/download/${doc.id}`;
+                          const downloadUrl = `${API_URL}/api/documents/download/${doc.id}`;
                           
                           // Fetch with auth and download
                           const response = await fetch(downloadUrl, {
@@ -913,15 +916,34 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                         backgroundColor: '#00ACC1',
                         borderRadius: 8,
                       }}
+                      data-testid={`download-doc-${doc.id}`}
                     >
                       <Ionicons name="download-outline" size={20} color="#fff" />
                     </TouchableOpacity>
                   )}
                 </View>
               ))}
+              {myDocuments.length > 3 && (
+                <TouchableOpacity 
+                  onPress={() => setShowAllDocumentsModal(true)}
+                  style={{
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                    borderTopWidth: 1,
+                    borderTopColor: '#f0f0f0',
+                    marginTop: 8,
+                  }}
+                  data-testid="view-all-documents-btn"
+                >
+                  <Text style={{ color: '#8E44AD', fontWeight: '600' }}>
+                    + Visualizza altri {myDocuments.length - 3} documenti
+                  </Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
         </View>
+
 
         {/* Documento e Dati Bancari */}
         <View style={styles.card}>
