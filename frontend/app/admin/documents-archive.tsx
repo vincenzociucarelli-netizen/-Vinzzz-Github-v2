@@ -49,6 +49,14 @@ const FIGURE_TYPES = [
   { value: 'atleta', label: 'Atleti' },
 ];
 
+const DOCUMENT_TYPES = [
+  { value: '', label: 'Tutti i tipi' },
+  { value: 'privacy_consent', label: 'Consenso Privacy' },
+  { value: 'receipt_standard', label: 'Quietanza Standard' },
+  { value: 'receipt_5000', label: 'Quietanza > 5.000€' },
+  { value: 'receipt_15000', label: 'Quietanza > 15.000€' },
+];
+
 const MONTH_NAMES = [
   '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
