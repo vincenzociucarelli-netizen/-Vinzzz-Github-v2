@@ -38,6 +38,16 @@ export default function AthleteProfile() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [selectedPhotoTitle, setSelectedPhotoTitle] = useState('');
   
+  // Trial and Privacy state
+  const [trialEndDate, setTrialEndDate] = useState<string | null>(null);
+  const [trialExpired, setTrialExpired] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [showTrialEndModal, setShowTrialEndModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [deletingData, setDeletingData] = useState(false);
+  const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
+  const [athleteId, setAthleteId] = useState<string | null>(null);
+  
   // Profile data
   const [profileData, setProfileData] = useState({
     email: '',
