@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
 import PhotoViewer from '../../src/components/PhotoViewer';
 import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
+import { TrialEndModal } from '../../src/components/TrialEndModal';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
