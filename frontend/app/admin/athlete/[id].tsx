@@ -1735,13 +1735,71 @@ export default function AdminAthleteDetail() {
                     </View>
                   </View>
                   <Text style={styles.inputLabel}>Codice Fiscale</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={editData.fiscal_code}
-                    onChangeText={(t) => setEditData({...editData, fiscal_code: t.toUpperCase()})}
-                    autoCapitalize="characters"
-                    maxLength={16}
-                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TextInput
+                      style={[styles.input, { flex: 1, marginRight: 8 }]}
+                      value={editData.fiscal_code}
+                      onChangeText={(t) => setEditData({...editData, fiscal_code: t.toUpperCase()})}
+                      autoCapitalize="characters"
+                      maxLength={16}
+                    />
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: '#007AFF',
+                        paddingHorizontal: 12,
+                        paddingVertical: 10,
+                        borderRadius: 8,
+                      }}
+                      onPress={() => {
+                        try {
+                          // Parse date of birth
+                          const dob = editData.date_of_birth;
+                          if (!dob || !editData.last_name || !editData.first_name || !editData.place_of_birth || !editData.gender) {
+                            Alert.alert('Dati Mancanti', 'Per calcolare il CF servono: Cognome, Nome, Data di Nascita, Luogo di Nascita e Sesso');
+                            return;
+                          }
+                          
+                          // Parse date - handle different formats
+                          let day, month, year;
+                          if (dob.includes('/')) {
+                            const parts = dob.split('/');
+                            day = parseInt(parts[0]);
+                            month = parseInt(parts[1]);
+                            year = parseInt(parts[2]);
+                          } else if (dob.includes('-')) {
+                            const parts = dob.split('-');
+                            year = parseInt(parts[0]);
+                            month = parseInt(parts[1]);
+                            day = parseInt(parts[2]);
+                          } else {
+                            const d = new Date(dob);
+                            day = d.getDate();
+                            month = d.getMonth() + 1;
+                            year = d.getFullYear();
+                          }
+                          
+                          const cf = new CodiceFiscale({
+                            name: editData.first_name.toUpperCase(),
+                            surname: editData.last_name.toUpperCase(),
+                            gender: editData.gender as 'M' | 'F',
+                            day: day,
+                            month: month,
+                            year: year,
+                            birthplace: editData.place_of_birth.toUpperCase(),
+                            birthplaceProvincia: editData.birth_province?.toUpperCase() || editData.province_of_birth?.toUpperCase() || '',
+                          });
+                          
+                          setEditData({...editData, fiscal_code: cf.toString()});
+                          Alert.alert('Successo', 'Codice Fiscale calcolato!');
+                        } catch (error: any) {
+                          console.error('CF calculation error:', error);
+                          Alert.alert('Errore', 'Impossibile calcolare il CF. Verifica i dati inseriti (es. comune di nascita deve essere valido).');
+                        }
+                      }}
+                    >
+                      <Ionicons name="calculator" size={18} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
                   <Text style={styles.inputLabel}>Email</Text>
                   <TextInput
                     style={styles.input}
