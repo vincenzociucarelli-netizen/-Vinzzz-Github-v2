@@ -62,6 +62,7 @@ export default function DirigenteProfile() {
   
   // My documents (privacy, receipts, etc.)
   const [myDocuments, setMyDocuments] = useState<any[]>([]);
+  const [showAllDocumentsModal, setShowAllDocumentsModal] = useState(false);
   
   // Profile data
   const [profileData, setProfileData] = useState({
