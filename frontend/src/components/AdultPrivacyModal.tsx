@@ -47,11 +47,26 @@ export const AdultPrivacyModal: React.FC<AdultPrivacyModalProps> = ({
   };
 
   const handleConfirm = async () => {
-    if (!hasSignature) {
+    if (!hasSignature || !signatureRef.current) {
       return;
     }
     
-    const signature = signatureRef.current?.toDataURL('image/png');
+    // Check if signature canvas is empty
+    if (signatureRef.current.isEmpty()) {
+      alert('Per favore, firma nel riquadro prima di confermare.');
+      return;
+    }
+    
+    // Get signature with higher quality
+    const signature = signatureRef.current.getTrimmedCanvas().toDataURL('image/png');
+    
+    // Verify the signature has actual content (not just 1x1 pixel)
+    const canvas = signatureRef.current.getTrimmedCanvas();
+    if (canvas.width < 10 || canvas.height < 10) {
+      alert('La firma è troppo piccola. Per favore, firma in modo più visibile.');
+      return;
+    }
+    
     if (signature) {
       setSigning(true);
       try {
@@ -67,7 +82,10 @@ export const AdultPrivacyModal: React.FC<AdultPrivacyModalProps> = ({
   };
 
   const handleSignatureEnd = () => {
-    setHasSignature(true);
+    // Verify signature is not empty before setting hasSignature
+    if (signatureRef.current && !signatureRef.current.isEmpty()) {
+      setHasSignature(true);
+    }
   };
 
   const roleLabel = getRoleLabel(signerRole);
