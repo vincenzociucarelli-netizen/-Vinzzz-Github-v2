@@ -245,6 +245,9 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
       setPrivacyAccepted(true);
       setShowPrivacyModal(false);
       
+      // Now save the profile
+      await performSave();
+      
       Alert.alert(
         'Privacy Confermata',
         'La tua conferma privacy è stata registrata. Una copia è stata inviata alla tua email e salvata nell\'archivio.',
@@ -252,7 +255,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
       );
       
       // Reload profile to get updated data
-      loadProfile();
+      await loadProfile();
     } catch (error: any) {
       console.error('Error signing privacy:', error);
       Alert.alert(
