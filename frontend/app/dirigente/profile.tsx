@@ -1348,6 +1348,14 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
+  docImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    resizeMode: 'contain',
+    backgroundColor: '#f5f5f5',
+    marginTop: 8,
+  },
   compensationAmount: {
     fontSize: 28,
     fontWeight: 'bold',
