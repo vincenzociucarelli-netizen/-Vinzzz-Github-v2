@@ -229,11 +229,11 @@ export default function DirigenteProfile() {
       const privacyText = `
 INFORMATIVA SULLA PRIVACY E CONSENSO AL TRATTAMENTO DEI DATI PERSONALI
 
-Il/La sottoscritto/a ${profileData.full_name || ''}, nato/a a ${profileData.place_of_birth || ''} il ${formatDate(profileData.date_of_birth)}, residente in ${profileData.address || ''}, ${profileData.city || ''} (${profileData.province || ''}), C.F. ${profileData.fiscal_code || ''},
+Il/La sottoscritto/a ${profileData.full_name || `${editData.last_name} ${editData.first_name}`}, nato/a a ${profileData.place_of_birth || editData.place_of_birth || ''} il ${formatDate(profileData.date_of_birth || editData.date_of_birth)}, residente in ${profileData.address || editData.address || ''}, ${profileData.city || editData.city || ''} (${profileData.province || editData.province || ''}), C.F. ${profileData.fiscal_code || editData.fiscal_code || ''},
 
 DICHIARA
 
-di aver ricevuto l'informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) relativa al trattamento dei propri dati personali da parte di ${societyName} e
+di aver letto e compreso l'informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) relativa al trattamento dei propri dati personali da parte di ${societyName} e
 
 ACCONSENTE
 
@@ -244,13 +244,13 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         document_type: 'privacy_consent',
         document_title: 'Consenso Privacy Dirigente',
         document_text: privacyText,
-        signer_name: profileData.full_name || user?.full_name || '',
+        signer_name: profileData.full_name || `${editData.last_name} ${editData.first_name}`,
         signer_email: user?.email || '',
         signature_base64: signatureBase64,
         related_entity_id: user?.id,
         additional_data: {
           role: 'dirigente',
-          fiscal_code: profileData.fiscal_code
+          fiscal_code: profileData.fiscal_code || editData.fiscal_code
         }
       });
       
@@ -266,6 +266,9 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
       // Update local state
       setPrivacyAccepted(true);
       setShowPrivacyModal(false);
+      
+      // Now save the profile
+      await performSave();
       
       Alert.alert(
         'Privacy Confermata',
