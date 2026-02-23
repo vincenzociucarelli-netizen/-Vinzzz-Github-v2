@@ -833,6 +833,9 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>📁 I Miei Documenti</Text>
+            {myDocuments.length > 0 && (
+              <Text style={{ color: '#666', fontSize: 12 }}>{myDocuments.length} totali</Text>
+            )}
           </View>
           
           {myDocuments.length === 0 ? (
@@ -841,18 +844,22 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </Text>
           ) : (
             <>
-              {myDocuments.slice(0, 5).map((doc: any, index: number) => (
+              {myDocuments.map((doc: any, index: number) => (
                 <View key={doc.id || index} style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  paddingVertical: 10,
+                  paddingVertical: 12,
                   borderBottomWidth: index < myDocuments.length - 1 ? 1 : 0,
                   borderBottomColor: '#f0f0f0',
                 }}>
                   <Ionicons 
-                    name={doc.document_type === 'privacy_consent' ? 'shield-checkmark' : 'document-text'} 
+                    name={doc.document_type === 'privacy_consent' ? 'shield-checkmark' : 
+                          doc.document_type?.includes('5000') ? 'alert-circle' :
+                          doc.document_type?.includes('15000') ? 'warning' : 'document-text'} 
                     size={24} 
-                    color={doc.document_type === 'privacy_consent' ? '#4CAF50' : '#8E44AD'} 
+                    color={doc.document_type === 'privacy_consent' ? '#4CAF50' : 
+                           doc.document_type?.includes('5000') ? '#FF9800' :
+                           doc.document_type?.includes('15000') ? '#F44336' : '#8E44AD'} 
                   />
                   <View style={{ marginLeft: 12, flex: 1 }}>
                     <Text style={{ fontSize: 14, fontWeight: '500', color: '#333' }}>
@@ -867,32 +874,46 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                       onPress={async () => {
                         try {
                           const token = await AsyncStorage.getItem('token');
-                          const apiUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
-                          // Open in new window for web, or use linking for mobile
-                          if (typeof window !== 'undefined') {
-                            const response = await fetch(`${apiUrl}/documents/download/${doc.id}`, {
-                              headers: { Authorization: `Bearer ${token}` }
-                            });
-                            const blob = await response.blob();
-                            const url = window.URL.createObjectURL(blob);
-                            window.open(url, '_blank');
+                          const apiUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://collaboratori-prep.preview.emergentagent.com';
+                          const downloadUrl = `${apiUrl}/api/documents/download/${doc.id}`;
+                          
+                          // Fetch with auth and download
+                          const response = await fetch(downloadUrl, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                          });
+                          
+                          if (!response.ok) {
+                            Alert.alert('Errore', 'Impossibile scaricare il documento');
+                            return;
                           }
+                          
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          
+                          // Create download link
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = doc.pdf_filename || `documento_${doc.id}.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          window.URL.revokeObjectURL(url);
                         } catch (err) {
                           console.error('Download error:', err);
+                          Alert.alert('Errore', 'Download non riuscito');
                         }
                       }}
-                      style={{ padding: 8 }}
+                      style={{ 
+                        padding: 10, 
+                        backgroundColor: '#00ACC1',
+                        borderRadius: 8,
+                      }}
                     >
-                      <Ionicons name="download-outline" size={20} color="#8E44AD" />
+                      <Ionicons name="download-outline" size={20} color="#fff" />
                     </TouchableOpacity>
                   )}
                 </View>
               ))}
-              {myDocuments.length > 5 && (
-                <Text style={{ color: '#8E44AD', textAlign: 'center', marginTop: 10 }}>
-                  + altri {myDocuments.length - 5} documenti
-                </Text>
-              )}
             </>
           )}
         </View>
