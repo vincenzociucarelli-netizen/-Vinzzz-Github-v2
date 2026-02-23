@@ -207,8 +207,37 @@ export default function CoachProfile() {
   // Handle privacy signature
   const handlePrivacySign = async (signatureBase64: string) => {
     try {
-      // Save privacy acceptance with signature
-      await api.put('/auth/me', {
+      // Generate privacy document with signature using /documents/sign endpoint
+      const privacyText = `
+INFORMATIVA SULLA PRIVACY E CONSENSO AL TRATTAMENTO DEI DATI PERSONALI
+
+Il/La sottoscritto/a ${profileData.full_name || ''}, nato/a a ${profileData.place_of_birth || ''} il ${formatDate(profileData.date_of_birth)}, residente in ${profileData.address || ''}, ${profileData.city || ''} (${profileData.province || ''}), C.F. ${profileData.fiscal_code || ''},
+
+DICHIARA
+
+di aver ricevuto l'informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) relativa al trattamento dei propri dati personali da parte di ${societyName} e
+
+ACCONSENTE
+
+al trattamento dei propri dati personali per le finalità connesse alla propria attività di Allenatore/Coach presso la società sportiva, inclusa la comunicazione a terzi per finalità strettamente connesse all'attività sportiva e al trattamento dei dati relativi ai compensi sportivi dilettantistici.
+      `.trim();
+
+      await api.post('/documents/sign', {
+        document_type: 'privacy_consent',
+        document_title: 'Consenso Privacy Coach',
+        document_text: privacyText,
+        signer_name: profileData.full_name || user?.full_name || '',
+        signer_email: user?.email || '',
+        signature_base64: signatureBase64,
+        related_entity_id: user?.id,
+        additional_data: {
+          role: 'coach',
+          fiscal_code: profileData.fiscal_code
+        }
+      });
+      
+      // Also update privacy_accepted flag in user profile
+      await api.patch('/auth/me', {
         privacy_accepted: true,
       });
       
@@ -218,7 +247,7 @@ export default function CoachProfile() {
       
       Alert.alert(
         'Privacy Confermata',
-        'Grazie! La tua conferma privacy è stata registrata con successo.',
+        'La tua conferma privacy è stata registrata. Una copia è stata inviata alla tua email e salvata nell\'archivio.',
         [{ text: 'OK' }]
       );
       
@@ -230,6 +259,19 @@ export default function CoachProfile() {
         'Errore',
         error.response?.data?.detail || 'Impossibile salvare la conferma privacy. Riprova.'
       );
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return '';
     }
   };
 
