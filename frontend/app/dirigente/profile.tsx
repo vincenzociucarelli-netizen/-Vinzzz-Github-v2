@@ -230,7 +230,7 @@ export default function DirigenteProfile() {
       const privacyText = `
 INFORMATIVA SULLA PRIVACY E CONSENSO AL TRATTAMENTO DEI DATI PERSONALI
 
-Il/La sottoscritto/a ${profile.full_name || ''}, nato/a a ${profile.place_of_birth || ''} il ${formatDate(profile.date_of_birth)}, residente in ${profile.address || ''}, ${profile.city || ''} (${profile.province || ''}), C.F. ${profile.fiscal_code || ''},
+Il/La sottoscritto/a ${profileData.full_name || ''}, nato/a a ${profileData.place_of_birth || ''} il ${formatDate(profileData.date_of_birth)}, residente in ${profileData.address || ''}, ${profileData.city || ''} (${profileData.province || ''}), C.F. ${profileData.fiscal_code || ''},
 
 DICHIARA
 
@@ -241,24 +241,28 @@ ACCONSENTE
 al trattamento dei propri dati personali per le finalità connesse alla propria attività di Dirigente presso la società sportiva, inclusa la comunicazione a terzi per finalità strettamente connesse all'attività sportiva.
       `.trim();
 
-      await api.post('/documents/sign', {
+      const signResponse = await api.post('/documents/sign', {
         document_type: 'privacy_consent',
         document_title: 'Consenso Privacy Dirigente',
         document_text: privacyText,
-        signer_name: profile.full_name || user?.full_name || '',
+        signer_name: profileData.full_name || user?.full_name || '',
         signer_email: user?.email || '',
         signature_base64: signatureBase64,
         related_entity_id: user?.id,
         additional_data: {
           role: 'dirigente',
-          fiscal_code: profile.fiscal_code
+          fiscal_code: profileData.fiscal_code
         }
       });
       
+      console.log('Document signed:', signResponse.data);
+      
       // Also update privacy_accepted flag in user profile
-      await api.patch('/auth/me', {
+      const updateResponse = await api.patch('/auth/me', {
         privacy_accepted: true,
       });
+      
+      console.log('Privacy flag updated:', updateResponse.data);
       
       // Update local state
       setPrivacyAccepted(true);
@@ -270,8 +274,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         [{ text: 'OK' }]
       );
       
-      // Reload profile to get updated data
-      loadProfile();
+      // Reload profile to get updated data and documents list
+      await loadProfile();
     } catch (error: any) {
       console.error('Error signing privacy:', error);
       Alert.alert(
