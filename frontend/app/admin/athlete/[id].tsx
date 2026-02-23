@@ -1881,11 +1881,11 @@ export default function AdminAthleteDetail() {
                 <>
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>Cognome</Text>
-                    <Text style={styles.value}>{editData.last_name || '-'}</Text>
+                    <Text style={styles.value}>{(editData.last_name || '-').toUpperCase()}</Text>
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>Nome</Text>
-                    <Text style={styles.value}>{editData.first_name || '-'}</Text>
+                    <Text style={styles.value}>{(editData.first_name || '-').toUpperCase()}</Text>
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>Data di nascita</Text>
