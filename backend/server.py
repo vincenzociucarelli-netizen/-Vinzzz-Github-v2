@@ -11065,12 +11065,16 @@ async def calcola_codice_fiscale(data: CalcolaCodiceFiscaleRequest):
 class DocumentFilter(BaseModel):
     season: Optional[str] = None  # Format: "2024-2025"
     figure_type: Optional[str] = None  # coach, dirigente, atleta, collaboratore
+    document_type: Optional[str] = None  # privacy_consent, receipt_5000, receipt_15000, etc.
+    team_id: Optional[str] = None  # Filter by team
     search: Optional[str] = None  # Search by name
 
 @api_router.get("/documents/archive")
 async def get_documents_archive(
     season: Optional[str] = None,
     figure_type: Optional[str] = None,
+    document_type: Optional[str] = None,
+    team_id: Optional[str] = None,
     search: Optional[str] = None,
     page: int = 1,
     limit: int = 20,
@@ -11089,6 +11093,22 @@ async def get_documents_archive(
             query["year"] = {"$in": years}
         except:
             pass
+    
+    # Filter by document type
+    if document_type:
+        query["document_type"] = document_type
+    
+    # Filter by team - need to find athletes in that team first
+    if team_id:
+        # Get athlete IDs from this team
+        athlete_ids = []
+        async for athlete in db.athletes.find({"team_id": team_id}, {"id": 1}):
+            athlete_ids.append(athlete.get("id"))
+        if athlete_ids:
+            query["athlete_id"] = {"$in": athlete_ids}
+        else:
+            # No athletes in team, return empty
+            query["athlete_id"] = {"$in": []}
     
     # Filter by figure type
     if figure_type:
