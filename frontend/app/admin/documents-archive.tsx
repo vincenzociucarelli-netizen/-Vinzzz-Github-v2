@@ -141,11 +141,21 @@ export default function DocumentsArchive() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSeason, selectedFigureType, searchQuery, router]);
+  }, [selectedSeason, selectedFigureType, selectedDocumentType, selectedTeamId, searchQuery, router]);
 
   useEffect(() => {
     loadDocuments(1, true);
-  }, [selectedSeason, selectedFigureType]);
+    loadTeams();
+  }, [selectedSeason, selectedFigureType, selectedDocumentType, selectedTeamId]);
+
+  // Reset filters function
+  const handleResetFilters = () => {
+    setSelectedSeason('');
+    setSelectedFigureType('');
+    setSelectedDocumentType('');
+    setSelectedTeamId('');
+    setSearchQuery('');
+  };
 
   const handleSearch = () => {
     loadDocuments(1, true);
