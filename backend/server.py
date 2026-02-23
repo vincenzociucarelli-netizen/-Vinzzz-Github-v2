@@ -11036,37 +11036,14 @@ async def get_my_documents(
     user_id = current_user.get("id")
     role = current_user.get("role")
     
-    query = {}
-    
-    # Build query based on role
-    if role == UserRole.COACH:
-        # Get coach_id from coaches collection
-        coach = await db.coaches.find_one({"user_id": user_id})
-        if coach:
-            query["coach_id"] = coach.get("id")
-    elif role == "dirigente":
-        dirigente = await db.dirigenti.find_one({"user_id": user_id})
-        if dirigente:
-            query["dirigente_id"] = dirigente.get("id")
-    elif role == "collaboratore":
-        collaboratore = await db.collaboratori.find_one({"user_id": user_id})
-        if collaboratore:
-            query["collaboratore_id"] = collaboratore.get("id")
-    elif role == "athlete":
-        athlete = await db.athletes.find_one({"user_id": user_id})
-        if athlete:
-            query["athlete_id"] = athlete.get("id")
-    elif role == "parent":
-        # Parent can see documents they signed (privacy consents for their children)
-        query["$or"] = [
-            {"parent_id": user_id},
-            {"signer_id": user_id}
-        ]
-    else:
-        return {"documents": [], "total": 0}
-    
-    if not query:
-        return {"documents": [], "total": 0}
+    # Use signer_id as primary query - works for all roles
+    query = {"$or": [
+        {"signer_id": user_id},
+        {"coach_id": user_id},
+        {"dirigente_id": user_id},
+        {"collaboratore_id": user_id},
+        {"parent_id": user_id}
+    ]}
     
     documents = []
     async for doc in db.signed_documents.find(query).sort("signed_at", -1):
