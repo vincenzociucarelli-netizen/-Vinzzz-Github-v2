@@ -8989,6 +8989,38 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
             parent_name = current_user.get("full_name", request.signer_name)
     
     # Store signed document record in database
+    # Determine role-specific fields based on signer role
+    coach_id = None
+    coach_name = None
+    dirigente_id = None
+    dirigente_name = None
+    collaboratore_id = None
+    collaboratore_name = None
+    
+    user_role = current_user.get("role", "")
+    if user_role == UserRole.COACH:
+        coach_id = current_user["id"]
+        coach_name = request.signer_name
+    elif user_role == UserRole.VIEWER:  # Dirigente
+        dirigente_id = current_user["id"]
+        dirigente_name = request.signer_name
+    elif user_role == UserRole.COLLABORATORE:
+        collaboratore_id = current_user["id"]
+        collaboratore_name = request.signer_name
+    
+    # Also check additional_data for role override
+    if request.additional_data:
+        role_from_data = request.additional_data.get("role", "")
+        if role_from_data == "coach":
+            coach_id = current_user["id"]
+            coach_name = request.signer_name
+        elif role_from_data == "dirigente":
+            dirigente_id = current_user["id"]
+            dirigente_name = request.signer_name
+        elif role_from_data == "collaboratore":
+            collaboratore_id = current_user["id"]
+            collaboratore_name = request.signer_name
+    
     document_record = {
         "id": document_id,
         "document_type": request.document_type,
@@ -9001,6 +9033,12 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
         "parent_name": parent_name,
         "athlete_id": athlete_id,
         "athlete_name": athlete_name,
+        "coach_id": coach_id,
+        "coach_name": coach_name,
+        "dirigente_id": dirigente_id,
+        "dirigente_name": dirigente_name,
+        "collaboratore_id": collaboratore_id,
+        "collaboratore_name": collaboratore_name,
         "signed_at": datetime.utcnow(),
         "pdf_path": pdf_path,
         "pdf_filename": filename,
