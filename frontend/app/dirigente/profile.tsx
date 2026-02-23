@@ -1265,25 +1265,50 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                           const token = await AsyncStorage.getItem('token');
                           const downloadUrl = `${API_URL}/api/documents/download/${doc.id}`;
                           
-                          const response = await fetch(downloadUrl, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                          });
-                          
-                          if (!response.ok) {
-                            Alert.alert('Errore', 'Impossibile scaricare il documento');
-                            return;
+                          if (Platform.OS === 'web') {
+                            const response = await fetch(downloadUrl, {
+                              headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            
+                            if (!response.ok) {
+                              Alert.alert('Errore', 'Impossibile scaricare il documento');
+                              return;
+                            }
+                            
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = doc.pdf_filename || `documento_${doc.id}.pdf`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+                          } else {
+                            const filename = doc.pdf_filename || `documento_${doc.id}.pdf`;
+                            const fileUri = FileSystem.documentDirectory + filename;
+                            
+                            const downloadResult = await FileSystem.downloadAsync(
+                              downloadUrl,
+                              fileUri,
+                              { headers: { 'Authorization': `Bearer ${token}` } }
+                            );
+                            
+                            if (downloadResult.status !== 200) {
+                              Alert.alert('Errore', 'Impossibile scaricare il documento');
+                              return;
+                            }
+                            
+                            const isSharingAvailable = await Sharing.isAvailableAsync();
+                            if (isSharingAvailable) {
+                              await Sharing.shareAsync(downloadResult.uri, {
+                                mimeType: 'application/pdf',
+                                dialogTitle: 'Apri documento PDF'
+                              });
+                            } else {
+                              Alert.alert('Successo', `Documento salvato`);
+                            }
                           }
-                          
-                          const blob = await response.blob();
-                          const url = window.URL.createObjectURL(blob);
-                          
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = doc.pdf_filename || `documento_${doc.id}.pdf`;
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                          window.URL.revokeObjectURL(url);
                         } catch (err) {
                           console.error('Download error:', err);
                           Alert.alert('Errore', 'Download non riuscito');
