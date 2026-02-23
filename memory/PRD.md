@@ -147,7 +147,38 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 ```
 
 ## Last Updated
-2026-02-23: Bug fix Profilo Dirigente e Archivio Documenti
+2026-02-23: Registrazione Atleta Maggiorenne implementata
+
+## Session 2026-02-23 - Registrazione Atleta Maggiorenne
+
+### Nuova Funzionalità ✅
+
+**Registrazione Atleta Maggiorenne (18+)**
+
+1. **Backend - Nuovo Endpoint `/auth/register-adult-athlete`**
+   - Crea un account user con ruolo `athlete`
+   - Crea un record `athlete` collegato
+   - L'atleta inizia in stato `trial` per 7 giorni
+   - Richiede un codice invito valido della società
+   - L'atleta viene auto-approvato (non richiede approvazione admin)
+   - **File**: `/app/backend/server.py`
+
+2. **Frontend - Form di Registrazione Aggiornato**
+   - Aggiunta opzione "Atleta Maggiorenne (18+)" nella selezione ruoli
+   - Info box specifico per atleti con messaggio sui 7 giorni di prova
+   - Redirect a `/athlete` dopo la registrazione
+   - **File**: `/app/frontend/app/register.tsx`
+
+### Test Effettuati ✅
+- Endpoint `/auth/register-adult-athlete` testato con successo
+- Login atleta funzionante
+- Endpoint `/auth/me` restituisce correttamente `athlete_id`
+
+### Credenziali Test
+- **Atleta Test**: `marco.bianchi.test@test.com` / `Test1234`
+- **Codice Invito Società**: `BUZHB0WT`
+
+---
 
 ## Session 2026-02-23 - Bug Fix Profilo Dirigente e Archivio
 
