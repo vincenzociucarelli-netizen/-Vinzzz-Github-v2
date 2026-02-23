@@ -184,7 +184,21 @@ export default function AthleteProfile() {
       setProfilePhoto(data.athlete_photo || data.profile_photo || null);
       setProfilePhotoArtistic(data.athlete_photo_artistic || data.profile_photo_artistic || null);
       
-      // Check if athlete is adult (18+) and needs privacy consent
+      // Store athlete_id
+      setAthleteId(data.athlete_id || data.id);
+      
+      // Load society name
+      try {
+        const societyRes = await api.get('/settings/society');
+        if (societyRes.data?.name) {
+          setSocietyName(societyRes.data.name);
+        }
+      } catch (e) {
+        console.log('Using default society name');
+      }
+      
+      // Check if athlete is adult (18+)
+      let isAdultAthlete = false;
       if (data.date_of_birth) {
         const dob = new Date(data.date_of_birth);
         const today = new Date();
@@ -193,34 +207,36 @@ export default function AthleteProfile() {
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
           age--;
         }
-        const isAdultAthlete = age >= 18;
+        isAdultAthlete = age >= 18;
         setIsAdult(isAdultAthlete);
-        
-        // Adult athletes need to sign privacy themselves
-        if (isAdultAthlete) {
-          const isPrivacyAccepted = data.privacy_accepted || false;
-          setPrivacyAccepted(isPrivacyAccepted);
-          if (!isPrivacyAccepted) {
-            // Small delay to ensure UI is ready
-            setTimeout(() => setShowPrivacyModal(true), 500);
-          }
+      }
+      
+      // Check trial status
+      const isPrivacyAccepted = data.privacy_accepted || false;
+      setPrivacyAccepted(isPrivacyAccepted);
+      
+      // Check trial expiration for adult athletes
+      if (isAdultAthlete) {
+        const trialEnd = data.trial_end_date;
+        if (trialEnd) {
+          const trialEndDateObj = new Date(trialEnd);
+          const now = new Date();
+          const isExpired = now > trialEndDateObj;
           
-          // Load society name
-          try {
-            const societyRes = await api.get('/settings/society');
-            if (societyRes.data?.name) {
-              setSocietyName(societyRes.data.name);
-            }
-          } catch (e) {
-            console.log('Using default society name');
+          setTrialEndDate(trialEndDateObj.toLocaleDateString('it-IT'));
+          setTrialExpired(isExpired);
+          
+          // If trial expired and privacy not accepted, show trial end modal
+          if (isExpired && !isPrivacyAccepted) {
+            setTimeout(() => setShowTrialEndModal(true), 500);
           }
         }
       }
       
       // Load signed receipts
       try {
-        const athleteId = data.athlete_id || data.id;
-        const receiptsRes = await api.get(`/athletes/${athleteId}/compensation/receipts`);
+        const athleteIdForReceipts = data.athlete_id || data.id;
+        const receiptsRes = await api.get(`/athletes/${athleteIdForReceipts}/compensation/receipts`);
         setSignedReceipts(receiptsRes.data || []);
       } catch (e) {
         console.log('No receipts found');
