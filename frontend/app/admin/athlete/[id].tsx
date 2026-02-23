@@ -1295,41 +1295,6 @@ export default function AdminAthleteDetail() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Adult Athlete Type Selector - solo per maggiorenni */}
-        {!athlete.is_minor && !athlete.parent_id && (
-          <View style={styles.athleteTypeSelector}>
-            <Text style={styles.athleteTypeSelectorLabel}>Tipo Atleta Maggiorenne:</Text>
-            <View style={styles.athleteTypeButtons}>
-              <TouchableOpacity 
-                style={[
-                  styles.athleteTypeBtn,
-                  athleteType === 'quota' && styles.athleteTypeBtnSelected
-                ]}
-                onPress={() => athleteType !== 'quota' && handleChangeAthleteType('quota')}
-                disabled={changingType}
-              >
-                <Ionicons name="card" size={16} color={athleteType === 'quota' ? '#fff' : '#007AFF'} />
-                <Text style={[styles.athleteTypeBtnText, athleteType === 'quota' && styles.athleteTypeBtnTextSelected]}>
-                  Paga Quota
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[
-                  styles.athleteTypeBtn,
-                  athleteType === 'compensated' && styles.athleteTypeBtnSelectedGold
-                ]}
-                onPress={() => athleteType !== 'compensated' && handleChangeAthleteType('compensated')}
-                disabled={changingType}
-              >
-                <Ionicons name="trophy" size={16} color={athleteType === 'compensated' ? '#fff' : '#B8860B'} />
-                <Text style={[styles.athleteTypeBtnText, athleteType === 'compensated' && styles.athleteTypeBtnTextSelected]}>
-                  Riceve Compenso
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
         {/* Withdrawn Banner */}
         {athlete.is_withdrawn && (
           <View style={styles.withdrawnBanner}>
