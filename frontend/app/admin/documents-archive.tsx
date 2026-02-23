@@ -85,7 +85,7 @@ export default function DocumentsArchive() {
       if (selectedFigureType) params.append('figure_type', selectedFigureType);
       if (searchQuery) params.append('search', searchQuery);
 
-      const response = await fetch(`${API_URL}/documents/archive?${params.toString()}`, {
+      const response = await fetch(`${API_URL}/api/documents/archive?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -126,7 +126,7 @@ export default function DocumentsArchive() {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
 
-      const downloadUrl = `${API_URL}/documents/download/${doc.id}`;
+      const downloadUrl = `${API_URL}/api/documents/download/${doc.id}`;
       
       if (Platform.OS === 'web') {
         // For web, open in new tab with auth header
