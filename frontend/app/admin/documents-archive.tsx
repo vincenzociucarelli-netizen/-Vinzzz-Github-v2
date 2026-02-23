@@ -355,6 +355,63 @@ export default function DocumentsArchive() {
               ))}
             </ScrollView>
           </View>
+
+          {/* Document Type Filter */}
+          <View style={styles.filterRow}>
+            <Text style={styles.filterLabel}>Tipo Doc:</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {DOCUMENT_TYPES.map(type => (
+                <TouchableOpacity
+                  key={type.value}
+                  style={[styles.filterChip, selectedDocumentType === type.value && styles.filterChipActive]}
+                  onPress={() => setSelectedDocumentType(type.value)}
+                >
+                  <Text style={[styles.filterChipText, selectedDocumentType === type.value && styles.filterChipTextActive]}>
+                    {type.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Team Filter */}
+          {teams.length > 0 && (
+            <View style={styles.filterRow}>
+              <Text style={styles.filterLabel}>Squadra:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <TouchableOpacity
+                  style={[styles.filterChip, !selectedTeamId && styles.filterChipActive]}
+                  onPress={() => setSelectedTeamId('')}
+                >
+                  <Text style={[styles.filterChipText, !selectedTeamId && styles.filterChipTextActive]}>
+                    Tutte
+                  </Text>
+                </TouchableOpacity>
+                {teams.map(team => (
+                  <TouchableOpacity
+                    key={team.id}
+                    style={[styles.filterChip, selectedTeamId === team.id && styles.filterChipActive]}
+                    onPress={() => setSelectedTeamId(team.id)}
+                  >
+                    <Text style={[styles.filterChipText, selectedTeamId === team.id && styles.filterChipTextActive]}>
+                      {team.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Reset Filters Button */}
+          {(selectedSeason || selectedFigureType || selectedDocumentType || selectedTeamId || searchQuery) && (
+            <TouchableOpacity 
+              style={styles.resetFiltersButton} 
+              onPress={handleResetFilters}
+            >
+              <Ionicons name="refresh" size={16} color="#F44336" />
+              <Text style={styles.resetFiltersText}>Azzera filtri</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
