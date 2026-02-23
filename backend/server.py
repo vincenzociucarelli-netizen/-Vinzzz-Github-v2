@@ -8490,6 +8490,182 @@ def generate_monthly_receipt_pdf(
     c.save()
     return buffer.getvalue()
 
+
+def generate_privacy_consent_pdf(
+    society_name: str,
+    signer_name: str,
+    signer_role: str,
+    fiscal_code: str,
+    birth_date: str,
+    birth_place: str,
+    address: str,
+    city: str,
+    province: str,
+    signature_base64: str
+) -> bytes:
+    """Generate privacy consent PDF with professional formatting like receipt"""
+    if not HAS_PDF_GENERATION:
+        raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    timestamp = datetime.now().strftime("%d/%m/%Y")
+    
+    # Title - centered, bold
+    c.setFont("Helvetica-Bold", 14)
+    title = "CONSENSO AL TRATTAMENTO DEI DATI PERSONALI"
+    c.drawCentredString(width/2, height - 3*cm, title)
+    
+    c.setFont("Helvetica", 9)
+    c.drawCentredString(width/2, height - 3.6*cm, "(ai sensi del Regolamento UE 2016/679 - GDPR)")
+    
+    # Society name
+    c.setFont("Helvetica", 11)
+    y = height - 5*cm
+    c.drawString(2*cm, y, f"ASD/SSD: {society_name}")
+    
+    # Role label
+    role_labels = {
+        'coach': 'Allenatore/Coach',
+        'dirigente': 'Dirigente',
+        'collaboratore': 'Collaboratore',
+        'genitore': 'Genitore',
+        'atleta': 'Atleta'
+    }
+    role_label = role_labels.get(signer_role, signer_role.capitalize() if signer_role else 'Utente')
+    
+    # Signer info
+    y -= 1*cm
+    c.drawString(2*cm, y, f"{role_label}: {signer_name}")
+    
+    y -= 0.6*cm
+    c.drawString(2*cm, y, f"Codice Fiscale: {fiscal_code or '________________________'}")
+    
+    if birth_date or birth_place:
+        y -= 0.6*cm
+        birth_info = f"Nato/a"
+        if birth_place:
+            birth_info += f" a {birth_place}"
+        if birth_date:
+            birth_info += f" il {birth_date}"
+        c.drawString(2*cm, y, birth_info)
+    
+    if address or city:
+        y -= 0.6*cm
+        address_info = "Residente in"
+        if address:
+            address_info += f" {address}"
+        if city:
+            address_info += f", {city}"
+        if province:
+            address_info += f" ({province})"
+        c.drawString(2*cm, y, address_info)
+    
+    # Declaration section
+    y -= 1.5*cm
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "DICHIARA")
+    
+    y -= 0.8*cm
+    c.setFont("Helvetica", 10)
+    declaration1 = "di aver ricevuto l'informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) relativa al trattamento dei propri dati personali da parte della società sportiva sopra indicata."
+    
+    # Word wrap
+    words = declaration1.split(' ')
+    lines = []
+    current_line = ""
+    max_width = width - 4*cm
+    for word in words:
+        test_line = current_line + " " + word if current_line else word
+        if c.stringWidth(test_line, "Helvetica", 10) < max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    
+    for line in lines:
+        c.drawString(2*cm, y, line)
+        y -= 0.5*cm
+    
+    # Consent section
+    y -= 0.8*cm
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "ACCONSENTE")
+    
+    y -= 0.8*cm
+    c.setFont("Helvetica", 10)
+    declaration2 = f"al trattamento dei propri dati personali per le finalità connesse alla propria attività di {role_label} presso la società sportiva, inclusa la comunicazione a terzi per finalità strettamente connesse all'attività sportiva."
+    
+    words = declaration2.split(' ')
+    lines = []
+    current_line = ""
+    for word in words:
+        test_line = current_line + " " + word if current_line else word
+        if c.stringWidth(test_line, "Helvetica", 10) < max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    
+    for line in lines:
+        c.drawString(2*cm, y, line)
+        y -= 0.5*cm
+    
+    # Signature section
+    y -= 2*cm
+    c.setFont("Helvetica", 10)
+    c.drawString(2*cm, y, f"Data: {timestamp}")
+    c.drawString(width - 8*cm, y, f"Firma {role_label.lower()}:")
+    
+    # Add signature image
+    if signature_base64 and HAS_PIL:
+        try:
+            if ',' in signature_base64:
+                signature_base64 = signature_base64.split(',')[1]
+            
+            sig_data = base64.b64decode(signature_base64)
+            sig_image = Image.open(io.BytesIO(sig_data))
+            
+            # Convert to RGB
+            if sig_image.mode != 'RGB':
+                if sig_image.mode == 'RGBA':
+                    background = Image.new('RGB', sig_image.size, (255, 255, 255))
+                    background.paste(sig_image, mask=sig_image.split()[3])
+                    sig_image = background
+                else:
+                    sig_image = sig_image.convert('RGB')
+            
+            # Normalize colors
+            pixels = sig_image.load()
+            w, h = sig_image.size
+            for py in range(h):
+                for px in range(w):
+                    r, g, b = pixels[px, py]
+                    luminance = (r * 0.299 + g * 0.587 + b * 0.114)
+                    if luminance < 200:
+                        pixels[px, py] = (0, 0, 0)
+                    else:
+                        pixels[px, py] = (255, 255, 255)
+            
+            sig_buffer = io.BytesIO()
+            sig_image.save(sig_buffer, format='PNG')
+            sig_buffer.seek(0)
+            
+            from reportlab.lib.utils import ImageReader
+            img_reader = ImageReader(sig_buffer)
+            c.drawImage(img_reader, width - 8*cm, y - 2.5*cm, width=6*cm, height=2*cm, preserveAspectRatio=True)
+        except Exception as e:
+            logging.error(f"Error adding signature: {e}")
+    
+    c.save()
+    return buffer.getvalue()
+
 def generate_threshold_5k_pdf(
     society_name: str,
     collaborator_name: str,
