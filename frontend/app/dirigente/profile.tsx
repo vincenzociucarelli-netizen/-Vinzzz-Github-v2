@@ -205,7 +205,36 @@ export default function DirigenteProfile() {
   // Handle privacy signature
   const handlePrivacySign = async (signatureBase64: string) => {
     try {
-      // Save privacy acceptance with signature
+      // Generate privacy document with signature using /documents/sign endpoint
+      const privacyText = `
+INFORMATIVA SULLA PRIVACY E CONSENSO AL TRATTAMENTO DEI DATI PERSONALI
+
+Il/La sottoscritto/a ${profile.full_name || ''}, nato/a a ${profile.place_of_birth || ''} il ${formatDate(profile.date_of_birth)}, residente in ${profile.address || ''}, ${profile.city || ''} (${profile.province || ''}), C.F. ${profile.fiscal_code || ''},
+
+DICHIARA
+
+di aver ricevuto l'informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) relativa al trattamento dei propri dati personali da parte di ${societyName} e
+
+ACCONSENTE
+
+al trattamento dei propri dati personali per le finalità connesse alla propria attività di Dirigente presso la società sportiva, inclusa la comunicazione a terzi per finalità strettamente connesse all'attività sportiva.
+      `.trim();
+
+      await api.post('/documents/sign', {
+        document_type: 'privacy_consent',
+        document_title: 'Consenso Privacy Dirigente',
+        document_text: privacyText,
+        signer_name: profile.full_name || user?.full_name || '',
+        signer_email: user?.email || '',
+        signature_base64: signatureBase64,
+        related_entity_id: user?.id,
+        additional_data: {
+          role: 'dirigente',
+          fiscal_code: profile.fiscal_code
+        }
+      });
+      
+      // Also update privacy_accepted flag in user profile
       await api.put('/auth/me', {
         privacy_accepted: true,
       });
@@ -216,7 +245,7 @@ export default function DirigenteProfile() {
       
       Alert.alert(
         'Privacy Confermata',
-        'Grazie! La tua conferma privacy è stata registrata con successo.',
+        'La tua conferma privacy è stata registrata. Una copia è stata inviata alla tua email e salvata nell\'archivio.',
         [{ text: 'OK' }]
       );
       
