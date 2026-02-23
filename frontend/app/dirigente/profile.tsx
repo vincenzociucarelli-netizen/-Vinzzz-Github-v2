@@ -248,7 +248,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
       });
       
       // Also update privacy_accepted flag in user profile
-      await api.put('/auth/me', {
+      await api.patch('/auth/me', {
         privacy_accepted: true,
       });
       
