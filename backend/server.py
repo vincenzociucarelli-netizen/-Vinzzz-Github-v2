@@ -9122,16 +9122,48 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
     society = await db.societies.find_one()
     society_name = society.get("name", "PALLAVOLO PERUGIA SSD A RL") if society else "PALLAVOLO PERUGIA SSD A RL"
     
-    # Generate PDF
+    # Get user info for privacy documents
+    user_data = current_user
+    
+    # Generate PDF - use appropriate function based on document type
     try:
-        pdf_bytes = generate_signed_pdf(
-            document_title=request.document_title,
-            document_text=request.document_text,
-            signer_name=request.signer_name,
-            signature_base64=request.signature_base64,
-            society_name=society_name,
-            additional_data=request.additional_data
-        )
+        if request.document_type == "privacy_consent":
+            # Use the new professional privacy consent PDF format
+            role = request.additional_data.get("role", "") if request.additional_data else ""
+            fiscal_code = request.additional_data.get("fiscal_code", "") if request.additional_data else ""
+            
+            # Get additional user data if available
+            birth_date = user_data.get("date_of_birth", "")
+            if birth_date and hasattr(birth_date, 'strftime'):
+                birth_date = birth_date.strftime("%d/%m/%Y")
+            elif birth_date and isinstance(birth_date, str) and 'T' in birth_date:
+                try:
+                    birth_date = datetime.fromisoformat(birth_date.replace('Z', '+00:00')).strftime("%d/%m/%Y")
+                except:
+                    pass
+            
+            pdf_bytes = generate_privacy_consent_pdf(
+                society_name=society_name,
+                signer_name=request.signer_name,
+                signer_role=role,
+                fiscal_code=fiscal_code or user_data.get("fiscal_code", ""),
+                birth_date=birth_date,
+                birth_place=user_data.get("place_of_birth", ""),
+                address=user_data.get("address", ""),
+                city=user_data.get("city", ""),
+                province=user_data.get("province", ""),
+                signature_base64=request.signature_base64
+            )
+        else:
+            # Use the generic signed PDF function for other document types
+            pdf_bytes = generate_signed_pdf(
+                document_title=request.document_title,
+                document_text=request.document_text,
+                signer_name=request.signer_name,
+                signature_base64=request.signature_base64,
+                society_name=society_name,
+                additional_data=request.additional_data
+            )
     except Exception as e:
         logging.error(f"Error generating PDF: {e}")
         raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
