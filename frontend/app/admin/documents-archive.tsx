@@ -638,4 +638,19 @@ const styles = StyleSheet.create({
     color: '#2196F3',
     fontWeight: '500',
   },
+  resetFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginTop: 8,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 8,
+  },
+  resetFiltersText: {
+    fontSize: 14,
+    color: '#F44336',
+    fontWeight: '500',
+    marginLeft: 6,
+  },
 });
