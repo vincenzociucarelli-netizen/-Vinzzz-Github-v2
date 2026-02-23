@@ -21,6 +21,7 @@
     "@react-navigation/native": "^7.1.6",
     "@types/react-signature-canvas": "^1.0.7",
     "axios": "^1.13.4",
+    "codice-fiscale-js": "^2.3.23",
     "date-fns": "^4.1.0",
     "expo": "^54.0.33",
     "expo-blur": "~14.1.5",
