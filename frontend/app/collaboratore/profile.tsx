@@ -384,6 +384,36 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
   };
 
   const handleSave = async () => {
+    // Validate required fields
+    if (!editData.last_name?.trim()) {
+      showAlert('Campo Obbligatorio', 'Inserisci il Cognome');
+      return;
+    }
+    if (!editData.first_name?.trim()) {
+      showAlert('Campo Obbligatorio', 'Inserisci il Nome');
+      return;
+    }
+    if (!editData.phone?.trim()) {
+      showAlert('Campo Obbligatorio', 'Inserisci il Telefono');
+      return;
+    }
+    if (!editData.fiscal_code?.trim()) {
+      showAlert('Campo Obbligatorio', 'Inserisci il Codice Fiscale');
+      return;
+    }
+    
+    // If privacy not yet accepted, show privacy modal instead of saving directly
+    if (!privacyAccepted) {
+      setProfileData({...profileData, ...editData});
+      setShowPrivacyModal(true);
+      return;
+    }
+    
+    // Privacy already accepted, proceed with save
+    await performSave();
+  };
+  
+  const performSave = async () => {
     setSaving(true);
     try {
       // Convert date to ISO format
