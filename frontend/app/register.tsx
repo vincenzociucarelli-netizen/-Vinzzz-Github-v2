@@ -438,6 +438,16 @@ export default function Register() {
         </View>
       )}
 
+      {/* Info for Adult Athlete */}
+      {role === 'athlete' && (
+        <View style={[styles.infoBox, { backgroundColor: '#FFF8E1', borderColor: '#FF9800', borderWidth: 1 }]}>
+          <Ionicons name="fitness" size={20} color="#FF9800" />
+          <Text style={styles.infoText}>
+            🏃 Come atleta maggiorenne, avrai 7 giorni di prova. Verrai assegnato a una squadra dall'amministratore.
+          </Text>
+        </View>
+      )}
+
       {/* Submit Button */}
       <TouchableOpacity
         style={[styles.registerButton, loading && styles.btnDisabled]}
