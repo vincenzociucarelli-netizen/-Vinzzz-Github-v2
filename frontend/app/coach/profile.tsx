@@ -172,11 +172,8 @@ export default function CoachProfile() {
       setProfilePhoto(data.profile_photo || null);
       setProfilePhotoArtistic(data.profile_photo_artistic || null);
       
-      // Load privacy status and show modal if not accepted
+      // Load privacy status
       const isPrivacyAccepted = data.privacy_accepted || false;
-      setPrivacyAccepted(isPrivacyAccepted);
-      if (!isPrivacyAccepted) {
-        // Small delay to ensure UI is ready
       // Privacy will be shown when user clicks Save, not automatically
       setPrivacyAccepted(isPrivacyAccepted);
       
