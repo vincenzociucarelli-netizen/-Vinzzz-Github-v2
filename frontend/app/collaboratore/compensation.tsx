@@ -992,7 +992,12 @@ export default function CollaboratoreCompensation() {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.modalScroll, { paddingBottom: 20 }]}>
+            <ScrollView 
+              style={styles.modalScroll} 
+              contentContainerStyle={{ paddingBottom: 20 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={true}
+            >
               {/* Receipt Preview */}
               <View style={styles.receiptPreview}>
                 <Text style={styles.receiptTitle}>QUIETANZA COMPENSO SPORTIVO DILETTANTISTICO</Text>
@@ -1013,7 +1018,7 @@ export default function CollaboratoreCompensation() {
                 onClear={() => setSignature(null)}
                 height={200}
               />
-            </View>
+            </ScrollView>
 
             {/* Confirm Buttons - OUTSIDE ScrollView for fixed position */}
             <View style={styles.modalButtonsFixed}>
