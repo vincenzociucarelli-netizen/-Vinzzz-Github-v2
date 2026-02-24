@@ -158,6 +158,7 @@ export default function DirigenteProfile() {
         last_name: data.last_name || '',
         date_of_birth: data.date_of_birth ? formatDate(data.date_of_birth) : '',
         place_of_birth: data.place_of_birth || '',
+        province_of_birth: data.birth_province || data.province_of_birth || '',
         gender: data.gender || '',
         fiscal_code: data.fiscal_code || '',
         address: data.address || '',
