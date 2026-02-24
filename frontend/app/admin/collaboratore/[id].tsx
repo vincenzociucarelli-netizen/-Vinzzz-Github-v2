@@ -339,8 +339,10 @@ export default function AdminCollaboratoreDetail() {
                 style={styles.input}
                 value={monthlyCompensation}
                 onChangeText={setMonthlyCompensation}
+                onFocus={(e) => { if (monthlyCompensation === '0') setMonthlyCompensation(''); }}
                 keyboardType="numeric"
                 placeholder="0.00"
+                selectTextOnFocus={true}
               />
               
               <Text style={styles.inputLabel}>Compensi Pregressi da altre ASD/SSD (€)</Text>
@@ -348,24 +350,46 @@ export default function AdminCollaboratoreDetail() {
                 style={styles.input}
                 value={otherAnnualCompensation}
                 onChangeText={setOtherAnnualCompensation}
+                onFocus={(e) => { if (otherAnnualCompensation === '0') setOtherAnnualCompensation(''); }}
                 keyboardType="numeric"
                 placeholder="0.00"
+                selectTextOnFocus={true}
               />
               
               <Text style={styles.inputLabel}>Data Inizio Contratto</Text>
               <TextInput
                 style={styles.input}
                 value={contractStartDate}
-                onChangeText={setContractStartDate}
-                placeholder="YYYY-MM-DD"
+                onChangeText={(text) => {
+                  // Auto-format as dd/mm/yyyy
+                  const cleaned = text.replace(/\D/g, '');
+                  let formatted = '';
+                  if (cleaned.length > 0) formatted = cleaned.substring(0, 2);
+                  if (cleaned.length > 2) formatted += '/' + cleaned.substring(2, 4);
+                  if (cleaned.length > 4) formatted += '/' + cleaned.substring(4, 8);
+                  setContractStartDate(formatted);
+                }}
+                placeholder="gg/mm/aaaa"
+                keyboardType="numeric"
+                maxLength={10}
               />
               
               <Text style={styles.inputLabel}>Data Fine Contratto</Text>
               <TextInput
                 style={styles.input}
                 value={contractEndDate}
-                onChangeText={setContractEndDate}
-                placeholder="YYYY-MM-DD"
+                onChangeText={(text) => {
+                  // Auto-format as dd/mm/yyyy
+                  const cleaned = text.replace(/\D/g, '');
+                  let formatted = '';
+                  if (cleaned.length > 0) formatted = cleaned.substring(0, 2);
+                  if (cleaned.length > 2) formatted += '/' + cleaned.substring(2, 4);
+                  if (cleaned.length > 4) formatted += '/' + cleaned.substring(4, 8);
+                  setContractEndDate(formatted);
+                }}
+                placeholder="gg/mm/aaaa"
+                keyboardType="numeric"
+                maxLength={10}
               />
               
               <TouchableOpacity
