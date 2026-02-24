@@ -549,22 +549,25 @@ export default function CoachScreen() {
       return (
         <View style={styles.container}>
           <View style={styles.header}>
+            <TouchableOpacity onPress={() => { stopWebScanner(); }} style={{ padding: 8 }}>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Scanner Presenze</Text>
-            <TouchableOpacity onPress={() => { stopWebScanner(); }}>
+            <TouchableOpacity onPress={() => { stopWebScanner(); }} style={{ padding: 8 }}>
               <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
           
-          <View style={styles.webScannerContainer}>
+          <ScrollView contentContainerStyle={styles.webScannerContainer}>
             <div id="web-qr-scanner" style={{ width: '100%', maxWidth: 500 }} />
             
             <TouchableOpacity
-              style={[styles.cancelButton, { marginTop: 20 }]}
+              style={[styles.cancelButton, { marginTop: 30, marginBottom: 40 }]}
               onPress={stopWebScanner}
             >
               <Text style={styles.cancelButtonText}>Chiudi Scanner</Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
       );
     }
