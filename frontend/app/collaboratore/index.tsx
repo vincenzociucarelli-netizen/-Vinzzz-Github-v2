@@ -1,57 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  Platform,
-} from 'react-native';
+import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '../../src/components/Icon';
-import api from '../../src/services/api';
 
-export default function CollaboratoreDashboard() {
+export default function CollaboratoreIndex() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
-  const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
-    loadData();
+    // Redirect to profile page directly (like coach and dirigente)
+    router.replace('/collaboratore/profile');
   }, []);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      
-      // Get profile from /auth/me
-      const profileRes = await api.get('/auth/me');
-      setProfile(profileRes.data);
-      
-      // Try to get compensation stats
-      try {
-        const compRes = await api.get(`/collaboratore/${profileRes.data.id}/compensation/annual/${new Date().getFullYear()}`);
-        setStats(compRes.data);
-      } catch (e) {
-        console.log('No compensation data yet');
-        setStats(null);
-      }
-    } catch (error) {
-      console.error('Error loading collaboratore data:', error);
-      if (Platform.OS === 'web') {
-        window.alert('Errore: Impossibile caricare i dati');
-      } else {
-        Alert.alert('Errore', 'Impossibile caricare i dati');
-      }
-      router.replace('/login');
-    } finally {
-      setLoading(false);
-    }
-  };
+  return null;
+}
 
   const handleLogout = async () => {
     await AsyncStorage.multiRemove(['token', 'userId', 'userRole']);
