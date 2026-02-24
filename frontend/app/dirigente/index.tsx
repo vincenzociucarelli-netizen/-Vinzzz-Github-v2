@@ -286,12 +286,36 @@ export default function DirigenteIndex() {
               <Text style={styles.emptyText}>Nessuna squadra registrata</Text>
             </View>
           ) : (
-            <FlatList
-              data={teams}
-              renderItem={renderTeamItem}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-            />
+            teams.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.teamCard, selectedTeam?.id === item.id && styles.teamCardSelected]}
+                onPress={() => {
+                  console.log('Team selected:', item.name);
+                  setSelectedTeam(selectedTeam?.id === item.id ? null : item);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.teamIcon}>
+                  <Ionicons name="people" size={24} color={selectedTeam?.id === item.id ? '#fff' : '#8E44AD'} />
+                </View>
+                <View style={styles.teamInfo}>
+                  <Text style={[styles.teamName, selectedTeam?.id === item.id && styles.teamNameSelected]}>
+                    {item.name}
+                  </Text>
+                  {item.category && (
+                    <Text style={[styles.teamCategory, selectedTeam?.id === item.id && styles.teamCategorySelected]}>
+                      {item.category}
+                    </Text>
+                  )}
+                </View>
+                <Ionicons 
+                  name={selectedTeam?.id === item.id ? "chevron-down" : "chevron-forward"}
+                  size={20} 
+                  color={selectedTeam?.id === item.id ? '#fff' : '#999'} 
+                />
+              </TouchableOpacity>
+            ))
           )}
         </View>
 
