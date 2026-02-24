@@ -1436,6 +1436,7 @@ class UserProfileUpdate(BaseModel):
     compensation_accepted: Optional[bool] = None
     compensation_history: Optional[dict] = None
     over_5000_limit: Optional[dict] = None
+    other_annual_compensation: Optional[float] = None  # Compensi pregressi da altre società
     # Profile photo
     profile_photo: Optional[str] = None
     profile_photo_artistic: Optional[str] = None
