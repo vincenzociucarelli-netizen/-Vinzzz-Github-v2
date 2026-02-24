@@ -69,6 +69,13 @@ load_dotenv(ROOT_DIR / '.env')
 SIGNED_DOCS_DIR = ROOT_DIR / "signed_documents"
 SIGNED_DOCS_DIR.mkdir(exist_ok=True)
 
+# Month names in Italian (index 1-12)
+MONTH_NAMES = {
+    1: "Gennaio", 2: "Febbraio", 3: "Marzo", 4: "Aprile",
+    5: "Maggio", 6: "Giugno", 7: "Luglio", 8: "Agosto",
+    9: "Settembre", 10: "Ottobre", 11: "Novembre", 12: "Dicembre"
+}
+
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
