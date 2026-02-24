@@ -154,12 +154,13 @@ export default function Register() {
         setUser({ ...response.data.user, token: response.data.token });
         
         // Different messages based on role
-        if (role === 'coach' || role === 'viewer') {
+        if (role === 'coach' || role === 'viewer' || role === 'collaboratore') {
           showAlert(
             '✅ Registrazione completata!',
             'Il tuo account è stato creato.\n\n⚠️ IMPORTANTE: La tua registrazione deve essere approvata da un Amministratore prima di poter accedere a tutte le funzionalità.\n\nRiceverai una notifica quando sarai abilitato.',
             () => {
               if (role === 'coach') router.replace('/coach');
+              else if (role === 'collaboratore') router.replace('/collaboratore');
               else router.replace('/dirigente');
             }
           );
