@@ -77,7 +77,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const { user, logout, refreshUser } = useAuthStore();
   const [stats, setStats] = useState<Stats | null>(null);
-  const [pendingCounts, setPendingCounts] = useState<PendingCount>({ dirigenti: 0, coaches: 0, parents: 0 });
+  const [pendingCounts, setPendingCounts] = useState<PendingCount>({ dirigenti: 0, coaches: 0, collaboratori: 0, parents: 0 });
   const [pendingAthletes, setPendingAthletes] = useState<any[]>([]);
   const [deletionRequests, setDeletionRequests] = useState<any[]>([]);
   const [society, setSociety] = useState<SocietySettings>({ name: 'Società Sportiva', logo: null, sport_image: null });
