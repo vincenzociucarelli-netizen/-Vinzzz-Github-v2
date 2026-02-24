@@ -210,7 +210,9 @@ export default function CollaboratoreCompensation() {
       // Load ALL compensation records (not filtered by year)
       const recordsRes = await api.get(`/collaboratore/${user?.id}/compensation`);
       console.log('Loaded collaboratore compensation records:', recordsRes.data);
-      setRecords(recordsRes.data || []);
+      // Ensure records is always an array
+      const recordsArray = Array.isArray(recordsRes.data) ? recordsRes.data : [];
+      setRecords(recordsArray);
       
       // Calculate yearly total for current display year (including prior compensation for first year)
       const totalFromReceipts = (recordsRes.data || [])
