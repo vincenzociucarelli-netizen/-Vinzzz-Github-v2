@@ -144,6 +144,9 @@ export default function TeamDetail() {
   // Training modal
   const [trainingModalVisible, setTrainingModalVisible] = useState(false);
 
+  // Available venues from society settings
+  const [availableVenues, setAvailableVenues] = useState<{name: string, address: string, city: string}[]>([]);
+
   const loadTeam = async () => {
     try {
       const response = await api.get(`/teams/${id}`);
