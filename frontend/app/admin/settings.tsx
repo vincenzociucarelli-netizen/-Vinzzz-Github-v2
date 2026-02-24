@@ -67,6 +67,7 @@ export default function SettingsScreen() {
       setAthleteRoles(response.data.athlete_roles || []);
       setAthleteCharacteristics(response.data.athlete_characteristics || []);
       setDirigenteQualifications(response.data.dirigente_qualifications || []);
+      setVenues(response.data.venues || []);
       // Load fiscal receipt data
       setRagioneSociale(response.data.ragione_sociale || '');
       setSportPraticato(response.data.sport_praticato || '');
