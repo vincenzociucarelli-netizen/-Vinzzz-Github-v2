@@ -1,70 +1,77 @@
-<analysis>**original_problem_statement**: The initial goal was to fix critical bugs, but the user pivoted to a phased implementation plan. The most recent work focuses on implementing the Collaboratori (Collaborators) role and fixing numerous bugs related to this new user type.
+<analysis>**original_problem_statement**: The initial goal was to fix critical bugs in the Collaboratori (Collaborators) user flow. This was expanded to include numerous feature requests and UI improvements. The most recent tasks involved implementing a Campi da gioco / Palestre (Venues/Gyms) management system, allowing admins to assign venues and teams to collaborators, and a major refactoring of the app's settings pages for better organization. The user's goal is to finalize the app within the week for submission to the app stores.
 
-Latest user requests revolve around fixing critical bugs in the Collaboratori flow:
-1.  A recurring privacy modal even after signing.
-2.  Personal data not being saved correctly.
-3.  Inability to scroll and confirm after signing monthly receipts.
-4.  Removing a Tesserino Allenatore (Coach ID Card) field from the collaborator profile.
-5.  Fixing an error when clicking on the Compensi (Compensations) page.
-6.  Removing an unnecessary intermediate page after collaborator login.
+PRODUCT REQUIREMENTS:
+- Fix all critical bugs in the Collaboratori flow.
+- Implement a system to manage Campi da gioco / Palestre (Venues/Gyms).
+- Allow admins to assign Venues and Teams to Collaborators.
+- Improve UI consistency, particularly for back buttons and input fields (e.g., province codes).
+- Refactor the main Settings page into logical sub-pages.
+- Ensure that when a user's compensation is changed by an admin, they are required to re-accept it.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-- A full-stack React/FastAPI/MongoDB application for sports club management.
-- The Collaboratori (Collaborators) role has been added to the registration, admin approval, and login flows.
-- A detail page for admins to manage collaborators () has been created.
-- A profile page for collaborators () exists but is plagued with bugs.
-- A compensation page for collaborators () also has critical bugs.
-- The GDPR-compliant privacy flow and the Adult Athlete registration flow were previously completed and tested.
+- A full-stack React/FastAPI/MongoDB application for sports club management with roles for Admin, Coach, Dirigente, Collaboratore, Athlete, and Parent.
+- The Collaboratori user flow is now stable after extensive bug fixing.
+- A Campi da gioco / Palestre (Venues/Gyms) feature has been implemented, allowing admins to define venues in the settings and assign them to teams and collaborators.
+- The main settings page has been refactored into a landing page with navigation to two new sub-pages: Società (for company data) and Altre Impostazioni (for roles, venues, etc.).
+- A system is in place for all roles with compensation (Coach, Dirigente, Collaboratore) that requires them to re-accept their compensation if the amount is modified by an admin.
 
 **Last working item**:
-- Last item agent was working: Fixing a series of critical bugs reported by the user for the Collaboratori (Collaborators) user flow. The agent was investigating three issues from the user's message.
-    - **A. Privacy Loop:** The privacy modal for a collaborator (Lara) reappears multiple times even though the document is already stored in the admin archive.
-    - **B. Data Not Saving:** Personal data for the collaborator is not being saved after editing.
-    - **C. Signature Scroll Issue:** When signing monthly receipts, the user is unable to scroll down the modal to click the Confirm button.
-- Status: IN PROGRESS
+- Last item agent was working: The agent completed the refactoring of the main settings page () into a new structure with a main index page () and two sub-pages ( and ). This was done to improve the organization and user experience of the settings section.
+- Status: USER VERIFICATION PENDING
 - Agent Testing Done: N
-- Which testing method agent to use? both. The backend agent needs to verify the PATCH endpoints for saving collaborator data. The frontend agent needs to test the entire collaborator user journey: login, profile editing (and saving), privacy signing, and compensation signing, ensuring all reported bugs are fixed.
+- Which testing method agent to use? frontend testing agent. The agent should verify that navigation from the new settings index page works, that both the 'Society' and 'Other Settings' pages load correctly, and that data can be successfully saved on each of the new pages.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: (P0) Fix critical bugs in the Collaborator user flow.
--   **Issue 2**: (P1) The  library fails to load correctly on the web version.
--   **Issue 3**: (P2) The compensation page for collaborators shows all 12 months of the year, not just the months within the contract period.
+-   Issue 1: (P1) The  library fails to load correctly on the web version, making some icons invisible.
+-   Issue 2: (P2) The compensation page for collaborators shows all 12 months of the year, not just the months within the contract period.
+-   Issue 3: (P2) Some back arrows are still hard to see against certain background colors.
 
 **Issues Detail**:
--   **Issue 1: Critical Bugs in Collaborator Flow (P0)**
-    -   **Description**: The collaborator feature, while partially implemented, is unusable due to several bugs reported by the user.
-    -   **Next debug checklist**:
-        1.  **Privacy Loop**: Investigate . The logic that checks the  flag is likely flawed. Verify the  function correctly fetches the flag and the UI correctly hides the modal if .
-        2.  **Data Not Saving**: The agent identified and fixed an issue where the backend PATCH endpoint  was missing fields. However, the user reports data is still not saving. Re-verify the frontend payload in 's  function to ensure all fields (, , etc.) are being sent correctly.
-        3.  **Signature Scroll Issue**: In the modal for signing monthly receipts (likely in ), the parent  is capturing touch events from the signature canvas. The fix is to disable the 's scrolling () when the signature modal is active or when the user starts drawing.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is the highest priority. The Collaboratori feature is a key requirement, and it's currently broken and causing user frustration.
-    -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: Y (data saving issues have appeared before).
-    -   **Should Test frontend/backend/both after fix?**: Both.
-
--   **Issue 2: @expo/vector-icons rendering issue (P1)**
+-   **Issue 1: @expo/vector-icons rendering issue (P1)**
     -   **Description**: Icons from  do not render on the web version. This is a long-standing UI bug that detracts from the user experience.
+    -   **Next debug checklist**:
+        1. Investigate the web build configuration for Expo.
+        2. Check for console errors in the browser related to font loading.
+        3. Research common issues with  and Expo Web. A potential fix might involve manually configuring the font in the web build's HTML or CSS.
+    -   **Why fix this issue and what will be achieved with the fix?**: Resolving this will fix a major UI inconsistency and improve the professionalism of the web app.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend.
+    -   **Blocked on other issue**: None.
 
--   **Issue 3: Compensation Month Display (P2)**
-    -   **Description**: The grid for monthly compensations in  displays all 12 months, regardless of the collaborator's contract start and end dates.
-    -   **Attempted fixes**: The agent identified that this happens when  or  are null.
-    -   **Next debug checklist**: The fix is to ensure the component correctly filters the months based on the  and  props, even if they are defined.
+-   **Issue 2: Compensation Month Display (P2)**
+    -   **Description**: The grid for monthly compensations in  (and likely other roles) displays all 12 months, regardless of the user's contract start and end dates.
+    -   **Next debug checklist**:
+        1.  In , review the logic that generates the month grid.
+        2.  Ensure the component correctly filters the months based on the  and  properties, handling cases where these dates might be null.
+    -   **Why fix this issue and what will be achieved with the fix?**: This will prevent user confusion by only showing relevant months for compensation.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Frontend.
+    -   **Blocked on other issue**: None.
+
+-   **Issue 3: Back Arrow Visibility (P2)**
+    -   **Description**: Despite a global fix attempt, some back arrows remain difficult to see, particularly a white arrow on an orange header background as reported by the user.
+    -   **Next debug checklist**:
+        1. Create a standardized, reusable  component that has a consistent, high-contrast style (e.g., an icon inside a circular white background with a drop shadow).
+        2. Systematically replace all instances of the back arrow across the app with this new component.
+    -   **Why fix this issue and what will be achieved with the fix?**: This will ensure consistent and accessible navigation throughout the app.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Frontend.
+    -   **Blocked on other issue**: None.
 
 **In progress Task List**:
--   None apart from the P0 bug fixes.
+- None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
+    - **(P0)** User plans to perform a full end-to-end test of the Atleta Maggiorenne (Adult Athlete) flow.
     - **(P1)** After the collaborator flow is stable, apply the identical end-of-trial logic for the **Parent** of a minor athlete.
+    - **(P1)** Prepare all necessary assets and legal documents (Privacy Policy) for app store submission. The agent has already provided a comprehensive guide.
 - **Future Tasks**:
     - **(P2)** Re-evaluate and stabilize the PRO Module.
     - **(P3)** Implement Stripe Integration for premium plans.
@@ -72,24 +79,31 @@ Latest user requests revolve around fixing critical bugs in the Collaboratori fl
     - **(P3)** Refactor  into a modular structure (routers, services, models).
 
 **Completed work in this session**
-- **GDPR & Privacy Flow**: Completed and tested the full GDPR trial-end flow for athletes and the sign on first save flow for staff.
-- **Collaborator Role**:
-    - Added Collaboratore to registration, admin approval, and login flows.
-    - Created the admin page () to manage collaborators.
-    - Fixed a bug preventing collaborators from uploading a profile photo.
-    - Fixed an error () on the compensation page.
-    - Removed an unnecessary intermediate landing page after collaborator login, redirecting them directly to their profile.
-    - Removed the N° Tesserino Allenatore (Coach ID Card number) field from the collaborator profile page.
-- **General Bug Fixes**:
-    - Added a missing My Documents section to the Coach profile page.
-    - Fixed a bug in the Dirigente dashboard where clicking a team did not display the athletes.
-    - Added a  field to the Coach profile.
-    - Corrected date formatting across the app to use  and ensured numeric input fields are cleared on focus, as per user request.
-    - Fixed an issue with overlapping buttons on the QR Scanner screen.
-    - Resolved a bug causing duplicate €5,000 threshold documents to be generated for coaches.
+- **Collaborator Flow Overhaul**:
+  - Fixed critical bugs: privacy modal loop, profile data not saving, and signature pad scrolling issue.
+  - Fixed the backend logic for signing compensation receipts ( and  errors).
+  - Added a My Documents section to the collaborator profile page.
+  - Made the password in the admin's reset-password modal visible.
+- **Compensation Logic Enhancement (All Roles)**:
+  - Implemented logic to force re-acceptance of compensation when the monthly amount is changed by an admin.
+  - Added a Già Percepito (Already Received) box on admin detail pages to show the sum of signed receipts.
+- **Campi da gioco / Palestre (Venues/Gyms) Feature**:
+  - Created a new section in Settings for admins to add, view, and delete venues.
+  - Replaced free-text inputs with a dropdown  for selecting venues on the Team details page.
+  - Added a new section on the Collaborator admin page to assign teams and venues to collaborators.
+  - Fixed a bug preventing assigned venues from being saved and displayed correctly.
+- **Settings Page Refactor**:
+  - Restructured the monolithic settings page into a main navigation page () linking to two new, organized sub-pages:  and .
+- **UI/UX Improvements**:
+  - Fixed the visibility of back arrows in over 30 files by changing them to a high-contrast style (white background, blue icon).
+  - Enforced a  and uppercase format for all province input fields across the application.
+  - Added the missing  field to the Dirigente profile.
+  - Fixed an issue on the admin's team list where the total fee was not updating dynamically based on its installments.
+  - Redesigned the Quietanze Firmate section on the collaborator admin page for better visibility.
 
 **Earlier issues found/mentioned but not fixed**
 - The  rendering issue on the web remains unresolved.
+- The compensation page shows all 12 months instead of only those in the contract period.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork**:  library failing to render on the web.
@@ -100,70 +114,68 @@ Latest user requests revolve around fixing critical bugs in the Collaboratori fl
 
 
 **Key Technical Concepts**
--   **Role-Based Access Control (RBAC)**: Expanded to include the  role, which required fixes in multiple backend endpoints (e.g., photo upload).
--   **State Management in React**: Debugging issues where frontend state is inconsistent with backend data (e.g., privacy flag, saved profile data).
--   **Event Handling in React Native**: Addressing the issue of a  capturing touch events intended for a child component (the signature canvas).
--   **Date/Time Handling**: Standardizing date formats () on the frontend and ensuring correct parsing/conversion when communicating with the backend's ISO format.
+-   **Role-Based Access Control (RBAC)**: Logic extended for  assignments.
+-   **State Management in React**: Complex state handling for dynamic lists (venues), multi-select chips (assignments), and conditional UI rendering.
+-   **File-based Routing (Expo Router)**: Refactored a single page into a nested route structure (, , ).
+-   **API Design**: Added new fields to existing models (, ) and ensured GET/PATCH endpoints were updated accordingly.
 
 **key DB schema**
 -   **users**:
-    -    (now includes collaboratore)
-    -    (PENDING, APPROVED)
-    -   
-    -   
-    -   
-    -   
--   **signed_documents**: Used to store signed privacy consents and receipts.
+    -    (Assignment functionality added for collaborators)
+    -    (NEW field for collaborators)
+    -    (Added for  role)
+-   **society_settings** (document in  collection):
+    -    (NEW field, where each dict is )
 
 **All files of reference**
--   **Files with active bugs**:
-    -    (Privacy loop, data saving)
-    -    (Signature scroll issue, month display issue)
-    -    (Data saving issue)
-    -    (Verify data saving logic for collaborators)
--   **Other key modified files**:
+-   **New Settings Structure**:
+    -   
+    -   
+    -   
+-   **Key Modified Files**:
+    -   
+    -   
+    -   
     -   
     -   
     -   
 
 **Areas that need refactoring**:
--   ****: This large file is becoming increasingly difficult to manage. It should be broken down into separate files for routes, models, and services.
--   **Profile Pages**: The profile pages for , , and  share significant amounts of code that could be abstracted into reusable components or hooks to reduce duplication and bugs.
+-   **Delete old settings file**: The file  is now redundant after the refactor and should be deleted to prevent confusion.
+-   ****: This file continues to grow and is the primary source of backend logic. It should be broken down into a modular structure (e.g., routers, services, models).
+-   **Profile Pages**: The profile pages for , , and  share significant repeated code ( function, document sections). This logic should be extracted into reusable components or hooks.
 
 **key api endpoints**
--   : Used for new user registration, now including collaborators.
--   : Used by admins to update user data. This was updated to include more fields for collaborators but may still have issues.
--   : Used by a logged-in user to update their own profile.
--   : Updated to allow collaborators to upload photos.
--   : New endpoint to fetch a list of all collaborators.
+-   : Modified to handle saving the new  array.
+-   : Modified to return the  array.
+-   : Heavily modified to handle , , the  reset logic, and added  for Dirigente.
+-   : Modified to return .
 
 **Critical Info for New Agent**
--   **PRIORITY 1: FIX COLLABORATOR BUGS**: The user is very frustrated with the state of the Collaboratori feature. Your absolute top priority is to fix the three main issues: the privacy modal loop, the data saving failure, and the signature pad scrolling problem. Address these before moving on to anything else.
--   **User Environment vs. Preview**: The user tests on Expo Go, which might connect to a different (older) version of the code/backend. If the user reports bugs you cannot reproduce, gently remind them that your fixes are applied to the preview environment, which is the source of truth for the final app build. However, the bugs they are currently reporting are confirmed to be present in the preview environment.
--   **Follow User's UX Rules**: The user has established clear rules: date format is  and numeric fields should be cleared on focus. Adhere to these in all future work. A note has been added to .
--   **Incremental Fixes**: Tackle one bug at a time, test it thoroughly, and then move to the next. This will build trust and show clear progress.
+-   **PRIORITY 1: Stability for App Store Submission**: The user's primary goal is to launch the app soon. Prioritize stability and thorough testing of existing features over new, complex functionality.
+-   **User Testing Cycle**: The user is very active in testing. Expect detailed feedback. The next step is for the user to test the Atleta Maggiorenne flow. Be prepared to address any issues they find.
+-   **Settings Refactor**: Be aware that the settings functionality is now split across three new files in . The original  file is now obsolete.
 
 **documents and test reports created in this job**
--    (Updated with user's UX rules).
--    (Passed, but for the GDPR flow, before the collaborator bugs were found).
+-   
+-   
+-    (Updated with completed tasks)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Reports being logged out after uploading a profile picture as a collaborator.
-2.  **Agent**: Identifies the backend endpoint was missing the 'collaboratore' role and fixes it.
-3.  **User**: Reports three new bugs for the collaborator profile with screenshots: (A) Tesserino Allenatore field shouldn't be there, (B) Compensation acceptance gives an error, (C) Clicking Compensi page shows an error. Asks why there is an intermediate landing page (Foto 4).
-4.  **Agent**: Acknowledges and starts fixing all reported issues, including removing the intermediate page.
-5.  **User**: Reports three more critical bugs for collaborator Lara: (A) Privacy is proposed repeatedly, (B) Personal data is not saved, (C) Cannot scroll to confirm signature on receipts.
-6.  **Agent**: Acknowledges the frustration and starts investigating the three new bugs. (This is the current state).
-7.  **User:** Asks for password reset for two collaborator accounts (, ) and requests a more visible password reset button in the admin view.
-8.  **Agent:** Resets passwords to  and adds a more visible reset button.
-9.  **User:** Reports login is still failing for both collaborators; the page just reloads.
-10. **Agent:** Fixes a bug in the collaborator's main page () that was causing the login loop.
+1.  **User**: Asks to make the Quietanze Firmate (Signed Receipts) section in the collaborator detail page more prominent.
+2.  **Agent**: Redesigns the section with a green background, borders, and icons.
+3.  **User**: Reports that the admin cannot see the newly added fields to assign teams and venues to a collaborator.
+4.  **Agent**: Identifies the UI was only visible in edit mode and creates a new, always-visible Assegnazioni (Assignments) section.
+5.  **User**: Reports that assigned venues are not saved for collaborators, while teams are.
+6.  **Agent**: Debugs the issue, finds the  endpoint wasn't returning the  field, and fixes it.
+7.  **User**: Reports that some back arrows are still invisible.
+8.  **User**: Proposes a major refactor of the Impostazioni (Settings) page to be more organized.
+9.  **User**: Chooses to split the Settings page into a main page with buttons leading to two separate sub-pages.
+10. **User**: Expresses satisfaction with the recent changes and states they will test the adult athlete flow next before proceeding with the bureaucratic steps for app publication.
 
 **Project Health Check:**
--   **Broken**:
-    -   The collaborator profile page () has critical bugs making it unusable.
-    -   The collaborator compensation page () has a critical bug preventing signing.
-    -   The admin's collaborator detail page () has a data-saving bug.
+-   **Broken**: The web version of the app has a known issue with icons from  not rendering.
+-   **Mocked**: None.
 
 **3rd Party Integrations**
 -   reportlab
@@ -174,10 +186,10 @@ Latest user requests revolve around fixing critical bugs in the Collaboratori fl
 -   @expo/ngrok
 
 **Testing status**
--   Testing agent used after significant changes: Yes, for the GDPR flow.
+-   Testing agent used after significant changes: Yes, for the collaborator bug fixes and adult athlete flow.
 -   Troubleshoot agent used after agent stuck in loop: No.
 -   Test files created: None.
--   Known regressions: The entire Collaboratori feature is a functional regression. While components were created, they are not stable or usable.
+-   Known regressions: None.
 
 **Credentials to test flow:**
 -   **Admin / Dirigente**:  / 
@@ -185,4 +197,6 @@ Latest user requests revolve around fixing critical bugs in the Collaboratori fl
 -   **Collaboratore (Lara)**:  / 
 
 **What agent forgot to execute**
-- The agent has not holistically tested the end-to-end collaborator flow after implementing it. This led to a series of frustrating bugs for the user. A full feature test should have been performed before considering the task complete.</analysis>
+- The agent never addressed the long-standing  issue.
+- The agent did not fix the issue where the compensation page shows all 12 months.
+- The agent did not delete the old  file after refactoring the settings pages, leaving a redundant file in the codebase.</analysis>

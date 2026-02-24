@@ -8,7 +8,7 @@ import requests
 import os
 from datetime import datetime
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://collab-p0-critical.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://palestre-team-assign.preview.emergentagent.com').rstrip('/')
 
 class TestAdminResetAthletePassword:
     """Test admin reset athlete password endpoint"""
