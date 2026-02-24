@@ -267,10 +267,20 @@ export default function TeamDetail() {
     }
   };
 
+  const loadAvailableVenues = async () => {
+    try {
+      const response = await api.get('/settings/society');
+      setAvailableVenues(response.data.venues || []);
+    } catch (error) {
+      console.error('Error loading venues:', error);
+    }
+  };
+
   useEffect(() => {
     loadTeam();
     loadAvailableCoaches();
     loadAvailableDirigenti();
+    loadAvailableVenues();
   }, [id]);
 
   const showAlert = (title: string, message: string) => {
