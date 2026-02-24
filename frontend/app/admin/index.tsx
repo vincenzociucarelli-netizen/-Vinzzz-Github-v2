@@ -48,6 +48,7 @@ interface Stats {
 interface PendingCount {
   dirigenti: number;
   coaches: number;
+  collaboratori: number;
   parents: number;
 }
 
