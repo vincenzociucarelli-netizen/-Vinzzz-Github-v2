@@ -962,9 +962,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   headerLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 8,
     backgroundColor: '#fff',
     marginRight: 12,
   },
