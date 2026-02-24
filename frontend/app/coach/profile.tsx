@@ -62,6 +62,7 @@ export default function CoachProfile() {
     phone: '',
     coach_license_number: '',
     monthly_compensation: 0,
+    other_annual_compensation: 0, // Compensi pregressi da altre società
     compensation_accepted: false,
     contract_start_date: '',
     contract_end_date: '',
