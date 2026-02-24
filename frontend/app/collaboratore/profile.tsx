@@ -12,6 +12,7 @@ import {
   Image,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
