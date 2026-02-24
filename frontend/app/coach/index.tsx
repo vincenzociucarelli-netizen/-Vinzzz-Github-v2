@@ -617,13 +617,19 @@ export default function CoachScreen() {
               
               {/* Tip for permanent camera permission */}
               <View style={{ marginTop: 30, paddingHorizontal: 20, paddingVertical: 15, backgroundColor: '#F0F8FF', borderRadius: 10, borderWidth: 1, borderColor: '#007AFF', borderStyle: 'dashed' }}>
-                <Text style={{ fontSize: 13, color: '#007AFF', fontWeight: '600', marginBottom: 5 }}>
-                  💡 Suggerimento
+                <Text style={{ fontSize: 13, color: '#007AFF', fontWeight: '600', marginBottom: 8 }}>
+                  📱 Come memorizzare il permesso fotocamera
                 </Text>
-                <Text style={{ fontSize: 12, color: '#666', lineHeight: 18 }}>
-                  Per evitare di autorizzare la fotocamera ogni volta:{'\n'}
-                  • Tocca ⋮ (menu) → Impostazioni → Impostazioni sito → Fotocamera{'\n'}
-                  • Oppure dopo aver concesso il permesso, seleziona "Consenti sempre"
+                <Text style={{ fontSize: 12, color: '#333', lineHeight: 20, marginBottom: 8 }}>
+                  <Text style={{ fontWeight: '600' }}>Metodo 1 - Dalle impostazioni del telefono:</Text>{'\n'}
+                  Vai in Impostazioni → App → Chrome/Browser → Autorizzazioni → Fotocamera → Consenti sempre
+                </Text>
+                <Text style={{ fontSize: 12, color: '#333', lineHeight: 20, marginBottom: 8 }}>
+                  <Text style={{ fontWeight: '600' }}>Metodo 2 - Dalle impostazioni del browser:</Text>{'\n'}
+                  Tocca ⋮ (menu) → Impostazioni → Impostazioni sito → Fotocamera
+                </Text>
+                <Text style={{ fontSize: 12, color: '#666', lineHeight: 18, fontStyle: 'italic' }}>
+                  💡 Seleziona "Consenti sempre" quando il browser chiede il permesso
                 </Text>
               </View>
             </>
