@@ -120,8 +120,9 @@ export default function AdminDashboard() {
       const pending = pendingRes.data;
       const dirigentiPending = pending.filter((u: any) => u.role === 'admin' || u.role === 'viewer').length;
       const coachesPending = pending.filter((u: any) => u.role === 'coach').length;
+      const collaboratoriPending = pending.filter((u: any) => u.role === 'collaboratore').length;
       const parentsPending = pending.filter((u: any) => u.role === 'parent').length;
-      setPendingCounts({ dirigenti: dirigentiPending, coaches: coachesPending, parents: parentsPending });
+      setPendingCounts({ dirigenti: dirigentiPending, coaches: coachesPending, collaboratori: collaboratoriPending, parents: parentsPending });
     } catch (error) {
       console.error('Error loading stats:', error);
     }
