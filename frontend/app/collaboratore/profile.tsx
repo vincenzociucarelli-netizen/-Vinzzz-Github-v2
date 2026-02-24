@@ -18,9 +18,14 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import PhotoViewer from '../../src/components/PhotoViewer';
 import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://collab-p0-critical.preview.emergentagent.com';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
