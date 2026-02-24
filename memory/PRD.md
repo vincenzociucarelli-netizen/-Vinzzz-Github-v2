@@ -515,3 +515,75 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 2. **P1**: Firma privacy per maggiorenni (atleti, coach, dirigenti)
 3. **P2**: Season renewal workflow
 4. **P3**: Refactor server.py into modular routes
+---
+
+## Session 2026-02-24 - Flusso Privacy GDPR-Compliant per Atleti
+
+### Implementazioni Completate ✅
+
+1. **Backend - Endpoint GDPR Cancellazione Dati**
+   - **Nuovo Endpoint**: `DELETE /api/auth/delete-my-data`
+   - Cancella: user, athlete record, signed_documents, receipts, notifications, certificates
+   - Risposta con conteggio elementi eliminati
+   - Conforme GDPR con log delle operazioni
+   - **File**: `/app/backend/server.py` linee 11475-11552
+
+2. **Backend - Miglioramento /auth/me per Atleti**
+   - Ora restituisce `trial_end_date` da collezione athlete
+   - Restituisce `date_of_birth` da collezione athlete se mancante in user
+   - Restituisce `privacy_accepted` da athlete se non presente in user
+   - **File**: `/app/backend/server.py` linee 1348-1383
+
+3. **Frontend - Flusso Fine Prova Atleta Adulto**
+   - Componente `TrialEndModal` già esistente collegato al profilo atleta
+   - Modal con due scelte: "Voglio Restare" (privacy) o "Non Voglio Continuare" (cancellazione dati)
+   - Al click "Accetta": alert certificato medico → firma privacy
+   - Al click "Elimina": chiamata DELETE endpoint → logout
+   - **File**: `/app/frontend/app/athlete/profile.tsx`
+
+4. **Frontend - Correzione Errori Build**
+   - Aggiunta variabile di stato `isAdult` mancante
+   - Corretti riferimenti a variabili non definite (`profile` → `profileData`)
+   - **File**: `/app/frontend/app/athlete/profile.tsx`
+
+5. **Frontend - Miglioramento Privacy Sign per Atleti**
+   - Firma privacy ora usa endpoint `/documents/sign` per generare PDF
+   - PDF firmato + email + archivio (come per Coach/Dirigente/Collaboratore)
+   - **File**: `/app/frontend/app/athlete/profile.tsx`
+
+### Test Results ✅
+- `/app/test_reports/iteration_16.json` - 11/11 test passati (backend)
+- GDPR DELETE endpoint: Verificato corretto funzionamento
+- /auth/me: Restituisce trial_end_date e date_of_birth per atleti
+
+### Credenziali Test
+- **Atleta Adulto Test**: `adult.athlete@test.com` / `Test1234`
+- **Admin**: `test.admin@test.com` / `Test1234`
+- **Codice Invito**: `BUZHB0WT`
+
+### Note
+- Il flusso privacy per Staff (Coach, Dirigente, Collaboratore) era già implementato correttamente
+- Il modal TrialEndModal si attiva solo quando `trial_end_date` è scaduta e `privacy_accepted` è false
+
+---
+
+## PROSSIMI TASK AGGIORNATI
+
+### P1 - Priorità Alta
+1. **Flusso Fine Prova per Genitori** (Parent di minori)
+   - Applicare stessa logica del flusso atleti adulti
+   - Trigger al termine dei 7 giorni di prova dell'atleta
+
+### P2 - Medio termine  
+- Stabilizzare modulo "PRO"
+- Integrazione Stripe per piani premium
+- Logica Freemium con upgrade prompts
+
+### P3 - Backlog
+- Refactoring `server.py` in struttura modulare (routers, services, models)
+- Fix @expo/vector-icons rendering web
+
+---
+
+## Last Updated
+2026-02-24: Implementato flusso GDPR per atleti adulti con cancellazione dati
