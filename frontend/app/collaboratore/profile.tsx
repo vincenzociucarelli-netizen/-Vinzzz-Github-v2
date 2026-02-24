@@ -1034,13 +1034,20 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           </View>
           
           {profileData.monthly_compensation > 0 && !profileData.compensation_accepted && (
-            <TouchableOpacity
-              style={styles.acceptButton}
-              onPress={handleAcceptCompensation}
-            >
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
-              <Text style={styles.acceptButtonText}>Accetta Compenso</Text>
-            </TouchableOpacity>
+            <View style={{ marginBottom: 12 }}>
+              <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: '#FF9500' }}>
+                <Text style={{ color: '#856404', fontSize: 13, fontWeight: '500' }}>
+                  ⚠️ Il tuo compenso mensile richiede accettazione. Clicca il pulsante qui sotto per confermare.
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.acceptButton}
+                onPress={handleAcceptCompensation}
+              >
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Text style={styles.acceptButtonText}>Accetta Compenso € {profileData.monthly_compensation.toFixed(2)}</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {profileData.compensation_accepted && (
