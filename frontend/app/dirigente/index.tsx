@@ -529,6 +529,19 @@ const styles = StyleSheet.create({
   teamCardSelected: {
     backgroundColor: '#8E44AD',
   },
+  inlineAthletesContainer: {
+    backgroundColor: '#F8F4FC',
+    marginTop: -8,
+    marginBottom: 10,
+    marginLeft: 20,
+    marginRight: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#8E44AD',
+  },
   teamIcon: {
     width: 44,
     height: 44,
