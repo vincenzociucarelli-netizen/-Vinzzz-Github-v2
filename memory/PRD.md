@@ -587,3 +587,37 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 
 ## Last Updated
 2026-02-24: Implementato flusso GDPR per atleti adulti con cancellazione dati
+
+---
+
+## Session 2026-02-24 - Bug Fix Coach Registration & Scanner
+
+### Bug Risolti ✅
+
+1. **Bug A - Documento Duplicato €5.000**
+   - **Problema**: Alla registrazione coach, quando si supera la soglia €5.000, venivano creati 2 documenti: uno con mese (es. "Ottobre 2025") e uno senza (solo "2025")
+   - **Causa**: Codice duplicato nel backend che generava il documento due volte
+   - **Soluzione**: Rimosso il blocco di codice duplicato (linee 7494-7544) che generava il secondo documento
+   - **File**: `/app/backend/server.py`
+
+2. **Bug B.1 - Mancava Freccia Ritorno Scanner**
+   - **Problema**: Nella schermata Scanner Presenze (sia pagina iniziale che con camera aperta) mancava la freccia per tornare indietro
+   - **Soluzione**: Aggiunto pulsante con icona `arrow-back` nell'header che torna alla tab "Squadre"
+   - **File**: `/app/frontend/app/coach/index.tsx`
+
+3. **Bug B.2 - Pulsanti Sovrapposti con Camera Aperta**
+   - **Problema**: Quando la camera è aperta, il pulsante verde "Start Camera" della libreria html5-qrcode si sovrappone al pulsante "Chiudi Scanner"
+   - **Soluzione**: Aggiunto CSS con padding-bottom e margin-bottom per separare gli elementi
+   - **File**: `/app/frontend/app/coach/index.tsx`
+
+4. **Bug B.3 - Istruzioni Permesso Fotocamera Migliorati**
+   - **Problema**: Il suggerimento per memorizzare il permesso fotocamera era troppo generico
+   - **Soluzione**: Aggiunto box dettagliato con due metodi:
+     - Metodo 1: Dalle impostazioni del telefono (Impostazioni → App → Chrome → Fotocamera → Consenti sempre)
+     - Metodo 2: Dalle impostazioni del browser
+   - **File**: `/app/frontend/app/coach/index.tsx`
+
+### Test Risultati
+- Backend riavviato correttamente
+- Hot reload frontend attivo
+
