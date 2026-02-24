@@ -2700,7 +2700,12 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
     
     # Compensation fields
     if "monthly_compensation" in data:
-        update_data["monthly_compensation"] = data["monthly_compensation"]
+        new_compensation = data["monthly_compensation"]
+        old_compensation = user.get("monthly_compensation", 0)
+        update_data["monthly_compensation"] = new_compensation
+        # Reset compensation_accepted if the amount changed
+        if new_compensation != old_compensation:
+            update_data["compensation_accepted"] = False
     
     if "other_annual_compensation" in data:
         update_data["other_annual_compensation"] = data["other_annual_compensation"]
