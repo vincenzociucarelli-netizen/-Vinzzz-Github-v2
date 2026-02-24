@@ -755,7 +755,7 @@ export default function ImportCalendarScreen() {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <View style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color="#fff" />
+            <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Importa Calendario Federazione</Text>
