@@ -450,6 +450,70 @@ export default function AdminCollaboratoreDetail() {
                 maxLength={10}
               />
               
+              {/* Assegnazione Squadre */}
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>🏐 Squadre Assegnate</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                {teams.map((team) => (
+                  <TouchableOpacity
+                    key={team.id}
+                    onPress={() => {
+                      if (selectedTeamIds.includes(team.id)) {
+                        setSelectedTeamIds(selectedTeamIds.filter(t => t !== team.id));
+                      } else {
+                        setSelectedTeamIds([...selectedTeamIds, team.id]);
+                      }
+                    }}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      borderWidth: 2,
+                      borderColor: selectedTeamIds.includes(team.id) ? '#007AFF' : '#ddd',
+                      backgroundColor: selectedTeamIds.includes(team.id) ? '#E3F2FD' : '#f9f9f9',
+                    }}
+                  >
+                    <Text style={{ color: selectedTeamIds.includes(team.id) ? '#007AFF' : '#666', fontWeight: selectedTeamIds.includes(team.id) ? '600' : '400' }}>
+                      {team.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                {teams.length === 0 && (
+                  <Text style={{ color: '#999', fontStyle: 'italic' }}>Nessuna squadra disponibile</Text>
+                )}
+              </View>
+
+              {/* Assegnazione Palestre */}
+              <Text style={[styles.inputLabel, { marginTop: 8 }]}>🏟️ Palestre Assegnate</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {availableVenues.map((venue, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => {
+                      if (selectedVenueNames.includes(venue.name)) {
+                        setSelectedVenueNames(selectedVenueNames.filter(v => v !== venue.name));
+                      } else {
+                        setSelectedVenueNames([...selectedVenueNames, venue.name]);
+                      }
+                    }}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      borderWidth: 2,
+                      borderColor: selectedVenueNames.includes(venue.name) ? '#FF9500' : '#ddd',
+                      backgroundColor: selectedVenueNames.includes(venue.name) ? '#FFF3E0' : '#f9f9f9',
+                    }}
+                  >
+                    <Text style={{ color: selectedVenueNames.includes(venue.name) ? '#E65100' : '#666', fontWeight: selectedVenueNames.includes(venue.name) ? '600' : '400' }}>
+                      {venue.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                {availableVenues.length === 0 && (
+                  <Text style={{ color: '#999', fontStyle: 'italic' }}>Nessuna palestra configurata nelle impostazioni</Text>
+                )}
+              </View>
+              
               <TouchableOpacity
                 style={[styles.saveButton, saving && styles.saveButtonDisabled]}
                 onPress={handleSaveCompensation}
