@@ -851,12 +851,27 @@ export default function TeamDetail() {
                       </View>
                       <View style={styles.fieldHalf}>
                         <Text style={styles.miniLabel}>Palestra</Text>
-                        <TextInput
-                          style={styles.miniInput}
-                          value={session.venue}
-                          onChangeText={(v) => updateTrainingSession(index, 'venue', v)}
-                          placeholder="Palestra"
-                        />
+                        {availableVenues.length > 0 ? (
+                          <View style={[styles.miniInput, { padding: 0, justifyContent: 'center' }]}>
+                            <Picker
+                              selectedValue={session.venue}
+                              onValueChange={(v) => updateTrainingSession(index, 'venue', v)}
+                              style={{ height: 36 }}
+                            >
+                              <Picker.Item label="-- Seleziona --" value="" />
+                              {availableVenues.map((venue, idx) => (
+                                <Picker.Item key={idx} label={venue.name} value={venue.name} />
+                              ))}
+                            </Picker>
+                          </View>
+                        ) : (
+                          <TextInput
+                            style={styles.miniInput}
+                            value={session.venue}
+                            onChangeText={(v) => updateTrainingSession(index, 'venue', v)}
+                            placeholder="Palestra"
+                          />
+                        )}
                       </View>
                     </View>
                   </View>
