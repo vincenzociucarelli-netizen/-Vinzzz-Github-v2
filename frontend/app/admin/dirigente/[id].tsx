@@ -576,6 +576,24 @@ export default function AdminDirigenteDetail() {
               <Text style={styles.acceptedText}>Accettato dal dirigente</Text>
             </View>
           )}
+          
+          {/* Totale già percepito (quietanze firmate) */}
+          {signedReceipts.filter((r: any) => r.receipt_signed).length > 0 && (
+            <View style={{ marginTop: 12, padding: 12, backgroundColor: '#E8F5E9', borderRadius: 8 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ color: '#2E7D32', fontWeight: '500' }}>💰 Già Percepito:</Text>
+                <Text style={{ fontWeight: 'bold', color: '#2E7D32', fontSize: 16 }}>
+                  € {signedReceipts
+                    .filter((r: any) => r.receipt_signed)
+                    .reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0)
+                    .toFixed(2)}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Storico Quietanze Firmate - Dati reali dal database */}
