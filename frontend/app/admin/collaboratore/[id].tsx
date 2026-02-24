@@ -298,11 +298,11 @@ export default function AdminCollaboratoreDetail() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 20, padding: 8 }]}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Dettaglio Collaboratore</Text>
-        <TouchableOpacity onPress={() => setResetPasswordVisible(true)}>
+        <TouchableOpacity onPress={() => setResetPasswordVisible(true)} style={{ backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 20, padding: 8 }}>
           <Ionicons name="key" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
