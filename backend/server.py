@@ -7491,57 +7491,8 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         except Exception as e:
             logging.error(f"Error sending threshold email to admin: {e}")
     
-    # Check if this is the FIRST time exceeding €5.000 threshold this year
-    # Generate and send "COMUNICAZIONE DI SUPERAMENTO DELLA SOGLIA" document
-    if first_time_exceeded_5000:
-        # Check if there are previous records this year that already exceeded €5.000
-        previous_exceeded = await db.coach_compensations.find_one({
-            "coach_id": coach_id,
-            "year": request.year,
-            "month": {"$lt": request.month},
-            "exceeded_5000": True
-        })
-        
-        if not previous_exceeded:
-            # This is the FIRST month exceeding €5.000 - generate the threshold document
-            try:
-                # Use new formatted PDF function
-                threshold_pdf_bytes = generate_threshold_5k_pdf(
-                    society_name=society_name,
-                    collaborator_name=coach.get('full_name', ''),
-                    collaborator_fiscal_code=coach.get('fiscal_code', ''),
-                    year=request.year,
-                    signature_base64=request.signature_base64,
-                    society_city=society_city
-                )
-                
-                # Save threshold document
-                threshold_doc_id = str(uuid.uuid4())
-                threshold_filename = f"comunicazione_superamento_5000_{coach_id}_{request.year}_{threshold_doc_id}.pdf"
-                threshold_path = os.path.join(SIGNED_DOCS_DIR, threshold_filename)
-                with open(threshold_path, 'wb') as f:
-                    f.write(threshold_pdf_bytes)
-                
-                # Store threshold document record
-                threshold_doc_record = {
-                    "id": threshold_doc_id,
-                    "document_type": "threshold_5000_communication",
-                    "document_title": f"Comunicazione Superamento €5.000 - {request.year}",
-                    "coach_id": coach_id,
-                    "coach_name": coach.get('full_name', ''),
-                    "year": request.year,
-                    "month": request.month,
-                    "total_at_threshold": new_total,
-                    "pdf_path": threshold_path,
-                    "pdf_filename": threshold_filename,
-                    "signed_at": now
-                }
-                await db.signed_documents.insert_one(threshold_doc_record)
-                
-                # NOTE: Email invio gestito sopra insieme alla quietanza
-                
-            except Exception as e:
-                logging.error(f"Error generating threshold €5.000 document: {e}")
+    # NOTE: Threshold €5.000 document is already generated and saved above in the main PDF generation block
+    # This section was removed to avoid duplicate document creation
     
     # Create admin notifications for threshold crossings
     if first_time_exceeded_5000 and not first_time_exceeded_15000:
