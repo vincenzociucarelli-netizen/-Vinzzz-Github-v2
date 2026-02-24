@@ -174,6 +174,7 @@ export default function SettingsScreen() {
         athlete_roles: athleteRoles,
         athlete_characteristics: athleteCharacteristics,
         dirigente_qualifications: dirigenteQualifications,
+        venues: venues,
         // Fiscal receipt data
         ragione_sociale: ragioneSociale,
         sport_praticato: sportPraticato,
