@@ -998,8 +998,6 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               <Text style={styles.fieldValue}>{profileData.fiscal_code || '-'}</Text>
             )}
           </View>
-
-          {renderField('N° Tesserino Allenatore', profileData.collaboratore_license_number, 'collaboratore_license_number')}
         </View>
 
         {/* Compensation Info */}
