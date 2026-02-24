@@ -263,6 +263,24 @@ export default function Register() {
         <Ionicons name="chevron-forward" size={24} color="#ccc" />
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={styles.roleCard}
+        onPress={() => {
+          setRole('collaboratore');
+          setStep('form'); // Collaboratore goes directly to form
+        }}
+        data-testid="role-collaboratore-btn"
+      >
+        <View style={[styles.roleIcon, { backgroundColor: '#FFF3E0' }]}>
+          <Ionicons name="hand-left" size={32} color="#FF5722" />
+        </View>
+        <View style={styles.roleCardContent}>
+          <Text style={styles.roleCardTitle}>Collaboratore</Text>
+          <Text style={styles.roleCardDesc}>Collaboratore sportivo della società</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={24} color="#ccc" />
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.loginLink} onPress={() => router.push('/login')}>
         <Text style={styles.loginLinkText}>
           Hai già un account? <Text style={styles.loginLinkBold}>Accedi</Text>
