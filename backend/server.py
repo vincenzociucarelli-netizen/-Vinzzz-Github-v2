@@ -1894,6 +1894,7 @@ class SocietySettingsUpdate(BaseModel):
     athlete_roles: Optional[List[str]] = None  # Custom roles for athletes
     athlete_characteristics: Optional[List[str]] = None  # Custom characteristics for athletes
     dirigente_qualifications: Optional[List[str]] = None  # Custom qualifications for dirigenti
+    venues: Optional[List[dict]] = None  # Campi da gioco / Palestre [{name: str, address: str, city: str}]
     # Fiscal receipt fields
     ragione_sociale: Optional[str] = None  # Company legal name
     sport_praticato: Optional[str] = None  # Sport type (es: Pallavolo, Calcio)
