@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
 
 export default function CollaboratoreDashboard() {
@@ -26,22 +27,27 @@ export default function CollaboratoreDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const userId = await AsyncStorage.getItem('userId');
-      if (!userId) {
-        router.replace('/login');
-        return;
-      }
-
-      const [profileRes, compRes] = await Promise.all([
-        api.get(`/collaboratore/${userId}`),
-        api.get(`/collaboratore/${userId}/compensation/annual/${new Date().getFullYear()}`),
-      ]);
-
+      
+      // Get profile from /auth/me
+      const profileRes = await api.get('/auth/me');
       setProfile(profileRes.data);
-      setStats(compRes.data);
+      
+      // Try to get compensation stats
+      try {
+        const compRes = await api.get(`/collaboratore/${profileRes.data.id}/compensation/annual/${new Date().getFullYear()}`);
+        setStats(compRes.data);
+      } catch (e) {
+        console.log('No compensation data yet');
+        setStats(null);
+      }
     } catch (error) {
       console.error('Error loading collaboratore data:', error);
-      Alert.alert('Errore', 'Impossibile caricare i dati');
+      if (Platform.OS === 'web') {
+        window.alert('Errore: Impossibile caricare i dati');
+      } else {
+        Alert.alert('Errore', 'Impossibile caricare i dati');
+      }
+      router.replace('/login');
     } finally {
       setLoading(false);
     }
