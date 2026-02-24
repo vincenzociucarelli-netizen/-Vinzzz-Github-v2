@@ -103,7 +103,7 @@ export default function CoachHistory() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.replace('/coach')}>
-          <View style={{ backgroundColor: "rgba(0,0,0,0.3)", borderRadius: 20, padding: 6 }}><Ionicons name="chevron-back" size={24} color="#fff" /></View>
+          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#fff" /></View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Presenze di Oggi</Text>
         <TouchableOpacity onPress={handleLogout}>
