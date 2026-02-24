@@ -708,3 +708,58 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 - Refactoring `server.py` in struttura modulare
 
 ---
+
+---
+
+## Session 2026-02-24 (Sera) - Completamento Collaboratori + Riorganizzazione
+
+### Bug Critici Risolti ✅
+1. **Firma Quietanza non funzionante** - Aggiunta costante `MONTH_NAMES` mancante + fix funzione PDF
+2. **Palestre non memorizzate** - Aggiunto `assigned_venues` all'endpoint GET `/users/{id}`
+3. **Totale quota squadre non aggiornato** - Calcolo dinamico dalla somma delle rate
+
+### Nuove Funzionalità ✅
+1. **Sezione "I Miei Documenti"** nel profilo collaboratore
+2. **Layout pulsante "Il Mio Profilo"** su due righe
+3. **Password visibile** nel reset collaboratore
+4. **Logica ri-accettazione compenso** quando l'importo cambia (per tutti: coach, dirigenti, collaboratori)
+5. **Box "Già Percepito"** nelle pagine admin (somma quietanze firmate)
+6. **Campi da Gioco / Palestre** nelle impostazioni società
+7. **Dropdown palestre** nella pagina squadra (invece di testo libero)
+8. **Assegnazione Squadre + Palestre** ai collaboratori
+9. **Sezione "Quietanze Firmate"** in evidenza (verde)
+
+### Miglioramenti UX ✅
+1. **Province a 2 caratteri** con conversione automatica maiuscolo
+2. **Provincia di nascita** aggiunta al Dirigente
+3. **Frecce di ritorno** più visibili (sfondo bianco + icona blu)
+
+### Riorganizzazione Impostazioni ✅
+La pagina Impostazioni è ora divisa in due sotto-pagine:
+- `/admin/settings` - Pagina principale con 2 pulsanti
+- `/admin/settings/society` - Dati società, logo, fiscali, timbro
+- `/admin/settings/other` - Ruoli, caratteristiche, qualifiche, palestre
+
+### File Creati
+- `/app/frontend/app/admin/settings/index.tsx`
+- `/app/frontend/app/admin/settings/society.tsx`
+- `/app/frontend/app/admin/settings/other.tsx`
+
+### Test Effettuati ✅
+- Test atleta maggiorenne: `/app/test_reports/iteration_18.json` - PASSED
+- Test collaboratori: `/app/test_reports/iteration_17.json` - PASSED
+
+---
+
+## Da Testare Domani
+- [ ] Flusso completo atleta maggiorenne (registrazione → approvazione → profilo → privacy)
+- [ ] Flusso genitore + atleta minorenne
+
+## Prossimi Passi (Pubblicazione Store)
+1. Account Apple Developer ($99) + Google Play ($25)
+2. Privacy Policy su URL pubblico
+3. Screenshot app
+4. Build production con Expo EAS
+5. Submit agli store
+
+---
