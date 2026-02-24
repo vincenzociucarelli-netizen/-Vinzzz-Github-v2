@@ -194,11 +194,24 @@ export default function AdminCollaboratoreDetail() {
   const handleSaveCompensation = async () => {
     setSaving(true);
     try {
+      // Convert dd/mm/yyyy to ISO format for backend
+      let isoStartDate = null;
+      let isoEndDate = null;
+      
+      if (contractStartDate && contractStartDate.length === 10) {
+        const [dd, mm, yyyy] = contractStartDate.split('/');
+        isoStartDate = `${yyyy}-${mm}-${dd}`;
+      }
+      if (contractEndDate && contractEndDate.length === 10) {
+        const [dd, mm, yyyy] = contractEndDate.split('/');
+        isoEndDate = `${yyyy}-${mm}-${dd}`;
+      }
+      
       await api.patch(`/users/${id}`, {
         monthly_compensation: parseFloat(monthlyCompensation) || 0,
         other_annual_compensation: parseFloat(otherAnnualCompensation) || 0,
-        contract_start_date: contractStartDate || null,
-        contract_end_date: contractEndDate || null,
+        contract_start_date: isoStartDate,
+        contract_end_date: isoEndDate,
       });
       showAlert('Successo', 'Compenso aggiornato');
       setEditing(false);
