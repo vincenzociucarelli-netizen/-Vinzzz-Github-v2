@@ -248,24 +248,53 @@ export default function AthleteProfile() {
   // Handle privacy signature for adult athletes
   const handlePrivacySign = async (signatureBase64: string) => {
     try {
-      // Save privacy acceptance with signature to the athlete record
-      const athleteId = profileData.athlete_id || user?.athlete_id || user?.id;
-      await api.put(`/athletes/${athleteId}`, {
+      // Generate privacy document with signature using /documents/sign endpoint
+      const privacyText = `
+INFORMATIVA SULLA PRIVACY E CONSENSO AL TRATTAMENTO DEI DATI PERSONALI
+
+Il/La sottoscritto/a ${profileData.full_name || `${profileData.last_name} ${profileData.first_name}`}, nato/a a ${profileData.place_of_birth || ''} il ${profileData.date_of_birth || ''}, residente in ${profileData.address || ''}, ${profileData.city || ''} (${profileData.province || ''}), C.F. ${profileData.fiscal_code || ''},
+
+DICHIARA
+
+di aver letto e compreso l'informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) relativa al trattamento dei propri dati personali da parte di ${societyName} e
+
+ACCONSENTE
+
+al trattamento dei propri dati personali per le finalità connesse alla propria attività di Atleta presso la società sportiva, inclusa la comunicazione a terzi per finalità strettamente connesse all'attività sportiva.
+      `.trim();
+
+      await api.post('/documents/sign', {
+        document_type: 'privacy_consent',
+        document_title: 'Consenso Privacy Atleta',
+        document_text: privacyText,
+        signer_name: profileData.full_name || `${profileData.last_name} ${profileData.first_name}`,
+        signer_email: user?.email || profileData.email || '',
+        signature_base64: signatureBase64,
+        related_entity_id: athleteId,
+        additional_data: {
+          role: 'athlete',
+          fiscal_code: profileData.fiscal_code
+        }
+      });
+      
+      // Also update privacy_accepted flag in athlete profile
+      await api.patch('/auth/me', {
         privacy_accepted: true,
       });
       
       // Update local state
       setPrivacyAccepted(true);
       setShowPrivacyModal(false);
+      setShowTrialEndModal(false);
       
       Alert.alert(
         'Privacy Confermata',
-        'Grazie! La tua conferma privacy è stata registrata con successo.',
+        'La tua conferma privacy è stata registrata. Una copia è stata inviata alla tua email e salvata nell\'archivio.',
         [{ text: 'OK' }]
       );
       
       // Reload profile to get updated data
-      loadProfile();
+      await loadProfile();
     } catch (error: any) {
       console.error('Error signing privacy:', error);
       Alert.alert(
