@@ -225,13 +225,15 @@ export default function AdminCollaboratoreDetail() {
         other_annual_compensation: parseFloat(otherAnnualCompensation) || 0,
         contract_start_date: isoStartDate,
         contract_end_date: isoEndDate,
+        assigned_teams: selectedTeamIds,
+        assigned_venues: selectedVenueNames,
       });
       
       // Show different message if compensation changed
       if (newCompensation !== oldCompensation && newCompensation > 0) {
         showAlert('Compenso Aggiornato', `Il compenso è stato modificato da €${oldCompensation.toFixed(2)} a €${newCompensation.toFixed(2)}.\n\nIl collaboratore dovrà ri-accettare il nuovo importo.`);
       } else {
-        showAlert('Successo', 'Compenso aggiornato');
+        showAlert('Successo', 'Dati aggiornati');
       }
       setEditing(false);
       loadData();
