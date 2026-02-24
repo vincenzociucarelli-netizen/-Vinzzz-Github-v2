@@ -347,7 +347,7 @@ export default function CollaboratoreesScreen() {
               style={styles.collaboratorePhoto}
             />
           ) : (
-            <Text style={{ fontSize: 22 }}>🏋️</Text>
+            <Text style={{ fontSize: 22 }}>👷</Text>
           )}
         </View>
         <View style={styles.userInfo}>
