@@ -621,3 +621,29 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 - Backend riavviato correttamente
 - Hot reload frontend attivo
 
+
+---
+
+## LINEE GUIDA UI/UX DA RICORDARE
+
+### 1. Date - Formato Italiano
+- **SEMPRE** usare formato `gg/mm/aaaa` (es. 01/09/2025)
+- **MAI** usare formato ISO americano `yyyy-mm-dd`
+- Quando si carica una data dal backend (ISO), convertirla subito in italiano
+- Quando si salva, convertire da italiano a ISO per il backend
+- **EVITARE** `new Date()` per il parsing - causa problemi di timezone. Usare split diretto della stringa.
+
+### 2. Campi Valuta (€)
+- Quando l'utente clicca su un campo con valore "0", **azzerare il campo** per facilitare l'input
+- Usare `selectTextOnFocus={true}` per selezionare tutto il testo
+- Usare `onFocus` per cancellare se valore è 0:
+  ```jsx
+  onFocus={() => { if (value === '0') setValue(''); }}
+  ```
+
+### 3. Placeholder
+- Date: `gg/mm/aaaa`
+- Valute: `0.00`
+
+---
+
