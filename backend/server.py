@@ -1357,7 +1357,7 @@ async def get_me(current_user = Depends(get_current_user)):
     user.pop("password_hash", None)
     user.pop("hashed_password", None)
     
-    # For athletes, also get photo from athletes collection (saved by transform-photo endpoint)
+    # For athletes, also get data from athletes collection
     if user.get("role") == "athlete" and user.get("athlete_id"):
         athlete = await db.athletes.find_one({"id": user["athlete_id"]})
         if athlete:
@@ -1366,6 +1366,17 @@ async def get_me(current_user = Depends(get_current_user)):
                 user["athlete_photo"] = athlete["athlete_photo"]
             if athlete.get("athlete_photo_artistic"):
                 user["athlete_photo_artistic"] = athlete["athlete_photo_artistic"]
+            # Include trial_end_date for GDPR compliance flow
+            if athlete.get("trial_end_date"):
+                trial_date = athlete["trial_end_date"]
+                user["trial_end_date"] = trial_date.isoformat() if hasattr(trial_date, 'isoformat') else trial_date
+            # Include date_of_birth if not in user record
+            if not user.get("date_of_birth") and athlete.get("date_of_birth"):
+                dob = athlete["date_of_birth"]
+                user["date_of_birth"] = dob.isoformat() if hasattr(dob, 'isoformat') else dob
+            # Include privacy_accepted from athlete record if not in user
+            if user.get("privacy_accepted") is None and athlete.get("privacy_accepted") is not None:
+                user["privacy_accepted"] = athlete["privacy_accepted"]
     
     return user
 
