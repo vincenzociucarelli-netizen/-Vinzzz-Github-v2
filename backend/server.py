@@ -165,6 +165,7 @@ class User(BaseModel):
     full_name: str
     status: str = UserStatus.PENDING  # pending, approved, rejected, suspended
     assigned_teams: List[str] = []  # For coaches and dirigenti - team IDs they can manage
+    assigned_venues: List[str] = []  # For collaborators - venue names they work at
     created_at: datetime = Field(default_factory=datetime.utcnow)
     approved_at: Optional[datetime] = None
     approved_by: Optional[str] = None  # Admin ID who approved
