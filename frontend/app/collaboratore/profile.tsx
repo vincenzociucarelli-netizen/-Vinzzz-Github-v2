@@ -99,6 +99,10 @@ export default function CollaboratoreProfile() {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
+  
+  // My Documents state
+  const [myDocuments, setMyDocuments] = useState<any[]>([]);
+  const [showAllDocumentsModal, setShowAllDocumentsModal] = useState(false);
 
   const loadProfile = async () => {
     try {
