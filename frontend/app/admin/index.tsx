@@ -982,6 +982,19 @@ const styles = StyleSheet.create({
   headerBtn: {
     padding: 4,
   },
+  headerIconBtn: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
+  },
   dirigenteSwitchBtn: {
     backgroundColor: '#fff',
     borderRadius: 14,
