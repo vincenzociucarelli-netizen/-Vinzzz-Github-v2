@@ -280,41 +280,51 @@ export default function CoachScreen() {
           const style = document.createElement('style');
           style.textContent = `
             #web-qr-scanner {
-              padding-bottom: 80px !important;
+              padding-bottom: 20px !important;
             }
             #web-qr-scanner button {
-              margin: 15px 10px !important;
-              padding: 15px 25px !important;
-              font-size: 16px !important;
-              min-height: 50px !important;
+              margin: 8px 5px !important;
+              padding: 12px 20px !important;
+              font-size: 14px !important;
+              min-height: 44px !important;
             }
             #web-qr-scanner select {
-              margin: 15px 10px !important;
-              padding: 12px !important;
-              font-size: 16px !important;
+              margin: 10px 5px !important;
+              padding: 10px !important;
+              font-size: 14px !important;
             }
             #web-qr-scanner #html5-qrcode-button-camera-permission {
               background-color: #007AFF !important;
               color: white !important;
               border: none !important;
               border-radius: 10px !important;
-              margin-bottom: 25px !important;
+              margin-bottom: 15px !important;
             }
             #web-qr-scanner #html5-qrcode-anchor-scan-type-change {
-              margin-top: 20px !important;
-              font-size: 14px !important;
+              margin-top: 15px !important;
+              font-size: 13px !important;
             }
-            #web-qr-scanner #html5-qrcode-button-camera-start,
-            #web-qr-scanner #html5-qrcode-button-camera-stop {
+            #web-qr-scanner #html5-qrcode-button-camera-start {
               background-color: #34C759 !important;
               color: white !important;
               border: none !important;
               border-radius: 10px !important;
-              margin-bottom: 20px !important;
             }
-            /* Hide the camera-stop button when camera is active to avoid confusion */
+            /* Hide the library's Stop Scanning button - we use our own Chiudi Scanner button */
+            #web-qr-scanner #html5-qrcode-button-camera-stop {
+              display: none !important;
+            }
             #web-qr-scanner video {
-              margin-bottom: 20px !important;
+              margin-bottom: 10px !important;
+              max-height: 300px !important;
+            }
+            /* Torch button styling */
+            #web-qr-scanner button[id*="torch"],
+            #web-qr-scanner button:contains("Torch") {
+              background-color: #FF9500 !important;
+              color: white !important;
+              border: none !important;
+              border-radius: 10px !important;
             }
           `;
           document.head.appendChild(style);
