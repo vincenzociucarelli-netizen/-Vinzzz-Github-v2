@@ -371,6 +371,16 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* ========== SEZIONE 1: SOCIETÀ ========== */}
+        <View style={{ backgroundColor: '#E3F2FD', padding: 16, marginHorizontal: -16, marginTop: 20 }}>
+          <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1565C0', textAlign: 'center' }}>
+            🏢 SOCIETÀ
+          </Text>
+          <Text style={{ fontSize: 13, color: '#1976D2', textAlign: 'center', marginTop: 4 }}>
+            Dati anagrafici e fiscali
+          </Text>
+        </View>
+
         {/* Immagine Sport */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🏐 Immagine Sport</Text>
