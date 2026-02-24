@@ -495,32 +495,39 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
     setEditData({ ...editData, [key]: formatted });
   };
 
-  const renderField = (label: string, value: string, key: string, editable: boolean = true) => (
-    <View style={styles.fieldContainer}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      {editing && editable ? (
-        key === 'date_of_birth' ? (
-          <TextInput
-            style={styles.input}
-            value={editData[key as keyof typeof editData]?.toString() || ''}
-            onChangeText={(text) => formatDateInput(text, key)}
-            placeholder="GG/MM/AAAA"
-            keyboardType="number-pad"
-            maxLength={10}
-          />
+  const renderField = (label: string, value: string, key: string, editable: boolean = true) => {
+    const isDateField = key === 'date_of_birth';
+    const isProvinceField = key.toLowerCase().includes('province') || key.toLowerCase().includes('provincia');
+    
+    return (
+      <View style={styles.fieldContainer}>
+        <Text style={styles.fieldLabel}>{label}{isProvinceField && editing ? ' (2 lettere)' : ''}</Text>
+        {editing && editable ? (
+          isDateField ? (
+            <TextInput
+              style={styles.input}
+              value={editData[key as keyof typeof editData]?.toString() || ''}
+              onChangeText={(text) => formatDateInput(text, key)}
+              placeholder="GG/MM/AAAA"
+              keyboardType="number-pad"
+              maxLength={10}
+            />
+          ) : (
+            <TextInput
+              style={styles.input}
+              value={editData[key as keyof typeof editData]?.toString() || ''}
+              onChangeText={(text) => setEditData({ ...editData, [key]: text.toUpperCase() })}
+              autoCapitalize="characters"
+              maxLength={isProvinceField ? 2 : undefined}
+              placeholder={isProvinceField ? 'es. PG' : undefined}
+            />
+          )
         ) : (
-          <TextInput
-            style={styles.input}
-            value={editData[key as keyof typeof editData]?.toString() || ''}
-            onChangeText={(text) => setEditData({ ...editData, [key]: text.toUpperCase() })}
-            autoCapitalize="characters"
-          />
-        )
-      ) : (
-        <Text style={styles.fieldValue}>{value || '-'}</Text>
-      )}
-    </View>
-  );
+          <Text style={styles.fieldValue}>{value || '-'}</Text>
+        )}
+      </View>
+    );
+  };
 
   if (loading) {
     return (
