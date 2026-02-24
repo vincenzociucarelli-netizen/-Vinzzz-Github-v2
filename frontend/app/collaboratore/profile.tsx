@@ -1502,6 +1502,122 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         title={selectedPhotoTitle}
         onClose={() => setPhotoViewerVisible(false)}
       />
+
+      {/* All Documents Modal */}
+      <Modal
+        visible={showAllDocumentsModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAllDocumentsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>📁 Tutti i Miei Documenti</Text>
+              <TouchableOpacity onPress={() => setShowAllDocumentsModal(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={{ flex: 1, padding: 16 }}>
+              {myDocuments.map((doc: any, index: number) => (
+                <View key={doc.id || index} style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingVertical: 12,
+                  borderBottomWidth: index < myDocuments.length - 1 ? 1 : 0,
+                  borderBottomColor: '#f0f0f0',
+                }}>
+                  <Ionicons 
+                    name={doc.document_type === 'privacy_consent' ? 'shield-checkmark' : 
+                          doc.document_type?.includes('compensation') ? 'receipt' :
+                          doc.document_type?.includes('5000') ? 'alert-circle' :
+                          doc.document_type?.includes('15000') ? 'warning' : 'document-text'} 
+                    size={24} 
+                    color={doc.document_type === 'privacy_consent' ? '#4CAF50' : 
+                           doc.document_type?.includes('compensation') ? '#007AFF' :
+                           doc.document_type?.includes('5000') ? '#FF9800' :
+                           doc.document_type?.includes('15000') ? '#F44336' : '#007AFF'} 
+                  />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: '#333' }}>
+                      {doc.document_title}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+                      {doc.signed_at ? new Date(doc.signed_at).toLocaleDateString('it-IT') : ''}
+                    </Text>
+                  </View>
+                  {doc.pdf_filename && (
+                    <TouchableOpacity
+                      onPress={async () => {
+                        try {
+                          const token = await AsyncStorage.getItem('token');
+                          const downloadUrl = `${API_URL}/api/documents/download/${doc.id}`;
+                          
+                          if (Platform.OS === 'web') {
+                            const response = await fetch(downloadUrl, {
+                              headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            
+                            if (!response.ok) {
+                              Alert.alert('Errore', 'Impossibile scaricare il documento');
+                              return;
+                            }
+                            
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = doc.pdf_filename || `documento_${doc.id}.pdf`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+                          } else {
+                            const filename = doc.pdf_filename || `documento_${doc.id}.pdf`;
+                            const fileUri = FileSystem.documentDirectory + filename;
+                            
+                            const downloadResult = await FileSystem.downloadAsync(
+                              downloadUrl,
+                              fileUri,
+                              { headers: { 'Authorization': `Bearer ${token}` } }
+                            );
+                            
+                            if (downloadResult.status !== 200) {
+                              Alert.alert('Errore', 'Impossibile scaricare il documento');
+                              return;
+                            }
+                            
+                            const isSharingAvailable = await Sharing.isAvailableAsync();
+                            if (isSharingAvailable) {
+                              await Sharing.shareAsync(downloadResult.uri, {
+                                mimeType: 'application/pdf',
+                                dialogTitle: 'Apri documento PDF'
+                              });
+                            } else {
+                              Alert.alert('Successo', `Documento salvato`);
+                            }
+                          }
+                        } catch (err) {
+                          console.error('Download error:', err);
+                          Alert.alert('Errore', 'Download non riuscito');
+                        }
+                      }}
+                      style={{ 
+                        padding: 10, 
+                        backgroundColor: '#007AFF',
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Ionicons name="download-outline" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
