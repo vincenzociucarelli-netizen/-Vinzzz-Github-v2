@@ -231,6 +231,29 @@ export default function SettingsScreen() {
     setDirigenteQualifications(dirigenteQualifications.filter(q => q !== qual));
   };
 
+  const addVenue = () => {
+    if (newVenueName.trim()) {
+      const newVenue = {
+        name: newVenueName.trim(),
+        address: newVenueAddress.trim(),
+        city: newVenueCity.trim()
+      };
+      // Check if venue with same name already exists
+      if (!venues.some(v => v.name.toLowerCase() === newVenue.name.toLowerCase())) {
+        setVenues([...venues, newVenue]);
+        setNewVenueName('');
+        setNewVenueAddress('');
+        setNewVenueCity('');
+      } else {
+        showAlert('Errore', 'Una palestra con questo nome esiste già');
+      }
+    }
+  };
+
+  const removeVenue = (venueName: string) => {
+    setVenues(venues.filter(v => v.name !== venueName));
+  };
+
   const handleSelectStampSignature = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
