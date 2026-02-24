@@ -2615,6 +2615,7 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "role": user["role"],
         "status": user.get("status", UserStatus.APPROVED),
         "assigned_teams": user.get("assigned_teams", []),
+        "assigned_venues": user.get("assigned_venues", []),
         "created_at": user.get("created_at"),
         "approved_at": user.get("approved_at"),
         # Personal data
