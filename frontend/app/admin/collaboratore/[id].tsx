@@ -728,24 +728,50 @@ export default function AdminCollaboratoreDetail() {
           </View>
         )}
 
-        {/* Signed Receipts */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>📝 Quietanze Firmate ({signedReceipts.length})</Text>
+        {/* Signed Receipts - Sezione in evidenza */}
+        <View style={[styles.card, { 
+          backgroundColor: '#E8F5E9', 
+          borderWidth: 2, 
+          borderColor: '#4CAF50',
+          shadowColor: '#4CAF50',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8
+        }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ backgroundColor: '#4CAF50', padding: 8, borderRadius: 10, marginRight: 10 }}>
+              <Ionicons name="receipt" size={24} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.cardTitle, { color: '#2E7D32', marginBottom: 0 }]}>Quietanze Firmate</Text>
+              <Text style={{ fontSize: 13, color: '#388E3C', fontWeight: '600' }}>
+                {signedReceipts.length} {signedReceipts.length === 1 ? 'quietanza' : 'quietanze'}
+              </Text>
+            </View>
+            {signedReceipts.length > 0 && (
+              <View style={{ backgroundColor: '#4CAF50', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>
+                  € {signedReceipts.reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0).toFixed(2)}
+                </Text>
+              </View>
+            )}
+          </View>
           {signedReceipts.length === 0 ? (
-            <Text style={styles.emptyText}>Nessuna quietanza firmata</Text>
+            <Text style={[styles.emptyText, { color: '#666' }]}>Nessuna quietanza firmata</Text>
           ) : (
             signedReceipts.slice(0, 6).map((receipt, index) => (
-              <View key={receipt.id || index} style={styles.receiptItem}>
-                <Ionicons name="document-text" size={20} color="#007AFF" />
-                <View style={{ marginLeft: 10, flex: 1 }}>
-                  <Text style={{ fontWeight: '500' }}>
+              <View key={receipt.id || index} style={[styles.receiptItem, { backgroundColor: '#fff', borderRadius: 8, padding: 12, marginBottom: 8 }]}>
+                <Ionicons name="document-text" size={22} color="#4CAF50" />
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Text style={{ fontWeight: '600', fontSize: 15, color: '#333' }}>
                     {receipt.month_name || `Mese ${receipt.month}`} {receipt.year}
                   </Text>
-                  <Text style={{ fontSize: 12, color: '#666' }}>
+                  <Text style={{ fontSize: 14, color: '#4CAF50', fontWeight: '500' }}>
                     € {(receipt.amount_gross || receipt.amount || 0).toFixed(2)}
                   </Text>
                 </View>
-                <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
               </View>
             ))
           )}
