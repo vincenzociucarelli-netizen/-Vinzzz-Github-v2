@@ -172,7 +172,8 @@ export default function CollaboratoreProfile() {
       setProfilePhoto(data.profile_photo || null);
       setProfilePhotoArtistic(data.profile_photo_artistic || null);
       
-      // Privacy will be shown when user clicks Save, not automatically
+      // Set privacy status from backend data
+      const isPrivacyAccepted = data.privacy_accepted === true;
       setPrivacyAccepted(isPrivacyAccepted);
       
       // Load society name
