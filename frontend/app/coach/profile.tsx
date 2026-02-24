@@ -1039,6 +1039,27 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </Text>
           </View>
           
+          {/* Prior Compensation Field */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>Compensi Pregressi (altre società nell'anno)</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              <Text style={{ fontSize: 16, marginRight: 4 }}>€</Text>
+              <TextInput
+                style={[styles.inputField, { flex: 1, paddingVertical: 8 }]}
+                value={editData.other_annual_compensation?.toString() || '0'}
+                onChangeText={(text) => {
+                  const numValue = parseFloat(text.replace(',', '.')) || 0;
+                  setEditData({...editData, other_annual_compensation: numValue});
+                }}
+                keyboardType="numeric"
+                placeholder="0.00"
+              />
+            </View>
+            <Text style={{ fontSize: 11, color: '#666', marginTop: 4, fontStyle: 'italic' }}>
+              Inserisci l'importo totale di compensi sportivi già percepiti da altre società nell'anno corrente (per il calcolo delle soglie fiscali)
+            </Text>
+          </View>
+          
           {profileData.monthly_compensation > 0 && !profileData.compensation_accepted && (
             <TouchableOpacity
               style={styles.acceptButton}
