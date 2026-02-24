@@ -35,6 +35,12 @@ export default function SettingsScreen() {
   const [dirigenteQualifications, setDirigenteQualifications] = useState<string[]>([]);
   const [newQualification, setNewQualification] = useState('');
 
+  // Venues (Campi da gioco / Palestre)
+  const [venues, setVenues] = useState<{name: string, address: string, city: string}[]>([]);
+  const [newVenueName, setNewVenueName] = useState('');
+  const [newVenueAddress, setNewVenueAddress] = useState('');
+  const [newVenueCity, setNewVenueCity] = useState('');
+
   // Fiscal receipt data
   const [ragioneSociale, setRagioneSociale] = useState('');
   const [sportPraticato, setSportPraticato] = useState('');
