@@ -607,6 +607,102 @@ export default function AdminCollaboratoreDetail() {
           )}
         </View>
 
+        {/* Assegnazioni Squadre e Palestre - Sezione separata sempre visibile */}
+        <View style={[styles.card, { backgroundColor: '#F3E5F5', borderWidth: 1, borderColor: '#9C27B0' }]}>
+          <Text style={[styles.cardTitle, { color: '#7B1FA2' }]}>📍 Assegnazioni</Text>
+          
+          {/* Squadre */}
+          <Text style={[styles.inputLabel, { color: '#7B1FA2', marginTop: 8 }]}>🏐 Squadre</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+            {teams.length === 0 ? (
+              <Text style={{ color: '#999', fontStyle: 'italic' }}>Nessuna squadra disponibile</Text>
+            ) : (
+              teams.map((team) => (
+                <TouchableOpacity
+                  key={team.id}
+                  onPress={() => {
+                    if (selectedTeamIds.includes(team.id)) {
+                      setSelectedTeamIds(selectedTeamIds.filter(t => t !== team.id));
+                    } else {
+                      setSelectedTeamIds([...selectedTeamIds, team.id]);
+                    }
+                  }}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    borderRadius: 20,
+                    borderWidth: 2,
+                    borderColor: selectedTeamIds.includes(team.id) ? '#9C27B0' : '#ddd',
+                    backgroundColor: selectedTeamIds.includes(team.id) ? '#E1BEE7' : '#fff',
+                  }}
+                >
+                  <Text style={{ 
+                    color: selectedTeamIds.includes(team.id) ? '#7B1FA2' : '#666', 
+                    fontWeight: selectedTeamIds.includes(team.id) ? '600' : '400' 
+                  }}>
+                    {selectedTeamIds.includes(team.id) ? '✓ ' : ''}{team.name}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+
+          {/* Palestre */}
+          <Text style={[styles.inputLabel, { color: '#7B1FA2', marginTop: 8 }]}>🏟️ Palestre</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+            {availableVenues.length === 0 ? (
+              <Text style={{ color: '#999', fontStyle: 'italic' }}>Nessuna palestra configurata (vai in Impostazioni)</Text>
+            ) : (
+              availableVenues.map((venue, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => {
+                    if (selectedVenueNames.includes(venue.name)) {
+                      setSelectedVenueNames(selectedVenueNames.filter(v => v !== venue.name));
+                    } else {
+                      setSelectedVenueNames([...selectedVenueNames, venue.name]);
+                    }
+                  }}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    borderRadius: 20,
+                    borderWidth: 2,
+                    borderColor: selectedVenueNames.includes(venue.name) ? '#FF9500' : '#ddd',
+                    backgroundColor: selectedVenueNames.includes(venue.name) ? '#FFF3E0' : '#fff',
+                  }}
+                >
+                  <Text style={{ 
+                    color: selectedVenueNames.includes(venue.name) ? '#E65100' : '#666', 
+                    fontWeight: selectedVenueNames.includes(venue.name) ? '600' : '400' 
+                  }}>
+                    {selectedVenueNames.includes(venue.name) ? '✓ ' : ''}{venue.name}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+
+          {/* Pulsante Salva Assegnazioni */}
+          <TouchableOpacity
+            style={[styles.saveButton, { backgroundColor: '#9C27B0', marginTop: 8 }]}
+            onPress={async () => {
+              try {
+                await api.patch(`/users/${id}`, {
+                  assigned_teams: selectedTeamIds,
+                  assigned_venues: selectedVenueNames,
+                });
+                showAlert('Successo', 'Assegnazioni salvate');
+                loadData();
+              } catch (error: any) {
+                showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
+              }
+            }}
+          >
+            <Text style={styles.saveButtonText}>💾 Salva Assegnazioni</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Onboarding Checklist */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
