@@ -270,9 +270,9 @@ export default function AdminDashboard() {
           {/* Notifications Bell */}
           <TouchableOpacity 
             onPress={() => router.push('/admin/notifications')} 
-            style={styles.headerBtn}
+            style={styles.headerIconBtn}
           >
-            <Text style={{ fontSize: 22 }}>🔔</Text>
+            <Text style={{ fontSize: 20 }}>🔔</Text>
             {unreadNotifications > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
@@ -284,15 +284,17 @@ export default function AdminDashboard() {
           {/* Switch to Dirigente button */}
           <TouchableOpacity 
             onPress={() => router.replace('/dirigente')} 
-            style={[styles.headerBtn, styles.dirigenteSwitchBtn]}
+            style={styles.headerIconBtn}
           >
-            <Text style={{ fontSize: 16 }}>{Icons.briefcase}</Text>
+            <Text style={{ fontSize: 18 }}>{Icons.briefcase}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerBtn}>
-            <Text style={{ fontSize: 22, color: '#fff' }}>{Icons.settings}</Text>
+          {/* Settings button */}
+          <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerIconBtn}>
+            <Text style={{ fontSize: 20 }}>{Icons.settings}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleLogout} style={styles.headerBtn}>
-            <Text style={{ fontSize: 22, color: '#fff' }}>{Icons.logout}</Text>
+          {/* Logout button */}
+          <TouchableOpacity onPress={handleLogout} style={styles.headerIconBtn}>
+            <Text style={{ fontSize: 20 }}>{Icons.logout}</Text>
           </TouchableOpacity>
         </View>
       </View>
