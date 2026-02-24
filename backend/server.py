@@ -1428,6 +1428,7 @@ class UserProfileUpdate(BaseModel):
     province: Optional[str] = None
     phone: Optional[str] = None
     coach_license_number: Optional[str] = None
+    collaboratore_license_number: Optional[str] = None  # License number for collaboratori
     # Documento di identità
     identity_document_type: Optional[str] = None  # Carta di identità, Patente, Passaporto
     identity_document_number: Optional[str] = None  # Numero del documento
@@ -1479,6 +1480,8 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
         update_dict["phone"] = data.phone
     if data.coach_license_number is not None:
         update_dict["coach_license_number"] = data.coach_license_number
+    if data.collaboratore_license_number is not None:
+        update_dict["collaboratore_license_number"] = data.collaboratore_license_number
     # Documento di identità
     if data.identity_document_type is not None:
         update_dict["identity_document_type"] = data.identity_document_type
