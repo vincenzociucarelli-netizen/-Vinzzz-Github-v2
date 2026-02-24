@@ -596,6 +596,16 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* ========== SEZIONE 2: ALTRE IMPOSTAZIONI ========== */}
+        <View style={{ backgroundColor: '#FFF3E0', padding: 16, marginHorizontal: -16, marginTop: 20 }}>
+          <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#E65100', textAlign: 'center' }}>
+            ⚙️ ALTRE IMPOSTAZIONI
+          </Text>
+          <Text style={{ fontSize: 13, color: '#F57C00', textAlign: 'center', marginTop: 4 }}>
+            Ruoli, caratteristiche, qualifiche e palestre
+          </Text>
+        </View>
+
         {/* Ruoli Atleti */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🏐 Ruoli Atleti</Text>
