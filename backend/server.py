@@ -2687,9 +2687,41 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
     if "qualification" in data:
         update_data["qualification"] = data["qualification"]
     
-    # Other fields that admin can update
+    # Compensation fields
     if "monthly_compensation" in data:
         update_data["monthly_compensation"] = data["monthly_compensation"]
+    
+    if "other_annual_compensation" in data:
+        update_data["other_annual_compensation"] = data["other_annual_compensation"]
+    
+    # Contract dates
+    if "contract_start_date" in data:
+        if data["contract_start_date"]:
+            try:
+                update_data["contract_start_date"] = datetime.fromisoformat(data["contract_start_date"])
+            except:
+                update_data["contract_start_date"] = data["contract_start_date"]
+        else:
+            update_data["contract_start_date"] = None
+    
+    if "contract_end_date" in data:
+        if data["contract_end_date"]:
+            try:
+                update_data["contract_end_date"] = datetime.fromisoformat(data["contract_end_date"])
+            except:
+                update_data["contract_end_date"] = data["contract_end_date"]
+        else:
+            update_data["contract_end_date"] = None
+    
+    # Onboarding checklist
+    if "onboarding_checklist" in data:
+        update_data["onboarding_checklist"] = data["onboarding_checklist"]
+    
+    if "onboarding_completed" in data:
+        update_data["onboarding_completed"] = data["onboarding_completed"]
+    
+    if "onboarding_date" in data:
+        update_data["onboarding_date"] = data["onboarding_date"]
     
     if update_data:
         await db.users.update_one(
