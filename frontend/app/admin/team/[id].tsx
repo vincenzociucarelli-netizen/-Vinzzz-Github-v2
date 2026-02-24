@@ -985,12 +985,27 @@ export default function TeamDetail() {
                     </View>
                     <View style={styles.fieldHalf}>
                       <Text style={styles.miniLabel}>Palestra</Text>
-                      <TextInput
-                        style={styles.miniInput}
-                        value={rifinitura.venue}
-                        onChangeText={(v) => setRifinitura({...rifinitura, venue: v})}
-                        placeholder="Palasport"
-                      />
+                      {availableVenues.length > 0 ? (
+                        <View style={[styles.miniInput, { padding: 0, justifyContent: 'center' }]}>
+                          <Picker
+                            selectedValue={rifinitura.venue}
+                            onValueChange={(v) => setRifinitura({...rifinitura, venue: v})}
+                            style={{ height: 36 }}
+                          >
+                            <Picker.Item label="-- Seleziona --" value="" />
+                            {availableVenues.map((venue, idx) => (
+                              <Picker.Item key={idx} label={venue.name} value={venue.name} />
+                            ))}
+                          </Picker>
+                        </View>
+                      ) : (
+                        <TextInput
+                          style={styles.miniInput}
+                          value={rifinitura.venue}
+                          onChangeText={(v) => setRifinitura({...rifinitura, venue: v})}
+                          placeholder="Palasport"
+                        />
+                      )}
                     </View>
                   </View>
                 </View>
