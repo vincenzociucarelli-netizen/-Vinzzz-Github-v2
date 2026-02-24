@@ -575,8 +575,11 @@ export default function CoachScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
+          <TouchableOpacity onPress={() => setActiveTab('teams')} style={{ padding: 8 }}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>Scanner Presenze</Text>
-          <TouchableOpacity onPress={handleLogout}>
+          <TouchableOpacity onPress={handleLogout} style={{ padding: 8 }}>
             <Ionicons name="log-out-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
