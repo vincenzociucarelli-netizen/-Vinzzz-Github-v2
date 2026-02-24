@@ -428,7 +428,7 @@ export default function TeamsScreen() {
             </View>
             {!item.is_prima_squadra && (
               <Text style={styles.teamAmount}>
-                Quota: €{item.total_amount} (€{item.installment_1_amount}/€{item.installment_2_amount}/€{item.installment_3_amount})
+                Quota: €{(item.installment_1_amount || 0) + (item.installment_2_amount || 0) + (item.installment_3_amount || 0)} (€{item.installment_1_amount || 0}/€{item.installment_2_amount || 0}/€{item.installment_3_amount || 0})
               </Text>
             )}
             {item.is_prima_squadra && (
