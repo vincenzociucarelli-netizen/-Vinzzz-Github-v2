@@ -151,17 +151,14 @@ export default function AdminCollaboratoreDetail() {
       
       // Load contract dates and convert to Italian format dd/mm/yyyy
       if (collabRes.data.contract_start_date) {
-        const date = new Date(collabRes.data.contract_start_date);
-        const dd = String(date.getDate()).padStart(2, '0');
-        const mm = String(date.getMonth() + 1).padStart(2, '0');
-        const yyyy = date.getFullYear();
+        // Parse ISO date string directly to avoid timezone issues
+        const dateStr = collabRes.data.contract_start_date.split('T')[0]; // Get only date part
+        const [yyyy, mm, dd] = dateStr.split('-');
         setContractStartDate(`${dd}/${mm}/${yyyy}`);
       }
       if (collabRes.data.contract_end_date) {
-        const date = new Date(collabRes.data.contract_end_date);
-        const dd = String(date.getDate()).padStart(2, '0');
-        const mm = String(date.getMonth() + 1).padStart(2, '0');
-        const yyyy = date.getFullYear();
+        const dateStr = collabRes.data.contract_end_date.split('T')[0];
+        const [yyyy, mm, dd] = dateStr.split('-');
         setContractEndDate(`${dd}/${mm}/${yyyy}`);
       }
       
