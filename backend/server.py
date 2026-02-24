@@ -1163,6 +1163,39 @@ async def register(user_data: UserCreate):
     
     await db.users.insert_one(user_dict)
     
+    # Crea notifica per admin se l'utente richiede approvazione (coach, viewer, collaboratore)
+    if initial_status == UserStatus.PENDING and society_id:
+        # Trova tutti gli admin della società
+        admins = await db.users.find({
+            "society_id": society_id,
+            "role": {"$in": ["admin", "viewer"]},
+            "status": "approved"
+        }).to_list(100)
+        
+        role_label = {
+            "coach": "Coach",
+            "viewer": "Dirigente",
+            "collaboratore": "Collaboratore"
+        }.get(final_role, final_role.capitalize())
+        
+        for admin in admins:
+            notification = {
+                "id": str(uuid.uuid4()),
+                "user_id": admin["id"],
+                "type": "new_registration",
+                "title": f"🆕 Nuova registrazione {role_label}",
+                "message": f"{user_data.full_name} si è registrato come {role_label} e attende approvazione.",
+                "data": {
+                    "user_id": user.id,
+                    "user_name": user_data.full_name,
+                    "user_email": user_data.email,
+                    "user_role": final_role
+                },
+                "read": False,
+                "created_at": datetime.now(timezone.utc)
+            }
+            await db.notifications.insert_one(notification)
+    
     # Se l'utente è un genitore, collega automaticamente gli atleti dove è secondo genitore
     if user.role == UserRole.PARENT and society_id:
         # Cerca atleti nella stessa società dove l'email è registrata come second_parent_email
