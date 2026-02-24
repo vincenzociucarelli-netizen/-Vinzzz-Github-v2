@@ -356,12 +356,32 @@ export default function DirigenteIndex() {
                 <Text style={styles.emptyText}>Nessun atleta in questa squadra</Text>
               </View>
             ) : (
-              <FlatList
-                data={athletes}
-                renderItem={renderAthleteItem}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-              />
+              athletes.map((item) => {
+                const certStatus = getCertificateStatus(item);
+                return (
+                  <View key={item.id} style={[styles.athleteCard, item.is_withdrawn && styles.athleteCardWithdrawn]}>
+                    <View style={styles.athleteInfo}>
+                      <Text style={[styles.athleteName, item.is_withdrawn && styles.athleteNameWithdrawn]}>
+                        {item.full_name}
+                      </Text>
+                      <View style={styles.athleteMeta}>
+                        <View style={[styles.statusBadge, { backgroundColor: item.is_withdrawn ? '#FF3B30' : (item.status === 'trial' ? '#FF9500' : '#34C759') }]}>
+                          <Text style={styles.statusBadgeText}>
+                            {item.is_withdrawn ? 'RITIRATO' : (item.status === 'trial' ? 'IN PROVA' : 'ATTIVO')}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={styles.certificateInfo}>
+                      <View style={[styles.certBadge, { backgroundColor: certStatus.color + '20' }]}>
+                        <Ionicons name={certStatus.icon as any} size={16} color={certStatus.color} />
+                        <Text style={[styles.certText, { color: certStatus.color }]}>{certStatus.text}</Text>
+                      </View>
+                      <Text style={styles.certDate}>{formatExpiryDate(item.certificate_expiry)}</Text>
+                    </View>
+                  </View>
+                );
+              })
             )}
           </View>
         )}
