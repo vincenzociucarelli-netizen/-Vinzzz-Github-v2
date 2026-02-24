@@ -2215,6 +2215,7 @@ async def get_collaboratorees(current_user = Depends(get_current_user)):
             "role": c["role"],
             "status": c.get("status", UserStatus.APPROVED),
             "assigned_teams": c.get("assigned_teams", []),
+            "assigned_venues": c.get("assigned_venues", []),
             "created_at": c.get("created_at"),
             "approved_at": c.get("approved_at"),
             "monthly_compensation": c.get("monthly_compensation", 0),
