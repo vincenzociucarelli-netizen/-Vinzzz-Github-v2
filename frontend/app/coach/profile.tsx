@@ -105,6 +105,10 @@ export default function CoachProfile() {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
+  
+  // My documents (privacy, receipts, etc.)
+  const [myDocuments, setMyDocuments] = useState<any[]>([]);
+  const [showAllDocumentsModal, setShowAllDocumentsModal] = useState(false);
 
   const loadProfile = async () => {
     try {
