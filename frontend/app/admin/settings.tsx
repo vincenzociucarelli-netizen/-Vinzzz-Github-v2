@@ -724,6 +724,70 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Campi da gioco / Palestre */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏟️ Campi da Gioco / Palestre</Text>
+          <Text style={styles.sectionDesc}>
+            Definisci i luoghi di allenamento e gara. Potrai assegnarli alle squadre e ai collaboratori.
+          </Text>
+          
+          <View style={{ marginBottom: 12 }}>
+            <TextInput
+              style={[styles.input, { marginBottom: 8 }]}
+              value={newVenueName}
+              onChangeText={setNewVenueName}
+              placeholder="Nome palestra (es: Palestra Liceo Alessi)"
+            />
+            <TextInput
+              style={[styles.input, { marginBottom: 8 }]}
+              value={newVenueAddress}
+              onChangeText={setNewVenueAddress}
+              placeholder="Indirizzo (es: Via Annibale Vecchi, 1)"
+            />
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TextInput
+                style={[styles.input, { flex: 1, marginRight: 8 }]}
+                value={newVenueCity}
+                onChangeText={setNewVenueCity}
+                placeholder="Città (es: Perugia)"
+              />
+              <TouchableOpacity 
+                style={[styles.addTagBtn, { backgroundColor: '#FF9500', height: 44, width: 44 }]} 
+                onPress={addVenue}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {venues.length === 0 ? (
+            <Text style={styles.noTagsText}>Nessuna palestra definita</Text>
+          ) : (
+            venues.map((venue, index) => (
+              <View key={index} style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#FFF3E0',
+                borderWidth: 1,
+                borderColor: '#FF9500',
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 8,
+              }}>
+                <Ionicons name="location" size={20} color="#FF9500" />
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={{ fontWeight: '600', color: '#E65100' }}>{venue.name}</Text>
+                  {venue.address && <Text style={{ fontSize: 12, color: '#666' }}>{venue.address}</Text>}
+                  {venue.city && <Text style={{ fontSize: 12, color: '#666' }}>{venue.city}</Text>}
+                </View>
+                <TouchableOpacity onPress={() => removeVenue(venue.name)}>
+                  <Ionicons name="close-circle" size={22} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </View>
+
         {/* Spacer for floating button */}
         <View style={{ height: 80 }} />
       </ScrollView>
