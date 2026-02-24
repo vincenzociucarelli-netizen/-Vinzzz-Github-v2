@@ -2171,6 +2171,46 @@ async def get_coaches(current_user = Depends(get_current_user)):
     
     return result
 
+@api_router.get("/users/collaboratorees")
+async def get_collaboratorees(current_user = Depends(get_current_user)):
+    """Get all collaboratori"""
+    if current_user["role"] not in [UserRole.ADMIN, "viewer"]:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i collaboratori")
+    
+    collaboratori = await db.users.find({"role": "collaboratore"}).to_list(1000)
+    
+    result = []
+    for c in collaboratori:
+        # Handle contract dates - they may be datetime objects or strings
+        contract_start = c.get("contract_start_date")
+        contract_end = c.get("contract_end_date")
+        if contract_start and hasattr(contract_start, 'strftime'):
+            contract_start = contract_start.strftime("%Y-%m-%d")
+        if contract_end and hasattr(contract_end, 'strftime'):
+            contract_end = contract_end.strftime("%Y-%m-%d")
+            
+        result.append({
+            "id": c["id"],
+            "email": c["email"],
+            "full_name": c.get("full_name", ""),
+            "first_name": c.get("first_name", ""),
+            "last_name": c.get("last_name", ""),
+            "role": c["role"],
+            "status": c.get("status", UserStatus.APPROVED),
+            "assigned_teams": c.get("assigned_teams", []),
+            "created_at": c.get("created_at"),
+            "approved_at": c.get("approved_at"),
+            "monthly_compensation": c.get("monthly_compensation", 0),
+            "other_annual_compensation": c.get("other_annual_compensation", 0),
+            "contract_start_date": contract_start,
+            "contract_end_date": contract_end,
+            "profile_photo": c.get("profile_photo"),
+            "profile_photo_artistic": c.get("profile_photo_artistic"),
+            "phone": c.get("phone", ""),
+        })
+    
+    return result
+
 @api_router.get("/users/parents")
 async def get_parents(current_user = Depends(get_current_user)):
     """Get all parents/athletes - OPTIMIZED with aggregation"""
