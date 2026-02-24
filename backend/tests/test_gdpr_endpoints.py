@@ -9,7 +9,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://athlete-consent.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://collab-p0-critical.preview.emergentagent.com')
 if BASE_URL.endswith('/'):
     BASE_URL = BASE_URL.rstrip('/')
 
