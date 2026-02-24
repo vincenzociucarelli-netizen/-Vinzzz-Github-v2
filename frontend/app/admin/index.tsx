@@ -964,8 +964,6 @@ const styles = StyleSheet.create({
   headerLogo: {
     width: 50,
     height: 50,
-    borderRadius: 8,
-    backgroundColor: '#fff',
     marginRight: 12,
   },
   headerTitle: {
