@@ -275,10 +275,13 @@ export default function CoachScreen() {
         
         webScannerRef.current = html5QrcodeScanner;
         
-        // Add custom CSS to improve button spacing
+        // Add custom CSS to improve button spacing and avoid overlap
         setTimeout(() => {
           const style = document.createElement('style');
           style.textContent = `
+            #web-qr-scanner {
+              padding-bottom: 80px !important;
+            }
             #web-qr-scanner button {
               margin: 15px 10px !important;
               padding: 15px 25px !important;
@@ -307,6 +310,11 @@ export default function CoachScreen() {
               color: white !important;
               border: none !important;
               border-radius: 10px !important;
+              margin-bottom: 20px !important;
+            }
+            /* Hide the camera-stop button when camera is active to avoid confusion */
+            #web-qr-scanner video {
+              margin-bottom: 20px !important;
             }
           `;
           document.head.appendChild(style);
