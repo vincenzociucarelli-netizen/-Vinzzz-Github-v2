@@ -465,6 +465,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         province: editData.province,
         phone: editData.phone,
         coach_license_number: editData.coach_license_number,
+        other_annual_compensation: editData.other_annual_compensation || 0,
       });
       
       showAlert('Successo', 'Profilo aggiornato con successo');
