@@ -109,6 +109,11 @@ export default function AdminCollaboratoreDetail() {
   const [otherAnnualCompensation, setOtherAnnualCompensation] = useState('0');
   const [contractStartDate, setContractStartDate] = useState('');
   const [contractEndDate, setContractEndDate] = useState('');
+  
+  // Assegnazioni
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  const [selectedVenueNames, setSelectedVenueNames] = useState<string[]>([]);
+  const [availableVenues, setAvailableVenues] = useState<{name: string, address: string, city: string}[]>([]);
 
   const openImageViewer = (imageBase64: string, title: string) => {
     setViewingImage(imageBase64);
