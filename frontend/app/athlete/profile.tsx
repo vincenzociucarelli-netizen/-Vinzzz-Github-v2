@@ -47,6 +47,7 @@ export default function AthleteProfile() {
   const [deletingData, setDeletingData] = useState(false);
   const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
   const [athleteId, setAthleteId] = useState<string | null>(null);
+  const [isAdult, setIsAdult] = useState(false);
   
   // Profile data
   const [profileData, setProfileData] = useState({
