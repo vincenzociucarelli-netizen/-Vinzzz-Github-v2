@@ -831,13 +831,15 @@ export default function CollaboratoreCompensation() {
           )}
           
           <TouchableOpacity 
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F8FF', padding: 10, borderRadius: 8 }}
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F8FF', padding: 12, borderRadius: 8 }}
             onPress={() => router.push('/collaboratore/profile')}
           >
-            <Ionicons name="create-outline" size={18} color="#007AFF" />
-            <Text style={{ marginLeft: 8, color: '#007AFF', fontWeight: '500' }}>Il Mio Profilo</Text>
-            <Text style={{ flex: 1, textAlign: 'right', fontSize: 12, color: '#666' }}>Dati personali, documento e IBAN</Text>
-            <Ionicons name="chevron-forward" size={18} color="#007AFF" style={{ marginLeft: 8 }} />
+            <Ionicons name="create-outline" size={20} color="#007AFF" />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={{ color: '#007AFF', fontWeight: '600', fontSize: 15 }}>Il Mio Profilo</Text>
+              <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Dati personali, documento e IBAN</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#007AFF" />
           </TouchableOpacity>
         </View>
         
