@@ -169,13 +169,12 @@ export default function AdminCollaboratoreDetail() {
       });
       
       // Load signed receipts
+      // Load signed receipts
       try {
         const compensationRes = await api.get(`/collaboratore/${id}/compensation`);
-        if (Array.isArray(compensationRes.data)) {
-          setSignedReceipts(compensationRes.data);
-        } else {
-          setSignedReceipts([]);
-        }
+        // API returns {collaboratore: {...}, records: [...]}
+        const records = compensationRes.data?.records || [];
+        setSignedReceipts(records);
       } catch (compError) {
         setSignedReceipts([]);
       }
