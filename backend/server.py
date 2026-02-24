@@ -2720,6 +2720,10 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
     if "other_annual_compensation" in data:
         update_data["other_annual_compensation"] = data["other_annual_compensation"]
     
+    # Assigned venues for collaborators
+    if "assigned_venues" in data:
+        update_data["assigned_venues"] = data["assigned_venues"]
+    
     # Contract dates
     if "contract_start_date" in data:
         if data["contract_start_date"]:
