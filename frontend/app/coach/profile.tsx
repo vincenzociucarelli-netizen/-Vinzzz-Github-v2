@@ -132,6 +132,7 @@ export default function CoachProfile() {
         phone: data.phone || '',
         coach_license_number: data.coach_license_number || '',
         monthly_compensation: data.monthly_compensation || 0,
+        other_annual_compensation: data.other_annual_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
         // Documento e Dati Bancari
         id_type: data.id_type || '',
@@ -162,6 +163,7 @@ export default function CoachProfile() {
         phone: data.phone || '',
         coach_license_number: data.coach_license_number || '',
         monthly_compensation: data.monthly_compensation || 0,
+        other_annual_compensation: data.other_annual_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
         // Documento e Dati Bancari
         id_type: data.id_type || '',
