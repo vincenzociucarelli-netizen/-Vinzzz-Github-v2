@@ -1981,6 +1981,8 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
         update_dict["athlete_characteristics"] = data.athlete_characteristics
     if data.dirigente_qualifications is not None:
         update_dict["dirigente_qualifications"] = data.dirigente_qualifications
+    if data.venues is not None:
+        update_dict["venues"] = data.venues
     if data.sport_image is not None:
         update_dict["sport_image"] = data.sport_image
     # Fiscal receipt fields
