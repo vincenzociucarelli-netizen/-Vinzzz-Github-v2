@@ -646,7 +646,6 @@ export default function AdminCollaboratoreDetail() {
               value={newPassword}
               onChangeText={setNewPassword}
               placeholder="Nuova password (min 6 caratteri)"
-              secureTextEntry
             />
             
             <View style={styles.modalButtons}>
