@@ -247,7 +247,14 @@ export default function AdminCollaboratoreDetail() {
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/D';
     try {
-      return format(new Date(dateString), 'dd MMM yyyy', { locale: it });
+      // If already in dd/mm/yyyy format, return as is
+      if (dateString.includes('/')) {
+        return dateString;
+      }
+      // Convert ISO format to Italian dd/mm/yyyy
+      const datePart = dateString.split('T')[0];
+      const [yyyy, mm, dd] = datePart.split('-');
+      return `${dd}/${mm}/${yyyy}`;
     } catch {
       return dateString;
     }
