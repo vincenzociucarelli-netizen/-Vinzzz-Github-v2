@@ -24,6 +24,7 @@ interface Collaboratore {
   role: string;
   status: string;
   assigned_teams: string[];
+  assigned_venues: string[];
   created_at: string;
   approved_at?: string;
   first_name?: string;
