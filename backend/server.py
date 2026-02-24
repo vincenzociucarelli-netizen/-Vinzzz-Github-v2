@@ -2534,8 +2534,12 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
     
     update_data = {}
     if "monthly_compensation" in data:
-        update_data["monthly_compensation"] = float(data["monthly_compensation"])
-        update_data["compensation_accepted"] = False  # Reset acceptance when changed
+        new_compensation = float(data["monthly_compensation"])
+        old_compensation = user.get("monthly_compensation", 0)
+        update_data["monthly_compensation"] = new_compensation
+        # Reset acceptance only if amount actually changed
+        if new_compensation != old_compensation:
+            update_data["compensation_accepted"] = False
     
     if "other_annual_compensation" in data:
         update_data["other_annual_compensation"] = float(data["other_annual_compensation"]) if data["other_annual_compensation"] else 0
