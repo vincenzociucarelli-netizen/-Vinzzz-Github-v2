@@ -751,6 +751,29 @@ La pagina Impostazioni è ora divisa in due sotto-pagine:
 
 ---
 
+## Session 2026-02-25 - Miglioramento UI Icone Header
+
+### Miglioramenti Completati ✅
+
+1. **Icone Header Dashboard Admin più Visibili**
+   - Tutte le icone nella barra header (🔔 notifiche, 💼 dirigente, ⚙️ impostazioni, 🚪 logout) ora hanno:
+     - Sfondo bianco circolare (40x40px)
+     - Ombra per maggiore contrasto
+     - Bordo arrotondato (borderRadius: 20)
+   - L'ingranaggio delle impostazioni ora è **molto più visibile** sullo sfondo blu
+   - **File modificato**: `/app/frontend/app/admin/index.tsx`
+
+2. **Pulizia File Obsoleto**
+   - Eliminato `/app/frontend/app/admin/settings_old.tsx.bak`
+
+### Struttura Impostazioni Confermata ✅
+La nuova struttura delle impostazioni funziona correttamente:
+- `/admin/settings` → Pagina indice con 2 pulsanti
+- `/admin/settings/society` → Dati società
+- `/admin/settings/other` → Altre impostazioni (ruoli, palestre)
+
+---
+
 ## Da Testare Domani
 - [ ] Flusso completo atleta maggiorenne (registrazione → approvazione → profilo → privacy)
 - [ ] Flusso genitore + atleta minorenne
