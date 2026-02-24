@@ -476,6 +476,24 @@ export default function AdminCollaboratoreDetail() {
                   {collaboratore.compensation_accepted ? '✓ Sì' : '✗ No'}
                 </Text>
               </View>
+              
+              {/* Totale già percepito (quietanze firmate) */}
+              {signedReceipts.length > 0 && (
+                <View style={{ marginTop: 12, padding: 12, backgroundColor: '#E8F5E9', borderRadius: 8 }}>
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: '#2E7D32' }]}>💰 Già Percepito:</Text>
+                    <Text style={[styles.infoValue, { fontWeight: 'bold', color: '#2E7D32', fontSize: 16 }]}>
+                      € {signedReceipts
+                        .filter((r: any) => r.receipt_signed)
+                        .reduce((sum: number, r: any) => sum + (r.amount_gross || 0), 0)
+                        .toFixed(2)}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                    {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate
+                  </Text>
+                </View>
+              )}
             </>
           )}
         </View>
