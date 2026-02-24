@@ -435,7 +435,7 @@ export default function CollaboratoreesScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={{ fontSize: 48 }}>🏋️</Text>
+            <Text style={{ fontSize: 48 }}>👷</Text>
             <Text style={styles.emptyText}>Nessun collaboratore registrato</Text>
           </View>
         }
