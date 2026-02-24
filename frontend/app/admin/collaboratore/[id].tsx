@@ -144,14 +144,18 @@ export default function AdminCollaboratoreDetail() {
 
   const loadData = async () => {
     try {
-      const [collabRes, teamsRes] = await Promise.all([
+      const [collabRes, teamsRes, settingsRes] = await Promise.all([
         api.get(`/users/${id}`),
         api.get('/teams'),
+        api.get('/settings/society'),
       ]);
       setCollaboratore(collabRes.data);
       setTeams(teamsRes.data);
+      setAvailableVenues(settingsRes.data.venues || []);
       setMonthlyCompensation(collabRes.data.monthly_compensation?.toString() || '0');
       setOtherAnnualCompensation(collabRes.data.other_annual_compensation?.toString() || '0');
+      setSelectedTeamIds(collabRes.data.assigned_teams || []);
+      setSelectedVenueNames(collabRes.data.assigned_venues || []);
       
       // Load contract dates and convert to Italian format dd/mm/yyyy
       if (collabRes.data.contract_start_date) {
