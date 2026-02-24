@@ -658,6 +658,11 @@ export default function AdminDashboard() {
               <Text style={styles.menuCardTitle}>Collaboratori</Text>
               <Text style={styles.menuCardSubtitle}>Staff e personale</Text>
             </View>
+            {pendingCounts.collaboratori > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingCounts.collaboratori}</Text>
+              </View>
+            )}
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
