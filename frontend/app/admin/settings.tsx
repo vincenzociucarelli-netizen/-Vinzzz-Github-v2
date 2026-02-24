@@ -444,9 +444,10 @@ export default function SettingsScreen() {
               <TextInput
                 style={styles.input}
                 value={province}
-                onChangeText={setProvince}
+                onChangeText={(text) => setProvince(text.toUpperCase())}
                 placeholder="PG"
                 maxLength={2}
+                autoCapitalize="characters"
               />
             </View>
           </View>
