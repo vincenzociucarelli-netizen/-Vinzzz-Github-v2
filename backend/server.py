@@ -1502,6 +1502,10 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
             user_type = "Utente"
             notif_type_5k = "user_exceeded_5000"
             notif_type_15k = "user_exceeded_15000"
+    
+    # Handle other_annual_compensation (compensi pregressi da altre società)
+    if data.other_annual_compensation is not None:
+        update_dict["other_annual_compensation"] = float(data.other_annual_compensation) if data.other_annual_compensation else 0.0
         
         # Notify admin if newly exceeded €5.000
         if new_limit.get("exceeded_5000") and not old_limit.get("exceeded_5000"):
