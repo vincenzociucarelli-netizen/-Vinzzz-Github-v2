@@ -11472,6 +11472,91 @@ async def get_my_documents(
         "total": len(documents)
     }
 
+# ==================== GDPR DATA DELETION ENDPOINT ====================
+
+@api_router.delete("/auth/delete-my-data")
+async def delete_my_data(current_user = Depends(get_current_user)):
+    """
+    GDPR-compliant endpoint for users to delete all their personal data.
+    This is an irreversible action.
+    """
+    user_id = current_user.get("id")
+    email = current_user.get("email")
+    role = current_user.get("role")
+    
+    if not user_id:
+        raise HTTPException(status_code=400, detail="ID utente non trovato")
+    
+    # Track what was deleted for logging
+    deleted_items = {
+        "user": False,
+        "athlete": False,
+        "documents": 0,
+        "certificates": 0,
+        "notifications": 0,
+        "receipts": 0
+    }
+    
+    try:
+        # 1. Delete all signed documents related to this user
+        doc_result = await db.signed_documents.delete_many({
+            "$or": [
+                {"signer_id": user_id},
+                {"athlete_id": user_id},
+                {"coach_id": user_id},
+                {"dirigente_id": user_id},
+                {"collaboratore_id": user_id},
+                {"parent_id": user_id}
+            ]
+        })
+        deleted_items["documents"] = doc_result.deleted_count
+        
+        # 2. Delete receipts (compensation records)
+        receipt_result = await db.receipts.delete_many({
+            "$or": [
+                {"user_id": user_id},
+                {"athlete_id": user_id},
+                {"coach_id": user_id},
+                {"collaboratore_id": user_id}
+            ]
+        })
+        deleted_items["receipts"] = receipt_result.deleted_count
+        
+        # 3. Delete notifications
+        notif_result = await db.notifications.delete_many({"user_id": user_id})
+        deleted_items["notifications"] = notif_result.deleted_count
+        
+        # 4. If user is an athlete or has athlete_id, delete athlete record and certificates
+        athlete_id = current_user.get("athlete_id")
+        if athlete_id:
+            # Delete medical certificates
+            cert_result = await db.certificates.delete_many({"athlete_id": athlete_id})
+            deleted_items["certificates"] = cert_result.deleted_count
+            
+            # Delete athlete record
+            await db.athletes.delete_one({"id": athlete_id})
+            deleted_items["athlete"] = True
+        
+        # 5. Delete the user account itself
+        await db.users.delete_one({"id": user_id})
+        deleted_items["user"] = True
+        
+        # Log the deletion (without PII)
+        logger.info(f"GDPR deletion completed for user with role '{role}'. Deleted: {deleted_items}")
+        
+        return {
+            "success": True,
+            "message": "Tutti i tuoi dati personali sono stati eliminati in conformità al GDPR.",
+            "deleted": deleted_items
+        }
+        
+    except Exception as e:
+        logger.error(f"Error during GDPR deletion for user {user_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Si è verificato un errore durante l'eliminazione dei dati. Contatta l'amministratore."
+        )
+
 @api_router.get("/health")
 async def api_health():
     """Health check endpoint for Kubernetes"""
