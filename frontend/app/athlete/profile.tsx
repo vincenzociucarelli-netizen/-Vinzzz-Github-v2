@@ -1417,6 +1417,48 @@ export default function AthleteProfile() {
         onClose={() => setPhotoViewerVisible(false)}
       />
 
+      {/* Trial End Modal (for adult athletes whose trial has expired) */}
+      {isAdult && (
+        <TrialEndModal
+          visible={showTrialEndModal}
+          onAcceptPrivacy={() => {
+            setShowTrialEndModal(false);
+            // Show medical certificate alert first, then privacy modal
+            Alert.alert(
+              'Certificato Medico Richiesto',
+              'Per continuare come atleta tesserato, dovrai consegnare alla società un certificato medico di idoneità sportiva in corso di validità.',
+              [{ text: 'Ho capito, procedi', onPress: () => setShowPrivacyModal(true) }]
+            );
+          }}
+          onDeleteData={async () => {
+            setDeletingData(true);
+            try {
+              await api.delete('/auth/delete-my-data');
+              Alert.alert(
+                'Dati Eliminati',
+                'Tutti i tuoi dati sono stati cancellati. Verrai reindirizzato alla pagina di login.',
+                [{ text: 'OK', onPress: async () => {
+                  await logout();
+                  if (Platform.OS === 'web') {
+                    window.location.href = '/login';
+                  } else {
+                    router.replace('/login');
+                  }
+                }}]
+              );
+            } catch (error: any) {
+              Alert.alert('Errore', error.response?.data?.detail || 'Impossibile eliminare i dati. Riprova.');
+            } finally {
+              setDeletingData(false);
+            }
+          }}
+          signerName={profileData.full_name || `${profileData.first_name} ${profileData.last_name}`}
+          signerRole="athlete"
+          trialEndDate={trialEndDate || undefined}
+          deleting={deletingData}
+        />
+      )}
+
       {/* Adult Privacy Modal (only for athletes 18+) */}
       {isAdult && (
         <AdultPrivacyModal
@@ -1426,6 +1468,12 @@ export default function AthleteProfile() {
           signerName={profileData.full_name || `${profileData.first_name} ${profileData.last_name}`}
           signerRole="athlete"
           societyName={societyName}
+          fiscalCode={profileData.fiscal_code}
+          birthDate={profileData.date_of_birth}
+          birthPlace={profileData.place_of_birth}
+          address={profileData.address}
+          city={profileData.city}
+          province={profileData.province}
         />
       )}
     </View>
