@@ -423,7 +423,7 @@ export default function CollaboratoreesScreen() {
             return (
               <View>
                 <View style={styles.sectionHeader}>
-                  <Text style={{ fontSize: 16 }}>🏋️</Text>
+                  <Text style={{ fontSize: 16 }}>👷</Text>
                   <Text style={styles.sectionTitle}>Collaboratore attivi ({collaboratorees.length})</Text>
                 </View>
                 {renderCollaboratoreItem({ item })}
