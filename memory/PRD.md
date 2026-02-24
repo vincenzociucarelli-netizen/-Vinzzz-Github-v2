@@ -647,3 +647,64 @@ Le seguenti funzionalità rimangono **ATTIVE**:
 
 ---
 
+
+---
+
+## Session 2026-02-24 - Bug Fix Collaboratori (P0)
+
+### Bug Critici Risolti ✅
+
+1. **Bug A - Privacy Modal Loop** (profile.tsx)
+   - **Problema**: Il modal della privacy riappariva continuamente anche dopo la firma
+   - **Causa**: La variabile `isPrivacyAccepted` non era definita, causava comportamento imprevedibile
+   - **Soluzione**: Definita correttamente: `const isPrivacyAccepted = data.privacy_accepted === true`
+   - **File**: `/app/frontend/app/collaboratore/profile.tsx` linea 176
+
+2. **Bug B - Dati Profilo Non Salvati** (server.py)
+   - **Problema**: Il campo `collaboratore_license_number` non veniva salvato nel backend
+   - **Soluzione**: Aggiunto campo `collaboratore_license_number` al modello `UserProfileUpdate` e relativo handler
+   - **File**: `/app/backend/server.py` linee 1431, 1483-1484
+
+3. **Bug C - Scroll Bloccato nel Modal Firma Quietanze** (compensation.tsx)
+   - **Problema**: Nel modal delle quietanze mensili, l'utente non riusciva a scrollare per raggiungere il pulsante "Conferma"
+   - **Causa**: Il contenitore usava `<View>` invece di `<ScrollView>`
+   - **Soluzione**: Sostituito `<View>` con `<ScrollView>` con i pulsanti fissi in basso
+   - **File**: `/app/frontend/app/collaboratore/compensation.tsx` linee 995-1016
+
+4. **Bug Fix Minore - Format API Response** (compensation.tsx)
+   - **Problema**: `recordsRes.data` era un oggetto `{records: []}` ma il codice si aspettava un array
+   - **Soluzione**: Estratto correttamente `recordsRes.data.records` con fallback ad array vuoto
+   - **File**: `/app/frontend/app/collaboratore/compensation.tsx` linee 212-219
+
+### Test Results
+- `/app/test_reports/iteration_17.json` - 100% Backend (14/14), 100% Frontend verificato
+- Tutti e 4 i bug confermati risolti dal testing agent
+
+### Credenziali Test Collaboratori
+- **Collaboratore Lara**: `lara@test.com` / `Collab2025`
+- **Collaboratore Iva**: `iva@test.com` / `Collab2025`
+- **Admin**: `test.admin@test.com` / `Test1234`
+
+---
+
+## Issue Backlog Aggiornato
+
+### P0 - Completati ✅
+- Bug Privacy Modal Loop → FIXED
+- Bug Dati Non Salvati → FIXED
+- Bug Scroll Modal Quietanze → FIXED
+
+### P1 - Da Fare
+- Applicare logica "fine periodo prova" per Genitori (come Atleti)
+- Fix icone `@expo/vector-icons` che non si caricano sul web
+
+### P2 - Backlog
+- Compensi: mostrare solo mesi del periodo contratto (non tutti i 12 mesi)
+- Stabilizzare modulo "PRO"
+
+### P3 - Futuro
+- Integrazione Stripe per piani premium
+- Logica Freemium con prompt upgrade
+- Refactoring `server.py` in struttura modulare
+
+---
