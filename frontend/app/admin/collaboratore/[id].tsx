@@ -342,6 +342,23 @@ export default function AdminCollaboratoreDetail() {
             <Text style={styles.infoLabel}>Registrato il:</Text>
             <Text style={styles.infoValue}>{formatDate(collaboratore.created_at)}</Text>
           </View>
+          
+          {/* Reset Password Button */}
+          <TouchableOpacity
+            style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              backgroundColor: '#FF9500', 
+              padding: 12, 
+              borderRadius: 8, 
+              marginTop: 15 
+            }}
+            onPress={() => setResetPasswordVisible(true)}
+          >
+            <Ionicons name="key" size={20} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 8 }}>Reset Password</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Compensation Card */}
