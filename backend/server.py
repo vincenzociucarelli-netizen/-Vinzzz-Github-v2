@@ -10145,24 +10145,20 @@ async def sign_collaboratore_compensation_receipt(
     month_name = MONTH_NAMES[request.month]
     receipt_id = str(uuid.uuid4())
     
-    # Generate PDF
+    # Generate PDF using existing function
     try:
-        pdf_bytes = generate_receipt_pdf(
-            receipt_type="collaboratore",
+        # Get society name from settings
+        society_settings = await db.settings.find_one({"type": "society"})
+        society_name = society_settings.get("society_name", "ASD/SSD") if society_settings else "ASD/SSD"
+        
+        pdf_bytes = generate_monthly_receipt_pdf(
+            society_name=society_name,
             collaborator_name=collaboratore.get("full_name", ""),
             collaborator_fiscal_code=collaboratore.get("fiscal_code", ""),
-            society_name=society_name,
-            month=request.month,
             month_name=month_name,
             year=request.year,
             amount_gross=request.amount_gross,
-            amount_net=amount_net,
-            deductions=deductions,
-            signature_base64=request.signature_base64,
-            exceeded_5000=first_time_exceeded_5000,
-            exceeded_15000=first_time_exceeded_15000,
-            yearly_total=new_total,
-            prior_compensation=prior_compensation
+            signature_base64=request.signature_base64
         )
     except Exception as e:
         logging.error(f"Error generating collaboratore receipt PDF: {e}")
