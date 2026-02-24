@@ -570,6 +570,39 @@ export default function AdminCollaboratoreDetail() {
                   </Text>
                 </View>
               )}
+              
+              {/* Visualizzazione Assegnazioni */}
+              {(selectedTeamIds.length > 0 || selectedVenueNames.length > 0) && (
+                <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#f0f0f0' }}>
+                  {selectedTeamIds.length > 0 && (
+                    <View style={{ marginBottom: 12 }}>
+                      <Text style={styles.infoLabel}>🏐 Squadre:</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                        {selectedTeamIds.map((teamId) => {
+                          const team = teams.find(t => t.id === teamId);
+                          return team ? (
+                            <View key={teamId} style={{ backgroundColor: '#E3F2FD', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                              <Text style={{ color: '#007AFF', fontSize: 13, fontWeight: '500' }}>{team.name}</Text>
+                            </View>
+                          ) : null;
+                        })}
+                      </View>
+                    </View>
+                  )}
+                  {selectedVenueNames.length > 0 && (
+                    <View>
+                      <Text style={styles.infoLabel}>🏟️ Palestre:</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                        {selectedVenueNames.map((venueName, idx) => (
+                          <View key={idx} style={{ backgroundColor: '#FFF3E0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                            <Text style={{ color: '#E65100', fontSize: 13, fontWeight: '500' }}>{venueName}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
             </>
           )}
         </View>
