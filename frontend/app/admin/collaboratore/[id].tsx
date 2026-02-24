@@ -149,14 +149,20 @@ export default function AdminCollaboratoreDetail() {
       setMonthlyCompensation(collabRes.data.monthly_compensation?.toString() || '0');
       setOtherAnnualCompensation(collabRes.data.other_annual_compensation?.toString() || '0');
       
-      // Load contract dates
+      // Load contract dates and convert to Italian format dd/mm/yyyy
       if (collabRes.data.contract_start_date) {
         const date = new Date(collabRes.data.contract_start_date);
-        setContractStartDate(date.toISOString().split('T')[0]);
+        const dd = String(date.getDate()).padStart(2, '0');
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const yyyy = date.getFullYear();
+        setContractStartDate(`${dd}/${mm}/${yyyy}`);
       }
       if (collabRes.data.contract_end_date) {
         const date = new Date(collabRes.data.contract_end_date);
-        setContractEndDate(date.toISOString().split('T')[0]);
+        const dd = String(date.getDate()).padStart(2, '0');
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const yyyy = date.getFullYear();
+        setContractEndDate(`${dd}/${mm}/${yyyy}`);
       }
       
       // Initialize onboarding checklist state
