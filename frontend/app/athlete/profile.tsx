@@ -1278,6 +1278,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 placeholderTextColor="#ccc"
                 autoCapitalize="characters"
               />
+              </>
+              )}
               
               <TouchableOpacity
                 style={[styles.saveBankButtonFixed, savingBank && styles.saveButtonDisabled]}
