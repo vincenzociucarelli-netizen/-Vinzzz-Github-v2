@@ -172,12 +172,6 @@ export default function Register() {
               else router.replace('/dirigente');
             }
           );
-        } else if (role === 'athlete') {
-          showAlert(
-            '✅ Registrazione completata!',
-            'Benvenuto! Sei registrato come atleta maggiorenne.\n\n🏃 Hai 7 giorni di prova. L\'amministratore ti assegnerà a una squadra.',
-            () => router.replace('/athlete')
-          );
         } else {
           showAlert(
             '✅ Registrazione completata!',
