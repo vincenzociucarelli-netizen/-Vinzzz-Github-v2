@@ -243,7 +243,7 @@ export default function DocumentsArchive() {
             onPress={() => handleDownload(doc)}
             data-testid={`download-btn-${doc.id}`}
           >
-            <Ionicons name="download-outline" size={20} color="#fff" />
+            <Ionicons name="eye-outline" size={20} color="#fff" />
           </TouchableOpacity>
         )}
       </View>
