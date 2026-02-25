@@ -1246,6 +1246,9 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 </TouchableOpacity>
               </View>
               
+              {/* Bank details - Only for compensated athletes */}
+              {!isQuotaAthlete && (
+              <>
               <Text style={styles.inputLabel}>IBAN</Text>
               <TextInput
                 style={styles.input}
