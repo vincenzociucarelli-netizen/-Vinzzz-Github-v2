@@ -1,77 +1,97 @@
-<analysis>**original_problem_statement**: The initial goal was to fix critical bugs in the Collaboratori (Collaborators) user flow. This was expanded to include numerous feature requests and UI improvements. The most recent tasks involved implementing a Campi da gioco / Palestre (Venues/Gyms) management system, allowing admins to assign venues and teams to collaborators, and a major refactoring of the app's settings pages for better organization. The user's goal is to finalize the app within the week for submission to the app stores.
+<analysis>**original_problem_statement**: The initial goal was to fix critical bugs in the Collaboratori flow, which expanded to include UI improvements, a Venues/Gyms management system, and refactoring the settings pages. The current focus has shifted to resolving a series of critical bugs in the Atleta Maggiorenne (Adult Athlete) user flow that are blocking testing. The user reported that after registration, the athlete's profile data doesn't save correctly, payments don't sync from their assigned team, and their dashboard is missing key information like schedule details and profile picture.
 
 PRODUCT REQUIREMENTS:
-- Fix all critical bugs in the Collaboratori flow.
-- Implement a system to manage Campi da gioco / Palestre (Venues/Gyms).
-- Allow admins to assign Venues and Teams to Collaborators.
-- Improve UI consistency, particularly for back buttons and input fields (e.g., province codes).
-- Refactor the main Settings page into logical sub-pages.
-- Ensure that when a user's compensation is changed by an admin, they are required to re-accept it.
+- Fix all critical bugs in the Atleta Maggiorenne flow.
+  - An adult athlete's registration must require Admin approval (changed from auto-approval).
+  - An approved adult athlete must be able to view their full profile, including personal data, assigned team, and profile picture.
+  - The athlete's payment page must correctly inherit and display the fee installments from their assigned team.
+  - The athlete's schedule page must show all team events, including training, match day, and pre-game warm-ups (rifinitura).
+  - The athlete must have a button to withdraw from their trial period.
+  - Personal data saved by the athlete must be visible to the Admin.
+- Fix UI/UX issues:
+  - Improve visibility of header icons.
+  - Ensure logos are not cropped or distorted.
+  - Implement a view before download functionality for all documents across all roles.
+  - Fix a bug that logs out parents when they try to upload a profile picture.
+  - Fix a QR scanner permission error by providing better user feedback.
+  - Ensure province input fields are limited to 2 characters.
+- Clean up the codebase by removing obsolete files.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-- A full-stack React/FastAPI/MongoDB application for sports club management with roles for Admin, Coach, Dirigente, Collaboratore, Athlete, and Parent.
-- The Collaboratori user flow is now stable after extensive bug fixing.
-- A Campi da gioco / Palestre (Venues/Gyms) feature has been implemented, allowing admins to define venues in the settings and assign them to teams and collaborators.
-- The main settings page has been refactored into a landing page with navigation to two new sub-pages: Società (for company data) and Altre Impostazioni (for roles, venues, etc.).
-- A system is in place for all roles with compensation (Coach, Dirigente, Collaboratore) that requires them to re-accept their compensation if the amount is modified by an admin.
+- A full-stack React/FastAPI/MongoDB application for sports club management.
+- The Adult Athlete registration flow has been modified to require admin approval, but the post-approval experience is severely bugged.
+- Numerous UI improvements have been completed: header icons are more visible, logos on the login/header are fixed, and a view in new tab feature for documents is implemented for all roles.
+- A bug preventing parents from uploading their photo has been fixed.
+- The QR scanner now has improved error handling for camera permissions.
+- The settings page has been successfully refactored and the old file was removed.
+- A critical backend fix was implemented to synchronize data between the  and  collections when an athlete updates their own profile via the  endpoint.
+- A fix was implemented to automatically generate payment installments when an admin assigns an athlete to a team.
 
 **Last working item**:
-- Last item agent was working: The agent completed the refactoring of the main settings page () into a new structure with a main index page () and two sub-pages ( and ). This was done to improve the organization and user experience of the settings section.
-- Status: USER VERIFICATION PENDING
+- Last item agent was working: The agent was in the middle of a large bug-fixing session for the Adult Athlete flow, addressing issues reported by the user. The final set of changes included:
+    1.  Modifying the  endpoint to return all installments, not just paid ones.
+    2.  Modifying the  endpoint to include  and  in the response.
+    3.  Updating the database to add a  to the Serie D team.
+    4.  Adding a section to display attendance history on the athlete's schedule page ().
+- Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? frontend testing agent. The agent should verify that navigation from the new settings index page works, that both the 'Society' and 'Other Settings' pages load correctly, and that data can be successfully saved on each of the new pages.
+- Which testing method agent to use? both.
+    - **Backend**: Use  to test the modified endpoints: , , and the new .
+    - **Frontend**: Use the screenshot tool to log in as an athlete (e.g., Lisa) and verify the entire dashboard ( and ) for corrected data (avatar, team name, payments, schedule including rifinitura, and the new Presenze section).
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   Issue 1: (P1) The  library fails to load correctly on the web version, making some icons invisible.
--   Issue 2: (P2) The compensation page for collaborators shows all 12 months of the year, not just the months within the contract period.
--   Issue 3: (P2) Some back arrows are still hard to see against certain background colors.
+-   Issue 1: (P0) The Adult Athlete dashboard is broken and not displaying correct information.
+-   Issue 2: (P1) The  library fails to load correctly on the web version.
+-   Issue 3: (P2) The compensation page for coach/dirigente/collaboratore shows all 12 months, not just contract months.
 
 **Issues Detail**:
--   **Issue 1: @expo/vector-icons rendering issue (P1)**
-    -   **Description**: Icons from  do not render on the web version. This is a long-standing UI bug that detracts from the user experience.
+-   **Issue 1: Adult Athlete Dashboard Broken (P0)**
+    -   **Description**: After being approved, an adult athlete logs in and sees incorrect or missing data. Specific bugs include: payment installments show €0.00, profile picture and team name are not displayed, the withdraw from trial button is not functional, and schedule details like rifinitura and attendance history are missing.
+    -   **Attempted fixes**: The previous agent made several backend and frontend changes to address this. It modified  to fix payment fetching logic and to include more data in the athlete profile API response. It also updated the frontend pages  and  to display this new data. These fixes have not been tested.
     -   **Next debug checklist**:
-        1. Investigate the web build configuration for Expo.
-        2. Check for console errors in the browser related to font loading.
-        3. Research common issues with  and Expo Web. A potential fix might involve manually configuring the font in the web build's HTML or CSS.
-    -   **Why fix this issue and what will be achieved with the fix?**: Resolving this will fix a major UI inconsistency and improve the professionalism of the web app.
+        1.  Restart and check the status of both  and  services to ensure they are stable after the previous  file watcher error.
+        2.  **Backend Verification**:
+            -    the  endpoint for an adult athlete (Lisa) to confirm it returns all payment installments.
+            -    the  endpoint to confirm it now includes  and .
+        3.  **Frontend Verification**:
+            -   Log in as the adult athlete.
+            -   Navigate to the main dashboard () and verify the avatar, team name, and Recesso button are correctly displayed and functional.
+            -   Navigate to the payments page () and verify the fee installments are listed correctly.
+            -   Navigate to the schedule page () and verify that the Rifinitura and Presenze sections appear.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is the main blocker preventing the user from testing and finalizing the adult athlete flow.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Both.
+    -   **Blocked on other issue**: None.
+
+-   **Issue 2: @expo/vector-icons rendering issue (P1)**
+    -   **Description**: Icons from  do not render on the web version.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend.
-    -   **Blocked on other issue**: None.
 
--   **Issue 2: Compensation Month Display (P2)**
-    -   **Description**: The grid for monthly compensations in  (and likely other roles) displays all 12 months, regardless of the user's contract start and end dates.
-    -   **Next debug checklist**:
-        1.  In , review the logic that generates the month grid.
-        2.  Ensure the component correctly filters the months based on the  and  properties, handling cases where these dates might be null.
-    -   **Why fix this issue and what will be achieved with the fix?**: This will prevent user confusion by only showing relevant months for compensation.
+-   **Issue 3: Compensation Month Display (P2)**
+    -   **Description**: The compensation grid for roles like Coach, Dirigente, and Collaboratore displays all 12 months, not just the months within their contract period.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Frontend.
-    -   **Blocked on other issue**: None.
-
--   **Issue 3: Back Arrow Visibility (P2)**
-    -   **Description**: Despite a global fix attempt, some back arrows remain difficult to see, particularly a white arrow on an orange header background as reported by the user.
-    -   **Next debug checklist**:
-        1. Create a standardized, reusable  component that has a consistent, high-contrast style (e.g., an icon inside a circular white background with a drop shadow).
-        2. Systematically replace all instances of the back arrow across the app with this new component.
-    -   **Why fix this issue and what will be achieved with the fix?**: This will ensure consistent and accessible navigation throughout the app.
-    -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Frontend.
-    -   **Blocked on other issue**: None.
 
 **In progress Task List**:
-- None.
+-   **Task 1: Finalize Adult Athlete Flow (P0)**
+    -   **Where to resume**: Verify the last batch of fixes made to the backend () and frontend (, ). Begin with the  for Issue 1.
+    -   **What will be achieved with this?**: A fully functional and testable user flow for adult athletes, from registration to post-approval dashboard usage.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: Both.
+    -   **Blocked on something**: Potential environment instability ( error).
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - **(P0)** User plans to perform a full end-to-end test of the Atleta Maggiorenne (Adult Athlete) flow.
-    - **(P1)** After the collaborator flow is stable, apply the identical end-of-trial logic for the **Parent** of a minor athlete.
-    - **(P1)** Prepare all necessary assets and legal documents (Privacy Policy) for app store submission. The agent has already provided a comprehensive guide.
+    - **(P0)** User to perform a full end-to-end test of the Atleta Maggiorenne (Adult Athlete) flow once the current bugs are fixed.
+    - **(P1)** Apply the end-of-trial logic for the **Parent** of a minor athlete.
+    - **(P1)** Prepare all necessary assets and legal documents (Privacy Policy) for app store submission.
 - **Future Tasks**:
     - **(P2)** Re-evaluate and stabilize the PRO Module.
     - **(P3)** Implement Stripe Integration for premium plans.
@@ -79,31 +99,23 @@ PRODUCT REQUIREMENTS:
     - **(P3)** Refactor  into a modular structure (routers, services, models).
 
 **Completed work in this session**
-- **Collaborator Flow Overhaul**:
-  - Fixed critical bugs: privacy modal loop, profile data not saving, and signature pad scrolling issue.
-  - Fixed the backend logic for signing compensation receipts ( and  errors).
-  - Added a My Documents section to the collaborator profile page.
-  - Made the password in the admin's reset-password modal visible.
-- **Compensation Logic Enhancement (All Roles)**:
-  - Implemented logic to force re-acceptance of compensation when the monthly amount is changed by an admin.
-  - Added a Già Percepito (Already Received) box on admin detail pages to show the sum of signed receipts.
-- **Campi da gioco / Palestre (Venues/Gyms) Feature**:
-  - Created a new section in Settings for admins to add, view, and delete venues.
-  - Replaced free-text inputs with a dropdown  for selecting venues on the Team details page.
-  - Added a new section on the Collaborator admin page to assign teams and venues to collaborators.
-  - Fixed a bug preventing assigned venues from being saved and displayed correctly.
-- **Settings Page Refactor**:
-  - Restructured the monolithic settings page into a main navigation page () linking to two new, organized sub-pages:  and .
-- **UI/UX Improvements**:
-  - Fixed the visibility of back arrows in over 30 files by changing them to a high-contrast style (white background, blue icon).
-  - Enforced a  and uppercase format for all province input fields across the application.
-  - Added the missing  field to the Dirigente profile.
-  - Fixed an issue on the admin's team list where the total fee was not updating dynamically based on its installments.
-  - Redesigned the Quietanze Firmate section on the collaborator admin page for better visibility.
+- **UI/UX Enhancements**:
+  - Improved visibility of header icons in the admin dashboard by adding white circular backgrounds.
+  - Fixed logo display on the login page (removed white circle) and in the admin header (removed white background) to prevent cropping.
+- **Adult Athlete Flow Changes**:
+  - Modified the registration process to require admin approval instead of auto-approving into a trial state.
+  - Changed the adult athlete badge color to orange for better distinction in the admin list.
+- **Document Handling**:
+  - Implemented a View in new tab feature for PDF documents (receipts, etc.) across all user roles (Coach, Collaboratore, Dirigente, Admin) instead of forcing an immediate download.
+- **Bug Fixes**:
+  - **Parent Photo Upload**: Fixed a bug that caused parents to be logged out when trying to upload a profile picture by adding  to the allowed roles on the  endpoint.
+  - **Athlete Profile Data Sync**: Fixed a critical bug where data saved by an athlete in their profile was not visible to admins. The  endpoint was updated to sync data to the  collection, and a migration script was run for the existing user Lisa.
+  - **QR Scanner Permissions**: Improved error handling for the QR scanner to show a helpful message when camera access is denied.
+  - **Province Input**: Limited all province input fields to a  of 2.
 
 **Earlier issues found/mentioned but not fixed**
 - The  rendering issue on the web remains unresolved.
-- The compensation page shows all 12 months instead of only those in the contract period.
+- The compensation page for compensated roles shows all 12 months instead of only those in the contract period.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork**:  library failing to render on the web.
@@ -114,67 +126,67 @@ PRODUCT REQUIREMENTS:
 
 
 **Key Technical Concepts**
--   **Role-Based Access Control (RBAC)**: Logic extended for  assignments.
--   **State Management in React**: Complex state handling for dynamic lists (venues), multi-select chips (assignments), and conditional UI rendering.
--   **File-based Routing (Expo Router)**: Refactored a single page into a nested route structure (, , ).
--   **API Design**: Added new fields to existing models (, ) and ensured GET/PATCH endpoints were updated accordingly.
+-   **API Data Synchronization**: Critical logic was added to keep the  and  MongoDB collections in sync when data is updated from different endpoints.
+-   **Conditional UI Rendering**: Extensive use of conditional logic in React components to tailor the UI for different user subtypes (e.g., quota vs. compensated athletes).
+-   **Environment Troubleshooting**: The agent encountered and debugged a critical environment issue () that was causing the frontend service to fail. This is a potential risk for the next agent.
+-   **API Response/Model Evolution**: Pydantic models and API responses were updated to include additional data (, ) needed by the frontend, ensuring consistency between the backend and frontend.
 
 **key DB schema**
--   **users**:
-    -    (Assignment functionality added for collaborators)
-    -    (NEW field for collaborators)
-    -    (Added for  role)
--   **society_settings** (document in  collection):
-    -    (NEW field, where each dict is )
+-   **users**: Logic in  now updates the associated  document if  exists.
+-   **athletes**:  now triggers payment creation when  is assigned.
+-   **teams**: A  field was added to a team document to test the schedule display.
+-   **Pydantic Models**: The  model in  was updated to include optional  and .
 
 **All files of reference**
--   **New Settings Structure**:
-    -   
-    -   
-    -   
--   **Key Modified Files**:
+-   **Key Modified Backend File**: 
+-   **Key Modified Frontend Files**:
     -   
     -   
     -   
     -   
     -   
+    -   
+-   **New Frontend Files**:
     -   
 
 **Areas that need refactoring**:
--   **Delete old settings file**: The file  is now redundant after the refactor and should be deleted to prevent confusion.
--   ****: This file continues to grow and is the primary source of backend logic. It should be broken down into a modular structure (e.g., routers, services, models).
--   **Profile Pages**: The profile pages for , , and  share significant repeated code ( function, document sections). This logic should be extracted into reusable components or hooks.
+-   ****: Continues to be a monolithic file and is a prime candidate for being split into a modular structure (routers, services, models).
+-   **Profile Pages**: The profile pages for , ,  share a lot of logic that could be extracted into reusable components.
+-   ** & **: These files have become very complex with nested conditional logic for different athlete types. They could benefit from being broken down into smaller, more focused components.
 
 **key api endpoints**
--   : Modified to handle saving the new  array.
--   : Modified to return the  array.
--   : Heavily modified to handle , , the  reset logic, and added  for Dirigente.
--   : Modified to return .
+-   : **CREATED** to handle an athlete withdrawing from their trial period.
+-   : **MODIFIED** to remove the  filter and return all payment installments.
+-   : **MODIFIED** to include  and  in the response.
+-   : **HEAVILY MODIFIED** to sync data changes to the  collection if the user is an athlete.
+-   : **MODIFIED** to trigger payment installment creation when a team is assigned.
+-   : **MODIFIED** to set user status to  and no longer return a login token.
+-   : **MODIFIED** to add  to the list of allowed roles.
 
 **Critical Info for New Agent**
--   **PRIORITY 1: Stability for App Store Submission**: The user's primary goal is to launch the app soon. Prioritize stability and thorough testing of existing features over new, complex functionality.
--   **User Testing Cycle**: The user is very active in testing. Expect detailed feedback. The next step is for the user to test the Atleta Maggiorenne flow. Be prepared to address any issues they find.
--   **Settings Refactor**: Be aware that the settings functionality is now split across three new files in . The original  file is now obsolete.
+-   **Environment Instability Risk**: The previous session was severely delayed by an  (file watcher limit) error that caused the frontend service to fail repeatedly. If the frontend fails to start, check the logs for this error.
+-   **Data Sync is Key**: The core of many recent bugs was data being out of sync between the  and  collections. The fix in  is critical. Be mindful of this pattern when modifying user-related data.
+-   **Test Before Committing**: The last set of fixes for the adult athlete flow were extensive and completely untested. You must start by thoroughly verifying them before moving on to any new tasks.
 
 **documents and test reports created in this job**
--   
--   
--    (Updated with completed tasks)
+- None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Asks to make the Quietanze Firmate (Signed Receipts) section in the collaborator detail page more prominent.
-2.  **Agent**: Redesigns the section with a green background, borders, and icons.
-3.  **User**: Reports that the admin cannot see the newly added fields to assign teams and venues to a collaborator.
-4.  **Agent**: Identifies the UI was only visible in edit mode and creates a new, always-visible Assegnazioni (Assignments) section.
-5.  **User**: Reports that assigned venues are not saved for collaborators, while teams are.
-6.  **Agent**: Debugs the issue, finds the  endpoint wasn't returning the  field, and fixes it.
-7.  **User**: Reports that some back arrows are still invisible.
-8.  **User**: Proposes a major refactor of the Impostazioni (Settings) page to be more organized.
-9.  **User**: Chooses to split the Settings page into a main page with buttons leading to two separate sub-pages.
-10. **User**: Expresses satisfaction with the recent changes and states they will test the adult athlete flow next before proceeding with the bureaucratic steps for app publication.
+10. **User**: Reports that the QR scanner gives a Permission denied error.
+9.  **User**: For adult athletes, asks to remove N° Tesserino and change the Save Bank Details button text. Also reports that coaches can't view receipts (they download instantly).
+8.  **User**: Asks to apply the View then Download logic to all documents for all roles.
+7.  **User**: Reports that athlete Lisa's personal data isn't saved on the Admin side, and her payment page shows €0.
+6.  **User**: Reports that a parent gets logged out when trying to upload a photo.
+5.  **User**: Confirms Lisa's data is still not loaded on the admin side and asks for a summary of what to test.
+4.  **User**: Reports Lisa cannot see her team's schedule from her account.
+3.  **User**: Reports multiple issues with Lisa's athlete page: warmup session missing, avatar not loaded, team name shows loading, withdraw button needed. Also, on the admin side, the second parent email should be hidden.
+2.  **User**: Reports a  error, blocking access to the app.
+1.  **User**: After the 502 error was fixed, reports that the previous fixes did not work. Payments are still wrong, avatar/team name not loaded, withdrawal button broken, and schedule is missing attendance/warmup info.
 
 **Project Health Check:**
--   **Broken**: The web version of the app has a known issue with icons from  not rendering.
+-   **Broken**:
+    -   The Adult Athlete user flow is currently broken, pending verification of the latest fixes.
+    -   The web version of the app has a known, long-standing issue with icons from  not rendering.
 -   **Mocked**: None.
 
 **3rd Party Integrations**
@@ -186,17 +198,17 @@ PRODUCT REQUIREMENTS:
 -   @expo/ngrok
 
 **Testing status**
--   Testing agent used after significant changes: Yes, for the collaborator bug fixes and adult athlete flow.
--   Troubleshoot agent used after agent stuck in loop: No.
+-   Testing agent used after significant changes: NO (not for the latest batch of fixes).
+-   Troubleshoot agent used after agent stuck in loop: NO. The agent manually debugged the environment issue.
 -   Test files created: None.
--   Known regressions: None.
+-   Known regressions: The Adult Athlete dashboard is currently in a regressed state, but fixes are pending verification.
 
 **Credentials to test flow:**
 -   **Admin / Dirigente**:  / 
 -   **Collaboratore (Iva)**:  / 
--   **Collaboratore (Lara)**:  / 
+-   **Adult Athlete (Lisa)**: Login credentials not specified, but the user is Lisa Test. The user might need to be re-registered or credentials found in the database.
+-   **Parent**: Credentials not specified.
 
 **What agent forgot to execute**
-- The agent never addressed the long-standing  issue.
-- The agent did not fix the issue where the compensation page shows all 12 months.
-- The agent did not delete the old  file after refactoring the settings pages, leaving a redundant file in the codebase.</analysis>
+- The agent did not permanently resolve the  file watcher limit issue, which could cause environment instability again.
+- The two long-standing issues ( and compensation month display) remain untouched.</analysis>
