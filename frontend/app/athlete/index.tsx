@@ -278,20 +278,42 @@ export default function AthleteScreen() {
           
           {/* Status Badge */}
           <View style={{ 
-            backgroundColor: profile?.status === 'trial' ? '#FFF3E0' : '#E8F5E9', 
+            backgroundColor: profile?.status === 'trial' ? '#FFF3E0' : profile?.status === 'pending_privacy' ? '#E3F2FD' : '#E8F5E9', 
             paddingHorizontal: 12, 
             paddingVertical: 6, 
             borderRadius: 16,
             marginTop: 8
           }}>
             <Text style={{ 
-              color: profile?.status === 'trial' ? '#FF9800' : '#4CAF50',
+              color: profile?.status === 'trial' ? '#FF9800' : profile?.status === 'pending_privacy' ? '#1976D2' : '#4CAF50',
               fontWeight: '600',
               fontSize: 13
             }}>
-              {profile?.status === 'trial' ? '⏳ Periodo di Prova' : '✓ Attivo'}
+              {profile?.status === 'trial' ? '⏳ Periodo di Prova' : profile?.status === 'pending_privacy' ? '📝 Firma Privacy Richiesta' : '✓ Attivo'}
             </Text>
           </View>
+          
+          {/* Pending Privacy Banner */}
+          {profile?.status === 'pending_privacy' && (
+            <TouchableOpacity 
+              style={{ 
+                backgroundColor: '#E3F2FD', 
+                padding: 12, 
+                borderRadius: 8, 
+                marginTop: 12,
+                borderWidth: 1,
+                borderColor: '#1976D2'
+              }}
+              onPress={() => router.push('/athlete/profile')}
+            >
+              <Text style={{ color: '#1976D2', fontWeight: '600', fontSize: 14, textAlign: 'center' }}>
+                ✍️ Devi accettare la Privacy per continuare
+              </Text>
+              <Text style={{ color: '#666', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
+                Clicca qui per andare al profilo e firmare
+              </Text>
+            </TouchableOpacity>
+          )}
           
           {/* Trial end date */}
           {profile?.status === 'trial' && profile?.trial_end_date && (
