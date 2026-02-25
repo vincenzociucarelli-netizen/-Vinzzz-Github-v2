@@ -1061,9 +1061,10 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </TouchableOpacity>
           )}
         </View>
+        )}
 
-        {/* Registro Quietanze Compatto */}
-        {profileData.monthly_compensation > 0 && (
+        {/* Registro Quietanze Compatto - Only show for compensated athletes */}
+        {!isQuotaAthlete && profileData.monthly_compensation > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📅 Registro Quietanze</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
