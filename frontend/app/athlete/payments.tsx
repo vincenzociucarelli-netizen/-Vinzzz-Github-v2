@@ -162,8 +162,8 @@ export default function AthletePayments() {
               </View>
               <View style={styles.paymentRight}>
                 <Text style={styles.paymentAmount}>€ {payment.amount.toFixed(2)}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(payment.status) }]}>
-                  <Text style={styles.statusText}>{getStatusText(payment.status)}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(payment) }]}>
+                  <Text style={styles.statusText}>{getStatusText(payment)}</Text>
                 </View>
               </View>
             </View>
