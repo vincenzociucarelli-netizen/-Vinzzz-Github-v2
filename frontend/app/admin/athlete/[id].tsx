@@ -964,6 +964,7 @@ export default function AdminAthleteDetail() {
           president_name: societyData?.president_name || '',
           logo: societyData?.logo || societyData?.company_logo_base64 || '',
           stamp_signature: societyData?.stamp_signature || societyData?.stamp_signature_base64 || '',
+          sport_type: societyData?.sport_type || societyData?.sport_praticato || 'PALLAVOLO',
         },
         payments: payments.length > 0 ? payments.map((p: any, index) => ({
           date: p.paid_date || '',
