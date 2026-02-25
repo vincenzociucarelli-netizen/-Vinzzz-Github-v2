@@ -49,9 +49,10 @@ export default function AthletePayments() {
         const paymentData = paymentsRes.data || [];
         setPayments(paymentData);
         
-        // Calculate totals
-        const due = paymentData.filter((p: Payment) => p.status !== 'paid').reduce((sum: number, p: Payment) => sum + p.amount, 0);
-        const paid = paymentData.filter((p: Payment) => p.status === 'paid').reduce((sum: number, p: Payment) => sum + p.amount, 0);
+        // Calculate totals - check both 'paid' boolean and 'status' field
+        const isPaid = (p: Payment) => p.paid === true || p.status === 'paid';
+        const due = paymentData.filter((p: Payment) => !isPaid(p)).reduce((sum: number, p: Payment) => sum + p.amount, 0);
+        const paid = paymentData.filter((p: Payment) => isPaid(p)).reduce((sum: number, p: Payment) => sum + p.amount, 0);
         setTotalDue(due);
         setTotalPaid(paid);
       }
