@@ -79,6 +79,12 @@ export default function AthleteScreen() {
   const [contractEndYear, setContractEndYear] = useState<number | null>(null);
   const [contractStartMonth, setContractStartMonth] = useState<number | null>(null);
   const [contractEndMonth, setContractEndMonth] = useState<number | null>(null);
+  
+  // Privacy modal state
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [privacySignature, setPrivacySignature] = useState<string | null>(null);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+  const signatureRef = useRef<SignatureCanvas>(null);
 
   // Helper function to format date strings correctly
   const formatDateIT = (dateStr: string | undefined) => {
