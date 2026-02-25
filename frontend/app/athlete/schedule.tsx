@@ -27,6 +27,12 @@ interface TeamSchedule {
   match_day?: {
     day: string;
     time?: string;
+    venue?: string;
+  };
+  warmup_session?: {
+    timeStart?: string;
+    timeEnd?: string;
+    venue?: string;
   };
 }
 
