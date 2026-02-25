@@ -239,6 +239,50 @@ export default function AthleteSchedule() {
           </>
         )}
         
+        {/* Attendance History Section */}
+        <Text style={styles.sectionTitle}>📋 Storico Presenze</Text>
+        {attendances.length > 0 ? (
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginHorizontal: 16 }}>
+            {attendances.slice(0, 10).map((att: any, index: number) => (
+              <View key={att.id || index} style={{ 
+                flexDirection: 'row', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                paddingVertical: 10,
+                borderBottomWidth: index < attendances.length - 1 ? 1 : 0,
+                borderBottomColor: '#eee'
+              }}>
+                <View>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>
+                    {att.date ? new Date(att.date).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Data non disponibile'}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#666' }}>
+                    {att.type === 'training' ? 'Allenamento' : att.type === 'match' ? 'Partita' : att.type || 'Evento'}
+                  </Text>
+                </View>
+                <View style={{ 
+                  backgroundColor: att.present ? '#E8F5E9' : '#FFEBEE', 
+                  paddingHorizontal: 12, 
+                  paddingVertical: 4, 
+                  borderRadius: 12 
+                }}>
+                  <Text style={{ 
+                    color: att.present ? '#4CAF50' : '#F44336', 
+                    fontWeight: '600',
+                    fontSize: 12
+                  }}>
+                    {att.present ? '✓ Presente' : '✗ Assente'}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 20, marginHorizontal: 16, alignItems: 'center' }}>
+            <Text style={{ color: '#999', fontSize: 14 }}>Nessuna presenza registrata</Text>
+          </View>
+        )}
+        
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
