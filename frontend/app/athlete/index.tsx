@@ -42,6 +42,16 @@ interface AthleteProfile {
   iban_holder_last_name?: string;
   bank_name?: string;
   athlete_type?: string;
+  // Additional fields for quota athletes
+  team_id?: string;
+  team_name?: string;
+  profile_photo?: string;
+  status?: string;
+  trial_end_date?: string;
+  privacy_accepted?: boolean;
+  privacy_accepted_date?: string;
+  email?: string;
+  phone_athlete?: string;
 }
 
 interface Receipt {
