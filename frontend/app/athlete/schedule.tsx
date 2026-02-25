@@ -12,6 +12,8 @@ import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import { useAuthStore } from '../../src/store/authStore';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
 
 interface TrainingSession {
   day: string;
@@ -32,8 +34,17 @@ interface TeamSchedule {
   warmup_session?: {
     timeStart?: string;
     timeEnd?: string;
+    start_time?: string;
+    end_time?: string;
     venue?: string;
   };
+}
+
+interface Attendance {
+  id: string;
+  date: string;
+  status: 'present' | 'absent' | 'late' | 'justified';
+  type?: string;
 }
 
 const DAYS_IT: { [key: string]: string } = {
