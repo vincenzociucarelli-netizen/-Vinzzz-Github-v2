@@ -70,6 +70,7 @@ export default function AthleteSchedule() {
           setSchedule({
             training_sessions: teamRes.data.training_sessions || [],
             match_day: teamRes.data.match_day,
+            warmup_session: teamRes.data.warmup_session,
           });
         }
       }
