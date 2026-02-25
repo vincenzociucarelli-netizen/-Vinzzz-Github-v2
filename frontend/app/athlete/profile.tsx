@@ -675,10 +675,11 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
   const renderField = (label: string, value: string, key: string, editable = true) => {
     // Special handling for date_of_birth field
     const isDateField = key === 'date_of_birth';
+    const isProvinceField = key === 'province' || key === 'province_of_birth' || key === 'birth_province';
     
     return (
       <View style={styles.fieldContainer}>
-        <Text style={styles.fieldLabel}>{label}{isDateField && editing ? ' (GG/MM/AAAA)' : ''}</Text>
+        <Text style={styles.fieldLabel}>{label}{isDateField && editing ? ' (GG/MM/AAAA)' : ''}{isProvinceField && editing ? ' (2 lettere)' : ''}</Text>
         {editing && editable ? (
           <TextInput
             style={styles.input}
@@ -692,8 +693,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             }}
             autoCapitalize={isDateField ? 'none' : 'characters'}
             keyboardType={isDateField ? 'number-pad' : 'default'}
-            maxLength={isDateField ? 10 : undefined}
-            placeholder={isDateField ? '01/01/1990' : undefined}
+            maxLength={isDateField ? 10 : (isProvinceField ? 2 : undefined)}
+            placeholder={isDateField ? '01/01/1990' : (isProvinceField ? 'es. PG' : undefined)}
           />
         ) : (
           <Text style={styles.fieldValue}>{value || '-'}</Text>
