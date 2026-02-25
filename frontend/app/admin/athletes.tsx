@@ -331,7 +331,7 @@ export default function AdminAthletes() {
           ]} numberOfLines={1}>
             {formatAthleteNameForDisplay(item)}
           </Text>
-          {(item as any).athlete_code && (
+          {(item as any).athlete_code && (item as any).athlete_code.includes('ADULT') && (
             <Text style={styles.athleteCode}>{(item as any).athlete_code}</Text>
           )}
           {(item as any).has_overpayment && (
