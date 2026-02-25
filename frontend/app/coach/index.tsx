@@ -65,6 +65,7 @@ export default function CoachScreen() {
   
   // Web scanner states
   const [webScannerActive, setWebScannerActive] = useState(false);
+  const [webScannerError, setWebScannerError] = useState<string | null>(null);
   const [manualQrInput, setManualQrInput] = useState('');
   const [manualInputModalVisible, setManualInputModalVisible] = useState(false);
   const webScannerRef = useRef<any>(null);
