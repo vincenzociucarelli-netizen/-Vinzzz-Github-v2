@@ -1581,6 +1581,50 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
             {"id": current_user["id"]},
             {"$set": update_dict}
         )
+        
+        # Also update athlete record if user is an adult athlete (has athlete_id)
+        athlete_id = current_user.get("athlete_id")
+        if athlete_id:
+            athlete_update = {}
+            # Map user fields to athlete fields
+            if "first_name" in update_dict:
+                athlete_update["first_name"] = update_dict["first_name"]
+            if "last_name" in update_dict:
+                athlete_update["last_name"] = update_dict["last_name"]
+            if "full_name" in update_dict:
+                athlete_update["full_name"] = update_dict["full_name"]
+            if "date_of_birth" in update_dict:
+                athlete_update["date_of_birth"] = update_dict["date_of_birth"]
+            if "place_of_birth" in update_dict:
+                athlete_update["place_of_birth"] = update_dict["place_of_birth"]
+                athlete_update["birth_place"] = update_dict["place_of_birth"]  # Both field names
+            if "birth_province" in update_dict:
+                athlete_update["birth_province"] = update_dict["birth_province"]
+                athlete_update["province_of_birth"] = update_dict["birth_province"]  # Both field names
+            if "gender" in update_dict:
+                athlete_update["gender"] = update_dict["gender"]
+            if "fiscal_code" in update_dict:
+                athlete_update["fiscal_code"] = update_dict["fiscal_code"]
+            if "address" in update_dict:
+                athlete_update["address"] = update_dict["address"]
+            if "city" in update_dict:
+                athlete_update["city"] = update_dict["city"]
+            if "postal_code" in update_dict:
+                athlete_update["postal_code"] = update_dict["postal_code"]
+            if "province" in update_dict:
+                athlete_update["province"] = update_dict["province"]
+            if "phone" in update_dict:
+                athlete_update["phone_athlete"] = update_dict["phone"]
+            if "privacy_accepted" in update_dict:
+                athlete_update["privacy_accepted"] = update_dict["privacy_accepted"]
+            if "privacy_accepted_date" in update_dict:
+                athlete_update["privacy_accepted_date"] = update_dict["privacy_accepted_date"]
+            
+            if athlete_update:
+                await db.athletes.update_one(
+                    {"id": athlete_id},
+                    {"$set": athlete_update}
+                )
     
     return {"message": "Profilo aggiornato"}
 
