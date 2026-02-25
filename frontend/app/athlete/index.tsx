@@ -359,7 +359,6 @@ export default function AthleteScreen() {
                     // Apri direttamente il modal per firmare la privacy
                     setShowPrivacyModal(true);
                   }}
-                  }}
                 >
                   <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>
                     ✅ Rimani e Firma Privacy
