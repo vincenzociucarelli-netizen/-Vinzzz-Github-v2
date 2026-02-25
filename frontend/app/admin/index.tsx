@@ -446,9 +446,27 @@ export default function AdminDashboard() {
             {pendingAthletes.map((athlete) => (
               <View key={athlete.id} style={styles.pendingAthleteItem}>
                 <View style={styles.pendingAthleteInfo}>
-                  <Text style={styles.pendingAthleteName}>{athlete.full_name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.pendingAthleteName}>{athlete.full_name}</Text>
+                    {athlete.is_adult && (
+                      <View style={{ backgroundColor: '#FF9800', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>18+</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.pendingAthleteTeam}>{athlete.team_name}</Text>
-                  <Text style={styles.pendingAthleteParent}>Genitore: {athlete.parent_name}</Text>
+                  {athlete.is_adult ? (
+                    <>
+                      {athlete.athlete_phone && (
+                        <Text style={styles.pendingAthleteParent}>📞 {athlete.athlete_phone}</Text>
+                      )}
+                      {athlete.athlete_email && (
+                        <Text style={[styles.pendingAthleteParent, { fontSize: 11 }]}>✉️ {athlete.athlete_email}</Text>
+                      )}
+                    </>
+                  ) : (
+                    <Text style={styles.pendingAthleteParent}>Genitore: {athlete.parent_name}</Text>
+                  )}
                 </View>
                 <View style={styles.pendingAthleteActions}>
                   <TouchableOpacity
