@@ -236,18 +236,115 @@ export default function AthleteScreen() {
   }
 
   if (!profile || profile.athlete_type !== 'compensated') {
+    // Vista per atleti "quota" (non compensati)
     return (
-      <View style={styles.container}>
+      <ScrollView 
+        style={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />}
+      >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Il Mio Profilo</Text>
           <TouchableOpacity onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Non hai compensi attivi</Text>
+        
+        {/* Profile Card for quota athletes */}
+        <View style={[styles.profileCard, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e0e0e0' }]}>
+          <View style={[styles.profileAvatar, { backgroundColor: '#007AFF' }]}>
+            <Text style={styles.profileInitial}>
+              {profile?.first_name?.charAt(0) || profile?.full_name?.charAt(0) || 'A'}
+            </Text>
+          </View>
+          <Text style={[styles.profileName, { color: '#333' }]}>{profile?.full_name || 'Atleta'}</Text>
+          
+          {/* Status Badge */}
+          <View style={{ 
+            backgroundColor: profile?.status === 'trial' ? '#FFF3E0' : '#E8F5E9', 
+            paddingHorizontal: 12, 
+            paddingVertical: 6, 
+            borderRadius: 16,
+            marginTop: 8
+          }}>
+            <Text style={{ 
+              color: profile?.status === 'trial' ? '#FF9800' : '#4CAF50',
+              fontWeight: '600',
+              fontSize: 13
+            }}>
+              {profile?.status === 'trial' ? '⏳ Periodo di Prova' : '✓ Attivo'}
+            </Text>
+          </View>
+          
+          {/* Trial end date */}
+          {profile?.status === 'trial' && profile?.trial_end_date && (
+            <Text style={{ color: '#666', fontSize: 12, marginTop: 6 }}>
+              Fine prova: {formatDateIT(profile.trial_end_date)}
+            </Text>
+          )}
+          
+          {/* Team */}
+          {profile?.team_id && (
+            <Text style={{ color: '#666', fontSize: 14, marginTop: 8 }}>
+              Squadra: {profile?.team_name || 'Non assegnata'}
+            </Text>
+          )}
         </View>
-      </View>
+        
+        {/* Menu Items */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push('/athlete/profile')}
+        >
+          <Ionicons name="person" size={22} color="#007AFF" />
+          <View style={styles.menuItemContent}>
+            <Text style={styles.menuItemTitle}>Dati Personali</Text>
+            <Text style={styles.menuItemSubtitle}>Visualizza e modifica i tuoi dati</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+        
+        {/* Privacy Status */}
+        <View style={[styles.menuItem, { backgroundColor: profile?.privacy_accepted ? '#E8F5E9' : '#FFF3E0' }]}>
+          <Ionicons 
+            name={profile?.privacy_accepted ? "checkmark-circle" : "alert-circle"} 
+            size={22} 
+            color={profile?.privacy_accepted ? "#4CAF50" : "#FF9800"} 
+          />
+          <View style={styles.menuItemContent}>
+            <Text style={styles.menuItemTitle}>Privacy</Text>
+            <Text style={styles.menuItemSubtitle}>
+              {profile?.privacy_accepted 
+                ? `Accettata il ${formatDateIT(profile.privacy_accepted_date)}` 
+                : 'Da accettare'}
+            </Text>
+          </View>
+          {!profile?.privacy_accepted && (
+            <Ionicons name="chevron-forward" size={20} color="#FF9800" />
+          )}
+        </View>
+        
+        {/* Contact Info */}
+        {profile?.email && (
+          <View style={styles.menuItem}>
+            <Ionicons name="mail" size={22} color="#007AFF" />
+            <View style={styles.menuItemContent}>
+              <Text style={styles.menuItemTitle}>Email</Text>
+              <Text style={styles.menuItemSubtitle}>{profile.email}</Text>
+            </View>
+          </View>
+        )}
+        
+        {profile?.phone_athlete && (
+          <View style={styles.menuItem}>
+            <Ionicons name="call" size={22} color="#007AFF" />
+            <View style={styles.menuItemContent}>
+              <Text style={styles.menuItemTitle}>Telefono</Text>
+              <Text style={styles.menuItemSubtitle}>{profile.phone_athlete}</Text>
+            </View>
+          </View>
+        )}
+        
+      </ScrollView>
     );
   }
 
