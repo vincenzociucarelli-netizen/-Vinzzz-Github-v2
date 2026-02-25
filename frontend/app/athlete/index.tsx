@@ -251,11 +251,18 @@ export default function AthleteScreen() {
         
         {/* Profile Card for quota athletes */}
         <View style={[styles.profileCard, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e0e0e0' }]}>
-          <View style={[styles.profileAvatar, { backgroundColor: '#007AFF' }]}>
-            <Text style={styles.profileInitial}>
-              {profile?.first_name?.charAt(0) || profile?.full_name?.charAt(0) || 'A'}
-            </Text>
-          </View>
+          {profile?.profile_photo ? (
+            <Image 
+              source={{ uri: `data:image/jpeg;base64,${profile.profile_photo}` }}
+              style={[styles.profileAvatar, { backgroundColor: 'transparent' }]}
+            />
+          ) : (
+            <View style={[styles.profileAvatar, { backgroundColor: '#007AFF' }]}>
+              <Text style={styles.profileInitial}>
+                {profile?.first_name?.charAt(0) || profile?.full_name?.charAt(0) || 'A'}
+              </Text>
+            </View>
+          )}
           <Text style={[styles.profileName, { color: '#333' }]}>{profile?.full_name || 'Atleta'}</Text>
           
           {/* Status Badge */}
@@ -282,11 +289,50 @@ export default function AthleteScreen() {
             </Text>
           )}
           
-          {/* Team */}
-          {profile?.team_id && (
-            <Text style={{ color: '#666', fontSize: 14, marginTop: 8 }}>
-              Squadra: {profile?.team_name || 'Non assegnata'}
-            </Text>
+          {/* Team - sempre visibile */}
+          <Text style={{ color: '#666', fontSize: 14, marginTop: 8 }}>
+            Squadra: {profile?.team_name || (profile?.team_id ? 'Caricamento...' : 'Non assegnata')}
+          </Text>
+          
+          {/* Recesso dalla prova */}
+          {profile?.status === 'trial' && (
+            <TouchableOpacity 
+              style={{ 
+                marginTop: 16, 
+                backgroundColor: '#FFEBEE', 
+                paddingHorizontal: 16, 
+                paddingVertical: 10, 
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: '#F44336'
+              }}
+              onPress={() => {
+                Alert.alert(
+                  'Recesso dalla Prova',
+                  'Sei sicuro di voler recedere dal periodo di prova? Questa azione non può essere annullata.',
+                  [
+                    { text: 'Annulla', style: 'cancel' },
+                    { 
+                      text: 'Conferma Recesso', 
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await api.post('/athletes/withdraw-trial');
+                          Alert.alert('Recesso confermato', 'Il tuo recesso è stato registrato. Grazie.');
+                          handleLogout();
+                        } catch (error) {
+                          Alert.alert('Errore', 'Impossibile completare il recesso. Riprova.');
+                        }
+                      }
+                    }
+                  ]
+                );
+              }}
+            >
+              <Text style={{ color: '#C62828', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>
+                Recedi dalla Prova
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
         
