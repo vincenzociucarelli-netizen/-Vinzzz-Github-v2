@@ -831,3 +831,46 @@ La nuova struttura delle impostazioni funziona correttamente:
 - Il campo `id` negli athletes è diverso da `_id` (ObjectId) - bisogna usare `id` per le query
 
 ---
+
+---
+
+## Session 2026-02-25 - Fix Bug Lisa (Atleta Maggiorenne)
+
+### Bug Corretti ✅
+
+1. **Rinuncia Prova (Recedi dalla Prova)**
+   - **Problema**: Il pulsante "Recedi dalla Prova" non funzionava su web perché `Alert.alert` non gestiva correttamente le callback.
+   - **Soluzione**: Modificato per usare `window.confirm` su web e `Alert.alert` su mobile.
+   - **File**: `/app/frontend/app/athlete/index.tsx`
+   - **Test**: ✅ Funziona correttamente - utente viene disconnesso dopo conferma.
+
+2. **Attestato di Pagamento - Tipo Sport**
+   - **Problema**: L'attestato mostrava "SPORT" generico invece del tipo sport configurato nelle impostazioni.
+   - **Soluzione**: 
+     - Aggiunto campo `sport_type` all'interface `SocietyData` in `fiscalReceipt.ts`
+     - Aggiornato template HTML per usare `data.society.sport_type` invece di `sport_praticato`
+     - Aggiunto `sport_type` al response dell'endpoint `/settings/society`
+     - Aggiunto `sport_type` al response dell'endpoint `/payments/{id}/fiscal-receipt`
+     - Aggiornato `admin/athlete/[id].tsx` per passare `sport_type` ai dati ricevuta
+   - **Files**: 
+     - `/app/frontend/src/utils/fiscalReceipt.ts`
+     - `/app/backend/server.py` (endpoints: get_society_settings, get_fiscal_receipt_data)
+     - `/app/frontend/app/admin/athlete/[id].tsx`
+
+3. **Codice Atleta**
+   - **Problema segnalato**: "Codice atleta non cambia"
+   - **Verifica**: Il backend gestisce correttamente l'aggiornamento del codice atleta. Testato via API: aggiornamento da "RAPLIS-ADULT" a "LISA-TEST" avvenuto con successo.
+   - **Status**: Il backend funziona correttamente. Se il problema persiste, potrebbe essere un problema di refresh della pagina frontend.
+
+### Modifiche Backend
+
+```python
+# server.py - Aggiunto sport_type a vari endpoint:
+# 1. GET /settings/society - riga ~1996
+# 2. GET /payments/{athlete_id}/fiscal-receipt - riga ~6468
+```
+
+### Credenziali Test
+- **Atleta (Lisa)**: `lisa@test.com` / `Test1234`
+
+---
