@@ -5717,6 +5717,42 @@ async def reject_athlete_deletion(athlete_id: str, current_user = Depends(get_cu
     
     return {"message": "Richiesta di cancellazione rifiutata"}
 
+@api_router.post("/athletes/withdraw-trial")
+async def withdraw_from_trial(current_user = Depends(get_current_user)):
+    """Withdraw from trial period - for adult athletes"""
+    athlete_id = current_user.get("athlete_id")
+    if not athlete_id:
+        raise HTTPException(status_code=400, detail="Non sei un atleta")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if athlete.get("status") != "trial":
+        raise HTTPException(status_code=400, detail="Non sei in periodo di prova")
+    
+    # Mark as withdrawn
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "status": "withdrawn",
+            "withdrawn_date": datetime.utcnow(),
+            "withdrawn_reason": "Recesso volontario"
+        }}
+    )
+    
+    # Also update user status
+    await db.users.update_one(
+        {"athlete_id": athlete_id},
+        {"$set": {"status": "rejected"}}
+    )
+    
+    # Delete payments
+    await db.payments.delete_many({"athlete_id": athlete_id})
+    
+    return {"message": "Recesso dalla prova completato"}
+
+
 @api_router.delete("/athletes/{athlete_id}")
 async def delete_athlete(athlete_id: str, current_user = Depends(get_current_user)):
     """Delete an athlete and all related data (certificates, payments, attendances)"""
