@@ -1158,10 +1158,10 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           </View>
         )}
 
-        {/* Documento e Dati Bancari */}
+        {/* Documento Identità - Per tutti gli atleti */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>🏦 Documento e Dati Bancari</Text>
+            <Text style={styles.cardTitle}>🪪 Documento di Identità</Text>
             <TouchableOpacity onPress={() => setEditingBank(!editingBank)}>
               <Ionicons name={editingBank ? "close" : "create"} size={22} color="#007AFF" />
             </TouchableOpacity>
@@ -1198,12 +1198,177 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 style={styles.input}
                 value={editData.id_back}
                 onChangeText={(v) => {
-                  // Auto-format: add / after day and month
                   let formatted = v.replace(/[^0-9]/g, '');
                   if (formatted.length > 2) {
                     formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
                   }
                   if (formatted.length > 5) {
+                    formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
+                  }
+                  setEditData({...editData, id_back: formatted});
+                }}
+                placeholder="gg/mm/aaaa"
+                placeholderTextColor="#ccc"
+                maxLength={10}
+                keyboardType="numeric"
+              />
+              
+              {/* Foto Documento */}
+              <Text style={styles.inputLabel}>Foto Documento</Text>
+              <View style={styles.docImagesRow}>
+                <TouchableOpacity style={styles.docImageBtnSmall} onPress={() => pickImage('front')}>
+                  {(docFrontImage || editData.doc_front_image) ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${docFrontImage || editData.doc_front_image}` }} 
+                      style={styles.docImageSmall} 
+                    />
+                  ) : (
+                    <View style={styles.docImagePlaceholderSmall}>
+                      <Ionicons name="card-outline" size={24} color="#007AFF" />
+                      <Text style={styles.docImageTextSmall}>Fronte</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.docImageBtnSmall} onPress={() => pickImage('back')}>
+                  {(docBackImage || editData.doc_back_image) ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${docBackImage || editData.doc_back_image}` }} 
+                      style={styles.docImageSmall} 
+                    />
+                  ) : (
+                    <View style={styles.docImagePlaceholderSmall}>
+                      <Ionicons name="card-outline" size={24} color="#007AFF" />
+                      <Text style={styles.docImageTextSmall}>Retro</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+              
+              <TouchableOpacity
+                style={[styles.saveBankButtonFixed, savingBank && styles.saveButtonDisabled]}
+                onPress={async () => {
+                  setSavingBank(true);
+                  try {
+                    const payload: any = {
+                      id_type: editData.id_type,
+                      id_front: editData.id_front,
+                      id_back: editData.id_back,
+                    };
+                    if (docFrontImage) {
+                      payload.doc_front_image = docFrontImage;
+                    } else if (editData.doc_front_image) {
+                      payload.doc_front_image = editData.doc_front_image;
+                    }
+                    if (docBackImage) {
+                      payload.doc_back_image = docBackImage;
+                    } else if (editData.doc_back_image) {
+                      payload.doc_back_image = editData.doc_back_image;
+                    }
+                    
+                    await api.patch('/users/me/bank-details', payload);
+                    setProfileData({
+                      ...profileData,
+                      id_type: editData.id_type,
+                      id_front: editData.id_front,
+                      id_back: editData.id_back,
+                      doc_front_image: docFrontImage || editData.doc_front_image || '',
+                      doc_back_image: docBackImage || editData.doc_back_image || '',
+                    });
+                    setEditingBank(false);
+                    showAlert('Salvato', 'Documento aggiornato');
+                  } catch (error: any) {
+                    console.error('Error saving document:', error);
+                    showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio. Riprova.');
+                  } finally {
+                    setSavingBank(false);
+                  }
+                }}
+                disabled={savingBank}
+              >
+                <Text style={styles.saveBankButtonText}>
+                  {savingBank ? 'Salvataggio...' : '💾 SALVA DOCUMENTO'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Tipo Documento</Text>
+                <Text style={styles.fieldValue}>{profileData.id_type || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Numero Documento</Text>
+                <Text style={styles.fieldValue}>{profileData.id_front || '-'}</Text>
+              </View>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Scadenza</Text>
+                <Text style={styles.fieldValue}>{profileData.id_back || '-'}</Text>
+              </View>
+              
+              {/* Document Images */}
+              <View style={styles.docImagesContainer}>
+                <TouchableOpacity 
+                  style={styles.docImageWrapper}
+                  onPress={() => {
+                    if (profileData.doc_front_image) {
+                      setSelectedPhoto(profileData.doc_front_image);
+                      setSelectedPhotoTitle('Fronte Documento');
+                      setPhotoViewerVisible(true);
+                    }
+                  }}
+                  disabled={!profileData.doc_front_image}
+                >
+                  <Text style={styles.docImageLabel}>Fronte Documento</Text>
+                  {profileData.doc_front_image ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${profileData.doc_front_image}` }}
+                      style={styles.docImagePreview}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.docImagePlaceholder}>
+                      <Ionicons name="id-card-outline" size={32} color="#ccc" />
+                      <Text style={styles.docImagePlaceholderText}>Non caricato</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.docImageWrapper}
+                  onPress={() => {
+                    if (profileData.doc_back_image) {
+                      setSelectedPhoto(profileData.doc_back_image);
+                      setSelectedPhotoTitle('Retro Documento');
+                      setPhotoViewerVisible(true);
+                    }
+                  }}
+                  disabled={!profileData.doc_back_image}
+                >
+                  <Text style={styles.docImageLabel}>Retro Documento</Text>
+                  {profileData.doc_back_image ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${profileData.doc_back_image}` }}
+                      style={styles.docImagePreview}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.docImagePlaceholder}>
+                      <Ionicons name="id-card-outline" size={32} color="#ccc" />
+                      <Text style={styles.docImagePlaceholderText}>Non caricato</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
+
+        {/* Dati Bancari - Solo per atleti compensati */}
+        {!isQuotaAthlete && (
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
                     formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
                   }
                   setEditData({...editData, id_back: formatted});
