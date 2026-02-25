@@ -1328,13 +1328,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                             
                             const blob = await response.blob();
                             const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = doc.pdf_filename || `documento_${doc.id}.pdf`;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            window.URL.revokeObjectURL(url);
+                            // Open in new tab instead of downloading
+                            window.open(url, '_blank');
                           } else {
                             const filename = doc.pdf_filename || `documento_${doc.id}.pdf`;
                             const fileUri = FileSystem.documentDirectory + filename;
@@ -1362,7 +1357,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                           }
                         } catch (err) {
                           console.error('Download error:', err);
-                          Alert.alert('Errore', 'Download non riuscito');
+                          Alert.alert('Errore', 'Apertura non riuscita');
                         }
                       }}
                       style={{ 
@@ -1371,7 +1366,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                         borderRadius: 8,
                       }}
                     >
-                      <Ionicons name="download-outline" size={20} color="#fff" />
+                      <Ionicons name="eye-outline" size={20} color="#fff" />
                     </TouchableOpacity>
                   )}
                 </View>
