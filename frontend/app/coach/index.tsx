@@ -353,6 +353,7 @@ export default function CoachScreen() {
       webScannerRef.current = null;
     }
     setWebScannerActive(false);
+    setWebScannerError(null);
   };
 
   // Manual QR code input
