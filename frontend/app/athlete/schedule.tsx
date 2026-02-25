@@ -64,15 +64,18 @@ export default function AthleteSchedule() {
   const [teamName, setTeamName] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [attendances, setAttendances] = useState<Attendance[]>([]);
+  const [athleteId, setAthleteId] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
       // Get athlete data
       const meRes = await api.get('/auth/me');
-      const athleteId = meRes.data.athlete_id;
+      const aid = meRes.data.athlete_id;
+      setAthleteId(aid);
       
-      if (athleteId) {
-        const athleteRes = await api.get(`/athletes/${athleteId}`);
+      if (aid) {
+        const athleteRes = await api.get(`/athletes/${aid}`);
         const teamId = athleteRes.data.team_id;
         
         if (teamId) {
@@ -83,6 +86,16 @@ export default function AthleteSchedule() {
             match_day: teamRes.data.match_day,
             warmup_session: teamRes.data.warmup_session,
           });
+          
+          // Load attendance history
+          try {
+            const attRes = await api.get(`/attendance/athlete/${aid}`);
+            setAttendances(attRes.data || []);
+          } catch (e) {
+            // Attendance endpoint might not exist, ignore
+            setAttendances([]);
+          }
+        }
         }
       }
     } catch (error) {
