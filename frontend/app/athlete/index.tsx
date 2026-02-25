@@ -510,6 +510,123 @@ export default function AthleteScreen() {
         )}
         
       </ScrollView>
+      
+      {/* Privacy Modal */}
+      <Modal
+        visible={showPrivacyModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowPrivacyModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '90%', maxWidth: 500, maxHeight: '90%' }}>
+            <ScrollView>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 16, textAlign: 'center' }}>
+                📝 Accettazione Privacy
+              </Text>
+              
+              <Text style={{ fontSize: 14, color: '#666', marginBottom: 16, lineHeight: 20 }}>
+                Termini il periodo di prova e confermi la tua iscrizione come atleta.
+                {'\n\n'}
+                Firmando qui sotto accetti:
+                {'\n'}• Il trattamento dei dati personali secondo la normativa GDPR
+                {'\n'}• L'utilizzo dei dati per finalità sportive e amministrative
+                {'\n'}• Le condizioni di iscrizione della società sportiva
+              </Text>
+              
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 }}>
+                Firma qui sotto:
+              </Text>
+              
+              {Platform.OS === 'web' && (
+                <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, height: 150, marginBottom: 16, overflow: 'hidden' }}>
+                  <SignatureCanvas
+                    ref={signatureRef}
+                    canvasProps={{
+                      style: { width: '100%', height: '100%' }
+                    }}
+                    onEnd={() => {
+                      if (signatureRef.current) {
+                        setPrivacySignature(signatureRef.current.toDataURL());
+                      }
+                    }}
+                  />
+                </View>
+              )}
+              
+              <TouchableOpacity
+                onPress={() => {
+                  if (signatureRef.current) {
+                    signatureRef.current.clear();
+                    setPrivacySignature(null);
+                  }
+                }}
+                style={{ alignSelf: 'flex-end', marginBottom: 16 }}
+              >
+                <Text style={{ color: '#666', fontSize: 12 }}>Cancella firma</Text>
+              </TouchableOpacity>
+              
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: '#f5f5f5', padding: 14, borderRadius: 8, alignItems: 'center' }}
+                  onPress={() => {
+                    setShowPrivacyModal(false);
+                    setPrivacySignature(null);
+                    if (signatureRef.current) signatureRef.current.clear();
+                  }}
+                >
+                  <Text style={{ color: '#666', fontWeight: '600' }}>Annulla</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={{ 
+                    flex: 1, 
+                    backgroundColor: privacySignature ? '#4CAF50' : '#ccc', 
+                    padding: 14, 
+                    borderRadius: 8, 
+                    alignItems: 'center' 
+                  }}
+                  disabled={!privacySignature || savingPrivacy}
+                  onPress={async () => {
+                    if (!privacySignature) {
+                      showAlert('Errore', 'Devi firmare per accettare la privacy');
+                      return;
+                    }
+                    
+                    setSavingPrivacy(true);
+                    try {
+                      // Chiama API per terminare prova e accettare privacy
+                      await api.post('/athletes/withdraw-trial-stay');
+                      await api.patch(`/athletes/${profile?.id}`, {
+                        privacy_accepted: true,
+                        privacy_accepted_date: new Date().toISOString(),
+                        privacy_signature: privacySignature
+                      });
+                      
+                      showAlert('Successo', 'Privacy accettata! Ora sei un atleta attivo.');
+                      setShowPrivacyModal(false);
+                      setPrivacySignature(null);
+                      if (signatureRef.current) signatureRef.current.clear();
+                      loadData(); // Ricarica i dati
+                    } catch (error: any) {
+                      const msg = error.response?.data?.detail || 'Errore durante il salvataggio';
+                      showAlert('Errore', msg);
+                    } finally {
+                      setSavingPrivacy(false);
+                    }
+                  }}
+                >
+                  {savingPrivacy ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={{ color: '#fff', fontWeight: '600' }}>Conferma e Firma</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     );
   }
 
