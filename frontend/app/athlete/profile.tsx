@@ -1018,7 +1018,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           {renderField('N° Tesserino', profileData.athlete_license_number, 'athlete_license_number')}
         </View>
 
-        {/* Compensation Info */}
+        {/* Compensation Info - Only show for compensated athletes */}
+        {!isQuotaAthlete && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>💰 Compenso</Text>
           <View style={styles.fieldContainer}>
