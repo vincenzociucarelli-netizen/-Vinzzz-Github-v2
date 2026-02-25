@@ -21,7 +21,8 @@ interface Payment {
   amount: number;
   due_date: string;
   paid_date?: string;
-  status: 'pending' | 'paid' | 'overdue';
+  status?: 'pending' | 'paid' | 'overdue';
+  paid?: boolean;  // Boolean field from DB
   description: string;
   installment_number?: number;
 }
