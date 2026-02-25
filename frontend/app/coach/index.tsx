@@ -576,6 +576,33 @@ export default function CoachScreen() {
           </View>
           
           <ScrollView contentContainerStyle={styles.webScannerContainer}>
+            {/* Permission error message */}
+            {webScannerError === 'PERMISSION_DENIED' && (
+              <View style={{ backgroundColor: '#FFEBEE', padding: 16, borderRadius: 12, marginBottom: 20, marginHorizontal: 16, borderWidth: 1, borderColor: '#F44336' }}>
+                <Text style={{ color: '#C62828', fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>
+                  ⚠️ Permesso fotocamera negato
+                </Text>
+                <Text style={{ color: '#333', fontSize: 14, lineHeight: 20, marginBottom: 12 }}>
+                  Per usare lo scanner devi consentire l'accesso alla fotocamera.
+                </Text>
+                <Text style={{ color: '#333', fontSize: 13, lineHeight: 18 }}>
+                  <Text style={{ fontWeight: '600' }}>Come risolvere:</Text>{'\n'}
+                  1. Clicca sull'icona 🔒 nella barra degli indirizzi{'\n'}
+                  2. Seleziona "Impostazioni sito"{'\n'}
+                  3. Imposta "Fotocamera" su "Consenti"{'\n'}
+                  4. Ricarica la pagina
+                </Text>
+                <TouchableOpacity 
+                  style={{ backgroundColor: '#007AFF', padding: 12, borderRadius: 8, marginTop: 16 }}
+                  onPress={() => setManualInputModalVisible(true)}
+                >
+                  <Text style={{ color: '#fff', textAlign: 'center', fontWeight: '600' }}>
+                    Inserisci codice manualmente
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            
             <div id="web-qr-scanner" style={{ width: '100%', maxWidth: 500 }} />
             
             <TouchableOpacity
