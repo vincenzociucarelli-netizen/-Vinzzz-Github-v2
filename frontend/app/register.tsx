@@ -136,6 +136,14 @@ export default function Register() {
           phone: phone.trim(),
           invite_code: inviteCode.trim().toUpperCase(),
         });
+        
+        // Adult athlete needs approval - show message and redirect to login
+        showAlert(
+          '✅ Registrazione completata!',
+          'Il tuo account è stato creato.\n\n⏳ IMPORTANTE: La tua registrazione deve essere approvata da un Amministratore.\n\nTi contatteremo telefonicamente per accordarci. Una volta approvato, potrai accedere con le tue credenziali.',
+          () => router.replace('/login')
+        );
+        return;
       } else {
         // Use the standard registration endpoint
         response = await api.post('/auth/register', {
