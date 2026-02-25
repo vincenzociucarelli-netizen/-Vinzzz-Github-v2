@@ -176,8 +176,44 @@ export default function AthleteSchedule() {
                   <Text style={styles.sessionTimeText}>{schedule.match_day.time}</Text>
                 </View>
               )}
+              {schedule.match_day.venue && (
+                <View style={styles.sessionVenue}>
+                  <Ionicons name="location-outline" size={18} color="#666" />
+                  <Text style={styles.sessionVenueText}>{schedule.match_day.venue}</Text>
+                </View>
+              )}
             </View>
           </View>
+        )}
+
+        {/* Warmup/Rifinitura */}
+        {schedule?.warmup_session && (
+          <>
+            <Text style={styles.sectionTitle}>🏋️ Rifinitura</Text>
+            <View style={[styles.sessionCard, { backgroundColor: '#E3F2FD' }]}>
+              <View style={[styles.sessionDay, { backgroundColor: '#2196F3' }]}>
+                <Text style={[styles.sessionDayText, { color: '#fff' }]}>
+                  Pre-Gara
+                </Text>
+              </View>
+              <View style={styles.sessionDetails}>
+                {(schedule.warmup_session.timeStart || schedule.warmup_session.start_time) && (
+                  <View style={styles.sessionTime}>
+                    <Ionicons name="time-outline" size={18} color="#666" />
+                    <Text style={styles.sessionTimeText}>
+                      {schedule.warmup_session.timeStart || schedule.warmup_session.start_time} - {schedule.warmup_session.timeEnd || schedule.warmup_session.end_time}
+                    </Text>
+                  </View>
+                )}
+                {schedule.warmup_session.venue && (
+                  <View style={styles.sessionVenue}>
+                    <Ionicons name="location-outline" size={18} color="#666" />
+                    <Text style={styles.sessionVenueText}>{schedule.warmup_session.venue}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </>
         )}
         
         <View style={{ height: 40 }} />
