@@ -1993,6 +1993,7 @@ async def get_society_settings():
         "venues": settings.get("venues", []),
         "ragione_sociale": settings.get("ragione_sociale"),
         "sport_praticato": settings.get("sport_praticato"),
+        "sport_type": settings.get("sport_type") or settings.get("sport_praticato"),  # Alias for sport_praticato
         "address": settings.get("address"),
         "postal_code": settings.get("postal_code"),
         "city": settings.get("city"),
