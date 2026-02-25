@@ -1644,9 +1644,9 @@ class ImageTransformRequest(BaseModel):
 
 @api_router.post("/auth/me/transform-photo")
 async def transform_user_photo(data: ImageTransformRequest, current_user = Depends(get_current_user)):
-    """Transform user profile photo to artistic style using AI - for coach, dirigente, and collaboratore"""
-    if current_user["role"] not in [UserRole.COACH, UserRole.VIEWER, UserRole.ADMIN, "collaboratore"]:
-        raise HTTPException(status_code=403, detail="Funzionalità disponibile solo per coach, dirigenti e collaboratori")
+    """Transform user profile photo to artistic style using AI - for coach, dirigente, collaboratore and parent"""
+    if current_user["role"] not in [UserRole.COACH, UserRole.VIEWER, UserRole.ADMIN, "collaboratore", UserRole.PARENT]:
+        raise HTTPException(status_code=403, detail="Funzionalità disponibile solo per coach, dirigenti, collaboratori e genitori")
     
     try:
         api_key = os.environ.get("EMERGENT_LLM_KEY")
