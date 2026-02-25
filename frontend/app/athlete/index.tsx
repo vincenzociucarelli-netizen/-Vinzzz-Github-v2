@@ -312,13 +312,13 @@ export default function AthleteScreen() {
                 borderWidth: 1,
                 borderColor: '#1976D2'
               }}
-              onPress={() => router.push('/athlete/profile')}
+              onPress={() => setShowPrivacyModal(true)}
             >
               <Text style={{ color: '#1976D2', fontWeight: '600', fontSize: 14, textAlign: 'center' }}>
                 ✍️ Devi accettare la Privacy per continuare
               </Text>
               <Text style={{ color: '#666', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
-                Clicca qui per andare al profilo e firmare
+                Clicca qui per firmare
               </Text>
             </TouchableOpacity>
           )}
