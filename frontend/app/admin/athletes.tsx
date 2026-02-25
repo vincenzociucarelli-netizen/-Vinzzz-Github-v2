@@ -456,15 +456,6 @@ export default function AdminAthletes() {
         )}
       </View>
 
-      {/* FAB - Aggiungi Atleta Maggiorenne */}
-      <TouchableOpacity 
-        style={styles.fab}
-        onPress={() => setShowAddAdultModal(true)}
-        data-testid="add-adult-athlete-btn"
-      >
-        <Ionicons name="person-add" size={24} color="#fff" />
-      </TouchableOpacity>
-
       {/* Modal Aggiungi Atleta Maggiorenne */}
       <Modal
         visible={showAddAdultModal}
@@ -817,8 +808,8 @@ const styles = StyleSheet.create({
   athleteCode: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#007AFF',
-    backgroundColor: '#E3F2FD',
+    color: '#FF6B00',
+    backgroundColor: '#FFF3E0',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
