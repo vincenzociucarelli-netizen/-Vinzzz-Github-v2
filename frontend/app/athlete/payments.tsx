@@ -82,20 +82,19 @@ export default function AthletePayments() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return '#4CAF50';
-      case 'overdue': return '#F44336';
-      default: return '#FF9800';
-    }
+  // Helper to check if payment is paid
+  const isPaid = (payment: Payment) => payment.paid === true || payment.status === 'paid';
+
+  const getStatusColor = (payment: Payment) => {
+    if (isPaid(payment)) return '#4CAF50';
+    if (payment.status === 'overdue') return '#F44336';
+    return '#FF9800';
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'paid': return 'Pagato';
-      case 'overdue': return 'Scaduto';
-      default: return 'Da pagare';
-    }
+  const getStatusText = (payment: Payment) => {
+    if (isPaid(payment)) return 'Pagato';
+    if (payment.status === 'overdue') return 'Scaduto';
+    return 'Da pagare';
   };
 
   if (loading) {
