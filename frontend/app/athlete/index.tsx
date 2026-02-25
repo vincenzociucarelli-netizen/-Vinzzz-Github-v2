@@ -317,27 +317,37 @@ export default function AthleteScreen() {
                 borderWidth: 1,
                 borderColor: '#F44336'
               }}
-              onPress={() => {
-                Alert.alert(
-                  'Recesso dalla Prova',
-                  'Sei sicuro di voler recedere dal periodo di prova? Questa azione non può essere annullata.',
-                  [
-                    { text: 'Annulla', style: 'cancel' },
-                    { 
-                      text: 'Conferma Recesso', 
-                      style: 'destructive',
-                      onPress: async () => {
-                        try {
-                          await api.post('/athletes/withdraw-trial');
-                          Alert.alert('Recesso confermato', 'Il tuo recesso è stato registrato. Grazie.');
-                          handleLogout();
-                        } catch (error) {
-                          Alert.alert('Errore', 'Impossibile completare il recesso. Riprova.');
-                        }
-                      }
+              onPress={async () => {
+                const confirmWithdraw = Platform.OS === 'web' 
+                  ? window.confirm('Sei sicuro di voler recedere dal periodo di prova? Questa azione non può essere annullata.')
+                  : await new Promise<boolean>((resolve) => {
+                      Alert.alert(
+                        'Recesso dalla Prova',
+                        'Sei sicuro di voler recedere dal periodo di prova? Questa azione non può essere annullata.',
+                        [
+                          { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                          { text: 'Conferma Recesso', style: 'destructive', onPress: () => resolve(true) }
+                        ]
+                      );
+                    });
+                
+                if (confirmWithdraw) {
+                  try {
+                    await api.post('/athletes/withdraw-trial');
+                    if (Platform.OS === 'web') {
+                      window.alert('Recesso confermato. Il tuo recesso è stato registrato. Grazie.');
+                    } else {
+                      Alert.alert('Recesso confermato', 'Il tuo recesso è stato registrato. Grazie.');
                     }
-                  ]
-                );
+                    handleLogout();
+                  } catch (error) {
+                    if (Platform.OS === 'web') {
+                      window.alert('Impossibile completare il recesso. Riprova.');
+                    } else {
+                      Alert.alert('Errore', 'Impossibile completare il recesso. Riprova.');
+                    }
+                  }
+                }
               }}
             >
               <Text style={{ color: '#C62828', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>
