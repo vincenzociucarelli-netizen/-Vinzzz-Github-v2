@@ -1372,6 +1372,14 @@ async def login(credentials: UserLogin):
     if user_status == UserStatus.SUSPENDED:
         raise HTTPException(status_code=403, detail="Account sospeso")
     
+    # For athletes, check if they need to accept privacy (pending_privacy status)
+    # Athletes with pending_privacy can still login but need to sign privacy
+    athlete_status = None
+    if user.get("athlete_id"):
+        athlete = await db.athletes.find_one({"id": user["athlete_id"]})
+        if athlete:
+            athlete_status = athlete.get("status")
+    
     token = create_token(user["id"], user["role"])
     
     return TokenResponse(
@@ -1382,6 +1390,7 @@ async def login(credentials: UserLogin):
             "role": user["role"], 
             "full_name": user["full_name"],
             "status": user_status,
+            "athlete_status": athlete_status,  # Include athlete status for frontend
             "profile_photo": user.get("profile_photo")
         }
     )
