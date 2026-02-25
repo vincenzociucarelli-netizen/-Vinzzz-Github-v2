@@ -1016,7 +1016,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             )}
           </View>
 
-          {renderField('N° Tesserino', profileData.athlete_license_number, 'athlete_license_number')}
+          {!isQuotaAthlete && renderField('N° Tesserino', profileData.athlete_license_number, 'athlete_license_number')}
         </View>
 
         {/* Compensation Info - Only show for compensated athletes */}
@@ -1331,7 +1331,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 disabled={savingBank}
               >
                 <Text style={styles.saveBankButtonText}>
-                  {savingBank ? 'Salvataggio...' : '💾 SALVA DATI BANCARI'}
+                  {savingBank ? 'Salvataggio...' : (isQuotaAthlete ? '💾 SALVA DOCUMENTO' : '💾 SALVA DATI BANCARI')}
                 </Text>
               </TouchableOpacity>
             </>
