@@ -1246,7 +1246,7 @@ class AdultAthleteRegister(BaseModel):
     fiscal_code: Optional[str] = None
     gender: Optional[str] = None  # 'M' or 'F'
 
-@api_router.post("/auth/register-adult-athlete", response_model=TokenResponse)
+@api_router.post("/auth/register-adult-athlete")
 async def register_adult_athlete(data: AdultAthleteRegister):
     """
     Self-registration for adult athletes (18+).
