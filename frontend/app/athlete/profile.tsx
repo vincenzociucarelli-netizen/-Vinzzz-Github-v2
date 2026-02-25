@@ -185,6 +185,9 @@ export default function AthleteProfile() {
       // Store athlete_id
       setAthleteId(data.athlete_id || data.id);
       
+      // Check if athlete is quota type (pays fees) vs compensated (receives payment)
+      setIsQuotaAthlete(data.athlete_type !== 'compensated');
+      
       // Load society name
       try {
         const societyRes = await api.get('/settings/society');
