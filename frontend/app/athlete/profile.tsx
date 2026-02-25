@@ -1409,6 +1409,9 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 </TouchableOpacity>
               </View>
 
+              {/* Bank details view - Only for compensated athletes */}
+              {!isQuotaAthlete && (
+              <>
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>IBAN</Text>
                 <Text style={styles.fieldValue}>{profileData.iban || '-'}</Text>
@@ -1421,6 +1424,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 <Text style={styles.fieldLabel}>Banca</Text>
                 <Text style={styles.fieldValue}>{profileData.bank_name || '-'}</Text>
               </View>
+              </>
+              )}
             </>
           )}
         </View>
