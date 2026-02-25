@@ -134,7 +134,7 @@ export default function AthleteSchedule() {
                 <View style={styles.sessionTime}>
                   <Ionicons name="time-outline" size={18} color="#666" />
                   <Text style={styles.sessionTimeText}>
-                    {session.start_time} - {session.end_time}
+                    {session.timeStart || session.start_time} - {session.timeEnd || session.end_time}
                   </Text>
                 </View>
                 {session.venue && (
