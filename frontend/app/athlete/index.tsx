@@ -550,7 +550,7 @@ export default function AthleteScreen() {
       />
     </>
   );
-}
+  }
 
   return (
     <ScrollView 
