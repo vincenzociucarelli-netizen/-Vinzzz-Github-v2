@@ -96,7 +96,6 @@ export default function AthleteSchedule() {
             setAttendances([]);
           }
         }
-        }
       }
     } catch (error) {
       console.error('Error loading schedule:', error);
