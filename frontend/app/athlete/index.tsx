@@ -305,55 +305,118 @@ export default function AthleteScreen() {
             Squadra: {profile?.team_name || (profile?.team_id ? 'Caricamento...' : 'Non assegnata')}
           </Text>
           
-          {/* Recesso dalla prova */}
+          {/* Recesso dalla prova - Due opzioni */}
           {profile?.status === 'trial' && (
-            <TouchableOpacity 
-              style={{ 
-                marginTop: 16, 
-                backgroundColor: '#FFEBEE', 
-                paddingHorizontal: 16, 
-                paddingVertical: 10, 
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: '#F44336'
-              }}
-              onPress={async () => {
-                const confirmWithdraw = Platform.OS === 'web' 
-                  ? window.confirm('Sei sicuro di voler recedere dal periodo di prova? Questa azione non può essere annullata.')
-                  : await new Promise<boolean>((resolve) => {
-                      Alert.alert(
-                        'Recesso dalla Prova',
-                        'Sei sicuro di voler recedere dal periodo di prova? Questa azione non può essere annullata.',
-                        [
-                          { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-                          { text: 'Conferma Recesso', style: 'destructive', onPress: () => resolve(true) }
-                        ]
-                      );
-                    });
-                
-                if (confirmWithdraw) {
-                  try {
-                    await api.post('/athletes/withdraw-trial');
-                    if (Platform.OS === 'web') {
-                      window.alert('Recesso confermato. Il tuo recesso è stato registrato. Grazie.');
-                    } else {
-                      Alert.alert('Recesso confermato', 'Il tuo recesso è stato registrato. Grazie.');
-                    }
-                    handleLogout();
-                  } catch (error) {
-                    if (Platform.OS === 'web') {
-                      window.alert('Impossibile completare il recesso. Riprova.');
-                    } else {
-                      Alert.alert('Errore', 'Impossibile completare il recesso. Riprova.');
+            <View style={{ marginTop: 16, gap: 10 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 4 }}>
+                Vuoi terminare il periodo di prova?
+              </Text>
+              
+              {/* Opzione 1: Rimani e firma privacy */}
+              <TouchableOpacity 
+                style={{ 
+                  backgroundColor: '#E3F2FD', 
+                  paddingHorizontal: 16, 
+                  paddingVertical: 12, 
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#2196F3'
+                }}
+                onPress={async () => {
+                  const confirm = Platform.OS === 'web' 
+                    ? window.confirm('Vuoi terminare il periodo di prova e rimanere? Dovrai accettare la privacy per continuare.')
+                    : await new Promise<boolean>((resolve) => {
+                        Alert.alert(
+                          'Termina Prova e Rimani',
+                          'Vuoi terminare il periodo di prova e continuare come atleta? Dovrai accettare la privacy.',
+                          [
+                            { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                            { text: 'Conferma', onPress: () => resolve(true) }
+                          ]
+                        );
+                      });
+                  
+                  if (confirm) {
+                    try {
+                      await api.post('/athletes/withdraw-trial-stay');
+                      if (Platform.OS === 'web') {
+                        window.alert('Periodo di prova terminato. Ora devi accettare la privacy per continuare.');
+                      } else {
+                        Alert.alert('Successo', 'Periodo di prova terminato. Ora devi accettare la privacy per continuare.');
+                      }
+                      // Redirect to privacy page
+                      router.push('/athlete/privacy');
+                    } catch (error: any) {
+                      const msg = error.response?.data?.detail || 'Errore durante l\'operazione';
+                      if (Platform.OS === 'web') {
+                        window.alert(msg);
+                      } else {
+                        Alert.alert('Errore', msg);
+                      }
                     }
                   }
-                }
-              }}
-            >
-              <Text style={{ color: '#C62828', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>
-                Recedi dalla Prova
-              </Text>
-            </TouchableOpacity>
+                }}
+              >
+                <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>
+                  ✅ Rimani e Firma Privacy
+                </Text>
+                <Text style={{ color: '#666', fontSize: 11, textAlign: 'center', marginTop: 4 }}>
+                  Termina la prova e continua come atleta
+                </Text>
+              </TouchableOpacity>
+              
+              {/* Opzione 2: Non rimanere e cancella dati */}
+              <TouchableOpacity 
+                style={{ 
+                  backgroundColor: '#FFEBEE', 
+                  paddingHorizontal: 16, 
+                  paddingVertical: 12, 
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#F44336'
+                }}
+                onPress={async () => {
+                  const confirm = Platform.OS === 'web' 
+                    ? window.confirm('ATTENZIONE: Questa azione cancellerà definitivamente tutti i tuoi dati (profilo, pagamenti, presenze). Sei sicuro?')
+                    : await new Promise<boolean>((resolve) => {
+                        Alert.alert(
+                          '⚠️ Cancella Account',
+                          'ATTENZIONE: Questa azione cancellerà definitivamente tutti i tuoi dati (profilo, pagamenti, presenze).\n\nSei sicuro di voler procedere?',
+                          [
+                            { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                            { text: 'Cancella Tutto', style: 'destructive', onPress: () => resolve(true) }
+                          ]
+                        );
+                      });
+                  
+                  if (confirm) {
+                    try {
+                      await api.post('/athletes/withdraw-trial-leave');
+                      if (Platform.OS === 'web') {
+                        window.alert('Account eliminato. Tutti i tuoi dati sono stati cancellati.');
+                      } else {
+                        Alert.alert('Account Eliminato', 'Tutti i tuoi dati sono stati cancellati.');
+                      }
+                      handleLogout();
+                    } catch (error: any) {
+                      const msg = error.response?.data?.detail || 'Errore durante l\'eliminazione';
+                      if (Platform.OS === 'web') {
+                        window.alert(msg);
+                      } else {
+                        Alert.alert('Errore', msg);
+                      }
+                    }
+                  }
+                }}
+              >
+                <Text style={{ color: '#C62828', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>
+                  ❌ Non Rimanere - Cancella Dati
+                </Text>
+                <Text style={{ color: '#666', fontSize: 11, textAlign: 'center', marginTop: 4 }}>
+                  Elimina definitivamente il tuo account e tutti i dati
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
         
