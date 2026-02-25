@@ -10,13 +10,12 @@ import {
   Alert,
   ActivityIndicator,
   Image,
-  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
-import SignatureCanvas from 'react-signature-canvas';
+import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
 
 const MONTH_NAMES = [
   '', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
