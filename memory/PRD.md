@@ -874,3 +874,62 @@ La nuova struttura delle impostazioni funziona correttamente:
 - **Atleta (Lisa)**: `lisa@test.com` / `Test1234`
 
 ---
+
+---
+
+## Session 2026-02-25 - Opzioni Recesso Atleta Adulto
+
+### Nuova Funzionalità Implementata ✅
+
+**Opzioni di fine periodo prova per atleta adulto:**
+
+1. **Rimani e Firma Privacy** (`/athletes/withdraw-trial-stay`)
+   - L'atleta termina il periodo di prova ma resta nella squadra
+   - Lo status cambia da `trial` a `pending_privacy`
+   - L'atleta deve accettare la privacy per continuare
+   - Redirect automatico alla pagina profilo
+
+2. **Non Rimanere - Cancella Dati** (`/athletes/withdraw-trial-leave`)
+   - L'atleta lascia definitivamente
+   - Tutti i dati vengono cancellati (certificati, pagamenti, presenze, profilo atleta, account utente)
+   - L'utente viene disconnesso
+
+### Modifiche Backend
+
+```python
+# server.py - Nuovi endpoint:
+# POST /api/athletes/withdraw-trial-stay
+# POST /api/athletes/withdraw-trial-leave
+
+# Login modificato per includere athlete_status nel response
+```
+
+### Modifiche Frontend
+
+```tsx
+// athlete/index.tsx
+// - Due pulsanti: "Rimani e Firma Privacy" e "Non Rimanere - Cancella Dati"
+// - Badge status mostra "📝 Firma Privacy Richiesta" per status pending_privacy
+// - Banner cliccabile per guidare l'utente a firmare la privacy
+```
+
+### Flusso Completo
+
+1. Atleta in prova vede due opzioni nella dashboard
+2. Se sceglie "Rimani":
+   - API cambia status a `pending_privacy`
+   - Redirect al profilo
+   - Badge mostra "Firma Privacy Richiesta"
+   - L'atleta deve firmare la privacy nel profilo
+3. Se sceglie "Non Rimanere":
+   - Conferma obbligatoria (dialog)
+   - Tutti i dati vengono eliminati
+   - Account utente eliminato
+   - Logout automatico
+
+### Test Effettuati
+- ✅ Login con status `pending_privacy` funziona
+- ✅ Badge e banner mostrati correttamente
+- ✅ API di cancellazione dati funziona
+
+---
