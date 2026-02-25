@@ -4899,6 +4899,18 @@ async def update_athlete_approval(athlete_id: str, data: AthleteApprovalUpdate, 
                         "approved_by": current_user["id"]
                     }}
                 )
+        else:
+            # Adult athlete - find and approve their user account
+            adult_user = await db.users.find_one({"athlete_id": athlete_id})
+            if adult_user and adult_user.get("status") == UserStatus.PENDING:
+                await db.users.update_one(
+                    {"athlete_id": athlete_id},
+                    {"$set": {
+                        "status": UserStatus.APPROVED,
+                        "approved_at": datetime.utcnow(),
+                        "approved_by": current_user["id"]
+                    }}
+                )
     
     # If approving, create payment records
     if data.status in [AthleteStatus.TRIAL, AthleteStatus.ACTIVE]:
