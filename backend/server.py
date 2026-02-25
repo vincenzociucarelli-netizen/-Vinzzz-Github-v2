@@ -5094,6 +5094,18 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
                 if sync_data:
                     await db.athletes.update_one({"id": athlete_id}, {"$set": sync_data})
     
+    # Add team_name if team_id exists
+    if athlete.get("team_id"):
+        team = await db.teams.find_one({"id": athlete["team_id"]})
+        if team:
+            athlete["team_name"] = team.get("name", "")
+    
+    # Add profile_photo from user if not in athlete
+    if not athlete.get("profile_photo"):
+        user = await db.users.find_one({"athlete_id": athlete_id})
+        if user and user.get("profile_photo"):
+            athlete["profile_photo"] = user["profile_photo"]
+    
     return Athlete(**athlete)
 
 @api_router.get("/athletes/{athlete_id}/technical-data")
