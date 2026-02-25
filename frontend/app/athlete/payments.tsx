@@ -148,9 +148,11 @@ export default function AthletePayments() {
                 <Text style={styles.paymentDescription}>
                   {payment.description || `Rata ${payment.installment_number || ''}`}
                 </Text>
-                <Text style={styles.paymentDate}>
-                  Scadenza: {formatDate(payment.due_date)}
-                </Text>
+                {payment.due_date && (
+                  <Text style={styles.paymentDate}>
+                    Scadenza: {formatDate(payment.due_date)}
+                  </Text>
+                )}
                 {payment.paid_date && (
                   <Text style={[styles.paymentDate, { color: '#4CAF50' }]}>
                     Pagato il: {formatDate(payment.paid_date)}
