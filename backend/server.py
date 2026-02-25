@@ -578,6 +578,9 @@ class Athlete(BaseModel):
     document_expiry: Optional[str] = None  # Scadenza documento (ISO string)
     document_front: Optional[str] = None  # Fronte documento (base64)
     document_back: Optional[str] = None  # Retro documento (base64)
+    # Campi dinamici (non persistiti, aggiunti nelle risposte)
+    team_name: Optional[str] = None  # Nome squadra (riempito dinamicamente)
+    profile_photo: Optional[str] = None  # Foto profilo (può venire da user)
 
 class AthleteCreate(BaseModel):
     full_name: str
