@@ -151,7 +151,7 @@ export default function Register() {
       }
 
       if (response.data.token) {
-        setUser({ ...response.data.user, token: response.data.token });
+        await setUser(response.data.user, response.data.token);
         
         // Different messages based on role
         if (role === 'coach' || role === 'viewer' || role === 'collaboratore') {
