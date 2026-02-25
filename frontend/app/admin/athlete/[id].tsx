@@ -1923,10 +1923,12 @@ export default function AdminAthleteDetail() {
                     <Text style={styles.label}>Tel. Padre</Text>
                     <Text style={styles.value}>{athlete.phone_father || '-'}</Text>
                   </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>Email 2° Genitore</Text>
-                    <Text style={styles.value}>{(athlete as any).second_parent_email || '-'}</Text>
-                  </View>
+                  {!athlete.parents_detached && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.label}>Email 2° Genitore</Text>
+                      <Text style={styles.value}>{(athlete as any).second_parent_email || '-'}</Text>
+                    </View>
+                  )}
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>Indirizzo</Text>
                     <Text style={styles.value}>{athlete.address || '-'}</Text>
