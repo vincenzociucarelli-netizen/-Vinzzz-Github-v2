@@ -6465,6 +6465,7 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
             "president_name": society.get("president_name", "") if society else "",
             "logo": society.get("logo", "") if society else "",
             "stamp_signature": society.get("stamp_signature", "") if society else "",
+            "sport_type": society.get("sport_type", "PALLAVOLO") if society else "PALLAVOLO",
         },
         "team_name": team.get("name", "") if team else "",
         "season": season,
