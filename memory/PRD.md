@@ -786,3 +786,48 @@ La nuova struttura delle impostazioni funziona correttamente:
 5. Submit agli store
 
 ---
+
+---
+
+## Session 2026-02-25 - Fix Bug Dashboard Atleta Maggiorenne
+
+### Bug Corretti ✅
+
+1. **Dashboard Atleta - Campi Mancanti nell'Interface**
+   - **Problema**: L'interface `AthleteProfile` in `athlete/index.tsx` non includeva `team_name`, `profile_photo`, `status`, `team_id`, `trial_end_date`
+   - **Soluzione**: Aggiunti tutti i campi necessari all'interface
+   - **File**: `/app/frontend/app/athlete/index.tsx`
+
+2. **Pagina Schedule - Errore Sintassi**
+   - **Problema**: Doppia parentesi graffa chiusa causava errore `Missing catch or finally clause`
+   - **Soluzione**: Corretta la struttura try-catch nella funzione `loadData`
+   - **File**: `/app/frontend/app/athlete/schedule.tsx`
+
+3. **Modello Team - Campo warmup_session Mancante**
+   - **Problema**: Il campo `warmup_session` non era nel modello Pydantic Team, quindi non veniva restituito dall'API
+   - **Soluzione**: Aggiunto `warmup_session: Optional[dict] = None` al modello Team
+   - **File**: `/app/backend/server.py`
+
+4. **Pagamenti - Data Scadenza 01 gen 1970**
+   - **Problema**: Quando `due_date` era null, `formatDate(null)` restituiva la data Unix epoch
+   - **Soluzione**: Aggiunto controllo condizionale `{payment.due_date && ...}` prima di renderizzare la scadenza
+   - **File**: `/app/frontend/app/athlete/payments.tsx`
+
+### Test Results
+- Test Report: `/app/test_reports/iteration_19.json`
+- Backend: 100% (11/11 test passati)
+- Frontend: 100% - Tutti i flussi funzionanti
+- Credenziali test atleta: `lisa@test.com` / `Test1234`
+
+### Funzionalità Verificate
+- ✅ Login atleta maggiorenne
+- ✅ Dashboard con avatar, nome, squadra, stato "Periodo di Prova"
+- ✅ Pagamenti con 3 rate (€300 + €250 + €250 = €800)
+- ✅ Schedule con allenamenti, giorno partita, rifinitura (10:00-11:30)
+- ✅ Pulsante "Recedi dalla Prova" visibile e funzionale
+
+### Note Tecniche
+- L'atleta Lisa ha `athlete_id: 699e98da29d5cad371478523` e `team_id: 698660a0bd36233989be88df` (Serie D)
+- Il campo `id` negli athletes è diverso da `_id` (ObjectId) - bisogna usare `id` per le query
+
+---
