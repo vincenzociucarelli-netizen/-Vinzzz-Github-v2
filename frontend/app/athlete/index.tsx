@@ -344,6 +344,34 @@ export default function AthleteScreen() {
           </View>
         )}
         
+        {/* Payments Section */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push(`/athlete/payments`)}
+        >
+          <Ionicons name="card" size={22} color="#007AFF" />
+          <View style={styles.menuItemContent}>
+            <Text style={styles.menuItemTitle}>Pagamenti</Text>
+            <Text style={styles.menuItemSubtitle}>Visualizza le tue rate e pagamenti</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+        
+        {/* Attendance/Schedule Section */}
+        {profile?.team_id && (
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => router.push(`/athlete/schedule`)}
+          >
+            <Ionicons name="calendar" size={22} color="#007AFF" />
+            <View style={styles.menuItemContent}>
+              <Text style={styles.menuItemTitle}>Presenze e Orari</Text>
+              <Text style={styles.menuItemSubtitle}>Calendario allenamenti e partite</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+        )}
+        
       </ScrollView>
     );
   }
