@@ -46,6 +46,7 @@ interface SocietyData {
   president_name?: string;
   logo?: string;
   stamp_signature?: string;
+  sport_type?: string;
 }
 
 export interface ReceiptData {
@@ -219,7 +220,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
         <span class="amount-value">${formatCurrency(totalPaid)}</span>
       </div>
 
-      <p style="margin-bottom: 6px; font-size: 10px;">per l'attività di ${(data.society.sport_praticato || 'SPORT').toUpperCase()} nella stagione sportiva ${data.season} svolta da:</p>
+      <p style="margin-bottom: 6px; font-size: 10px;">per l'attività di ${(data.society.sport_type || 'SPORT').toUpperCase()} nella stagione sportiva ${data.season} svolta da:</p>
 
       <div class="box">
         <div class="box-row">
