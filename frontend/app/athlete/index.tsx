@@ -257,6 +257,7 @@ export default function AthleteScreen() {
   if (!profile || profile.athlete_type !== 'compensated') {
     // Vista per atleti "quota" (non compensati)
     return (
+      <>
       <ScrollView 
         style={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />}
