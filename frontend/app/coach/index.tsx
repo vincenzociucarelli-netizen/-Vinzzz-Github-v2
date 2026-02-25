@@ -241,6 +241,7 @@ export default function CoachScreen() {
     if (Platform.OS !== 'web' || !Html5QrcodeScanner) return;
     
     setWebScannerActive(true);
+    setWebScannerError(null);
     
     // Wait for DOM to be ready
     setTimeout(() => {
@@ -267,10 +268,15 @@ export default function CoachScreen() {
           async (decodedText: string) => {
             html5QrcodeScanner.clear();
             setWebScannerActive(false);
+            setWebScannerError(null);
             await handleBarCodeScanned({ data: decodedText });
           },
           (error: any) => {
-            // Ignore scanning errors (they happen constantly while scanning)
+            // Check for permission errors
+            const errorStr = String(error);
+            if (errorStr.includes('NotAllowedError') || errorStr.includes('Permission denied')) {
+              setWebScannerError('PERMISSION_DENIED');
+            }
           }
         );
         
