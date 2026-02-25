@@ -180,20 +180,15 @@ export default function DocumentsArchive() {
         
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = doc.pdf_filename || `documento_${doc.id}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        // Open in new tab instead of downloading
+        window.open(url, '_blank');
       } else {
         // For mobile, use Linking
         Linking.openURL(downloadUrl);
       }
     } catch (error) {
       console.error('Download error:', error);
-      Alert.alert('Errore', 'Impossibile scaricare il documento');
+      Alert.alert('Errore', 'Impossibile aprire il documento');
     }
   };
 
