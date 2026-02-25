@@ -5206,6 +5206,7 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
         # Verify team exists
         team = await db.teams.find_one({"id": update_data.team_id})
         if team:
+            old_team_id = athlete.get("team_id")
             update_dict["team_id"] = update_data.team_id
             # Auto-update athlete code when team changes
             athlete = await db.athletes.find_one({"id": athlete_id})
@@ -5218,6 +5219,28 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
                     athlete_id
                 )
                 update_dict["athlete_code"] = new_code
+            
+            # Create payments when team is assigned (for quota athletes)
+            if old_team_id != update_data.team_id and athlete.get("athlete_type") == "quota":
+                # Delete old payments if any
+                await db.payments.delete_many({"athlete_id": athlete_id})
+                
+                # Create new payments based on team installments
+                installments = team.get("installments", [])
+                for i, installment in enumerate(installments):
+                    payment = {
+                        "id": str(uuid.uuid4()),
+                        "athlete_id": athlete_id,
+                        "society_id": athlete.get("society_id"),
+                        "amount": installment.get("amount", 0),
+                        "due_date": installment.get("due_date"),
+                        "paid_date": None,
+                        "status": "pending",
+                        "description": installment.get("name", f"Rata {i+1}"),
+                        "installment_number": i + 1,
+                        "created_at": datetime.utcnow()
+                    }
+                    await db.payments.insert_one(payment)
     
     # Manual athlete_code override (takes priority over auto-generated)
     if update_data.athlete_code is not None:
