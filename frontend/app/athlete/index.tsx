@@ -81,9 +81,7 @@ export default function AthleteScreen() {
   
   // Privacy modal state
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  const [privacySignature, setPrivacySignature] = useState<string | null>(null);
-  const [savingPrivacy, setSavingPrivacy] = useState(false);
-  const signatureRef = useRef<SignatureCanvas>(null);
+  const [societyData, setSocietyData] = useState<any>(null);
 
   // Helper function to format date strings correctly
   const formatDateIT = (dateStr: string | undefined) => {
