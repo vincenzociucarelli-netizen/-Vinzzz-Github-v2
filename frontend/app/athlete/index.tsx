@@ -344,8 +344,8 @@ export default function AthleteScreen() {
                       } else {
                         Alert.alert('Successo', 'Periodo di prova terminato. Ora devi accettare la privacy per continuare.');
                       }
-                      // Redirect to privacy page
-                      router.push('/athlete/privacy');
+                      // Redirect to profile page to sign privacy
+                      router.push('/athlete/profile');
                     } catch (error: any) {
                       const msg = error.response?.data?.detail || 'Errore durante l\'operazione';
                       if (Platform.OS === 'web') {
