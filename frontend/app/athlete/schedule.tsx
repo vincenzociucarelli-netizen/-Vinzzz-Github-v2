@@ -15,8 +15,10 @@ import { useAuthStore } from '../../src/store/authStore';
 
 interface TrainingSession {
   day: string;
-  start_time: string;
-  end_time: string;
+  timeStart?: string;
+  timeEnd?: string;
+  start_time?: string;
+  end_time?: string;
   venue?: string;
 }
 
