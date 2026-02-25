@@ -5103,11 +5103,14 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
         if team:
             athlete["team_name"] = team.get("name", "")
     
-    # Add profile_photo from user if not in athlete
+    # Add profile_photo - check athlete_photo, then user profile_photo
     if not athlete.get("profile_photo"):
-        user = await db.users.find_one({"athlete_id": athlete_id})
-        if user and user.get("profile_photo"):
-            athlete["profile_photo"] = user["profile_photo"]
+        if athlete.get("athlete_photo"):
+            athlete["profile_photo"] = athlete["athlete_photo"]
+        else:
+            user = await db.users.find_one({"athlete_id": athlete_id})
+            if user and user.get("profile_photo"):
+                athlete["profile_photo"] = user["profile_photo"]
     
     return Athlete(**athlete)
 
