@@ -1161,7 +1161,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         {/* Documento e Dati Bancari */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>🏦 Documento e Dati Bancari</Text>
+            <Text style={styles.cardTitle}>{isQuotaAthlete ? '🪪 Documento di Identità' : '🏦 Documento e Dati Bancari'}</Text>
             <TouchableOpacity onPress={() => setEditingBank(!editingBank)}>
               <Ionicons name={editingBank ? "close" : "create"} size={22} color="#007AFF" />
             </TouchableOpacity>
