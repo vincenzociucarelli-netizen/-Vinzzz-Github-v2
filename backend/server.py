@@ -432,6 +432,7 @@ class Team(BaseModel):
     training_sessions: List[dict] = []  # List of TrainingSession
     match_day: Optional[dict] = None  # MatchDay
     rifinitura: Optional[dict] = None  # Rifinitura mattina gara
+    warmup_session: Optional[dict] = None  # Alias for rifinitura (warmup before match)
     # Legacy fields (keeping for backward compatibility)
     venue: Optional[str] = None
     training_schedule: Optional[str] = None
