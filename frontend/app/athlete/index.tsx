@@ -355,39 +355,10 @@ export default function AthleteScreen() {
                     borderWidth: 1,
                     borderColor: '#2196F3'
                   }}
-                  onPress={async () => {
-                    const confirm = Platform.OS === 'web' 
-                      ? window.confirm('Vuoi terminare il periodo di prova e rimanere? Dovrai accettare la privacy per continuare.')
-                      : await new Promise<boolean>((resolve) => {
-                          Alert.alert(
-                            'Termina Prova e Rimani',
-                            'Vuoi terminare il periodo di prova e continuare come atleta? Dovrai accettare la privacy.',
-                            [
-                              { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-                              { text: 'Conferma', onPress: () => resolve(true) }
-                            ]
-                          );
-                        });
-                    
-                    if (confirm) {
-                      try {
-                        await api.post('/athletes/withdraw-trial-stay');
-                        if (Platform.OS === 'web') {
-                          window.alert('Periodo di prova terminato. Ora devi accettare la privacy per continuare.');
-                        } else {
-                          Alert.alert('Successo', 'Periodo di prova terminato. Ora devi accettare la privacy per continuare.');
-                        }
-                        // Redirect to profile page to sign privacy
-                        router.push('/athlete/profile');
-                      } catch (error: any) {
-                        const msg = error.response?.data?.detail || 'Errore durante l\'operazione';
-                        if (Platform.OS === 'web') {
-                          window.alert(msg);
-                        } else {
-                          Alert.alert('Errore', msg);
-                        }
-                      }
-                    }
+                  onPress={() => {
+                    // Apri direttamente il modal per firmare la privacy
+                    setShowPrivacyModal(true);
+                  }}
                   }}
                 >
                   <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>
