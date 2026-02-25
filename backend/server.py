@@ -4836,6 +4836,10 @@ async def get_pending_athletes(current_user = Depends(get_current_user)):
     for athlete in pending:
         team = teams_dict.get(athlete["team_id"])
         parent = users_dict.get(athlete["parent_id"])
+        
+        # Check if adult athlete (no parent_id)
+        is_adult = athlete.get("parent_id") is None or athlete.get("parents_detached") is True
+        
         result.append({
             "id": athlete["id"],
             "full_name": athlete["full_name"],
@@ -4843,12 +4847,15 @@ async def get_pending_athletes(current_user = Depends(get_current_user)):
             "last_name": athlete.get("last_name"),
             "date_of_birth": athlete.get("date_of_birth"),
             "fiscal_code": athlete.get("fiscal_code"),
-            "team_id": athlete["team_id"],
-            "team_name": team["name"] if team else "Sconosciuta",
-            "parent_name": parent["full_name"] if parent else "Sconosciuto",
+            "team_id": athlete.get("team_id"),
+            "team_name": team["name"] if team else "Da assegnare",
+            "parent_name": parent["full_name"] if parent else None,
             "parent_email": parent["email"] if parent else "",
             "registration_date": athlete.get("registration_date"),
             "status": athlete.get("status", "pending"),
+            "is_adult": is_adult,
+            "athlete_email": athlete.get("email"),
+            "athlete_phone": athlete.get("phone_athlete"),
         })
     
     return result
