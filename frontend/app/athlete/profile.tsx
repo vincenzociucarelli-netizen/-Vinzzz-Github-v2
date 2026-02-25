@@ -48,6 +48,7 @@ export default function AthleteProfile() {
   const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
   const [athleteId, setAthleteId] = useState<string | null>(null);
   const [isAdult, setIsAdult] = useState(false);
+  const [isQuotaAthlete, setIsQuotaAthlete] = useState(true); // true if athlete pays quota, false if compensated
   
   // Profile data
   const [profileData, setProfileData] = useState({
