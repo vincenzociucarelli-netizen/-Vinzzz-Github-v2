@@ -135,6 +135,85 @@ export default function AthleteDocumentsScreen() {
     loadData();
   };
 
+  // Handle medical certificate upload
+  const handleUploadMedicalCertificate = async () => {
+    if (Platform.OS === 'web') {
+      // For web, use file input
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
+    } else {
+      // For mobile, use ImagePicker
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permesso negato', 'Serve il permesso per accedere alla galleria');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadFile(result.assets[0].base64!, result.assets[0].uri);
+      }
+    }
+  };
+
+  const handleWebFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      if (Platform.OS === 'web') {
+        window.alert('Formato non supportato. Usa immagini (JPG, PNG) o PDF.');
+      }
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(',')[1];
+      await uploadFile(base64, file.name, file.type);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadFile = async (base64: string, filename: string, mimeType?: string) => {
+    setUploading(true);
+    try {
+      // Upload the certificate
+      const response = await api.post('/certificates/upload-self', {
+        certificate_data: base64,
+        filename: filename,
+        mime_type: mimeType || 'image/jpeg',
+      });
+
+      if (Platform.OS === 'web') {
+        window.alert('Certificato medico caricato con successo!');
+      } else {
+        Alert.alert('Successo', 'Certificato medico caricato con successo!');
+      }
+      
+      // Reload documents
+      loadData();
+    } catch (error: any) {
+      const msg = error.response?.data?.detail || 'Errore durante il caricamento';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Errore', msg);
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const getDocIcon = (type: string) => {
     switch (type) {
       case 'privacy': return 'shield-checkmark';
