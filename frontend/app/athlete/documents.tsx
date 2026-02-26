@@ -48,24 +48,27 @@ export default function AthleteDocumentsScreen() {
           // Try to get the signed document from the archive
           let privacyPdfUrl = athleteRes.data.privacy_pdf_url;
           
-          // If no URL saved, try to find in signed_documents
+          // If no URL saved, try to find in signed_documents (if user has access)
           if (!privacyPdfUrl) {
             try {
-              const archiveRes = await api.get('/documents/archive', {
+              const archiveRes = await api.get('/documents/signed', {
                 params: { 
                   page: 1, 
                   limit: 100,
-                  athlete_id: athleteId
+                  related_entity_id: athleteId
                 }
               });
-              const privacyDoc = archiveRes.data.documents?.find(
-                (d: any) => d.document_type === 'privacy_consent' && d.related_entity_id === athleteId
+              const privacyDoc = archiveRes.data?.documents?.find(
+                (d: any) => d.document_type === 'privacy_consent'
+              ) || archiveRes.data?.find?.(
+                (d: any) => d.document_type === 'privacy_consent'
               );
               if (privacyDoc) {
                 privacyPdfUrl = `/api/documents/signed/${privacyDoc.id}/pdf`;
               }
-            } catch (e) {
-              console.log('Could not fetch archive documents');
+            } catch (e: any) {
+              // User may not have access to archive - that's OK
+              console.log('Could not fetch signed documents:', e?.response?.status);
             }
           }
           
