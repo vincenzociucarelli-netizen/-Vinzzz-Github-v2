@@ -215,12 +215,6 @@ export default function AthleteSchedule() {
                 </Text>
               </View>
             )}
-                </Text>
-                <Text style={{ color: '#2196F3', fontSize: 12 }} numberOfLines={1}>
-                  {schedule.warmup_session.venue || '-'}
-                </Text>
-              </View>
-            )}
           </View>
         )}
         
