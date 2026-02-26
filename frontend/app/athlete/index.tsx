@@ -589,7 +589,14 @@ export default function AthleteScreen() {
             setShowPrivacyModal(false);
             loadData();
           } catch (error: any) {
-            const msg = error.response?.data?.detail || 'Errore durante il salvataggio';
+            let msg = 'Errore durante il salvataggio';
+            if (error.response?.data?.detail) {
+              msg = typeof error.response.data.detail === 'string' 
+                ? error.response.data.detail 
+                : JSON.stringify(error.response.data.detail);
+            } else if (error.message) {
+              msg = error.message;
+            }
             if (Platform.OS === 'web') {
               window.alert(msg);
             } else {
