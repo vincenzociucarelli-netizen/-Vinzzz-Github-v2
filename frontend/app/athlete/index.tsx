@@ -563,6 +563,7 @@ export default function AthleteScreen() {
               document_title: 'Privacy - Informativa GDPR',
               document_text: 'Accettazione informativa sulla privacy',
               signer_name: profile?.full_name || '',
+              signer_email: user?.email || profile?.email || '',
               signature_base64: signatureBase64,
               related_entity_id: profile?.id,
               additional_data: {
