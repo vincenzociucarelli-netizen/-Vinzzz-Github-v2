@@ -621,6 +621,45 @@ export default function AthleteScreen() {
         city={profile?.city || ''}
         province={profile?.province || ''}
       />
+      
+      {/* QR Code Modal */}
+      <Modal
+        visible={showQRModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowQRModal(false)}
+      >
+        <TouchableOpacity 
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}
+          activeOpacity={1}
+          onPress={() => setShowQRModal(false)}
+        >
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', maxWidth: '90%' }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 16 }}>Il Tuo QR Code</Text>
+            {profile?.qr_code && (
+              <Image 
+                source={{ uri: profile.qr_code }}
+                style={{ width: 250, height: 250, borderRadius: 8 }}
+                resizeMode="contain"
+              />
+            )}
+            {profile?.athlete_code && (
+              <View style={{ marginTop: 16, backgroundColor: '#f5f5f5', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', letterSpacing: 2 }}>{profile.athlete_code}</Text>
+              </View>
+            )}
+            <Text style={{ marginTop: 12, color: '#666', fontSize: 13, textAlign: 'center' }}>
+              Mostra questo codice al coach per registrare la tua presenza
+            </Text>
+            <TouchableOpacity 
+              style={{ marginTop: 20, backgroundColor: '#007AFF', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 8 }}
+              onPress={() => setShowQRModal(false)}
+            >
+              <Text style={{ color: '#fff', fontWeight: '600' }}>Chiudi</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </>
   );
   }
