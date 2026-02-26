@@ -426,20 +426,24 @@ export default function AthleteScreen() {
         
         {/* QR Code Section */}
         {profile?.qr_code && (
-          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginHorizontal: 16, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 8 }}>Il Tuo QR Code</Text>
-            <Text style={{ fontSize: 12, color: '#666', marginBottom: 12, textAlign: 'center' }}>Mostralo al coach per registrare la presenza</Text>
+          <TouchableOpacity 
+            style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginHorizontal: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+            onPress={() => {/* Could open full QR modal */}}
+          >
             <Image 
               source={{ uri: profile.qr_code }}
-              style={{ width: 150, height: 150, borderRadius: 8 }}
+              style={{ width: 60, height: 60, borderRadius: 4 }}
               resizeMode="contain"
             />
-            {profile?.athlete_code && (
-              <View style={{ marginTop: 12, backgroundColor: '#f5f5f5', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', letterSpacing: 2 }}>{profile.athlete_code}</Text>
-              </View>
-            )}
-          </View>
+            <View style={{ marginLeft: 12, flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Il Tuo QR Code</Text>
+              <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Mostralo al coach per la presenza</Text>
+              {profile?.athlete_code && (
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#007AFF', marginTop: 4, letterSpacing: 1 }}>{profile.athlete_code}</Text>
+              )}
+            </View>
+            <Ionicons name="qr-code" size={24} color="#007AFF" />
+          </TouchableOpacity>
         )}
         
         {/* Menu Items */}
