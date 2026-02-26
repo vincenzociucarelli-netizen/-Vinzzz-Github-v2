@@ -83,6 +83,7 @@ export default function AthleteScreen() {
   // Privacy modal state
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [societyData, setSocietyData] = useState<any>(null);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   // Helper function to format date strings correctly
   const formatDateIT = (dateStr: string | undefined) => {
