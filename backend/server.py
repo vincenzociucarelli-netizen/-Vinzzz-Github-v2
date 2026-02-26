@@ -9420,6 +9420,13 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
     # Get user info for privacy documents
     user_data = current_user
     
+    # If related_entity_id is an athlete, get athlete data too
+    athlete_data = {}
+    if request.related_entity_id:
+        athlete = await db.athletes.find_one({"id": request.related_entity_id})
+        if athlete:
+            athlete_data = athlete
+    
     # Generate PDF - use appropriate function based on document type
     try:
         if request.document_type == "privacy_consent":
@@ -9427,8 +9434,12 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
             role = request.additional_data.get("role", "") if request.additional_data else ""
             fiscal_code = request.additional_data.get("fiscal_code", "") if request.additional_data else ""
             
-            # Get additional user data if available
-            birth_date = user_data.get("date_of_birth", "")
+            # Try to get fiscal_code from multiple sources
+            if not fiscal_code:
+                fiscal_code = athlete_data.get("fiscal_code", "") or user_data.get("fiscal_code", "")
+            
+            # Get additional user data if available - check both user and athlete
+            birth_date = user_data.get("date_of_birth", "") or athlete_data.get("birth_date", "") or athlete_data.get("date_of_birth", "")
             if birth_date and hasattr(birth_date, 'strftime'):
                 birth_date = birth_date.strftime("%d/%m/%Y")
             elif birth_date and isinstance(birth_date, str) and 'T' in birth_date:
