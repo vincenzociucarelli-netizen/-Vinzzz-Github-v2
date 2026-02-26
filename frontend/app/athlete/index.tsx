@@ -424,6 +424,24 @@ export default function AthleteScreen() {
           )}
         </View>
         
+        {/* QR Code Section */}
+        {profile?.qr_code && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginHorizontal: 16, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 8 }}>Il Tuo QR Code</Text>
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 12, textAlign: 'center' }}>Mostralo al coach per registrare la presenza</Text>
+            <Image 
+              source={{ uri: profile.qr_code }}
+              style={{ width: 150, height: 150, borderRadius: 8 }}
+              resizeMode="contain"
+            />
+            {profile?.athlete_code && (
+              <View style={{ marginTop: 12, backgroundColor: '#f5f5f5', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', letterSpacing: 2 }}>{profile.athlete_code}</Text>
+              </View>
+            )}
+          </View>
+        )}
+        
         {/* Menu Items */}
         <TouchableOpacity 
           style={styles.menuItem}
