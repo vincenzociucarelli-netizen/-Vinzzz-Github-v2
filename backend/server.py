@@ -9717,11 +9717,28 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
     if not document:
         raise HTTPException(status_code=404, detail="Documento non trovato")
     
-    # Check access: only signer or admin can view
-    if document["signer_id"] != current_user["id"] and current_user["role"] != UserRole.ADMIN:
+    # Check access: signer, related athlete, or admin can view
+    is_signer = document.get("signer_id") == current_user["id"]
+    is_related = document.get("related_entity_id") == current_user.get("athlete_id")
+    is_email_match = document.get("signer_email") == current_user.get("email")
+    is_admin = current_user["role"] == UserRole.ADMIN
+    
+    if not (is_signer or is_related or is_email_match or is_admin):
         raise HTTPException(status_code=403, detail="Non autorizzato a visualizzare questo documento")
     
-    pdf_bytes = base64.b64decode(document["pdf_base64"])
+    # Check if PDF exists
+    if not document.get("pdf_base64"):
+        # Try to get from file path if available
+        if document.get("pdf_path"):
+            try:
+                with open(document["pdf_path"], "rb") as f:
+                    pdf_bytes = f.read()
+            except:
+                raise HTTPException(status_code=404, detail="File PDF non trovato")
+        else:
+            raise HTTPException(status_code=404, detail="PDF non disponibile per questo documento")
+    else:
+        pdf_bytes = base64.b64decode(document["pdf_base64"])
     
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
