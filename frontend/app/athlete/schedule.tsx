@@ -226,70 +226,9 @@ export default function AthleteSchedule() {
             )}
           </View>
         )}
-
-        {/* Match Day */}
-        <Text style={styles.sectionTitle}>🏆 Giorno Partita</Text>
-        
-        {!schedule?.match_day ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>Giorno partita non impostato</Text>
-          </View>
-        ) : (
-          <View style={[styles.sessionCard, { backgroundColor: '#FFF3E0' }]}>
-            <View style={[styles.sessionDay, { backgroundColor: '#FF9800' }]}>
-              <Text style={[styles.sessionDayText, { color: '#fff' }]}>
-                {DAYS_IT[schedule.match_day.day?.toLowerCase()] || schedule.match_day.day}
-              </Text>
-            </View>
-            <View style={styles.sessionDetails}>
-              {schedule.match_day.time && (
-                <View style={styles.sessionTime}>
-                  <Ionicons name="time-outline" size={18} color="#666" />
-                  <Text style={styles.sessionTimeText}>{schedule.match_day.time}</Text>
-                </View>
-              )}
-              {schedule.match_day.venue && (
-                <View style={styles.sessionVenue}>
-                  <Ionicons name="location-outline" size={18} color="#666" />
-                  <Text style={styles.sessionVenueText}>{schedule.match_day.venue}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* Warmup/Rifinitura */}
-        {schedule?.warmup_session && (
-          <>
-            <Text style={styles.sectionTitle}>🏋️ Rifinitura</Text>
-            <View style={[styles.sessionCard, { backgroundColor: '#E3F2FD' }]}>
-              <View style={[styles.sessionDay, { backgroundColor: '#2196F3' }]}>
-                <Text style={[styles.sessionDayText, { color: '#fff' }]}>
-                  Pre-Gara
-                </Text>
-              </View>
-              <View style={styles.sessionDetails}>
-                {(schedule.warmup_session.timeStart || schedule.warmup_session.start_time) && (
-                  <View style={styles.sessionTime}>
-                    <Ionicons name="time-outline" size={18} color="#666" />
-                    <Text style={styles.sessionTimeText}>
-                      {schedule.warmup_session.timeStart || schedule.warmup_session.start_time} - {schedule.warmup_session.timeEnd || schedule.warmup_session.end_time}
-                    </Text>
-                  </View>
-                )}
-                {schedule.warmup_session.venue && (
-                  <View style={styles.sessionVenue}>
-                    <Ionicons name="location-outline" size={18} color="#666" />
-                    <Text style={styles.sessionVenueText}>{schedule.warmup_session.venue}</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          </>
-        )}
         
         {/* Attendance History Section */}
-        <Text style={styles.sectionTitle}>📋 Storico Presenze</Text>
+        <Text style={styles.sectionTitle}>Storico Presenze</Text>
         {attendances.length > 0 ? (
           <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginHorizontal: 16 }}>
             {attendances.slice(0, 10).map((att: any, index: number) => (
