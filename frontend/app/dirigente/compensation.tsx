@@ -846,11 +846,18 @@ export default function DirigenteCompensation() {
           </>
         )}
         
+        {/* Fallback: No contract dates set - show only current year with warning */}
         {(!contractStartYear || !contractEndYear) && (
           <>
-            <Text style={styles.sectionTitle}>Quietanze Mensili</Text>
+            <View style={{ backgroundColor: '#FFF3CD', borderRadius: 8, padding: 12, marginHorizontal: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="warning" size={20} color="#856404" />
+              <Text style={{ color: '#856404', marginLeft: 8, flex: 1, fontSize: 13 }}>
+                Date contratto non impostate. Contatta l'amministratore per configurare il periodo contrattuale.
+              </Text>
+            </View>
+            <Text style={styles.sectionTitle}>Quietanze {new Date().getFullYear()}</Text>
             <View style={styles.monthsGrid}>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => renderMonthCard(month))}
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].filter(m => m <= new Date().getMonth() + 1).map(month => renderMonthCard(month, new Date().getFullYear()))}
             </View>
           </>
         )}
