@@ -9655,12 +9655,24 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
     )
 
 @api_router.get("/documents/signed")
-async def list_signed_documents(current_user = Depends(get_current_user)):
+async def list_signed_documents(
+    related_entity_id: Optional[str] = None,
+    current_user = Depends(get_current_user)
+):
     """List signed documents for current user or all for admin"""
     query = {}
     
     if current_user["role"] != UserRole.ADMIN:
-        query["signer_id"] = current_user["id"]
+        # Non-admin users can only see their own documents
+        query["$or"] = [
+            {"signer_id": current_user["id"]},
+            {"related_entity_id": current_user.get("athlete_id", "")},
+            {"signer_email": current_user.get("email", "")}
+        ]
+    
+    # Allow filtering by related_entity_id
+    if related_entity_id:
+        query["related_entity_id"] = related_entity_id
     
     documents = await db.signed_documents.find(query, {"pdf_base64": 0}).to_list(100)
     
