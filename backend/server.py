@@ -9605,9 +9605,13 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
     
     # NOTE: No email to admin for privacy documents - available in Archive section
     
+    # Build PDF URL for downloading
+    pdf_url = f"/api/documents/signed/{document_id}/pdf"
+    
     return {
         "success": True,
         "document_id": document_record["id"],
+        "pdf_url": pdf_url,
         "message": f"Documento firmato con successo. Una copia è stata inviata a {request.signer_email}"
     }
 
