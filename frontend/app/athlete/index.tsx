@@ -430,7 +430,7 @@ export default function AthleteScreen() {
         {profile?.qr_code && (
           <TouchableOpacity 
             style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginHorizontal: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
-            onPress={() => {/* Could open full QR modal */}}
+            onPress={() => setShowQRModal(true)}
           >
             <Image 
               source={{ uri: profile.qr_code }}
@@ -439,12 +439,12 @@ export default function AthleteScreen() {
             />
             <View style={{ marginLeft: 12, flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Il Tuo QR Code</Text>
-              <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Mostralo al coach per la presenza</Text>
+              <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Tocca per ingrandire</Text>
               {profile?.athlete_code && (
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#007AFF', marginTop: 4, letterSpacing: 1 }}>{profile.athlete_code}</Text>
               )}
             </View>
-            <Ionicons name="qr-code" size={24} color="#007AFF" />
+            <Ionicons name="expand" size={24} color="#007AFF" />
           </TouchableOpacity>
         )}
         
