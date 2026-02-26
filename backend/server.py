@@ -9452,12 +9452,12 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
                 society_name=society_name,
                 signer_name=request.signer_name,
                 signer_role=role,
-                fiscal_code=fiscal_code or user_data.get("fiscal_code", ""),
+                fiscal_code=fiscal_code,
                 birth_date=birth_date,
-                birth_place=user_data.get("place_of_birth", ""),
-                address=user_data.get("address", ""),
-                city=user_data.get("city", ""),
-                province=user_data.get("province", ""),
+                birth_place=user_data.get("place_of_birth", "") or athlete_data.get("place_of_birth", "") or athlete_data.get("birth_place", ""),
+                address=user_data.get("address", "") or athlete_data.get("address", ""),
+                city=user_data.get("city", "") or athlete_data.get("city", ""),
+                province=user_data.get("province", "") or athlete_data.get("province", ""),
                 signature_base64=request.signature_base64
             )
         else:
