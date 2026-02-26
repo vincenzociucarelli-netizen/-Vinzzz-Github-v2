@@ -6736,13 +6736,21 @@ async def check_attendance(attendance_data: AttendanceCreate, current_user = Dep
     if current_user["role"] != UserRole.COACH:
         raise HTTPException(status_code=403, detail="Solo coach può registrare presenze")
     
-    # Extract athlete_id from QR code
-    athlete_id = attendance_data.qr_code
+    # Extract athlete_id from QR code - can be either athlete_id or athlete_code
+    qr_code_value = attendance_data.qr_code.strip()
     
-    # Find athlete
-    athlete = await db.athletes.find_one({"id": athlete_id})
+    # Find athlete - try by id first, then by athlete_code
+    athlete = await db.athletes.find_one({"id": qr_code_value})
     if not athlete:
-        raise HTTPException(status_code=404, detail="Atleta non trovato")
+        # Try by athlete_code (manual input)
+        athlete = await db.athletes.find_one({"athlete_code": qr_code_value.upper()})
+    if not athlete:
+        # Try case-insensitive search on athlete_code
+        athlete = await db.athletes.find_one({"athlete_code": {"$regex": f"^{qr_code_value}$", "$options": "i"}})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="QR code non valido o atleta non trovato")
+    
+    athlete_id = athlete["id"]
     
     # Check if already registered today (skip if force=True)
     if not attendance_data.force:
