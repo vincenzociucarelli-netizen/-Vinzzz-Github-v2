@@ -5982,6 +5982,81 @@ async def get_expiring_certificates(current_user = Depends(get_current_user)):
     """Get certificates expiring today and within next 30 days"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i certificati in scadenza")
+
+
+# Endpoint for athletes to upload their own medical certificate
+@api_router.post("/certificates/upload-self")
+async def upload_self_certificate(request: dict, current_user = Depends(get_current_user)):
+    """Allow athlete to upload their own medical certificate"""
+    
+    # Get athlete_id from current user
+    athlete_id = current_user.get("athlete_id")
+    if not athlete_id:
+        raise HTTPException(status_code=400, detail="Utente non associato a un atleta")
+    
+    # Verify the athlete exists
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    certificate_data = request.get("certificate_data")
+    filename = request.get("filename", "certificate.jpg")
+    mime_type = request.get("mime_type", "image/jpeg")
+    
+    if not certificate_data:
+        raise HTTPException(status_code=400, detail="Dati del certificato mancanti")
+    
+    # Create a data URL for the certificate
+    certificate_url = f"data:{mime_type};base64,{certificate_data}"
+    
+    # Default expiry to 1 year from now
+    expiry_date = datetime.utcnow() + timedelta(days=365)
+    
+    # Check if certificate already exists for this athlete
+    existing_cert = await db.certificates.find_one({"athlete_id": athlete_id})
+    
+    if existing_cert:
+        # Update existing certificate
+        await db.certificates.update_one(
+            {"athlete_id": athlete_id},
+            {"$set": {
+                "certificate_data": certificate_url,
+                "uploaded_at": datetime.utcnow().isoformat(),
+                "uploaded_by": "athlete",
+                "filename": filename,
+                "mime_type": mime_type
+            }}
+        )
+    else:
+        # Create new certificate record
+        cert_record = {
+            "id": str(uuid.uuid4()),
+            "athlete_id": athlete_id,
+            "society_id": athlete.get("society_id"),
+            "certificate_data": certificate_url,
+            "issue_date": datetime.utcnow().isoformat(),
+            "expiry_date": expiry_date.isoformat(),
+            "uploaded_at": datetime.utcnow().isoformat(),
+            "uploaded_by": "athlete",
+            "filename": filename,
+            "mime_type": mime_type
+        }
+        await db.certificates.insert_one(cert_record)
+    
+    # Also update athlete's medical certificate expiry
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "medical_certificate_expiry": expiry_date.strftime("%Y-%m-%d"),
+            "medical_certificate_url": certificate_url
+        }}
+    )
+    
+    return {
+        "success": True,
+        "message": "Certificato medico caricato con successo",
+        "expiry_date": expiry_date.strftime("%Y-%m-%d")
+    }
     
     today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     thirty_days = today + timedelta(days=30)
