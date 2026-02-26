@@ -26,38 +26,43 @@ Sistema di gestione per società sportive (pallavolo) con:
 - Privacy acceptance genera PDF firmato tramite /documents/sign
 - Pagina documenti mostra icona download se PDF disponibile
 
+**Parent Flow (Genitore di Minorenne)**
+- Check automatico atleti con trial scaduto
+- Modal con opzioni: "Accetta Privacy" (firma digitale) o "Cancella Dati"
+- Generazione PDF privacy firmato con invio email
+- Doppia conferma per cancellazione dati
+
 **Admin Features**
-- Sezione "Privacy GDPR" aggiunta nella pagina dettaglio atleta
+- Sezione "Privacy GDPR" nella pagina dettaglio atleta
 - Modifica athlete_code funzionante
 - Pulsante "Reset Password" presente
 - Visualizzazione stato atleti
 
 **Payment System**
-- Calcolo corretto importi pagati/da pagare (usa campo `paid: boolean`)
-- Ricevute con sport_type corretto dalle impostazioni società
+- Calcolo corretto importi pagati/da pagare
+- Ricevute con sport_type corretto
 
-### 🔄 In Progress
+**Compensation System (Coach/Dirigente/Collaboratore)**
+- Warning quando date contratto non impostate
+- Mostra solo mesi fino a quello corrente (non tutti 12)
 
-**Test User for Deletion Flow**
-- Created: `testcancella@test.com` / `Test1234`
-- Status: trial
-- Ready to test "Non Rimanere" (delete account) flow
+**Icons Fix**
+- Tutti i file usano componente Icon.tsx con fallback emoji
+- Nessun file usa più @expo/vector-icons direttamente
 
 ### 📋 Backlog
 
 **P1 - High Priority**
-- Applicare logica "fine prova" per Genitore di atleta minorenne
 - Preparare documenti per app store submission
+- Decidere se implementare Stripe ora o rimandare
 
 **P2 - Medium Priority**
-- Risolvere @expo/vector-icons rendering sul web
-- Correggere visualizzazione mesi compensi (mostra 12 mesi invece dei mesi contratto)
 - Stabilizzare modulo PRO
+- Refactoring server.py in struttura modulare
 
 **P3 - Low Priority**
 - Integrazione Stripe per piani premium
 - Implementare logica Freemium
-- Refactoring server.py in struttura modulare
 
 ## Architecture
 
@@ -71,28 +76,34 @@ Sistema di gestione per società sportive (pallavolo) con:
 - React Native / Expo
 - expo-router for navigation
 - AsyncStorage for auth tokens
+- Custom Icon component with emoji fallback
 
 ### Key Files
 - `/app/backend/server.py` - Main API server
 - `/app/frontend/app/athlete/index.tsx` - Athlete dashboard
-- `/app/frontend/app/athlete/schedule.tsx` - Schedule page (without Storico Presenze)
-- `/app/frontend/app/athlete/documents.tsx` - Documents page (without confusing message)
-- `/app/frontend/app/admin/athlete/[id].tsx` - Admin athlete detail (with Privacy section)
-- `/app/frontend/src/components/AdultPrivacyModal.tsx` - Privacy signature modal
+- `/app/frontend/app/parent/index.tsx` - Parent dashboard (with trial logic)
+- `/app/frontend/app/athlete/schedule.tsx` - Schedule page
+- `/app/frontend/app/athlete/documents.tsx` - Documents page
+- `/app/frontend/app/admin/athlete/[id].tsx` - Admin athlete detail
+- `/app/frontend/src/components/Icon.tsx` - Icon component with emoji fallback
+- `/app/frontend/app/coach/compensation.tsx` - Coach compensation
+- `/app/frontend/app/dirigente/compensation.tsx` - Dirigente compensation
+- `/app/frontend/app/collaboratore/compensation.tsx` - Collaboratore compensation
 
 ## Test Credentials
 - **Admin**: `test.admin@test.com` / `Test1234`
 - **Athlete (Lisa)**: `lisa@test.com` / `Test1234`
-- **Test Cancellazione**: `testcancella@test.com` / `Test1234`
-
-## Known Issues
-- Frontend environment (Expo/ngrok) can be unstable - may need restart
-- @expo/vector-icons don't render on web
-- Lisa's privacy PDF not in archive (signed before PDF generation was added)
 
 ## Recent Changes (26 Feb 2026)
-1. Removed "Storico Presenze" section from athlete schedule page
-2. Removed confusing info message from athlete documents page
-3. Added "Privacy GDPR" section to admin athlete detail page
-4. Updated privacy signature flow to generate PDF via /documents/sign endpoint
-5. Updated documents page to show download icon when PDF available
+1. Fixed icon import in documents-archive.tsx
+2. Added warning + limited months for compensation pages without contract dates
+3. Verified parent trial flow is already implemented
+4. Removed "Storico Presenze" section from schedule page
+5. Removed confusing info message from documents page
+6. Added "Privacy GDPR" section to admin athlete detail
+7. Updated privacy signature flow to generate PDF
+
+## Known Issues Resolved
+- ✅ @expo/vector-icons on web - all files now use Icon.tsx
+- ✅ 12 months compensation display - now shows warning and limited months
+- ✅ Parent trial logic - already implemented and working
