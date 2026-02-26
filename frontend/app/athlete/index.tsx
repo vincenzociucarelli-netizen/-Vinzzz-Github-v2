@@ -457,24 +457,21 @@ export default function AthleteScreen() {
           )}
         </View>
         
-        {/* Contact Info */}
-        {profile?.email && (
-          <View style={styles.menuItem}>
-            <Ionicons name="mail" size={22} color="#007AFF" />
-            <View style={styles.menuItemContent}>
-              <Text style={styles.menuItemTitle}>Email</Text>
-              <Text style={styles.menuItemSubtitle}>{profile.email}</Text>
-            </View>
-          </View>
-        )}
-        
-        {profile?.phone_athlete && (
-          <View style={styles.menuItem}>
-            <Ionicons name="call" size={22} color="#007AFF" />
-            <View style={styles.menuItemContent}>
-              <Text style={styles.menuItemTitle}>Telefono</Text>
-              <Text style={styles.menuItemSubtitle}>{profile.phone_athlete}</Text>
-            </View>
+        {/* Contact Info - Email and Phone on same row */}
+        {(profile?.email || profile?.phone_athlete) && (
+          <View style={[styles.menuItem, { flexDirection: 'row', justifyContent: 'space-between' }]}>
+            {profile?.email && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                <Ionicons name="mail" size={18} color="#666" />
+                <Text style={{ marginLeft: 6, color: '#666', fontSize: 13 }}>{profile.email}</Text>
+              </View>
+            )}
+            {profile?.phone_athlete && (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="call" size={18} color="#666" />
+                <Text style={{ marginLeft: 6, color: '#666', fontSize: 13 }}>{profile.phone_athlete}</Text>
+              </View>
+            )}
           </View>
         )}
         
