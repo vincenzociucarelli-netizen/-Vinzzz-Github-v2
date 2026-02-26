@@ -197,13 +197,7 @@ export default function AthleteDocumentsScreen() {
           ))
         )}
 
-        {/* Info section */}
-        <View style={styles.infoSection}>
-          <Ionicons name="information-circle" size={20} color="#666" />
-          <Text style={styles.infoText}>
-            Per caricare o aggiornare i documenti, vai nella sezione "Dati Personali"
-          </Text>
-        </View>
+        <View style={{ height: 20 }} />
       </ScrollView>
     </View>
   );
