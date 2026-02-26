@@ -23,7 +23,7 @@
     "axios": "^1.13.4",
     "codice-fiscale-js": "^2.3.23",
     "date-fns": "^4.1.0",
-    "expo": "^55.0.2",
+    "expo": "54.0.33",
     "expo-blur": "~14.1.5",
     "expo-camera": "^17.0.10",
     "expo-constants": "~17.1.7",
