@@ -43,13 +43,38 @@ export default function AthleteDocumentsScreen() {
         // Build documents list from profile data
         const docs: Document[] = [];
         
-        // Privacy document
+        // Privacy document - check for signed document in archive
         if (athleteRes.data.privacy_accepted) {
+          // Try to get the signed document from the archive
+          let privacyPdfUrl = athleteRes.data.privacy_pdf_url;
+          
+          // If no URL saved, try to find in signed_documents
+          if (!privacyPdfUrl) {
+            try {
+              const archiveRes = await api.get('/documents/archive', {
+                params: { 
+                  page: 1, 
+                  limit: 100,
+                  athlete_id: athleteId
+                }
+              });
+              const privacyDoc = archiveRes.data.documents?.find(
+                (d: any) => d.document_type === 'privacy_consent' && d.related_entity_id === athleteId
+              );
+              if (privacyDoc) {
+                privacyPdfUrl = `/api/documents/signed/${privacyDoc.id}/pdf`;
+              }
+            } catch (e) {
+              console.log('Could not fetch archive documents');
+            }
+          }
+          
           docs.push({
             id: 'privacy',
             type: 'privacy',
             name: 'Privacy - Informativa GDPR',
             date: athleteRes.data.privacy_accepted_date || '',
+            url: privacyPdfUrl || undefined,
           });
         }
         
