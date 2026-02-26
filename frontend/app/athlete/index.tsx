@@ -539,11 +539,27 @@ export default function AthleteScreen() {
         onClose={() => setShowPrivacyModal(false)}
         onSign={async (signatureBase64: string) => {
           try {
+            // First, sign the privacy document (generates PDF)
+            const signResponse = await api.post('/documents/sign', {
+              document_type: 'privacy_consent',
+              document_title: 'Privacy - Informativa GDPR',
+              document_text: 'Accettazione informativa sulla privacy',
+              signer_name: profile?.full_name || '',
+              signature_base64: signatureBase64,
+              related_entity_id: profile?.id,
+              additional_data: {
+                role: 'athlete',
+                fiscal_code: profile?.fiscal_code || ''
+              }
+            });
+            
+            // Update athlete status to active and save privacy info
             await api.post('/athletes/withdraw-trial-stay');
             await api.patch(`/athletes/${profile?.id}`, {
               privacy_accepted: true,
               privacy_accepted_date: new Date().toISOString(),
-              privacy_signature: signatureBase64
+              privacy_signature: signatureBase64,
+              privacy_pdf_url: signResponse.data?.pdf_url || null
             });
             
             if (Platform.OS === 'web') {
