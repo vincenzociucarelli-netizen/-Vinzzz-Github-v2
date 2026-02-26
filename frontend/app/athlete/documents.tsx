@@ -86,12 +86,13 @@ export default function AthleteDocumentsScreen() {
         }
         
         // Medical certificate
-        if (athleteRes.data.medical_certificate_expiry) {
+        if (athleteRes.data.medical_certificate_expiry || athleteRes.data.medical_certificate_url) {
           docs.push({
             id: 'medical',
             type: 'medical',
             name: 'Certificato Medico',
-            date: athleteRes.data.medical_certificate_expiry,
+            date: athleteRes.data.medical_certificate_expiry || '',
+            url: athleteRes.data.medical_certificate_url,
           });
         }
         
