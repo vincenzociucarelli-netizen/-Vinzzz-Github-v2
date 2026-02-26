@@ -153,71 +153,68 @@ export default function AthleteSchedule() {
             <Text style={styles.emptyText}>Nessun allenamento programmato</Text>
           </View>
         ) : (
-          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginHorizontal: 16 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginHorizontal: 16 }}>
             {schedule.training_sessions.map((session, index) => (
               <View key={index} style={{ 
-                flexDirection: 'row', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                paddingVertical: 8,
+                paddingVertical: 12,
                 borderBottomWidth: index < schedule.training_sessions.length - 1 ? 1 : 0,
                 borderBottomColor: '#eee'
               }}>
-                <Text style={{ fontWeight: '600', color: '#333', width: 90 }}>
+                <Text style={{ fontWeight: '700', color: '#333', fontSize: 15, marginBottom: 4 }}>
                   {DAYS_IT[session.day?.toLowerCase()] || session.day}
                 </Text>
-                <Text style={{ color: '#666', flex: 1 }}>
-                  {session.timeStart || session.start_time} - {session.timeEnd || session.end_time}
+                <Text style={{ color: '#007AFF', fontSize: 14, fontWeight: '600', marginBottom: 2 }}>
+                  {session.timeStart || session.start_time} / {session.timeEnd || session.end_time}
                 </Text>
-                <Text style={{ color: '#999', fontSize: 12 }} numberOfLines={1}>
+                <Text style={{ color: '#666', fontSize: 13 }}>
                   {session.venue || '-'}
                 </Text>
               </View>
             ))}
             
-            {/* Match Day inline */}
+            {/* Match Day */}
             {schedule?.match_day && (
               <View style={{ 
-                flexDirection: 'row', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                paddingVertical: 8,
+                paddingVertical: 12,
                 backgroundColor: '#FFF3E0',
                 marginTop: 8,
-                marginHorizontal: -12,
-                paddingHorizontal: 12,
+                marginHorizontal: -16,
+                paddingHorizontal: 16,
                 borderRadius: 8
               }}>
-                <Text style={{ fontWeight: '600', color: '#FF9800', width: 90 }}>
-                  {DAYS_IT[schedule.match_day.day?.toLowerCase()] || schedule.match_day.day}
+                <Text style={{ fontWeight: '700', color: '#FF9800', fontSize: 15, marginBottom: 4 }}>
+                  {DAYS_IT[schedule.match_day.day?.toLowerCase()] || schedule.match_day.day} (Partita)
                 </Text>
-                <Text style={{ color: '#FF9800', flex: 1 }}>
-                  {schedule.match_day.time || 'TBD'} (Partita)
+                <Text style={{ color: '#FF9800', fontSize: 14, fontWeight: '600', marginBottom: 2 }}>
+                  {schedule.match_day.time || 'TBD'}
                 </Text>
-                <Text style={{ color: '#FF9800', fontSize: 12 }} numberOfLines={1}>
+                <Text style={{ color: '#E65100', fontSize: 13 }}>
                   {schedule.match_day.venue || '-'}
                 </Text>
               </View>
             )}
             
-            {/* Warmup inline */}
+            {/* Warmup/Rifinitura */}
             {schedule?.warmup_session && (
               <View style={{ 
-                flexDirection: 'row', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                paddingVertical: 8,
+                paddingVertical: 12,
                 backgroundColor: '#E3F2FD',
                 marginTop: 8,
-                marginHorizontal: -12,
-                paddingHorizontal: 12,
+                marginHorizontal: -16,
+                paddingHorizontal: 16,
                 borderRadius: 8
               }}>
-                <Text style={{ fontWeight: '600', color: '#2196F3', width: 90 }}>
+                <Text style={{ fontWeight: '700', color: '#2196F3', fontSize: 15, marginBottom: 4 }}>
                   Rifinitura
                 </Text>
-                <Text style={{ color: '#2196F3', flex: 1 }}>
-                  {schedule.warmup_session.timeStart || schedule.warmup_session.start_time} - {schedule.warmup_session.timeEnd || schedule.warmup_session.end_time}
+                <Text style={{ color: '#2196F3', fontSize: 14, fontWeight: '600', marginBottom: 2 }}>
+                  {schedule.warmup_session.timeStart || schedule.warmup_session.start_time} / {schedule.warmup_session.timeEnd || schedule.warmup_session.end_time}
+                </Text>
+                <Text style={{ color: '#1565C0', fontSize: 13 }}>
+                  {schedule.warmup_session.venue || '-'}
+                </Text>
+              </View>
+            )}
                 </Text>
                 <Text style={{ color: '#2196F3', fontSize: 12 }} numberOfLines={1}>
                   {schedule.warmup_session.venue || '-'}
