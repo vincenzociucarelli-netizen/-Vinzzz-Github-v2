@@ -582,6 +582,11 @@ class Athlete(BaseModel):
     # Campi dinamici (non persistiti, aggiunti nelle risposte)
     team_name: Optional[str] = None  # Nome squadra (riempito dinamicamente)
     profile_photo: Optional[str] = None  # Foto profilo (può venire da user)
+    # Certificato medico
+    medical_certificate_expiry: Optional[str] = None  # Scadenza certificato medico
+    medical_certificate_url: Optional[str] = None  # URL/base64 certificato medico
+    privacy_signature: Optional[str] = None  # Firma privacy (base64)
+    privacy_pdf_url: Optional[str] = None  # URL PDF privacy firmato
 
 class AthleteCreate(BaseModel):
     full_name: str
