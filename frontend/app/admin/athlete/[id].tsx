@@ -2006,6 +2006,24 @@ export default function AdminAthleteDetail() {
               )}
             </View>
 
+            {/* Privacy Status */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>🔒 Privacy GDPR</Text>
+              {athlete.privacy_accepted ? (
+                <View style={styles.certRow}>
+                  <Ionicons name="checkmark-circle" size={24} color="#34C759" />
+                  <Text style={[styles.certText, { color: '#34C759' }]}>
+                    Accettata il {athlete.privacy_accepted_date ? formatDate(athlete.privacy_accepted_date) : '-'}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.warningBox}>
+                  <Ionicons name="warning" size={20} color="#FF9500" />
+                  <Text style={styles.warningText}>Privacy non ancora accettata</Text>
+                </View>
+              )}
+            </View>
+
             {/* Password Modifiche (for minors) */}
             {hasDataPassword && (
               <View style={styles.card}>
