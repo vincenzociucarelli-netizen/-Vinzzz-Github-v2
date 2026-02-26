@@ -145,37 +145,86 @@ export default function AthleteSchedule() {
           <Text style={styles.teamName}>{teamName}</Text>
         </View>
 
-        {/* Training Sessions */}
-        <Text style={styles.sectionTitle}>🏐 Allenamenti</Text>
+        {/* Training Sessions - Compact Grid */}
+        <Text style={styles.sectionTitle}>Orari Settimanali</Text>
         
         {!schedule || schedule.training_sessions.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>Nessun allenamento programmato</Text>
           </View>
         ) : (
-          schedule.training_sessions.map((session, index) => (
-            <View key={index} style={styles.sessionCard}>
-              <View style={styles.sessionDay}>
-                <Text style={styles.sessionDayText}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginHorizontal: 16 }}>
+            {schedule.training_sessions.map((session, index) => (
+              <View key={index} style={{ 
+                flexDirection: 'row', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                paddingVertical: 8,
+                borderBottomWidth: index < schedule.training_sessions.length - 1 ? 1 : 0,
+                borderBottomColor: '#eee'
+              }}>
+                <Text style={{ fontWeight: '600', color: '#333', width: 90 }}>
                   {DAYS_IT[session.day?.toLowerCase()] || session.day}
                 </Text>
+                <Text style={{ color: '#666', flex: 1 }}>
+                  {session.timeStart || session.start_time} - {session.timeEnd || session.end_time}
+                </Text>
+                <Text style={{ color: '#999', fontSize: 12 }} numberOfLines={1}>
+                  {session.venue || '-'}
+                </Text>
               </View>
-              <View style={styles.sessionDetails}>
-                <View style={styles.sessionTime}>
-                  <Ionicons name="time-outline" size={18} color="#666" />
-                  <Text style={styles.sessionTimeText}>
-                    {session.timeStart || session.start_time} - {session.timeEnd || session.end_time}
-                  </Text>
-                </View>
-                {session.venue && (
-                  <View style={styles.sessionVenue}>
-                    <Ionicons name="location-outline" size={18} color="#666" />
-                    <Text style={styles.sessionVenueText}>{session.venue}</Text>
-                  </View>
-                )}
+            ))}
+            
+            {/* Match Day inline */}
+            {schedule?.match_day && (
+              <View style={{ 
+                flexDirection: 'row', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                paddingVertical: 8,
+                backgroundColor: '#FFF3E0',
+                marginTop: 8,
+                marginHorizontal: -12,
+                paddingHorizontal: 12,
+                borderRadius: 8
+              }}>
+                <Text style={{ fontWeight: '600', color: '#FF9800', width: 90 }}>
+                  {DAYS_IT[schedule.match_day.day?.toLowerCase()] || schedule.match_day.day}
+                </Text>
+                <Text style={{ color: '#FF9800', flex: 1 }}>
+                  {schedule.match_day.time || 'TBD'} (Partita)
+                </Text>
+                <Text style={{ color: '#FF9800', fontSize: 12 }} numberOfLines={1}>
+                  {schedule.match_day.venue || '-'}
+                </Text>
               </View>
-            </View>
-          ))
+            )}
+            
+            {/* Warmup inline */}
+            {schedule?.warmup_session && (
+              <View style={{ 
+                flexDirection: 'row', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                paddingVertical: 8,
+                backgroundColor: '#E3F2FD',
+                marginTop: 8,
+                marginHorizontal: -12,
+                paddingHorizontal: 12,
+                borderRadius: 8
+              }}>
+                <Text style={{ fontWeight: '600', color: '#2196F3', width: 90 }}>
+                  Rifinitura
+                </Text>
+                <Text style={{ color: '#2196F3', flex: 1 }}>
+                  {schedule.warmup_session.timeStart || schedule.warmup_session.start_time} - {schedule.warmup_session.timeEnd || schedule.warmup_session.end_time}
+                </Text>
+                <Text style={{ color: '#2196F3', fontSize: 12 }} numberOfLines={1}>
+                  {schedule.warmup_session.venue || '-'}
+                </Text>
+              </View>
+            )}
+          </View>
         )}
 
         {/* Match Day */}
