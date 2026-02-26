@@ -284,23 +284,23 @@ export default function AthleteScreen() {
           
           {/* Status Badge */}
           <View style={{ 
-            backgroundColor: profile?.status === 'trial' ? '#FFF3E0' : profile?.status === 'pending_privacy' ? '#E3F2FD' : '#E8F5E9', 
+            backgroundColor: profile?.status === 'trial' ? '#FFF3E0' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#E3F2FD' : '#E8F5E9', 
             paddingHorizontal: 12, 
             paddingVertical: 6, 
             borderRadius: 16,
             marginTop: 8
           }}>
             <Text style={{ 
-              color: profile?.status === 'trial' ? '#FF9800' : profile?.status === 'pending_privacy' ? '#1976D2' : '#4CAF50',
+              color: profile?.status === 'trial' ? '#FF9800' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#1976D2' : '#4CAF50',
               fontWeight: '600',
               fontSize: 13
             }}>
-              {profile?.status === 'trial' ? '⏳ Periodo di Prova' : profile?.status === 'pending_privacy' ? '📝 Firma Privacy Richiesta' : '✓ Attivo'}
+              {profile?.status === 'trial' ? '⏳ Periodo di Prova' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '📝 Firma Privacy Richiesta' : '✓ Attivo'}
             </Text>
           </View>
           
-          {/* Pending Privacy Banner */}
-          {profile?.status === 'pending_privacy' && (
+          {/* Pending Privacy Banner - only show if NOT privacy_accepted */}
+          {profile?.status === 'pending_privacy' && !profile?.privacy_accepted && (
             <TouchableOpacity 
               style={{ 
                 backgroundColor: '#E3F2FD', 
