@@ -22,7 +22,7 @@ from pathlib import Path
 # Load env
 load_dotenv(Path('/app/backend/.env'))
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://athlete-profile-sync.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://adult-athlete-ui.preview.emergentagent.com').rstrip('/')
 
 # Admin credentials
 ADMIN_EMAIL = "test.admin@test.com"
