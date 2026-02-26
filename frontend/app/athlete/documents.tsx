@@ -195,10 +195,32 @@ export default function AthleteDocumentsScreen() {
             <TouchableOpacity
               key={doc.id}
               style={styles.docCard}
-              onPress={() => {
+              onPress={async () => {
                 if (doc.url) {
                   if (Platform.OS === 'web') {
-                    window.open(doc.url, '_blank');
+                    // For API URLs, fetch with auth token
+                    if (doc.url.startsWith('/api/')) {
+                      try {
+                        const response = await api.get(doc.url.replace('/api/', '/'), {
+                          responseType: 'blob'
+                        });
+                        const blob = new Blob([response.data], { type: 'application/pdf' });
+                        const url = window.URL.createObjectURL(blob);
+                        window.open(url, '_blank');
+                      } catch (error) {
+                        console.error('Error downloading document:', error);
+                        Alert.alert('Errore', 'Impossibile scaricare il documento');
+                      }
+                    } else {
+                      window.open(doc.url, '_blank');
+                    }
+                  }
+                } else if (doc.type === 'privacy') {
+                  // Privacy without PDF - show message
+                  if (Platform.OS === 'web') {
+                    window.alert('Documento privacy accettato. Il PDF firmato sarà disponibile dopo una nuova firma.');
+                  } else {
+                    Alert.alert('Info', 'Documento privacy accettato. Il PDF firmato sarà disponibile dopo una nuova firma.');
                   }
                 }
               }}
@@ -215,9 +237,11 @@ export default function AthleteDocumentsScreen() {
                   </Text>
                 )}
               </View>
-              {doc.url && (
-                <Ionicons name="open-outline" size={20} color="#666" />
-              )}
+              {doc.url ? (
+                <Ionicons name="download-outline" size={20} color="#007AFF" />
+              ) : doc.type === 'privacy' ? (
+                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+              ) : null}
             </TouchableOpacity>
           ))
         )}
