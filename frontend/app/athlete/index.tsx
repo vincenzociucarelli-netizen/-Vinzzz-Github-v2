@@ -475,6 +475,21 @@ export default function AthleteScreen() {
           </View>
         )}
         
+        {/* Presenze/Statistiche - PRIMA dei pagamenti, più visibile */}
+        {profile?.team_id && (
+          <TouchableOpacity 
+            style={[styles.menuItem, { backgroundColor: '#E3F2FD', borderWidth: 1, borderColor: '#2196F3' }]}
+            onPress={() => router.push(`/athlete/schedule`)}
+          >
+            <Ionicons name="stats-chart" size={22} color="#2196F3" />
+            <View style={styles.menuItemContent}>
+              <Text style={[styles.menuItemTitle, { color: '#1976D2' }]}>Presenze e Statistiche</Text>
+              <Text style={styles.menuItemSubtitle}>Visualizza le tue presenze e orari</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#2196F3" />
+          </TouchableOpacity>
+        )}
+        
         {/* Payments Section */}
         <TouchableOpacity 
           style={styles.menuItem}
@@ -488,20 +503,33 @@ export default function AthleteScreen() {
           <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
         
-        {/* Attendance/Schedule Section */}
+        {/* Orari Allenamenti - Separato dalle presenze */}
         {profile?.team_id && (
           <TouchableOpacity 
             style={styles.menuItem}
-            onPress={() => router.push(`/athlete/schedule`)}
+            onPress={() => router.push(`/athlete/schedule?tab=orari`)}
           >
             <Ionicons name="calendar" size={22} color="#007AFF" />
             <View style={styles.menuItemContent}>
-              <Text style={styles.menuItemTitle}>Presenze e Orari</Text>
-              <Text style={styles.menuItemSubtitle}>Calendario allenamenti e partite</Text>
+              <Text style={styles.menuItemTitle}>Orari Allenamenti</Text>
+              <Text style={styles.menuItemSubtitle}>Calendario settimanale</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
         )}
+        
+        {/* Documenti Section */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push(`/athlete/documents`)}
+        >
+          <Ionicons name="document-text" size={22} color="#007AFF" />
+          <View style={styles.menuItemContent}>
+            <Text style={styles.menuItemTitle}>Documenti</Text>
+            <Text style={styles.menuItemSubtitle}>Privacy, certificati e altro</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
         
       </ScrollView>
       
