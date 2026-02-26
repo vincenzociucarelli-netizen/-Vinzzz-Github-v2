@@ -479,12 +479,12 @@ export default function AthleteScreen() {
         {profile?.team_id && (
           <TouchableOpacity 
             style={[styles.menuItem, { backgroundColor: '#E3F2FD', borderWidth: 1, borderColor: '#2196F3' }]}
-            onPress={() => router.push(`/athlete/schedule`)}
+            onPress={() => router.push(`/athlete/presenze`)}
           >
             <Ionicons name="stats-chart" size={22} color="#2196F3" />
             <View style={styles.menuItemContent}>
               <Text style={[styles.menuItemTitle, { color: '#1976D2' }]}>Presenze e Statistiche</Text>
-              <Text style={styles.menuItemSubtitle}>Visualizza le tue presenze e orari</Text>
+              <Text style={styles.menuItemSubtitle}>Visualizza le tue presenze e statistiche</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#2196F3" />
           </TouchableOpacity>
