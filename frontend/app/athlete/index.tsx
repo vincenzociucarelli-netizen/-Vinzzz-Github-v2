@@ -341,6 +341,116 @@ export default function AthleteScreen() {
     }
   };
 
+  // Print certificate
+  const handlePrintCertificate = () => {
+    if (!profile?.medical_certificate_url) {
+      if (Platform.OS === 'web') {
+        window.alert('Nessun certificato disponibile');
+      }
+      return;
+    }
+    
+    if (Platform.OS === 'web') {
+      try {
+        const [header, base64Data] = profile.medical_certificate_url.split(',');
+        const mimeMatch = header.match(/data:([^;]+)/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+        
+        // Create a new window for printing
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          if (mimeType.startsWith('image/')) {
+            printWindow.document.write(`
+              <html>
+                <head>
+                  <title>Certificato Medico - ${profile.full_name || 'Atleta'}</title>
+                  <style>
+                    body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+                    img { max-width: 100%; max-height: 100vh; }
+                    @media print { body { margin: 0; } img { max-width: 100%; } }
+                  </style>
+                </head>
+                <body>
+                  <img src="${profile.medical_certificate_url}" onload="window.print(); window.close();" />
+                </body>
+              </html>
+            `);
+          } else {
+            // For PDF
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: mimeType });
+            const blobUrl = window.URL.createObjectURL(blob);
+            
+            printWindow.location.href = blobUrl;
+            printWindow.onload = () => {
+              printWindow.print();
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error printing certificate:', error);
+        window.alert('Impossibile stampare il certificato');
+      }
+    }
+  };
+
+  // Share certificate
+  const handleShareCertificate = async () => {
+    if (!profile?.medical_certificate_url) {
+      if (Platform.OS === 'web') {
+        window.alert('Nessun certificato disponibile');
+      }
+      return;
+    }
+    
+    if (Platform.OS === 'web') {
+      try {
+        const [header, base64Data] = profile.medical_certificate_url.split(',');
+        const mimeMatch = header.match(/data:([^;]+)/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+        
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        
+        const fileName = `certificato_medico_${profile.full_name?.replace(/\s+/g, '_') || 'atleta'}.${mimeType.split('/')[1] || 'jpg'}`;
+        const file = new File([blob], fileName, { type: mimeType });
+        
+        // Check if Web Share API is available
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Certificato Medico',
+            text: `Certificato medico di ${profile.full_name || 'Atleta'}`,
+            files: [file]
+          });
+        } else {
+          // Fallback: download the file
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          window.alert('File scaricato! Puoi condividerlo manualmente.');
+        }
+      } catch (error) {
+        console.error('Error sharing certificate:', error);
+        window.alert('Impossibile condividere il certificato');
+      }
+    }
+  };
+
   const loadData = async () => {
     try {
       // Load athlete profile
