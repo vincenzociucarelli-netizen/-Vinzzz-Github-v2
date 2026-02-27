@@ -822,36 +822,25 @@ export default function AthleteScreen() {
               </View>
               <View style={styles.certificateButtonsRow}>
                 <TouchableOpacity
-                  style={styles.certificateViewButton}
+                  style={[styles.certificateViewButton, { flex: 1 }]}
                   onPress={handleViewCertificate}
                 >
                   <Ionicons name="eye" size={18} color="#007AFF" />
                   <Text style={styles.certificateViewButtonText}>Visualizza</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.certificateViewButton, { backgroundColor: '#E8F5E9' }]}
-                  onPress={handlePrintCertificate}
+                  style={[styles.certificateUploadButton, { flex: 1, marginLeft: 8 }]}
+                  onPress={handleUploadCertificate}
+                  disabled={uploadingCert}
                 >
-                  <Ionicons name="print" size={18} color="#4CAF50" />
-                  <Text style={[styles.certificateViewButtonText, { color: '#4CAF50' }]}>Stampa</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.certificateViewButton, { backgroundColor: '#FFF3E0' }]}
-                  onPress={handleShareCertificate}
-                >
-                  <Ionicons name="share-social" size={18} color="#FF9800" />
-                  <Text style={[styles.certificateViewButtonText, { color: '#FF9800' }]}>Condividi</Text>
+                  <Text style={styles.certificateUploadButtonText}>
+                    {uploadingCert ? '...' : 'Carica'}
+                  </Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={[styles.certificateUploadButton, { marginTop: 10 }]}
-                onPress={handleUploadCertificate}
-                disabled={uploadingCert}
-              >
-                <Text style={styles.certificateUploadButtonText}>
-                  {uploadingCert ? 'Caricamento...' : '📤 Carica Nuovo'}
-                </Text>
-              </TouchableOpacity>
+              <Text style={{ fontSize: 11, color: '#888', marginTop: 8, textAlign: 'center' }}>
+                Apri il certificato per stampare o condividere
+              </Text>
             </View>
           ) : (
             <View>
