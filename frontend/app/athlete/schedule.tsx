@@ -139,82 +139,107 @@ export default function AthleteSchedule() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Team Name */}
-        <View style={styles.teamCard}>
-          <Ionicons name="people" size={24} color="#007AFF" />
-          <Text style={styles.teamName}>{teamName}</Text>
+        {/* Calendario Squadra Header */}
+        <View style={styles.calendarHeader}>
+          <Text style={styles.calendarEmoji}>🏐</Text>
+          <Text style={styles.calendarTitle}>Calendario Squadra</Text>
         </View>
 
-        {/* Training Sessions - Compact Grid */}
-        <Text style={styles.sectionTitle}>Orari Settimanali</Text>
-        
-        {!schedule || schedule.training_sessions.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>Nessun allenamento programmato</Text>
+        {/* Allenamenti Settimanali */}
+        <View style={styles.scheduleSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionEmoji}>📅</Text>
+            <Text style={styles.sectionTitleNew}>Allenamenti Settimanali</Text>
           </View>
-        ) : (
-          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginHorizontal: 16 }}>
-            {schedule.training_sessions.map((session, index) => (
-              <View key={index} style={{ 
-                paddingVertical: 12,
-                borderBottomWidth: index < schedule.training_sessions.length - 1 ? 1 : 0,
-                borderBottomColor: '#eee'
-              }}>
-                <Text style={{ fontWeight: '700', color: '#333', fontSize: 15, marginBottom: 4 }}>
-                  {DAYS_IT[session.day?.toLowerCase()] || session.day}
-                </Text>
-                <Text style={{ color: '#007AFF', fontSize: 14, fontWeight: '600', marginBottom: 2 }}>
-                  {session.timeStart || session.start_time} / {session.timeEnd || session.end_time}
-                </Text>
-                <Text style={{ color: '#666', fontSize: 13 }}>
-                  {session.venue || '-'}
-                </Text>
+          
+          {!schedule || schedule.training_sessions.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>Nessun allenamento programmato</Text>
+            </View>
+          ) : (
+            <View style={styles.trainingList}>
+              {schedule.training_sessions.map((session, index) => (
+                <View key={index} style={styles.trainingItem}>
+                  <View style={styles.trainingDayIcon}>
+                    <Text style={styles.dayIconEmoji}>📅</Text>
+                  </View>
+                  <View style={styles.trainingDetails}>
+                    <Text style={styles.trainingDay}>
+                      {DAYS_IT[session.day?.toLowerCase()] || session.day}
+                    </Text>
+                    <View style={styles.trainingTimeRow}>
+                      <Ionicons name="time-outline" size={16} color="#666" />
+                      <Text style={styles.trainingTime}>
+                        {session.timeStart || session.start_time} - {session.timeEnd || session.end_time}
+                      </Text>
+                    </View>
+                    <View style={styles.trainingVenueRow}>
+                      <Ionicons name="location" size={16} color="#E91E63" />
+                      <Text style={styles.trainingVenue}>{session.venue || '-'}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Gare / Partite */}
+        {schedule?.match_day && (
+          <View style={styles.scheduleSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionEmoji}>🏆</Text>
+              <Text style={styles.sectionTitleNew}>Gare</Text>
+            </View>
+            <View style={styles.trainingList}>
+              <View style={styles.trainingItem}>
+                <View style={styles.trainingDayIcon}>
+                  <Text style={styles.dayIconEmoji}>🏆</Text>
+                </View>
+                <View style={styles.trainingDetails}>
+                  <Text style={[styles.trainingDay, { color: '#FF9800' }]}>
+                    {DAYS_IT[schedule.match_day.day?.toLowerCase()] || schedule.match_day.day}
+                  </Text>
+                  <View style={styles.trainingTimeRow}>
+                    <Ionicons name="time-outline" size={16} color="#666" />
+                    <Text style={styles.trainingTime}>{schedule.match_day.time || 'TBD'}</Text>
+                  </View>
+                  <View style={styles.trainingVenueRow}>
+                    <Ionicons name="location" size={16} color="#E91E63" />
+                    <Text style={styles.trainingVenue}>{schedule.match_day.venue || '-'}</Text>
+                  </View>
+                </View>
               </View>
-            ))}
-            
-            {/* Match Day */}
-            {schedule?.match_day && (
-              <View style={{ 
-                paddingVertical: 12,
-                backgroundColor: '#FFF3E0',
-                marginTop: 8,
-                marginHorizontal: -16,
-                paddingHorizontal: 16,
-                borderRadius: 8
-              }}>
-                <Text style={{ fontWeight: '700', color: '#FF9800', fontSize: 15, marginBottom: 4 }}>
-                  {DAYS_IT[schedule.match_day.day?.toLowerCase()] || schedule.match_day.day} (Partita)
-                </Text>
-                <Text style={{ color: '#FF9800', fontSize: 14, fontWeight: '600', marginBottom: 2 }}>
-                  {schedule.match_day.time || 'TBD'}
-                </Text>
-                <Text style={{ color: '#E65100', fontSize: 13 }}>
-                  {schedule.match_day.venue || '-'}
-                </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Rifinitura */}
+        {schedule?.warmup_session && (
+          <View style={styles.scheduleSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionEmoji}>⚡</Text>
+              <Text style={styles.sectionTitleNew}>Rifinitura</Text>
+            </View>
+            <View style={styles.trainingList}>
+              <View style={styles.trainingItem}>
+                <View style={styles.trainingDayIcon}>
+                  <Text style={styles.dayIconEmoji}>⚡</Text>
+                </View>
+                <View style={styles.trainingDetails}>
+                  <View style={styles.trainingTimeRow}>
+                    <Ionicons name="time-outline" size={16} color="#666" />
+                    <Text style={styles.trainingTime}>
+                      {schedule.warmup_session.timeStart || schedule.warmup_session.start_time} - {schedule.warmup_session.timeEnd || schedule.warmup_session.end_time}
+                    </Text>
+                  </View>
+                  <View style={styles.trainingVenueRow}>
+                    <Ionicons name="location" size={16} color="#E91E63" />
+                    <Text style={styles.trainingVenue}>{schedule.warmup_session.venue || '-'}</Text>
+                  </View>
+                </View>
               </View>
-            )}
-            
-            {/* Warmup/Rifinitura */}
-            {schedule?.warmup_session && (
-              <View style={{ 
-                paddingVertical: 12,
-                backgroundColor: '#E3F2FD',
-                marginTop: 8,
-                marginHorizontal: -16,
-                paddingHorizontal: 16,
-                borderRadius: 8
-              }}>
-                <Text style={{ fontWeight: '700', color: '#2196F3', fontSize: 15, marginBottom: 4 }}>
-                  Rifinitura
-                </Text>
-                <Text style={{ color: '#2196F3', fontSize: 14, fontWeight: '600', marginBottom: 2 }}>
-                  {schedule.warmup_session.timeStart || schedule.warmup_session.start_time} / {schedule.warmup_session.timeEnd || schedule.warmup_session.end_time}
-                </Text>
-                <Text style={{ color: '#1565C0', fontSize: 13 }}>
-                  {schedule.warmup_session.venue || '-'}
-                </Text>
-              </View>
-            )}
+            </View>
           </View>
         )}
         
