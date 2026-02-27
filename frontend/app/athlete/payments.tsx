@@ -456,7 +456,7 @@ export default function AthletePayments() {
         {/* Scarica Ricevuta Button */}
         <TouchableOpacity style={styles.downloadButton} onPress={downloadReceipt}>
           <Text style={styles.downloadEmoji}>🧾</Text>
-          <Text style={styles.downloadText}>Scarica Ricevuta Fiscale</Text>
+          <Text style={styles.downloadText}>Scarica Ricevuta Pagamenti</Text>
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />
