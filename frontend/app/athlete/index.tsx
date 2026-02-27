@@ -404,7 +404,7 @@ export default function AthleteScreen() {
             // Fallback: download the image instead
             const link = document.createElement('a');
             link.href = profile.medical_certificate_url;
-            link.download = \`certificato_medico_\${profile.full_name?.replace(/\\s+/g, '_') || 'atleta'}.jpg\`;
+            link.download = `certificato_medico_${profile.full_name?.replace(/\s+/g, '_') || 'atleta'}.jpg`;
             link.click();
             window.alert('Popup bloccato. Il certificato è stato scaricato. Puoi stamparlo dal file.');
           }
@@ -430,7 +430,7 @@ export default function AthleteScreen() {
             // Fallback: download the PDF
             const link = document.createElement('a');
             link.href = blobUrl;
-            link.download = \`certificato_medico_\${profile.full_name?.replace(/\\s+/g, '_') || 'atleta'}.pdf\`;
+            link.download = `certificato_medico_${profile.full_name?.replace(/\s+/g, '_') || 'atleta'}.pdf`;
             link.click();
             window.alert('Popup bloccato. Il certificato è stato scaricato. Puoi stamparlo dal file.');
           }
