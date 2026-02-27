@@ -5632,6 +5632,27 @@ async def upload_medical_certificate(data: UploadMedicalCertificateRequest, curr
     except:
         raise HTTPException(status_code=400, detail="Formato data non valido. Usa YYYY-MM-DD")
     
+    # Calculate issue date (12 months before expiry for standard certificates)
+    issue_date = expiry_date - timedelta(days=365)
+    
+    # Archive the certificate for 5-year retention (legal requirement for ASD)
+    archive_entry = {
+        "id": str(uuid.uuid4()),
+        "athlete_id": athlete_id,
+        "last_name": athlete.get("last_name", ""),
+        "first_name": athlete.get("first_name", ""),
+        "full_name": athlete.get("full_name", f"{athlete.get('last_name', '')} {athlete.get('first_name', '')}"),
+        "team_id": athlete.get("team_id"),
+        "team_name": athlete.get("team_name"),
+        "issue_date": issue_date.isoformat(),
+        "expiry_date": expiry_date.isoformat(),
+        "certificate_data": data.certificate_base64,
+        "uploaded_at": datetime.utcnow().isoformat(),
+        "uploaded_by": "athlete",
+        "society_id": athlete.get("society_id")
+    }
+    await db.medical_certificates_archive.insert_one(archive_entry)
+    
     # Update athlete record
     await db.athletes.update_one(
         {"id": athlete_id},
@@ -5642,6 +5663,86 @@ async def upload_medical_certificate(data: UploadMedicalCertificateRequest, curr
     )
     
     return {"message": "Certificato medico caricato con successo", "expiry_date": expiry_date.isoformat()}
+
+
+# ===================== MEDICAL CERTIFICATES ARCHIVE (5-year retention) =====================
+
+@api_router.get("/admin/medical-certificates-archive")
+async def get_medical_certificates_archive(
+    page: int = 1,
+    limit: int = 50,
+    search: str = None,
+    current_user = Depends(get_current_user)
+):
+    """Get archived medical certificates for admin (5-year retention for ASD compliance)"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+        raise HTTPException(status_code=403, detail="Accesso riservato agli amministratori")
+    
+    query = {}
+    if search:
+        search_regex = {"$regex": search, "$options": "i"}
+        query["$or"] = [
+            {"last_name": search_regex},
+            {"first_name": search_regex},
+            {"full_name": search_regex}
+        ]
+    
+    total = await db.medical_certificates_archive.count_documents(query)
+    skip = (page - 1) * limit
+    
+    certificates = await db.medical_certificates_archive.find(
+        query,
+        {"certificate_data": 0}  # Exclude base64 data for listing
+    ).sort("uploaded_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    clean_mongo_docs(certificates)
+    
+    return {
+        "certificates": certificates,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+
+@api_router.get("/admin/medical-certificates-archive/{certificate_id}")
+async def get_archived_certificate(certificate_id: str, current_user = Depends(get_current_user)):
+    """Download a specific archived medical certificate"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+        raise HTTPException(status_code=403, detail="Accesso riservato agli amministratori")
+    
+    certificate = await db.medical_certificates_archive.find_one({"id": certificate_id})
+    if not certificate:
+        raise HTTPException(status_code=404, detail="Certificato non trovato")
+    
+    clean_mongo_docs([certificate])
+    return certificate
+
+
+@api_router.get("/admin/medical-certificates-archive/stats")
+async def get_certificates_archive_stats(current_user = Depends(get_current_user)):
+    """Get statistics about archived certificates"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+        raise HTTPException(status_code=403, detail="Accesso riservato agli amministratori")
+    
+    total = await db.medical_certificates_archive.count_documents({})
+    
+    # Count by year
+    pipeline = [
+        {
+            "$group": {
+                "_id": {"$substr": ["$uploaded_at", 0, 4]},
+                "count": {"$sum": 1}
+            }
+        },
+        {"$sort": {"_id": -1}}
+    ]
+    by_year = await db.medical_certificates_archive.aggregate(pipeline).to_list(10)
+    
+    return {
+        "total_certificates": total,
+        "by_year": {item["_id"]: item["count"] for item in by_year}
+    }
 
 
 @api_router.post("/athletes/{athlete_id}/transform-photo")
