@@ -111,15 +111,35 @@ export default function AthleteScreen() {
   // Check if profile data is complete for privacy signature
   const isProfileComplete = () => {
     if (!profile) return false;
-    const requiredFields = [
-      profile.first_name,
-      profile.last_name,
-      profile.fiscal_code,
-      (profile as any).date_of_birth || (profile as any).birth_date,
-      (profile as any).place_of_birth || (profile as any).birth_place,
-      (profile as any).gender
-    ];
+    
+    // Get field values considering different naming conventions
+    const firstName = profile.first_name;
+    const lastName = profile.last_name;
+    const fiscalCode = profile.fiscal_code;
+    const dateOfBirth = (profile as any).date_of_birth || (profile as any).birth_date;
+    const placeOfBirth = (profile as any).place_of_birth || (profile as any).birth_place;
+    const gender = (profile as any).gender || (profile as any).sesso;
+    
+    // Log for debugging
+    console.log('Profile completeness check:', {
+      firstName, lastName, fiscalCode, dateOfBirth, placeOfBirth, gender
+    });
+    
+    const requiredFields = [firstName, lastName, fiscalCode, dateOfBirth, placeOfBirth, gender];
     return requiredFields.every(field => field && field.toString().trim() !== '');
+  };
+
+  // Get missing profile fields for message
+  const getMissingFields = () => {
+    if (!profile) return 'tutti i dati';
+    const missing: string[] = [];
+    if (!profile.first_name) missing.push('nome');
+    if (!profile.last_name) missing.push('cognome');
+    if (!profile.fiscal_code) missing.push('codice fiscale');
+    if (!(profile as any).date_of_birth && !(profile as any).birth_date) missing.push('data di nascita');
+    if (!(profile as any).place_of_birth && !(profile as any).birth_place) missing.push('luogo di nascita');
+    if (!(profile as any).gender && !(profile as any).sesso) missing.push('sesso');
+    return missing.join(', ');
   };
 
   // Handle the "Rimani e Firma Privacy" action
