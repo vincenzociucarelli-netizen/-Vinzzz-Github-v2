@@ -7,6 +7,9 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  Platform,
+  Alert,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
@@ -22,9 +25,18 @@ interface Payment {
   due_date: string;
   paid_date?: string;
   status?: 'pending' | 'paid' | 'overdue';
-  paid?: boolean;  // Boolean field from DB
+  paid?: boolean;
   description: string;
   installment_number?: number;
+}
+
+interface TeamPaymentInfo {
+  seasonal_fee?: number;
+  discount_amount?: number;
+  discount_reason?: string;
+  bank_iban?: string;
+  bank_name?: string;
+  paypal_email?: string;
 }
 
 export default function AthletePayments() {
@@ -33,29 +45,51 @@ export default function AthletePayments() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [athleteId, setAthleteId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [paymentInfo, setPaymentInfo] = useState<TeamPaymentInfo | null>(null);
+  const [societySettings, setSocietySettings] = useState<any>(null);
   const [totalDue, setTotalDue] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
 
   const loadData = async () => {
     try {
-      // Get athlete ID from user
       const meRes = await api.get('/auth/me');
-      const aid = meRes.data.athlete_id;
-      setAthleteId(aid);
+      const athleteId = meRes.data.athlete_id;
       
-      if (aid) {
+      if (athleteId) {
+        // Load athlete profile
+        const athleteRes = await api.get(`/athletes/${athleteId}`);
+        setProfile(athleteRes.data);
+        
         // Load payments
-        const paymentsRes = await api.get(`/payments/${aid}`);
+        const paymentsRes = await api.get(`/payments/${athleteId}`);
         const paymentData = paymentsRes.data || [];
         setPayments(paymentData);
         
-        // Calculate totals - check both 'paid' boolean and 'status' field
-        const isPaid = (p: Payment) => p.paid === true || p.status === 'paid';
-        const due = paymentData.filter((p: Payment) => !isPaid(p)).reduce((sum: number, p: Payment) => sum + p.amount, 0);
-        const paid = paymentData.filter((p: Payment) => isPaid(p)).reduce((sum: number, p: Payment) => sum + p.amount, 0);
+        // Calculate totals
+        const isPaidFn = (p: Payment) => p.paid === true || p.status === 'paid';
+        const due = paymentData.filter((p: Payment) => !isPaidFn(p)).reduce((sum: number, p: Payment) => sum + p.amount, 0);
+        const paid = paymentData.filter((p: Payment) => isPaidFn(p)).reduce((sum: number, p: Payment) => sum + p.amount, 0);
         setTotalDue(due);
         setTotalPaid(paid);
+        
+        // Load team payment info
+        if (athleteRes.data.team_id) {
+          try {
+            const teamInfoRes = await api.get(`/teams/${athleteRes.data.team_id}/payment-info`);
+            setPaymentInfo(teamInfoRes.data);
+          } catch (e) {
+            console.log('No team payment info');
+          }
+        }
+        
+        // Load society settings for IBAN
+        try {
+          const societyRes = await api.get('/settings/society');
+          setSocietySettings(societyRes.data);
+        } catch (e) {
+          console.log('No society settings');
+        }
       }
     } catch (error) {
       console.error('Error loading payments:', error);
@@ -76,100 +110,243 @@ export default function AthletePayments() {
 
   const formatDate = (dateStr: string) => {
     try {
-      return format(new Date(dateStr), 'dd MMM yyyy', { locale: it });
+      if (!dateStr) return '-';
+      return format(new Date(dateStr), 'dd/MM/yyyy', { locale: it });
     } catch {
       return dateStr;
     }
   };
 
-  // Helper to check if payment is paid
   const isPaid = (payment: Payment) => payment.paid === true || payment.status === 'paid';
-
-  const getStatusColor = (payment: Payment) => {
-    if (isPaid(payment)) return '#4CAF50';
-    if (payment.status === 'overdue') return '#F44336';
-    return '#FF9800';
+  
+  const isOverdue = (payment: Payment) => {
+    if (isPaid(payment)) return false;
+    if (!payment.due_date) return false;
+    return new Date(payment.due_date) < new Date();
   };
 
-  const getStatusText = (payment: Payment) => {
-    if (isPaid(payment)) return 'Pagato';
-    if (payment.status === 'overdue') return 'Scaduto';
-    return 'Da pagare';
+  const getInstallmentTitle = (payment: Payment, index: number) => {
+    if (payment.description) return payment.description;
+    if (index === 0) return 'Pagamento Rata Iscrizione';
+    return `Pagamento ${index}ª Rata`;
+  };
+
+  const downloadReceipt = async () => {
+    try {
+      const response = await api.get(`/payments/${profile?.id}/receipt`, {
+        responseType: 'blob'
+      });
+      
+      if (Platform.OS === 'web') {
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      }
+    } catch (error: any) {
+      const msg = error.response?.data?.detail || 'Errore durante il download';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Errore', msg);
+      }
+    }
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={{ marginTop: 10 }}>Caricamento...</Text>
       </View>
     );
   }
 
+  const seasonalFee = paymentInfo?.seasonal_fee || 0;
+  const discount = paymentInfo?.discount_amount || profile?.discount_amount || 0;
+  const discountReason = paymentInfo?.discount_reason || profile?.discount_reason || '';
+  const iban = societySettings?.iban || paymentInfo?.bank_iban || '';
+  const bankName = societySettings?.ragione_sociale || paymentInfo?.bank_name || 'Pallavolo Perugia SSD a RL';
+  const paypalEmail = societySettings?.paypal_email || paymentInfo?.paypal_email || '';
+
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <View style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>I Miei Pagamenti</Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitle}>{profile?.full_name || 'Pagamenti'}</Text>
+        <TouchableOpacity onPress={downloadReceipt}>
+          <View style={styles.receiptButton}>
+            <Ionicons name="document-text" size={24} color="#fff" />
+          </View>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
-          <View style={[styles.summaryCard, { backgroundColor: '#E8F5E9' }]}>
-            <Text style={styles.summaryLabel}>Pagato</Text>
-            <Text style={[styles.summaryAmount, { color: '#4CAF50' }]}>€ {totalPaid.toFixed(2)}</Text>
+        {/* Pagamenti Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionEmoji}>💰</Text>
+            <Text style={styles.sectionTitle}>Pagamenti</Text>
           </View>
-          <View style={[styles.summaryCard, { backgroundColor: '#FFF3E0' }]}>
-            <Text style={styles.summaryLabel}>Da Pagare</Text>
-            <Text style={[styles.summaryAmount, { color: '#FF9800' }]}>€ {totalDue.toFixed(2)}</Text>
+          
+          <View style={styles.sectionContent}>
+            {/* Quota Stagionale */}
+            {seasonalFee > 0 && (
+              <View style={styles.feeRow}>
+                <Text style={styles.feeLabel}>Quota Stagionale:</Text>
+                <Text style={styles.feeAmount}>€ {seasonalFee.toFixed(2)}</Text>
+              </View>
+            )}
+            
+            {/* Sconto */}
+            {discount > 0 && (
+              <View style={styles.feeRow}>
+                <Text style={[styles.feeLabel, { color: '#4CAF50' }]}>
+                  Sconto applicato per: {discountReason || 'Non specificato'}
+                </Text>
+                <Text style={[styles.feeAmount, { color: '#4CAF50' }]}>- € {discount.toFixed(2)}</Text>
+              </View>
+            )}
           </View>
         </View>
 
-        {/* Payments List */}
-        <Text style={styles.sectionTitle}>Rate e Pagamenti</Text>
-        
-        {payments.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="card-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>Nessun pagamento registrato</Text>
+        {/* Dettaglio Rate */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionEmoji}>📅</Text>
+            <Text style={styles.sectionTitle}>Dettaglio Rate</Text>
           </View>
-        ) : (
-          payments.map((payment) => (
-            <View key={payment.id} style={styles.paymentCard}>
-              <View style={styles.paymentInfo}>
-                <Text style={styles.paymentDescription}>
-                  {payment.description || `Rata ${payment.installment_number || ''}`}
-                </Text>
-                {payment.due_date && (
-                  <Text style={styles.paymentDate}>
-                    Scadenza: {formatDate(payment.due_date)}
-                  </Text>
-                )}
-                {payment.paid_date && (
-                  <Text style={[styles.paymentDate, { color: '#4CAF50' }]}>
-                    Pagato il: {formatDate(payment.paid_date)}
-                  </Text>
-                )}
-              </View>
-              <View style={styles.paymentRight}>
-                <Text style={styles.paymentAmount}>€ {payment.amount.toFixed(2)}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(payment) }]}>
-                  <Text style={styles.statusText}>{getStatusText(payment)}</Text>
-                </View>
-              </View>
+          
+          <View style={styles.sectionContent}>
+            {payments.length === 0 ? (
+              <Text style={styles.emptyText}>Nessuna rata registrata</Text>
+            ) : (
+              payments.map((payment, index) => {
+                const paid = isPaid(payment);
+                const overdue = isOverdue(payment);
+                
+                return (
+                  <View 
+                    key={payment.id} 
+                    style={[
+                      styles.installmentCard,
+                      overdue && !paid && styles.installmentOverdue
+                    ]}
+                  >
+                    <View style={styles.installmentInfo}>
+                      <Text style={styles.installmentTitle}>
+                        {getInstallmentTitle(payment, index)}
+                      </Text>
+                      <Text style={[styles.installmentAmount, paid && { color: '#4CAF50' }]}>
+                        € {payment.amount.toFixed(2)}
+                      </Text>
+                      <Text style={[
+                        styles.installmentDue,
+                        overdue && !paid && styles.installmentDueOverdue
+                      ]}>
+                        Scadenza: {formatDate(payment.due_date)}
+                        {overdue && !paid && ' ⚠️ SCADUTA'}
+                      </Text>
+                    </View>
+                    <View style={styles.installmentStatus}>
+                      {paid ? (
+                        <>
+                          <Text style={styles.statusEmoji}>✅</Text>
+                          <Text style={[styles.statusLabel, { color: '#4CAF50' }]}>Pagata</Text>
+                        </>
+                      ) : overdue ? (
+                        <>
+                          <Text style={styles.statusEmoji}>⏰</Text>
+                          <Text style={[styles.statusLabel, { color: '#F44336' }]}>Scaduta</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.statusEmoji}>⏳</Text>
+                          <Text style={[styles.statusLabel, { color: '#FF9800' }]}>Da pagare</Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+          
+          {/* Residuo Dovuto */}
+          {totalDue > 0 && (
+            <View style={styles.residueRow}>
+              <Text style={styles.residueLabel}>Residuo Dovuto</Text>
+              <Text style={styles.residueAmount}>€ {totalDue.toFixed(2)}</Text>
             </View>
-          ))
+          )}
+        </View>
+
+        {/* Modalità di pagamento */}
+        {(iban || paypalEmail) && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionEmoji}>💳</Text>
+              <Text style={styles.sectionTitle}>Modalità di pagamento:</Text>
+            </View>
+            
+            <View style={styles.sectionContent}>
+              {iban && (
+                <View style={styles.paymentMethod}>
+                  <Text style={styles.paymentMethodIcon}>🏦</Text>
+                  <View style={styles.paymentMethodInfo}>
+                    <Text style={styles.paymentMethodTitle}>Bonifico Bancario:</Text>
+                    <Text style={styles.paymentMethodValue}>{iban}</Text>
+                    <Text style={styles.paymentMethodValue}>{bankName}</Text>
+                    <Text style={styles.paymentMethodNote}>Causale: inserire il nome dell'atleta</Text>
+                  </View>
+                </View>
+              )}
+              
+              {paypalEmail && (
+                <View style={styles.paymentMethod}>
+                  <Text style={styles.paymentMethodIcon}>🅿️</Text>
+                  <View style={styles.paymentMethodInfo}>
+                    <Text style={styles.paymentMethodTitle}>PayPal:</Text>
+                    <Text style={styles.paymentMethodValue}>{paypalEmail}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
         )}
-        
+
+        {/* Pagamenti Effettuati */}
+        {totalPaid > 0 && (
+          <View style={[styles.section, { backgroundColor: '#E8F5E9' }]}>
+            <Text style={[styles.sectionTitle, { color: '#4CAF50', textAlign: 'center', marginBottom: 8 }]}>
+              Pagamenti Effettuati:
+            </Text>
+            <View style={styles.paidSummary}>
+              <View>
+                <Text style={styles.paidAmount}>€{totalPaid.toFixed(2)}</Text>
+                {payments.filter(p => isPaid(p)).length > 0 && (
+                  <Text style={styles.paidDate}>
+                    {formatDate(payments.filter(p => isPaid(p))[0]?.paid_date || '')}
+                  </Text>
+                )}
+              </View>
+              <Text style={styles.paidCheckmark}>✅</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Scarica Ricevuta Button */}
+        <TouchableOpacity style={styles.downloadButton} onPress={downloadReceipt}>
+          <Text style={styles.downloadEmoji}>🧾</Text>
+          <Text style={styles.downloadText}>Scarica Ricevuta Fiscale</Text>
+        </TouchableOpacity>
+
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -199,99 +376,196 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
   },
   headerTitle: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
+  receiptButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
+    padding: 8,
+  },
   content: {
     flex: 1,
     padding: 16,
   },
-  summaryContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  summaryCard: {
-    flex: 1,
-    padding: 16,
+  section: {
+    backgroundColor: '#fff',
     borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  summaryAmount: {
-    fontSize: 22,
-    fontWeight: 'bold',
+  sectionEmoji: {
+    fontSize: 20,
+    marginRight: 8,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#333',
-    marginBottom: 12,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    padding: 40,
+  sectionContent: {
+    padding: 12,
   },
-  emptyText: {
-    marginTop: 12,
-    color: '#999',
-    fontSize: 16,
-  },
-  paymentCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+  feeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    alignItems: 'flex-start',
+    marginBottom: 8,
   },
-  paymentInfo: {
+  feeLabel: {
+    fontSize: 14,
+    color: '#333',
     flex: 1,
   },
-  paymentDescription: {
+  feeAmount: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#333',
-    marginBottom: 4,
   },
-  paymentDate: {
+  installmentCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  installmentOverdue: {
+    backgroundColor: '#FFEBEE',
+    marginHorizontal: -12,
+    paddingHorizontal: 12,
+  },
+  installmentInfo: {
+    flex: 1,
+  },
+  installmentTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 2,
+  },
+  installmentAmount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2196F3',
+    marginBottom: 2,
+  },
+  installmentDue: {
     fontSize: 13,
     color: '#666',
   },
-  paymentRight: {
-    alignItems: 'flex-end',
+  installmentDueOverdue: {
+    color: '#F44336',
+    fontWeight: '600',
   },
-  paymentAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 6,
+  installmentStatus: {
+    alignItems: 'center',
+    marginLeft: 12,
   },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  statusEmoji: {
+    fontSize: 28,
   },
-  statusText: {
-    color: '#fff',
+  statusLabel: {
     fontSize: 12,
     fontWeight: '600',
+    marginTop: 2,
+  },
+  residueRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#f5f5f5',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  residueLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  residueAmount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F44336',
+  },
+  paymentMethod: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  paymentMethodIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  paymentMethodInfo: {
+    flex: 1,
+  },
+  paymentMethodTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  paymentMethodValue: {
+    fontSize: 13,
+    color: '#666',
+  },
+  paymentMethodNote: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  paidSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  paidAmount: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#333',
+  },
+  paidDate: {
+    fontSize: 13,
+    color: '#666',
+  },
+  paidCheckmark: {
+    fontSize: 36,
+  },
+  downloadButton: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  downloadEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  downloadText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#007AFF',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 14,
+    padding: 20,
   },
 });
