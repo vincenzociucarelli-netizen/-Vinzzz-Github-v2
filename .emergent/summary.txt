@@ -1,12 +1,10 @@
 <analysis>**original_problem_statement**: The initial goal was to fix critical bugs in the Collaboratori flow, which expanded to include UI improvements, a Venues/Gyms management system, and refactoring the settings pages. The current focus is on resolving a series of critical bugs and UI/UX enhancements in the Atleta Maggiorenne (Adult Athlete) and Admin user flows, ensuring functional parity with the Atleta Minorenne (Minor Athlete) flow, and achieving environment stability.
 
-The latest user requests focus on fixing new bugs and improving the UI/UX. Specific requirements include:
-1.  **UI/UX Parity**: Make the Orari Allenamenti (Training Schedule) and Pagamenti (Payments) pages for adult athletes visually identical to the minor athlete versions.
-2.  **QR Code Functionality**: Add a QR code to the adult athlete's dashboard, fix the manual code entry for coaches, and make the QR code expandable.
-3.  **Privacy Signature Flow**: Fix multiple bugs preventing a new athlete (Genny) from successfully signing the privacy document.
-4.  **Document Management**: Allow athletes to upload their own medical certificates, fix bugs preventing them from viewing signed documents, and correct missing information (fiscal code) in generated PDFs.
-5.  **Admin Dashboard**: Fix a crash that occurs when the admin logs in.
-6.  **Statistics**: Implement a dedicated page for Presenze e Statistiche (Attendance and Statistics).
+The latest user requests focus on:
+1.  **Certificate Printing**: The print preview for the medical certificate is not working.
+2.  **Document List Cleanup**: The uploaded medical certificate should not appear in the general I miei documenti list to avoid duplication.
+3.  **UI Color Change**: The days of the week for training sessions should be colored dark blue.
+4.  **Coach Information**: The coach for the Serie D team should be Serzi Lucio, not the test coach Rossi Mario. A direct WhatsApp contact link between the coach and adult athlete should be added.
 
 PRODUCT REQUIREMENTS:
 - Fix all critical bugs in the Atleta Maggiorenne and Admin flows.
@@ -19,127 +17,140 @@ PRODUCT REQUIREMENTS:
 
 **what currently exists?**
 - A full-stack React/FastAPI/MongoDB application for sports club management.
-- The development environment, previously highly unstable, has been stabilized by resolving underlying dependency conflicts.
-- The Adult Athlete flow has been significantly improved. The schedule and payments pages have been refactored to match the UI of the Minor Athlete flow. A QR code is now displayed on the dashboard, and the corresponding backend logic for attendance check-in has been fixed.
-- A new feature allows athletes to upload their own medical certificates.
-- The privacy signature flow has been debugged multiple times, fixing issues related to user status, missing request data, and incorrect error handling.
-- A new dedicated page for Presenze e Statistiche has been created.
-- The Admin dashboard is currently broken and crashes upon login.
+- The Admin dashboard, which was previously crashing, is now stable and functional.
+- The Adult Athlete (Atleta Maggiorenne) flow has been significantly enhanced with numerous bug fixes and new features, including a dedicated medical certificate section, coach display, corrected payment information, and personal attendance statistics.
+- The backend has been updated to fix data validation issues, incorrect API responses (e.g., returning ), and missing endpoints. Role-based access for certain APIs has also been addressed.
+- The document viewing system has been partially fixed by changing the  header to , though printing remains an issue.
 
 **Last working item**:
-- Last item agent was working: The agent was diagnosing a crash on the admin dashboard. The user reported that logging in as an admin results in an error screen. The agent identified the cause as a  in , occurring because the  object returned from the API was , and the code was attempting to read its properties (). The agent was about to add a null check to fix this.
-- Status: IN PROGRESS
+- Last item agent was working: The agent just received a list of four new tasks and bug fixes from the user and was about to begin investigating the first item.
+- Status: NOT STARTED
 - Agent Testing Done: N
-- Which testing method agent to use? Frontend testing agent
-    - Log in as the admin user ( / ).
-    - Verify that the admin dashboard at  loads successfully without crashing and displays the interface, even if statistics are zero or unavailable.
+- Which testing method agent to use? Frontend testing agent. The agent will need to:
+    1.  Test the print functionality for the medical certificate.
+    2.  Verify the medical certificate is removed from the I Miei Documenti list.
+    3.  Confirm the UI color change on the schedule.
+    4.  Check that the correct coach name and a functional WhatsApp link appear on the athlete's dashboard.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   Issue 1: (P0) Admin Dashboard crashes on login.
--   Issue 2: (P1) The compensation page logic needs user verification.
+-   Issue 1: (P0) The print preview for the medical certificate is broken.
+-   Issue 2: (P1) Admin dashboard sometimes fails to load lists of athletes, teams, etc.
 -   Issue 3: (P2) The  library fails to load correctly on the web.
+-   Issue 4: (P3) The compensation page logic needs user verification.
 
 **Issues Detail**:
--   **Issue 1: Admin Dashboard crashes on login (P0)**
-    -   **Description**: Logging in as an admin user () leads to a crash. The error is  in . This happens when the  endpoint returns .
-    -   **Attempted fixes**: The agent identified the root cause.
+-   **Issue 1: The print preview for the medical certificate is broken (P0)**
+    -   **Description**: The user reported that the print preview for the medical certificate does not appear, suggesting the print functionality is not working correctly.
+    -   **Attempted fixes**: The agent implemented a  function using  inside a modal in . The underlying document viewing was fixed by changing the backend  header to .
     -   **Next debug checklist**:
-        1.  Open .
-        2.  Locate the section where , , etc., are accessed.
-        3.  Add a conditional check to ensure the  object is not null before trying to read its properties. For example:  followed by .
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical blocker for all admin functionality. Fixing it will restore access to the admin dashboard.
-    -   **Status**: IN PROGRESS
+        1.  In , review the  function within the .
+        2.  Investigate how the  or  tag holding the certificate content interacts with . The print context might be incorrect.
+        3.  Ensure the  or  data is correctly passed to the element that needs to be printed.
+        4.  Consider creating a dedicated, printable HTML page/component that is opened in a new window before triggering the print dialog.
+    -   **Why fix this issue and what will be achieved with the fix?**: Athletes need a reliable way to print their official documents like medical certificates.
+    -   **Status**: NOT STARTED
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Frontend.
     -   **Blocked on other issue**: None.
 
--   **Issue 2: The compensation page logic needs user verification (P1)**
-    -   **Description**: The compensation grid for roles like Coach and Dirigente was showing all 12 months, even if their contract was shorter. The agent implemented a fix to show a warning and only the current year's months if contract dates are missing in the database.
-    -   **Status**: USER VERIFICATION PENDING
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Frontend.
-    -   **Blocked on other issue**: None.
-
--   **Issue 3: @expo/vector-icons rendering issue (P2)**
-    -   **Description**: Icons from  do not render on the web version, which was a recurring issue. The agent fixed one specific file that was importing it incorrectly, but the underlying problem related to font loading or React Navigation context might still exist. A related  error appeared and was fixed by reinstalling dependencies, but the icon fix itself was not confirmed.
+-   **Issue 2: Admin dashboard sometimes fails to load lists (P1)**
+    -   **Description**: The user reported that the admin dashboard was not showing lists of athletes, teams, etc. While the agent's subsequent check showed the lists loading correctly, this could be an intermittent issue (e.g., race condition, caching problem).
+    -   **Attempted fixes**: The agent verified the APIs were returning data and a screenshot test showed the lists were populated.
+    -   **Next debug checklist**:
+        1.  Review the data fetching logic in .
+        2.  Check for race conditions or dependency issues in the  calls.
+        3.  Add more robust error handling and loading states to give the user better feedback if data fails to load.
+    -   **Why fix this issue and what will be achieved with the fix?**: The admin dashboard is unusable if core data lists do not load reliably.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend.
     -   **Blocked on other issue**: None.
 
-**In progress Task List**:
--   **Task 1: Finalize UI/UX Parity for Adult Athlete (P1)**
-    -   **Where to resume**: The  and  pages for the adult athlete have been refactored to match the minor athlete's UI. This is ready for user testing. The next agent should confirm with the user if the new layouts are satisfactory.
-    -   **What will be achieved with this?**: A consistent and improved user experience across different athlete types.
+-   **Issue 3: @expo/vector-icons rendering issue (P2)**
+    -   **Description**: Icons from  do not render on the web version. This is a known, low-priority, recurring issue from a previous session.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Frontend.
+    -   **Blocked on other issue**: None.
+
+-   **Issue 4: The compensation page logic needs user verification (P3)**
+    -   **Description**: A fix was implemented to handle cases where collaborator contracts are missing dates. This is awaiting feedback from the user.
     -   **Status**: USER VERIFICATION PENDING
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Frontend.
+    -   **Blocked on other issue**: None.
+
+**In progress Task List**:
+-   **Task 1: Update Coach Info & Add WhatsApp Link (P0)**
+    -   **Where to resume**:
+        1.  In the database, find the coach ROSSI MARIO and update their name to SERZI LUCIO.
+        2.  In , modify the Coach display section to include a clickable link that opens WhatsApp (). The coach's phone number will need to be added to the database and fetched by the API.
+    -   **What will be achieved with this?**: Corrects team data and provides a direct communication channel as requested.
+    -   **Status**: NOT STARTED
+    -   **Should Test frontend/backend/both after fix?**: Both.
+    -   **Blocked on something**: None.
+
+-   **Task 2: Refine I Miei Documenti Page (P1)**
+    -   **Where to resume**: In , filter the list of documents to exclude any document identified as a medical certificate to prevent it from showing in this general list.
+    -   **What will be achieved with this?**: Improves UI clarity by showing the medical certificate only in its dedicated section.
+    -   **Status**: NOT STARTED
+    -   **Should Test frontend/backend/both after fix?**: Frontend.
+    -   **Blocked on something**: None.
+
+-   **Task 3: Change Training Day UI Color (P1)**
+    -   **Where to resume**: In  (or a related style file), find the style definition for the training day display and change the color to a dark blue.
+    -   **What will be achieved with this?**: Fulfills a specific UI tweak requested by the user.
+    -   **Status**: NOT STARTED
     -   **Should Test frontend/backend/both after fix?**: Frontend.
     -   **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   (P0) Apply the end-of-trial logic for the **Parent** of a minor athlete, mirroring the adult athlete flow. (User confirmed this is high priority, agent verified it was mostly implemented but needs a final check).
+    -   (P0) Apply the end-of-trial logic for the **Parent** of a minor athlete, mirroring the adult athlete flow.
     -   (P1) Prepare all necessary assets and legal documents (Privacy Policy) for app store submission.
 -   **Future Tasks**:
     -   (P2) Re-evaluate and stabilize the PRO Module.
-    -   (P3) Implement Stripe Integration for premium plans. (User agreed to postpone this).
+    -   (P3) Implement Stripe Integration for premium plans.
     -   (P3) Implement Freemium Logic with upgrade prompts.
     -   (P3) Refactor  into a modular structure (routers, services, models).
 
 **Completed work in this session**
--   **Environment Stability**: Resolved the critical and recurring frontend crash loop by identifying a dependency conflict () and reinstalling all packages.
--   **QR Code & Attendance**:
-    -   Added a QR code display to the athlete's dashboard.
-    -   Implemented a modal to show an enlarged QR code on click.
-    -   Fixed a critical backend bug where manual entry of an  by a coach failed to register attendance.
--   **Document Management & Privacy**:
-    -   Implemented a new feature allowing athletes to upload their own medical certificates via their profile page.
-    -   Fixed a bug that caused athletes to be logged out when viewing their documents.
-    -   Fixed a bug that prevented the medical certificate from appearing after being uploaded (API model was missing fields).
-    -   Fixed multiple bugs in the privacy signature flow, including an  error, and a failure for users not in  status.
-    -   Fixed a bug where the generated privacy PDF was missing the athlete's fiscal code.
-    -   Reset the test user Genny to allow re-testing the corrected privacy flow.
--   **UI/UX Parity**:
-    -   Redesigned the Orari Allenamenti (schedule) page for adult athletes to match the minor athlete's layout.
-    -   Redesigned the Pagamenti (payments) page for adult athletes to match the minor athlete's layout.
--   **Statistics Page**: Created a new, dedicated page for Presenze e Statistiche and linked it from the athlete dashboard, separating it from the training schedule.
--   **Test User Flow**: Successfully debugged and validated the account deletion flow using a dedicated test user.
--   **Compensation Logic**: Implemented a fallback for the compensation pages to handle cases where contract dates are not set in the database.
-
-**Earlier issues found/mentioned but not fixed**
--   The root cause of the  rendering issue on the web remains unconfirmed, even though a  error was resolved.
-
-**Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Frontend Environment Instability (Expo/ngrok crashes)
-    -   **Recurrence count**: 10+
-    -   **Status**: RESOLVED (by reinstalling dependencies and adding ).
--   **Issue recurrence in previous fork**:  library failing to render on the web.
-    -   **Recurrence count**: 10+
-    -   **Status**: NOT STARTED (A specific instance was fixed, but the general problem was not tackled).
+-   **Admin Dashboard**: Fixed a critical crash caused by a  response from the  endpoint.
+-   **Payment System**:
+    -   Fixed a bug preventing admins from registering payments by updating the backend  model.
+    -   Cleaned up duplicate payment entries created during previous failed attempts.
+    -   Fixed the payment history UI to show only paid installments, not suggested/pending ones.
+-   **Athlete Flow**:
+    -   Implemented a mandatory profile completion step before an athlete can sign the privacy policy.
+    -   Fixed a bug preventing athletes from seeing their own attendance statistics by creating a new dedicated API endpoint.
+    -   Fixed the UI to correctly display bank transfer (IBAN) information.
+-   **Document Management**:
+    -   Fixed a bug causing a blank page when viewing documents by changing the backend  header to .
+    -   Added a dedicated Medical Certificate section to the adult athlete dashboard.
+    -   Improved the certificate upload UX with a custom date input modal that auto-formats the date.
+    -   Improved the certificate viewing UX on mobile by moving Print and Share buttons into a modal.
+-   **Coach Display**: Added a section to the athlete dashboard to display the assigned coach's name.
 
 **Code Architecture**
-stats
+
 
 **Key Technical Concepts**
--   **Dependency Conflict Resolution**: The agent successfully debugged a critical frontend crash by identifying multiple conflicting versions of  and resolved it by forcing a clean re-installation of all .
--   **API/Frontend Mismatch**: Several bugs were caused by mismatches between the frontend's expectations and the backend's responses (e.g.,  missing from the  Pydantic model, causing it to be excluded from the API response).
--   **Conditional Logic in UI**: Added checks in the admin dashboard (pending implementation) and compensation pages to handle  data or missing database fields gracefully.
--   **State-Driven API Calls**: The privacy signature flow was refactored to conditionally call an endpoint () only if the user's status was , preventing errors for other user statuses.
+-   **Backend API Fixes**: Corrected HTTP methods ( to ), completed unfinished endpoint logic, and adjusted data models () to match frontend requests.
+-   **Role-Based API Endpoints**: Created a new endpoint () for athletes to access their own data, separating it from the admin/coach endpoint.
+-   **HTTP Headers**: Resolved a file viewing issue by changing the  header from  to  to allow in-browser viewing of PDFs.
+-   **State-Driven UI Logic**: Implemented a robust check () to enforce a specific user flow (complete profile before signing).
+-   **Database Management**: Performed direct database operations (updates and deletes) to clean up incorrect data and link user accounts to athlete profiles.
+-   **Mobile-First UX Refactoring**: Moved action buttons (, ) into a modal to improve layout and usability on smaller screens.
 
 **key DB schema**
--   **users**:
-    -   : Used for , , .
-    -   : Now correctly retrieved and added to the privacy PDF.
--   **athletes**:
-    -   Added  (string, base64) and  (date).
-    -   The  field is now used for manual attendance check-in.
--   **documents**:
-    -   The system now handles documents stored with either  or .
-    -    and  are used for access control.
+-   **users**: Field  is now correctly linked to the  collection.
+-   **athletes**: Field  is now correctly linked to the  collection.
+-   **payments**: Cleaned up records; now differentiating between paid (with ) and pending installments in the frontend logic.
+-   **teams**: Added  to link a coach to a team.
 
 **All files of reference**
--    (File to be fixed)
--    (Multiple fixes and new endpoints)
+-   
 -   
 -   
 -   
@@ -149,47 +160,41 @@ stats
 -   
 
 **Areas that need refactoring**:
--   ****: Remains a large, monolithic file that would benefit from being broken into a modular structure (e.g., routers, services).
--   ****: This file is very large and contains complex logic that could be split into smaller components.
+-   ****: Still a large monolithic file. A future task is to break it into a modular structure.
+-   ****: This file is becoming very large and complex due to handling multiple user states (trial, pending, active) and features. It could be broken down into smaller components.
 
 **key api endpoints**
--   : **IDENTIFIED** as the source of the admin dashboard crash when it returns .
--   : **MODIFIED** to allow searching for an athlete by  in addition to their uid=0(root) gid=0(root) groups=0(root).
--   : **MODIFIED** to pass the  and to correctly retrieve the  for the PDF.
--   : **CREATED** to allow athletes to upload their medical certificate.
--   : **MODIFIED** the  response model to include  and .
--   : **MODIFIED** to correctly retrieve a PDF from either a  field or a .
+-   : **FIXED** to accept  and .
+-   : **FIXED** a bug where it returned  instead of an object.
+-   : **FIXED** to return .
+-   : **CREATED** to fetch the coach assigned to a team.
+-   : **FIXED** by changing from GET to POST.
+-   : **CREATED** to allow athletes to see their own statistics.
 
 **Critical Info for New Agent**
--   Your immediate task is to fix the admin dashboard crash. The file is , and you need to add a null check for the  object before rendering the data.
--   The previously critical environment instability issue seems to be resolved. If frontend issues reappear, a full dependency reinstall (yarn install v1.22.22
-[1/4] Resolving packages...
-[2/4] Fetching packages...
-[3/4] Linking dependencies...
-[4/4] Rebuilding all packages...
-success Saved lockfile.
-Done in 18.15s.) is the most likely solution.
--   The user is actively testing the application. Be prepared for more feedback on the features recently delivered (UI parity for payments/schedule, medical cert upload, QR code functionality).
--   The user has postponed Stripe integration but is a key future requirement.
+-   Your immediate priority is the list of four items from the user's last message, starting with fixing the certificate print functionality.
+-   The admin data loading issue might be intermittent. Be prepared to investigate if the user reports it again.
+-   When updating the coach, you will need to perform a database update to change the name and potentially add a phone number field, then update the frontend to use it.
+-   The certificate printing issue is likely related to how  interacts with the content inside the modal.
 
 **documents and test reports created in this job**
 -   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
--   10. User reports that logging in as admin causes a crash. (PENDING FIX)
--   9. User requests the adult athlete's Pagamenti (Payments) page be styled like the minor's. (COMPLETED)
--   8. User requests the adult athlete's Orari Allenamenti (Schedule) page be styled like the minor's. (COMPLETED)
--   7. User reports a new error message when Genny tries to sign privacy. (COMPLETED - Fixed flow for non-trial users).
--   6. User asks to reset Genny to re-sign privacy. (COMPLETED)
--   5. User reports an error when a minor athlete views their medical certificate. (INVESTIGATED - Likely a cache issue, agent restarted server).
--   4. User asks to reset Genny to re-sign privacy. (COMPLETED)
--   3. User reports multiple issues with Genny: certificate not saving, privacy doc missing fiscal code, QR code not opening, stats empty. (COMPLETED - All issues were addressed).
--   2. User states that athletes MUST be able to upload their own medical certificates. (COMPLETED - Feature was implemented).
--   1. User reports new issues for Genny: can't upload cert, logged out when viewing docs, QR code too big, admin PDF missing fiscal code. (COMPLETED - All issues were addressed).
+-   10. **(PENDING)** Reports 4 new items: A. Certificate print preview is broken. B. Certificate appears in My Documents. C. Training days should be dark blue. D. Coach is wrong, add WhatsApp link.
+-   9. **(COMPLETED)** Asks to move Print and Share buttons for the certificate to the opened image view to fix mobile layout, and reports admin lists are empty.
+-   8. **(COMPLETED)** Asks to show the coach's photo and name for Genny and allow sharing/printing of the medical certificate.
+-   7. **(COMPLETED)** Requests UI improvements for the certificate date input: placeholder text and auto-slashes.
+-   6. **(COMPLETED)** Reports an error when uploading a new certificate and asks for the date format to be improved.
+-   5. **(COMPLETED)** Reports two bugs for Genny: A. Cannot see attendance/stats. B. Missing bank info for payments.
+-   4. **(COMPLETED)** Requests to add a dedicated medical certificate section and display the team's coach on the adult athlete's dashboard.
+-   3. **(COMPLETED)** Reports a document viewing bug: athletes and admins see a blank page for medical certificates and signed documents.
+-   2. **(COMPLETED)** Reports a logic bug: an athlete finishing a trial is asked to sign privacy before completing their profile, leading to a missing fiscal code.
+-   1. **(COMPLETED)** Reports that paid and pending installments are mixed in the payment history, creating confusion.
 
 **Project Health Check:**
 -   **Broken**:
-    -   : The admin dashboard crashes on load.
+    -   Print functionality for medical certificates is not working.
 
 **3rd Party Integrations**
 -   reportlab
@@ -199,19 +204,20 @@ Done in 18.15s.) is the most likely solution.
 -   Brevo/Sendinblue
 -   @expo/ngrok
 -   react-native-qrcode-svg
+-   Web Share API (newly used)
 
 **Testing status**
 -   Testing agent used after significant changes: NO
 -   Troubleshoot agent used after agent stuck in loop: NO
 -   Test files created: None
--   Known regressions: The admin dashboard is now inaccessible due to a crash.
+-   Known regressions: None. The previous regression (admin dashboard crash) was fixed.
 
 **Credentials to test flow:**
 -   **Admin / Dirigente**:  / 
 -   **Adult Athlete (Lisa)**:  / 
 -   **Coach**:  / 
--   **Newly created Adult Athlete (Genny)**:  / 
--   **Test Deletion User**:  / 
+-   **Adult Athlete (Genny)**:  /  (Note: user was  previously)
 
 **What agent forgot to execute**
--   The agent has not yet performed a final verification of the compensation page fix (Issue #2). This is pending user testing.</analysis>
+-   The agent has not yet addressed the long-standing, low-priority issue of  not rendering on the web.
+-   The agent has not received user feedback on the compensation page fix from the previous session.</analysis>

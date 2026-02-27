@@ -8,7 +8,7 @@ import requests
 import os
 from datetime import datetime
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://trial-flow-1.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://coach-connect-141.preview.emergentagent.com').rstrip('/')
 
 class TestAdminResetAthletePassword:
     """Test admin reset athlete password endpoint"""
