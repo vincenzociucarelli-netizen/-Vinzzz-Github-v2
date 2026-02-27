@@ -108,6 +108,42 @@ export default function AthleteScreen() {
     }
   };
 
+  // Check if profile data is complete for privacy signature
+  const isProfileComplete = () => {
+    if (!profile) return false;
+    const requiredFields = [
+      profile.first_name,
+      profile.last_name,
+      profile.fiscal_code,
+      (profile as any).date_of_birth || (profile as any).birth_date,
+      (profile as any).place_of_birth || (profile as any).birth_place,
+      (profile as any).gender
+    ];
+    return requiredFields.every(field => field && field.toString().trim() !== '');
+  };
+
+  // Handle the "Rimani e Firma Privacy" action
+  const handleStayAndSignPrivacy = () => {
+    if (!isProfileComplete()) {
+      if (Platform.OS === 'web') {
+        window.alert('Per firmare la privacy devi prima completare i tuoi dati anagrafici (nome, cognome, codice fiscale, data e luogo di nascita, sesso).\n\nVerrai reindirizzato alla pagina del profilo.');
+      } else {
+        Alert.alert(
+          'Dati Incompleti',
+          'Per firmare la privacy devi prima completare i tuoi dati anagrafici (nome, cognome, codice fiscale, data e luogo di nascita, sesso).',
+          [
+            { text: 'Vai al Profilo', onPress: () => router.push('/athlete/profile') }
+          ]
+        );
+        return;
+      }
+      router.push('/athlete/profile');
+      return;
+    }
+    // Profile is complete, open privacy modal
+    setShowPrivacyModal(true);
+  };
+
   const loadData = async () => {
     try {
       // Load athlete profile
