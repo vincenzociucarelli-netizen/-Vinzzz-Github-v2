@@ -97,20 +97,22 @@ export default function AdminDashboard() {
   const loadStats = async () => {
     try {
       const [statsRes, pendingRes, societyRes, birthdaysRes, certsRes, inviteRes, pendingAthletesRes, deletionRes, notifRes] = await Promise.all([
-        api.get('/stats/overview'),
-        api.get('/users/pending'),
-        api.get('/settings/society'),
-        api.get('/birthdays/today'),
-        api.get('/certificates/expiring'),
+        api.get('/stats/overview').catch(() => ({ data: null })),
+        api.get('/users/pending').catch(() => ({ data: [] })),
+        api.get('/settings/society').catch(() => ({ data: { name: 'Società Sportiva', logo: null, sport_image: null } })),
+        api.get('/birthdays/today').catch(() => ({ data: [] })),
+        api.get('/certificates/expiring').catch(() => ({ data: null })),
         api.get('/societies/invite-code').catch(() => ({ data: { invite_code: '' } })),
         api.get('/athletes/pending').catch(() => ({ data: [] })),
         api.get('/athletes/deletion-requests').catch(() => ({ data: [] })),
         api.get('/admin/notifications/unread-count').catch(() => ({ data: { count: 0 } })),
       ]);
-      setStats(statsRes.data);
-      setSociety(societyRes.data);
-      setBirthdays(birthdaysRes.data);
-      setExpiringCerts(certsRes.data);
+      if (statsRes.data) setStats(statsRes.data);
+      if (societyRes.data) setSociety(societyRes.data);
+      setBirthdays(birthdaysRes.data || []);
+      // Handle null response from certificates/expiring API
+      const certsData = certsRes.data || { count_today: 0, count_30_days: 0, expiring_today: [], expiring_soon: [] };
+      setExpiringCerts(certsData);
       setInviteCode(inviteRes.data.invite_code || '');
       setPendingAthletes(pendingAthletesRes.data || []);
       setDeletionRequests(deletionRes.data || []);
