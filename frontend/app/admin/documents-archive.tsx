@@ -172,39 +172,52 @@ export default function DocumentsArchive() {
       const downloadUrl = `${API_URL}/api/documents/download/${doc.id}`;
       
       if (Platform.OS === 'web') {
-        // For web, fetch the PDF and open it
-        const response = await fetch(downloadUrl, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // Create a hidden iframe to handle the download without popup blockers
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
         
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(errorText || 'Download failed');
-        }
-        
-        const blob = await response.blob();
-        
-        // Ensure correct MIME type for PDF
-        const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(pdfBlob);
-        
-        // Open PDF in new tab
-        const newWindow = window.open(url, '_blank');
-        
-        // If popup blocked, try alternative method
-        if (!newWindow) {
-          // Create a hidden link and click it
+        // For web, fetch the PDF and display it
+        try {
+          const response = await fetch(downloadUrl, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          
+          if (!response.ok) {
+            throw new Error('Download failed');
+          }
+          
+          const blob = await response.blob();
+          
+          // Verify we got a PDF
+          if (blob.size === 0) {
+            throw new Error('Empty PDF response');
+          }
+          
+          const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+          const url = window.URL.createObjectURL(pdfBlob);
+          
+          // Use link click for better compatibility
           const link = document.createElement('a');
           link.href = url;
           link.target = '_blank';
           link.rel = 'noopener noreferrer';
+          link.style.display = 'none';
           document.body.appendChild(link);
           link.click();
-          document.body.removeChild(link);
+          
+          // Cleanup
+          setTimeout(() => {
+            document.body.removeChild(link);
+            document.body.removeChild(iframe);
+            window.URL.revokeObjectURL(url);
+          }, 1000);
+          
+        } catch (fetchError) {
+          console.error('Fetch error:', fetchError);
+          document.body.removeChild(iframe);
+          window.alert('Errore nel download del documento. Riprova.');
         }
-        
-        // Cleanup blob URL after a delay
-        setTimeout(() => window.URL.revokeObjectURL(url), 5000);
       } else {
         // For mobile, use Linking
         Linking.openURL(downloadUrl);
