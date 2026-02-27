@@ -2242,13 +2242,13 @@ export default function AdminAthleteDetail() {
                 </Text>
               </View>
               
-              {payments.length === 0 ? (
+              {payments.filter((p: any) => p.paid_date).length === 0 ? (
                 <View style={styles.emptyPayments}>
                   <Ionicons name="card-outline" size={32} color="#ccc" />
                   <Text style={styles.emptyText}>Nessun pagamento registrato</Text>
                 </View>
               ) : (
-                payments.map((payment: any, index) => (
+                payments.filter((p: any) => p.paid_date).map((payment: any, index) => (
                   <View key={payment.id || index} style={styles.paymentItem}>
                     <View style={styles.paymentInfo}>
                       <Text style={styles.paymentAmount}>€{payment.amount}</Text>
