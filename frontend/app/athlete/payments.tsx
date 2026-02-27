@@ -32,8 +32,15 @@ interface Payment {
 
 interface TeamPaymentInfo {
   seasonal_fee?: number;
+  total_amount?: number;
+  installment_1_amount?: number;
+  installment_2_amount?: number;
+  installment_2_due_date?: string;
+  installment_3_amount?: number;
+  installment_3_due_date?: string;
   discount_amount?: number;
   discount_reason?: string;
+  bank_info?: string;
   bank_iban?: string;
   bank_name?: string;
   paypal_email?: string;
