@@ -340,7 +340,7 @@ export default function AthleteScreen() {
         const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
         
         if (mimeType.startsWith('image/')) {
-          // For images: create a printable page with the image
+          // For images: create a printable page with ONLY the image
           const printContent = `
             <!DOCTYPE html>
             <html>
@@ -348,12 +348,15 @@ export default function AthleteScreen() {
                 <title>Certificato Medico - ${profile.full_name || 'Atleta'}</title>
                 <style>
                   * { margin: 0; padding: 0; box-sizing: border-box; }
+                  html, body { 
+                    width: 100%; 
+                    height: 100%; 
+                    background: #fff;
+                  }
                   body { 
                     display: flex; 
                     justify-content: center; 
-                    align-items: center; 
-                    min-height: 100vh; 
-                    background: #fff;
+                    align-items: center;
                   }
                   img { 
                     max-width: 100%; 
@@ -361,8 +364,19 @@ export default function AthleteScreen() {
                     object-fit: contain;
                   }
                   @media print { 
-                    body { margin: 0; } 
-                    img { max-width: 100%; max-height: 100%; } 
+                    @page { margin: 0; }
+                    html, body { 
+                      width: 100%; 
+                      height: 100%;
+                      margin: 0;
+                      padding: 0;
+                    }
+                    img { 
+                      width: 100%; 
+                      height: auto; 
+                      max-height: 100vh;
+                      page-break-inside: avoid;
+                    } 
                   }
                 </style>
               </head>
@@ -370,16 +384,13 @@ export default function AthleteScreen() {
                 <img id="printImg" src="${profile.medical_certificate_url}" />
                 <script>
                   var img = document.getElementById('printImg');
-                  img.onload = function() {
+                  function doPrint() {
                     setTimeout(function() {
                       window.print();
-                    }, 500);
-                  };
-                  if (img.complete) {
-                    setTimeout(function() {
-                      window.print();
-                    }, 500);
+                    }, 300);
                   }
+                  img.onload = doPrint;
+                  if (img.complete) doPrint();
                 </script>
               </body>
             </html>
@@ -390,7 +401,12 @@ export default function AthleteScreen() {
             printWindow.document.write(printContent);
             printWindow.document.close();
           } else {
-            window.alert('Popup bloccato. Abilita i popup per stampare.');
+            // Fallback: download the image instead
+            const link = document.createElement('a');
+            link.href = profile.medical_certificate_url;
+            link.download = \`certificato_medico_\${profile.full_name?.replace(/\\s+/g, '_') || 'atleta'}.jpg\`;
+            link.click();
+            window.alert('Popup bloccato. Il certificato è stato scaricato. Puoi stamparlo dal file.');
           }
         } else {
           // For PDF: convert to blob and open
@@ -408,10 +424,15 @@ export default function AthleteScreen() {
             printWindow.onload = () => {
               setTimeout(() => {
                 printWindow.print();
-              }, 500);
+              }, 300);
             };
           } else {
-            window.alert('Popup bloccato. Abilita i popup per stampare.');
+            // Fallback: download the PDF
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = \`certificato_medico_\${profile.full_name?.replace(/\\s+/g, '_') || 'atleta'}.pdf\`;
+            link.click();
+            window.alert('Popup bloccato. Il certificato è stato scaricato. Puoi stamparlo dal file.');
           }
         }
       } catch (error) {
