@@ -335,40 +335,79 @@ export default function AthleteScreen() {
         const mimeMatch = header.match(/data:([^;]+)/);
         const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
         
-        // Create a new window for printing
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          if (mimeType.startsWith('image/')) {
-            printWindow.document.write(`
-              <html>
-                <head>
-                  <title>Certificato Medico - ${profile.full_name || 'Atleta'}</title>
-                  <style>
-                    body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-                    img { max-width: 100%; max-height: 100vh; }
-                    @media print { body { margin: 0; } img { max-width: 100%; } }
-                  </style>
-                </head>
-                <body>
-                  <img src="${profile.medical_certificate_url}" onload="window.print(); window.close();" />
-                </body>
-              </html>
-            `);
+        if (mimeType.startsWith('image/')) {
+          // For images: create a printable page with the image
+          const printContent = `
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>Certificato Medico - ${profile.full_name || 'Atleta'}</title>
+                <style>
+                  * { margin: 0; padding: 0; box-sizing: border-box; }
+                  body { 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    min-height: 100vh; 
+                    background: #fff;
+                  }
+                  img { 
+                    max-width: 100%; 
+                    max-height: 100vh; 
+                    object-fit: contain;
+                  }
+                  @media print { 
+                    body { margin: 0; } 
+                    img { max-width: 100%; max-height: 100%; } 
+                  }
+                </style>
+              </head>
+              <body>
+                <img id="printImg" src="${profile.medical_certificate_url}" />
+                <script>
+                  var img = document.getElementById('printImg');
+                  img.onload = function() {
+                    setTimeout(function() {
+                      window.print();
+                    }, 500);
+                  };
+                  if (img.complete) {
+                    setTimeout(function() {
+                      window.print();
+                    }, 500);
+                  }
+                </script>
+              </body>
+            </html>
+          `;
+          
+          const printWindow = window.open('', '_blank', 'width=800,height=600');
+          if (printWindow) {
+            printWindow.document.write(printContent);
+            printWindow.document.close();
           } else {
-            // For PDF
-            const byteCharacters = atob(base64Data);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-              byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], { type: mimeType });
-            const blobUrl = window.URL.createObjectURL(blob);
-            
-            printWindow.location.href = blobUrl;
+            window.alert('Popup bloccato. Abilita i popup per stampare.');
+          }
+        } else {
+          // For PDF: convert to blob and open
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: mimeType });
+          const blobUrl = window.URL.createObjectURL(blob);
+          
+          const printWindow = window.open(blobUrl, '_blank');
+          if (printWindow) {
             printWindow.onload = () => {
-              printWindow.print();
+              setTimeout(() => {
+                printWindow.print();
+              }, 500);
             };
+          } else {
+            window.alert('Popup bloccato. Abilita i popup per stampare.');
           }
         }
       } catch (error) {
