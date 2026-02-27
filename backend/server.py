@@ -6708,6 +6708,127 @@ async def get_payment_summary(athlete_id: str, current_user = Depends(get_curren
         }
     }
 
+@api_router.get("/notifications/expiring")
+async def get_expiring_notifications(current_user = Depends(get_current_user)):
+    """Get notifications for upcoming payment and certificate expirations (7 days)"""
+    from datetime import datetime, timedelta
+    
+    notifications = []
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    seven_days_later = today + timedelta(days=7)
+    
+    # Get athletes based on user role
+    athletes_to_check = []
+    
+    if current_user["role"] == "athlete":
+        # Adult athlete - check their own data
+        athlete_id = current_user.get("athlete_id")
+        if athlete_id:
+            athlete = await db.athletes.find_one({"id": athlete_id})
+            if athlete:
+                athletes_to_check.append(athlete)
+    elif current_user["role"] == UserRole.PARENT:
+        # Parent - check all their children
+        parent_id = current_user["id"]
+        children = await db.athletes.find({
+            "$or": [
+                {"parent_id": parent_id},
+                {"second_parent_id": parent_id}
+            ]
+        }).to_list(100)
+        athletes_to_check.extend(children)
+    else:
+        # Admin/Coach/etc - no personal notifications
+        return {"notifications": []}
+    
+    for athlete in athletes_to_check:
+        athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}".strip()
+        athlete_id = athlete.get("id")
+        
+        # Check medical certificate expiry
+        cert_expiry = athlete.get("medical_certificate_expiry")
+        if cert_expiry:
+            if isinstance(cert_expiry, str):
+                try:
+                    cert_expiry = datetime.fromisoformat(cert_expiry.replace('Z', '+00:00'))
+                except:
+                    cert_expiry = None
+            
+            if cert_expiry:
+                cert_expiry_date = cert_expiry.replace(tzinfo=None)
+                if cert_expiry_date <= seven_days_later:
+                    days_until = (cert_expiry_date - today).days
+                    if days_until < 0:
+                        status = "expired"
+                        message = f"Certificato medico SCADUTO"
+                    elif days_until == 0:
+                        status = "urgent"
+                        message = f"Certificato medico scade OGGI"
+                    else:
+                        status = "warning"
+                        message = f"Certificato medico scade tra {days_until} giorni"
+                    
+                    notifications.append({
+                        "type": "certificate",
+                        "athlete_id": athlete_id,
+                        "athlete_name": athlete_name,
+                        "message": message,
+                        "status": status,
+                        "expiry_date": cert_expiry_date.strftime("%d/%m/%Y"),
+                        "days_until": days_until
+                    })
+        
+        # Check payment due dates
+        payments = await db.payments.find({
+            "athlete_id": athlete_id,
+            "paid": {"$ne": True}
+        }).to_list(100)
+        
+        for payment in payments:
+            due_date = payment.get("due_date")
+            if due_date:
+                if isinstance(due_date, str):
+                    try:
+                        due_date = datetime.fromisoformat(due_date.replace('Z', '+00:00'))
+                    except:
+                        due_date = None
+                
+                if due_date:
+                    due_date_clean = due_date.replace(tzinfo=None)
+                    if due_date_clean <= seven_days_later:
+                        days_until = (due_date_clean - today).days
+                        amount = payment.get("amount", 0)
+                        
+                        if days_until < 0:
+                            status = "expired"
+                            message = f"Rata €{amount:.0f} SCADUTA"
+                        elif days_until == 0:
+                            status = "urgent"
+                            message = f"Rata €{amount:.0f} scade OGGI"
+                        else:
+                            status = "warning"
+                            message = f"Rata €{amount:.0f} scade tra {days_until} giorni"
+                        
+                        notifications.append({
+                            "type": "payment",
+                            "athlete_id": athlete_id,
+                            "athlete_name": athlete_name,
+                            "message": message,
+                            "status": status,
+                            "due_date": due_date_clean.strftime("%d/%m/%Y"),
+                            "days_until": days_until,
+                            "amount": amount
+                        })
+    
+    # Sort by urgency (expired first, then by days_until)
+    notifications.sort(key=lambda x: (
+        0 if x["status"] == "expired" else (1 if x["status"] == "urgent" else 2),
+        x.get("days_until", 999)
+    ))
+    
+    return {"notifications": notifications}
+
+
 @api_router.get("/payments/{athlete_id}/fiscal-receipt")
 async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_current_user)):
     """Get all data needed to generate a fiscal receipt for an athlete"""
