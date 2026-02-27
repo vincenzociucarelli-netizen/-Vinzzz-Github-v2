@@ -317,8 +317,35 @@ export default function AthleteDocumentsScreen() {
               onPress={async () => {
                 if (doc.url) {
                   if (Platform.OS === 'web') {
+                    // Handle base64 data URLs (medical certificates, images)
+                    if (doc.url.startsWith('data:')) {
+                      // For base64 images/PDFs, create a blob and open
+                      try {
+                        const [header, base64Data] = doc.url.split(',');
+                        const mimeMatch = header.match(/data:([^;]+)/);
+                        const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+                        
+                        // Convert base64 to blob
+                        const byteCharacters = atob(base64Data);
+                        const byteNumbers = new Array(byteCharacters.length);
+                        for (let i = 0; i < byteCharacters.length; i++) {
+                          byteNumbers[i] = byteCharacters.charCodeAt(i);
+                        }
+                        const byteArray = new Uint8Array(byteNumbers);
+                        const blob = new Blob([byteArray], { type: mimeType });
+                        
+                        const blobUrl = window.URL.createObjectURL(blob);
+                        window.open(blobUrl, '_blank');
+                        
+                        // Cleanup after a delay
+                        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 5000);
+                      } catch (error) {
+                        console.error('Error opening base64 document:', error);
+                        window.alert('Impossibile aprire il documento');
+                      }
+                    }
                     // For API URLs, fetch with auth token
-                    if (doc.url.startsWith('/api/')) {
+                    else if (doc.url.startsWith('/api/')) {
                       try {
                         const response = await api.get(doc.url.replace('/api/', '/'), {
                           responseType: 'blob'
@@ -328,9 +355,10 @@ export default function AthleteDocumentsScreen() {
                         window.open(url, '_blank');
                       } catch (error) {
                         console.error('Error downloading document:', error);
-                        Alert.alert('Errore', 'Impossibile scaricare il documento');
+                        window.alert('Impossibile scaricare il documento');
                       }
                     } else {
+                      // Regular URL
                       window.open(doc.url, '_blank');
                     }
                   }
