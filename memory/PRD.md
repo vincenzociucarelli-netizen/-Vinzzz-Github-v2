@@ -30,6 +30,9 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 - [x] **Training Day Color**: Changed training day color to dark blue (#1565C0)
 - [x] **Document List Cleanup**: Medical certificate removed from "I Miei Documenti" list to avoid duplication
 - [x] **Print Certificate Fix**: Improved print functionality with better popup handling and delayed print trigger
+- [x] **Receipt Download Fix**: Fixed fiscal receipt download - was calling wrong endpoint, now uses `/payments/{id}/fiscal-receipt`
+- [x] **Redundant Fields Removed**: Removed Cognome/Nome from "Dati Iscrizione" section (redundant on user's own profile)
+- [x] **Team Quote Section**: Added "Quote" section to payments page showing team installments (€800 total, €300 1st, €250 2nd/3rd with due dates)
 
 ### Previous Session Completions
 - Fixed critical Admin Dashboard crash - endpoint `/api/certificates/expiring` was returning null
