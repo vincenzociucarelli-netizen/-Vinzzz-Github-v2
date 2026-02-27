@@ -144,6 +144,15 @@ export default function ParentDashboard() {
       console.error('Error loading athletes:', error);
     }
   };
+  
+  const loadNotifications = async () => {
+    try {
+      const response = await api.get('/notifications/expiring');
+      setNotifications(response.data.notifications || []);
+    } catch (error) {
+      console.log('Could not load notifications');
+    }
+  };
 
   const loadCommitments = async () => {
     try {
