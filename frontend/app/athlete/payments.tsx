@@ -143,15 +143,15 @@ export default function AthletePayments() {
       const response = await api.get(`/payments/${profile?.id}/fiscal-receipt`);
       
       if (Platform.OS === 'web') {
-        // The endpoint returns JSON data, not a PDF blob
-        // For now, show the receipt data or redirect to a proper receipt page
         const data = response.data;
         if (data && data.payments && data.payments.length > 0) {
-          // Create a simple printable receipt
+          // Create a simple printable receipt HTML
           const receiptHtml = `
             <!DOCTYPE html>
             <html>
             <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
               <title>Ricevuta Pagamenti - ${data.athlete?.last_name} ${data.athlete?.first_name}</title>
               <style>
                 body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
@@ -171,19 +171,17 @@ export default function AthletePayments() {
                 <h1>RICEVUTA PAGAMENTI</h1>
                 <p>${data.society?.name || 'Società Sportiva'}</p>
                 <p>Stagione: ${data.season || ''}</p>
-                <p>Numero: ${data.receipt_number || ''}</p>
               </div>
               <div class="section">
                 <h3>Atleta</h3>
                 <div class="row"><span class="label">Nome:</span><span class="value">${data.athlete?.first_name} ${data.athlete?.last_name}</span></div>
                 <div class="row"><span class="label">Codice Fiscale:</span><span class="value">${data.athlete?.fiscal_code || '-'}</span></div>
-                <div class="row"><span class="label">Squadra:</span><span class="value">${data.team_name || '-'}</span></div>
               </div>
               <div class="section">
                 <h3>Pagamenti Effettuati</h3>
                 ${data.payments.map((p: any) => `
                   <div class="row">
-                    <span class="label">${p.date ? new Date(p.date).toLocaleDateString('it-IT') : '-'}</span>
+                    <span class="label">${p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : (p.date ? new Date(p.date).toLocaleDateString('it-IT') : '-')}</span>
                     <span class="value">€ ${p.amount?.toFixed(2) || '0.00'}</span>
                   </div>
                 `).join('')}
@@ -191,17 +189,24 @@ export default function AthletePayments() {
               <div class="total">
                 Totale Pagato: € ${data.payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0).toFixed(2)}
               </div>
-              <script>
-                setTimeout(function() { window.print(); }, 500);
-              </script>
             </body>
             </html>
           `;
-          const printWindow = window.open('', '_blank', 'width=800,height=600');
-          if (printWindow) {
-            printWindow.document.write(receiptHtml);
-            printWindow.document.close();
-          }
+          
+          // Convert HTML to Blob and create download link
+          const blob = new Blob([receiptHtml], { type: 'text/html;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          
+          // Create a temporary link and click it
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `Ricevuta_${data.athlete?.last_name}_${data.athlete?.first_name}.html`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          // Clean up URL
+          setTimeout(() => URL.revokeObjectURL(url), 100);
         } else {
           window.alert('Nessun pagamento registrato per generare la ricevuta');
         }
