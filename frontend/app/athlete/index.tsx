@@ -520,6 +520,14 @@ export default function AthleteScreen() {
       const settingsResponse = await api.get('/settings/society');
       setSocietySettings(settingsResponse.data);
       
+      // Load expiring notifications
+      try {
+        const notifResponse = await api.get('/notifications/expiring');
+        setNotifications(notifResponse.data.notifications || []);
+      } catch (notifError) {
+        console.log('Could not load notifications');
+      }
+      
     } catch (error: any) {
       console.error('Error loading data:', error);
       showAlert('Errore', 'Impossibile caricare i dati');
