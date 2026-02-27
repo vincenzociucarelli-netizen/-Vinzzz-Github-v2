@@ -290,7 +290,7 @@ export default function AthletePayments() {
         </View>
 
         {/* Modalità di pagamento */}
-        {(iban || paypalEmail) && (
+        {(iban || bankInfoText || paypalEmail) && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionEmoji}>💳</Text>
@@ -298,7 +298,19 @@ export default function AthletePayments() {
             </View>
             
             <View style={styles.sectionContent}>
-              {iban && (
+              {/* Show bank_info from team if available */}
+              {bankInfoText && (
+                <View style={styles.paymentMethod}>
+                  <Text style={styles.paymentMethodIcon}>🏦</Text>
+                  <View style={styles.paymentMethodInfo}>
+                    <Text style={styles.paymentMethodTitle}>Bonifico Bancario:</Text>
+                    <Text style={[styles.paymentMethodValue, { whiteSpace: 'pre-wrap' }]}>{bankInfoText}</Text>
+                  </View>
+                </View>
+              )}
+              
+              {/* Fallback to society IBAN if no team bank_info */}
+              {!bankInfoText && iban && (
                 <View style={styles.paymentMethod}>
                   <Text style={styles.paymentMethodIcon}>🏦</Text>
                   <View style={styles.paymentMethodInfo}>
