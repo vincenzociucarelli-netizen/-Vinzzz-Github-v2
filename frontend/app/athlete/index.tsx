@@ -926,16 +926,6 @@ export default function AthleteScreen() {
               </View>
             </View>
           )}
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Cognome</Text>
-            <Text style={styles.dataValue}>{profile?.last_name || '-'}</Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Nome</Text>
-            <Text style={styles.dataValue}>{profile?.first_name || '-'}</Text>
-          </View>
         </View>
         
         {/* Menu Items */}
@@ -1437,16 +1427,6 @@ export default function AthleteScreen() {
             </View>
           </View>
         )}
-        
-        <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>Cognome</Text>
-          <Text style={styles.dataValue}>{profile?.last_name || '-'}</Text>
-        </View>
-        
-        <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>Nome</Text>
-          <Text style={styles.dataValue}>{profile?.first_name || '-'}</Text>
-        </View>
       </View>
 
       {/* Link to Profile */}
@@ -1456,8 +1436,8 @@ export default function AthleteScreen() {
       >
         <Ionicons name="person" size={22} color="#B8860B" />
         <View style={styles.menuItemContent}>
-          <Text style={styles.menuItemTitle}>Il Mio Profilo</Text>
-          <Text style={styles.menuItemSubtitle}>Dati personali, documento e IBAN</Text>
+          <Text style={styles.menuItemTitle}>Dati Personali</Text>
+          <Text style={styles.menuItemSubtitle}>Visualizza e modifica i tuoi dati</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color="#999" />
       </TouchableOpacity>
