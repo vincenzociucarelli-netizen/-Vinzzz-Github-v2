@@ -614,6 +614,109 @@ export default function AthleteScreen() {
           </TouchableOpacity>
         )}
         
+        {/* Certificato Medico Card - for quota athletes */}
+        <View style={[styles.certificateCard, { marginTop: 16 }]}>
+          <Text style={styles.certificateCardTitle}>📋 Certificato Medico</Text>
+          {(profile as any)?.medical_certificate_url || (profile as any)?.medical_certificate_expiry ? (
+            <View>
+              <View style={styles.certificateInfo}>
+                <Ionicons
+                  name={new Date((profile as any)?.medical_certificate_expiry) < new Date() ? 'close-circle' : 'checkmark-circle'}
+                  size={24}
+                  color={new Date((profile as any)?.medical_certificate_expiry) < new Date() ? '#FF3B30' : '#34C759'}
+                />
+                <View style={styles.certificateDetails}>
+                  <Text style={styles.certificateLabel}>
+                    Scadenza: {formatDateIT((profile as any)?.medical_certificate_expiry)}
+                  </Text>
+                  {new Date((profile as any)?.medical_certificate_expiry) < new Date() && (
+                    <Text style={styles.certificateExpired}>SCADUTO</Text>
+                  )}
+                </View>
+              </View>
+              <View style={styles.certificateButtonsRow}>
+                <TouchableOpacity
+                  style={styles.certificateViewButton}
+                  onPress={handleViewCertificate}
+                >
+                  <Ionicons name="eye" size={18} color="#007AFF" />
+                  <Text style={styles.certificateViewButtonText}>Visualizza</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.certificateUploadButton}
+                  onPress={handleUploadCertificate}
+                  disabled={uploadingCert}
+                >
+                  <Text style={styles.certificateUploadButtonText}>
+                    {uploadingCert ? 'Caricamento...' : 'Carica Nuovo'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View>
+              <View style={styles.warningBox}>
+                <Ionicons name="warning" size={24} color="#FF9500" />
+                <Text style={styles.warningText}>Nessun certificato caricato</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.certificateMainButton, { backgroundColor: '#007AFF' }]}
+                onPress={handleUploadCertificate}
+                disabled={uploadingCert}
+              >
+                <Text style={styles.certificateMainButtonText}>
+                  {uploadingCert ? 'Caricamento...' : '📤 Carica Certificato'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Dati Iscrizione Card - for quota athletes */}
+        <View style={[styles.iscrizioneCard, { marginTop: 16 }]}>
+          <Text style={styles.iscrizioneCardTitle}>📝 Dati Iscrizione</Text>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Squadra</Text>
+            <Text style={[styles.dataValue, { color: '#E53935', fontWeight: '700' }]}>
+              🏐 {profile?.team_name || 'Non assegnata'}
+            </Text>
+          </View>
+          
+          {/* Coach Info for quota athletes */}
+          {coachInfo && (
+            <View style={styles.coachInfoCard}>
+              <Text style={styles.coachInfoTitle}>👨‍🏫 Coach della Squadra</Text>
+              <View style={styles.coachInfoRow}>
+                {coachInfo.profile_photo_artistic || coachInfo.profile_photo ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${coachInfo.profile_photo_artistic || coachInfo.profile_photo}` }}
+                    style={styles.coachPhoto}
+                  />
+                ) : (
+                  <View style={styles.coachPhotoPlaceholder}>
+                    <Ionicons name="person" size={20} color="#999" />
+                  </View>
+                )}
+                <View style={styles.coachInfoDetails}>
+                  <Text style={styles.coachName}>{coachInfo.full_name}</Text>
+                  <Text style={styles.coachContactHint}>Per contattare il coach, rivolgersi alla segreteria</Text>
+                </View>
+              </View>
+            </View>
+          )}
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Cognome</Text>
+            <Text style={styles.dataValue}>{profile?.last_name || '-'}</Text>
+          </View>
+          
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Nome</Text>
+            <Text style={styles.dataValue}>{profile?.first_name || '-'}</Text>
+          </View>
+        </View>
+        
         {/* Menu Items */}
         <TouchableOpacity 
           style={styles.menuItem}
