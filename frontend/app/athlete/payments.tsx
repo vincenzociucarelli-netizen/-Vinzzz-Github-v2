@@ -133,14 +133,71 @@ export default function AthletePayments() {
 
   const downloadReceipt = async () => {
     try {
-      const response = await api.get(`/payments/${profile?.id}/receipt`, {
-        responseType: 'blob'
-      });
+      const response = await api.get(`/payments/${profile?.id}/fiscal-receipt`);
       
       if (Platform.OS === 'web') {
-        const blob = new Blob([response.data], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        window.open(url, '_blank');
+        // The endpoint returns JSON data, not a PDF blob
+        // For now, show the receipt data or redirect to a proper receipt page
+        const data = response.data;
+        if (data && data.payments && data.payments.length > 0) {
+          // Create a simple printable receipt
+          const receiptHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>Ricevuta Fiscale - ${data.athlete?.last_name} ${data.athlete?.first_name}</title>
+              <style>
+                body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+                h1 { text-align: center; color: #333; }
+                .header { text-align: center; margin-bottom: 30px; }
+                .section { margin-bottom: 20px; }
+                .section h3 { color: #007AFF; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+                .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+                .label { color: #666; }
+                .value { font-weight: bold; }
+                .total { font-size: 18px; color: #007AFF; margin-top: 20px; text-align: right; }
+                @media print { body { padding: 20px; } }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>RICEVUTA FISCALE</h1>
+                <p>${data.society?.name || 'Società Sportiva'}</p>
+                <p>Stagione: ${data.season || ''}</p>
+                <p>Numero: ${data.receipt_number || ''}</p>
+              </div>
+              <div class="section">
+                <h3>Atleta</h3>
+                <div class="row"><span class="label">Nome:</span><span class="value">${data.athlete?.first_name} ${data.athlete?.last_name}</span></div>
+                <div class="row"><span class="label">Codice Fiscale:</span><span class="value">${data.athlete?.fiscal_code || '-'}</span></div>
+                <div class="row"><span class="label">Squadra:</span><span class="value">${data.team_name || '-'}</span></div>
+              </div>
+              <div class="section">
+                <h3>Pagamenti Effettuati</h3>
+                ${data.payments.map((p: any) => `
+                  <div class="row">
+                    <span class="label">${p.date ? new Date(p.date).toLocaleDateString('it-IT') : '-'}</span>
+                    <span class="value">€ ${p.amount?.toFixed(2) || '0.00'}</span>
+                  </div>
+                `).join('')}
+              </div>
+              <div class="total">
+                Totale Pagato: € ${data.payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0).toFixed(2)}
+              </div>
+              <script>
+                setTimeout(function() { window.print(); }, 500);
+              </script>
+            </body>
+            </html>
+          `;
+          const printWindow = window.open('', '_blank', 'width=800,height=600');
+          if (printWindow) {
+            printWindow.document.write(receiptHtml);
+            printWindow.document.close();
+          }
+        } else {
+          window.alert('Nessun pagamento registrato per generare la ricevuta');
+        }
       }
     } catch (error: any) {
       const msg = error.response?.data?.detail || 'Errore durante il download';
