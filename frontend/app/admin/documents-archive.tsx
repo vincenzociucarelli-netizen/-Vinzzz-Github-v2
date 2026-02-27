@@ -165,64 +165,76 @@ export default function DocumentsArchive() {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        Alert.alert('Errore', 'Sessione scaduta. Effettua nuovamente il login.');
+        if (Platform.OS === 'web') {
+          window.alert('Sessione scaduta. Effettua nuovamente il login.');
+        } else {
+          Alert.alert('Errore', 'Sessione scaduta. Effettua nuovamente il login.');
+        }
         return;
       }
 
       const downloadUrl = `${API_URL}/api/documents/download/${doc.id}`;
       
       if (Platform.OS === 'web') {
-        // Create a hidden iframe to handle the download without popup blockers
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-        
-        // For web, fetch the PDF and display it
         try {
+          console.log('Downloading document:', doc.id);
+          
           const response = await fetch(downloadUrl, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { 
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/pdf'
+            },
           });
           
+          console.log('Response status:', response.status);
+          
           if (!response.ok) {
-            throw new Error('Download failed');
+            const errorText = await response.text();
+            console.error('Download error response:', errorText);
+            throw new Error(`Download failed: ${response.status}`);
           }
           
           const blob = await response.blob();
+          console.log('Blob size:', blob.size, 'type:', blob.type);
           
-          // Verify we got a PDF
           if (blob.size === 0) {
             throw new Error('Empty PDF response');
           }
           
+          // Create object URL for the PDF
           const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-          const url = window.URL.createObjectURL(pdfBlob);
+          const objectUrl = window.URL.createObjectURL(pdfBlob);
           
-          // Use link click for better compatibility
-          const link = document.createElement('a');
-          link.href = url;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
+          // Open in new window/tab
+          const newWindow = window.open(objectUrl, '_blank', 'noopener,noreferrer');
           
-          // Cleanup
-          setTimeout(() => {
-            document.body.removeChild(link);
-            document.body.removeChild(iframe);
-            window.URL.revokeObjectURL(url);
-          }, 1000);
+          if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+            // Popup was blocked, try with anchor
+            console.log('Popup blocked, using anchor fallback');
+            const anchor = document.createElement('a');
+            anchor.href = objectUrl;
+            anchor.target = '_blank';
+            anchor.style.cssText = 'position:fixed;top:-1000px;left:-1000px;';
+            document.body.appendChild(anchor);
+            anchor.click();
+            setTimeout(() => {
+              document.body.removeChild(anchor);
+              window.URL.revokeObjectURL(objectUrl);
+            }, 100);
+          } else {
+            // Cleanup after delay
+            setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60000);
+          }
           
-        } catch (fetchError) {
+        } catch (fetchError: any) {
           console.error('Fetch error:', fetchError);
-          document.body.removeChild(iframe);
-          window.alert('Errore nel download del documento. Riprova.');
+          window.alert(`Errore nel download: ${fetchError.message || 'Errore sconosciuto'}`);
         }
       } else {
         // For mobile, use Linking
         Linking.openURL(downloadUrl);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Download error:', error);
       if (Platform.OS === 'web') {
         window.alert('Impossibile aprire il documento');
