@@ -348,7 +348,7 @@ export default function AthleteScreen() {
                 borderWidth: 1,
                 borderColor: '#1976D2'
               }}
-              onPress={() => setShowPrivacyModal(true)}
+              onPress={handleStayAndSignPrivacy}
             >
               <Text style={{ color: '#1976D2', fontWeight: '600', fontSize: 14, textAlign: 'center' }}>
                 ✍️ Devi accettare la Privacy per continuare
