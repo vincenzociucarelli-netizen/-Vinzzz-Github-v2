@@ -5987,6 +5987,57 @@ async def get_expiring_certificates(current_user = Depends(get_current_user)):
     """Get certificates expiring today and within next 30 days"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i certificati in scadenza")
+    
+    society_id = current_user.get("society_id")
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today + timedelta(days=1)
+    thirty_days_from_now = today + timedelta(days=30)
+    
+    # Get athletes with expiring certificates
+    expiring_today = []
+    expiring_soon = []
+    
+    # Get all athletes for this society with medical certificate info
+    athletes = await db.athletes.find({"society_id": society_id}).to_list(1000)
+    
+    for athlete in athletes:
+        expiry_str = athlete.get("medical_certificate_expiry")
+        if not expiry_str:
+            continue
+            
+        try:
+            if isinstance(expiry_str, str):
+                expiry_date = datetime.fromisoformat(expiry_str.replace('Z', '+00:00')).replace(tzinfo=None)
+            elif isinstance(expiry_str, datetime):
+                expiry_date = expiry_str.replace(tzinfo=None)
+            else:
+                continue
+        except:
+            continue
+        
+        athlete_info = {
+            "id": athlete.get("id"),
+            "athlete_name": athlete.get("full_name"),
+            "expiry_date": expiry_date.isoformat(),
+            "days_until_expiry": (expiry_date - today).days
+        }
+        
+        # Check if expiring today
+        if today <= expiry_date < today_end:
+            expiring_today.append(athlete_info)
+        # Check if expiring in next 30 days (but not today)
+        elif today_end <= expiry_date <= thirty_days_from_now:
+            expiring_soon.append(athlete_info)
+    
+    # Sort by days until expiry
+    expiring_soon.sort(key=lambda x: x["days_until_expiry"])
+    
+    return {
+        "count_today": len(expiring_today),
+        "count_30_days": len(expiring_soon),
+        "expiring_today": expiring_today,
+        "expiring_soon": expiring_soon
+    }
 
 
 # Endpoint for athletes to upload their own medical certificate
