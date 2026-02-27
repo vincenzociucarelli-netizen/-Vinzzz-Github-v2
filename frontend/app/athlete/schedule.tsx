@@ -131,7 +131,7 @@ export default function AthleteSchedule() {
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Orari e Presenze</Text>
+        <Text style={styles.headerTitle}>Calendario Squadra</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -139,12 +139,6 @@ export default function AthleteSchedule() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Calendario Squadra Header */}
-        <View style={styles.calendarHeader}>
-          <Text style={styles.calendarEmoji}>🏐</Text>
-          <Text style={styles.calendarTitle}>Calendario Squadra</Text>
-        </View>
-
         {/* Allenamenti Settimanali */}
         <View style={styles.scheduleSection}>
           <View style={styles.sectionHeader}>
