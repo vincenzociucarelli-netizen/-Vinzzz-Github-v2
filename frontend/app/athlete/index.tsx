@@ -940,6 +940,43 @@ export default function AthleteScreen() {
           )}
         </View>
         
+        {/* Notifications Banner */}
+        {notifications.length > 0 && showNotifications && (
+          <View style={styles.notificationBanner}>
+            <View style={styles.notificationHeader}>
+              <View style={styles.notificationTitleRow}>
+                <Ionicons name="notifications" size={20} color="#FF9800" />
+                <Text style={styles.notificationTitle}>Scadenze in arrivo</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowNotifications(false)}>
+                <Ionicons name="close" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+            {notifications.map((notif, index) => (
+              <View key={index} style={[
+                styles.notificationItem,
+                notif.status === 'expired' && styles.notificationExpired,
+                notif.status === 'urgent' && styles.notificationUrgent
+              ]}>
+                <Ionicons 
+                  name={notif.type === 'certificate' ? 'document-text' : 'card'} 
+                  size={18} 
+                  color={notif.status === 'expired' ? '#D32F2F' : (notif.status === 'urgent' ? '#F57C00' : '#FF9800')} 
+                />
+                <View style={styles.notificationContent}>
+                  <Text style={[
+                    styles.notificationMessage,
+                    notif.status === 'expired' && { color: '#D32F2F' }
+                  ]}>{notif.message}</Text>
+                  <Text style={styles.notificationDate}>
+                    {notif.type === 'certificate' ? `Scadenza: ${notif.expiry_date}` : `Scadenza: ${notif.due_date}`}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+        
         {/* Menu Items */}
         <TouchableOpacity 
           style={styles.menuItem}
