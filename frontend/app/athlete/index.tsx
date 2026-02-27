@@ -172,6 +172,92 @@ export default function AthleteScreen() {
     setShowPrivacyModal(true);
   };
 
+  // Auto-format date input (add slashes automatically)
+  const formatDateInput = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+    
+    // Format as GG/MM/AAAA
+    let formatted = '';
+    if (digits.length > 0) {
+      formatted = digits.substring(0, 2);
+    }
+    if (digits.length > 2) {
+      formatted += '/' + digits.substring(2, 4);
+    }
+    if (digits.length > 4) {
+      formatted += '/' + digits.substring(4, 8);
+    }
+    
+    return formatted;
+  };
+
+  // Handle date input change with auto-formatting
+  const handleDateInputChange = (text: string) => {
+    const formatted = formatDateInput(text);
+    setCertDateInput(formatted);
+  };
+
+  // Confirm certificate upload with date
+  const confirmCertUpload = async () => {
+    if (!pendingCertBase64) return;
+    
+    // Validate date
+    const parts = certDateInput.split('/');
+    if (parts.length !== 3 || parts[2].length !== 4) {
+      if (Platform.OS === 'web') {
+        window.alert('Inserisci una data valida nel formato GG/MM/AAAA');
+      } else {
+        Alert.alert('Errore', 'Inserisci una data valida nel formato GG/MM/AAAA');
+      }
+      return;
+    }
+    
+    const day = parseInt(parts[0]);
+    const month = parseInt(parts[1]);
+    const year = parseInt(parts[2]);
+    
+    if (day < 1 || day > 31 || month < 1 || month > 12 || year < 2020 || year > 2100) {
+      if (Platform.OS === 'web') {
+        window.alert('Data non valida. Verifica giorno, mese e anno.');
+      } else {
+        Alert.alert('Errore', 'Data non valida. Verifica giorno, mese e anno.');
+      }
+      return;
+    }
+    
+    const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    
+    setUploadingCert(true);
+    try {
+      await api.post('/athletes/upload-medical-certificate', {
+        certificate_base64: pendingCertBase64,
+        expiry_date: isoDate
+      });
+      
+      setCertDateModalVisible(false);
+      setPendingCertBase64(null);
+      setCertDateInput('');
+      
+      if (Platform.OS === 'web') {
+        window.alert('Certificato medico caricato con successo!');
+      } else {
+        Alert.alert('Successo', 'Certificato medico caricato con successo!');
+      }
+      
+      loadData();
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      if (Platform.OS === 'web') {
+        window.alert(`Errore: ${error.response?.data?.detail || error.message || 'Errore sconosciuto'}`);
+      } else {
+        Alert.alert('Errore', error.response?.data?.detail || 'Errore nel caricamento');
+      }
+    } finally {
+      setUploadingCert(false);
+    }
+  };
+
   // Handle certificate upload
   const handleUploadCertificate = async () => {
     if (Platform.OS === 'web') {
