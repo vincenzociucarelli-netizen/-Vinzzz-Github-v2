@@ -966,7 +966,9 @@ export default function AdminAthleteDetail() {
           stamp_signature: societyData?.stamp_signature || societyData?.stamp_signature_base64 || '',
           sport_type: societyData?.sport_type || societyData?.sport_praticato || 'PALLAVOLO',
         },
-        payments: payments.length > 0 ? payments.map((p: any, index) => ({
+        // Filter only payments with paid_date for the attestato
+        const paidPayments = payments.filter((p: any) => p.paid_date);
+        payments: paidPayments.length > 0 ? paidPayments.map((p: any, index) => ({
           date: p.paid_date || '',
           receipt_number: `${index + 1}`,
           amount: p.amount || 0,
