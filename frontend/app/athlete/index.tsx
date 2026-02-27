@@ -978,6 +978,91 @@ export default function AthleteScreen() {
         province={profile?.province || ''}
       />
       
+      {/* Certificate Date Input Modal */}
+      <Modal
+        visible={certDateModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setCertDateModalVisible(false);
+          setPendingCertBase64(null);
+          setCertDateInput('');
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 8, textAlign: 'center' }}>
+              📋 Data Scadenza Certificato
+            </Text>
+            <Text style={{ fontSize: 14, color: '#666', marginBottom: 20, textAlign: 'center' }}>
+              Inserisci la data di scadenza (GG/MM/AAAA)
+            </Text>
+            
+            <View style={{ position: 'relative' }}>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#ddd',
+                  borderRadius: 8,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  fontSize: 18,
+                  textAlign: 'center',
+                  backgroundColor: '#f9f9f9',
+                  fontWeight: '600',
+                  letterSpacing: 1,
+                }}
+                value={certDateInput}
+                onChangeText={handleDateInputChange}
+                placeholder="27/02/2028"
+                placeholderTextColor="#bbb"
+                keyboardType="numeric"
+                maxLength={10}
+              />
+            </View>
+            
+            <Text style={{ fontSize: 12, color: '#999', marginTop: 8, textAlign: 'center' }}>
+              Digita solo i numeri, le barre / vengono inserite automaticamente
+            </Text>
+            
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f0f0f0',
+                  paddingVertical: 14,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                }}
+                onPress={() => {
+                  setCertDateModalVisible(false);
+                  setPendingCertBase64(null);
+                  setCertDateInput('');
+                }}
+              >
+                <Text style={{ color: '#666', fontWeight: '600', fontSize: 15 }}>Annulla</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: uploadingCert ? '#ccc' : '#34C759',
+                  paddingVertical: 14,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                }}
+                onPress={confirmCertUpload}
+                disabled={uploadingCert || certDateInput.length < 10}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
+                  {uploadingCert ? 'Caricamento...' : 'Conferma'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      
       {/* QR Code Modal */}
       <Modal
         visible={showQRModal}
