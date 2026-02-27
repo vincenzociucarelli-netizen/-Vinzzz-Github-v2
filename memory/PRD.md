@@ -33,12 +33,15 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 - [x] **Receipt Download Fix**: Fixed fiscal receipt download - was calling wrong endpoint, now uses `/payments/{id}/fiscal-receipt`
 - [x] **Redundant Fields Removed**: Removed Cognome/Nome from "Dati Iscrizione" section (redundant on user's own profile)
 - [x] **Team Quote Section**: Added "Quote" section to payments page showing team installments (€800 total, €300 1st, €250 2nd/3rd with due dates)
-- [x] **In-App Notifications**: Implemented expiration notifications (7 days before) for:
-  - Medical certificates
-  - Payment due dates
-  - Works for adult athletes AND parents of minors
-  - Yellow banner with "Scadenze in arrivo" title
-  - Categories: expired (red), urgent (orange), warning (yellow)
+- [x] **In-App Notifications**: Implemented expiration notifications (7 days before) for medical certificates and payment due dates
+- [x] **UI Cleanup - Documents**: Removed "Carica Certificato Medico" section from "I Miei Documenti" page
+- [x] **UI Cleanup - Payments Header**: Removed duplicate download icon from payments page header
+- [x] **Renamed Receipt**: Changed "Ricevuta Fiscale" to "Ricevuta Pagamenti" (button and document title)
+- [x] **Medical Certificates Archive**: Implemented 5-year archive for ASD legal compliance
+  - Automatic archive when athlete uploads new certificate
+  - Admin page to view/search/download archived certificates
+  - Shows: last name, first name, issue date, expiry date, team
+  - Stats by year with legal compliance note
 
 ### Previous Session Completions
 - Fixed critical Admin Dashboard crash - endpoint `/api/certificates/expiring` was returning null
