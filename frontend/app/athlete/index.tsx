@@ -578,14 +578,26 @@ export default function AthleteScreen() {
               }
             });
             
+            // Only call withdraw-trial-stay if athlete is in trial status
+            if (profile?.status === 'trial') {
+              await api.post('/athletes/withdraw-trial-stay');
+            }
+            
             // Update athlete status to active and save privacy info
-            await api.post('/athletes/withdraw-trial-stay');
             await api.patch(`/athletes/${profile?.id}`, {
+              status: 'active',
               privacy_accepted: true,
               privacy_accepted_date: new Date().toISOString(),
               privacy_signature: signatureBase64,
               privacy_pdf_url: signResponse.data?.pdf_url || null
             });
+            
+            // Also update user status via accept-privacy endpoint
+            try {
+              await api.post('/auth/accept-privacy');
+            } catch (e) {
+              // Ignore if already active
+            }
             
             if (Platform.OS === 'web') {
               window.alert('Privacy accettata! Ora sei un atleta attivo.');
