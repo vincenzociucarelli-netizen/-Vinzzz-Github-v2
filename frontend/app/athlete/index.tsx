@@ -268,69 +268,27 @@ export default function AthleteScreen() {
         const file = e.target.files?.[0];
         if (!file) return;
         
-        setUploadingCert(true);
-        
         const reader = new FileReader();
         reader.onload = async (event) => {
-          try {
-            const base64 = event.target?.result as string;
-            
-            // Calculate default date: today + 1 year
-            const defaultDate = new Date();
-            defaultDate.setFullYear(defaultDate.getFullYear() + 1);
-            const defaultDateStr = `${String(defaultDate.getDate()).padStart(2, '0')}/${String(defaultDate.getMonth() + 1).padStart(2, '0')}/${defaultDate.getFullYear()}`;
-            
-            // Ask for expiry date with default value
-            const expiryDate = window.prompt('Inserisci la data di scadenza del certificato (formato: GG/MM/AAAA):', defaultDateStr);
-            if (!expiryDate) {
-              setUploadingCert(false);
-              return;
-            }
-            
-            // Parse date - accept both GG/MM/AAAA and GG-MM-AAAA
-            const parts = expiryDate.replace(/-/g, '/').split('/');
-            if (parts.length !== 3 || parts[0].length < 1 || parts[1].length < 1 || parts[2].length !== 4) {
-              window.alert('Formato data non valido. Usa GG/MM/AAAA (es: 27/02/2027)');
-              setUploadingCert(false);
-              return;
-            }
-            
-            const day = parts[0].padStart(2, '0');
-            const month = parts[1].padStart(2, '0');
-            const year = parts[2];
-            
-            // Validate date values
-            const dayNum = parseInt(day);
-            const monthNum = parseInt(month);
-            const yearNum = parseInt(year);
-            
-            if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12 || yearNum < 2020 || yearNum > 2100) {
-              window.alert('Data non valida. Verifica giorno, mese e anno.');
-              setUploadingCert(false);
-              return;
-            }
-            
-            const isoDate = `${year}-${month}-${day}`;
-            
-            await api.post('/athletes/upload-medical-certificate', {
-              certificate_base64: base64,
-              expiry_date: isoDate
-            });
-            
-            window.alert('Certificato medico caricato con successo!');
-            loadData(); // Reload data
-          } catch (error: any) {
-            console.error('Upload error:', error);
-            window.alert(`Errore nel caricamento: ${error.response?.data?.detail || error.message || 'Errore sconosciuto'}`);
-          } finally {
-            setUploadingCert(false);
-          }
+          const base64 = event.target?.result as string;
+          
+          // Store the base64 and open date modal
+          setPendingCertBase64(base64);
+          
+          // Set default date: today + 1 year
+          const defaultDate = new Date();
+          defaultDate.setFullYear(defaultDate.getFullYear() + 1);
+          const defaultDateStr = `${String(defaultDate.getDate()).padStart(2, '0')}/${String(defaultDate.getMonth() + 1).padStart(2, '0')}/${defaultDate.getFullYear()}`;
+          setCertDateInput(defaultDateStr);
+          
+          setCertDateModalVisible(true);
         };
         
         reader.onerror = () => {
           console.error('File read error');
-          window.alert('Errore nella lettura del file');
-          setUploadingCert(false);
+          if (Platform.OS === 'web') {
+            window.alert('Errore nella lettura del file');
+          }
         };
         
         reader.readAsDataURL(file);
