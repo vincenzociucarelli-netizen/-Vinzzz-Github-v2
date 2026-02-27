@@ -25,27 +25,30 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 ## Current Status (as of 2026-02-27)
 
 ### Completed This Session
-- [x] Fixed critical Admin Dashboard crash - endpoint `/api/certificates/expiring` was returning null
-- [x] Added robust error handling in frontend for all dashboard API calls
-- [x] Environment stability restored
-- [x] Fixed payment registration bug - backend `PaymentCreate` model was missing `payment_method` and `description` fields
-- [x] Improved document download endpoint to support both `pdf_path` (file) and `pdf_base64` (database) storage
-- [x] Enhanced frontend document download with better error handling and blob creation
+- [x] **Coach Info Update**: Updated coach name from "ROSSI MARIO" to "SERZI LUCIO" in database
+- [x] **WhatsApp Contact**: Added WhatsApp button next to coach name for direct contact
+- [x] **Training Day Color**: Changed training day color to dark blue (#1565C0)
+- [x] **Document List Cleanup**: Medical certificate removed from "I Miei Documenti" list to avoid duplication
+- [x] **Print Certificate Fix**: Improved print functionality with better popup handling and delayed print trigger
 
-### Recent Completions (Previous Sessions)
+### Previous Session Completions
+- Fixed critical Admin Dashboard crash - endpoint `/api/certificates/expiring` was returning null
+- Added robust error handling in frontend for all dashboard API calls
+- Fixed payment registration bug - backend `PaymentCreate` model was missing fields
+- Improved document download endpoint to support both file and base64 storage
 - QR Code display on athlete dashboard with enlargeable modal
 - Medical certificate upload by athletes themselves
 - Privacy signature flow fixes
-- UI/UX parity for schedule/payments pages (adult athlete matches minor)
+- UI/UX parity for schedule/payments pages
 - "Presenze e Statistiche" page created
 - Account deletion flow working
 
 ### Pending User Verification
 - Compensation page logic (fallback for missing contract dates)
-- UI/UX parity for "Orari Allenamenti" and "Pagamenti" pages
 
 ### Known Issues
 - P2: `@expo/vector-icons` not rendering correctly on web (recurring)
+- P1: Admin dashboard sometimes fails to load lists (intermittent)
 
 ## Upcoming Tasks (Priority Order)
 1. P0: Apply "end-of-trial" logic for Parent of minor athlete
