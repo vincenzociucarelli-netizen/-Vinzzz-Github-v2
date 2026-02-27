@@ -6347,6 +6347,80 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
         "athletes": stats
     }
 
+@api_router.get("/athletes/{athlete_id}/my-stats")
+async def get_athlete_personal_stats(athlete_id: str, current_user = Depends(get_current_user)):
+    """Get attendance statistics for a specific athlete (accessible by the athlete themselves)"""
+    # Check if user is viewing their own stats or is admin
+    user_athlete_id = current_user.get("athlete_id")
+    is_own_stats = str(user_athlete_id) == str(athlete_id)
+    is_admin = current_user["role"] == UserRole.ADMIN
+    
+    if not is_own_stats and not is_admin:
+        raise HTTPException(status_code=403, detail="Puoi vedere solo le tue statistiche")
+    
+    # Get athlete
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Get team for training configuration
+    team_id = athlete.get("team_id")
+    training_sessions = []
+    if team_id:
+        team = await db.teams.find_one({"id": team_id})
+        if team:
+            training_sessions = team.get("training_sessions", [])
+    
+    trainings_per_week = len(training_sessions) if training_sessions else 3
+    
+    # Get current date info
+    now = datetime.now()
+    today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+    week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # Calculate expected trainings
+    expected_weekly = count_training_days_in_period(training_sessions, week_start, today_end) if training_sessions else trainings_per_week
+    expected_monthly = count_training_days_in_period(training_sessions, month_start, today_end) if training_sessions else trainings_per_week * 4
+    
+    # Get registration date for total calculation
+    reg_date = athlete.get("registration_date") or athlete.get("created_at") or now
+    if isinstance(reg_date, str):
+        reg_date = datetime.fromisoformat(reg_date.replace('Z', '+00:00')).replace(tzinfo=None)
+    
+    expected_total = count_training_days_in_period(training_sessions, reg_date, today_end) if training_sessions else 10
+    expected_total = max(expected_total, 1)  # Avoid division by zero
+    
+    # Get attendance counts
+    all_attendances = await db.attendances.count_documents({"athlete_id": athlete_id})
+    week_attendances = await db.attendances.count_documents({
+        "athlete_id": athlete_id,
+        "check_in_time": {"$gte": week_start}
+    })
+    month_attendances = await db.attendances.count_documents({
+        "athlete_id": athlete_id,
+        "check_in_time": {"$gte": month_start}
+    })
+    
+    # Calculate percentages
+    weekly_percentage = min(100, round((week_attendances / max(expected_weekly, 1)) * 100))
+    monthly_percentage = min(100, round((month_attendances / max(expected_monthly, 1)) * 100))
+    total_percentage = min(100, round((all_attendances / expected_total) * 100))
+    
+    return {
+        "athlete_id": athlete_id,
+        "athlete_name": athlete.get("full_name"),
+        "total_attendances": all_attendances,
+        "weekly_attendances": week_attendances,
+        "monthly_attendances": month_attendances,
+        "weekly_percentage": weekly_percentage,
+        "monthly_percentage": monthly_percentage,
+        "total_percentage": total_percentage,
+        "expected_weekly": expected_weekly,
+        "expected_monthly": expected_monthly,
+        "expected_total": expected_total
+    }
+
 # ==================== PAYMENT ENDPOINTS ====================
 
 @api_router.post("/payment-settings", response_model=PaymentSettings)
