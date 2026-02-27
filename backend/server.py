@@ -11891,6 +11891,7 @@ async def download_document(
         doc.get("dirigente_id") == current_user.get("dirigente_id") or
         doc.get("athlete_id") == current_user.get("athlete_id") or
         doc.get("collaboratore_id") == current_user.get("collaboratore_id") or
+        doc.get("signer_id") == current_user.get("id") or
         str(doc.get("coach_id")) == str(current_user.get("id")) or
         str(doc.get("dirigente_id")) == str(current_user.get("id"))
     )
@@ -11898,15 +11899,25 @@ async def download_document(
     if not is_admin and not is_owner:
         raise HTTPException(status_code=403, detail="Non autorizzato a scaricare questo documento")
     
+    # Try pdf_path first (file on disk)
     pdf_path = doc.get("pdf_path")
-    if not pdf_path or not os.path.exists(pdf_path):
-        raise HTTPException(status_code=404, detail="File PDF non trovato")
+    if pdf_path and os.path.exists(pdf_path):
+        return FileResponse(
+            path=pdf_path,
+            filename=doc.get("pdf_filename", f"documento_{document_id}.pdf"),
+            media_type="application/pdf"
+        )
     
-    return FileResponse(
-        path=pdf_path,
-        filename=doc.get("pdf_filename", f"documento_{document_id}.pdf"),
-        media_type="application/pdf"
-    )
+    # Fallback to pdf_base64 (stored in database)
+    if doc.get("pdf_base64"):
+        pdf_bytes = base64.b64decode(doc["pdf_base64"])
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"inline; filename=documento_{document_id}.pdf"}
+        )
+    
+    raise HTTPException(status_code=404, detail="File PDF non trovato")
 
 @api_router.get("/documents/my-documents")
 async def get_my_documents(
