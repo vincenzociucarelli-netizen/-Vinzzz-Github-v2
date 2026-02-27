@@ -287,6 +287,107 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  // New styles for schedule
+  calendarHeader: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  calendarEmoji: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  calendarTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+  },
+  scheduleSection: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  sectionEmoji: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  sectionTitleNew: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  trainingList: {
+    padding: 0,
+  },
+  trainingItem: {
+    flexDirection: 'row',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  trainingDayIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E3F2FD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  dayIconEmoji: {
+    fontSize: 18,
+  },
+  trainingDetails: {
+    flex: 1,
+  },
+  trainingDay: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#E91E63',
+    marginBottom: 4,
+  },
+  trainingTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  trainingTime: {
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 6,
+  },
+  trainingVenueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  trainingVenue: {
+    fontSize: 13,
+    color: '#666',
+    marginLeft: 6,
+  },
+  // Old styles kept for compatibility
   teamCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
