@@ -302,6 +302,7 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
     loadAthletes();
     loadCommitments();
     loadTeams();
+    loadNotifications();
     checkTrialPeriods(); // Check for expired trial periods
   }, []);
 
