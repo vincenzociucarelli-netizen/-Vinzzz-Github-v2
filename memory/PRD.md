@@ -28,6 +28,9 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 - [x] Fixed critical Admin Dashboard crash - endpoint `/api/certificates/expiring` was returning null
 - [x] Added robust error handling in frontend for all dashboard API calls
 - [x] Environment stability restored
+- [x] Fixed payment registration bug - backend `PaymentCreate` model was missing `payment_method` and `description` fields
+- [x] Improved document download endpoint to support both `pdf_path` (file) and `pdf_base64` (database) storage
+- [x] Enhanced frontend document download with better error handling and blob creation
 
 ### Recent Completions (Previous Sessions)
 - QR Code display on athlete dashboard with enlargeable modal
