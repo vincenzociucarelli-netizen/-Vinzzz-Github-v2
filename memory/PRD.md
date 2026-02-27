@@ -70,7 +70,7 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 - Admin: `test.admin@test.com` / `Test1234`
 - Adult Athlete (Lisa): `lisa@test.com` / `Test1234`
 - Coach: `coach@test.com` / `Test1234`
-- Adult Athlete (Genny): `genny.ferretti@test.com` / `Test1234`
+- Adult Athlete (Genny): `genny@test.com` / `Test1234`
 - Test Deletion: `testcancella@test.com` / `Test1234`
 
 ## Technical Notes
