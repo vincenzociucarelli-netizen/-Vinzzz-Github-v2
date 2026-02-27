@@ -195,6 +195,18 @@ export default function AthleteScreen() {
         // Load receipts
         const receiptsResponse = await api.get(`/athletes/${athleteData.athlete_id}/compensation/receipts`);
         setReceipts(receiptsResponse.data || []);
+        
+        // Load coach info if athlete has a team
+        if (athleteResponse.data.team_id) {
+          try {
+            const coachResponse = await api.get(`/teams/${athleteResponse.data.team_id}/coach`);
+            if (coachResponse.data) {
+              setCoachInfo(coachResponse.data);
+            }
+          } catch (coachError) {
+            console.log('No coach info available');
+          }
+        }
       } else {
         // Direct athlete user
         setProfile(athleteData);
