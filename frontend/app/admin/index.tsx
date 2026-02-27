@@ -817,7 +817,7 @@ export default function AdminDashboard() {
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Archivio Certificati Medici</Text>
-              <Text style={styles.menuCardSubtitle}>Conservazione 5 anni (normativa ASD)</Text>
+              <Text style={styles.menuCardSubtitle}>Conservazione 5 anni</Text>
             </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
