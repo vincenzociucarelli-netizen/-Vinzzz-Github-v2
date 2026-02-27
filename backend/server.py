@@ -11902,10 +11902,15 @@ async def download_document(
     # Try pdf_path first (file on disk)
     pdf_path = doc.get("pdf_path")
     if pdf_path and os.path.exists(pdf_path):
-        return FileResponse(
-            path=pdf_path,
-            filename=doc.get("pdf_filename", f"documento_{document_id}.pdf"),
-            media_type="application/pdf"
+        # Read file and return as StreamingResponse with inline disposition
+        with open(pdf_path, 'rb') as f:
+            pdf_content = f.read()
+        return StreamingResponse(
+            io.BytesIO(pdf_content),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'inline; filename="{doc.get("pdf_filename", f"documento_{document_id}.pdf")}"'
+            }
         )
     
     # Fallback to pdf_base64 (stored in database)
@@ -11914,7 +11919,7 @@ async def download_document(
         return StreamingResponse(
             io.BytesIO(pdf_bytes),
             media_type="application/pdf",
-            headers={"Content-Disposition": f"inline; filename=documento_{document_id}.pdf"}
+            headers={"Content-Disposition": f'inline; filename="documento_{document_id}.pdf"'}
         )
     
     raise HTTPException(status_code=404, detail="File PDF non trovato")
