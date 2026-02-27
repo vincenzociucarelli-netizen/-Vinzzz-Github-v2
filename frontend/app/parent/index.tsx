@@ -1324,4 +1324,61 @@ const styles = StyleSheet.create({
     color: '#666',
     textDecorationLine: 'underline',
   },
+  // Notification styles
+  notificationBanner: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+  },
+  notificationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  notificationTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  notificationTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#E65100',
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 6,
+    gap: 10,
+  },
+  notificationExpired: {
+    backgroundColor: '#FFEBEE',
+    borderLeftWidth: 3,
+    borderLeftColor: '#D32F2F',
+  },
+  notificationUrgent: {
+    backgroundColor: '#FFF3E0',
+    borderLeftWidth: 3,
+    borderLeftColor: '#F57C00',
+  },
+  notificationContent: {
+    flex: 1,
+  },
+  notificationMessage: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  notificationDate: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
 });
