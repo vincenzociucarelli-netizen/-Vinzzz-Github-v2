@@ -868,7 +868,21 @@ export default function AthleteScreen() {
                 )}
                 <View style={styles.coachInfoDetails}>
                   <Text style={styles.coachName}>{coachInfo.full_name}</Text>
-                  <Text style={styles.coachContactHint}>Per contattare il coach, rivolgersi alla segreteria</Text>
+                  {coachInfo.phone && (
+                    <TouchableOpacity 
+                      style={styles.whatsappButton}
+                      onPress={() => {
+                        const phoneNumber = coachInfo.phone.replace(/\s+/g, '').replace(/^\+/, '');
+                        const whatsappUrl = `https://wa.me/${phoneNumber}`;
+                        if (Platform.OS === 'web') {
+                          window.open(whatsappUrl, '_blank');
+                        }
+                      }}
+                    >
+                      <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                      <Text style={styles.whatsappButtonText}>Contatta su WhatsApp</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             </View>
@@ -1365,7 +1379,21 @@ export default function AthleteScreen() {
               )}
               <View style={styles.coachInfoDetails}>
                 <Text style={styles.coachName}>{coachInfo.full_name}</Text>
-                <Text style={styles.coachContactHint}>Per contattare il coach, rivolgersi alla segreteria</Text>
+                {coachInfo.phone && (
+                  <TouchableOpacity 
+                    style={styles.whatsappButton}
+                    onPress={() => {
+                      const phoneNumber = coachInfo.phone.replace(/\s+/g, '').replace(/^\+/, '');
+                      const whatsappUrl = `https://wa.me/${phoneNumber}`;
+                      if (Platform.OS === 'web') {
+                        window.open(whatsappUrl, '_blank');
+                      }
+                    }}
+                  >
+                    <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                    <Text style={styles.whatsappButtonText}>Contatta su WhatsApp</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
@@ -2157,5 +2185,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     marginTop: 2,
+  },
+  whatsappButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    gap: 6,
+  },
+  whatsappButtonText: {
+    color: '#25D366',
+    fontWeight: '600',
+    fontSize: 13,
   },
 });
