@@ -5705,20 +5705,6 @@ async def get_medical_certificates_archive(
     }
 
 
-@api_router.get("/admin/medical-certificates-archive/{certificate_id}")
-async def get_archived_certificate(certificate_id: str, current_user = Depends(get_current_user)):
-    """Download a specific archived medical certificate"""
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
-        raise HTTPException(status_code=403, detail="Accesso riservato agli amministratori")
-    
-    certificate = await db.medical_certificates_archive.find_one({"id": certificate_id})
-    if not certificate:
-        raise HTTPException(status_code=404, detail="Certificato non trovato")
-    
-    clean_mongo_docs([certificate])
-    return certificate
-
-
 @api_router.get("/admin/medical-certificates-archive/stats")
 async def get_certificates_archive_stats(current_user = Depends(get_current_user)):
     """Get statistics about archived certificates"""
@@ -5743,6 +5729,20 @@ async def get_certificates_archive_stats(current_user = Depends(get_current_user
         "total_certificates": total,
         "by_year": {item["_id"]: item["count"] for item in by_year}
     }
+
+
+@api_router.get("/admin/medical-certificates-archive/{certificate_id}")
+async def get_archived_certificate(certificate_id: str, current_user = Depends(get_current_user)):
+    """Download a specific archived medical certificate"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+        raise HTTPException(status_code=403, detail="Accesso riservato agli amministratori")
+    
+    certificate = await db.medical_certificates_archive.find_one({"id": certificate_id})
+    if not certificate:
+        raise HTTPException(status_code=404, detail="Certificato non trovato")
+    
+    clean_mongo_docs([certificate])
+    return certificate
 
 
 @api_router.post("/athletes/{athlete_id}/transform-photo")
