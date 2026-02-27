@@ -93,6 +93,10 @@ export default function AthleteScreen() {
   const [certDateModalVisible, setCertDateModalVisible] = useState(false);
   const [certDateInput, setCertDateInput] = useState('');
   const [pendingCertBase64, setPendingCertBase64] = useState<string | null>(null);
+  
+  // Notifications state
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(true);
 
   // Helper function to format date strings correctly
   const formatDateIT = (dateStr: string | undefined) => {
