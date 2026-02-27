@@ -391,10 +391,7 @@ export default function AthleteScreen() {
                     borderWidth: 1,
                     borderColor: '#2196F3'
                   }}
-                  onPress={() => {
-                    // Apri direttamente il modal per firmare la privacy
-                    setShowPrivacyModal(true);
-                  }}
+                  onPress={handleStayAndSignPrivacy}
                 >
                   <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>
                     ✅ Rimani e Firma Privacy
