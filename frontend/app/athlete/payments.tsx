@@ -163,7 +163,9 @@ export default function AthletePayments() {
   const seasonalFee = paymentInfo?.seasonal_fee || 0;
   const discount = paymentInfo?.discount_amount || profile?.discount_amount || 0;
   const discountReason = paymentInfo?.discount_reason || profile?.discount_reason || '';
-  const iban = societySettings?.iban || paymentInfo?.bank_iban || '';
+  // Bank info can be from society settings (iban field) or team payment info (bank_info as text)
+  const bankInfoText = paymentInfo?.bank_info || '';
+  const iban = societySettings?.iban || paymentInfo?.bank_iban || (bankInfoText.includes('IBAN') ? bankInfoText : '');
   const bankName = societySettings?.ragione_sociale || paymentInfo?.bank_name || 'Pallavolo Perugia SSD a RL';
   const paypalEmail = societySettings?.paypal_email || paymentInfo?.paypal_email || '';
 
