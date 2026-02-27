@@ -300,7 +300,11 @@ export default function AthleteScreen() {
     }
   };
 
-  // View certificate
+  // Certificate viewer modal state
+  const [showCertViewer, setShowCertViewer] = useState(false);
+  const [certViewerUrl, setCertViewerUrl] = useState<string | null>(null);
+
+  // View certificate - open in modal with print/share options
   const handleViewCertificate = () => {
     if (!profile?.medical_certificate_url) {
       if (Platform.OS === 'web') {
@@ -311,34 +315,9 @@ export default function AthleteScreen() {
       return;
     }
     
-    if (Platform.OS === 'web') {
-      // For base64 data
-      if (profile.medical_certificate_url.startsWith('data:')) {
-        try {
-          const [header, base64Data] = profile.medical_certificate_url.split(',');
-          const mimeMatch = header.match(/data:([^;]+)/);
-          const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
-          
-          const byteCharacters = atob(base64Data);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], { type: mimeType });
-          
-          const blobUrl = window.URL.createObjectURL(blob);
-          window.open(blobUrl, '_blank');
-          
-          setTimeout(() => window.URL.revokeObjectURL(blobUrl), 5000);
-        } catch (error) {
-          console.error('Error opening certificate:', error);
-          window.alert('Impossibile aprire il certificato');
-        }
-      } else {
-        window.open(profile.medical_certificate_url, '_blank');
-      }
-    }
+    // Open modal with certificate
+    setCertViewerUrl(profile.medical_certificate_url);
+    setShowCertViewer(true);
   };
 
   // Print certificate
