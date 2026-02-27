@@ -5606,6 +5606,43 @@ async def create_athlete_account(athlete_id: str, data: CreateAthleteAccountRequ
     return {"message": "Account atleta creato con successo", "user_id": user_id, "email": email}
 
 
+class UploadMedicalCertificateRequest(BaseModel):
+    certificate_base64: str
+    expiry_date: str  # formato ISO: YYYY-MM-DD
+
+@api_router.post("/athletes/upload-medical-certificate")
+async def upload_medical_certificate(data: UploadMedicalCertificateRequest, current_user = Depends(get_current_user)):
+    """Allow athletes to upload their own medical certificate"""
+    # Get athlete_id from current user
+    athlete_id = current_user.get("athlete_id")
+    if not athlete_id:
+        raise HTTPException(status_code=403, detail="Solo atleti possono caricare il proprio certificato")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Validate base64 data
+    if not data.certificate_base64:
+        raise HTTPException(status_code=400, detail="Certificato non fornito")
+    
+    # Parse and validate expiry date
+    try:
+        expiry_date = datetime.fromisoformat(data.expiry_date)
+    except:
+        raise HTTPException(status_code=400, detail="Formato data non valido. Usa YYYY-MM-DD")
+    
+    # Update athlete record
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "medical_certificate_url": data.certificate_base64,
+            "medical_certificate_expiry": expiry_date.isoformat()
+        }}
+    )
+    
+    return {"message": "Certificato medico caricato con successo", "expiry_date": expiry_date.isoformat()}
+
 
 @api_router.post("/athletes/{athlete_id}/transform-photo")
 async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, current_user = Depends(get_current_user)):
