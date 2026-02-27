@@ -26,7 +26,7 @@ import { Picker } from '@react-native-picker/picker';
 import PhotoViewer from '../../src/components/PhotoViewer';
 import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://adult-athlete-ui.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://trial-flow-1.preview.emergentagent.com';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 

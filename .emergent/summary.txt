@@ -1,20 +1,17 @@
-<analysis>**original_problem_statement**: The initial goal was to fix critical bugs in the Collaboratori flow, which expanded to include UI improvements, a Venues/Gyms management system, and refactoring the settings pages. The current focus has shifted to resolving a series of critical bugs in the Atleta Maggiorenne (Adult Athlete) user flow that are blocking testing.
+<analysis>**original_problem_statement**: The initial goal was to fix critical bugs in the Collaboratori flow, which expanded to include UI improvements, a Venues/Gyms management system, and refactoring the settings pages. The current focus is on resolving a series of critical bugs and UI/UX enhancements in the Atleta Maggiorenne (Adult Athlete) and Admin user flows, ensuring functional parity with the Atleta Minorenne (Minor Athlete) flow, and achieving environment stability.
 
-The latest user requests focus on fixing new bugs and improving the UI/UX of the Adult Athlete dashboard after the trial period ends. Specific requirements include:
-1.  **Privacy Signature Flow**: Fix a bug where an athlete signs the privacy document but is repeatedly prompted to sign again, and the admin cannot see the accepted status.
-2.  **Dashboard UI/UX**:
-    *   Redesign the layout to be more compact by placing the user's email and phone on a single line.
-    *   Increase the visibility of the Presenze/Statistiche (Attendance/Stats) section.
-    *   Make the training schedule view more compact.
-    *   Add a missing Documenti (Documents) section to the athlete's dashboard.
-3.  **Payment Calculation**: Fix an error where the remaining balance was calculated incorrectly.
-4.  **Attendance History**: Add a section for attendance history (Storico Presenze) to the schedule page.
-5.  **Withdrawal Flow**: Implement a two-option withdrawal process: Stay and sign privacy or Leave and delete data.
-6.  **Environment Instability**: The user is experiencing frequent connection issues with the preview URL.
+The latest user requests focus on fixing new bugs and improving the UI/UX. Specific requirements include:
+1.  **UI/UX Parity**: Make the Orari Allenamenti (Training Schedule) and Pagamenti (Payments) pages for adult athletes visually identical to the minor athlete versions.
+2.  **QR Code Functionality**: Add a QR code to the adult athlete's dashboard, fix the manual code entry for coaches, and make the QR code expandable.
+3.  **Privacy Signature Flow**: Fix multiple bugs preventing a new athlete (Genny) from successfully signing the privacy document.
+4.  **Document Management**: Allow athletes to upload their own medical certificates, fix bugs preventing them from viewing signed documents, and correct missing information (fiscal code) in generated PDFs.
+5.  **Admin Dashboard**: Fix a crash that occurs when the admin logs in.
+6.  **Statistics**: Implement a dedicated page for Presenze e Statistiche (Attendance and Statistics).
 
 PRODUCT REQUIREMENTS:
-- Fix all critical bugs in the Atleta Maggiorenne flow.
-- Fix UI/UX issues as requested by the user.
+- Fix all critical bugs in the Atleta Maggiorenne and Admin flows.
+- Achieve UI/UX consistency between the adult and minor athlete dashboards.
+- Ensure all document management and attendance tracking features are fully functional.
 - Ensure the preview environment is stable and accessible.
 - Clean up the codebase by removing obsolete files and refactoring complex components.
 
@@ -22,203 +19,177 @@ PRODUCT REQUIREMENTS:
 
 **what currently exists?**
 - A full-stack React/FastAPI/MongoDB application for sports club management.
-- The Adult Athlete flow, including registration, admin approval, and post-trial options, has been implemented. Many critical bugs related to data display (profile, payments, schedule) have been fixed.
-- A new withdrawal flow provides two options: stay with the club (triggering a privacy signature process) or leave permanently (deleting the account).
-- The payment calculation logic was fixed to correctly sum paid installments based on a boolean  flag.
-- The UI for the athlete dashboard is currently in a half-refactored state to address the user's latest layout requests.
-- The development environment is highly unstable, with the frontend service (Expo/ngrok) frequently crashing and becoming inaccessible.
+- The development environment, previously highly unstable, has been stabilized by resolving underlying dependency conflicts.
+- The Adult Athlete flow has been significantly improved. The schedule and payments pages have been refactored to match the UI of the Minor Athlete flow. A QR code is now displayed on the dashboard, and the corresponding backend logic for attendance check-in has been fixed.
+- A new feature allows athletes to upload their own medical certificates.
+- The privacy signature flow has been debugged multiple times, fixing issues related to user status, missing request data, and incorrect error handling.
+- A new dedicated page for Presenze e Statistiche has been created.
+- The Admin dashboard is currently broken and crashes upon login.
 
 **Last working item**:
-- Last item agent was working: The agent was implementing a series of UI and logic fixes for the Adult Athlete dashboard, as requested by the user in message #606. This involved:
-    1.  Modifying the backend  endpoint to correctly update the user's status from  to .
-    2.  Refactoring the athlete dashboard () to make the layout more compact, prioritize the attendance section, and add a Documents menu item.
-    3.  Creating a new, empty documents page ().
-    4.  Refactoring the schedule page () to use a more compact grid layout.
-    5.  Using a shared component  for the privacy signature flow.
+- Last item agent was working: The agent was diagnosing a crash on the admin dashboard. The user reported that logging in as an admin results in an error screen. The agent identified the cause as a  in , occurring because the  object returned from the API was , and the code was attempting to read its properties (). The agent was about to add a null check to fix this.
 - Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? both
-    - **Backend**:  to verify that the  endpoint now correctly changes the athlete's status to .
-    - **Frontend**: Use the screenshot tool to log in as Lisa () and verify the new dashboard layout, the new documents page, and the compact schedule view. Also, test the full privacy signature flow to ensure the banner disappears after signing.
+- Which testing method agent to use? Frontend testing agent
+    - Log in as the admin user ( / ).
+    - Verify that the admin dashboard at  loads successfully without crashing and displays the interface, even if statistics are zero or unavailable.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   Issue 1: (P0) Unstable frontend development environment.
--   Issue 2: (P0) Finalize and test the Athlete Dashboard UI/UX refactor.
--   Issue 3: (P1) The  library fails to load correctly on the web version.
--   Issue 4: (P2) The compensation page for coach/dirigente/collaboratore shows all 12 months, not just contract months.
+-   Issue 1: (P0) Admin Dashboard crashes on login.
+-   Issue 2: (P1) The compensation page logic needs user verification.
+-   Issue 3: (P2) The  library fails to load correctly on the web.
 
 **Issues Detail**:
--   **Issue 1: Unstable frontend development environment (P0)**
-    -   **Description**: The frontend service (Expo) and its public tunnel (ngrok) are extremely unstable. They frequently enter a crash-restart loop, causing the preview URL to be inaccessible (502 Bad Gateway) and blocking all development and testing. This is a major blocker.
-    -   **Attempted fixes**: The agent has repeatedly tried restarting supervisor, clearing the Metro cache (), reinstalling dependencies (yarn install v1.22.22
-[1/4] Resolving packages...
-success Already up-to-date.
-Done in 0.40s.), and changing the Expo  mode in . These are temporary workarounds at best.
+-   **Issue 1: Admin Dashboard crashes on login (P0)**
+    -   **Description**: Logging in as an admin user () leads to a crash. The error is  in . This happens when the  endpoint returns .
+    -   **Attempted fixes**: The agent identified the root cause.
     -   **Next debug checklist**:
-        1.  If the app is down, check backend                          STOPPED   Feb 26 06:53 AM
-code-server                      STOPPED   Not started
-expo                             STOPPED   Feb 26 06:53 AM
-mongodb                          RUNNING   pid 110, uptime 0:00:04
-nginx-code-proxy                 RUNNING   pid 104, uptime 0:00:04.
-        2.  If  is , check logs: .
-        3.  Look for  tunnel errors or  bundler syntax errors.
-        4.  Start by restarting the service: frontend: ERROR (no such process)
-frontend: ERROR (no such process).
-        5.  If it loops, try to kill all node processes () and restart.
-        6.  If a syntax error is reported, carefully review the last edited file. The agent previously introduced syntax errors that caused this loop.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical blocker. Without a stable environment, no frontend changes can be implemented or tested.
+        1.  Open .
+        2.  Locate the section where , , etc., are accessed.
+        3.  Add a conditional check to ensure the  object is not null before trying to read its properties. For example:  followed by .
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical blocker for all admin functionality. Fixing it will restore access to the admin dashboard.
     -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Frontend (by checking accessibility).
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Frontend.
     -   **Blocked on other issue**: None.
 
--   **Issue 2: Finalize and test the Athlete Dashboard UI/UX refactor (P0)**
-    -   **Description**: The changes made to address user request #606 are untested and likely incomplete. The agent refactored multiple files but was interrupted by the environment instability. The privacy signature flow, dashboard layout, schedule compactness, and new documents section all need verification.
-    -   **Attempted fixes**: The agent modified , , , and created .
-    -   **Next debug checklist**:
-        1.  Ensure the environment is stable (see Issue 1).
-        2.  Log in as Lisa ().
-        3.  Verify the dashboard (): email/phone on one line, Presenze link is prominent, Documenti link works.
-        4.  Test the privacy flow: if the banner appears, click it, sign the privacy doc in the , and confirm the banner disappears permanently.
-        5.  Verify the schedule page () has a compact layout.
-        6.  Log in as admin and verify that after Lisa signs the privacy doc, her status is  and the admin can see the signature.
-    -   **Why fix this issue and what will be achieved with the fix?**: This will complete the user's latest set of requests for the athlete flow.
-    -   **Status**: IN PROGRESS
+-   **Issue 2: The compensation page logic needs user verification (P1)**
+    -   **Description**: The compensation grid for roles like Coach and Dirigente was showing all 12 months, even if their contract was shorter. The agent implemented a fix to show a warning and only the current year's months if contract dates are missing in the database.
+    -   **Status**: USER VERIFICATION PENDING
     -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Both.
-    -   **Blocked on other issue**: Issue 1: Unstable frontend development environment.
+    -   **Should Test frontend/backend/both after fix?**: Frontend.
+    -   **Blocked on other issue**: None.
 
--   **Issue 3: @expo/vector-icons rendering issue (P1)**
-    -   **Description**: Icons from  do not render on the web version.
+-   **Issue 3: @expo/vector-icons rendering issue (P2)**
+    -   **Description**: Icons from  do not render on the web version, which was a recurring issue. The agent fixed one specific file that was importing it incorrectly, but the underlying problem related to font loading or React Navigation context might still exist. A related  error appeared and was fixed by reinstalling dependencies, but the icon fix itself was not confirmed.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend.
-
--   **Issue 4: Compensation Month Display (P2)**
-    -   **Description**: The compensation grid for roles like Coach, Dirigente, and Collaboratore displays all 12 months, not just the months within their contract period.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Frontend.
+    -   **Blocked on other issue**: None.
 
 **In progress Task List**:
--   **Task 1: Finalize Athlete Dashboard Refactor (P0)**
-    -   **Where to resume**: Start by stabilizing the environment (Issue 1). Then, proceed with the Next debug checklist for Issue 2 to test all the recent frontend and backend changes. The last files edited were  and .
-    -   **What will be achieved with this?**: A fully functional and polished athlete dashboard that meets all of the user's latest UI/UX and logic requirements.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Both.
-    -   **Blocked on something**: **Issue 1: Unstable frontend development environment.**
+-   **Task 1: Finalize UI/UX Parity for Adult Athlete (P1)**
+    -   **Where to resume**: The  and  pages for the adult athlete have been refactored to match the minor athlete's UI. This is ready for user testing. The next agent should confirm with the user if the new layouts are satisfactory.
+    -   **What will be achieved with this?**: A consistent and improved user experience across different athlete types.
+    -   **Status**: USER VERIFICATION PENDING
+    -   **Should Test frontend/backend/both after fix?**: Frontend.
+    -   **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   **(P0)** Create a test user for the user to try the cancellazione (delete account) flow.
-    -   **(P1)** Apply the end-of-trial logic for the **Parent** of a minor athlete, mirroring the adult athlete flow.
-    -   **(P1)** Prepare all necessary assets and legal documents (Privacy Policy) for app store submission.
+    -   (P0) Apply the end-of-trial logic for the **Parent** of a minor athlete, mirroring the adult athlete flow. (User confirmed this is high priority, agent verified it was mostly implemented but needs a final check).
+    -   (P1) Prepare all necessary assets and legal documents (Privacy Policy) for app store submission.
 -   **Future Tasks**:
-    -   **(P2)** Re-evaluate and stabilize the PRO Module.
-    -   **(P3)** Implement Stripe Integration for premium plans.
-    -   **(P3)** Implement Freemium Logic with upgrade prompts.
-    -   **(P3)** Refactor  into a modular structure (routers, services, models).
+    -   (P2) Re-evaluate and stabilize the PRO Module.
+    -   (P3) Implement Stripe Integration for premium plans. (User agreed to postpone this).
+    -   (P3) Implement Freemium Logic with upgrade prompts.
+    -   (P3) Refactor  into a modular structure (routers, services, models).
 
 **Completed work in this session**
--   **Adult Athlete Flow (Major Fixes)**:
-    -   Fixed the entire athlete dashboard, ensuring the profile picture, team name, payment installments, and schedule (including Rifinitura) display correctly.
-    -   Implemented and debugged a two-option withdrawal flow (Stay and Sign Privacy vs. Leave and Delete Data).
-    -   Fixed the privacy signature flow by using a shared , allowing logins for users with  status, and ensuring the user's status updates to  post-signature.
-    -   Fixed a bug where the withdrawal confirmation () did not work on web.
--   **Payment Bugs**:
-    -   Fixed a bug where  caused the date to display as 01 gen 1970.
-    -   Corrected the logic for calculating paid vs. to be paid amounts by using the  boolean field instead of a  string.
--   **UI/Layout Fixes**:
-    -   Implemented a compact, side-by-side layout for the two withdrawal buttons on the athlete dashboard.
-    -   Added the Storico Presenze (Attendance History) section to the athlete's schedule page.
--   **Backend/Admin Fixes**:
-    -   Fixed the payment receipt generation to use the correct  from society settings instead of a generic placeholder.
-    -   Verified that the admin can update an athlete's  and that the change is saved correctly.
-    -   Confirmed the Reset Password button is available on the admin's athlete detail page.
+-   **Environment Stability**: Resolved the critical and recurring frontend crash loop by identifying a dependency conflict () and reinstalling all packages.
+-   **QR Code & Attendance**:
+    -   Added a QR code display to the athlete's dashboard.
+    -   Implemented a modal to show an enlarged QR code on click.
+    -   Fixed a critical backend bug where manual entry of an  by a coach failed to register attendance.
+-   **Document Management & Privacy**:
+    -   Implemented a new feature allowing athletes to upload their own medical certificates via their profile page.
+    -   Fixed a bug that caused athletes to be logged out when viewing their documents.
+    -   Fixed a bug that prevented the medical certificate from appearing after being uploaded (API model was missing fields).
+    -   Fixed multiple bugs in the privacy signature flow, including an  error, and a failure for users not in  status.
+    -   Fixed a bug where the generated privacy PDF was missing the athlete's fiscal code.
+    -   Reset the test user Genny to allow re-testing the corrected privacy flow.
+-   **UI/UX Parity**:
+    -   Redesigned the Orari Allenamenti (schedule) page for adult athletes to match the minor athlete's layout.
+    -   Redesigned the Pagamenti (payments) page for adult athletes to match the minor athlete's layout.
+-   **Statistics Page**: Created a new, dedicated page for Presenze e Statistiche and linked it from the athlete dashboard, separating it from the training schedule.
+-   **Test User Flow**: Successfully debugged and validated the account deletion flow using a dedicated test user.
+-   **Compensation Logic**: Implemented a fallback for the compensation pages to handle cases where contract dates are not set in the database.
 
 **Earlier issues found/mentioned but not fixed**
--   The  rendering issue on the web remains unresolved.
--   The compensation page for compensated roles shows all 12 months instead of only those in the contract period.
+-   The root cause of the  rendering issue on the web remains unconfirmed, even though a  error was resolved.
 
 **Known issue recurrence from previous fork**
+-   **Issue recurrence in previous fork**: Frontend Environment Instability (Expo/ngrok crashes)
+    -   **Recurrence count**: 10+
+    -   **Status**: RESOLVED (by reinstalling dependencies and adding ).
 -   **Issue recurrence in previous fork**:  library failing to render on the web.
     -   **Recurrence count**: 10+
-    -   **Status**: NOT STARTED
--   **Issue recurrence in previous fork**: **Frontend Environment Instability (Expo/ngrok crashes)**
-    -   **Recurrence count**: 10+
-    -   **Status**: IN PROGRESS (Recurring Blocker)
+    -   **Status**: NOT STARTED (A specific instance was fixed, but the general problem was not tackled).
 
 **Code Architecture**
-outputstaticsingle
+stats
 
 **Key Technical Concepts**
--   **Environment Instability**: The biggest challenge in this session was the unstable Expo/ngrok environment, which repeatedly crashed and blocked progress. This is a critical issue for the next agent.
--   **Component Reuse**: The agent identified and reused an existing  component instead of building a new one, improving code consistency.
--   **State-Driven UI**: The UI logic was updated to be more robust, handling various athlete statuses (, , ) and data states () to correctly display or hide UI elements like banners and modals.
--   **Frontend Refactoring**: Significant refactoring was done on  and  to meet new UI/UX requirements.
+-   **Dependency Conflict Resolution**: The agent successfully debugged a critical frontend crash by identifying multiple conflicting versions of  and resolved it by forcing a clean re-installation of all .
+-   **API/Frontend Mismatch**: Several bugs were caused by mismatches between the frontend's expectations and the backend's responses (e.g.,  missing from the  Pydantic model, causing it to be excluded from the API response).
+-   **Conditional Logic in UI**: Added checks in the admin dashboard (pending implementation) and compensation pages to handle  data or missing database fields gracefully.
+-   **State-Driven API Calls**: The privacy signature flow was refactored to conditionally call an endpoint () only if the user's status was , preventing errors for other user statuses.
 
 **key DB schema**
 -   **users**:
-    -    can now be .
-    -   The login endpoint was modified to allow users with  to sign in.
+    -   : Used for , , .
+    -   : Now correctly retrieved and added to the privacy PDF.
 -   **athletes**:
-    -    is updated from  to  or .
-    -   The backend now updates the  from  to  when the privacy document is signed.
--   **payments**:
-    -   The schema relies on  to track payment status. Frontend logic was updated to match.
-    -   A third payment installment was added to Lisa's record to correctly test the balance calculation.
+    -   Added  (string, base64) and  (date).
+    -   The  field is now used for manual attendance check-in.
+-   **documents**:
+    -   The system now handles documents stored with either  or .
+    -    and  are used for access control.
 
 **All files of reference**
--   **Key Modified Backend File**: 
--   **Key Modified Frontend Files**:
-    -   
-    -   
-    -   
--   **New Frontend Files**:
-    -   
--   **Configuration File**:
-    -   
+-    (File to be fixed)
+-    (Multiple fixes and new endpoints)
+-   
+-   
+-   
+-   
+-   
+-   
+-   
 
 **Areas that need refactoring**:
--   ****: Still a monolithic file that is difficult to maintain. A major refactor into a modular structure is on the future tasks list.
--   ****: This file has become extremely large and complex, handling profile data, status banners, multiple modals, and withdrawal logic. It should be broken down into smaller, more manageable components.
+-   ****: Remains a large, monolithic file that would benefit from being broken into a modular structure (e.g., routers, services).
+-   ****: This file is very large and contains complex logic that could be split into smaller components.
 
 **key api endpoints**
--   : **CREATED** to handle an athlete ending their trial but staying with the club (status becomes ).
--   : **CREATED** to handle an athlete leaving and deleting their account.
--   : **MODIFIED** to update the user's status from  to  upon successful signature.
--   : **MODIFIED** to allow users with  to log in.
+-   : **IDENTIFIED** as the source of the admin dashboard crash when it returns .
+-   : **MODIFIED** to allow searching for an athlete by  in addition to their uid=0(root) gid=0(root) groups=0(root).
+-   : **MODIFIED** to pass the  and to correctly retrieve the  for the PDF.
+-   : **CREATED** to allow athletes to upload their medical certificate.
+-   : **MODIFIED** the  response model to include  and .
+-   : **MODIFIED** to correctly retrieve a PDF from either a  field or a .
 
 **Critical Info for New Agent**
--   **ENVIRONMENT INSTABILITY IS THE #1 BLOCKER**: You will likely encounter the frontend service crashing or being inaccessible. Be prepared to troubleshoot using backend                          STOPPED   Feb 26 06:53 AM
-code-server                      STOPPED   Not started
-expo                             STOPPED   Feb 26 06:53 AM
-mongodb                          RUNNING   pid 110, uptime 0:00:04
-nginx-code-proxy                 RUNNING   pid 104, uptime 0:00:04
-supervisor> , checking logs, and clearing the Metro cache. Do not assume a code change is wrong until you have a stable environment to test it in.
--   **Test Recent Changes First**: The last set of changes for the athlete dashboard UI/UX were significant and are completely untested due to the environment issues. Your first task is to stabilize the environment and then thoroughly test these changes.
--   **User Lisa is the Primary Test Case**: The user  (pw: ) is the main subject for all adult athlete flow testing. Her state in the database has been changed multiple times (, , , ). Be prepared to reset her status in the database as needed for testing different scenarios.
+-   Your immediate task is to fix the admin dashboard crash. The file is , and you need to add a null check for the  object before rendering the data.
+-   The previously critical environment instability issue seems to be resolved. If frontend issues reappear, a full dependency reinstall (yarn install v1.22.22
+[1/4] Resolving packages...
+[2/4] Fetching packages...
+[3/4] Linking dependencies...
+[4/4] Rebuilding all packages...
+success Saved lockfile.
+Done in 18.15s.) is the most likely solution.
+-   The user is actively testing the application. Be prepared for more feedback on the features recently delivered (UI parity for payments/schedule, medical cert upload, QR code functionality).
+-   The user has postponed Stripe integration but is a key future requirement.
 
 **documents and test reports created in this job**
--   /app/test_reports/iteration_1.json
+-   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-- 10. User asks to place the two withdrawal buttons on a single line for a more compact UI. (COMPLETED)
-- 9. User provides feedback and confirmation. (COMPLETED)
-- 8. User reports payment calculations are wrong (should be €200 remaining) and that the privacy signature flow is broken (modal is empty, should be the full form). Also requests Presenze to be added and a test user for deletion. (IN PROGRESS)
-- 7. User reports the privacy modal is empty and that they haven't signed. (ADDRESSED, pending test)
-- 6. User confirms the environment is back online. (COMPLETED)
-- 5. User asks if the app instability is normal and if it will persist in production. (ANSWERED)
-- 4. User reports being unable to access the preview URL for over 5 minutes. (ADDRESSED)
-- 3. User reports Lisa's account is not approved, the QR code is wrong, login fails, and the admin view is missing a Reset Password button. (ADDRESSED - was due to testing the withdrawal flow which set Lisa's status to 'rejected').
-- 2. User clarifies the expected behavior after an athlete withdraws, wanting a choice to stay and sign privacy or leave and delete data. (IMPLEMENTED, pending full test).
-- 1. User reports that after an athlete withdraws, they are locked out with an unapproved user message. (EXPLAINED as expected behavior, leading to request #2).
+-   10. User reports that logging in as admin causes a crash. (PENDING FIX)
+-   9. User requests the adult athlete's Pagamenti (Payments) page be styled like the minor's. (COMPLETED)
+-   8. User requests the adult athlete's Orari Allenamenti (Schedule) page be styled like the minor's. (COMPLETED)
+-   7. User reports a new error message when Genny tries to sign privacy. (COMPLETED - Fixed flow for non-trial users).
+-   6. User asks to reset Genny to re-sign privacy. (COMPLETED)
+-   5. User reports an error when a minor athlete views their medical certificate. (INVESTIGATED - Likely a cache issue, agent restarted server).
+-   4. User asks to reset Genny to re-sign privacy. (COMPLETED)
+-   3. User reports multiple issues with Genny: certificate not saving, privacy doc missing fiscal code, QR code not opening, stats empty. (COMPLETED - All issues were addressed).
+-   2. User states that athletes MUST be able to upload their own medical certificates. (COMPLETED - Feature was implemented).
+-   1. User reports new issues for Genny: can't upload cert, logged out when viewing docs, QR code too big, admin PDF missing fiscal code. (COMPLETED - All issues were addressed).
 
 **Project Health Check:**
 -   **Broken**:
-    -   **Frontend Environment**: The Expo/ngrok development environment is highly unstable and frequently crashes.
-    -   **Adult Athlete Dashboard**: The UI is in a mid-refactor state and is untested. Key logic like the post-signature flow is not verified.
+    -   : The admin dashboard crashes on load.
 
 **3rd Party Integrations**
 -   reportlab
@@ -227,17 +198,20 @@ supervisor> , checking logs, and clearing the Metro cache. Do not assume a code 
 -   codice-fiscale-js
 -   Brevo/Sendinblue
 -   @expo/ngrok
+-   react-native-qrcode-svg
 
 **Testing status**
--   Testing agent used after significant changes: YES (for the initial athlete dashboard fixes).
--   Troubleshoot agent used after agent stuck in loop: NO (agent manually debugged environment issues).
--   Test files created: None.
--   Known regressions: The frontend environment's stability has significantly regressed.
+-   Testing agent used after significant changes: NO
+-   Troubleshoot agent used after agent stuck in loop: NO
+-   Test files created: None
+-   Known regressions: The admin dashboard is now inaccessible due to a crash.
 
 **Credentials to test flow:**
 -   **Admin / Dirigente**:  / 
 -   **Adult Athlete (Lisa)**:  / 
+-   **Coach**:  / 
+-   **Newly created Adult Athlete (Genny)**:  / 
+-   **Test Deletion User**:  / 
 
 **What agent forgot to execute**
-- The agent has not found a permanent solution to the Expo/ngrok environment instability.
-- The agent was asked to create a test user for trying the cancellazione (account deletion) flow but has not yet done so.</analysis>
+-   The agent has not yet performed a final verification of the compensation page fix (Issue #2). This is pending user testing.</analysis>
