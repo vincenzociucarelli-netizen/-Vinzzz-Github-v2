@@ -4031,6 +4031,32 @@ async def get_team_payment_info(team_id: str, current_user = Depends(get_current
         "paypal_email": team.get("paypal_email", "")
     }
 
+@api_router.get("/teams/{team_id}/coach")
+async def get_team_coach(team_id: str, current_user = Depends(get_current_user)):
+    """Get the primary coach of a team"""
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    coach_ids = team.get("coach_ids", [])
+    if not coach_ids:
+        raise HTTPException(status_code=404, detail="Nessun coach assegnato a questa squadra")
+    
+    # Get the first coach
+    coach = await db.coaches.find_one({"id": coach_ids[0]})
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach non trovato")
+    
+    clean_mongo_doc(coach)
+    
+    return {
+        "id": coach.get("id"),
+        "full_name": coach.get("full_name"),
+        "profile_photo": coach.get("profile_photo"),
+        "profile_photo_artistic": coach.get("profile_photo_artistic"),
+        "phone": coach.get("phone")
+    }
+
 @api_router.get("/teams/{team_id}/athletes-count")
 async def get_team_athletes_count(team_id: str, current_user = Depends(get_current_user)):
     """Get the count of athletes in a team"""
