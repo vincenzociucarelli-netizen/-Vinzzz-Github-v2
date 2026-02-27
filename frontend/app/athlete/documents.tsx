@@ -85,16 +85,17 @@ export default function AthleteDocumentsScreen() {
           });
         }
         
-        // Medical certificate
-        if (athleteRes.data.medical_certificate_expiry || athleteRes.data.medical_certificate_url) {
-          docs.push({
-            id: 'medical',
-            type: 'medical',
-            name: 'Certificato Medico',
-            date: athleteRes.data.medical_certificate_expiry || '',
-            url: athleteRes.data.medical_certificate_url,
-          });
-        }
+        // Medical certificate - REMOVED from this list to avoid duplication
+        // The medical certificate is shown in the dedicated section on the main athlete page
+        // if (athleteRes.data.medical_certificate_expiry || athleteRes.data.medical_certificate_url) {
+        //   docs.push({
+        //     id: 'medical',
+        //     type: 'medical',
+        //     name: 'Certificato Medico',
+        //     date: athleteRes.data.medical_certificate_expiry || '',
+        //     url: athleteRes.data.medical_certificate_url,
+        //   });
+        // }
         
         // ID documents
         if (athleteRes.data.id_front) {

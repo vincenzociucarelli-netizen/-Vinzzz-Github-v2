@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
   trainingDay: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#E91E63',
+    color: '#1565C0',
     marginBottom: 4,
   },
   trainingTimeRow: {
