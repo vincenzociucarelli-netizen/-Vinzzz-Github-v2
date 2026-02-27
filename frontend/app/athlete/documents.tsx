@@ -270,37 +270,7 @@ export default function AthleteDocumentsScreen() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />}
       >
-        {/* Upload Medical Certificate Section */}
-        <View style={styles.uploadSection}>
-          <Text style={styles.uploadTitle}>Certificato Medico</Text>
-          <Text style={styles.uploadSubtitle}>
-            Carica il tuo certificato medico di idoneità sportiva
-          </Text>
-          <TouchableOpacity 
-            style={[styles.uploadButton, uploading && styles.uploadButtonDisabled]}
-            onPress={handleUploadMedicalCertificate}
-            disabled={uploading}
-          >
-            {uploading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Ionicons name="cloud-upload" size={20} color="#fff" />
-                <Text style={styles.uploadButtonText}>Carica Certificato</Text>
-              </>
-            )}
-          </TouchableOpacity>
-          {/* Hidden file input for web */}
-          {Platform.OS === 'web' && (
-            <input
-              ref={fileInputRef as any}
-              type="file"
-              accept="image/*,.pdf"
-              style={{ display: 'none' }}
-              onChange={handleWebFileSelect as any}
-            />
-          )}
-        </View>
+        {/* Medical certificate upload section removed - it's available in the main athlete dashboard */}
 
         {documents.length === 0 ? (
           <View style={styles.emptyState}>

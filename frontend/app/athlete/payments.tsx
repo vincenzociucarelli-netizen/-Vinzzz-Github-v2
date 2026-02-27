@@ -243,11 +243,7 @@ export default function AthletePayments() {
           </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{profile?.full_name || 'Pagamenti'}</Text>
-        <TouchableOpacity onPress={downloadReceipt}>
-          <View style={styles.receiptButton}>
-            <Ionicons name="document-text" size={24} color="#fff" />
-          </View>
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
