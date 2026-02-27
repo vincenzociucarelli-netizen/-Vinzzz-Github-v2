@@ -164,31 +164,58 @@ export default function DocumentsArchive() {
   const handleDownload = async (doc: Document) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        Alert.alert('Errore', 'Sessione scaduta. Effettua nuovamente il login.');
+        return;
+      }
 
       const downloadUrl = `${API_URL}/api/documents/download/${doc.id}`;
       
       if (Platform.OS === 'web') {
-        // For web, open in new tab with auth header
+        // For web, fetch the PDF and open it
         const response = await fetch(downloadUrl, {
           headers: { Authorization: `Bearer ${token}` },
         });
         
         if (!response.ok) {
-          throw new Error('Download failed');
+          const errorText = await response.text();
+          throw new Error(errorText || 'Download failed');
         }
         
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        // Open in new tab instead of downloading
-        window.open(url, '_blank');
+        
+        // Ensure correct MIME type for PDF
+        const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(pdfBlob);
+        
+        // Open PDF in new tab
+        const newWindow = window.open(url, '_blank');
+        
+        // If popup blocked, try alternative method
+        if (!newWindow) {
+          // Create a hidden link and click it
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        
+        // Cleanup blob URL after a delay
+        setTimeout(() => window.URL.revokeObjectURL(url), 5000);
       } else {
         // For mobile, use Linking
         Linking.openURL(downloadUrl);
       }
     } catch (error) {
       console.error('Download error:', error);
-      Alert.alert('Errore', 'Impossibile aprire il documento');
+      if (Platform.OS === 'web') {
+        window.alert('Impossibile aprire il documento');
+      } else {
+        Alert.alert('Errore', 'Impossibile aprire il documento');
+      }
     }
   };
 
