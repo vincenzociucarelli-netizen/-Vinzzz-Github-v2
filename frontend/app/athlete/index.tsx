@@ -169,6 +169,102 @@ export default function AthleteScreen() {
     setShowPrivacyModal(true);
   };
 
+  // Handle certificate upload
+  const handleUploadCertificate = async () => {
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*,.pdf';
+      input.onchange = async (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        setUploadingCert(true);
+        try {
+          const reader = new FileReader();
+          reader.onload = async (event) => {
+            const base64 = event.target?.result as string;
+            
+            // Ask for expiry date
+            const expiryDate = window.prompt('Inserisci la data di scadenza del certificato (formato: GG/MM/AAAA):', '');
+            if (!expiryDate) {
+              setUploadingCert(false);
+              return;
+            }
+            
+            // Parse date
+            const parts = expiryDate.split('/');
+            if (parts.length !== 3) {
+              window.alert('Formato data non valido. Usa GG/MM/AAAA');
+              setUploadingCert(false);
+              return;
+            }
+            
+            const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            
+            await api.post('/athletes/upload-medical-certificate', {
+              certificate_base64: base64,
+              expiry_date: isoDate
+            });
+            
+            window.alert('Certificato caricato con successo!');
+            loadData(); // Reload data
+          };
+          reader.readAsDataURL(file);
+        } catch (error: any) {
+          console.error('Upload error:', error);
+          window.alert('Errore nel caricamento del certificato');
+        } finally {
+          setUploadingCert(false);
+        }
+      };
+      input.click();
+    } else {
+      Alert.alert('Info', 'Usa la versione web per caricare il certificato');
+    }
+  };
+
+  // View certificate
+  const handleViewCertificate = () => {
+    if (!profile?.medical_certificate_url) {
+      if (Platform.OS === 'web') {
+        window.alert('Nessun certificato disponibile');
+      } else {
+        Alert.alert('Info', 'Nessun certificato disponibile');
+      }
+      return;
+    }
+    
+    if (Platform.OS === 'web') {
+      // For base64 data
+      if (profile.medical_certificate_url.startsWith('data:')) {
+        try {
+          const [header, base64Data] = profile.medical_certificate_url.split(',');
+          const mimeMatch = header.match(/data:([^;]+)/);
+          const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+          
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: mimeType });
+          
+          const blobUrl = window.URL.createObjectURL(blob);
+          window.open(blobUrl, '_blank');
+          
+          setTimeout(() => window.URL.revokeObjectURL(blobUrl), 5000);
+        } catch (error) {
+          console.error('Error opening certificate:', error);
+          window.alert('Impossibile aprire il certificato');
+        }
+      } else {
+        window.open(profile.medical_certificate_url, '_blank');
+      }
+    }
+  };
+
   const loadData = async () => {
     try {
       // Load athlete profile
