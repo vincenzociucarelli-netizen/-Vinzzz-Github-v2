@@ -706,6 +706,8 @@ class PaymentCreate(BaseModel):
     paid_date: str  # formato gg/mm/aaaa
     is_cash: bool = False
     notes: Optional[str] = None
+    description: Optional[str] = None
+    payment_method: Optional[str] = None  # 'Bonifico', 'POS', 'Contanti', 'Assegno'
 
 class PaymentSettings(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
