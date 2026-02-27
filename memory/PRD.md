@@ -1,109 +1,87 @@
-# RegistraTEAM - Product Requirements Document
+# RegistraTeam - Sports Club Management App
 
-## Original Problem Statement
-Sistema di gestione per società sportive (pallavolo) con:
-- Gestione atleti (maggiorenni e minorenni)
-- Gestione staff (coach, dirigenti, collaboratori)
-- Gestione pagamenti e quote
-- Gestione presenze e allenamenti
-- Flusso di registrazione con periodo di prova
-- Privacy GDPR compliance
-
-## Current State (26 Feb 2026)
-
-### ✅ Completed Features
-
-**Adult Athlete Flow (Atleta Maggiorenne)**
-- Dashboard completa con foto profilo, nome, status
-- Layout compatto: email/telefono sulla stessa riga
-- Link "Presenze e Statistiche" evidenziato
-- Sezione "Documenti" aggiunta
-- Pagina Schedule con layout compatto (senza "Storico Presenze")
-- Flusso withdrawal con due opzioni:
-  - "Rimani e Firma Privacy" → status diventa pending_privacy
-  - "Non Rimanere" → elimina account
-- Modal firma privacy (AdultPrivacyModal) funzionante
-- Privacy acceptance genera PDF firmato tramite /documents/sign
-- Pagina documenti mostra icona download se PDF disponibile
-
-**Parent Flow (Genitore di Minorenne)**
-- Check automatico atleti con trial scaduto
-- Modal con opzioni: "Accetta Privacy" (firma digitale) o "Cancella Dati"
-- Generazione PDF privacy firmato con invio email
-- Doppia conferma per cancellazione dati
-
-**Admin Features**
-- Sezione "Privacy GDPR" nella pagina dettaglio atleta
-- Modifica athlete_code funzionante
-- Pulsante "Reset Password" presente
-- Visualizzazione stato atleti
-
-**Payment System**
-- Calcolo corretto importi pagati/da pagare
-- Ricevute con sport_type corretto
-
-**Compensation System (Coach/Dirigente/Collaboratore)**
-- Warning quando date contratto non impostate
-- Mostra solo mesi fino a quello corrente (non tutti 12)
-
-**Icons Fix**
-- Tutti i file usano componente Icon.tsx con fallback emoji
-- Nessun file usa più @expo/vector-icons direttamente
-
-### 📋 Backlog
-
-**P1 - High Priority**
-- Preparare documenti per app store submission
-- Decidere se implementare Stripe ora o rimandare
-
-**P2 - Medium Priority**
-- Stabilizzare modulo PRO
-- Refactoring server.py in struttura modulare
-
-**P3 - Low Priority**
-- Integrazione Stripe per piani premium
-- Implementare logica Freemium
+## Overview
+Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club management (volleyball focus). Supports multiple user roles: Admin, Dirigente, Coach, Collaboratore, Parent, Athlete (adult/minor).
 
 ## Architecture
+- **Frontend**: React Native with Expo Router, running on port 3000
+- **Backend**: FastAPI on port 8001, all routes prefixed with `/api`
+- **Database**: MongoDB via `MONGO_URL` environment variable
+- **Auth**: JWT-based authentication with role-based access control
 
-### Backend
-- FastAPI server (`/app/backend/server.py`)
-- MongoDB database
-- JWT authentication
-- Brevo/SendGrid for emails
+## Core Features Implemented
+- Multi-role user management (Admin, Dirigente, Coach, Collaboratore, Parent, Athlete)
+- Athlete registration (adult and minor flows)
+- Team management
+- Attendance tracking with QR codes
+- Medical certificate management with expiry tracking
+- Document management and digital signatures
+- Privacy policy signature flow
+- Compensation/payment tracking
+- Match/event calendar
+- Birthday notifications
+- Invite code system for society registration
 
-### Frontend
-- React Native / Expo
-- expo-router for navigation
-- AsyncStorage for auth tokens
-- Custom Icon component with emoji fallback
+## Current Status (as of 2026-02-27)
 
-### Key Files
-- `/app/backend/server.py` - Main API server
-- `/app/frontend/app/athlete/index.tsx` - Athlete dashboard
-- `/app/frontend/app/parent/index.tsx` - Parent dashboard (with trial logic)
-- `/app/frontend/app/athlete/schedule.tsx` - Schedule page
-- `/app/frontend/app/athlete/documents.tsx` - Documents page
-- `/app/frontend/app/admin/athlete/[id].tsx` - Admin athlete detail
-- `/app/frontend/src/components/Icon.tsx` - Icon component with emoji fallback
-- `/app/frontend/app/coach/compensation.tsx` - Coach compensation
-- `/app/frontend/app/dirigente/compensation.tsx` - Dirigente compensation
-- `/app/frontend/app/collaboratore/compensation.tsx` - Collaboratore compensation
+### Completed This Session
+- [x] Fixed critical Admin Dashboard crash - endpoint `/api/certificates/expiring` was returning null
+- [x] Added robust error handling in frontend for all dashboard API calls
+- [x] Environment stability restored
+
+### Recent Completions (Previous Sessions)
+- QR Code display on athlete dashboard with enlargeable modal
+- Medical certificate upload by athletes themselves
+- Privacy signature flow fixes
+- UI/UX parity for schedule/payments pages (adult athlete matches minor)
+- "Presenze e Statistiche" page created
+- Account deletion flow working
+
+### Pending User Verification
+- Compensation page logic (fallback for missing contract dates)
+- UI/UX parity for "Orari Allenamenti" and "Pagamenti" pages
+
+### Known Issues
+- P2: `@expo/vector-icons` not rendering correctly on web (recurring)
+
+## Upcoming Tasks (Priority Order)
+1. P0: Apply "end-of-trial" logic for Parent of minor athlete
+2. P1: Prepare assets and legal documents for app store submission
+3. P2: Stabilize "PRO" Module
+4. P3: Stripe Integration for premium plans (postponed)
+5. P3: Freemium logic with upgrade prompts
+
+## Key API Endpoints
+- `GET /api/stats/overview` - Dashboard statistics (admin only)
+- `GET /api/certificates/expiring` - Expiring medical certificates
+- `POST /api/attendance/check` - Check-in athlete by ID or code
+- `POST /api/documents/sign` - Sign documents digitally
+- `POST /api/athletes/upload-medical-certificate` - Upload medical cert
+- `GET /api/birthdays/today` - Today's birthdays
+- `GET /api/societies/invite-code` - Society invite code
 
 ## Test Credentials
-- **Admin**: `test.admin@test.com` / `Test1234`
-- **Athlete (Lisa)**: `lisa@test.com` / `Test1234`
+- Admin: `test.admin@test.com` / `Test1234`
+- Adult Athlete (Lisa): `lisa@test.com` / `Test1234`
+- Coach: `coach@test.com` / `Test1234`
+- Adult Athlete (Genny): `genny.ferretti@test.com` / `Test1234`
+- Test Deletion: `testcancella@test.com` / `Test1234`
 
-## Recent Changes (26 Feb 2026)
-1. Fixed icon import in documents-archive.tsx
-2. Added warning + limited months for compensation pages without contract dates
-3. Verified parent trial flow is already implemented
-4. Removed "Storico Presenze" section from schedule page
-5. Removed confusing info message from documents page
-6. Added "Privacy GDPR" section to admin athlete detail
-7. Updated privacy signature flow to generate PDF
+## Technical Notes
+- Frontend uses `EXPO_PUBLIC_BACKEND_URL` for API calls
+- MongoDB `_id` fields must be excluded from all API responses
+- Hot reload enabled for both frontend and backend
+- Supervisor manages services (`sudo supervisorctl restart frontend/backend`)
 
-## Known Issues Resolved
-- ✅ @expo/vector-icons on web - all files now use Icon.tsx
-- ✅ 12 months compensation display - now shows warning and limited months
-- ✅ Parent trial logic - already implemented and working
+## 3rd Party Integrations
+- Brevo/Sendinblue (email)
+- reportlab (PDF generation)
+- react-signature-canvas (digital signatures)
+- python-codicefiscale / codice-fiscale-js (fiscal code validation)
+- react-native-qrcode-svg (QR code display)
+- @expo/ngrok (tunnel for development)
+
+## Files of Reference
+- `/app/frontend/app/admin/index.tsx` - Admin dashboard
+- `/app/backend/server.py` - Main backend (needs refactoring)
+- `/app/frontend/app/athlete/` - Athlete pages (index, schedule, payments, documents, profile, presenze)
