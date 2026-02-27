@@ -58,17 +58,14 @@ export default function AthletePresenze() {
           setAttendances([]);
         }
         
-        // Get stats if team exists
-        if (meRes.data.team_id) {
-          try {
-            const statsRes = await api.get(`/teams/${meRes.data.team_id}/attendance-stats`);
-            const myStats = statsRes.data?.find((s: any) => s.athlete_id === athleteId);
-            if (myStats) {
-              setStats(myStats);
-            }
-          } catch (e) {
-            console.log('No stats available');
+        // Get personal stats using the new endpoint
+        try {
+          const statsRes = await api.get(`/athletes/${athleteId}/my-stats`);
+          if (statsRes.data) {
+            setStats(statsRes.data);
           }
+        } catch (e) {
+          console.log('No stats available');
         }
       }
     } catch (error) {
