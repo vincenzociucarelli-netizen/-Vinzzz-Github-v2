@@ -152,7 +152,7 @@ export default function AthletePayments() {
             <!DOCTYPE html>
             <html>
             <head>
-              <title>Ricevuta Fiscale - ${data.athlete?.last_name} ${data.athlete?.first_name}</title>
+              <title>Ricevuta Pagamenti - ${data.athlete?.last_name} ${data.athlete?.first_name}</title>
               <style>
                 body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
                 h1 { text-align: center; color: #333; }
@@ -168,7 +168,7 @@ export default function AthletePayments() {
             </head>
             <body>
               <div class="header">
-                <h1>RICEVUTA FISCALE</h1>
+                <h1>RICEVUTA PAGAMENTI</h1>
                 <p>${data.society?.name || 'Società Sportiva'}</p>
                 <p>Stagione: ${data.season || ''}</p>
                 <p>Numero: ${data.receipt_number || ''}</p>
