@@ -6447,15 +6447,20 @@ async def create_manual_payment(payment_data: PaymentCreate, current_user = Depe
     except:
         raise HTTPException(status_code=400, detail="Formato data non valido. Usa gg/mm/aaaa")
     
+    # Determine payment_method - use provided value or derive from is_cash
+    payment_method = payment_data.payment_method
+    if not payment_method:
+        payment_method = "Contanti" if payment_data.is_cash else "Bonifico"
+    
     payment = Payment(
         athlete_id=payment_data.athlete_id,
         amount=payment_data.amount,
         paid=True,
         paid_date=paid_date,
-        is_cash=payment_data.is_cash,
-        payment_method="contanti" if payment_data.is_cash else "bonifico",
+        is_cash=payment_data.is_cash or payment_method == "Contanti",
+        payment_method=payment_method,
         notes=payment_data.notes,
-        description=f"Pagamento del {payment_data.paid_date}",
+        description=payment_data.description or f"Pagamento del {payment_data.paid_date}",
         created_by=current_user["id"]
     )
     
