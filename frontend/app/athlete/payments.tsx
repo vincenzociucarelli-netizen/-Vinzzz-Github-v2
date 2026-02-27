@@ -254,33 +254,71 @@ export default function AthletePayments() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Pagamenti Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionEmoji}>💰</Text>
-            <Text style={styles.sectionTitle}>Pagamenti</Text>
-          </View>
-          
-          <View style={styles.sectionContent}>
-            {/* Quota Stagionale */}
-            {seasonalFee > 0 && (
-              <View style={styles.feeRow}>
-                <Text style={styles.feeLabel}>Quota Stagionale:</Text>
-                <Text style={styles.feeAmount}>€ {seasonalFee.toFixed(2)}</Text>
-              </View>
-            )}
+        {/* Quote Section - Team payment structure */}
+        {paymentInfo && (paymentInfo.total_amount || paymentInfo.installment_1_amount) && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionEmoji}>💰</Text>
+              <Text style={styles.sectionTitle}>Quote</Text>
+            </View>
             
-            {/* Sconto */}
-            {discount > 0 && (
-              <View style={styles.feeRow}>
-                <Text style={[styles.feeLabel, { color: '#4CAF50' }]}>
-                  Sconto applicato per: {discountReason || 'Non specificato'}
-                </Text>
-                <Text style={[styles.feeAmount, { color: '#4CAF50' }]}>- € {discount.toFixed(2)}</Text>
-              </View>
-            )}
+            <View style={styles.sectionContent}>
+              {paymentInfo.total_amount && paymentInfo.total_amount > 0 && (
+                <View style={styles.feeRow}>
+                  <Text style={styles.feeLabel}>Quota Totale:</Text>
+                  <Text style={styles.feeAmount}>€{paymentInfo.total_amount.toFixed(0)}</Text>
+                </View>
+              )}
+              
+              {paymentInfo.installment_1_amount && paymentInfo.installment_1_amount > 0 && (
+                <View style={styles.feeRow}>
+                  <Text style={styles.feeLabel}>1ª Rata (iscrizione):</Text>
+                  <Text style={styles.feeAmount}>€{paymentInfo.installment_1_amount.toFixed(0)}</Text>
+                </View>
+              )}
+              
+              {paymentInfo.installment_2_amount && paymentInfo.installment_2_amount > 0 && (
+                <>
+                  <View style={styles.feeRow}>
+                    <Text style={styles.feeLabel}>2ª Rata:</Text>
+                    <Text style={styles.feeAmount}>€{paymentInfo.installment_2_amount.toFixed(0)}</Text>
+                  </View>
+                  {paymentInfo.installment_2_due_date && (
+                    <View style={styles.feeRow}>
+                      <Text style={styles.feeLabel}>Scadenza 2ª Rata:</Text>
+                      <Text style={styles.feeAmount}>{formatDate(paymentInfo.installment_2_due_date)}</Text>
+                    </View>
+                  )}
+                </>
+              )}
+              
+              {paymentInfo.installment_3_amount && paymentInfo.installment_3_amount > 0 && (
+                <>
+                  <View style={styles.feeRow}>
+                    <Text style={styles.feeLabel}>3ª Rata:</Text>
+                    <Text style={styles.feeAmount}>€{paymentInfo.installment_3_amount.toFixed(0)}</Text>
+                  </View>
+                  {paymentInfo.installment_3_due_date && (
+                    <View style={styles.feeRow}>
+                      <Text style={styles.feeLabel}>Scadenza 3ª Rata:</Text>
+                      <Text style={styles.feeAmount}>{formatDate(paymentInfo.installment_3_due_date)}</Text>
+                    </View>
+                  )}
+                </>
+              )}
+              
+              {/* Sconto */}
+              {discount > 0 && (
+                <View style={styles.feeRow}>
+                  <Text style={[styles.feeLabel, { color: '#4CAF50' }]}>
+                    Sconto applicato per: {discountReason || 'Non specificato'}
+                  </Text>
+                  <Text style={[styles.feeAmount, { color: '#4CAF50' }]}>- €{discount.toFixed(0)}</Text>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Dettaglio Rate */}
         <View style={styles.section}>
