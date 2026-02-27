@@ -51,7 +51,7 @@ export default function AthletePresenze() {
         
         // Get attendance history
         try {
-          const attendanceRes = await api.get(`/attendance/${athleteId}`);
+          const attendanceRes = await api.get(`/attendance/athlete/${athleteId}`);
           setAttendances(attendanceRes.data || []);
         } catch (e) {
           console.log('No attendance data');
