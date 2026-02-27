@@ -829,15 +829,29 @@ export default function AthleteScreen() {
                   <Text style={styles.certificateViewButtonText}>Visualizza</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.certificateUploadButton}
-                  onPress={handleUploadCertificate}
-                  disabled={uploadingCert}
+                  style={[styles.certificateViewButton, { backgroundColor: '#E8F5E9' }]}
+                  onPress={handlePrintCertificate}
                 >
-                  <Text style={styles.certificateUploadButtonText}>
-                    {uploadingCert ? 'Caricamento...' : 'Carica Nuovo'}
-                  </Text>
+                  <Ionicons name="print" size={18} color="#4CAF50" />
+                  <Text style={[styles.certificateViewButtonText, { color: '#4CAF50' }]}>Stampa</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.certificateViewButton, { backgroundColor: '#FFF3E0' }]}
+                  onPress={handleShareCertificate}
+                >
+                  <Ionicons name="share-social" size={18} color="#FF9800" />
+                  <Text style={[styles.certificateViewButtonText, { color: '#FF9800' }]}>Condividi</Text>
                 </TouchableOpacity>
               </View>
+              <TouchableOpacity
+                style={[styles.certificateUploadButton, { marginTop: 10 }]}
+                onPress={handleUploadCertificate}
+                disabled={uploadingCert}
+              >
+                <Text style={styles.certificateUploadButtonText}>
+                  {uploadingCert ? 'Caricamento...' : '📤 Carica Nuovo'}
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View>
