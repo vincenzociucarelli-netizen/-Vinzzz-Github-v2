@@ -6238,6 +6238,25 @@ async def upload_self_certificate(request: dict, current_user = Depends(get_curr
     existing_cert = await db.certificates.find_one({"athlete_id": athlete_id})
     
     if existing_cert:
+        # Archive the old certificate before updating
+        archive_entry = {
+            "id": str(uuid.uuid4()),
+            "athlete_id": athlete_id,
+            "last_name": athlete.get("last_name", ""),
+            "first_name": athlete.get("first_name", ""),
+            "full_name": athlete.get("full_name", f"{athlete.get('last_name', '')} {athlete.get('first_name', '')}"),
+            "team_id": athlete.get("team_id"),
+            "team_name": athlete.get("team_name"),
+            "issue_date": existing_cert.get("issue_date"),
+            "expiry_date": existing_cert.get("expiry_date"),
+            "certificate_data": existing_cert.get("certificate_data"),
+            "uploaded_at": existing_cert.get("uploaded_at"),
+            "uploaded_by": existing_cert.get("uploaded_by", "unknown"),
+            "society_id": athlete.get("society_id"),
+            "archived_at": datetime.utcnow().isoformat()
+        }
+        await db.medical_certificates_archive.insert_one(archive_entry)
+        
         # Update existing certificate
         await db.certificates.update_one(
             {"athlete_id": athlete_id},
