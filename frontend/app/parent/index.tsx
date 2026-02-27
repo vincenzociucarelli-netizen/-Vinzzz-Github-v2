@@ -308,7 +308,7 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadAthletes(), loadCommitments(), loadTeams()]);
+    await Promise.all([loadAthletes(), loadCommitments(), loadTeams(), loadNotifications()]);
     setRefreshing(false);
   };
 
