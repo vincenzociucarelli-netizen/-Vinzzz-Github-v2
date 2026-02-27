@@ -967,14 +967,15 @@ export default function AdminAthleteDetail() {
           sport_type: societyData?.sport_type || societyData?.sport_praticato || 'PALLAVOLO',
         },
         // Filter only payments with paid_date for the attestato
-        const paidPayments = payments.filter((p: any) => p.paid_date);
-        payments: paidPayments.length > 0 ? paidPayments.map((p: any, index) => ({
-          date: p.paid_date || '',
-          receipt_number: `${index + 1}`,
-          amount: p.amount || 0,
-          description: p.description || p.notes || '',
-          payment_method: p.payment_method || (p.is_cash ? 'Contanti' : 'Bonifico'),
-        })) : [], // Empty array if no payments
+        payments: payments.filter((p: any) => p.paid_date).length > 0 
+          ? payments.filter((p: any) => p.paid_date).map((p: any, index) => ({
+              date: p.paid_date || '',
+              receipt_number: `${index + 1}`,
+              amount: p.amount || 0,
+              description: p.description || p.notes || '',
+              payment_method: p.payment_method || (p.is_cash ? 'Contanti' : 'Bonifico'),
+            })) 
+          : [], // Empty array if no payments
         season: season,
         receipt_number: `ATT-${athlete.id?.slice(-6).toUpperCase()}`,
         team_name: team?.name || '',
