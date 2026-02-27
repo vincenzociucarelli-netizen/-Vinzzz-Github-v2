@@ -5156,6 +5156,22 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
             if user and user.get("profile_photo"):
                 athlete["profile_photo"] = user["profile_photo"]
     
+    # For adult athletes, sync personal data from user record if missing in athlete
+    if athlete.get("is_adult") or athlete.get("user_id"):
+        user = await db.users.find_one({"athlete_id": athlete_id})
+        if user:
+            # Sync gender if missing
+            if not athlete.get("gender") and user.get("gender"):
+                athlete["gender"] = user["gender"]
+            # Sync place_of_birth if missing
+            if not athlete.get("place_of_birth") and user.get("place_of_birth"):
+                athlete["place_of_birth"] = user["place_of_birth"]
+            if not athlete.get("birth_place") and user.get("place_of_birth"):
+                athlete["birth_place"] = user["place_of_birth"]
+            # Sync date_of_birth if missing
+            if not athlete.get("date_of_birth") and user.get("date_of_birth"):
+                athlete["date_of_birth"] = user["date_of_birth"]
+    
     return Athlete(**athlete)
 
 @api_router.get("/athletes/{athlete_id}/technical-data")
