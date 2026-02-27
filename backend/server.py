@@ -506,6 +506,8 @@ class Athlete(BaseModel):
     date_of_birth: Optional[datetime] = None  # Optional for simplified adult registration
     birth_place: Optional[str] = None  # Luogo di nascita
     birth_province: Optional[str] = None  # Provincia di nascita
+    place_of_birth: Optional[str] = None  # Alias for birth_place
+    gender: Optional[str] = None  # M or F - for Codice Fiscale calculation
     is_minor: bool = False  # Default to adult
     fiscal_code: Optional[str] = None  # Codice fiscale atleta
     email: Optional[str] = None  # Email di contatto
