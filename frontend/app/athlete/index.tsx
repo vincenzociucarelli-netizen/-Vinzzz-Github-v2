@@ -1071,6 +1071,52 @@ export default function AthleteScreen() {
         province={profile?.province || ''}
       />
       
+      {/* Certificate Viewer Modal */}
+      <Modal
+        visible={showCertViewer}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCertViewer(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' }}>
+          {/* Header with close button */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingTop: 40 }}>
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Certificato Medico</Text>
+            <TouchableOpacity onPress={() => setShowCertViewer(false)}>
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Certificate Image */}
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+            {certViewerUrl && (
+              <Image
+                source={{ uri: certViewerUrl }}
+                style={{ width: '100%', height: '100%', resizeMode: 'contain' }}
+              />
+            )}
+          </View>
+          
+          {/* Action buttons */}
+          <View style={{ flexDirection: 'row', padding: 16, gap: 12, paddingBottom: 32 }}>
+            <TouchableOpacity
+              style={{ flex: 1, backgroundColor: '#4CAF50', padding: 14, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}
+              onPress={handlePrintCertificate}
+            >
+              <Ionicons name="print" size={20} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>Stampa</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ flex: 1, backgroundColor: '#FF9800', padding: 14, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}
+              onPress={handleShareCertificate}
+            >
+              <Ionicons name="share-social" size={20} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>Condividi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      
       {/* Certificate Date Input Modal */}
       <Modal
         visible={certDateModalVisible}
