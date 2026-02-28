@@ -527,7 +527,7 @@ class Athlete(BaseModel):
     # Squadra e stato
     team_id: Optional[str] = None  # Squadra principale (optional for adult registration)
     team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
-    qr_code: str  # Base64 encoded QR code
+    qr_code: str = ""  # Base64 encoded QR code
     registration_date: datetime = Field(default_factory=datetime.utcnow)
     trial_end_date: Optional[datetime] = None  # 7 days after registration (None per atleti maggiorenni)
     privacy_accepted: bool = False
