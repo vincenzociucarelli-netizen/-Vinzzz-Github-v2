@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../../src/components/Icon';
 import api from '../../../src/services/api';
+import { SportIcon } from '../../../src/components/SportIcon';
 
 const showAlert = (title: string, message: string) => {
   if (Platform.OS === 'web') {
