@@ -942,7 +942,7 @@ export default function AdminAthleteDetail() {
         const paidPayments = payments.filter((p: any) => p.paid_date || p.paid === true);
         const totalPaid = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
         
-        // Simple receipt HTML for adult athletes (same style as athlete's receipt)
+        // Simple receipt HTML for adult athletes - A4 optimized
         const simpleReceiptHtml = `
           <!DOCTYPE html>
           <html>
@@ -951,52 +951,199 @@ export default function AdminAthleteDetail() {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Ricevuta Pagamenti - ${(athlete as any).last_name || ''} ${(athlete as any).first_name || ''}</title>
             <style>
-              body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
-              h1 { text-align: center; color: #333; margin-bottom: 5px; }
-              .header { text-align: center; margin-bottom: 30px; }
-              .header p { margin: 5px 0; color: #666; }
-              .section { margin-bottom: 20px; }
-              .section h3 { color: #007AFF; border-bottom: 2px solid #007AFF; padding-bottom: 5px; margin-bottom: 15px; }
-              .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
-              .label { color: #666; }
-              .value { font-weight: bold; }
-              .payment-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-              .payment-info { flex: 1; }
-              .payment-date { color: #666; font-size: 14px; }
-              .payment-method { color: #888; font-size: 12px; font-style: italic; margin-top: 2px; }
-              .payment-amount { font-size: 18px; font-weight: bold; color: #4CAF50; }
-              .total { font-size: 20px; color: #4CAF50; margin-top: 20px; text-align: right; font-weight: bold; }
-              @media print { body { padding: 20px; } }
+              @page {
+                size: A4;
+                margin: 20mm;
+              }
+              * {
+                box-sizing: border-box;
+              }
+              body {
+                font-family: Arial, Helvetica, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #fff;
+                color: #333;
+                font-size: 14px;
+                line-height: 1.5;
+              }
+              .receipt-container {
+                width: 100%;
+                max-width: 210mm;
+                min-height: 297mm;
+                margin: 0 auto;
+                padding: 15mm;
+                background: #fff;
+              }
+              .header {
+                text-align: center;
+                margin-bottom: 30px;
+                padding-bottom: 20px;
+                border-bottom: 3px solid #007AFF;
+              }
+              .header h1 {
+                font-size: 28px;
+                margin: 0 0 10px 0;
+                color: #007AFF;
+                letter-spacing: 2px;
+              }
+              .society-name {
+                font-size: 18px;
+                font-weight: bold;
+                color: #333;
+                margin: 10px 0;
+              }
+              .season {
+                font-size: 14px;
+                color: #666;
+              }
+              .section {
+                margin-bottom: 25px;
+              }
+              .section-title {
+                font-size: 16px;
+                font-weight: bold;
+                color: #007AFF;
+                border-bottom: 2px solid #007AFF;
+                padding-bottom: 8px;
+                margin-bottom: 15px;
+              }
+              .info-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 10px 0;
+                border-bottom: 1px solid #eee;
+              }
+              .info-label {
+                color: #666;
+                font-size: 14px;
+              }
+              .info-value {
+                font-weight: bold;
+                font-size: 14px;
+                color: #333;
+              }
+              .payments-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+              }
+              .payments-table th {
+                background: #f5f5f5;
+                padding: 12px;
+                text-align: left;
+                font-size: 13px;
+                color: #666;
+                border-bottom: 2px solid #ddd;
+              }
+              .payments-table td {
+                padding: 12px;
+                border-bottom: 1px solid #eee;
+                font-size: 14px;
+              }
+              .payments-table .amount {
+                text-align: right;
+                font-weight: bold;
+                color: #4CAF50;
+                font-size: 16px;
+              }
+              .payments-table .method {
+                color: #888;
+                font-size: 12px;
+                font-style: italic;
+              }
+              .total-section {
+                margin-top: 30px;
+                padding: 20px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                text-align: right;
+              }
+              .total-label {
+                font-size: 16px;
+                color: #666;
+              }
+              .total-amount {
+                font-size: 28px;
+                font-weight: bold;
+                color: #4CAF50;
+                margin-top: 5px;
+              }
+              .footer {
+                margin-top: 50px;
+                padding-top: 20px;
+                border-top: 1px solid #eee;
+                text-align: center;
+                font-size: 11px;
+                color: #999;
+              }
+              @media print {
+                body {
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
+                .receipt-container {
+                  padding: 0;
+                  min-height: auto;
+                }
+              }
             </style>
           </head>
           <body>
-            <div class="header">
-              <h1>RICEVUTA PAGAMENTI</h1>
-              <p style="font-size: 16px; font-weight: bold;">${societyData?.ragione_sociale || societyData?.society_name || 'Società Sportiva'}</p>
-              <p>Stagione: ${season}</p>
-            </div>
-            <div class="section">
-              <h3>Atleta</h3>
-              <div class="row"><span class="label">Nome:</span><span class="value">${(athlete as any).last_name || ''} ${(athlete as any).first_name || ''}</span></div>
-              <div class="row"><span class="label">Codice Fiscale:</span><span class="value">${(athlete as any).fiscal_code || '-'}</span></div>
-            </div>
-            <div class="section">
-              <h3>Pagamenti Effettuati</h3>
-              ${paidPayments.length === 0 ? '<p style="color: #666;">Nessun pagamento registrato</p>' : paidPayments.map((p: any) => {
-                const payDate = p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : '-';
-                const method = p.payment_method || '';
-                return `
-                <div class="payment-row">
-                  <div class="payment-info">
-                    <div class="payment-date">${payDate}</div>
-                    ${method ? `<div class="payment-method">${method}</div>` : ''}
-                  </div>
-                  <div class="payment-amount">€ ${(p.amount || 0).toFixed(2)}</div>
+            <div class="receipt-container">
+              <div class="header">
+                <h1>RICEVUTA PAGAMENTI</h1>
+                <div class="society-name">${societyData?.ragione_sociale || societyData?.society_name || 'Società Sportiva'}</div>
+                <div class="season">Stagione Sportiva ${season}</div>
+              </div>
+              
+              <div class="section">
+                <div class="section-title">Dati Atleta</div>
+                <div class="info-row">
+                  <span class="info-label">Cognome e Nome:</span>
+                  <span class="info-value">${(athlete as any).last_name || ''} ${(athlete as any).first_name || ''}</span>
                 </div>
-              `}).join('')}
-            </div>
-            <div class="total">
-              Totale Pagato: € ${totalPaid.toFixed(2)}
+                <div class="info-row">
+                  <span class="info-label">Codice Fiscale:</span>
+                  <span class="info-value">${(athlete as any).fiscal_code || '-'}</span>
+                </div>
+              </div>
+              
+              <div class="section">
+                <div class="section-title">Pagamenti Effettuati</div>
+                ${paidPayments.length === 0 ? '<p style="color: #666; padding: 20px 0;">Nessun pagamento registrato</p>' : `
+                <table class="payments-table">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Modalità</th>
+                      <th style="text-align: right;">Importo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${paidPayments.map((p: any) => {
+                      const payDate = p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : '-';
+                      const method = p.payment_method || 'Non specificato';
+                      return `
+                      <tr>
+                        <td>${payDate}</td>
+                        <td class="method">${method}</td>
+                        <td class="amount">€ ${(p.amount || 0).toFixed(2)}</td>
+                      </tr>
+                    `}).join('')}
+                  </tbody>
+                </table>
+                `}
+              </div>
+              
+              <div class="total-section">
+                <div class="total-label">Totale Pagato</div>
+                <div class="total-amount">€ ${totalPaid.toFixed(2)}</div>
+              </div>
+              
+              <div class="footer">
+                Documento generato il ${new Date().toLocaleDateString('it-IT')} alle ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+              </div>
             </div>
           </body>
           </html>
@@ -1019,15 +1166,42 @@ export default function AdminAthleteDetail() {
         } else {
           // Share/Download
           if (Platform.OS === 'web') {
-            const blob = new Blob([simpleReceiptHtml], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            setTimeout(() => URL.revokeObjectURL(url), 100);
+            // Try Web Share API first
+            if (navigator.share) {
+              try {
+                const blob = new Blob([simpleReceiptHtml], { type: 'text/html' });
+                const file = new File([blob], filename, { type: 'text/html' });
+                await navigator.share({
+                  title: `Ricevuta ${(athlete as any).last_name} ${(athlete as any).first_name}`,
+                  text: `Ricevuta pagamenti per ${(athlete as any).last_name} ${(athlete as any).first_name}`,
+                  files: [file]
+                });
+              } catch (shareError: any) {
+                // Fallback to download if share fails or is cancelled
+                if (shareError.name !== 'AbortError') {
+                  const blob = new Blob([simpleReceiptHtml], { type: 'text/html;charset=utf-8' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = filename;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  setTimeout(() => URL.revokeObjectURL(url), 100);
+                }
+              }
+            } else {
+              // Fallback for browsers without Web Share API
+              const blob = new Blob([simpleReceiptHtml], { type: 'text/html;charset=utf-8' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = filename;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              setTimeout(() => URL.revokeObjectURL(url), 100);
+            }
           }
         }
         return;
