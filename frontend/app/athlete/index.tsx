@@ -92,6 +92,8 @@ export default function AthleteScreen() {
   const [uploadingCert, setUploadingCert] = useState(false);
   const [certDateModalVisible, setCertDateModalVisible] = useState(false);
   const [certDateInput, setCertDateInput] = useState('');
+  const [certValidityMonths, setCertValidityMonths] = useState('12');
+  const [certCalculatedExpiry, setCertCalculatedExpiry] = useState('');
   const [pendingCertBase64, setPendingCertBase64] = useState<string | null>(null);
   
   // Notifications state
