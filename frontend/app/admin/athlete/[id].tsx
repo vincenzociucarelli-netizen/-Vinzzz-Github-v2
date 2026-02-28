@@ -1210,17 +1210,6 @@ export default function AdminAthleteDetail() {
 
       // For minor athletes, use the formal Attestato di Versamento
 
-      // Get or generate attestato number from backend
-      let attestatoNumber = `ATT-${athlete.id?.slice(-6).toUpperCase()}`;
-      try {
-        const attestatoRes = await api.post(`/attestati/generate-number/${athlete.id}`);
-        if (attestatoRes.data?.attestato_number) {
-          attestatoNumber = attestatoRes.data.attestato_number;
-        }
-      } catch (err) {
-        console.log('Could not get attestato number, using fallback');
-      }
-
       // Prepare receipt data - works even with 0 payments
       const receiptData: ReceiptData = {
         athlete: {
@@ -1253,18 +1242,18 @@ export default function AdminAthleteDetail() {
           stamp_signature: societyData?.stamp_signature || societyData?.stamp_signature_base64 || '',
           sport_type: societyData?.sport_type || societyData?.sport_praticato || 'PALLAVOLO',
         },
-        // Filter only payments with paid_date for the attestato
+        // Filter only payments with paid_date for the attestato - use receipt_number from database
         payments: payments.filter((p: any) => p.paid_date).length > 0 
           ? payments.filter((p: any) => p.paid_date).map((p: any, index) => ({
               date: p.paid_date || '',
-              receipt_number: `${index + 1}`,
+              receipt_number: p.receipt_number || `${index + 1}`,
               amount: p.amount || 0,
               description: p.description || p.notes || '',
               payment_method: p.payment_method || (p.is_cash ? 'Contanti' : 'Bonifico'),
             })) 
           : [], // Empty array if no payments
         season: season,
-        receipt_number: attestatoNumber,
+        receipt_number: '', // Not used for individual receipts
         team_name: team?.name || '',
       };
 
