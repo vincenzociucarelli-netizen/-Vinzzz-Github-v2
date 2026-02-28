@@ -22,9 +22,15 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 - Birthday notifications
 - Invite code system for society registration
 
-## Current Status (as of 2026-02-27)
+## Current Status (as of 2026-02-28)
 
-### Completed This Session
+### Completed Today (28/02/2026)
+- [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Pagato` (was showing total instead of remainder)
+- [x] **Notifications Removed**: Removed "Scadenze in arrivo" section from athlete dashboard
+- [x] **Sport Icon**: Replaced volleyball emoji (🏐) with actual sport_image from society settings
+- [x] **Receipt Payment Method**: Added payment method (POS/Bonifico/Contanti) to downloadable receipt
+
+### Completed Previous Session (27/02/2026)
 - [x] **Coach Info Update**: Updated coach name from "ROSSI MARIO" to "SERZI LUCIO" in database
 - [x] **WhatsApp Contact**: Added WhatsApp button next to coach name for direct contact
 - [x] **Training Day Color**: Changed training day color to dark blue (#1565C0)
