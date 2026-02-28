@@ -46,6 +46,10 @@ export default function OtherSettings() {
   const [newVenueAddress, setNewVenueAddress] = useState('');
   const [newVenueCity, setNewVenueCity] = useState('');
 
+  // Stagione sportiva
+  const [seasonStartMonth, setSeasonStartMonth] = useState(7);
+  const [seasonStartDay, setSeasonStartDay] = useState(1);
+
   useEffect(() => {
     loadSettings();
   }, []);
