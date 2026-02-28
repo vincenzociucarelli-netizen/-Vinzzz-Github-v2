@@ -205,26 +205,17 @@ export default function DocumentsArchive() {
           const pdfBlob = new Blob([blob], { type: 'application/pdf' });
           const objectUrl = window.URL.createObjectURL(pdfBlob);
           
-          // Open in new window/tab
-          const newWindow = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+          // Create download link
+          const filename = doc.pdf_filename || `documento_${doc.id}.pdf`;
+          const link = document.createElement('a');
+          link.href = objectUrl;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
           
-          if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-            // Popup was blocked, try with anchor
-            console.log('Popup blocked, using anchor fallback');
-            const anchor = document.createElement('a');
-            anchor.href = objectUrl;
-            anchor.target = '_blank';
-            anchor.style.cssText = 'position:fixed;top:-1000px;left:-1000px;';
-            document.body.appendChild(anchor);
-            anchor.click();
-            setTimeout(() => {
-              document.body.removeChild(anchor);
-              window.URL.revokeObjectURL(objectUrl);
-            }, 100);
-          } else {
-            // Cleanup after delay
-            setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60000);
-          }
+          // Clean up URL after download
+          setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
           
         } catch (fetchError: any) {
           console.error('Fetch error:', fetchError);
