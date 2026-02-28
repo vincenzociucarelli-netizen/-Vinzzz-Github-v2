@@ -1973,6 +1973,9 @@ class SocietySettingsUpdate(BaseModel):
     email: Optional[str] = None  # Society email for notifications
     pec: Optional[str] = None  # PEC (Posta Elettronica Certificata)
     pro_enabled: Optional[bool] = None  # Flag per attivare il modulo Prime Squadre
+    # Season settings
+    season_start_month: Optional[int] = None  # Month when season starts (1-12, default 7 = July)
+    season_start_day: Optional[int] = None  # Day when season starts (1-31, default 1)
 
 @api_router.get("/settings/society")
 async def get_society_settings():
