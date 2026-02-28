@@ -9099,11 +9099,13 @@ async def request_data_deletion(athlete_id: str, current_user = Depends(get_curr
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
     # Verify user is the parent of this athlete or the athlete themselves
+    parent_id = None
     if current_user["role"] == "parent":
         is_primary_parent = athlete.get("parent_id") == current_user["id"]
         is_second_parent = athlete.get("second_parent_id") == current_user["id"]
         if not is_primary_parent and not is_second_parent:
             raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo atleta")
+        parent_id = current_user["id"]
     elif current_user["role"] == "athlete":
         if athlete.get("email") != current_user["email"]:
             raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo atleta")
@@ -9127,12 +9129,26 @@ async def request_data_deletion(athlete_id: str, current_user = Depends(get_curr
     # 4. Delete the athlete
     await db.athletes.delete_one({"id": athlete_id})
     
-    # 5. Create notification for admin
+    # 5. Check if parent has other athletes - if not, delete parent account too
+    should_delete_parent = False
+    if parent_id:
+        remaining_athletes = await db.athletes.count_documents({
+            "$or": [
+                {"parent_id": parent_id},
+                {"second_parent_id": parent_id}
+            ]
+        })
+        if remaining_athletes == 0:
+            # Delete the parent account
+            await db.users.delete_one({"id": parent_id})
+            should_delete_parent = True
+    
+    # 6. Create notification for admin
     notification = {
         "id": str(uuid.uuid4()),
         "type": "athlete_deleted",
         "title": "Atleta cancellato",
-        "message": f"L'atleta {athlete_name} ha richiesto la cancellazione dei propri dati al termine del periodo di prova.",
+        "message": f"L'atleta {athlete_name} ha richiesto la cancellazione dei propri dati al termine del periodo di prova." + (" Anche l'account del genitore è stato eliminato." if should_delete_parent else ""),
         "related_user_id": athlete_id,
         "related_user_name": athlete_name,
         "read": False,
@@ -9143,7 +9159,8 @@ async def request_data_deletion(athlete_id: str, current_user = Depends(get_curr
     
     return {
         "message": f"Tutti i dati di {athlete_name} sono stati eliminati.",
-        "deleted_athlete": athlete_name
+        "deleted_athlete": athlete_name,
+        "parent_deleted": should_delete_parent
     }
 
 @api_router.get("/trial/check-pending")
