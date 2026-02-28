@@ -16,6 +16,7 @@ import { Ionicons } from '../../../src/components/Icon';
 import api from '../../../src/services/api';
 import * as ImagePicker from 'expo-image-picker';
 import Slider from '@react-native-community/slider';
+import { SportIcon, clearSportIconCache } from '../../../src/components/SportIcon';
 
 const showAlert = (title: string, message: string) => {
   if (Platform.OS === 'web') {
