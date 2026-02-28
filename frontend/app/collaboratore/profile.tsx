@@ -1649,6 +1649,113 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           </View>
         </View>
       </Modal>
+
+      {/* Dirigenti Modal */}
+      <Modal
+        visible={showDirigentiModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowDirigentiModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '85%' }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ backgroundColor: '#E3F2FD', padding: 8, borderRadius: 10, marginRight: 10 }}>
+                  <Ionicons name="call" size={22} color="#1976D2" />
+                </View>
+                <View>
+                  <Text style={styles.modalTitle}>Contatta Dirigenti</Text>
+                  <Text style={{ fontSize: 12, color: '#666' }}>
+                    Invia un messaggio WhatsApp
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setShowDirigentiModal(false)}>
+                <Ionicons name="close" size={28} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={{ padding: 16 }}>
+              {dirigenti.length === 0 ? (
+                <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                  <Ionicons name="people-outline" size={60} color="#ccc" />
+                  <Text style={{ color: '#999', marginTop: 12, fontSize: 16 }}>
+                    Nessun dirigente disponibile
+                  </Text>
+                </View>
+              ) : (
+                dirigenti.map((dir, index) => (
+                  <View key={dir.id || index} style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 16,
+                    borderBottomWidth: index < dirigenti.length - 1 ? 1 : 0,
+                    borderBottomColor: '#f0f0f0',
+                  }}>
+                    <View style={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 25,
+                      backgroundColor: '#E3F2FD',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <Ionicons name="person" size={28} color="#1976D2" />
+                    </View>
+                    <View style={{ marginLeft: 14, flex: 1 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: '#333' }}>
+                        {dir.full_name}
+                      </Text>
+                      {dir.phone && (
+                        <Text style={{ fontSize: 14, color: '#666', marginTop: 3 }}>
+                          📞 {dir.phone}
+                        </Text>
+                      )}
+                      {dir.email && (
+                        <Text style={{ fontSize: 13, color: '#999', marginTop: 2 }}>
+                          ✉️ {dir.email}
+                        </Text>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: dir.phone ? '#25D366' : '#ccc',
+                        paddingHorizontal: 18,
+                        paddingVertical: 10,
+                        borderRadius: 25,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                      }}
+                      onPress={() => {
+                        if (!dir.phone) {
+                          Alert.alert('Telefono non disponibile', 'Questo dirigente non ha un numero di telefono registrato');
+                          return;
+                        }
+                        const phone = dir.phone.replace(/\D/g, '');
+                        const phoneWithCountry = phone.startsWith('39') ? phone : `39${phone}`;
+                        Linking.openURL(`https://wa.me/${phoneWithCountry}`);
+                      }}
+                    >
+                      <Ionicons name="logo-whatsapp" size={20} color="#fff" />
+                      <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 8, fontSize: 14 }}>
+                        Scrivi
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+
+            <TouchableOpacity 
+              style={{ backgroundColor: '#007AFF', padding: 15, margin: 16, borderRadius: 12, alignItems: 'center' }}
+              onPress={() => setShowDirigentiModal(false)}
+            >
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chiudi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
