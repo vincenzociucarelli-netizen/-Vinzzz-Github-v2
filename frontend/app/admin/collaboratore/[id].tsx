@@ -452,7 +452,10 @@ export default function AdminCollaboratoreDetail() {
               />
               
               {/* Assegnazione Squadre */}
-              <Text style={[styles.inputLabel, { marginTop: 16 }]}>🏐 Squadre Assegnate</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
+                <SportIcon size={18} />
+                <Text style={[styles.inputLabel, { marginLeft: 6, marginTop: 0, marginBottom: 0 }]}>Squadre Assegnate</Text>
+              </View>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
                 {teams.map((team) => (
                   <TouchableOpacity
