@@ -321,65 +321,41 @@ export default function AthletePayments() {
           </View>
         )}
 
-        {/* Dettaglio Rate */}
+        {/* Pagamenti Ricevuti - Only show paid payments */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionEmoji}>📅</Text>
-            <Text style={styles.sectionTitle}>Dettaglio Rate</Text>
+            <Text style={styles.sectionEmoji}>✅</Text>
+            <Text style={styles.sectionTitle}>Pagamenti Ricevuti</Text>
           </View>
           
           <View style={styles.sectionContent}>
-            {payments.length === 0 ? (
-              <Text style={styles.emptyText}>Nessuna rata registrata</Text>
+            {payments.filter(p => isPaid(p)).length === 0 ? (
+              <Text style={styles.emptyText}>Nessun pagamento registrato</Text>
             ) : (
-              payments.map((payment, index) => {
-                const paid = isPaid(payment);
-                const overdue = isOverdue(payment);
-                
-                return (
-                  <View 
-                    key={payment.id} 
-                    style={[
-                      styles.installmentCard,
-                      overdue && !paid && styles.installmentOverdue
-                    ]}
-                  >
-                    <View style={styles.installmentInfo}>
-                      <Text style={styles.installmentTitle}>
-                        {getInstallmentTitle(payment, index)}
+              payments.filter(p => isPaid(p)).map((payment, index) => (
+                <View 
+                  key={payment.id} 
+                  style={styles.installmentCard}
+                >
+                  <View style={styles.installmentInfo}>
+                    <Text style={styles.installmentTitle}>
+                      {getInstallmentTitle(payment, index)}
+                    </Text>
+                    <Text style={[styles.installmentAmount, { color: '#4CAF50' }]}>
+                      € {payment.amount.toFixed(2)}
+                    </Text>
+                    {payment.paid_date && (
+                      <Text style={styles.installmentDue}>
+                        Pagato il: {formatDate(payment.paid_date)}
                       </Text>
-                      <Text style={[styles.installmentAmount, paid && { color: '#4CAF50' }]}>
-                        € {payment.amount.toFixed(2)}
-                      </Text>
-                      <Text style={[
-                        styles.installmentDue,
-                        overdue && !paid && styles.installmentDueOverdue
-                      ]}>
-                        Scadenza: {formatDate(payment.due_date)}
-                        {overdue && !paid && ' ⚠️ SCADUTA'}
-                      </Text>
-                    </View>
-                    <View style={styles.installmentStatus}>
-                      {paid ? (
-                        <>
-                          <Text style={styles.statusEmoji}>✅</Text>
-                          <Text style={[styles.statusLabel, { color: '#4CAF50' }]}>Pagata</Text>
-                        </>
-                      ) : overdue ? (
-                        <>
-                          <Text style={styles.statusEmoji}>⏰</Text>
-                          <Text style={[styles.statusLabel, { color: '#F44336' }]}>Scaduta</Text>
-                        </>
-                      ) : (
-                        <>
-                          <Text style={styles.statusEmoji}>⏳</Text>
-                          <Text style={[styles.statusLabel, { color: '#FF9800' }]}>Da pagare</Text>
-                        </>
-                      )}
-                    </View>
+                    )}
                   </View>
-                );
-              })
+                  <View style={styles.installmentStatus}>
+                    <Text style={styles.statusEmoji}>✅</Text>
+                    <Text style={[styles.statusLabel, { color: '#4CAF50' }]}>Pagata</Text>
+                  </View>
+                </View>
+              ))
             )}
           </View>
           
