@@ -580,7 +580,10 @@ export default function AdminCollaboratoreDetail() {
                 <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#f0f0f0' }}>
                   {selectedTeamIds.length > 0 && (
                     <View style={{ marginBottom: 12 }}>
-                      <Text style={styles.infoLabel}>🏐 Squadre:</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <SportIcon size={16} />
+                        <Text style={[styles.infoLabel, { marginLeft: 4 }]}>Squadre:</Text>
+                      </View>
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                         {selectedTeamIds.map((teamId) => {
                           const team = teams.find(t => t.id === teamId);
