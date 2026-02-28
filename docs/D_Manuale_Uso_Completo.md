@@ -24,7 +24,7 @@
 Dopo il login, vai in **Impostazioni** (icona ingranaggio):
 
 ### Dati Società
-- **Ragione Sociale**: nome ufficiale (es. "ASD Pallavolo Perugia")
+- **Ragione Sociale**: nome ufficiale (es. "ASD Sport Club Roma")
 - **Partita IVA / C.F. Società**: codice fiscale della società
 - **Indirizzo Sede**: via, città, CAP
 - **Telefono Società**
