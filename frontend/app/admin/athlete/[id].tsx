@@ -26,6 +26,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { downloadFiscalReceipt, ReceiptData } from '../../../src/utils/fiscalReceipt';
 import CodiceFiscale from 'codice-fiscale-js';
+import { SportIcon } from '../../../src/components/SportIcon';
 
 interface PaymentSummary {
   total_due: number;
