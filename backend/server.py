@@ -7088,17 +7088,26 @@ async def update_payment(payment_id: str, update_data: PaymentUpdate, current_us
 
 async def get_next_receipt_number(society_id: str) -> str:
     """Generate next receipt number for the current sports season: RIC-24/25-0001
-    Sports season runs from July 1st to June 30th (e.g., 2024/2025 = Jul 2024 - Jun 2025)
+    Sports season dates are configurable in society settings (default: July 1st - June 30th)
     """
     now = datetime.utcnow()
     
-    # Determine current sports season
-    # If we're in July-December, season is current_year/next_year
-    # If we're in January-June, season is previous_year/current_year
-    if now.month >= 7:  # July to December
+    # Get season start from society settings
+    settings = await db.settings.find_one({"type": "society"})
+    season_start_month = settings.get("season_start_month", 7) if settings else 7  # Default July
+    season_start_day = settings.get("season_start_day", 1) if settings else 1  # Default 1st
+    
+    # Determine current sports season based on configurable start date
+    # If we're past the season start date, season is current_year/next_year
+    # If we're before the season start date, season is previous_year/current_year
+    season_start_this_year = datetime(now.year, season_start_month, season_start_day)
+    
+    if now >= season_start_this_year:
+        # We're in the new season (current_year/next_year)
         season_start_year = now.year
         season_end_year = now.year + 1
-    else:  # January to June
+    else:
+        # We're still in the old season (previous_year/current_year)
         season_start_year = now.year - 1
         season_end_year = now.year
     
