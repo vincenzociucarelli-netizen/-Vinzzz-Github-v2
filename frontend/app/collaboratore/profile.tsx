@@ -111,6 +111,9 @@ export default function CollaboratoreProfile() {
   const [myDocuments, setMyDocuments] = useState<any[]>([]);
   const [showAllDocumentsModal, setShowAllDocumentsModal] = useState(false);
 
+  // Dirigenti state
+  const [dirigenti, setDirigenti] = useState<any[]>([]);
+
   const loadProfile = async () => {
     try {
       const response = await api.get('/auth/me');
