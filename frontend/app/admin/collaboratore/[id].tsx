@@ -1042,28 +1042,26 @@ export default function AdminCollaboratoreDetail() {
               </View>
             )}
             
-            {/* Month Icons Grid */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16, backgroundColor: '#f5f5f5', borderRadius: 10, padding: 8 }}>
-              {[
-                { name: 'Set', month: 9 }, { name: 'Ott', month: 10 }, { name: 'Nov', month: 11 }, { name: 'Dic', month: 12 },
-                { name: 'Gen', month: 1 }, { name: 'Feb', month: 2 }, { name: 'Mar', month: 3 }, { name: 'Apr', month: 4 },
-                { name: 'Mag', month: 5 }, { name: 'Giu', month: 6 }, { name: 'Lug', month: 7 }, { name: 'Ago', month: 8 }
-              ].map(({ name: monthName, month: monthNum }) => {
-                const isSigned = signedReceipts.some((r: any) => r.month === monthNum);
-                return (
-                  <View key={monthName} style={{ width: '25%', alignItems: 'center', paddingVertical: 6 }}>
-                    <View style={{ 
-                      width: 36, height: 36, borderRadius: 18, 
-                      backgroundColor: isSigned ? '#4CAF50' : '#e0e0e0',
-                      alignItems: 'center', justifyContent: 'center', marginBottom: 2
-                    }}>
-                      <Ionicons name={isSigned ? "checkmark" : "remove"} size={20} color={isSigned ? '#fff' : '#999'} />
+            {/* Month Icons Grid - Solo mesi del contratto */}
+            {contractMonths.length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16, backgroundColor: '#f5f5f5', borderRadius: 10, padding: 8 }}>
+                {contractMonths.map(({ name: monthName, month: monthNum, year }) => {
+                  const isSigned = signedReceipts.some((r: any) => r.month === monthNum && r.year === year);
+                  return (
+                    <View key={`${monthName}-${year}`} style={{ width: contractMonths.length <= 5 ? `${100/contractMonths.length}%` : '20%', alignItems: 'center', paddingVertical: 6 }}>
+                      <View style={{ 
+                        width: 36, height: 36, borderRadius: 18, 
+                        backgroundColor: isSigned ? '#4CAF50' : '#e0e0e0',
+                        alignItems: 'center', justifyContent: 'center', marginBottom: 2
+                      }}>
+                        <Ionicons name={isSigned ? "checkmark" : "remove"} size={20} color={isSigned ? '#fff' : '#999'} />
+                      </View>
+                      <Text style={{ fontSize: 11, color: isSigned ? '#4CAF50' : '#999', fontWeight: '600' }}>{monthName}</Text>
                     </View>
-                    <Text style={{ fontSize: 11, color: isSigned ? '#4CAF50' : '#999', fontWeight: '600' }}>{monthName}</Text>
-                  </View>
-                );
-              })}
-            </View>
+                  );
+                })}
+              </View>
+            )}
 
             <ScrollView style={{ maxHeight: 300 }}>
               {signedReceipts.map((receipt, index) => (
