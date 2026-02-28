@@ -2160,9 +2160,12 @@ export default function AthleteDetail() {
               {/* Squadra - sola lettura per genitori */}
               <Text style={styles.inputLabel}>Squadra</Text>
               <View style={[styles.pickerContainer, { backgroundColor: '#FFF5F5', borderColor: '#E53935', borderWidth: 1 }]}>
-                <Text style={{ padding: 15, color: '#E53935', fontSize: 16, fontWeight: '700' }}>
-                  🏐 {getTeamName(editData.team_id)}
-                </Text>
+                <View style={{ padding: 15, flexDirection: 'row', alignItems: 'center' }}>
+                  <SportIcon size={18} />
+                  <Text style={{ color: '#E53935', fontSize: 16, fontWeight: '700', marginLeft: 6 }}>
+                    {getTeamName(editData.team_id)}
+                  </Text>
+                </View>
               </View>
               <Text style={{ fontSize: 12, color: '#666', marginBottom: 16, marginTop: 4 }}>
                 Per cambiare squadra contattare la segreteria
