@@ -1822,7 +1822,10 @@ export default function AdminAthleteDetail() {
 
             {/* Squadra */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>🏐 Squadra</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <SportIcon size={20} />
+                <Text style={[styles.cardTitle, { marginLeft: 6 }]}>Squadra</Text>
+              </View>
               {editing ? (
                 <>
                   <Text style={styles.inputLabel}>Squadra Principale (per Quote e Codice)</Text>
