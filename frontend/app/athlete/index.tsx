@@ -18,6 +18,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
+import { SportIcon } from '../../src/components/SportIcon';
 
 const MONTH_NAMES = [
   '', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
