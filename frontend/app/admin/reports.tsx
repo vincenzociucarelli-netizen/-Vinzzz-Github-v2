@@ -119,7 +119,9 @@ export default function ReportsPage() {
     return `€ ${amount.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+  // Years: start from 2025, show current year + 3 more
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 4 }, (_, i) => 2025 + i);
 
   return (
     <ScrollView style={styles.container}>
