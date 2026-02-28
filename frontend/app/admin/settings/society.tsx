@@ -105,6 +105,8 @@ export default function SocietySettings() {
         email: societyEmail,
         pec: societyPec,
       });
+      // Clear the sport icon cache so all components reload the new image
+      clearSportIconCache();
       showAlert('Successo', 'Dati società salvati con successo');
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
