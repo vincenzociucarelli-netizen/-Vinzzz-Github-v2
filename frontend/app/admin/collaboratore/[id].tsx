@@ -104,6 +104,7 @@ export default function AdminCollaboratoreDetail() {
   
   // Quietanze firmate
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
+  const [quietanzeModalVisible, setQuietanzeModalVisible] = useState(false);
   
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
