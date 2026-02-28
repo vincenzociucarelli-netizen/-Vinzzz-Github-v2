@@ -266,8 +266,8 @@ export default function AthletePayments() {
             <View style={styles.sectionContent}>
               {paymentInfo.total_amount && paymentInfo.total_amount > 0 && (
                 <View style={styles.feeRow}>
-                  <Text style={styles.feeLabel}>Quota Totale:</Text>
-                  <Text style={styles.feeAmount}>€{paymentInfo.total_amount.toFixed(0)}</Text>
+                  <Text style={[styles.feeLabel, { fontSize: 16, fontWeight: '700' }]}>Quota Totale:</Text>
+                  <Text style={[styles.feeAmount, { fontSize: 18, fontWeight: '700' }]}>€{paymentInfo.total_amount.toFixed(0)}</Text>
                 </View>
               )}
               
@@ -286,8 +286,8 @@ export default function AthletePayments() {
                   </View>
                   {paymentInfo.installment_2_due_date && (
                     <View style={styles.feeRow}>
-                      <Text style={styles.feeLabel}>Scadenza 2ª Rata:</Text>
-                      <Text style={styles.feeAmount}>{formatDate(paymentInfo.installment_2_due_date)}</Text>
+                      <Text style={[styles.feeLabel, { color: '#888' }]}>Scadenza 2ª Rata:</Text>
+                      <Text style={[styles.feeAmount, { color: '#888' }]}>{formatDate(paymentInfo.installment_2_due_date)}</Text>
                     </View>
                   )}
                 </>
@@ -301,8 +301,8 @@ export default function AthletePayments() {
                   </View>
                   {paymentInfo.installment_3_due_date && (
                     <View style={styles.feeRow}>
-                      <Text style={styles.feeLabel}>Scadenza 3ª Rata:</Text>
-                      <Text style={styles.feeAmount}>{formatDate(paymentInfo.installment_3_due_date)}</Text>
+                      <Text style={[styles.feeLabel, { color: '#888' }]}>Scadenza 3ª Rata:</Text>
+                      <Text style={[styles.feeAmount, { color: '#888' }]}>{formatDate(paymentInfo.installment_3_due_date)}</Text>
                     </View>
                   )}
                 </>
