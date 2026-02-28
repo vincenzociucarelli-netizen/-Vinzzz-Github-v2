@@ -16,6 +16,7 @@ import { Ionicons } from '../../../src/components/Icon';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../../src/services/api';
+import { SportIcon } from '../../../src/components/SportIcon';
 
 interface TechnicalData {
   id: string;
