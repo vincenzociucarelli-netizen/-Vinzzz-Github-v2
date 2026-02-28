@@ -174,11 +174,6 @@
 
 ## 🎨 FUNZIONALITÀ AVANZATE
 
-### 🖼️ Trasformazione Foto AI
-- ✅ Ogni utente può trasformare la propria foto
-- ✅ Stile **schizzo a matita artistico**
-- ✅ Powered by OpenAI
-
 ### 📤 Import/Export Dati
 - ✅ **Import partite da Excel** con template
 - ✅ Sistema intelligente anti-duplicati
