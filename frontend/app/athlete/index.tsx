@@ -907,9 +907,19 @@ export default function AthleteScreen() {
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Squadra</Text>
-            <Text style={[styles.dataValue, { color: '#E53935', fontWeight: '700' }]}>
-              🏐 {profile?.team_name || 'Non assegnata'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {societySettings?.sport_image ? (
+                <Image 
+                  source={{ uri: `data:image/png;base64,${societySettings.sport_image}` }}
+                  style={{ width: 24, height: 24, marginRight: 6, resizeMode: 'contain' }}
+                />
+              ) : (
+                <Text style={{ marginRight: 4 }}>🏐</Text>
+              )}
+              <Text style={[styles.dataValue, { color: '#E53935', fontWeight: '700' }]}>
+                {profile?.team_name || 'Non assegnata'}
+              </Text>
+            </View>
           </View>
           
           {/* Coach Info for quota athletes */}
