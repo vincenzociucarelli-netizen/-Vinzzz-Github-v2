@@ -350,7 +350,7 @@ export default function Register() {
       </TouchableOpacity>
 
       <Text style={styles.formTitle}>
-        Registrazione {role === 'parent' ? 'Genitore' : role === 'coach' ? 'Coach' : role === 'athlete' ? 'Atleta Maggiorenne' : 'Dirigente'}
+        Registrazione {role === 'parent' ? 'Genitore' : role === 'coach' ? 'Coach' : role === 'athlete' ? 'Atleta Maggiorenne' : role === 'collaboratore' ? 'Collaboratore' : 'Dirigente'}
       </Text>
 
       {/* Invite code for all roles (inline) */}
