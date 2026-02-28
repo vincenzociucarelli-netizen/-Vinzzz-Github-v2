@@ -8200,6 +8200,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         "id": receipt_id,
         "document_type": doc_type,
         "document_title": doc_title,
+        "signer_id": coach_id,
         "coach_id": coach_id,
         "coach_name": coach.get('full_name', ''),
         "month": request.month,
