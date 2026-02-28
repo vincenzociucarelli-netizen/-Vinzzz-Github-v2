@@ -474,35 +474,20 @@ export default function TeamsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             {initialLoading ? (
-              // Loading state con immagine sport o icona generica
+              // Loading state con icona sport
               <>
-                {sportImage ? (
-                  <Image 
-                    source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
-                    style={{ width: 80, height: 80, borderRadius: 12, marginBottom: 8, opacity: 0.7 }}
-                    resizeMode="contain"
-                  />
-                ) : (
-                  <View style={{ width: 64, height: 64, marginBottom: 8, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 48, opacity: 0.7 }}>⏳</Text>
-                  </View>
-                )}
-                <Text style={styles.emptyText}>Caricamento...</Text>
+                <View style={{ marginBottom: 16, opacity: 0.7 }}>
+                  <SportIcon size={64} fallbackEmoji="⏳" />
+                </View>
+                <ActivityIndicator size="small" color="#007AFF" style={{ marginBottom: 8 }} />
+                <Text style={styles.emptyText}>Caricamento squadre...</Text>
               </>
             ) : (
               // Empty state - lista vuota dopo il caricamento
               <>
-                {sportImage ? (
-                  <Image 
-                    source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
-                    style={{ width: 80, height: 80, borderRadius: 12, marginBottom: 8 }}
-                    resizeMode="contain"
-                  />
-                ) : (
-                  <View style={{ width: 64, height: 64, marginBottom: 8, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 48 }}>📚</Text>
-                  </View>
-                )}
+                <View style={{ marginBottom: 8 }}>
+                  <SportIcon size={64} fallbackEmoji="📚" />
+                </View>
                 <Text style={styles.emptyText}>Nessuna squadra</Text>
                 <Text style={styles.emptySubtext}>Tocca + per creare una squadra</Text>
               </>
