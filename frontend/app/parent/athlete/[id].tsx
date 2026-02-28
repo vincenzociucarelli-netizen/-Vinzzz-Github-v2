@@ -1482,7 +1482,10 @@ export default function AthleteDetail() {
         {/* Team Schedule Card - Allenamenti e Gare Interne */}
         {teamSchedule && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🏐 Calendario Squadra</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <SportIcon size={20} />
+              <Text style={[styles.cardTitle, { marginLeft: 6 }]}>Calendario Squadra</Text>
+            </View>
             
             {/* Allenamenti */}
             {teamSchedule.training_sessions && teamSchedule.training_sessions.length > 0 && (
