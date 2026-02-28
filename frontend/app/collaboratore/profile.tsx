@@ -1222,17 +1222,17 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           onPress={() => setShowDirigentiModal(true)}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ backgroundColor: '#E3F2FD', padding: 10, borderRadius: 12, marginRight: 12 }}>
-              <Ionicons name="call" size={24} color="#1976D2" />
+            <View style={{ backgroundColor: '#FFEBEE', padding: 10, borderRadius: 12, marginRight: 12 }}>
+              <Ionicons name="call" size={24} color="#E53935" />
             </View>
             <View>
-              <Text style={[styles.cardTitle, { marginBottom: 2 }]}>Contatta Dirigenti</Text>
+              <Text style={[styles.cardTitle, { marginBottom: 2, color: '#E53935' }]}>Contatta Dirigenti</Text>
               <Text style={{ color: '#666', fontSize: 13 }}>
                 {dirigenti.length} {dirigenti.length === 1 ? 'dirigente' : 'dirigenti'} disponibili
               </Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={24} color="#007AFF" />
+          <Ionicons name="chevron-forward" size={24} color="#E53935" />
         </TouchableOpacity>
 
         {/* Documento e Dati Bancari */}
