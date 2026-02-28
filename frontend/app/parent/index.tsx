@@ -817,7 +817,7 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
                     data-testid={`accept-privacy-${athlete.id}`}
                   >
                     <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                    <Text style={styles.trialButtonText}>Confermo e Accetto Privacy</Text>
+                    <Text style={styles.trialButtonText}>Resta, Compila e Firma</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
@@ -827,7 +827,7 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
                     data-testid={`delete-data-${athlete.id}`}
                   >
                     <Ionicons name="trash-outline" size={20} color="#fff" />
-                    <Text style={styles.trialButtonText}>Non Resto, Cancella Dati</Text>
+                    <Text style={styles.trialButtonText}>Esci e Cancella</Text>
                   </TouchableOpacity>
                 </View>
               </View>
