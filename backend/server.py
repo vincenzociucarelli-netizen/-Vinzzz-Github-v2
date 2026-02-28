@@ -7066,6 +7066,10 @@ async def update_payment(payment_id: str, update_data: PaymentUpdate, current_us
             update_dict["paid_date"] = datetime.utcnow()
             if update_data.payment_method:
                 update_dict["payment_method"] = update_data.payment_method
+            # Generate receipt number only if not already assigned
+            if not payment.get("receipt_number"):
+                receipt_number = await get_next_receipt_number("")
+                update_dict["receipt_number"] = receipt_number
     
     if update_dict:
         await db.payments.update_one({"id": payment_id}, {"$set": update_dict})
