@@ -217,6 +217,14 @@ export default function CollaboratoreProfile() {
       } catch (err) {
         console.log('No documents found');
       }
+
+      // Load dirigenti for contact
+      try {
+        const dirigentiRes = await api.get('/users/dirigenti');
+        setDirigenti(dirigentiRes.data || []);
+      } catch (err) {
+        console.log('No dirigenti found');
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
