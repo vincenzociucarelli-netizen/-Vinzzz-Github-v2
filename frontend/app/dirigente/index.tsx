@@ -280,7 +280,10 @@ export default function DirigenteIndex() {
 
         {/* Teams Section with inline Athletes */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏐 Squadre ({teams.length})</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <SportIcon size={20} />
+            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Squadre ({teams.length})</Text>
+          </View>
           {teams.length === 0 ? (
             <View style={styles.emptyCard}>
               <Ionicons name="people-outline" size={48} color="#ccc" />
