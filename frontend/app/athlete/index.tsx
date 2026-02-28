@@ -249,13 +249,13 @@ export default function AthleteScreen() {
   const confirmCertUpload = async () => {
     if (!pendingCertBase64) return;
     
-    // Validate date
+    // Validate emission date
     const parts = certDateInput.split('/');
     if (parts.length !== 3 || parts[2].length !== 4) {
       if (Platform.OS === 'web') {
-        window.alert('Inserisci una data valida nel formato GG/MM/AAAA');
+        window.alert('Inserisci una data di emissione valida nel formato GG/MM/AAAA');
       } else {
-        Alert.alert('Errore', 'Inserisci una data valida nel formato GG/MM/AAAA');
+        Alert.alert('Errore', 'Inserisci una data di emissione valida nel formato GG/MM/AAAA');
       }
       return;
     }
@@ -266,20 +266,30 @@ export default function AthleteScreen() {
     
     if (day < 1 || day > 31 || month < 1 || month > 12 || year < 2020 || year > 2100) {
       if (Platform.OS === 'web') {
-        window.alert('Data non valida. Verifica giorno, mese e anno.');
+        window.alert('Data di emissione non valida. Verifica giorno, mese e anno.');
       } else {
-        Alert.alert('Errore', 'Data non valida. Verifica giorno, mese e anno.');
+        Alert.alert('Errore', 'Data di emissione non valida. Verifica giorno, mese e anno.');
       }
       return;
     }
     
-    const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    // Validate calculated expiry
+    if (!certCalculatedExpiry) {
+      if (Platform.OS === 'web') {
+        window.alert('Impossibile calcolare la data di scadenza');
+      }
+      return;
+    }
+    
+    // Use calculated expiry date
+    const expiryParts = certCalculatedExpiry.split('/');
+    const expiryIsoDate = `${expiryParts[2]}-${String(expiryParts[1]).padStart(2, '0')}-${String(expiryParts[0]).padStart(2, '0')}`;
     
     setUploadingCert(true);
     try {
       await api.post('/athletes/upload-medical-certificate', {
         certificate_base64: pendingCertBase64,
-        expiry_date: isoDate
+        expiry_date: expiryIsoDate
       });
       
       setCertDateModalVisible(false);
