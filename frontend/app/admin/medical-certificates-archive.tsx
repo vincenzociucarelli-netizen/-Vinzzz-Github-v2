@@ -329,6 +329,24 @@ export default function MedicalCertificatesArchiveScreen() {
                 </View>
 
                 {selectedCertificate.certificate_data && (
+                  <View style={styles.certificatePreview}>
+                    {selectedCertificate.certificate_data.includes('application/pdf') ? (
+                      <View style={styles.pdfPreview}>
+                        <Ionicons name="document" size={64} color="#FF3B30" />
+                        <Text style={styles.pdfPreviewText}>Documento PDF</Text>
+                        <Text style={styles.pdfPreviewHint}>Clicca scarica per visualizzare</Text>
+                      </View>
+                    ) : (
+                      <Image 
+                        source={{ uri: selectedCertificate.certificate_data }}
+                        style={styles.certificateImage}
+                        resizeMode="contain"
+                      />
+                    )}
+                  </View>
+                )}
+
+                {selectedCertificate.certificate_data && (
                   <TouchableOpacity 
                     style={styles.downloadButton}
                     onPress={handleDownloadCertificate}
