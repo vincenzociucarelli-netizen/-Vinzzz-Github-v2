@@ -2083,6 +2083,10 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
         update_dict["pec"] = data.pec
     if data.pro_enabled is not None:
         update_dict["pro_enabled"] = data.pro_enabled
+    if data.season_start_month is not None:
+        update_dict["season_start_month"] = data.season_start_month
+    if data.season_start_day is not None:
+        update_dict["season_start_day"] = data.season_start_day
     
     if update_dict:
         await db.settings.update_one(
