@@ -306,8 +306,16 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
       // Check if parent account was also deleted
       if (response.data.parent_deleted) {
         // Clear token and redirect to login
-        await AsyncStorage.removeItem('token');
+        try {
+          await AsyncStorage.removeItem('token');
+        } catch (e) {
+          console.log('Error removing token:', e);
+        }
         if (Platform.OS === 'web') {
+          // Also clear localStorage
+          try {
+            localStorage.removeItem('token');
+          } catch (e) {}
           window.alert('Account eliminato. Verrai reindirizzato alla pagina di login.');
           window.location.href = '/login';
         } else {
