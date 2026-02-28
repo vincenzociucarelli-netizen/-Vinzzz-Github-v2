@@ -6048,9 +6048,11 @@ async def upload_certificate(
     pdf_data = await file.read()
     pdf_base64 = base64.b64encode(pdf_data).decode()
     
-    # Calculate expiry date
+    # Calculate expiry date: issue_date + validity_months - 1 day
     issue_dt = datetime.fromisoformat(issue_date)
-    expiry_dt = issue_dt + timedelta(days=validity_months * 30)
+    # Add months properly using relativedelta, then subtract 1 day
+    from dateutil.relativedelta import relativedelta
+    expiry_dt = issue_dt + relativedelta(months=validity_months) - timedelta(days=1)
     
     # Delete old certificate if exists
     await db.certificates.delete_many({"athlete_id": athlete_id})
