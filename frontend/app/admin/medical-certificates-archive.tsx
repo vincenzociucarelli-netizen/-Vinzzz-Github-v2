@@ -147,7 +147,7 @@ export default function MedicalCertificatesArchiveScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#FF5722" /></View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Archivio Certificati Medici</Text>
         <View style={{ width: 24 }} />

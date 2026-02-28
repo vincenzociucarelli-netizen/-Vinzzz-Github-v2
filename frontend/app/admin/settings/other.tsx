@@ -150,7 +150,7 @@ export default function OtherSettings() {
           onPress={() => router.back()} 
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Altre Impostazioni</Text>
         <View style={{ width: 40 }} />
