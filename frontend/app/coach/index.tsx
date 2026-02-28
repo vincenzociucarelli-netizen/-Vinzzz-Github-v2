@@ -1138,7 +1138,10 @@ export default function CoachScreen() {
 
         {/* Teams List */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏐 Squadre Assegnate</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <SportIcon size={20} />
+            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Squadre Assegnate</Text>
+          </View>
           {teams.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="football-outline" size={48} color="#ccc" />
