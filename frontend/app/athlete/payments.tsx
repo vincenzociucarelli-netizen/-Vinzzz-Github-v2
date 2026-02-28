@@ -379,10 +379,11 @@ export default function AthletePayments() {
             )}
           </View>
           
-          {/* Residuo Dovuto - Calcolo corretto: quota totale - pagato */}
+          {/* Residuo Dovuto - Calcolo corretto: quota totale - sconto - pagato */}
           {(() => {
             const quotaTotale = paymentInfo?.total_amount || 0;
-            const residuo = quotaTotale - totalPaid;
+            const scontoApplicato = discount || 0;
+            const residuo = quotaTotale - scontoApplicato - totalPaid;
             return residuo > 0 ? (
               <View style={styles.residueRow}>
                 <Text style={styles.residueLabel}>Residuo Dovuto</Text>
