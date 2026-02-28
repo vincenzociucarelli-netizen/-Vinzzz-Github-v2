@@ -487,7 +487,7 @@ export default function ImportCalendarScreen() {
 
       <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.buttonSecondary} onPress={() => setStep(1)}>
-          <Ionicons name="arrow-back" size={20} color="#007AFF" />
+          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={20} color="#007AFF" /></View>
           <Text style={styles.buttonSecondaryText}>Indietro</Text>
         </TouchableOpacity>
         
@@ -685,7 +685,7 @@ export default function ImportCalendarScreen() {
 
       <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.buttonSecondary} onPress={() => setStep(2)}>
-          <Ionicons name="arrow-back" size={20} color="#007AFF" />
+          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={20} color="#007AFF" /></View>
           <Text style={styles.buttonSecondaryText}>Indietro</Text>
         </TouchableOpacity>
         
