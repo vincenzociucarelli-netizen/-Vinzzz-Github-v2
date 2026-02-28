@@ -12,12 +12,14 @@ import {
   Platform,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import { Team } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
+import { SportIcon } from '../../src/components/SportIcon';
 
 export default function TeamsScreen() {
   const router = useRouter();
