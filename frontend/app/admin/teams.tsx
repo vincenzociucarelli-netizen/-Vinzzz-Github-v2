@@ -26,6 +26,7 @@ export default function TeamsScreen() {
   const [athletesCounts, setAthletesCounts] = useState<{[key: string]: number}>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [sportImage, setSportImage] = useState<string | null>(null);
   
   // Form fields
