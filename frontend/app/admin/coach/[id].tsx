@@ -20,6 +20,7 @@ import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { SportIcon } from '../../../src/components/SportIcon';
 
 interface Coach {
   id: string;
