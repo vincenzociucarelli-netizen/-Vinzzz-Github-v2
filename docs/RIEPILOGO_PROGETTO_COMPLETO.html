@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RegistraTEAM - Riepilogo Completo del Progetto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f8f9fa;
+        }
+        
+        .container {
+            background: white;
+            padding: 50px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #E53935;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+            border-bottom: 3px solid #E53935;
+            padding-bottom: 20px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .meta-info {
+            background: #f1f3f4;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+        
+        .meta-item {
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .meta-label {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .meta-value {
+            font-weight: bold;
+            color: #E53935;
+            font-size: 1.1em;
+        }
+        
+        h2 {
+            color: #1976D2;
+            font-size: 1.6em;
+            margin: 40px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #E3F2FD;
+        }
+        
+        h3 {
+            color: #333;
+            font-size: 1.3em;
+            margin: 25px 0 15px 0;
+        }
+        
+        h4 {
+            color: #555;
+            font-size: 1.1em;
+            margin: 20px 0 10px 0;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        ul, ol {
+            margin: 15px 0 15px 25px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .check-item {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .check-item li {
+            padding-left: 30px;
+            position: relative;
+        }
+        
+        .check-item li::before {
+            content: "✅";
+            position: absolute;
+            left: 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+        }
+        
+        th {
+            background: #E53935;
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        tr:hover {
+            background: #FFF3E0;
+        }
+        
+        .role-card {
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+            border-left: 4px solid #E53935;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .role-card h4 {
+            color: #E53935;
+            margin-top: 0;
+        }
+        
+        .role-card ul {
+            margin-bottom: 0;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .feature-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .feature-box h4 {
+            color: #1976D2;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #E3F2FD;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+            padding: 25px;
+            border-radius: 10px;
+            margin: 25px 0;
+        }
+        
+        .highlight-box h3 {
+            color: #1565C0;
+            margin-top: 0;
+        }
+        
+        .warning-box {
+            background: #FFF3E0;
+            border-left: 4px solid #FF9800;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .success-box {
+            background: #E8F5E9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .code-block {
+            background: #263238;
+            color: #ECEFF1;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        
+        .badge-success {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .badge-warning {
+            background: #FF9800;
+            color: white;
+        }
+        
+        .badge-info {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .timeline {
+            border-left: 3px solid #E53935;
+            padding-left: 25px;
+            margin: 20px 0;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-bottom: 25px;
+        }
+        
+        .timeline-item::before {
+            content: "";
+            position: absolute;
+            left: -32px;
+            top: 5px;
+            width: 14px;
+            height: 14px;
+            background: #E53935;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #E53935;
+        }
+        
+        .timeline-item h4 {
+            color: #E53935;
+            margin: 0 0 10px 0;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 2px solid #eee;
+            color: #666;
+        }
+        
+        footer p {
+            text-align: center;
+        }
+        
+        .logo-placeholder {
+            text-align: center;
+            font-size: 4em;
+            margin-bottom: 10px;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 20px;
+            }
+            h2 {
+                page-break-after: avoid;
+            }
+            .role-card, .feature-box {
+                page-break-inside: avoid;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            .meta-info {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-placeholder">🏐</div>
+        <h1>RegistraTEAM</h1>
+        <p class="subtitle">Riepilogo Completo del Progetto</p>
+        
+        <div class="meta-info">
+            <div class="meta-item">
+                <div class="meta-label">Data Documento</div>
+                <div class="meta-value">28 Febbraio 2026</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Periodo Sviluppo</div>
+                <div class="meta-value">~15 giorni</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Stato</div>
+                <div class="meta-value">✅ Pronto per Pubblicazione</div>
+            </div>
+        </div>
+
+        <!-- SEZIONE 1: PANORAMICA -->
+        <h2>1. Panoramica dell'Applicazione</h2>
+        
+        <p><strong>RegistraTEAM</strong> è un'applicazione completa per la gestione di associazioni sportive dilettantistiche (ASD), con focus iniziale sulla pallavolo ma adattabile a qualsiasi sport.</p>
+        
+        <div class="highlight-box">
+            <h3>🎯 Piattaforme Supportate</h3>
+            <ul>
+                <li>📱 <strong>iOS</strong> - App nativa per iPhone e iPad</li>
+                <li>📱 <strong>Android</strong> - App nativa per smartphone e tablet</li>
+                <li>💻 <strong>Web</strong> - Versione browser completa</li>
+            </ul>
+        </div>
+        
+        <h3>Stack Tecnologico</h3>
+        <table>
+            <tr>
+                <th>Componente</th>
+                <th>Tecnologia</th>
+            </tr>
+            <tr>
+                <td>Frontend</td>
+                <td>React Native + Expo Router</td>
+            </tr>
+            <tr>
+                <td>Backend</td>
+                <td>FastAPI (Python)</td>
+            </tr>
+            <tr>
+                <td>Database</td>
+                <td>MongoDB</td>
+            </tr>
+            <tr>
+                <td>Autenticazione</td>
+                <td>JWT Token</td>
+            </tr>
+            <tr>
+                <td>Email</td>
+                <td>Brevo/Sendinblue</td>
+            </tr>
+            <tr>
+                <td>PDF</td>
+                <td>ReportLab</td>
+            </tr>
+        </table>
+
+        <!-- SEZIONE 2: RUOLI UTENTE -->
+        <h2>2. Ruoli Utente Implementati</h2>
+        
+        <div class="role-card">
+            <h4>👑 Amministratore (Admin)</h4>
+            <ul>
+                <li>Gestione completa società (logo, dati, impostazioni)</li>
+                <li>Approvazione/rifiuto richieste iscrizione</li>
+                <li>Gestione squadre e assegnazione atleti</li>
+                <li>Gestione allenatori e dirigenti</li>
+                <li>Importazione calendario gare da FIPAV</li>
+                <li>Registrazione pagamenti atleti</li>
+                <li>Archivio certificati medici (5 anni per compliance ASD)</li>
+                <li>Statistiche e report</li>
+            </ul>
+        </div>
+        
+        <div class="role-card">
+            <h4>👔 Dirigente</h4>
+            <ul>
+                <li>Visualizzazione squadre e atleti</li>
+                <li>Accesso statistiche presenze</li>
+                <li>Profilo personale con compensi sportivi</li>
+                <li>Contatto diretto WhatsApp con genitori/coach</li>
+            </ul>
+        </div>
+        
+        <div class="role-card">
+            <h4>🏋️ Allenatore (Coach)</h4>
+            <ul>
+                <li>Scanner QR Code per presenze</li>
+                <li>Calendario allenamenti e gare (prossimi 3 giorni)</li>
+                <li>Gestione squadre assegnate</li>
+                <li>Storico presenze registrate</li>
+                <li>Profilo personale con dati bancari</li>
+            </ul>
+        </div>
+        
+        <div class="role-card">
+            <h4>👨‍👩‍👧 Genitore</h4>
+            <ul>
+                <li>Registrazione figli (atleti minorenni)</li>
+                <li>Calendario impegni figli</li>
+                <li>Upload certificato medico</li>
+                <li>Visualizzazione QR Code atleta</li>
+                <li>Firma privacy e consensi GDPR</li>
+                <li>Visualizzazione pagamenti e ricevute</li>
+            </ul>
+        </div>
+        
+        <div class="role-card">
+            <h4>🏃 Atleta Maggiorenne</h4>
+            <ul>
+                <li>Dashboard personale completa</li>
+                <li>Calendario allenamenti e gare</li>
+                <li>Gestione certificato medico</li>
+                <li>QR Code per presenze</li>
+                <li>Storico presenze e statistiche</li>
+                <li>Pagamenti e ricevute scaricabili</li>
+            </ul>
+        </div>
+        
+        <div class="role-card">
+            <h4>👶 Atleta Minorenne</h4>
+            <ul>
+                <li>Gestito interamente dal genitore</li>
+                <li>QR Code per presenze</li>
+                <li>Certificato medico caricato dal genitore</li>
+            </ul>
+        </div>
+
+        <!-- SEZIONE 3: FUNZIONALITÀ -->
+        <h2>3. Funzionalità Implementate</h2>
+        
+        <div class="feature-grid">
+            <div class="feature-box">
+                <h4>🔐 Autenticazione</h4>
+                <ul class="check-item">
+                    <li>Registrazione con codice invito</li>
+                    <li>Login con email/password</li>
+                    <li>Recupero password via email</li>
+                    <li>Token JWT sicuri</li>
+                    <li>Sistema doppia password</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box">
+                <h4>📋 Certificati Medici</h4>
+                <ul class="check-item">
+                    <li>Upload con data scadenza</li>
+                    <li>Calcolo automatico scadenza</li>
+                    <li>Alert 7 giorni prima</li>
+                    <li>Archivio storico 5 anni</li>
+                    <li>Semaforo visivo</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box">
+                <h4>📅 Calendario</h4>
+                <ul class="check-item">
+                    <li>Import da FIPAV</li>
+                    <li>Import da Excel</li>
+                    <li>Vista 3 giorni espandibile</li>
+                    <li>Dettagli completi gare</li>
+                    <li>Indicatore casa/trasferta</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box">
+                <h4>📱 Presenze QR</h4>
+                <ul class="check-item">
+                    <li>Scanner QR Code</li>
+                    <li>Inserimento manuale</li>
+                    <li>Feedback colorato immediato</li>
+                    <li>Storico presenze</li>
+                    <li>Statistiche mensili</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box">
+                <h4>💰 Pagamenti</h4>
+                <ul class="check-item">
+                    <li>Quote con rate personalizzabili</li>
+                    <li>Sconti per rata</li>
+                    <li>Calcolo residuo automatico</li>
+                    <li>Ricevuta scaricabile A4</li>
+                    <li>Condivisione mobile</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box">
+                <h4>📄 Documenti</h4>
+                <ul class="check-item">
+                    <li>Privacy con firma digitale</li>
+                    <li>Consensi GDPR</li>
+                    <li>Firma su canvas touch</li>
+                    <li>Documenti identità</li>
+                    <li>Storico firmati</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- SEZIONE 4: ARCHITETTURA -->
+        <h2>4. Architettura Tecnica</h2>
+        
+        <h3>Struttura Directory</h3>
+        <div class="code-block">
+/app
+├── backend/
+│   ├── server.py          # API principale FastAPI
+│   ├── requirements.txt   # Dipendenze Python
+│   └── .env               # Variabili ambiente
+├── frontend/
+│   ├── app/               # Pagine (Expo Router)
+│   │   ├── admin/         # Area amministratore
+│   │   ├── athlete/       # Area atleta maggiorenne
+│   │   ├── coach/         # Area allenatore
+│   │   ├── dirigente/     # Area dirigente
+│   │   └── parent/        # Area genitore
+│   └── src/
+│       ├── components/    # Componenti riutilizzabili
+│       ├── services/      # API client
+│       └── utils/         # Utility functions
+└── docs/                  # Documentazione
+        </div>
+        
+        <h3>API Endpoints Principali</h3>
+        <table>
+            <tr>
+                <th>Metodo</th>
+                <th>Endpoint</th>
+                <th>Descrizione</th>
+            </tr>
+            <tr>
+                <td><span class="badge badge-success">POST</span></td>
+                <td>/api/auth/login</td>
+                <td>Login utente</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-success">POST</span></td>
+                <td>/api/auth/register</td>
+                <td>Registrazione</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>/api/stats/overview</td>
+                <td>Statistiche admin</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>/api/teams</td>
+                <td>Lista squadre</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-success">POST</span></td>
+                <td>/api/attendance/check</td>
+                <td>Check-in QR</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>/api/certificates/expiring</td>
+                <td>Certificati in scadenza</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-success">POST</span></td>
+                <td>/api/payments</td>
+                <td>Registra pagamento</td>
+            </tr>
+        </table>
+
+        <!-- SEZIONE 5: CREDENZIALI -->
+        <h2>5. Credenziali di Test</h2>
+        
+        <div class="warning-box">
+            <strong>⚠️ Solo per ambiente di test!</strong> Queste credenziali sono valide solo nell'ambiente di sviluppo.
+        </div>
+        
+        <table>
+            <tr>
+                <th>Ruolo</th>
+                <th>Email</th>
+                <th>Password</th>
+            </tr>
+            <tr>
+                <td>👑 Admin</td>
+                <td>test.admin@test.com</td>
+                <td>Test1234</td>
+            </tr>
+            <tr>
+                <td>🏃 Atleta (Lisa)</td>
+                <td>lisa@test.com</td>
+                <td>Test1234</td>
+            </tr>
+            <tr>
+                <td>🏃 Atleta (Genny)</td>
+                <td>genny@test.com</td>
+                <td>Test1234</td>
+            </tr>
+            <tr>
+                <td>🏋️ Coach</td>
+                <td>coach@test.com</td>
+                <td>Test1234</td>
+            </tr>
+            <tr>
+                <td>👨‍👩‍👧 Genitore</td>
+                <td>genitore.test@test.com</td>
+                <td>Test1234</td>
+            </tr>
+        </table>
+
+        <!-- SEZIONE 6: BUSINESS MODEL -->
+        <h2>6. Modello di Business</h2>
+        
+        <div class="highlight-box">
+            <h3>💰 Piano Freemium</h3>
+            <table>
+                <tr>
+                    <th>Piano</th>
+                    <th>Limite</th>
+                    <th>Prezzo</th>
+                </tr>
+                <tr>
+                    <td><strong>FREE</strong></td>
+                    <td>Fino a 30 tesserati</td>
+                    <td>Gratuito</td>
+                </tr>
+                <tr>
+                    <td><strong>PRO</strong></td>
+                    <td>Illimitati</td>
+                    <td>Da definire</td>
+                </tr>
+            </table>
+        </div>
+        
+        <h3>Vantaggi per le Società</h3>
+        <ul>
+            <li>⏱️ <strong>Risparmio tempo</strong> - Presenze in 2 secondi con QR</li>
+            <li>📋 <strong>Organizzazione</strong> - Tutto centralizzato in un'app</li>
+            <li>🔒 <strong>Conformità</strong> - GDPR e normativa ASD</li>
+            <li>💰 <strong>Zero costi hardware</strong> - Funziona su smartphone esistenti</li>
+        </ul>
+
+        <!-- SEZIONE 7: PUBBLICAZIONE -->
+        <h2>7. Note per la Pubblicazione</h2>
+        
+        <h3>Pre-requisiti App Store</h3>
+        <ul>
+            <li>☐ Privacy Policy pubblica</li>
+            <li>☐ Terms of Service</li>
+            <li>☐ Screenshot per store</li>
+            <li>☐ Icona app (1024x1024)</li>
+            <li>☐ Descrizione app</li>
+            <li>☐ Categoria: Sport / Utility</li>
+        </ul>
+        
+        <div class="success-box">
+            <strong>✅ Checklist Tecnica Completata</strong>
+            <ul>
+                <li>Tutte le API funzionanti</li>
+                <li>Gestione errori robusta</li>
+                <li>Loading states implementati</li>
+                <li>Responsive design</li>
+            </ul>
+        </div>
+
+        <!-- SEZIONE 8: CRONOLOGIA -->
+        <h2>8. Cronologia Sviluppo</h2>
+        
+        <div class="timeline">
+            <div class="timeline-item">
+                <h4>Settimana 1</h4>
+                <p>Setup progetto iniziale, implementazione autenticazione, struttura multi-ruolo, dashboard base.</p>
+            </div>
+            <div class="timeline-item">
+                <h4>Settimana 2</h4>
+                <p>Sistema presenze QR, gestione certificati medici, calendario allenamenti/gare, import FIPAV.</p>
+            </div>
+            <div class="timeline-item">
+                <h4>Settimana 3 (Ultima)</h4>
+                <p>Sistema pagamenti completo, ricevute e attestati, archivio certificati 5 anni, UI/UX refinements, documentazione completa, bug fixes finali.</p>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer>
+            <p><strong>RegistraTEAM</strong> - Versione 1.0.0</p>
+            <p>Sviluppato con Emergent AI Platform</p>
+            <p style="margin-top: 20px; font-style: italic; color: #999;">
+                "Semplifica la gestione, concentrati sullo sport!" 🏐
+            </p>
+            <p style="margin-top: 20px; font-size: 0.85em; color: #aaa;">
+                Documento generato il 28/02/2026
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
