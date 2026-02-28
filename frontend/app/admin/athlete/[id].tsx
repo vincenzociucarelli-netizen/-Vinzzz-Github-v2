@@ -2234,7 +2234,10 @@ export default function AdminAthleteDetail() {
 
             {/* Squadra e Certificato */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>🏐 Squadra</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <SportIcon size={20} />
+                <Text style={[styles.cardTitle, { marginLeft: 6 }]}>Squadra</Text>
+              </View>
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Squadra</Text>
                 <Text style={styles.value}>{team?.name || '-'}</Text>
