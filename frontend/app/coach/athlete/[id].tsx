@@ -369,7 +369,10 @@ export default function CoachAthleteDetail() {
 
         {/* Role Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏐 Ruolo</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <SportIcon size={20} />
+            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Ruolo</Text>
+          </View>
           {settings.athlete_roles.length > 0 ? (
             <View style={styles.pickerContainer}>
               <Picker
