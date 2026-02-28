@@ -339,7 +339,7 @@ export default function AthletePayments() {
                 >
                   <View style={styles.installmentInfo}>
                     <Text style={styles.installmentTitle}>
-                      {getInstallmentTitle(payment, index)}
+                      Rata {index + 1}
                     </Text>
                     <Text style={[styles.installmentAmount, { color: '#4CAF50' }]}>
                       € {payment.amount.toFixed(2)}
@@ -359,13 +359,17 @@ export default function AthletePayments() {
             )}
           </View>
           
-          {/* Residuo Dovuto */}
-          {totalDue > 0 && (
-            <View style={styles.residueRow}>
-              <Text style={styles.residueLabel}>Residuo Dovuto</Text>
-              <Text style={styles.residueAmount}>€ {totalDue.toFixed(2)}</Text>
-            </View>
-          )}
+          {/* Residuo Dovuto - Calcolo corretto: quota totale - pagato */}
+          {(() => {
+            const quotaTotale = paymentInfo?.total_amount || 0;
+            const residuo = quotaTotale - totalPaid;
+            return residuo > 0 ? (
+              <View style={styles.residueRow}>
+                <Text style={styles.residueLabel}>Residuo Dovuto</Text>
+                <Text style={styles.residueAmount}>€ {residuo.toFixed(2)}</Text>
+              </View>
+            ) : null;
+          })()}
         </View>
 
         {/* Modalità di pagamento */}
