@@ -160,7 +160,10 @@ export default function OtherSettings() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Ruoli Atleti */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏐 Ruoli Atleti</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <SportIcon size={20} />
+            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Ruoli Atleti</Text>
+          </View>
           <Text style={styles.sectionDesc}>
             Definisci i ruoli per il tuo sport (es: Palleggiatore, Centrale, Schiacciatore)
           </Text>
