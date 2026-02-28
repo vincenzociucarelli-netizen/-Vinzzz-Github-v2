@@ -2026,7 +2026,9 @@ async def get_society_settings():
         "stamp_signature": settings.get("stamp_signature"),
         "email": settings.get("email"),
         "pec": settings.get("pec"),
-        "pro_enabled": settings.get("pro_enabled", False)
+        "pro_enabled": settings.get("pro_enabled", False),
+        "season_start_month": settings.get("season_start_month", 7),
+        "season_start_day": settings.get("season_start_day", 1)
     }
 
 @api_router.patch("/settings/society")
