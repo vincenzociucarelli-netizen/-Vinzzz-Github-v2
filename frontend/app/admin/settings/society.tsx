@@ -246,7 +246,10 @@ export default function SocietySettings() {
 
         {/* Immagine Sport */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏐 Immagine Sport</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <SportIcon size={20} />
+            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Immagine Sport</Text>
+          </View>
           <Text style={styles.sectionDesc}>
             Carica un'immagine che rappresenta il tuo sport
           </Text>
