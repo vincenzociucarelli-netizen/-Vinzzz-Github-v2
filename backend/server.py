@@ -12061,37 +12061,37 @@ async def get_monthly_compensation_summary(
     
     # Count receipts by type
     coach_count = await db.coach_compensations.count_documents({
-        "year": year, "month": month, "received": True
+        "year": year, "month": month, "receipt_signed": True
     })
     
     dirigente_count = await db.dirigente_compensations.count_documents({
-        "year": year, "month": month, "received": True
+        "year": year, "month": month, "receipt_signed": True
+    })
+    
+    collaboratore_count = await db.collaboratore_compensations.count_documents({
+        "year": year, "month": month, "receipt_signed": True
     })
     
     athlete_count = await db.athlete_compensation_receipts.count_documents({
         "year": year, "month": month_name, "signed": True
     })
     
-    atleta_pro_count = await db.atleta_pro_compensations.count_documents({
-        "year": year, "month": month, "received": True
-    })
-    
     # Calculate totals
     coach_total = 0
-    async for comp in db.coach_compensations.find({"year": year, "month": month, "received": True}):
+    async for comp in db.coach_compensations.find({"year": year, "month": month, "receipt_signed": True}):
         coach_total += comp.get("amount_gross", comp.get("amount", 0))
     
     dirigente_total = 0
-    async for comp in db.dirigente_compensations.find({"year": year, "month": month, "received": True}):
+    async for comp in db.dirigente_compensations.find({"year": year, "month": month, "receipt_signed": True}):
         dirigente_total += comp.get("amount_gross", comp.get("amount", 0))
+    
+    collaboratore_total = 0
+    async for comp in db.collaboratore_compensations.find({"year": year, "month": month, "receipt_signed": True}):
+        collaboratore_total += comp.get("amount_gross", comp.get("amount", 0))
     
     athlete_total = 0
     async for receipt in db.athlete_compensation_receipts.find({"year": year, "month": month_name, "signed": True}):
         athlete_total += receipt.get("amount", 0)
-    
-    atleta_pro_total = 0
-    async for comp in db.atleta_pro_compensations.find({"year": year, "month": month, "received": True}):
-        atleta_pro_total += comp.get("amount_gross", comp.get("amount", 0))
     
     return {
         "year": year,
@@ -12100,11 +12100,11 @@ async def get_monthly_compensation_summary(
         "breakdown": {
             "coach": {"count": coach_count, "total": coach_total},
             "dirigente": {"count": dirigente_count, "total": dirigente_total},
-            "atleta": {"count": athlete_count, "total": athlete_total},
-            "atleta_pro": {"count": atleta_pro_count, "total": atleta_pro_total}
+            "collaboratore": {"count": collaboratore_count, "total": collaboratore_total},
+            "atleta": {"count": athlete_count, "total": athlete_total}
         },
-        "total_count": coach_count + dirigente_count + athlete_count + atleta_pro_count,
-        "total_amount": coach_total + dirigente_total + athlete_total + atleta_pro_total
+        "total_count": coach_count + dirigente_count + collaboratore_count + athlete_count,
+        "total_amount": coach_total + dirigente_total + collaboratore_total + athlete_total
     }
 
 
