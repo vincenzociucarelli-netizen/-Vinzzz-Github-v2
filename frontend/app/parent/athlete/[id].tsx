@@ -26,6 +26,7 @@ import { Athlete, Certificate, Payment, PaymentSettings, Team } from '../../../s
 import { format, differenceInDays, addMonths, subDays } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuthStore } from '../../../src/store/authStore';
+import { SportIcon } from '../../../src/components/SportIcon';
 
 export default function AthleteDetail() {
   const router = useRouter();
