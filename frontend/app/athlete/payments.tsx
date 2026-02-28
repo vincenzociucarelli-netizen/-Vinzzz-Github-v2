@@ -310,8 +310,14 @@ export default function AthletePayments() {
               {paymentInfo.installment_3_amount && paymentInfo.installment_3_amount > 0 && (
                 <>
                   <View style={styles.feeRow}>
-                    <Text style={styles.feeLabel}>3ª Rata:</Text>
-                    <Text style={styles.feeAmount}>€{paymentInfo.installment_3_amount.toFixed(0)}</Text>
+                    <Text style={styles.feeLabel}>
+                      3ª Rata{discount > 0 ? ' (con sconto)' : ''}:
+                    </Text>
+                    <Text style={styles.feeAmount}>
+                      €{discount > 0 
+                        ? (paymentInfo.installment_3_amount - discount).toFixed(0)
+                        : paymentInfo.installment_3_amount.toFixed(0)}
+                    </Text>
                   </View>
                   {paymentInfo.installment_3_due_date && (
                     <View style={styles.feeRow}>
