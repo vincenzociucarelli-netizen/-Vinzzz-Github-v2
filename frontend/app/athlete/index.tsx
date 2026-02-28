@@ -324,7 +324,7 @@ export default function AthleteScreen() {
     setShowCertViewer(true);
   };
 
-  // Print certificate
+  // Print certificate - downloads the file for printing
   const handlePrintCertificate = () => {
     if (!profile?.medical_certificate_url) {
       if (Platform.OS === 'web') {
@@ -339,105 +339,35 @@ export default function AthleteScreen() {
         const mimeMatch = header.match(/data:([^;]+)/);
         const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
         
-        if (mimeType.startsWith('image/')) {
-          // For images: create a printable page with ONLY the image
-          const printContent = `
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <title>Certificato Medico - ${profile.full_name || 'Atleta'}</title>
-                <style>
-                  * { margin: 0; padding: 0; box-sizing: border-box; }
-                  html, body { 
-                    width: 100%; 
-                    height: 100%; 
-                    background: #fff;
-                  }
-                  body { 
-                    display: flex; 
-                    justify-content: center; 
-                    align-items: center;
-                  }
-                  img { 
-                    max-width: 100%; 
-                    max-height: 100vh; 
-                    object-fit: contain;
-                  }
-                  @media print { 
-                    @page { margin: 0; }
-                    html, body { 
-                      width: 100%; 
-                      height: 100%;
-                      margin: 0;
-                      padding: 0;
-                    }
-                    img { 
-                      width: 100%; 
-                      height: auto; 
-                      max-height: 100vh;
-                      page-break-inside: avoid;
-                    } 
-                  }
-                </style>
-              </head>
-              <body>
-                <img id="printImg" src="${profile.medical_certificate_url}" />
-                <script>
-                  var img = document.getElementById('printImg');
-                  function doPrint() {
-                    setTimeout(function() {
-                      window.print();
-                    }, 300);
-                  }
-                  img.onload = doPrint;
-                  if (img.complete) doPrint();
-                </script>
-              </body>
-            </html>
-          `;
-          
-          const printWindow = window.open('', '_blank', 'width=800,height=600');
-          if (printWindow) {
-            printWindow.document.write(printContent);
-            printWindow.document.close();
-          } else {
-            // Fallback: download the image instead
-            const link = document.createElement('a');
-            link.href = profile.medical_certificate_url;
-            link.download = `certificato_medico_${profile.full_name?.replace(/\s+/g, '_') || 'atleta'}.jpg`;
-            link.click();
-            window.alert('Popup bloccato. Il certificato è stato scaricato. Puoi stamparlo dal file.');
-          }
-        } else {
-          // For PDF: convert to blob and open
-          const byteCharacters = atob(base64Data);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], { type: mimeType });
-          const blobUrl = window.URL.createObjectURL(blob);
-          
-          const printWindow = window.open(blobUrl, '_blank');
-          if (printWindow) {
-            printWindow.onload = () => {
-              setTimeout(() => {
-                printWindow.print();
-              }, 300);
-            };
-          } else {
-            // Fallback: download the PDF
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = `certificato_medico_${profile.full_name?.replace(/\s+/g, '_') || 'atleta'}.pdf`;
-            link.click();
-            window.alert('Popup bloccato. Il certificato è stato scaricato. Puoi stamparlo dal file.');
-          }
+        // Convert base64 to blob
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        // Get file extension
+        const ext = mimeType.startsWith('image/') ? (mimeType.split('/')[1] || 'jpg') : 'pdf';
+        const fileName = `certificato_medico_${profile.full_name?.replace(/\s+/g, '_') || 'atleta'}.${ext}`;
+        
+        // Download the file directly (works on all devices including mobile)
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+        
+        window.alert('Certificato scaricato! Apri il file per stamparlo.');
       } catch (error) {
-        console.error('Error printing certificate:', error);
-        window.alert('Impossibile stampare il certificato');
+        console.error('Error downloading certificate:', error);
+        window.alert('Impossibile scaricare il certificato');
       }
     }
   };
