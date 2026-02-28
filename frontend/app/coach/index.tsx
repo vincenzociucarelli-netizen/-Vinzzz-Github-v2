@@ -22,6 +22,7 @@ import { Ionicons } from '../../src/components/Icon';
 import { Team, Athlete } from '../../src/types';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { SportIcon } from '../../src/components/SportIcon';
 
 // Web QR Scanner
 let Html5QrcodeScanner: any = null;
