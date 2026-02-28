@@ -619,7 +619,10 @@ export default function AdminCollaboratoreDetail() {
           <Text style={[styles.cardTitle, { color: '#7B1FA2' }]}>📍 Assegnazioni</Text>
           
           {/* Squadre */}
-          <Text style={[styles.inputLabel, { color: '#7B1FA2', marginTop: 8 }]}>🏐 Squadre</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, marginBottom: 8 }}>
+            <SportIcon size={18} />
+            <Text style={[styles.inputLabel, { color: '#7B1FA2', marginLeft: 6, marginTop: 0 }]}>Squadre</Text>
+          </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
             {teams.length === 0 ? (
               <Text style={{ color: '#999', fontStyle: 'italic' }}>Nessuna squadra disponibile</Text>
