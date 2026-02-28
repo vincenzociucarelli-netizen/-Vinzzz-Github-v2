@@ -117,7 +117,7 @@
 
 ### 👤 Profilo Personale
 - ✅ Gestione dati personali
-- ✅ Foto profilo con **trasformazione AI**
+- ✅ Foto profilo
 - ✅ Gestione documenti d'identità
 - ✅ Dati bancari (IBAN per rimborsi)
 
