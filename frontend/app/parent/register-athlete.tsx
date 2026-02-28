@@ -452,7 +452,10 @@ export default function RegisterAthlete() {
             returnKeyType="next"
           />
 
-          <Text style={styles.sectionTitle}>🏐 Squadre</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+            <SportIcon size={20} />
+            <Text style={[styles.sectionTitle, { marginLeft: 6, marginTop: 0 }]}>Squadre</Text>
+          </View>
 
           <Text style={styles.label}>Squadra Principale (opzionale)</Text>
           <View style={styles.pickerContainer}>
