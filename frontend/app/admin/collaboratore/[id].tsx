@@ -16,6 +16,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
+import { SportIcon } from '../../../src/components/SportIcon';
 
 interface Collaboratore {
   id: string;
