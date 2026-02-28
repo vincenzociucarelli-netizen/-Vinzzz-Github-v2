@@ -863,7 +863,10 @@ export default function AdminMatches() {
         <View style={styles.modalOverlay}>
           <View style={styles.homeTeamModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>🏐 Identifica Gare in Casa</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <SportIcon size={22} />
+                <Text style={[styles.modalTitle, { marginLeft: 6 }]}>Identifica Gare in Casa</Text>
+              </View>
               <TouchableOpacity onPress={() => {
                 setHomeTeamModalVisible(false);
                 setPendingImportData([]);
