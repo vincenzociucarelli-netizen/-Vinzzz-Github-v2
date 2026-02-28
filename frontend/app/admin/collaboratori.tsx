@@ -290,6 +290,11 @@ export default function CollaboratoreesScreen() {
     return teamNames.join(', ');
   };
 
+  const getVenueNames = (venueNames: string[]) => {
+    if (!venueNames || venueNames.length === 0) return null;
+    return venueNames.join(', ');
+  };
+
   const renderPendingItem = ({ item }: { item: Collaboratore }) => (
     <View style={styles.pendingCard}>
       <View style={styles.pendingInfo}>
