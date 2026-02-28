@@ -1320,7 +1320,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                       doc_back_image: docBackImage || editData.doc_back_image || '',
                     });
                     setEditingBank(false);
-                    showAlert('Salvato', 'Dati bancari aggiornati');
+                    showAlert('Salvato', isQuotaAthlete ? 'Dati documento aggiornati' : 'Dati bancari aggiornati');
                   } catch (error: any) {
                     console.error('Error saving bank details:', error);
                     showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio. Riprova.');
