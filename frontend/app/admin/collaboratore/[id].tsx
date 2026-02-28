@@ -345,7 +345,14 @@ export default function AdminCollaboratoreDetail() {
         <View style={styles.profileSection}>
           {collaboratore.profile_photo_artistic || collaboratore.profile_photo ? (
             <Image
-              source={{ uri: collaboratore.profile_photo_artistic || collaboratore.profile_photo }}
+              source={{ uri: collaboratore.profile_photo_artistic?.startsWith('data:') 
+                ? collaboratore.profile_photo_artistic 
+                : collaboratore.profile_photo_artistic 
+                  ? `data:image/jpeg;base64,${collaboratore.profile_photo_artistic}`
+                  : collaboratore.profile_photo?.startsWith('data:')
+                    ? collaboratore.profile_photo
+                    : `data:image/jpeg;base64,${collaboratore.profile_photo}`
+              }}
               style={styles.profilePhoto}
             />
           ) : (
