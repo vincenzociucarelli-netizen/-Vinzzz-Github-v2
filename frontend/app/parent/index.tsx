@@ -730,7 +730,10 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
                 <View style={styles.athleteInfo}>
                   <Text style={styles.athleteName}>{athlete.full_name}</Text>
                   {athlete.team_id && teams[athlete.team_id] && (
-                    <Text style={styles.athleteTeam}>🏐 {teams[athlete.team_id]}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <SportIcon size={14} />
+                      <Text style={[styles.athleteTeam, { marginLeft: 4 }]}>{teams[athlete.team_id]}</Text>
+                    </View>
                   )}
                   <Text style={[
                     styles.athleteStatus,
