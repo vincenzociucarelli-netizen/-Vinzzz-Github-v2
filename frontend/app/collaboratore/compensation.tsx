@@ -1004,7 +1004,7 @@ export default function CollaboratoreCompensation() {
 
             <ScrollView 
               style={styles.modalScroll} 
-              contentContainerStyle={{ paddingBottom: 20 }}
+              contentContainerStyle={{ paddingBottom: 40 }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={true}
             >
@@ -1021,13 +1021,15 @@ export default function CollaboratoreCompensation() {
               </View>
 
               {/* Signature Pad */}
-              <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
-              <SignaturePadInline
-                ref={signatureRef}
-                onSave={(sig) => setSignature(sig)}
-                onClear={() => setSignature(null)}
-                height={200}
-              />
+              <View style={{ marginTop: 10, marginBottom: 20 }}>
+                <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
+                <SignaturePadInline
+                  ref={signatureRef}
+                  onSave={(sig) => setSignature(sig)}
+                  onClear={() => setSignature(null)}
+                  height={180}
+                />
+              </View>
             </ScrollView>
 
             {/* Confirm Buttons - OUTSIDE ScrollView for fixed position */}
