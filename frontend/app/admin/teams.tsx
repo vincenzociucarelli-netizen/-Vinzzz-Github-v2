@@ -475,7 +475,9 @@ export default function TeamsScreen() {
                 resizeMode="contain"
               />
             ) : (
-              <Ionicons name="basketball-outline" size={64} color="#ccc" />
+              <View style={{ width: 64, height: 64, marginBottom: 8, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 48 }}>🏐</Text>
+              </View>
             )}
             <Text style={styles.emptyText}>Nessuna squadra</Text>
             <Text style={styles.emptySubtext}>Tocca + per creare una squadra</Text>
