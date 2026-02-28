@@ -7078,11 +7078,26 @@ async def update_payment(payment_id: str, update_data: PaymentUpdate, current_us
     return Payment(**payment)
 
 async def get_next_receipt_number(society_id: str) -> str:
-    """Generate next receipt number for the current year: RIC-2025-0001"""
-    current_year = datetime.utcnow().year
-    prefix = f"RIC-{current_year}-"
+    """Generate next receipt number for the current sports season: RIC-24/25-0001
+    Sports season runs from July 1st to June 30th (e.g., 2024/2025 = Jul 2024 - Jun 2025)
+    """
+    now = datetime.utcnow()
     
-    # Find the highest receipt number for this year and society
+    # Determine current sports season
+    # If we're in July-December, season is current_year/next_year
+    # If we're in January-June, season is previous_year/current_year
+    if now.month >= 7:  # July to December
+        season_start_year = now.year
+        season_end_year = now.year + 1
+    else:  # January to June
+        season_start_year = now.year - 1
+        season_end_year = now.year
+    
+    # Format: RIC-24/25-0001
+    season_str = f"{season_start_year % 100:02d}/{season_end_year % 100:02d}"
+    prefix = f"RIC-{season_str}-"
+    
+    # Find the highest receipt number for this season
     last_payment = await db.payments.find_one(
         {
             "receipt_number": {"$regex": f"^{prefix}"},
