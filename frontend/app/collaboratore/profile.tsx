@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
