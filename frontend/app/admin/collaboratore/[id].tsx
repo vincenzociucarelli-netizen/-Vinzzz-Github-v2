@@ -985,6 +985,86 @@ export default function AdminCollaboratoreDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Quietanze Modal */}
+      <Modal visible={quietanzeModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '90%', width: '95%' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ backgroundColor: '#4CAF50', padding: 8, borderRadius: 10, marginRight: 10 }}>
+                  <Ionicons name="receipt" size={24} color="#fff" />
+                </View>
+                <View>
+                  <Text style={[styles.modalTitle, { marginBottom: 0 }]}>Quietanze Firmate</Text>
+                  <Text style={{ fontSize: 13, color: '#388E3C', fontWeight: '600' }}>
+                    {signedReceipts.length} {signedReceipts.length === 1 ? 'quietanza' : 'quietanze'}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setQuietanzeModalVisible(false)}>
+                <Ionicons name="close" size={28} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            {signedReceipts.length > 0 && (
+              <View style={{ backgroundColor: '#4CAF50', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, marginBottom: 16, alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 12 }}>Totale Percepito</Text>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 22 }}>
+                  € {signedReceipts.reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0).toFixed(2)}
+                </Text>
+              </View>
+            )}
+            
+            {/* Month Icons Grid */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16, backgroundColor: '#f5f5f5', borderRadius: 10, padding: 8 }}>
+              {[
+                { name: 'Set', month: 9 }, { name: 'Ott', month: 10 }, { name: 'Nov', month: 11 }, { name: 'Dic', month: 12 },
+                { name: 'Gen', month: 1 }, { name: 'Feb', month: 2 }, { name: 'Mar', month: 3 }, { name: 'Apr', month: 4 },
+                { name: 'Mag', month: 5 }, { name: 'Giu', month: 6 }, { name: 'Lug', month: 7 }, { name: 'Ago', month: 8 }
+              ].map(({ name: monthName, month: monthNum }) => {
+                const isSigned = signedReceipts.some((r: any) => r.month === monthNum);
+                return (
+                  <View key={monthName} style={{ width: '25%', alignItems: 'center', paddingVertical: 6 }}>
+                    <View style={{ 
+                      width: 36, height: 36, borderRadius: 18, 
+                      backgroundColor: isSigned ? '#4CAF50' : '#e0e0e0',
+                      alignItems: 'center', justifyContent: 'center', marginBottom: 2
+                    }}>
+                      <Ionicons name={isSigned ? "checkmark" : "remove"} size={20} color={isSigned ? '#fff' : '#999'} />
+                    </View>
+                    <Text style={{ fontSize: 11, color: isSigned ? '#4CAF50' : '#999', fontWeight: '600' }}>{monthName}</Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            <ScrollView style={{ maxHeight: 300 }}>
+              {signedReceipts.map((receipt, index) => (
+                <View key={receipt.id || index} style={{ backgroundColor: '#fff', borderRadius: 8, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E8F5E9' }}>
+                  <Ionicons name="document-text" size={24} color="#4CAF50" />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={{ fontWeight: '600', fontSize: 15, color: '#333' }}>
+                      {receipt.month_name || `Mese ${receipt.month}`} {receipt.year}
+                    </Text>
+                    <Text style={{ fontSize: 14, color: '#4CAF50', fontWeight: '500' }}>
+                      € {(receipt.amount_gross || receipt.amount || 0).toFixed(2)}
+                    </Text>
+                  </View>
+                  <Ionicons name="checkmark-circle" size={26} color="#4CAF50" />
+                </View>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity 
+              style={{ backgroundColor: '#4CAF50', padding: 14, borderRadius: 10, marginTop: 16, alignItems: 'center' }}
+              onPress={() => setQuietanzeModalVisible(false)}
+            >
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chiudi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
