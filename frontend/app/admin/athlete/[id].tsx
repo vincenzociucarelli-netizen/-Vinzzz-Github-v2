@@ -1210,6 +1210,17 @@ export default function AdminAthleteDetail() {
 
       // For minor athletes, use the formal Attestato di Versamento
 
+      // Get or generate attestato number from backend
+      let attestatoNumber = `ATT-${athlete.id?.slice(-6).toUpperCase()}`;
+      try {
+        const attestatoRes = await api.post(`/attestati/generate-number/${athlete.id}`);
+        if (attestatoRes.data?.attestato_number) {
+          attestatoNumber = attestatoRes.data.attestato_number;
+        }
+      } catch (err) {
+        console.log('Could not get attestato number, using fallback');
+      }
+
       // Prepare receipt data - works even with 0 payments
       const receiptData: ReceiptData = {
         athlete: {
@@ -1253,7 +1264,7 @@ export default function AdminAthleteDetail() {
             })) 
           : [], // Empty array if no payments
         season: season,
-        receipt_number: `ATT-${athlete.id?.slice(-6).toUpperCase()}`,
+        receipt_number: attestatoNumber,
         team_name: team?.name || '',
       };
 
