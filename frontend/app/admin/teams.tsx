@@ -221,6 +221,8 @@ export default function TeamsScreen() {
       setSportImage(societyRes.data.sport_image || null);
     } catch (error) {
       console.error('Error loading teams:', error);
+    } finally {
+      setInitialLoading(false);
     }
   };
 
