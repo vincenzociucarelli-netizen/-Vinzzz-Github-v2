@@ -238,11 +238,11 @@ export default function ReportsPage() {
 
               <View style={styles.breakdownItem}>
                 <View style={[styles.breakdownIcon, { backgroundColor: '#FFB74D' }]}>
-                  <Ionicons name="trophy" size={24} color="#fff" />
+                  <Ionicons name="people" size={24} color="#fff" />
                 </View>
-                <Text style={styles.breakdownLabel}>Atleti PRO</Text>
-                <Text style={styles.breakdownCount}>{summary.breakdown.atleta_pro.count}</Text>
-                <Text style={styles.breakdownAmount}>{formatCurrency(summary.breakdown.atleta_pro.total)}</Text>
+                <Text style={styles.breakdownLabel}>Collaboratori</Text>
+                <Text style={styles.breakdownCount}>{summary.breakdown.collaboratore?.count || 0}</Text>
+                <Text style={styles.breakdownAmount}>{formatCurrency(summary.breakdown.collaboratore?.total || 0)}</Text>
               </View>
             </View>
           </View>
