@@ -113,6 +113,7 @@ export default function CollaboratoreProfile() {
 
   // Dirigenti state
   const [dirigenti, setDirigenti] = useState<any[]>([]);
+  const [showDirigentiModal, setShowDirigentiModal] = useState(false);
 
   const loadProfile = async () => {
     try {
