@@ -17,6 +17,7 @@ import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import { Team } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
+import { SportIcon } from '../../src/components/SportIcon';
 
 export default function RegisterAthlete() {
   const router = useRouter();
