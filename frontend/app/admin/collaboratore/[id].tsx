@@ -863,6 +863,44 @@ export default function AdminCollaboratoreDetail() {
               </View>
             )}
           </View>
+          
+          {/* Month Icons Grid */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 12, backgroundColor: '#f5f5f5', borderRadius: 10, padding: 8 }}>
+            {['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'].map((monthName, index) => {
+              const monthNum = index + 1;
+              const isSigned = signedReceipts.some((r: any) => r.month === monthNum);
+              return (
+                <View 
+                  key={monthName} 
+                  style={{ 
+                    width: '25%', 
+                    alignItems: 'center', 
+                    paddingVertical: 6 
+                  }}
+                >
+                  <View style={{ 
+                    width: 32, 
+                    height: 32, 
+                    borderRadius: 16, 
+                    backgroundColor: isSigned ? '#4CAF50' : '#e0e0e0',
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    marginBottom: 2
+                  }}>
+                    <Ionicons 
+                      name={isSigned ? "checkmark" : "remove"} 
+                      size={18} 
+                      color={isSigned ? '#fff' : '#999'} 
+                    />
+                  </View>
+                  <Text style={{ fontSize: 10, color: isSigned ? '#4CAF50' : '#999', fontWeight: '600' }}>
+                    {monthName}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
           {signedReceipts.length === 0 ? (
             <Text style={[styles.emptyText, { color: '#666' }]}>Nessuna quietanza firmata</Text>
           ) : (
