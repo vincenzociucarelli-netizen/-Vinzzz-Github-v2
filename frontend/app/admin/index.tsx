@@ -591,7 +591,7 @@ export default function AdminDashboard() {
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Importa Calendario</Text>
-              <Text style={styles.menuCardSubtitle}>Da FIPAV, FIP e altre federazioni</Text>
+              <Text style={styles.menuCardSubtitle}>Da FIPAV e altre federazioni</Text>
             </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
