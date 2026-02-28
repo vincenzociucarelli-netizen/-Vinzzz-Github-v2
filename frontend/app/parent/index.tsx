@@ -196,6 +196,28 @@ export default function ParentDashboard() {
     // Find the athlete in the list
     const athlete = athletesRequiringAction.find(a => a.id === athleteId);
     if (athlete) {
+      // Check if athlete profile is complete before allowing privacy signature
+      const missingFields = [];
+      if (!athlete.fiscal_code) missingFields.push('Codice Fiscale');
+      if (!athlete.date_of_birth) missingFields.push('Data di nascita');
+      if (!athlete.birth_place && !athlete.place_of_birth) missingFields.push('Luogo di nascita');
+      if (!athlete.gender) missingFields.push('Sesso');
+      
+      if (missingFields.length > 0) {
+        if (Platform.OS === 'web') {
+          window.alert(`⚠️ Prima di firmare la privacy, completa il profilo di ${athleteName}.\n\nCampi mancanti:\n- ${missingFields.join('\n- ')}\n\nVai nella sezione "Dati Atleta" per completare il profilo.`);
+        } else {
+          Alert.alert(
+            'Profilo Incompleto',
+            `Prima di firmare la privacy, completa il profilo di ${athleteName}.\n\nCampi mancanti:\n- ${missingFields.join('\n- ')}`,
+            [
+              { text: 'OK', style: 'default' }
+            ]
+          );
+        }
+        return;
+      }
+      
       setSigningAthlete({ ...athlete, athleteName });
       setSignatureVisible(true);
     }
