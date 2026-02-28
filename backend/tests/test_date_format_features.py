@@ -10,7 +10,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://gym-manager-pro-5.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://registrateam-preview-1.preview.emergentagent.com')
 
 
 class TestConfig:

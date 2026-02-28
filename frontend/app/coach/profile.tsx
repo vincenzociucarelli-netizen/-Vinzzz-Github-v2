@@ -26,7 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://gym-manager-pro-5.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://registrateam-preview-1.preview.emergentagent.com';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 

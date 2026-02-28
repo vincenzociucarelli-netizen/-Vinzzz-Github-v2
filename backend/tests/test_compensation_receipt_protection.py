@@ -19,7 +19,7 @@ from datetime import datetime
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
     # Fallback for local testing
-    BASE_URL = "https://gym-manager-pro-5.preview.emergentagent.com"
+    BASE_URL = "https://registrateam-preview-1.preview.emergentagent.com"
 
 # Test credentials
 ADMIN_EMAIL = "test.admin@test.com"
