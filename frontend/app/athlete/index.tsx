@@ -282,11 +282,18 @@ export default function AthleteScreen() {
           // Store the base64 and open date modal
           setPendingCertBase64(base64);
           
-          // Set default date: today + 1 year
-          const defaultDate = new Date();
-          defaultDate.setFullYear(defaultDate.getFullYear() + 1);
-          const defaultDateStr = `${String(defaultDate.getDate()).padStart(2, '0')}/${String(defaultDate.getMonth() + 1).padStart(2, '0')}/${defaultDate.getFullYear()}`;
+          // Set default emission date: today
+          const today = new Date();
+          const defaultDateStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
           setCertDateInput(defaultDateStr);
+          setCertValidityMonths('12');
+          
+          // Calculate default expiry: today + 12 months - 1 day
+          const expiryDate = new Date(today);
+          expiryDate.setMonth(expiryDate.getMonth() + 12);
+          expiryDate.setDate(expiryDate.getDate() - 1);
+          const expiryStr = `${String(expiryDate.getDate()).padStart(2, '0')}/${String(expiryDate.getMonth() + 1).padStart(2, '0')}/${expiryDate.getFullYear()}`;
+          setCertCalculatedExpiry(expiryStr);
           
           setCertDateModalVisible(true);
         };
