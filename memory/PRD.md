@@ -25,10 +25,12 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 ## Current Status (as of 2026-02-28)
 
 ### Completed Today (28/02/2026)
-- [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Pagato` (was showing total instead of remainder)
+- [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Sconto - Pagato` (now shows €200 correctly)
+- [x] **3ª Rata con Sconto**: Shows "(con sconto)" label and discounted amount (€250 - €50 = €200)
 - [x] **Notifications Removed**: Removed "Scadenze in arrivo" section from athlete dashboard
 - [x] **Sport Icon**: Replaced volleyball emoji (🏐) with actual sport_image from society settings
 - [x] **Receipt Payment Method**: Added payment method (POS/Bonifico/Contanti) to downloadable receipt
+- [x] **Admin Receipt for Adults**: Admin now sees simple receipt (same as athlete) for adult athletes, formal Attestato only for minors
 
 ### Completed Previous Session (27/02/2026)
 - [x] **Coach Info Update**: Updated coach name from "ROSSI MARIO" to "SERZI LUCIO" in database
