@@ -45,7 +45,7 @@ export const clearSportIconCache = () => {
 
 export const SportIcon: React.FC<SportIconProps> = ({ 
   size = 24, 
-  fallbackEmoji = '🏐',
+  fallbackEmoji = '⚽',
   style 
 }) => {
   const [sportImage, setSportImage] = useState<string | null>(cachedSportImage);
