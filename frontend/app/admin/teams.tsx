@@ -471,19 +471,40 @@ export default function TeamsScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            {sportImage ? (
-              <Image 
-                source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
-                style={{ width: 80, height: 80, borderRadius: 12, marginBottom: 8 }}
-                resizeMode="contain"
-              />
+            {initialLoading ? (
+              // Loading state con immagine sport o icona generica
+              <>
+                {sportImage ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
+                    style={{ width: 80, height: 80, borderRadius: 12, marginBottom: 8, opacity: 0.7 }}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={{ width: 64, height: 64, marginBottom: 8, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 48, opacity: 0.7 }}>⏳</Text>
+                  </View>
+                )}
+                <Text style={styles.emptyText}>Caricamento...</Text>
+              </>
             ) : (
-              <View style={{ width: 64, height: 64, marginBottom: 8, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: 48 }}>🏐</Text>
-              </View>
+              // Empty state - lista vuota dopo il caricamento
+              <>
+                {sportImage ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
+                    style={{ width: 80, height: 80, borderRadius: 12, marginBottom: 8 }}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={{ width: 64, height: 64, marginBottom: 8, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 48 }}>📚</Text>
+                  </View>
+                )}
+                <Text style={styles.emptyText}>Nessuna squadra</Text>
+                <Text style={styles.emptySubtext}>Tocca + per creare una squadra</Text>
+              </>
             )}
-            <Text style={styles.emptyText}>Nessuna squadra</Text>
-            <Text style={styles.emptySubtext}>Tocca + per creare una squadra</Text>
           </View>
         }
       />
