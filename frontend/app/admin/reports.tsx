@@ -22,7 +22,7 @@ interface ReportSummary {
     coach: { count: number; total: number };
     dirigente: { count: number; total: number };
     atleta: { count: number; total: number };
-    atleta_pro: { count: number; total: number };
+    collaboratore?: { count: number; total: number };
   };
   total_count: number;
   total_amount: number;
