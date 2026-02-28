@@ -203,6 +203,46 @@ export default function AthleteScreen() {
   const handleDateInputChange = (text: string) => {
     const formatted = formatDateInput(text);
     setCertDateInput(formatted);
+    recalculateExpiry(formatted, certValidityMonths);
+  };
+  
+  // Calculate expiry date based on emission date and validity months
+  const recalculateExpiry = (emissionDate: string, months: string) => {
+    const parts = emissionDate.split('/');
+    if (parts.length !== 3 || parts[2].length !== 4) {
+      setCertCalculatedExpiry('');
+      return;
+    }
+    
+    const day = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1; // JS months are 0-indexed
+    const year = parseInt(parts[2]);
+    const validityMonths = parseInt(months) || 12;
+    
+    if (isNaN(day) || isNaN(month) || isNaN(year)) {
+      setCertCalculatedExpiry('');
+      return;
+    }
+    
+    // Create emission date
+    const emissionDateObj = new Date(year, month, day);
+    
+    // Add validity months
+    const expiryDate = new Date(emissionDateObj);
+    expiryDate.setMonth(expiryDate.getMonth() + validityMonths);
+    
+    // Subtract 1 day (expiry is the day before anniversary)
+    expiryDate.setDate(expiryDate.getDate() - 1);
+    
+    const expiryStr = `${String(expiryDate.getDate()).padStart(2, '0')}/${String(expiryDate.getMonth() + 1).padStart(2, '0')}/${expiryDate.getFullYear()}`;
+    setCertCalculatedExpiry(expiryStr);
+  };
+  
+  const handleValidityChange = (text: string) => {
+    // Only allow numbers
+    const numOnly = text.replace(/[^0-9]/g, '');
+    setCertValidityMonths(numOnly);
+    recalculateExpiry(certDateInput, numOnly);
   };
 
   // Confirm certificate upload with date
