@@ -1371,9 +1371,12 @@ export default function AthleteDetail() {
           
           <View style={styles.dataRow}>
             <Text style={styles.dataLabel}>Squadra</Text>
-            <Text style={[styles.dataValue, { color: '#E53935', fontWeight: '700' }]}>
-              🏐 {getTeamName(athlete.team_id)}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <SportIcon size={18} />
+              <Text style={[styles.dataValue, { color: '#E53935', fontWeight: '700', marginLeft: 4 }]}>
+                {getTeamName(athlete.team_id)}
+              </Text>
+            </View>
           </View>
           
           {/* Coach Info */}
