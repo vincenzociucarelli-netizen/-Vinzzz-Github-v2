@@ -1215,6 +1215,75 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           )}
         </View>
 
+        {/* Contatta Dirigenti */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>📞 Contatta Dirigenti</Text>
+          <Text style={{ color: '#666', fontSize: 13, marginBottom: 12 }}>
+            Contatta i dirigenti tramite WhatsApp
+          </Text>
+          
+          {dirigenti.length === 0 ? (
+            <Text style={{ color: '#999', fontStyle: 'italic', paddingVertical: 10 }}>
+              Nessun dirigente disponibile
+            </Text>
+          ) : (
+            dirigenti.map((dir, index) => (
+              <View key={dir.id || index} style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 12,
+                borderBottomWidth: index < dirigenti.length - 1 ? 1 : 0,
+                borderBottomColor: '#f0f0f0',
+              }}>
+                <View style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: '#E3F2FD',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <Ionicons name="person" size={24} color="#1976D2" />
+                </View>
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>
+                    {dir.full_name}
+                  </Text>
+                  {dir.phone && (
+                    <Text style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
+                      {dir.phone}
+                    </Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: dir.phone ? '#25D366' : '#ccc',
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                  }}
+                  onPress={() => {
+                    if (!dir.phone) {
+                      Alert.alert('Telefono non disponibile', 'Questo dirigente non ha un numero di telefono registrato');
+                      return;
+                    }
+                    const phone = dir.phone.replace(/\D/g, '');
+                    const phoneWithCountry = phone.startsWith('39') ? phone : `39${phone}`;
+                    Linking.openURL(`https://wa.me/${phoneWithCountry}`);
+                  }}
+                >
+                  <Ionicons name="logo-whatsapp" size={18} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 6, fontSize: 13 }}>
+                    WhatsApp
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </View>
+
         {/* Documento e Dati Bancari */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
