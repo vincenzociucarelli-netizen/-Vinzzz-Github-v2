@@ -333,7 +333,6 @@ export default function ImportCalendarScreen() {
             style={styles.picker}
           >
             <Picker.Item label="FIPAV - Pallavolo" value="fipav" />
-            <Picker.Item label="FIP - Basket (non disponibile)" value="fip" />
           </Picker>
         </View>
       </View>
