@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RegistraTEAM - Presentazione</title>
+  <style>
+    @page { size: A4; margin: 20mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      line-height: 1.7;
+      color: #333;
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #667eea;
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+    .tagline {
+      text-align: center;
+      font-size: 18px;
+      color: #666;
+      margin-bottom: 40px;
+    }
+    .problems {
+      background: #fff5f5;
+      border-left: 4px solid #e53e3e;
+      padding: 20px;
+      border-radius: 0 10px 10px 0;
+      margin: 20px 0;
+    }
+    .problems h2 { color: #e53e3e; margin-top: 0; font-size: 18px; }
+    .problems ul { margin: 0; padding-left: 20px; }
+    .problems li { margin: 8px 0; }
+    .solution {
+      background: #f0fff4;
+      border-left: 4px solid #38a169;
+      padding: 20px;
+      border-radius: 0 10px 10px 0;
+      margin: 20px 0;
+    }
+    .solution h2 { color: #38a169; margin-top: 0; font-size: 18px; }
+    .solution ul { margin: 0; padding-left: 20px; }
+    .solution li { margin: 8px 0; }
+    .how-it-works {
+      background: #ebf8ff;
+      padding: 25px;
+      border-radius: 10px;
+      margin: 30px 0;
+    }
+    .how-it-works h2 { color: #3182ce; margin-top: 0; text-align: center; }
+    .steps {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-around;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .step {
+      text-align: center;
+      flex: 1;
+      min-width: 120px;
+    }
+    .step-number {
+      width: 40px;
+      height: 40px;
+      background: #3182ce;
+      color: white;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    .step-text { font-size: 14px; color: #333; }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-around;
+      margin: 30px 0;
+      gap: 20px;
+    }
+    .stat {
+      text-align: center;
+      flex: 1;
+      min-width: 100px;
+    }
+    .stat-number {
+      font-size: 32px;
+      font-weight: bold;
+      color: #667eea;
+    }
+    .stat-label { font-size: 12px; color: #666; }
+    .target {
+      background: #faf5ff;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+    }
+    .target h2 { color: #805ad5; margin-top: 0; font-size: 16px; }
+    .cta {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 15px;
+      text-align: center;
+      margin-top: 30px;
+    }
+    .cta h2 { margin-top: 0; font-size: 22px; }
+    .cta p { margin: 10px 0; font-size: 16px; }
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+      color: #888;
+      font-size: 14px;
+    }
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🏆 RegistraTEAM</h1>
+  <p class="tagline">La Tua Società Sportiva, Sempre in Tasca</p>
+  
+  <div class="problems">
+    <h2>❌ Sei stanco di...</h2>
+    <ul>
+      <li>Fogli Excel che non trovi mai?</li>
+      <li>Certificati medici scaduti senza accorgertene?</li>
+      <li>Rincorrere i genitori per le firme?</li>
+      <li>Calcolare a mano le quote e i residui?</li>
+      <li>Segnare le presenze su fogli volanti?</li>
+    </ul>
+  </div>
+  
+  <div class="solution">
+    <h2>✅ RegistraTEAM risolve tutto questo</h2>
+    <p><strong>Una sola app</strong> per gestire:</p>
+    <ul>
+      <li><strong>Atleti</strong> - Iscrizioni, documenti, foto</li>
+      <li><strong>Certificati Medici</strong> - Con alert automatici prima della scadenza</li>
+      <li><strong>Pagamenti</strong> - Quote, rate, sconti, ricevute automatiche</li>
+      <li><strong>Presenze</strong> - Scanner QR veloce come un click</li>
+      <li><strong>Firme</strong> - Privacy e consensi firmati digitalmente</li>
+      <li><strong>Squadre</strong> - Organizza, assegna coach, monitora</li>
+    </ul>
+  </div>
+  
+  <div class="how-it-works">
+    <h2>🚀 Come Funziona?</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-text">Crei la tua società in 2 minuti</div>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-text">Condividi il codice con atleti</div>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-text">Loro si iscrivono dall'app</div>
+      </div>
+      <div class="step">
+        <div class="step-number">4</div>
+        <div class="step-text">Tu approvi e gestisci tutto</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-number">-80%</div>
+      <div class="stat-label">TEMPO<br>amministrativo</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number">0</div>
+      <div class="stat-label">CARTA<br>tutto digitale</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number">0</div>
+      <div class="stat-label">SCADENZE<br>dimenticate</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number">10s</div>
+      <div class="stat-label">FIRMA<br>digitale</div>
+    </div>
+  </div>
+  
+  <div class="target">
+    <h2>📍 Per Chi è?</h2>
+    <ul>
+      <li><strong>Pallavolo, Basket, Calcio, Nuoto...</strong> qualsiasi sport</li>
+      <li><strong>Da 20 a 500+ atleti</strong> - scala con te</li>
+      <li><strong>ASD e SSD</strong> - conforme alla normativa</li>
+    </ul>
+  </div>
+  
+  <div class="cta">
+    <h2>📱 Provalo Subito!</h2>
+    <p>Scarica l'app → Crea la tua società → Inizia gratis</p>
+    <p style="font-size: 14px; opacity: 0.9; margin-top: 20px;">
+      Non perdere altro tempo con la burocrazia.<br>
+      Torna a fare quello che ami: allenare e far crescere i tuoi atleti.
+    </p>
+  </div>
+  
+  <div class="footer">
+    <p><strong>RegistraTEAM</strong> - Semplifica la gestione, valorizza lo sport</p>
+    <p style="font-size: 12px;">📖 Vuoi saperne di più? Leggi la presentazione completa delle funzionalità</p>
+  </div>
+</div>
+
+</body>
+</html>

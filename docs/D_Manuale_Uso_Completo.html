@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RegistraTEAM - Manuale d'Uso Completo</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      line-height: 1.5;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      font-size: 12px;
+    }
+    h1 {
+      color: #1a73e8;
+      text-align: center;
+      font-size: 26px;
+      border-bottom: 3px solid #1a73e8;
+      padding-bottom: 15px;
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: white;
+      background: #1a73e8;
+      padding: 10px 15px;
+      border-radius: 5px;
+      font-size: 16px;
+      margin-top: 30px;
+      page-break-after: avoid;
+    }
+    h3 {
+      color: #1a73e8;
+      font-size: 14px;
+      margin-top: 20px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 5px;
+    }
+    h4 {
+      color: #333;
+      font-size: 12px;
+      margin-top: 15px;
+    }
+    .part-title {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      font-size: 18px;
+      margin-top: 40px;
+      margin-bottom: 20px;
+      page-break-before: auto;
+    }
+    ul, ol {
+      margin: 8px 0;
+      padding-left: 25px;
+    }
+    li { margin: 4px 0; }
+    .note {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 10px 15px;
+      margin: 15px 0;
+      border-radius: 0 5px 5px 0;
+      font-size: 11px;
+    }
+    .important {
+      background: #f8d7da;
+      border-left: 4px solid #dc3545;
+      padding: 10px 15px;
+      margin: 15px 0;
+      border-radius: 0 5px 5px 0;
+      font-size: 11px;
+    }
+    .tip {
+      background: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 10px 15px;
+      margin: 15px 0;
+      border-radius: 0 5px 5px 0;
+      font-size: 11px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 11px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #f8f9fa;
+      font-weight: bold;
+    }
+    .toc {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+    .toc h3 { margin-top: 0; border: none; }
+    .toc ul { list-style: none; padding-left: 0; }
+    .toc li { margin: 8px 0; }
+    .toc a { color: #1a73e8; text-decoration: none; }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px solid #1a73e8;
+      color: #666;
+    }
+    @media print {
+      .part-title { page-break-before: always; }
+      h2 { page-break-after: avoid; }
+      h3 { page-break-after: avoid; }
+      .note, .important, .tip { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>📖 RegistraTEAM<br>Manuale d'Uso Completo</h1>
+
+<div class="toc">
+  <h3>Indice</h3>
+  <ul>
+    <li><strong>Parte 1:</strong> Setup Iniziale (Amministratore)</li>
+    <li><strong>Parte 2:</strong> Gestione Atleti</li>
+    <li><strong>Parte 3:</strong> Gestione Certificati Medici</li>
+    <li><strong>Parte 4:</strong> Gestione Presenze (Coach)</li>
+    <li><strong>Parte 5:</strong> Gestione Collaboratori</li>
+    <li><strong>Parte 6:</strong> Flusso Atleta Maggiorenne</li>
+    <li><strong>Parte 7:</strong> Flusso Genitore (Atleta Minorenne)</li>
+    <li><strong>Parte 8:</strong> Archivi e Storico</li>
+    <li><strong>Parte 9:</strong> Notifiche e Alert</li>
+    <li><strong>Parte 10:</strong> Risoluzione Problemi</li>
+  </ul>
+</div>
+
+<!-- PARTE 1 -->
+<div class="part-title">PARTE 1: SETUP INIZIALE (Amministratore)</div>
+
+<h2>1.1 Creazione Account Amministratore</h2>
+<ol>
+  <li>Apri l'app RegistraTEAM</li>
+  <li>Nella schermata di login, clicca <strong>"Non hai un account? Registrati"</strong></li>
+  <li>Seleziona <strong>"Crea nuova società"</strong></li>
+  <li>Compila il form:
+    <ul>
+      <li><strong>Email</strong>: la tua email (sarà il tuo username)</li>
+      <li><strong>Password</strong>: minimo 8 caratteri, con numeri e lettere</li>
+      <li><strong>Nome e Cognome</strong></li>
+      <li><strong>Telefono</strong></li>
+    </ul>
+  </li>
+  <li>Clicca <strong>"Registrati"</strong></li>
+  <li>Seleziona il ruolo <strong>"Amministratore"</strong> o <strong>"Dirigente"</strong></li>
+</ol>
+
+<h2>1.2 Configurazione Dati Società</h2>
+<p>Dopo il login, vai in <strong>Impostazioni</strong> (icona ingranaggio):</p>
+
+<h3>Dati Società</h3>
+<ul>
+  <li><strong>Ragione Sociale</strong>: nome ufficiale (es. "ASD Pallavolo Perugia")</li>
+  <li><strong>Partita IVA / C.F. Società</strong>: codice fiscale della società</li>
+  <li><strong>Indirizzo Sede</strong>: via, città, CAP</li>
+  <li><strong>Telefono e Email Società</strong></li>
+</ul>
+
+<h3>Personalizzazione</h3>
+<ul>
+  <li><strong>Logo</strong>: carica il logo (JPG/PNG, max 2MB)</li>
+  <li><strong>Immagine Sport</strong>: es. pallone da pallavolo</li>
+  <li><strong>Sport Praticato</strong>: seleziona lo sport principale</li>
+</ul>
+
+<h3>Dati per Ricevute</h3>
+<ul>
+  <li><strong>IBAN</strong>: per i bonifici</li>
+  <li><strong>Intestatario Conto</strong></li>
+  <li><strong>Email PayPal</strong> (se accetti PayPal)</li>
+</ul>
+
+<h2>1.3 Creazione Squadre</h2>
+<p>Vai in <strong>Squadre → + Nuova Squadra</strong></p>
+<p>Per ogni squadra inserisci:</p>
+<ul>
+  <li><strong>Nome Squadra</strong>: es. "Under 14", "Serie D"</li>
+  <li><strong>Coach Assegnato</strong></li>
+  <li><strong>Quota Totale Annuale</strong>: es. €800</li>
+  <li><strong>Numero Rate</strong>: 1, 2 o 3</li>
+  <li><strong>Importo e Scadenza</strong> per ogni rata</li>
+</ul>
+
+<h2>1.4 Codice Invito</h2>
+<p>Nella <strong>Dashboard</strong> trovi il <strong>Codice Invito</strong> della società.</p>
+<div class="tip">
+  <strong>💡 Suggerimento:</strong> Condividi il codice via WhatsApp o stampalo per distribuirlo agli allenamenti.
+</div>
+
+<!-- PARTE 2 -->
+<div class="part-title">PARTE 2: GESTIONE ATLETI</div>
+
+<h2>2.1 Approvazione Nuovi Iscritti</h2>
+<ol>
+  <li>Ricevi una <strong>notifica</strong> (campanella)</li>
+  <li>Vai in <strong>Dashboard → Richieste Pendenti</strong></li>
+  <li>Clicca sul nome dell'atleta</li>
+  <li>Verifica i dati inseriti</li>
+  <li>Clicca <strong>"Approva"</strong> o <strong>"Rifiuta"</strong></li>
+</ol>
+
+<h2>2.2 Visualizzazione Atleta</h2>
+<p>Vai in <strong>Atleti → clicca sul nome</strong></p>
+<table>
+  <tr><th>Tab</th><th>Contenuto</th></tr>
+  <tr><td>Profilo</td><td>Dati anagrafici, foto, codice fiscale</td></tr>
+  <tr><td>Documenti</td><td>Identità, CF, privacy, certificato</td></tr>
+  <tr><td>Pagamenti</td><td>Quote, rate, pagamenti, residuo</td></tr>
+  <tr><td>Presenze</td><td>Storico e statistiche</td></tr>
+</table>
+
+<h2>2.3 Assegnazione Squadra</h2>
+<ol>
+  <li>Apri il profilo dell'atleta</li>
+  <li>Nella sezione <strong>"Squadra"</strong>, clicca <strong>"Modifica"</strong></li>
+  <li>Seleziona la squadra</li>
+  <li>Salva</li>
+</ol>
+
+<h2>2.4 Applicare uno Sconto</h2>
+<ol>
+  <li>Apri profilo atleta → Tab <strong>Pagamenti</strong></li>
+  <li>Clicca <strong>"Gestisci Sconto"</strong></li>
+  <li>Inserisci importo e motivo</li>
+  <li>Salva</li>
+</ol>
+<div class="note">
+  <strong>📝 Nota:</strong> Il sistema ricalcola automaticamente il residuo dovuto.
+</div>
+
+<h2>2.5 Registrare un Pagamento</h2>
+<ol>
+  <li>Apri profilo atleta → Tab <strong>Pagamenti</strong></li>
+  <li>Clicca <strong>"+ Registra Pagamento"</strong></li>
+  <li>Inserisci: Importo, Data, Metodo (POS/Bonifico/Contanti)</li>
+  <li>Salva</li>
+</ol>
+
+<h2>2.6 Generare Ricevuta</h2>
+<ol>
+  <li>Apri profilo atleta → Tab <strong>Pagamenti</strong></li>
+  <li>Clicca <strong>"Attestato di Versamento"</strong> (minorenni) o <strong>"Ricevuta Pagamenti"</strong> (adulti)</li>
+  <li>Scegli: <strong>Stampa</strong> o <strong>Condividi</strong></li>
+</ol>
+
+<!-- PARTE 3 -->
+<div class="part-title">PARTE 3: GESTIONE CERTIFICATI MEDICI</div>
+
+<h2>3.1 Certificati in Scadenza</h2>
+<p>Nella <strong>Dashboard</strong>, la sezione <strong>"Certificati in Scadenza"</strong> mostra:</p>
+<ul>
+  <li>Certificati che scadono nei prossimi 30 giorni</li>
+  <li>Certificati già scaduti (evidenziati in rosso)</li>
+</ul>
+
+<h2>3.2 Archivio Certificati Medici</h2>
+<p>Vai in <strong>Archivio Certificati Medici</strong>:</p>
+<ul>
+  <li>Cerca per nome atleta</li>
+  <li>Filtra per squadra o stagione</li>
+  <li>Visualizza/scarica qualsiasi certificato</li>
+</ul>
+<div class="important">
+  <strong>⚠️ Importante:</strong> Conservazione obbligatoria 5 anni come da normativa ASD.
+</div>
+
+<h2>3.3 Calcolo Scadenza</h2>
+<p>La scadenza viene calcolata automaticamente:</p>
+<p><strong>Formula:</strong> Data Emissione + Mesi di Validità - 1 giorno</p>
+<p><strong>Esempio:</strong> Emissione 15/04/2025, Validità 12 mesi → Scadenza <strong>14/04/2026</strong></p>
+
+<!-- PARTE 4 -->
+<div class="part-title">PARTE 4: GESTIONE PRESENZE (Coach)</div>
+
+<h2>4.1 Accesso Coach</h2>
+<p>Il coach accede con le proprie credenziali e vede:</p>
+<ul>
+  <li>Le squadre assegnate</li>
+  <li>Gli atleti di ogni squadra</li>
+  <li>Lo scanner QR</li>
+</ul>
+
+<h2>4.2 Registrazione Presenze con QR</h2>
+<ol>
+  <li>Il coach apre lo <strong>Scanner Presenze</strong></li>
+  <li>Autorizza l'accesso alla fotocamera</li>
+  <li>Inquadra il <strong>QR code</strong> dell'atleta</li>
+  <li>La presenza viene registrata automaticamente</li>
+</ol>
+
+<h2>4.3 QR Code Atleta</h2>
+<p>Ogni atleta ha un QR code personale:</p>
+<ul>
+  <li><strong>Atleta:</strong> Dashboard → "Il mio QR Code"</li>
+  <li><strong>Genitore:</strong> Profilo figlio → "QR Code"</li>
+</ul>
+<div class="tip">
+  <strong>💡 Suggerimento:</strong> Il QR può essere stampato per creare una tessera fisica.
+</div>
+
+<!-- PARTE 5 -->
+<div class="part-title">PARTE 5: GESTIONE COLLABORATORI</div>
+
+<h2>5.1 Registrazione Collaboratore</h2>
+<p>Il collaboratore si registra come un normale utente:</p>
+<ol>
+  <li>Inserisce il codice società</li>
+  <li>Compila i dati anagrafici</li>
+  <li>Seleziona ruolo <strong>"Collaboratore"</strong></li>
+</ol>
+
+<h2>5.2 Gestione Contratti (Admin)</h2>
+<ol>
+  <li>Vai in <strong>Collaboratori → seleziona nome</strong></li>
+  <li>Clicca <strong>"Gestisci Contratto"</strong></li>
+  <li>Inserisci: tipo contratto, date, compenso</li>
+  <li>Registra i pagamenti effettuati</li>
+</ol>
+
+<!-- PARTE 6 -->
+<div class="part-title">PARTE 6: FLUSSO ATLETA MAGGIORENNE</div>
+
+<h2>6.1 Registrazione</h2>
+<ol>
+  <li>L'atleta scarica l'app</li>
+  <li>Inserisce il <strong>Codice Invito</strong></li>
+  <li>Compila tutti i dati anagrafici</li>
+  <li>Carica foto profilo</li>
+  <li>Sceglie <strong>"Atleta"</strong> come ruolo</li>
+</ol>
+
+<h2>6.2 Completamento Profilo</h2>
+<p>Dopo l'approvazione, l'atleta deve:</p>
+<ol>
+  <li>Caricare <strong>Documento d'identità</strong> (fronte e retro)</li>
+  <li>Caricare <strong>Codice Fiscale / Tessera Sanitaria</strong></li>
+  <li>Firmare l'<strong>Informativa Privacy</strong></li>
+  <li>Caricare il <strong>Certificato Medico Sportivo</strong></li>
+</ol>
+
+<h2>6.3 Dashboard Atleta</h2>
+<p>L'atleta vede:</p>
+<ul>
+  <li>I propri dati e la squadra assegnata</li>
+  <li>Il coach con contatto WhatsApp</li>
+  <li>Le quote e i pagamenti</li>
+  <li>Il proprio QR code per le presenze</li>
+  <li>I documenti caricati</li>
+</ul>
+
+<!-- PARTE 7 -->
+<div class="part-title">PARTE 7: FLUSSO GENITORE (Atleta Minorenne)</div>
+
+<h2>7.1 Registrazione Genitore</h2>
+<ol>
+  <li>Il genitore scarica l'app</li>
+  <li>Inserisce il <strong>Codice Invito</strong></li>
+  <li>Compila i propri dati</li>
+  <li>Sceglie <strong>"Genitore"</strong> come ruolo</li>
+</ol>
+
+<h2>7.2 Iscrizione Figlio/a</h2>
+<ol>
+  <li>Clicca <strong>"Aggiungi Figlio/a"</strong></li>
+  <li>Compila i dati del minore</li>
+  <li>Indica se è nuovo iscritto o in prova</li>
+</ol>
+
+<h2>7.3 Periodo di Prova</h2>
+<p>Se l'atleta è <strong>"In Prova"</strong>:</p>
+<ul>
+  <li>Il genitore può testare l'esperienza</li>
+  <li>Alla fine della prova, sceglie:
+    <ul>
+      <li><strong>"Resta, compila e firma"</strong>: prosegue con l'iscrizione</li>
+      <li><strong>"Esci e cancella"</strong>: annulla e l'account viene eliminato</li>
+    </ul>
+  </li>
+</ul>
+
+<h2>7.4 Gestione Multi-Figlio</h2>
+<p>Un genitore può iscrivere più figli:</p>
+<ul>
+  <li>Ogni figlio appare nella dashboard</li>
+  <li>Documenti e pagamenti separati per ogni figlio</li>
+</ul>
+
+<!-- PARTE 8 -->
+<div class="part-title">PARTE 8: ARCHIVI E STORICO</div>
+
+<h2>8.1 Archivio Documenti</h2>
+<p>Vai in <strong>Archivio Documenti</strong>:</p>
+<ul>
+  <li>Tutti i documenti firmati (privacy, consensi)</li>
+  <li>Filtro per atleta, tipo documento, data</li>
+  <li>Download e stampa</li>
+</ul>
+
+<h2>8.2 Gestione Stagioni</h2>
+<p>A fine stagione:</p>
+<ul>
+  <li>I dati vengono archiviati</li>
+  <li>Puoi iniziare una nuova stagione</li>
+  <li>Lo storico rimane consultabile</li>
+</ul>
+
+<!-- PARTE 9 -->
+<div class="part-title">PARTE 9: NOTIFICHE E ALERT</div>
+
+<h2>9.1 Tipi di Notifiche</h2>
+<table>
+  <tr><th>Icona</th><th>Tipo</th><th>Quando</th></tr>
+  <tr><td>🔔</td><td>Nuova iscrizione</td><td>Quando qualcuno si registra</td></tr>
+  <tr><td>🏥</td><td>Certificato in scadenza</td><td>30 e 7 giorni prima</td></tr>
+  <tr><td>💰</td><td>Rata in scadenza</td><td>7 giorni prima</td></tr>
+  <tr><td>🎂</td><td>Compleanni</td><td>Atleti del giorno</td></tr>
+</table>
+
+<h2>9.2 Centro Notifiche</h2>
+<p>Clicca sulla <strong>campanella</strong> in alto per vedere tutte le notifiche.</p>
+<p>Il <strong>badge rosso</strong> indica notifiche non lette.</p>
+
+<!-- PARTE 10 -->
+<div class="part-title">PARTE 10: RISOLUZIONE PROBLEMI</div>
+
+<h2>Problemi Comuni</h2>
+
+<h3>Non ricevo il codice invito</h3>
+<ul>
+  <li>Verifica di aver inserito l'email corretta</li>
+  <li>Controlla la cartella SPAM</li>
+  <li>Contatta l'amministratore della società</li>
+</ul>
+
+<h3>La fotocamera non funziona (Scanner QR)</h3>
+<ul>
+  <li>Verifica i permessi dell'app nelle impostazioni del telefono</li>
+  <li>Prova a ricaricare la pagina</li>
+  <li>Su alcuni browser potrebbe essere necessario HTTPS</li>
+</ul>
+
+<h3>Non riesco a caricare documenti</h3>
+<ul>
+  <li>Verifica che il file sia JPG, PNG o PDF</li>
+  <li>Dimensione massima: 10MB</li>
+  <li>Prova a ridurre la risoluzione dell'immagine</li>
+</ul>
+
+<h3>Password dimenticata</h3>
+<ul>
+  <li>Nella schermata di login, clicca "Password dimenticata"</li>
+  <li>Inserisci la tua email</li>
+  <li>Riceverai un link per reimpostare la password</li>
+</ul>
+
+<!-- GLOSSARIO -->
+<h2>Glossario</h2>
+<table>
+  <tr><th>Termine</th><th>Significato</th></tr>
+  <tr><td>ASD</td><td>Associazione Sportiva Dilettantistica</td></tr>
+  <tr><td>SSD</td><td>Società Sportiva Dilettantistica</td></tr>
+  <tr><td>Codice Invito</td><td>Codice univoco della società per le iscrizioni</td></tr>
+  <tr><td>Atleta a Quota</td><td>Atleta che paga una quota associativa</td></tr>
+  <tr><td>Atleta Compensato</td><td>Atleta che riceve un compenso</td></tr>
+  <tr><td>Stagione</td><td>Anno sportivo (es. 2025/2026)</td></tr>
+</table>
+
+<div class="footer">
+  <p><strong>RegistraTEAM</strong> - Semplifica la gestione, valorizza lo sport 🏆</p>
+  <p style="font-size: 10px; color: #999;">Ultimo aggiornamento: Febbraio 2026</p>
+</div>
+
+</body>
+</html>
