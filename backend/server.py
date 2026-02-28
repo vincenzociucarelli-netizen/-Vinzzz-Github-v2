@@ -10973,6 +10973,7 @@ async def sign_collaboratore_compensation_receipt(
         "id": receipt_id,
         "document_type": "collaboratore_compensation_receipt",
         "document_title": f"Quietanza Compenso - {month_name} {request.year}",
+        "signer_id": collaboratore_id,
         "collaboratore_id": collaboratore_id,
         "collaboratore_name": collaboratore.get("full_name", ""),
         "month": request.month,
