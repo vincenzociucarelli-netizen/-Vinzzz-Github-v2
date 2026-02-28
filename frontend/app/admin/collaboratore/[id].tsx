@@ -298,8 +298,8 @@ export default function AdminCollaboratoreDetail() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 20, padding: 8 }]}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+        <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: 'transparent' }]}>
+          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#7B1FA2" /></View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Dettaglio Collaboratore</Text>
         <TouchableOpacity onPress={() => setResetPasswordVisible(true)} style={{ backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 20, padding: 8 }}>
