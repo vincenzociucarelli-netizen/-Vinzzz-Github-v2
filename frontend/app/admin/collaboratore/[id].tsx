@@ -365,6 +365,31 @@ export default function AdminCollaboratoreDetail() {
           <View style={[styles.statusBadge, { backgroundColor: collaboratore.status === 'approved' ? '#34C759' : '#FF9500' }]}>
             <Text style={styles.statusBadgeText}>{collaboratore.status === 'approved' ? 'ATTIVO' : 'IN ATTESA'}</Text>
           </View>
+          
+          {/* WhatsApp Button */}
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: collaboratore.phone ? '#25D366' : '#ccc',
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              borderRadius: 25,
+              marginTop: 12,
+            }}
+            onPress={() => {
+              if (!collaboratore.phone) {
+                Alert.alert('Telefono non disponibile', 'Questo collaboratore non ha un numero di telefono registrato');
+                return;
+              }
+              const phone = collaboratore.phone?.replace(/\D/g, '');
+              const phoneWithCountry = phone?.startsWith('39') ? phone : `39${phone}`;
+              Linking.openURL(`https://wa.me/${phoneWithCountry}`);
+            }}
+          >
+            <Ionicons name="logo-whatsapp" size={20} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 8 }}>WhatsApp</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Info Card */}
