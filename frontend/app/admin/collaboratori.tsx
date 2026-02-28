@@ -366,8 +366,13 @@ export default function CollaboratoreesScreen() {
           </View>
           <Text style={styles.userEmail}>{item.email}</Text>
           <Text style={styles.userTeams} numberOfLines={1}>
-            {getTeamNames(item.assigned_teams)}
+            🏐 {getTeamNames(item.assigned_teams)}
           </Text>
+          {item.assigned_venues && item.assigned_venues.length > 0 && (
+            <Text style={[styles.userTeams, { color: '#7B1FA2' }]} numberOfLines={1}>
+              🏢 {getVenueNames(item.assigned_venues)}
+            </Text>
+          )}
           <View style={styles.userMeta}>
             <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
             <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
