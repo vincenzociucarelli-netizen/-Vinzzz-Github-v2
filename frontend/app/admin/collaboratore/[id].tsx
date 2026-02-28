@@ -117,6 +117,34 @@ export default function AdminCollaboratoreDetail() {
   const [selectedVenueNames, setSelectedVenueNames] = useState<string[]>([]);
   const [availableVenues, setAvailableVenues] = useState<{name: string, address: string, city: string}[]>([]);
 
+  // Helper: genera i mesi del contratto
+  const getContractMonths = () => {
+    const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+    const months: { name: string; month: number; year: number }[] = [];
+    
+    if (!collaboratore?.contract_start_date || !collaboratore?.contract_end_date) {
+      return months;
+    }
+    
+    const startDate = new Date(collaboratore.contract_start_date);
+    const endDate = new Date(collaboratore.contract_end_date);
+    
+    let current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    
+    while (current <= endDate) {
+      months.push({
+        name: monthNames[current.getMonth()],
+        month: current.getMonth() + 1,
+        year: current.getFullYear()
+      });
+      current.setMonth(current.getMonth() + 1);
+    }
+    
+    return months;
+  };
+
+  const contractMonths = collaboratore ? getContractMonths() : [];
+
   const openImageViewer = (imageBase64: string, title: string) => {
     setViewingImage(imageBase64);
     setViewingImageTitle(title);
