@@ -77,7 +77,7 @@
 
 ### 👤 Profilo Personale
 - ✅ Gestione dati personali
-- ✅ Foto profilo con **trasformazione artistica AI** (stile schizzo a matita)
+- ✅ Foto profilo
 - ✅ Dichiarazione compensi sportivi (limite 5.000€)
 
 ---
