@@ -864,10 +864,13 @@ export default function AdminCollaboratoreDetail() {
             )}
           </View>
           
-          {/* Month Icons Grid */}
+          {/* Month Icons Grid - Contract year order (Sep-Dec first, then Jan-Aug) */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 12, backgroundColor: '#f5f5f5', borderRadius: 10, padding: 8 }}>
-            {['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'].map((monthName, index) => {
-              const monthNum = index + 1;
+            {[
+              { name: 'Set', month: 9 }, { name: 'Ott', month: 10 }, { name: 'Nov', month: 11 }, { name: 'Dic', month: 12 },
+              { name: 'Gen', month: 1 }, { name: 'Feb', month: 2 }, { name: 'Mar', month: 3 }, { name: 'Apr', month: 4 },
+              { name: 'Mag', month: 5 }, { name: 'Giu', month: 6 }, { name: 'Lug', month: 7 }, { name: 'Ago', month: 8 }
+            ].map(({ name: monthName, month: monthNum }) => {
               const isSigned = signedReceipts.some((r: any) => r.month === monthNum);
               return (
                 <View 
