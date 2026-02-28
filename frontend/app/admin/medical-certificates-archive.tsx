@@ -610,4 +610,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  certificatePreview: {
+    marginBottom: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  certificateImage: {
+    width: '100%',
+    height: 300,
+    backgroundColor: '#fff',
+  },
+  pdfPreview: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  pdfPreviewText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 8,
+  },
+  pdfPreviewHint: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+  },
 });
