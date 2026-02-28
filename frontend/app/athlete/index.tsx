@@ -1232,37 +1232,73 @@ export default function AthleteScreen() {
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 }}>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 8, textAlign: 'center' }}>
-              📋 Data Scadenza Certificato
-            </Text>
-            <Text style={{ fontSize: 14, color: '#666', marginBottom: 20, textAlign: 'center' }}>
-              Inserisci la data di scadenza (GG/MM/AAAA)
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 16, textAlign: 'center' }}>
+              📋 Certificato Medico
             </Text>
             
-            <View style={{ position: 'relative' }}>
-              <TextInput
-                style={{
-                  borderWidth: 1,
-                  borderColor: '#ddd',
-                  borderRadius: 8,
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  fontSize: 18,
-                  textAlign: 'center',
-                  backgroundColor: '#f9f9f9',
-                  fontWeight: '600',
-                  letterSpacing: 1,
-                }}
-                value={certDateInput}
-                onChangeText={handleDateInputChange}
-                placeholder="27/02/2028"
-                placeholderTextColor="#bbb"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-            </View>
+            {/* Data di Emissione */}
+            <Text style={{ fontSize: 14, color: '#333', marginBottom: 6, fontWeight: '600' }}>
+              Data di Emissione (GG/MM/AAAA)
+            </Text>
+            <TextInput
+              style={{
+                borderWidth: 1,
+                borderColor: '#ddd',
+                borderRadius: 8,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                fontSize: 16,
+                textAlign: 'center',
+                backgroundColor: '#f9f9f9',
+                fontWeight: '600',
+                letterSpacing: 1,
+              }}
+              value={certDateInput}
+              onChangeText={handleDateInputChange}
+              placeholder="28/02/2026"
+              placeholderTextColor="#bbb"
+              keyboardType="numeric"
+              maxLength={10}
+            />
             
-            <Text style={{ fontSize: 12, color: '#999', marginTop: 8, textAlign: 'center' }}>
+            {/* Validità */}
+            <Text style={{ fontSize: 14, color: '#333', marginTop: 16, marginBottom: 6, fontWeight: '600' }}>
+              Validità (mesi)
+            </Text>
+            <TextInput
+              style={{
+                borderWidth: 1,
+                borderColor: '#ddd',
+                borderRadius: 8,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                fontSize: 16,
+                textAlign: 'center',
+                backgroundColor: '#f9f9f9',
+                fontWeight: '600',
+                width: 100,
+                alignSelf: 'center',
+              }}
+              value={certValidityMonths}
+              onChangeText={handleValidityChange}
+              placeholder="12"
+              placeholderTextColor="#bbb"
+              keyboardType="numeric"
+              maxLength={2}
+            />
+            
+            {/* Scadenza Calcolata */}
+            {certCalculatedExpiry ? (
+              <View style={{ marginTop: 20, backgroundColor: '#E8F5E9', padding: 16, borderRadius: 8, alignItems: 'center' }}>
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>SCADENZA CERTIFICATO</Text>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#2E7D32' }}>{certCalculatedExpiry}</Text>
+                <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                  (giorno prima dell'anniversario emissione)
+                </Text>
+              </View>
+            ) : null}
+            
+            <Text style={{ fontSize: 11, color: '#999', marginTop: 12, textAlign: 'center' }}>
               Digita solo i numeri, le barre / vengono inserite automaticamente
             </Text>
             
