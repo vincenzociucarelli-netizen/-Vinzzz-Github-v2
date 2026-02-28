@@ -301,8 +301,22 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
     
     setProcessingTrial(true);
     try {
-      await api.post(`/trial/request-deletion/${athleteId}`);
-      Alert.alert('Cancellazione Completata', `Tutti i dati di ${athleteName} sono stati eliminati.`);
+      const response = await api.post(`/trial/request-deletion/${athleteId}`);
+      
+      // Check if parent account was also deleted
+      if (response.data.parent_deleted) {
+        // Clear token and redirect to login
+        await AsyncStorage.removeItem('token');
+        if (Platform.OS === 'web') {
+          window.alert('Account eliminato. Verrai reindirizzato alla pagina di login.');
+          window.location.href = '/login';
+        } else {
+          Alert.alert('Account Eliminato', 'Tutti i tuoi dati sono stati cancellati.', [
+            { text: 'OK', onPress: () => router.replace('/login') }
+          ]);
+        }
+        return;
+      }
       
       // Remove this athlete from the list
       const remaining = athletesRequiringAction.filter(a => a.id !== athleteId);
@@ -313,8 +327,19 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
       
       // Reload athletes
       await loadAthletes();
+      
+      if (Platform.OS === 'web') {
+        window.alert(`Tutti i dati di ${athleteName} sono stati eliminati.`);
+      } else {
+        Alert.alert('Cancellazione Completata', `Tutti i dati di ${athleteName} sono stati eliminati.`);
+      }
     } catch (error: any) {
-      Alert.alert('Errore', error.response?.data?.detail || 'Impossibile completare l\'operazione');
+      const errorMsg = error.response?.data?.detail || 'Impossibile completare l\'operazione';
+      if (Platform.OS === 'web') {
+        window.alert('Errore: ' + errorMsg);
+      } else {
+        Alert.alert('Errore', errorMsg);
+      }
     } finally {
       setProcessingTrial(false);
     }
