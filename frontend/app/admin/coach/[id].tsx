@@ -718,7 +718,10 @@ export default function AdminCoachDetail() {
         {/* Squadre Assegnate */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>🏐 Squadre Assegnate</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <SportIcon size={20} />
+              <Text style={[styles.cardTitle, { marginLeft: 6 }]}>Squadre Assegnate</Text>
+            </View>
             <TouchableOpacity onPress={() => setEditingTeams(!editingTeams)}>
               <Ionicons name={editingTeams ? "close" : "create"} size={22} color="#007AFF" />
             </TouchableOpacity>
