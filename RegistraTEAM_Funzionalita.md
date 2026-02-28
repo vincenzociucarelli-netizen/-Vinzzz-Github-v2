@@ -146,7 +146,7 @@
 
 ### 👤 Profilo Personale
 - ✅ Gestione dati personali
-- ✅ Foto profilo con **trasformazione AI**
+- ✅ Foto profilo
 
 ---
 
