@@ -7098,6 +7098,87 @@ async def get_next_receipt_number(society_id: str) -> str:
     
     return f"{prefix}{next_num:04d}"
 
+async def get_next_attestato_number() -> str:
+    """Generate next attestato number for the current year: ATT-2025-0001"""
+    current_year = datetime.utcnow().year
+    prefix = f"ATT-{current_year}-"
+    
+    # Find the highest attestato number for this year
+    last_attestato = await db.attestati_versamento.find_one(
+        {
+            "attestato_number": {"$regex": f"^{prefix}"},
+        },
+        sort=[("attestato_number", -1)]
+    )
+    
+    if last_attestato and last_attestato.get("attestato_number"):
+        try:
+            last_num = int(last_attestato["attestato_number"].split("-")[-1])
+            next_num = last_num + 1
+        except:
+            next_num = 1
+    else:
+        next_num = 1
+    
+    return f"{prefix}{next_num:04d}"
+
+@api_router.post("/attestati/generate-number/{athlete_id}")
+async def generate_attestato_number(
+    athlete_id: str,
+    current_user = Depends(get_current_user)
+):
+    """Generate and save a unique attestato number for a minor athlete"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.PARENT]:
+        raise HTTPException(status_code=403, detail="Solo admin e genitori possono generare attestati")
+    
+    # Check if athlete exists
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Check if there's already an attestato for this athlete this year
+    current_year = datetime.utcnow().year
+    existing = await db.attestati_versamento.find_one({
+        "athlete_id": athlete_id,
+        "year": current_year
+    })
+    
+    if existing:
+        return {"attestato_number": existing["attestato_number"], "existing": True}
+    
+    # Generate new number
+    attestato_number = await get_next_attestato_number()
+    
+    # Save to database
+    attestato_record = {
+        "id": str(uuid.uuid4()),
+        "attestato_number": attestato_number,
+        "athlete_id": athlete_id,
+        "athlete_name": athlete.get("full_name", ""),
+        "year": current_year,
+        "created_at": datetime.utcnow().isoformat(),
+        "created_by": current_user["id"]
+    }
+    await db.attestati_versamento.insert_one(attestato_record)
+    
+    return {"attestato_number": attestato_number, "existing": False}
+
+@api_router.get("/attestati/number/{athlete_id}")
+async def get_attestato_number(
+    athlete_id: str,
+    current_user = Depends(get_current_user)
+):
+    """Get existing attestato number for an athlete this year, or None if not generated yet"""
+    current_year = datetime.utcnow().year
+    existing = await db.attestati_versamento.find_one({
+        "athlete_id": athlete_id,
+        "year": current_year
+    })
+    
+    if existing:
+        return {"attestato_number": existing["attestato_number"]}
+    return {"attestato_number": None}
+
 @api_router.post("/payments/import")
 async def import_payments(file: UploadFile = File(...), current_user = Depends(get_current_user)):
     """Import payments from Excel file. Matches athletes by athlete_code."""
