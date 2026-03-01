@@ -623,18 +623,18 @@ export default function AdminCollaboratoreDetail() {
               {signedReceipts.length > 0 && (
                 <TouchableOpacity 
                   onPress={() => setQuietanzeModalVisible(true)}
-                  style={{ marginTop: 12, padding: 12, backgroundColor: '#E8F5E9', borderRadius: 8 }}
+                  style={{ marginTop: 12, padding: 12, backgroundColor: '#E3F2FD', borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9' }}
                 >
                   <View style={[styles.infoRow, { alignItems: 'center' }]}>
-                    <Text style={[styles.infoLabel, { color: '#2E7D32' }]}>💰 Già Percepito:</Text>
+                    <Text style={[styles.infoLabel, { color: '#1565C0' }]}>💰 Già Percepito:</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={[styles.infoValue, { fontWeight: 'bold', color: '#2E7D32', fontSize: 16, marginRight: 8 }]}>
+                      <Text style={[styles.infoValue, { fontWeight: 'bold', color: '#1565C0', fontSize: 16, marginRight: 8 }]}>
                         € {signedReceipts
                           .filter((r: any) => r.receipt_signed)
                           .reduce((sum: number, r: any) => sum + (r.amount_gross || 0), 0)
                           .toFixed(2)}
                       </Text>
-                      <Ionicons name="chevron-forward" size={18} color="#2E7D32" />
+                      <Ionicons name="chevron-forward" size={18} color="#1565C0" />
                     </View>
                   </View>
                   <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
