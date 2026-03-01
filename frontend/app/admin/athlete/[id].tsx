@@ -3151,18 +3151,34 @@ export default function AdminAthleteDetail() {
             />
             
             <Text style={styles.inputLabel}>Validità (mesi)</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={certValidityMonths}
-                onValueChange={(value) => setCertValidityMonths(value)}
-                style={styles.picker}
-              >
-                <Picker.Item label="6 mesi" value="6" />
-                <Picker.Item label="12 mesi" value="12" />
-                <Picker.Item label="18 mesi" value="18" />
-                <Picker.Item label="24 mesi" value="24" />
-              </Picker>
-            </View>
+            <TextInput
+              style={styles.modalInput}
+              value={certValidityMonths}
+              onChangeText={setCertValidityMonths}
+              placeholder="12"
+              placeholderTextColor="#999"
+              keyboardType="number-pad"
+              maxLength={2}
+            />
+            
+            {certIssueDate.length === 10 && parseInt(certValidityMonths) > 0 && (
+              <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginTop: 8, alignItems: 'center' }}>
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>SCADENZA CERTIFICATO</Text>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2E7D32' }}>
+                  {(() => {
+                    const parts = certIssueDate.split('/');
+                    if (parts.length === 3) {
+                      const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                      issueDate.setMonth(issueDate.getMonth() + parseInt(certValidityMonths));
+                      issueDate.setDate(issueDate.getDate() - 1);
+                      return `${issueDate.getDate().toString().padStart(2, '0')}/${(issueDate.getMonth() + 1).toString().padStart(2, '0')}/${issueDate.getFullYear()}`;
+                    }
+                    return '';
+                  })()}
+                </Text>
+                <Text style={{ fontSize: 10, color: '#666', marginTop: 2 }}>(giorno prima dell'anniversario emissione)</Text>
+              </View>
+            )}
             
             <Text style={styles.inputLabel}>Foto Certificato (opzionale)</Text>
             <TouchableOpacity style={styles.certImageBtn} onPress={pickCertImage}>
