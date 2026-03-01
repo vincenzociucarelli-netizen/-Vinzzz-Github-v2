@@ -2170,13 +2170,14 @@ export default function AdminAthleteDetail() {
                       />
                     </View>
                     <View style={styles.flex1}>
-                      <Text style={styles.inputLabel}>Prov.</Text>
+                      <Text style={styles.inputLabel}>Prov. (2 lett.)</Text>
                       <TextInput
                         style={styles.input}
                         value={editData.province}
-                        onChangeText={(t) => setEditData({...editData, province: t.toUpperCase()})}
+                        onChangeText={(t) => setEditData({...editData, province: t.toUpperCase().slice(0, 2)})}
                         maxLength={2}
                         autoCapitalize="characters"
+                        placeholder="PG"
                       />
                     </View>
                   </View>
