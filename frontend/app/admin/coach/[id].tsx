@@ -1113,14 +1113,24 @@ export default function AdminCoachDetail() {
                                 </Text>
                               </View>
                               {data.exceedsThreshold15k && (
-                                <Text style={{ color: '#C62828', fontSize: 11, marginTop: 4 }}>
-                                  Supera soglia €15.000 - Tassazione IRPEF
-                                </Text>
+                                <View style={{ backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#F44336', borderRadius: 8, padding: 8, marginTop: 8 }}>
+                                  <Text style={{ fontSize: 12, color: '#C62828', fontWeight: 'bold', textAlign: 'center' }}>
+                                    🚨 SUPERAMENTO €15.000
+                                  </Text>
+                                  <Text style={{ fontSize: 10, color: '#D32F2F', textAlign: 'center', marginTop: 2 }}>
+                                    Tassazione IRPEF obbligatoria
+                                  </Text>
+                                </View>
                               )}
                               {data.exceedsThreshold5k && !data.exceedsThreshold15k && (
-                                <Text style={{ color: '#F57F17', fontSize: 11, marginTop: 4 }}>
-                                  Supera soglia €5.000 - Contributi previdenziali
-                                </Text>
+                                <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 8, marginTop: 8 }}>
+                                  <Text style={{ fontSize: 12, color: '#E65100', fontWeight: 'bold', textAlign: 'center' }}>
+                                    ⚠️ SUPERAMENTO €5.000
+                                  </Text>
+                                  <Text style={{ fontSize: 10, color: '#F57F17', textAlign: 'center', marginTop: 2 }}>
+                                    Contributi previdenziali INPS
+                                  </Text>
+                                </View>
                               )}
                             </View>
                           );
