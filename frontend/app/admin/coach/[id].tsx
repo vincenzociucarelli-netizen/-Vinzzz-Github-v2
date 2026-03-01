@@ -116,6 +116,9 @@ export default function AdminCoachDetail() {
   // Quietanze firmate reali dal database
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
   
+  // Modal per visualizzare le quietanze firmate
+  const [receiptsModalVisible, setReceiptsModalVisible] = useState(false);
+  
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
   const [otherAnnualCompensation, setOtherAnnualCompensation] = useState('0');
