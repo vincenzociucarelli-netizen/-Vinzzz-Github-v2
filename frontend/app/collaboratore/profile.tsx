@@ -976,8 +976,17 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           {renderField('Provincia di Nascita', profileData.province_of_birth, 'province_of_birth')}
           {renderField('Indirizzo', profileData.address, 'address')}
           {renderField('Città', profileData.city, 'city')}
-          {renderField('Provincia', profileData.province, 'province')}
-          {renderField('CAP', profileData.postal_code, 'postal_code')}
+          
+          {/* CAP e Provincia sulla stessa riga */}
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              {renderField('CAP', profileData.postal_code, 'postal_code')}
+            </View>
+            <View style={{ flex: 1 }}>
+              {renderField('Provincia', profileData.province, 'province')}
+            </View>
+          </View>
+          
           {renderField('Telefono', profileData.phone, 'phone')}
         </View>
 
