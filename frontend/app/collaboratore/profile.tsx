@@ -55,6 +55,7 @@ export default function CollaboratoreProfile() {
     place_of_birth: '',
     province_of_birth: '',
     birth_province: '',
+    country_of_birth: DEFAULT_COUNTRY,
     gender: '' as '' | 'M' | 'F',
     fiscal_code: '',
     address: '',
