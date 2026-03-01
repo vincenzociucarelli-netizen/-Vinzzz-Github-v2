@@ -1915,18 +1915,15 @@ export default function AthleteDetail() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Validità (mesi)</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={certValidityMonths}
-                  onValueChange={(value) => setCertValidityMonths(value)}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="6 mesi" value="6" />
-                  <Picker.Item label="12 mesi" value="12" />
-                  <Picker.Item label="18 mesi" value="18" />
-                  <Picker.Item label="24 mesi" value="24" />
-                </Picker>
-              </View>
+              <TextInput
+                style={styles.textInput}
+                value={certValidityMonths}
+                onChangeText={setCertValidityMonths}
+                placeholder="12"
+                placeholderTextColor="#999"
+                keyboardType="number-pad"
+                maxLength={2}
+              />
             </View>
 
             {certIssueDate.length === 10 && parseInt(certValidityMonths) > 0 && (
