@@ -996,7 +996,7 @@ export default function CoachCompensation() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: 30 }}>
+            <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: 100 }}>
               {/* Receipt Preview */}
               <View style={styles.receiptPreview}>
                 <Text style={styles.receiptTitle}>QUIETANZA COMPENSO SPORTIVO DILETTANTISTICO</Text>
