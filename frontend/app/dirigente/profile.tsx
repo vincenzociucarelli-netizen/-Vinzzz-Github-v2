@@ -767,6 +767,27 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           {renderField('Nome', profileData.first_name, 'first_name')}
           {renderField('Cognome', profileData.last_name, 'last_name')}
           {renderField('Data di Nascita', profileData.date_of_birth, 'date_of_birth')}
+          
+          {/* Stato di Nascita - Dropdown */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>Stato di Nascita</Text>
+            {editing ? (
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={editData.country_of_birth}
+                  onValueChange={(value) => setEditData({...editData, country_of_birth: value})}
+                  style={styles.picker}
+                >
+                  {COUNTRIES.map((country) => (
+                    <Picker.Item key={country} label={country} value={country} />
+                  ))}
+                </Picker>
+              </View>
+            ) : (
+              <Text style={styles.fieldValue}>{profileData.country_of_birth || DEFAULT_COUNTRY}</Text>
+            )}
+          </View>
+          
           {renderField('Luogo di Nascita', profileData.place_of_birth, 'place_of_birth')}
           {renderField('Provincia di Nascita', profileData.province_of_birth || '', 'province_of_birth')}
           {renderField('Indirizzo', profileData.address, 'address')}
