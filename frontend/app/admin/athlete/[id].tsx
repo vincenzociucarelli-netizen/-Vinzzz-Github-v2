@@ -1998,6 +1998,18 @@ export default function AdminAthleteDetail() {
                     keyboardType="number-pad"
                     maxLength={10}
                   />
+                  <Text style={styles.inputLabel}>Stato di Nascita</Text>
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={editData.country_of_birth || DEFAULT_COUNTRY}
+                      onValueChange={(value) => setEditData({...editData, country_of_birth: value})}
+                      style={styles.picker}
+                    >
+                      {COUNTRIES.map((country) => (
+                        <Picker.Item key={country} label={country} value={country} />
+                      ))}
+                    </Picker>
+                  </View>
                   <View style={styles.row}>
                     <View style={styles.flex2}>
                       <Text style={styles.inputLabel}>Luogo di nascita</Text>
@@ -2009,13 +2021,14 @@ export default function AdminAthleteDetail() {
                       />
                     </View>
                     <View style={styles.flex1}>
-                      <Text style={styles.inputLabel}>Prov.</Text>
+                      <Text style={styles.inputLabel}>Prov. (2 lett.)</Text>
                       <TextInput
                         style={styles.input}
                         value={editData.birth_province}
-                        onChangeText={(t) => setEditData({...editData, birth_province: t.toUpperCase()})}
+                        onChangeText={(t) => setEditData({...editData, birth_province: t.toUpperCase().slice(0, 2)})}
                         maxLength={2}
                         autoCapitalize="characters"
+                        placeholder="PG"
                       />
                     </View>
                   </View>
