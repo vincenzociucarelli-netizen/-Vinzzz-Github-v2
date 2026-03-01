@@ -1558,6 +1558,106 @@ export default function AdminCoachDetail() {
           </View>
         </View>
       </Modal>
+      
+      {/* Modal Quietanze Firmate */}
+      <Modal
+        visible={receiptsModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setReceiptsModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '85%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333' }}>📋 Quietanze Firmate</Text>
+              <TouchableOpacity onPress={() => setReceiptsModalVisible(false)}>
+                <Ionicons name="close-circle" size={28} color="#999" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={{ padding: 16 }}>
+              {/* Totale */}
+              <View style={{ backgroundColor: '#E8F5E9', padding: 16, borderRadius: 12, marginBottom: 16 }}>
+                <Text style={{ color: '#2E7D32', fontWeight: '600', fontSize: 14 }}>💰 Totale Percepito</Text>
+                <Text style={{ color: '#2E7D32', fontWeight: 'bold', fontSize: 28, marginTop: 4 }}>
+                  € {signedReceipts
+                    .filter((r: any) => r.receipt_signed)
+                    .reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0)
+                    .toFixed(2)}
+                </Text>
+                <Text style={{ color: '#666', fontSize: 12, marginTop: 4 }}>
+                  {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate
+                </Text>
+              </View>
+              
+              {/* Lista quietanze */}
+              {signedReceipts
+                .filter((r: any) => r.receipt_signed)
+                .sort((a: any, b: any) => {
+                  if (a.year !== b.year) return b.year - a.year;
+                  return b.month - a.month;
+                })
+                .map((receipt: any, index: number) => {
+                  const MONTH_NAMES = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+                  const isThreshold5k = receipt.exceeded_5000 === true;
+                  const isThreshold15k = receipt.exceeded_15000 === true;
+                  
+                  return (
+                    <View 
+                      key={index} 
+                      style={{ 
+                        backgroundColor: isThreshold15k ? '#FFEBEE' : isThreshold5k ? '#FFF8E1' : '#fff',
+                        padding: 14, 
+                        borderRadius: 10, 
+                        marginBottom: 10,
+                        borderLeftWidth: 4,
+                        borderLeftColor: isThreshold15k ? '#F44336' : isThreshold5k ? '#FF9800' : '#4CAF50',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 2,
+                        elevation: 2,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View>
+                          <Text style={{ fontSize: 16, fontWeight: '600', color: '#333' }}>
+                            {MONTH_NAMES[receipt.month]} {receipt.year}
+                          </Text>
+                          {receipt.signed_date && (
+                            <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+                              Firmata il: {format(new Date(receipt.signed_date), 'dd/MM/yyyy', { locale: it })}
+                            </Text>
+                          )}
+                          {isThreshold5k && !isThreshold15k && (
+                            <View style={{ backgroundColor: '#FF9800', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginTop: 4, alignSelf: 'flex-start' }}>
+                              <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>&gt;5K</Text>
+                            </View>
+                          )}
+                          {isThreshold15k && (
+                            <View style={{ backgroundColor: '#F44336', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginTop: 4, alignSelf: 'flex-start' }}>
+                              <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>&gt;15K</Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2E7D32' }}>
+                            € {(receipt.amount_gross || receipt.amount || 0).toFixed(2)}
+                          </Text>
+                          <View style={{ backgroundColor: '#4CAF50', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 4 }}>
+                            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>✓ FIRMATA</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              
+              <View style={{ height: 30 }} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
