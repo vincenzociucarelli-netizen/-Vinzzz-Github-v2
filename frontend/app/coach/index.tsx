@@ -51,8 +51,6 @@ export default function CoachScreen() {
   const [scanning, setScanning] = useState(false);
   const [activeTab, setActiveTab] = useState<'teams' | 'scanner' | 'society'>('teams');
   const [teams, setTeams] = useState<Team[]>([]);
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-  const [athletes, setAthletes] = useState<AthleteWithCert[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dirigenti, setDirigenti] = useState<Dirigente[]>([]);
