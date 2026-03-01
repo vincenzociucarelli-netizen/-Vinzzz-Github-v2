@@ -939,10 +939,25 @@ export default function AdminCoachDetail() {
                                 </Text>
                               </View>
                             </View>
-                            {yearlyBreakdown[years[0]].exceedsThreshold5k && (
-                              <Text style={{ fontSize: 11, color: '#F57F17', marginTop: 4 }}>
-                                ⚠️ Supera soglia €5.000 - Contributi previdenziali
-                              </Text>
+                            {yearlyBreakdown[years[0]].exceedsThreshold5k && !yearlyBreakdown[years[0]].exceedsThreshold15k && (
+                              <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#E65100', fontWeight: 'bold', textAlign: 'center' }}>
+                                  ⚠️ SUPERAMENTO SOGLIA €5.000
+                                </Text>
+                                <Text style={{ fontSize: 11, color: '#F57F17', textAlign: 'center', marginTop: 4 }}>
+                                  Scattano i contributi previdenziali INPS
+                                </Text>
+                              </View>
+                            )}
+                            {yearlyBreakdown[years[0]].exceedsThreshold15k && (
+                              <View style={{ backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#F44336', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#C62828', fontWeight: 'bold', textAlign: 'center' }}>
+                                  🚨 SUPERAMENTO SOGLIA €15.000
+                                </Text>
+                                <Text style={{ fontSize: 11, color: '#D32F2F', textAlign: 'center', marginTop: 4 }}>
+                                  Tassazione IRPEF obbligatoria
+                                </Text>
+                              </View>
                             )}
                           </View>
                         )}
