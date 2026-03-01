@@ -996,15 +996,17 @@ export default function CoachCompensation() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: 100 }}>
+            <ScrollView 
+              style={styles.modalScroll} 
+              contentContainerStyle={{ paddingBottom: 20 }}
+              showsVerticalScrollIndicator={true}
+            >
               {/* Receipt Preview */}
-              <View style={styles.receiptPreview}>
-                <Text style={styles.receiptTitle}>QUIETANZA COMPENSO SPORTIVO DILETTANTISTICO</Text>
-                <Text style={styles.receiptText}>
-                  Collaboratore: {profile?.full_name}{'\n'}
-                  Mese: {MONTH_NAMES[selectedMonth || 0]} {selectedYear}{'\n'}
+              <View style={styles.receiptPreviewCompact}>
+                <Text style={styles.receiptTitleCompact}>QUIETANZA COMPENSO SPORTIVO DILETTANTISTICO</Text>
+                <Text style={styles.receiptTextCompact}>
+                  Collaboratore: {profile?.full_name} • Mese: {MONTH_NAMES[selectedMonth || 0]} {selectedYear}{'\n'}
                   Compenso lordo: € {(profile?.monthly_compensation || 0).toFixed(2)}{'\n'}
-                  {'\n'}
                   Il collaboratore dichiara che non sono intervenute variazioni rispetto all'autocertificazione precedente.
                 </Text>
               </View>
