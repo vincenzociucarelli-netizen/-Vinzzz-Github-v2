@@ -27,6 +27,8 @@ import * as Sharing from 'expo-sharing';
 import { downloadFiscalReceipt, ReceiptData } from '../../../src/utils/fiscalReceipt';
 import CodiceFiscale from 'codice-fiscale-js';
 import { SportIcon } from '../../../src/components/SportIcon';
+import { Picker } from '@react-native-picker/picker';
+import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 
 interface PaymentSummary {
   total_due: number;
