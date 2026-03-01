@@ -1166,16 +1166,16 @@ export default function AdminCoachDetail() {
           {/* Totale già percepito (quietanze firmate) */}
           {signedReceipts.filter((r: any) => r.receipt_signed).length > 0 && (
             <TouchableOpacity 
-              style={{ marginTop: 12, padding: 12, backgroundColor: '#E8F5E9', borderRadius: 8 }}
+              style={{ marginTop: 12, padding: 12, backgroundColor: '#E3F2FD', borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9' }}
               onPress={() => setReceiptsModalVisible(true)}
               activeOpacity={0.7}
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ color: '#2E7D32', fontWeight: '500' }}>💰 Già Percepito:</Text>
-                  <Ionicons name="chevron-forward" size={16} color="#2E7D32" style={{ marginLeft: 4 }} />
+                  <Text style={{ color: '#1565C0', fontWeight: '500' }}>💰 Già Percepito:</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#1565C0" style={{ marginLeft: 4 }} />
                 </View>
-                <Text style={{ fontWeight: 'bold', color: '#2E7D32', fontSize: 16 }}>
+                <Text style={{ fontWeight: 'bold', color: '#1565C0', fontSize: 16 }}>
                   € {signedReceipts
                     .filter((r: any) => r.receipt_signed)
                     .reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0)
