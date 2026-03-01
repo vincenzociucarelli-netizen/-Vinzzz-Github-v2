@@ -1167,10 +1167,7 @@ export default function AdminCoachDetail() {
           {signedReceipts.filter((r: any) => r.receipt_signed).length > 0 && (
             <TouchableOpacity 
               style={{ marginTop: 12, padding: 12, backgroundColor: '#E8F5E9', borderRadius: 8 }}
-              onPress={() => {
-                // Scroll to receipts section or navigate
-                Alert.alert('📋 Quietanze Firmate', 'Scorri in basso per vedere l\'elenco completo delle quietanze firmate.');
-              }}
+              onPress={() => setReceiptsModalVisible(true)}
               activeOpacity={0.7}
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1186,7 +1183,7 @@ export default function AdminCoachDetail() {
                 </Text>
               </View>
               <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate
+                {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate - Tocca per vedere
               </Text>
             </TouchableOpacity>
           )}
