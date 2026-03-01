@@ -301,6 +301,7 @@ export default function AdminAthleteDetail() {
         date_of_birth: athleteData.date_of_birth ? formatDateForInput(athleteData.date_of_birth) : '',
         birth_place: athleteData.birth_place || '',
         birth_province: athleteData.birth_province || '',
+        country_of_birth: athleteData.country_of_birth || DEFAULT_COUNTRY,
         fiscal_code: athleteData.fiscal_code || '',
         email: athleteData.email || '',
         phone_athlete: athleteData.phone_athlete || '',
