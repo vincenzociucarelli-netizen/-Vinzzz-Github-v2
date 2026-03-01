@@ -91,15 +91,6 @@ export default function CoachScreen() {
     }
   };
 
-  const loadAthletes = async (teamId: string) => {
-    try {
-      const response = await api.get(`/coach/team/${teamId}/athletes`);
-      setAthletes(response.data);
-    } catch (error) {
-      console.error('Error loading athletes:', error);
-    }
-  };
-
   const loadDirigenti = async () => {
     try {
       const response = await api.get('/users/dirigenti');
@@ -115,20 +106,11 @@ export default function CoachScreen() {
     loadDirigenti();
   }, []);
 
-  useEffect(() => {
-    if (selectedTeam) {
-      loadAthletes(selectedTeam.id);
-    }
-  }, [selectedTeam]);
-
   const onRefresh = async () => {
     setRefreshing(true);
     await loadTeams();
     await loadCommitments();
     await loadDirigenti();
-    if (selectedTeam) {
-      await loadAthletes(selectedTeam.id);
-    }
     setRefreshing(false);
   };
 
