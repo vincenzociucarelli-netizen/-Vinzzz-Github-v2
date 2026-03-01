@@ -3132,16 +3132,37 @@ export default function AdminAthleteDetail() {
               {certificate ? 'Aggiorna Certificato Medico' : 'Aggiungi Certificato Medico'}
             </Text>
             
-            <Text style={styles.inputLabel}>Data Scadenza (GG/MM/AAAA)</Text>
+            <Text style={styles.inputLabel}>Data di Emissione (GG/MM/AAAA)</Text>
             <TextInput
               style={styles.modalInput}
-              value={certExpiryDate}
-              onChangeText={formatDateInput}
-              placeholder="31/12/2025"
+              value={certIssueDate}
+              onChangeText={(text) => {
+                // Auto-format date input
+                let cleaned = text.replace(/\D/g, '');
+                if (cleaned.length >= 2) cleaned = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
+                if (cleaned.length >= 5) cleaned = cleaned.slice(0, 5) + '/' + cleaned.slice(5);
+                if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+                setCertIssueDate(cleaned);
+              }}
+              placeholder="01/03/2025"
               placeholderTextColor="#999"
               keyboardType="number-pad"
               maxLength={10}
             />
+            
+            <Text style={styles.inputLabel}>Validità (mesi)</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={certValidityMonths}
+                onValueChange={(value) => setCertValidityMonths(value)}
+                style={styles.picker}
+              >
+                <Picker.Item label="6 mesi" value="6" />
+                <Picker.Item label="12 mesi" value="12" />
+                <Picker.Item label="18 mesi" value="18" />
+                <Picker.Item label="24 mesi" value="24" />
+              </Picker>
+            </View>
             
             <Text style={styles.inputLabel}>Foto Certificato (opzionale)</Text>
             <TouchableOpacity style={styles.certImageBtn} onPress={pickCertImage}>
@@ -3163,7 +3184,8 @@ export default function AdminAthleteDetail() {
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setCertModalVisible(false);
-                  setCertExpiryDate('');
+                  setCertIssueDate('');
+                  setCertValidityMonths('12');
                   setCertImage(null);
                 }}
               >
