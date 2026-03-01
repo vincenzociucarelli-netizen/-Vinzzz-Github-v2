@@ -491,6 +491,7 @@ export default function AdminAthleteDetail() {
         date_of_birth: dateOfBirthISO,
         birth_place: editData.birth_place || null,
         birth_province: editData.birth_province || null,
+        country_of_birth: editData.country_of_birth || DEFAULT_COUNTRY,
         fiscal_code: editData.fiscal_code || null,
         email: editData.email || null,
         phone_athlete: editData.phone_athlete || null,
