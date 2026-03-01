@@ -713,6 +713,9 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             onChangeText={(text) => {
               if (isDateField) {
                 setEditData({ ...editData, [key]: formatDateInputAuto(text) });
+              } else if (isProvinceField) {
+                // Limita a 2 caratteri per le province
+                setEditData({ ...editData, [key]: text.toUpperCase().slice(0, 2) });
               } else {
                 setEditData({ ...editData, [key]: text.toUpperCase() });
               }
