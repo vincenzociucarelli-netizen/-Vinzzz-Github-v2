@@ -45,6 +45,7 @@ export default function AdminProfile() {
     last_name: '',
     date_of_birth: '',
     place_of_birth: '',
+    country_of_birth: DEFAULT_COUNTRY,
     fiscal_code: '',
     address: '',
     city: '',
