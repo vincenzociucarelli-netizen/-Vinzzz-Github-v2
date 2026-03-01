@@ -525,7 +525,13 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             <TextInput
               style={styles.input}
               value={editData[key as keyof typeof editData]?.toString() || ''}
-              onChangeText={(text) => setEditData({ ...editData, [key]: text.toUpperCase() })}
+              onChangeText={(text) => {
+                if (isProvinceField) {
+                  setEditData({ ...editData, [key]: text.toUpperCase().slice(0, 2) });
+                } else {
+                  setEditData({ ...editData, [key]: text.toUpperCase() });
+                }
+              }}
               autoCapitalize="characters"
               maxLength={isProvinceField ? 2 : undefined}
               placeholder={isProvinceField ? 'es. PG' : undefined}
