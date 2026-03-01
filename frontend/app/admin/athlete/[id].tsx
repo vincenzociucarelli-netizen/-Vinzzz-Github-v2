@@ -98,6 +98,8 @@ export default function AdminAthleteDetail() {
   // Certificate modal
   const [certModalVisible, setCertModalVisible] = useState(false);
   const [certExpiryDate, setCertExpiryDate] = useState('');
+  const [certIssueDate, setCertIssueDate] = useState('');
+  const [certValidityMonths, setCertValidityMonths] = useState('12');
   const [certImage, setCertImage] = useState<string | null>(null);
   const [savingCert, setSavingCert] = useState(false);
   
