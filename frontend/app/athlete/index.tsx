@@ -1065,6 +1065,9 @@ export default function AthleteScreen() {
           <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
         
+        {/* Spacer per permettere scroll completo */}
+        <View style={{ height: 100 }} />
+        
       </ScrollView>
       
       {/* Privacy Modal - using AdultPrivacyModal component */}
