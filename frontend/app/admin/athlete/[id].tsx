@@ -841,23 +841,32 @@ export default function AdminAthleteDetail() {
   };
 
   const handleSaveCertificate = async () => {
-    if (!certExpiryDate) {
-      showAlert('Errore', 'Inserisci la data di scadenza');
+    if (!certIssueDate) {
+      showAlert('Errore', 'Inserisci la data di emissione');
       return;
     }
     
-    // Converti da DD/MM/YYYY a ISO
-    const parts = certExpiryDate.split('/');
+    if (!certValidityMonths || parseInt(certValidityMonths) <= 0) {
+      showAlert('Errore', 'Inserisci la validità in mesi');
+      return;
+    }
+    
+    // Converti da DD/MM/YYYY a Date
+    const parts = certIssueDate.split('/');
     if (parts.length !== 3) {
       showAlert('Errore', 'Formato data non valido. Usa GG/MM/AAAA');
       return;
     }
     
-    const expiryDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-    if (isNaN(expiryDate.getTime())) {
+    const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    if (isNaN(issueDate.getTime())) {
       showAlert('Errore', 'Data non valida');
       return;
     }
+    
+    // Calcola data di scadenza: data emissione + mesi validità
+    const expiryDate = new Date(issueDate);
+    expiryDate.setMonth(expiryDate.getMonth() + parseInt(certValidityMonths));
     
     setSavingCert(true);
     try {
@@ -872,7 +881,8 @@ export default function AdminAthleteDetail() {
         expiry_date: response.data.expiry_date,
       });
       setCertModalVisible(false);
-      setCertExpiryDate('');
+      setCertIssueDate('');
+      setCertValidityMonths('12');
       setCertImage(null);
       showAlert('Successo', 'Certificato medico salvato');
     } catch (error: any) {
