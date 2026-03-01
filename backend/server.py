@@ -1569,28 +1569,6 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
     # Handle other_annual_compensation (compensi pregressi da altre società)
     if data.other_annual_compensation is not None:
         update_dict["other_annual_compensation"] = float(data.other_annual_compensation) if data.other_annual_compensation else 0.0
-        
-        # Notify admin if newly exceeded €5.000
-        if new_limit.get("exceeded_5000") and not old_limit.get("exceeded_5000"):
-            notification = AdminNotification(
-                type=notif_type_5k,
-                title=f"⚠️ {user_type} ha superato €5.000",
-                message=f"Il {user_type.lower()} {user_name} ha dichiarato di aver superato il limite di €5.000 annuali di compensi sportivi dilettantistici. Data dichiarazione: {now.strftime('%d/%m/%Y %H:%M')}",
-                related_user_id=current_user["id"],
-                related_user_name=user_name
-            )
-            await db.admin_notifications.insert_one(notification.dict())
-        
-        # Notify admin if newly exceeded €15.000
-        if new_limit.get("exceeded_15000") and not old_limit.get("exceeded_15000"):
-            notification = AdminNotification(
-                type=notif_type_15k,
-                title=f"🚨 URGENTE: {user_type} ha superato €15.000",
-                message=f"ATTENZIONE: Il {user_type.lower()} {user_name} ha dichiarato di aver superato il limite di €15.000 annuali. Data dichiarazione: {now.strftime('%d/%m/%Y %H:%M')}. Questo comporta obblighi fiscali e contributivi aggiuntivi!",
-                related_user_id=current_user["id"],
-                related_user_name=user_name
-            )
-            await db.admin_notifications.insert_one(notification.dict())
     
     # Handle privacy acceptance for adult users
     if data.privacy_accepted is not None:
