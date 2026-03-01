@@ -1163,66 +1163,6 @@ export default function CoachScreen() {
           )}
         </View>
 
-        {/* Athletes List (if team selected) */}
-        {selectedTeam && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>👥 Atleti - {selectedTeam.name}</Text>
-              <TouchableOpacity 
-                style={styles.attendanceBtn}
-                onPress={() => router.push(`/coach/team/${selectedTeam.id}/attendances`)}
-              >
-                <Ionicons name="calendar" size={16} color="#007AFF" />
-                <Text style={styles.attendanceBtnText}>Presenze</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {athletes.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="person-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>Nessun atleta</Text>
-              </View>
-            ) : (
-              <>
-                {/* Certificate Legend */}
-                <View style={styles.legendContainer}>
-                  <Text style={styles.legendTitle}>📋 Certificato Medico:</Text>
-                  <View style={styles.legendItems}>
-                    <View style={styles.legendItem}>
-                      <Ionicons name="checkmark-circle" size={14} color="#34C759" />
-                      <Text style={styles.legendText}>Valido</Text>
-                    </View>
-                    <View style={styles.legendItem}>
-                      <Ionicons name="warning" size={14} color="#FF9500" />
-                      <Text style={styles.legendText}>In scadenza</Text>
-                    </View>
-                    <View style={styles.legendItem}>
-                      <Ionicons name="close-circle" size={14} color="#FF3B30" />
-                      <Text style={styles.legendText}>Scaduto/Mancante</Text>
-                    </View>
-                  </View>
-                </View>
-                <FlatList
-                  data={athletes}
-                  renderItem={renderAthleteItem}
-                  keyExtractor={(item) => item.id}
-                  scrollEnabled={false}
-                />
-              </>
-            )}
-          </View>
-        )}
-
-        {/* Profile Link */}
-        <TouchableOpacity
-          style={styles.profileLink}
-          onPress={() => router.push('/coach/profile')}
-        >
-          <Ionicons name="person-circle" size={24} color="#007AFF" />
-          <Text style={styles.profileLinkText}>Il Mio Profilo</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
-
         <View style={{ height: 40 }} />
       </ScrollView>
       )}
