@@ -996,7 +996,7 @@ export default function CoachCompensation() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: 20 }}>
+            <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: 30 }}>
               {/* Receipt Preview */}
               <View style={styles.receiptPreview}>
                 <Text style={styles.receiptTitle}>QUIETANZA COMPENSO SPORTIVO DILETTANTISTICO</Text>
@@ -1015,7 +1015,7 @@ export default function CoachCompensation() {
                 ref={signatureRef}
                 onSave={(sig) => setSignature(sig)}
                 onClear={() => setSignature(null)}
-                height={200}
+                height={180}
               />
             </ScrollView>
 
