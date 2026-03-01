@@ -161,14 +161,6 @@ export default function CoachScreen() {
     setPendingQrCode(null);
   };
 
-  const formatDate = (dateStr: string) => {
-    try {
-      return format(new Date(dateStr), 'dd/MM/yyyy', { locale: it });
-    } catch {
-      return dateStr;
-    }
-  };
-
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     setScanning(false);
     
