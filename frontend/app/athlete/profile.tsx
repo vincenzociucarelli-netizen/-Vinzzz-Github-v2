@@ -22,6 +22,7 @@ import { Picker } from '@react-native-picker/picker';
 import PhotoViewer from '../../src/components/PhotoViewer';
 import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
 import { TrialEndModal } from '../../src/components/TrialEndModal';
+import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
