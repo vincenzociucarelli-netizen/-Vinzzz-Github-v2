@@ -1469,7 +1469,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           )}
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
       </KeyboardAvoidingView>
 
