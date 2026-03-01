@@ -17,6 +17,8 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
+import { Picker } from '@react-native-picker/picker';
+import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function ParentProfile() {
