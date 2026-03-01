@@ -1419,10 +1419,22 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
   },
+  receiptTitleCompact: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
   receiptText: {
     fontSize: 13,
     color: '#555',
     lineHeight: 22,
+  },
+  receiptTextCompact: {
+    fontSize: 12,
+    color: '#555',
+    lineHeight: 18,
   },
   warningBox: {
     flexDirection: 'row',
