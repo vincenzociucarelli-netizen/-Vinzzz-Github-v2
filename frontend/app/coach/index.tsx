@@ -413,18 +413,18 @@ export default function CoachScreen() {
   const renderTeamCard = (team: Team) => (
     <TouchableOpacity
       key={team.id}
-      style={[styles.teamCard, selectedTeam?.id === team.id && styles.teamCardSelected]}
-      onPress={() => setSelectedTeam(team)}
+      style={styles.teamCard}
+      onPress={() => router.push(`/coach/team/${team.id}`)}
     >
       <View style={styles.teamCardHeader}>
-        <Text style={styles.teamName}>{team.name}</Text>
-        {selectedTeam?.id === team.id && (
-          <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
-        )}
+        <View style={{ flex: 1 }}>
+          <Text style={styles.teamName}>{team.name}</Text>
+          {team.description && (
+            <Text style={styles.teamDescription}>{team.description}</Text>
+          )}
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#999" />
       </View>
-      {team.description && (
-        <Text style={styles.teamDescription}>{team.description}</Text>
-      )}
     </TouchableOpacity>
   );
 
