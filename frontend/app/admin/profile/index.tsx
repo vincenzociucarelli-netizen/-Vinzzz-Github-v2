@@ -18,6 +18,7 @@ import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
+import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 
 export default function AdminProfile() {
   const router = useRouter();
