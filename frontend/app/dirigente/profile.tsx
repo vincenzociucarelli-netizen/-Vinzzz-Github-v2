@@ -399,6 +399,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         date_of_birth: isoDate,
         place_of_birth: editData.place_of_birth,
         birth_province: editData.province_of_birth,
+        country_of_birth: editData.country_of_birth,
         gender: editData.gender,
         fiscal_code: editData.fiscal_code,
         address: editData.address,
