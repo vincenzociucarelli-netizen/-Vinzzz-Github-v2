@@ -270,6 +270,7 @@ export default function AdminProfile() {
         full_name: `${editData.last_name} ${editData.first_name}`,
         date_of_birth: isoDate,
         place_of_birth: editData.place_of_birth,
+        country_of_birth: editData.country_of_birth,
         fiscal_code: editData.fiscal_code,
         address: editData.address,
         city: editData.city,
