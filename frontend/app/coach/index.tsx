@@ -582,10 +582,9 @@ export default function CoachScreen() {
             </>
           ) : (
             <TouchableOpacity 
-              style={styles.button} 
+              style={styles.scannerButton} 
               onPress={async () => {
                 if (Platform.OS !== 'web') {
-                  // Request camera permission first if not granted
                   if (!permission?.granted) {
                     const result = await requestPermission();
                     if (result.granted) {
@@ -599,8 +598,8 @@ export default function CoachScreen() {
                 }
               }}
             >
-              <Ionicons name="scan" size={24} color="#fff" />
-              <Text style={styles.buttonText}>Scansiona QR Code</Text>
+              <Ionicons name="scan" size={22} color="#fff" />
+              <Text style={styles.scannerButtonText}>Scansiona QR Code</Text>
             </TouchableOpacity>
           )}
 
@@ -608,10 +607,12 @@ export default function CoachScreen() {
             style={styles.historyButton}
             onPress={() => router.push('/coach/history')}
           >
-            <Ionicons name="list" size={20} color="#007AFF" />
+            <Ionicons name="list" size={18} color="#007AFF" />
             <Text style={styles.historyButtonText}>Storico Presenze</Text>
           </TouchableOpacity>
-        </View>
+          
+          <View style={{ height: 40 }} />
+        </ScrollView>
         
         {/* Manual Input Modal */}
         <Modal
