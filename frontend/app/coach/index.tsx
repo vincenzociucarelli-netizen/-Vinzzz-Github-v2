@@ -539,40 +539,43 @@ export default function CoachScreen() {
           </TouchableOpacity>
         </View>
         
-        <View style={styles.content}>
-          <Ionicons name="qr-code" size={80} color="#007AFF" />
-          <Text style={styles.title}>Pronto per scansionare</Text>
-          <Text style={styles.subtitle}>Registra le presenze degli atleti</Text>
+        <ScrollView 
+          style={styles.scrollContent}
+          contentContainerStyle={styles.scannerContent}
+        >
+          <Ionicons name="qr-code" size={60} color="#007AFF" />
+          <Text style={styles.scannerTitle}>Pronto per scansionare</Text>
+          <Text style={styles.scannerSubtitle}>Registra le presenze degli atleti</Text>
           
           {Platform.OS === 'web' ? (
             <>
-              <TouchableOpacity style={[styles.button, { marginTop: 30, marginBottom: 20, paddingVertical: 18 }]} onPress={startWebScanner}>
-                <Ionicons name="camera" size={28} color="#fff" />
-                <Text style={[styles.buttonText, { fontSize: 18, marginLeft: 12 }]}>Apri Scanner Fotocamera</Text>
+              <TouchableOpacity style={styles.scannerButton} onPress={startWebScanner}>
+                <Ionicons name="camera" size={22} color="#fff" />
+                <Text style={styles.scannerButtonText}>Apri Scanner Fotocamera</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.button, styles.buttonSecondary, { marginTop: 15, paddingVertical: 18 }]} 
+                style={styles.scannerButtonSecondary} 
                 onPress={() => setManualInputModalVisible(true)}
               >
-                <Ionicons name="keypad" size={28} color="#007AFF" />
-                <Text style={[styles.buttonSecondaryText, { fontSize: 18, marginLeft: 12 }]}>Inserisci Codice Manualmente</Text>
+                <Ionicons name="keypad" size={22} color="#007AFF" />
+                <Text style={styles.scannerButtonSecondaryText}>Inserisci Codice Manualmente</Text>
               </TouchableOpacity>
               
               {/* Tip for permanent camera permission */}
-              <View style={{ marginTop: 30, paddingHorizontal: 20, paddingVertical: 15, backgroundColor: '#F0F8FF', borderRadius: 10, borderWidth: 1, borderColor: '#007AFF', borderStyle: 'dashed' }}>
-                <Text style={{ fontSize: 13, color: '#007AFF', fontWeight: '600', marginBottom: 8 }}>
+              <View style={styles.permissionTip}>
+                <Text style={styles.permissionTipTitle}>
                   📱 Come memorizzare il permesso fotocamera
                 </Text>
-                <Text style={{ fontSize: 12, color: '#333', lineHeight: 20, marginBottom: 8 }}>
+                <Text style={styles.permissionTipText}>
                   <Text style={{ fontWeight: '600' }}>Metodo 1 - Dalle impostazioni del telefono:</Text>{'\n'}
                   Vai in Impostazioni → App → Chrome/Browser → Autorizzazioni → Fotocamera → Consenti sempre
                 </Text>
-                <Text style={{ fontSize: 12, color: '#333', lineHeight: 20, marginBottom: 8 }}>
+                <Text style={styles.permissionTipText}>
                   <Text style={{ fontWeight: '600' }}>Metodo 2 - Dalle impostazioni del browser:</Text>{'\n'}
                   Tocca ⋮ (menu) → Impostazioni → Impostazioni sito → Fotocamera
                 </Text>
-                <Text style={{ fontSize: 12, color: '#666', lineHeight: 18, fontStyle: 'italic' }}>
+                <Text style={styles.permissionTipNote}>
                   💡 Seleziona "Consenti sempre" quando il browser chiede il permesso
                 </Text>
               </View>
