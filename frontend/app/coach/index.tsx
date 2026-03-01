@@ -8,7 +8,6 @@ import {
   ScrollView,
   RefreshControl,
   Platform,
-  FlatList,
   TextInput,
   Modal,
   Linking,
@@ -19,7 +18,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
-import { Team, Athlete } from '../../src/types';
+import { Team } from '../../src/types';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { SportIcon } from '../../src/components/SportIcon';
