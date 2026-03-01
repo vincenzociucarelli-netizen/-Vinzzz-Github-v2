@@ -329,21 +329,27 @@ export default function AdminProfile() {
     }
   };
 
-  const renderField = (label: string, value: string, key: string, editable: boolean = true) => (
-    <View style={styles.fieldContainer}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      {editing && editable ? (
-        <TextInput
-          style={styles.input}
-          value={editData[key as keyof typeof editData]?.toString() || ''}
-          onChangeText={(text) => setEditData({ ...editData, [key]: text.toUpperCase() })}
-          autoCapitalize="characters"
-        />
-      ) : (
-        <Text style={styles.fieldValue}>{value || '-'}</Text>
-      )}
-    </View>
-  );
+  const renderField = (label: string, value: string, key: string, editable: boolean = true) => {
+    const isProvinceField = key === 'province' || key.toLowerCase().includes('province');
+    
+    return (
+      <View style={styles.fieldContainer}>
+        <Text style={styles.fieldLabel}>{label}{isProvinceField && editing ? ' (2 lettere)' : ''}</Text>
+        {editing && editable ? (
+          <TextInput
+            style={styles.input}
+            value={editData[key as keyof typeof editData]?.toString() || ''}
+            onChangeText={(text) => setEditData({ ...editData, [key]: text.toUpperCase() })}
+            autoCapitalize="characters"
+            maxLength={isProvinceField ? 2 : undefined}
+            placeholder={isProvinceField ? 'es. PG' : undefined}
+          />
+        ) : (
+          <Text style={styles.fieldValue}>{value || '-'}</Text>
+        )}
+      </View>
+    );
+  };
 
   if (loading) {
     return (
