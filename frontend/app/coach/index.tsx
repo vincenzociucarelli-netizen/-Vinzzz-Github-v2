@@ -29,11 +29,6 @@ if (Platform.OS === 'web') {
   Html5QrcodeScanner = require('html5-qrcode').Html5QrcodeScanner;
 }
 
-interface AthleteWithCert extends Athlete {
-  certificate_expiry?: string;
-  is_expired?: boolean;
-}
-
 interface Dirigente {
   id: string;
   full_name: string;
