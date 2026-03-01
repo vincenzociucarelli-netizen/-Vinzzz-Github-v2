@@ -26,6 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import PhotoViewer from '../../src/components/PhotoViewer';
 import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
+import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://registrateam-season.preview.emergentagent.com';
 
