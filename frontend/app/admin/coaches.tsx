@@ -136,6 +136,7 @@ export default function CoachesScreen() {
       criminal_record: false,
     });
     setPriorCompensation('');
+    setProposedCompensation('');
     setOnboardingModalVisible(true);
     setActionModalVisible(false);
   };
