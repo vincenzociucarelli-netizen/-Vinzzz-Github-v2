@@ -146,10 +146,11 @@ export default function CoachesScreen() {
     
     setApprovingCoach(true);
     try {
-      // Save checklist and prior compensation data
+      // Save checklist, compensation data
       await api.patch(`/users/${coachToApprove.id}/onboarding`, {
         onboarding_checklist: checklistItems,
         prior_compensation: parseFloat(priorCompensation) || 0,
+        monthly_compensation: parseFloat(proposedCompensation) || 0,
         onboarding_completed: true,
         onboarding_date: new Date().toISOString(),
       });
