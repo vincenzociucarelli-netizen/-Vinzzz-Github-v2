@@ -562,35 +562,42 @@ export default function AdminCoachDetail() {
           </View>
         )}
 
-        {/* Onboarding Reminder Banner - Clickable to edit */}
+        {/* Onboarding Checklist Button - Always visible when approved */}
         {coach.status === 'approved' && (() => {
           const checklist = coach.onboarding_checklist || {};
-          const missingChecklist = !checklist.contract_signed || !checklist.ras_registered || 
-                                   !checklist.id_acquired || !checklist.fiscal_code_acquired;
-          const missingPriorComp = (coach.prior_compensation === undefined || coach.prior_compensation === null);
+          const totalItems = 5; // contract, ras, id, fiscal_code, criminal_record
+          const completedItems = [
+            checklist.contract_signed,
+            checklist.ras_registered,
+            checklist.id_acquired,
+            checklist.fiscal_code_acquired,
+            checklist.criminal_record
+          ].filter(Boolean).length;
           
-          if (!missingChecklist && !missingPriorComp) return null;
-          
-          const missingItems = [];
-          if (!checklist.contract_signed) missingItems.push('Contratto/Lettera d\'incarico');
-          if (!checklist.ras_registered) missingItems.push('Iscrizione RAS');
-          if (!checklist.id_acquired) missingItems.push('Documento d\'identità');
-          if (!checklist.fiscal_code_acquired) missingItems.push('Codice fiscale');
-          if (missingPriorComp) missingItems.push('Compensi pregressi');
+          const isComplete = completedItems === totalItems;
           
           return (
             <TouchableOpacity 
-              style={styles.onboardingBanner}
+              style={[
+                styles.checklistButton,
+                isComplete ? styles.checklistButtonComplete : styles.checklistButtonIncomplete
+              ]}
               onPress={() => setEditingOnboarding(true)}
             >
-              <Text style={{ fontSize: 18 }}>📋</Text>
-              <View style={styles.onboardingBannerContent}>
-                <Text style={styles.onboardingBannerTitle}>Promemoria Onboarding</Text>
-                <Text style={styles.onboardingBannerText}>
-                  Da completare: {missingItems.join(', ')}
+              <Ionicons 
+                name={isComplete ? "checkmark-circle" : "alert-circle"} 
+                size={24} 
+                color="#fff" 
+              />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.checklistButtonTitle}>
+                  Checklist Onboarding
                 </Text>
-                <Text style={styles.onboardingBannerAction}>Tocca per completare →</Text>
+                <Text style={styles.checklistButtonSubtitle}>
+                  {completedItems}/{totalItems} completati
+                </Text>
               </View>
+              <Ionicons name="chevron-forward" size={20} color="#fff" />
             </TouchableOpacity>
           );
         })()}
