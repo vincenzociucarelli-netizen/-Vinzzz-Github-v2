@@ -136,6 +136,7 @@ export default function CollaboratoreesScreen() {
       criminal_record: false,
     });
     setPriorCompensation('');
+    setProposedCompensation('');
     setOnboardingModalVisible(true);
     setActionModalVisible(false);
   };
