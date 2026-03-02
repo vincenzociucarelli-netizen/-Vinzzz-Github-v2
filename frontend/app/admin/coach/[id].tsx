@@ -2027,7 +2027,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // Onboarding banner styles
+  // Onboarding banner styles (legacy)
   onboardingBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -2040,6 +2040,31 @@ const styles = StyleSheet.create({
     borderColor: '#FFE0B2',
     borderLeftWidth: 4,
     borderLeftColor: '#FF9500',
+  },
+  // NEW Checklist button styles
+  checklistButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 12,
+  },
+  checklistButtonComplete: {
+    backgroundColor: '#4CAF50',
+  },
+  checklistButtonIncomplete: {
+    backgroundColor: '#F44336',
+  },
+  checklistButtonTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  checklistButtonSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
   },
   onboardingBannerContent: {
     flex: 1,
