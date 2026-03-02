@@ -72,6 +72,7 @@ export default function CollaboratoreesScreen() {
     criminal_record: false,
   });
   const [priorCompensation, setPriorCompensation] = useState('');
+  const [proposedCompensation, setProposedCompensation] = useState('');
   const [approvingCollaboratore, setApprovingCollaboratore] = useState(false);
 
   const handleExport = async () => {
