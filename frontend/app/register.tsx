@@ -159,20 +159,18 @@ export default function Register() {
       }
 
       if (response.data.token) {
-        await setUser(response.data.user, response.data.token);
-        
-        // Different messages based on role
+        // Different behavior based on role
         if (role === 'coach' || role === 'viewer' || role === 'collaboratore') {
+          // Coach, Collaboratore and Viewer need approval - do NOT login automatically
+          // Show message and redirect to login page
           showAlert(
             '✅ Registrazione completata!',
-            'Il tuo account è stato creato.\n\n⚠️ IMPORTANTE: La tua registrazione deve essere approvata da un Amministratore prima di poter accedere a tutte le funzionalità.\n\nRiceverai una notifica quando sarai abilitato.',
-            () => {
-              if (role === 'coach') router.replace('/coach');
-              else if (role === 'collaboratore') router.replace('/collaboratore');
-              else router.replace('/dirigente');
-            }
+            'Il tuo account è stato creato.\n\n⏳ IMPORTANTE: La tua registrazione deve essere approvata da un Amministratore prima di poter accedere.\n\nTi contatteremo per accordarci. Una volta approvato, potrai accedere con le tue credenziali.',
+            () => router.replace('/login')
           );
         } else {
+          // Parent can login immediately
+          await setUser(response.data.user, response.data.token);
           showAlert(
             '✅ Registrazione completata!',
             'Benvenuto! Completa il tuo profilo nella sezione dedicata.',
