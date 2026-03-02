@@ -781,78 +781,94 @@ export default function AdminCollaboratoreDetail() {
           </TouchableOpacity>
         </View>
 
-        {/* Onboarding Checklist */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>📋 Checklist Onboarding</Text>
-            <TouchableOpacity onPress={() => setEditingOnboarding(!editingOnboarding)}>
-              <Ionicons name={editingOnboarding ? "close" : "create"} size={22} color="#007AFF" />
-            </TouchableOpacity>
-          </View>
+        {/* Onboarding Checklist Button */}
+        {(() => {
+          const totalItems = 3; // contract_signed, id_acquired, fiscal_code_acquired
+          const completedItems = [
+            checklistItems.contract_signed,
+            checklistItems.id_acquired,
+            checklistItems.fiscal_code_acquired
+          ].filter(Boolean).length;
           
-          {editingOnboarding ? (
-            <>
+          const isComplete = completedItems === totalItems;
+          
+          return (
+            <TouchableOpacity 
+              style={[
+                styles.checklistButton,
+                isComplete ? styles.checklistButtonComplete : styles.checklistButtonIncomplete
+              ]}
+              onPress={() => setEditingOnboarding(true)}
+            >
+              <Ionicons 
+                name={isComplete ? "checkmark-circle" : "alert-circle"} 
+                size={24} 
+                color="#fff" 
+              />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.checklistButtonTitle}>
+                  Checklist Onboarding
+                </Text>
+                <Text style={styles.checklistButtonSubtitle}>
+                  {completedItems}/{totalItems} completati
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#fff" />
+            </TouchableOpacity>
+          );
+        })()}
+
+        {/* Onboarding Modal */}
+        <Modal
+          visible={editingOnboarding}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setEditingOnboarding(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.onboardingModalContent}>
+              <Text style={styles.onboardingModalTitle}>📋 Checklist Onboarding</Text>
+              <Text style={{ color: '#666', marginBottom: 16, textAlign: 'center' }}>
+                Seleziona le attività completate
+              </Text>
+              
               {Object.entries(checklistItems).map(([key, value]) => (
                 <TouchableOpacity
                   key={key}
-                  style={styles.checklistItem}
+                  style={[styles.onboardingChecklistItem, value && styles.onboardingChecklistItemChecked]}
                   onPress={() => setChecklistItems({ ...checklistItems, [key]: !value })}
                 >
-                  <Ionicons
-                    name={value ? "checkbox" : "square-outline"}
-                    size={24}
-                    color={value ? "#34C759" : "#ccc"}
-                  />
-                  <Text style={styles.checklistLabel}>
-                    {key === 'contract_signed' && 'Contratto firmato'}
-                    {key === 'id_acquired' && 'Documento identità acquisito'}
+                  <Text style={{ fontSize: 22 }}>{value ? '☑️' : '⬜'}</Text>
+                  <Text style={styles.onboardingChecklistText}>
+                    {key === 'contract_signed' && 'Contratto/Lettera d\'incarico firmata'}
+                    {key === 'id_acquired' && 'Documento d\'identità acquisito'}
                     {key === 'fiscal_code_acquired' && 'Codice fiscale acquisito'}
                   </Text>
                 </TouchableOpacity>
               ))}
               
-              <TouchableOpacity
-                style={[styles.saveButton, savingOnboarding && styles.saveButtonDisabled]}
-                onPress={handleSaveOnboarding}
-                disabled={savingOnboarding}
-              >
-                {savingOnboarding ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.saveButtonText}>Salva Checklist</Text>
-                )}
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              {Object.entries(checklistItems).map(([key, value]) => (
-                <View key={key} style={styles.checklistItem}>
-                  <Ionicons
-                    name={value ? "checkmark-circle" : "close-circle"}
-                    size={24}
-                    color={value ? "#34C759" : "#FF3B30"}
-                  />
-                  <Text style={styles.checklistLabel}>
-                    {key === 'contract_signed' && 'Contratto firmato'}
-                    {key === 'id_acquired' && 'Documento identità acquisito'}
-                    {key === 'fiscal_code_acquired' && 'Codice fiscale acquisito'}
-                  </Text>
-                </View>
-              ))}
-              
-              <View style={[styles.onboardingStatus, { backgroundColor: collaboratore.onboarding_completed ? '#E8F5E9' : '#FFF3E0' }]}>
-                <Ionicons
-                  name={collaboratore.onboarding_completed ? "checkmark-circle" : "time"}
-                  size={20}
-                  color={collaboratore.onboarding_completed ? "#34C759" : "#FF9500"}
-                />
-                <Text style={{ marginLeft: 8, color: collaboratore.onboarding_completed ? "#34C759" : "#FF9500", fontWeight: '600' }}>
-                  {collaboratore.onboarding_completed ? 'Onboarding Completato' : 'Onboarding in corso'}
-                </Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setEditingOnboarding(false)}
+                >
+                  <Text style={styles.modalCancelBtnText}>Annulla</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveButton, savingOnboarding && styles.saveButtonDisabled]}
+                  onPress={handleSaveOnboarding}
+                  disabled={savingOnboarding}
+                >
+                  {savingOnboarding ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.saveButtonText}>Salva</Text>
+                  )}
+                </TouchableOpacity>
               </View>
-            </>
-          )}
-        </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* Document Images */}
         {(collaboratore.document_front || collaboratore.document_back) && (
