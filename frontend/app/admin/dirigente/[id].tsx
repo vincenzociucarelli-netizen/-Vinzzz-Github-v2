@@ -1699,4 +1699,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
   },
+  // Enhanced compensation breakdown styles
+  totalBox: {
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  totalValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
 });
