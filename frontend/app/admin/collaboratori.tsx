@@ -1011,6 +1011,32 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
   },
+  compensationSection: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  compensationLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  compensationHint: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 10,
+    lineHeight: 18,
+  },
+  compensationInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 14,
+    fontSize: 16,
+    backgroundColor: '#fafafa',
+  },
   checklistNote: {
     backgroundColor: '#FFF9E6',
     padding: 12,
