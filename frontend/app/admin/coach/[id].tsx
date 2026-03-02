@@ -873,8 +873,10 @@ export default function AdminCoachDetail() {
                 style={styles.input}
                 value={monthlyCompensation}
                 onChangeText={setMonthlyCompensation}
+                onFocus={() => { if (monthlyCompensation === '0') setMonthlyCompensation(''); }}
                 keyboardType="decimal-pad"
                 placeholder="0"
+                selectTextOnFocus={true}
               />
               
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>📋 Compensi Pregressi Dichiarati (€)</Text>
