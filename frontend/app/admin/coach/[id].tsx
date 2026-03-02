@@ -882,8 +882,10 @@ export default function AdminCoachDetail() {
                 style={styles.input}
                 value={otherAnnualCompensation}
                 onChangeText={setOtherAnnualCompensation}
+                onFocus={() => { if (otherAnnualCompensation === '0') setOtherAnnualCompensation(''); }}
                 keyboardType="decimal-pad"
                 placeholder="0"
+                selectTextOnFocus={true}
               />
               <Text style={styles.inputHint}>
                 Importo dichiarato dal coach percepito prima dell'assunzione (Gen-Ago se assunto a Set)
