@@ -134,6 +134,8 @@ export default function AdminDirigenteDetail() {
       setDirigente(userResponse.data);
       setMonthlyCompensation(userResponse.data.monthly_compensation?.toString() || '0');
       setOtherAnnualCompensation(userResponse.data.other_annual_compensation?.toString() || '0');
+      setContractStartDate(userResponse.data.contract_start_date || '');
+      setContractEndDate(userResponse.data.contract_end_date || '');
       setQualification(userResponse.data.qualification || '');
       setDocumentType(userResponse.data.document_type || '');
       setDocumentFront(userResponse.data.document_front || '');
