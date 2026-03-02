@@ -1410,4 +1410,19 @@ const styles = StyleSheet.create({
   modalButtonCancelText: { color: '#666', fontWeight: '600' },
   modalButtonConfirm: { backgroundColor: '#007AFF' },
   modalButtonConfirmText: { color: '#fff', fontWeight: '600' },
+  // Enhanced compensation breakdown styles
+  totalBox: {
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  totalValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
 });
