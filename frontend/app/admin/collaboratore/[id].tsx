@@ -315,6 +315,82 @@ export default function AdminCollaboratoreDetail() {
     }
   };
 
+  // Calcolo breakdown per anno solare
+  const getYearlyBreakdown = () => {
+    const monthly = parseFloat(monthlyCompensation) || 0;
+    const prior = parseFloat(otherAnnualCompensation) || 0;
+    const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+    
+    const years: { [year: number]: { months: number, startMonth: string, endMonth: string, total: number, prior: number, grandTotal: number, exceedsThreshold5k: boolean, exceedsThreshold15k: boolean } } = {};
+    
+    if (contractStartDate && contractEndDate) {
+      const start = new Date(contractStartDate);
+      const end = new Date(contractEndDate);
+      const startYear = start.getFullYear();
+      const endYear = end.getFullYear();
+      
+      for (let year = startYear; year <= endYear; year++) {
+        const yearStartMonth = (year === startYear) ? start.getMonth() : 0;
+        const yearEndMonth = (year === endYear) ? end.getMonth() : 11;
+        
+        const monthsThisYear = yearEndMonth - yearStartMonth + 1;
+        const totalThisYear = monthly * monthsThisYear;
+        
+        const priorThisYear = (year === startYear) ? prior : 0;
+        const grandTotalThisYear = priorThisYear + totalThisYear;
+        
+        years[year] = {
+          months: monthsThisYear,
+          startMonth: monthNames[yearStartMonth],
+          endMonth: monthNames[yearEndMonth],
+          total: totalThisYear,
+          prior: priorThisYear,
+          grandTotal: grandTotalThisYear,
+          exceedsThreshold5k: grandTotalThisYear > 5000,
+          exceedsThreshold15k: grandTotalThisYear > 15000
+        };
+      }
+    }
+    
+    return years;
+  };
+  
+  const getCompensationBreakdown = () => {
+    const monthly = parseFloat(monthlyCompensation) || 0;
+    const prior = parseFloat(otherAnnualCompensation) || 0;
+    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    
+    let monthsInContract = 12;
+    let startMonthName = 'Gennaio';
+    let endMonthName = 'Dicembre';
+    let startYear = new Date().getFullYear();
+    let endYear = startYear;
+    
+    if (contractStartDate && contractEndDate) {
+      const start = new Date(contractStartDate);
+      const end = new Date(contractEndDate);
+      monthsInContract = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+      if (monthsInContract < 1) monthsInContract = 1;
+      startMonthName = monthNames[start.getMonth()];
+      endMonthName = monthNames[end.getMonth()];
+      startYear = start.getFullYear();
+      endYear = end.getFullYear();
+    }
+    
+    return {
+      monthly,
+      prior,
+      monthsInContract,
+      startMonthName,
+      endMonthName,
+      startYear,
+      endYear,
+      thisClubTotal: monthly * monthsInContract,
+      grandTotal: prior + (monthly * monthsInContract)
+    };
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
