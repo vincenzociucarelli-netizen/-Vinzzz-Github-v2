@@ -2471,7 +2471,7 @@ export default function AdminAthleteDetail() {
               <Text style={styles.inputLabel}>Importo Sconto (€)</Text>
               <TextInput
                 style={styles.input}
-                value={editData.discount_amount}
+                value={editData.discount_amount === '0' ? '' : editData.discount_amount}
                 onChangeText={(t) => setEditData({...editData, discount_amount: t})}
                 keyboardType="decimal-pad"
                 placeholder="0"
