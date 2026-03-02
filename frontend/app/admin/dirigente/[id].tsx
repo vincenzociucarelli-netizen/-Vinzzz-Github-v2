@@ -190,6 +190,21 @@ export default function AdminDirigenteDetail() {
     }
   };
 
+  // Helper per parsare date in formato dd/mm/yyyy o yyyy-mm-dd
+  const parseDate = (dateStr: string): Date | null => {
+    if (!dateStr) return null;
+    // Se è in formato dd/mm/yyyy
+    if (dateStr.includes('/')) {
+      const [dd, mm, yyyy] = dateStr.split('/');
+      return new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd));
+    }
+    // Se è in formato yyyy-mm-dd (ISO)
+    if (dateStr.includes('-')) {
+      return new Date(dateStr);
+    }
+    return null;
+  };
+
   // Calcolo breakdown per anno solare
   const getYearlyBreakdown = () => {
     const monthly = parseFloat(monthlyCompensation) || 0;
@@ -198,9 +213,10 @@ export default function AdminDirigenteDetail() {
     
     const years: { [year: number]: { months: number, startMonth: string, endMonth: string, total: number, prior: number, grandTotal: number, exceedsThreshold5k: boolean, exceedsThreshold15k: boolean } } = {};
     
-    if (contractStartDate && contractEndDate) {
-      const start = new Date(contractStartDate);
-      const end = new Date(contractEndDate);
+    const start = parseDate(contractStartDate);
+    const end = parseDate(contractEndDate);
+    
+    if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
       const startYear = start.getFullYear();
       const endYear = end.getFullYear();
       
@@ -242,9 +258,10 @@ export default function AdminDirigenteDetail() {
     let startYear = new Date().getFullYear();
     let endYear = startYear;
     
-    if (contractStartDate && contractEndDate) {
-      const start = new Date(contractStartDate);
-      const end = new Date(contractEndDate);
+    const start = parseDate(contractStartDate);
+    const end = parseDate(contractEndDate);
+    
+    if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
       monthsInContract = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
       if (monthsInContract < 1) monthsInContract = 1;
       startMonthName = monthNames[start.getMonth()];
