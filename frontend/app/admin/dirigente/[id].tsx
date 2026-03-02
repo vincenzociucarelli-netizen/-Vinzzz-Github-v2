@@ -647,6 +647,143 @@ export default function AdminDirigenteDetail() {
                   </Text>
                 </View>
               )}
+              
+              {/* Calcolo per Anno Solare - Enhanced UI */}
+              {contractStartDate && contractEndDate && (
+                <View style={{ marginTop: 16 }}>
+                  {(() => {
+                    const breakdown = getCompensationBreakdown();
+                    const yearlyBreakdown = getYearlyBreakdown();
+                    const years = Object.keys(yearlyBreakdown).map(Number).sort();
+                    const prior = parseFloat(otherAnnualCompensation) || 0;
+                    
+                    return (
+                      <>
+                        {/* Box RAS - Totale Contratto */}
+                        <View style={[styles.totalBox, { backgroundColor: '#F3E5F5', marginBottom: 12 }]}>
+                          <Text style={[styles.totalLabel, { color: '#8E44AD', fontWeight: 'bold' }]}>
+                            📄 Comunicazione RAS - Totale Contratto
+                          </Text>
+                          <Text style={{ color: '#8E44AD', fontSize: 12, marginTop: 4 }}>
+                            Dal {contractStartDate.split('-').reverse().join('/')} al {contractEndDate.split('-').reverse().join('/')} = {breakdown.monthsInContract} mesi
+                          </Text>
+                          <Text style={[styles.totalValue, { color: '#8E44AD', fontSize: 22 }]}>
+                            €{breakdown.thisClubTotal.toLocaleString()}
+                          </Text>
+                          <Text style={{ color: '#8E44AD', fontSize: 11 }}>
+                            ({breakdown.monthsInContract} mesi × €{parseFloat(monthlyCompensation) || 0})
+                          </Text>
+                        </View>
+                        
+                        {/* Header Calcolo per Anno */}
+                        <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 10, marginBottom: 12 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>📊 Calcolo per Anno Solare (soglie €5k/€15k)</Text>
+                        </View>
+                        
+                        {/* Box Anno Inizio */}
+                        {years.length > 0 && years[0] && yearlyBreakdown[years[0]] && (
+                          <View style={[styles.totalBox, { 
+                            backgroundColor: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9',
+                            marginBottom: 12 
+                          }]}>
+                            <Text style={[styles.totalLabel, { 
+                              color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32',
+                              fontWeight: 'bold' 
+                            }]}>
+                              {yearlyBreakdown[years[0]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[0]} ({yearlyBreakdown[years[0]].startMonth}-Dic: {yearlyBreakdown[years[0]].months} mesi)
+                            </Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, flexWrap: 'wrap' }}>
+                              <View style={{ marginRight: 8 }}>
+                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600' }}>€{yearlyBreakdown[years[0]].total.toLocaleString()}</Text>
+                              </View>
+                              {prior > 0 && (
+                                <View style={{ marginRight: 8 }}>
+                                  <Text style={{ fontSize: 12, color: '#E65100' }}>+ Pregressi:</Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#E65100' }}>€{prior.toLocaleString()}</Text>
+                                </View>
+                              )}
+                              <View>
+                                <Text style={{ fontSize: 12, color: '#333' }}>Totale:</Text>
+                                <Text style={{ fontSize: 18, fontWeight: 'bold', color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
+                                  €{yearlyBreakdown[years[0]].grandTotal.toLocaleString()}
+                                </Text>
+                              </View>
+                            </View>
+                            {yearlyBreakdown[years[0]].exceedsThreshold5k && !yearlyBreakdown[years[0]].exceedsThreshold15k && (
+                              <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#E65100', fontWeight: 'bold', textAlign: 'center' }}>
+                                  ⚠️ SUPERAMENTO €5.000
+                                </Text>
+                                <Text style={{ fontSize: 11, color: '#F57F17', textAlign: 'center', marginTop: 4 }}>
+                                  Contributi previdenziali INPS
+                                </Text>
+                              </View>
+                            )}
+                            {yearlyBreakdown[years[0]].exceedsThreshold15k && (
+                              <View style={{ backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#F44336', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#C62828', fontWeight: 'bold', textAlign: 'center' }}>
+                                  🚨 SUPERAMENTO €15.000
+                                </Text>
+                                <Text style={{ fontSize: 11, color: '#D32F2F', textAlign: 'center', marginTop: 4 }}>
+                                  Tassazione IRPEF obbligatoria
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        )}
+                        
+                        {/* Box Anno Fine (se diverso) */}
+                        {years.length > 1 && years[1] && yearlyBreakdown[years[1]] && (
+                          <View style={[styles.totalBox, { 
+                            backgroundColor: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9',
+                            marginBottom: 12 
+                          }]}>
+                            <Text style={[styles.totalLabel, { 
+                              color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32',
+                              fontWeight: 'bold' 
+                            }]}>
+                              {yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} (Gen-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
+                            </Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                              <View>
+                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600' }}>€{yearlyBreakdown[years[1]].total.toLocaleString()}</Text>
+                              </View>
+                              <View>
+                                <Text style={{ fontSize: 12, color: '#333' }}>Totale Anno:</Text>
+                                <Text style={{ fontSize: 18, fontWeight: 'bold', color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
+                                  €{yearlyBreakdown[years[1]].grandTotal.toLocaleString()}
+                                </Text>
+                              </View>
+                            </View>
+                            {yearlyBreakdown[years[1]].exceedsThreshold5k && !yearlyBreakdown[years[1]].exceedsThreshold15k && (
+                              <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#E65100', fontWeight: 'bold', textAlign: 'center' }}>
+                                  ⚠️ SUPERAMENTO €5.000
+                                </Text>
+                                <Text style={{ fontSize: 11, color: '#F57F17', textAlign: 'center', marginTop: 4 }}>
+                                  Contributi previdenziali INPS
+                                </Text>
+                              </View>
+                            )}
+                            {yearlyBreakdown[years[1]].exceedsThreshold15k && (
+                              <View style={{ backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#F44336', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#C62828', fontWeight: 'bold', textAlign: 'center' }}>
+                                  🚨 SUPERAMENTO €15.000
+                                </Text>
+                                <Text style={{ fontSize: 11, color: '#D32F2F', textAlign: 'center', marginTop: 4 }}>
+                                  Tassazione IRPEF obbligatoria
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        )}
+                      </>
+                    );
+                  })()}
+                </View>
+              )}
             </>
           )}
 
