@@ -83,6 +83,8 @@ export default function AdminDirigenteDetail() {
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
   const [otherAnnualCompensation, setOtherAnnualCompensation] = useState('');
+  const [contractStartDate, setContractStartDate] = useState('');
+  const [contractEndDate, setContractEndDate] = useState('');
   const [qualification, setQualification] = useState('');
   const [availableQualifications, setAvailableQualifications] = useState<string[]>([]);
   const [qualificationModalVisible, setQualificationModalVisible] = useState(false);
