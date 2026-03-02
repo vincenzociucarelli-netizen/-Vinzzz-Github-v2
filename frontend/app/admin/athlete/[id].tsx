@@ -2472,7 +2472,11 @@ export default function AdminAthleteDetail() {
               <TextInput
                 style={styles.input}
                 value={editData.discount_amount === '0' ? '' : editData.discount_amount}
-                onChangeText={(t) => setEditData({...editData, discount_amount: t})}
+                onChangeText={(t) => {
+                  // Remove leading zeros unless it's just "0" or "0."
+                  let cleanValue = t.replace(/^0+(?=\d)/, '');
+                  setEditData({...editData, discount_amount: cleanValue || '0'});
+                }}
                 keyboardType="decimal-pad"
                 placeholder="0"
               />
