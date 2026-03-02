@@ -869,7 +869,7 @@ export default function DirigenteCompensation() {
             • Fino a €5.000/anno: compenso esente da tasse e contributi{'\n'}
             • Da €5.000 a €15.000: soggetto a contributi previdenziali{'\n'}
             • Oltre €15.000: soggetto anche a imposizione fiscale IRPEF{'\n'}
-            • La firma della quietanza genera un PDF inviato via email{'\n'}
+            • La firma della quietanza genera un PDF salvato nei "Miei Documenti"{'\n'}
             • Al superamento delle soglie è richiesta una dichiarazione
           </Text>
         </View>
