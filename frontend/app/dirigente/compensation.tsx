@@ -739,74 +739,128 @@ export default function DirigenteCompensation() {
           </TouchableOpacity>
         </View>
         
-        {/* Year Summaries */}
+        {/* Year Summaries - ENHANCED STYLE */}
         {contractStartYear && contractEndYear && (
           <>
+            {/* Compensi Pregressi - Prominent Display */}
+            {priorCompensation > 0 && (
+              <View style={styles.priorCompBox}>
+                <Text style={styles.priorCompLabel}>Compensi Pregressi (dichiarati all'assunzione)</Text>
+                <Text style={styles.priorCompValue}>€{priorCompensation.toLocaleString()}</Text>
+              </View>
+            )}
+            
+            {/* Contract Period Summary */}
+            <View style={styles.contractPeriodBox}>
+              <Text style={styles.contractPeriodLabel}>Periodo Contratto: {MONTH_NAMES[contractStartMonth || 1]} {contractStartYear} - {MONTH_NAMES[contractEndMonth || 1]} {contractEndYear}</Text>
+              <Text style={styles.contractPeriodValue}>
+                €{profile?.monthly_compensation || 0} × {(() => {
+                  const months1 = getContractMonthsForYear(contractStartYear).length;
+                  const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
+                  return months1 + months2;
+                })()} mesi = €{(() => {
+                  const months1 = getContractMonthsForYear(contractStartYear).length;
+                  const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
+                  return ((profile?.monthly_compensation || 0) * (months1 + months2)).toLocaleString();
+                })()}
+              </Text>
+            </View>
+            
+            {/* Calcolo per Anno Solare Header */}
+            <View style={styles.yearCalcHeader}>
+              <Text style={styles.yearCalcHeaderText}>📊 Calcolo per Anno Solare (soglie €5k/€15k)</Text>
+            </View>
+            
+            {/* First Year */}
             {(() => {
               const summary = getYearSummary(contractStartYear);
-              const exceeds5k = summary.totalProjected >= 5000;
-              const exceeds15k = summary.totalProjected >= 15000;
+              const exceeds5k = summary.totalProjected > 5000;
+              const exceeds15k = summary.totalProjected > 15000;
+              const bgColor = exceeds15k ? '#FFEBEE' : exceeds5k ? '#FFF8E1' : '#E8F5E9';
+              const textColor = exceeds15k ? '#C62828' : exceeds5k ? '#F57F17' : '#2E7D32';
+              const icon = exceeds15k ? '🚨' : exceeds5k ? '⚠️' : '✅';
+              
               return (
-                <View key={`summary-${contractStartYear}`} style={[styles.summaryCard, { marginBottom: 16 }]}>
-                  <Text style={styles.summaryTitle}>📊 Anno {contractStartYear} (Inizio Contratto)</Text>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Mesi nel contratto:</Text>
-                    <Text style={styles.summaryValue}>{MONTH_NAMES[contractStartMonth || 1]} - Dic ({summary.monthCount} mesi)</Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Compenso da contratto:</Text>
-                    <Text style={styles.summaryValue}>€{summary.monthlyComp} × {summary.monthCount} = €{summary.yearlyFromContract.toLocaleString()}</Text>
-                  </View>
-                  {summary.priorCompensation > 0 && (
-                    <View style={[styles.summaryRow, { backgroundColor: '#FFF3CD', padding: 8, borderRadius: 6 }]}>
-                      <Text style={[styles.summaryLabel, { color: '#856404' }]}>+ Pregressi dichiarati:</Text>
-                      <Text style={[styles.summaryValue, { color: '#856404' }]}>€{summary.priorCompensation.toLocaleString()}</Text>
+                <View key={`summary-${contractStartYear}`} style={[styles.yearBox, { backgroundColor: bgColor }]}>
+                  <Text style={[styles.yearBoxTitle, { color: textColor }]}>
+                    {icon} Anno {contractStartYear} ({MONTH_NAMES[contractStartMonth || 9].substring(0,3)}-Dic: {summary.monthCount} mesi)
+                  </Text>
+                  
+                  <Text style={styles.yearBoxCalc}>
+                    {summary.priorCompensation > 0 && `Pregressi €${summary.priorCompensation.toLocaleString()} + `}€{summary.monthlyComp} × {summary.monthCount} = €{summary.priorCompensation > 0 ? (summary.priorCompensation + summary.yearlyFromContract).toLocaleString() : summary.yearlyFromContract.toLocaleString()}
+                    <Text style={[styles.yearBoxTotal, { color: textColor }]}>€{summary.totalProjected.toLocaleString()}</Text>
+                  </Text>
+                  
+                  {exceeds5k && !exceeds15k && (
+                    <View style={styles.thresholdWarningBox5k}>
+                      <Text style={styles.thresholdWarningTitle5k}>⚠️ SUPERAMENTO €5.000</Text>
+                      <Text style={styles.thresholdWarningText5k}>Contributi previdenziali INPS</Text>
                     </View>
                   )}
-                  <View style={[styles.summaryRow, { marginTop: 8, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8 }]}>
-                    <Text style={[styles.summaryLabel, { fontWeight: 'bold' }]}>TOTALE ANNO:</Text>
-                    <Text style={[styles.summaryValue, styles.summaryTotal, exceeds5k ? { color: '#FF3B30' } : {}]}>
-                      €{summary.totalProjected.toLocaleString()}
-                    </Text>
-                  </View>
-                  {exceeds5k && (
-                    <Text style={{ fontSize: 12, color: '#FF3B30', marginTop: 4 }}>
-                      ⚠️ Supera soglia €5.000 {exceeds15k ? '+ €15.000' : ''}
-                    </Text>
+                  {exceeds15k && (
+                    <View style={styles.thresholdWarningBox15k}>
+                      <Text style={styles.thresholdWarningTitle15k}>🚨 SUPERAMENTO €15.000</Text>
+                      <Text style={styles.thresholdWarningText15k}>Tassazione IRPEF obbligatoria</Text>
+                    </View>
                   )}
                 </View>
               );
             })()}
             
+            {/* Second Year */}
             {contractEndYear > contractStartYear && (() => {
               const summary = getYearSummary(contractEndYear);
-              const exceeds5k = summary.totalProjected >= 5000;
-              const exceeds15k = summary.totalProjected >= 15000;
+              const exceeds5k = summary.totalProjected > 5000;
+              const exceeds15k = summary.totalProjected > 15000;
+              const bgColor = exceeds15k ? '#FFEBEE' : exceeds5k ? '#FFF8E1' : '#E8F5E9';
+              const textColor = exceeds15k ? '#C62828' : exceeds5k ? '#F57F17' : '#2E7D32';
+              const icon = exceeds15k ? '🚨' : exceeds5k ? '⚠️' : '✅';
+              
               return (
-                <View key={`summary-${contractEndYear}`} style={[styles.summaryCard, { marginBottom: 16 }]}>
-                  <Text style={styles.summaryTitle}>📊 Anno {contractEndYear} (Fine Contratto)</Text>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Mesi nel contratto:</Text>
-                    <Text style={styles.summaryValue}>Gen - {MONTH_NAMES[contractEndMonth || 1]} ({summary.monthCount} mesi)</Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Compenso da contratto:</Text>
-                    <Text style={styles.summaryValue}>€{summary.monthlyComp} × {summary.monthCount} = €{summary.yearlyFromContract.toLocaleString()}</Text>
-                  </View>
-                  <View style={[styles.summaryRow, { marginTop: 8, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8 }]}>
-                    <Text style={[styles.summaryLabel, { fontWeight: 'bold' }]}>TOTALE ANNO:</Text>
-                    <Text style={[styles.summaryValue, styles.summaryTotal, exceeds5k ? { color: '#FF3B30' } : {}]}>
-                      €{summary.totalProjected.toLocaleString()}
-                    </Text>
-                  </View>
-                  {exceeds5k && (
-                    <Text style={{ fontSize: 12, color: '#FF3B30', marginTop: 4 }}>
-                      ⚠️ Supera soglia €5.000 {exceeds15k ? '+ €15.000' : ''}
-                    </Text>
+                <View key={`summary-${contractEndYear}`} style={[styles.yearBox, { backgroundColor: bgColor }]}>
+                  <Text style={[styles.yearBoxTitle, { color: textColor }]}>
+                    {icon} Anno {contractEndYear} (Gen-{MONTH_NAMES[contractEndMonth || 5].substring(0,3)}: {summary.monthCount} mesi)
+                  </Text>
+                  
+                  <Text style={styles.yearBoxCalc}>
+                    €{summary.monthlyComp} × {summary.monthCount} = €{summary.yearlyFromContract.toLocaleString()}
+                    <Text style={[styles.yearBoxTotal, { color: textColor }]}>€{summary.totalProjected.toLocaleString()}</Text>
+                  </Text>
+                  
+                  {exceeds5k && !exceeds15k && (
+                    <View style={styles.thresholdWarningBox5k}>
+                      <Text style={styles.thresholdWarningTitle5k}>⚠️ SUPERAMENTO €5.000</Text>
+                      <Text style={styles.thresholdWarningText5k}>Contributi previdenziali INPS</Text>
+                    </View>
+                  )}
+                  {exceeds15k && (
+                    <View style={styles.thresholdWarningBox15k}>
+                      <Text style={styles.thresholdWarningTitle15k}>🚨 SUPERAMENTO €15.000</Text>
+                      <Text style={styles.thresholdWarningText15k}>Tassazione IRPEF obbligatoria</Text>
+                    </View>
                   )}
                 </View>
               );
             })()}
+            
+            {/* Totale Compenso Contratto */}
+            <View style={styles.totalContractBox}>
+              <Text style={styles.totalContractLabel}>Totale Compenso Contratto (per RAS)</Text>
+              <Text style={styles.totalContractValue}>
+                €{(() => {
+                  const months1 = getContractMonthsForYear(contractStartYear).length;
+                  const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
+                  return ((profile?.monthly_compensation || 0) * (months1 + months2)).toLocaleString();
+                })()}
+              </Text>
+              <Text style={styles.totalContractSubtext}>
+                (€{profile?.monthly_compensation || 0} × {(() => {
+                  const months1 = getContractMonthsForYear(contractStartYear).length;
+                  const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
+                  return months1 + months2;
+                })()} mesi)
+              </Text>
+            </View>
           </>
         )}
         
