@@ -72,6 +72,7 @@ export default function CoachesScreen() {
     criminal_record: false,
   });
   const [priorCompensation, setPriorCompensation] = useState('');
+  const [proposedCompensation, setProposedCompensation] = useState('');
   const [approvingCoach, setApprovingCoach] = useState(false);
 
   const handleExport = async () => {
