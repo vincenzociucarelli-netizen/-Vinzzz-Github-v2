@@ -606,21 +606,6 @@ export default function CoachesScreen() {
                 <Text style={styles.checklistText}>Certificato casellario giudiziale (se richiesto)</Text>
               </TouchableOpacity>
               
-              <View style={styles.compensationSection}>
-                <Text style={styles.compensationLabel}>💰 Compensi già percepiti fino alla data di assunzione (€)</Text>
-                <Text style={styles.compensationHint}>
-                  Inserisci l'importo dichiarato dal coach dei compensi sportivi già ricevuti nel corrente anno fiscale da altre società
-                </Text>
-                <TextInput
-                  style={styles.compensationInput}
-                  value={priorCompensation}
-                  onChangeText={setPriorCompensation}
-                  placeholder="0"
-                  keyboardType="decimal-pad"
-                  placeholderTextColor="#999"
-                />
-              </View>
-              
               <View style={styles.checklistNote}>
                 <Text style={styles.checklistNoteText}>
                   ⚠️ Puoi approvare il coach anche senza completare tutte le voci. 
