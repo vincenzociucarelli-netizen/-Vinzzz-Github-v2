@@ -789,11 +789,13 @@ export default function AdminCollaboratoreDetail() {
 
         {/* Onboarding Checklist Button */}
         {(() => {
-          const totalItems = 3; // contract_signed, id_acquired, fiscal_code_acquired
+          const totalItems = 5; // contract_signed, ras_registered, id_acquired, fiscal_code_acquired, criminal_record
           const completedItems = [
             checklistItems.contract_signed,
+            checklistItems.ras_registered,
             checklistItems.id_acquired,
-            checklistItems.fiscal_code_acquired
+            checklistItems.fiscal_code_acquired,
+            checklistItems.criminal_record
           ].filter(Boolean).length;
           
           const isComplete = completedItems === totalItems;
@@ -847,8 +849,10 @@ export default function AdminCollaboratoreDetail() {
                   <Text style={{ fontSize: 22 }}>{value ? '☑️' : '⬜'}</Text>
                   <Text style={styles.onboardingChecklistText}>
                     {key === 'contract_signed' && 'Contratto/Lettera d\'incarico firmata'}
+                    {key === 'ras_registered' && 'Iscrizione RAS (Registro Attività Sportive)'}
                     {key === 'id_acquired' && 'Documento d\'identità acquisito'}
                     {key === 'fiscal_code_acquired' && 'Codice fiscale acquisito'}
+                    {key === 'criminal_record' && 'Certificato casellario giudiziale (se richiesto)'}
                   </Text>
                 </TouchableOpacity>
               ))}
