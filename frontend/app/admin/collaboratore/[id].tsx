@@ -54,8 +54,10 @@ interface Collaboratore {
   bank_name?: string;
   onboarding_checklist?: {
     contract_signed?: boolean;
+    ras_registered?: boolean;
     id_acquired?: boolean;
     fiscal_code_acquired?: boolean;
+    criminal_record?: boolean;
   };
   onboarding_completed?: boolean;
 }
