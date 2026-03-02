@@ -1416,21 +1416,6 @@ export default function AdminCoachDetail() {
                 <Text style={styles.onboardingChecklistText}>Certificato casellario giudiziale (se richiesto)</Text>
               </TouchableOpacity>
               
-              <View style={styles.onboardingCompensationSection}>
-                <Text style={styles.onboardingCompensationLabel}>💰 Compensi pregressi alla data di assunzione (€)</Text>
-                <Text style={styles.onboardingCompensationHint}>
-                  Importo dichiarato dal coach dei compensi sportivi già percepiti nel corrente anno fiscale
-                </Text>
-                <TextInput
-                  style={styles.onboardingCompensationInput}
-                  value={priorCompensation}
-                  onChangeText={setPriorCompensation}
-                  placeholder="0"
-                  keyboardType="decimal-pad"
-                  placeholderTextColor="#999"
-                />
-              </View>
-              
               <View style={styles.onboardingModalButtons}>
                 <TouchableOpacity
                   style={styles.modalCancelBtn}
