@@ -209,8 +209,10 @@ export default function AdminCollaboratoreDetail() {
       const checklist = collabRes.data.onboarding_checklist || {};
       setChecklistItems({
         contract_signed: checklist.contract_signed || false,
+        ras_registered: checklist.ras_registered || false,
         id_acquired: checklist.id_acquired || false,
         fiscal_code_acquired: checklist.fiscal_code_acquired || false,
+        criminal_record: checklist.criminal_record || false,
       });
       
       // Load signed receipts
