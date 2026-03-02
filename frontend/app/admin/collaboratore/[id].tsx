@@ -101,8 +101,10 @@ export default function AdminCollaboratoreDetail() {
   const [savingOnboarding, setSavingOnboarding] = useState(false);
   const [checklistItems, setChecklistItems] = useState({
     contract_signed: false,
+    ras_registered: false,
     id_acquired: false,
     fiscal_code_acquired: false,
+    criminal_record: false,
   });
   
   // Quietanze firmate
