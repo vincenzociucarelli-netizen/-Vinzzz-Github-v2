@@ -506,7 +506,7 @@ export default function AthleteDetail() {
             <h2>QR Code Atleta</h2>
             <div class="qr-container">
               <img class="qr-image" src="${qrCodeSrc}" alt="QR Code" />
-              <div class="athlete-code">Codice: ${athlete.athlete_code || athlete.id}</div>
+              <div class="athlete-code">Codice: ${athlete.qr_identifier || athlete.athlete_code || athlete.id}</div>
             </div>
             <p>Presentare questo codice all'allenatore per registrare la presenza</p>
           </body>
@@ -1848,7 +1848,7 @@ export default function AthleteDetail() {
                 style={styles.qrImage}
                 resizeMode="contain"
               />
-              <Text style={styles.qrCodeText}>{athlete.id}</Text>
+              <Text style={styles.qrCodeText}>{athlete.qr_identifier || athlete.athlete_code || athlete.id}</Text>
             </View>
             <Text style={styles.qrInstructions}>
               Mostra questo QR code al coach per registrare la presenza

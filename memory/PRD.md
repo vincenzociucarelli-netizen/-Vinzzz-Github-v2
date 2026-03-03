@@ -61,6 +61,11 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
   - "Already registered" shows detailed popup with time and team name
   - Force registration now includes note input
   - Added Modal for team selection
+- [x] **QR Code Display/Print (Parent & Admin)**: Updated athlete card
+  - QR modal shows new `qr_identifier` (12-char alphanumeric code)
+  - Print function generates clean printable page with athlete name and QR code
+  - Share function allows sharing QR as image/HTML
+  - Perfect for minivolley kids without phones - parents can print and laminate
 
 ### Completed Previously (28/02/2026)
 - [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Sconto - Pagato` (now shows €200 correctly)

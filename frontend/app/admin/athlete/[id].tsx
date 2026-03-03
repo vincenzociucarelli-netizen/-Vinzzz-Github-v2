@@ -1404,7 +1404,7 @@ export default function AdminAthleteDetail() {
             <h2>QR Code Atleta</h2>
             <div class="qr-container">
               <img class="qr-image" src="${qrCodeSrc}" alt="QR Code" />
-              <div class="athlete-code">Codice: ${(athlete as any).athlete_code || athlete.id}</div>
+              <div class="athlete-code">Codice: ${(athlete as any).qr_identifier || (athlete as any).athlete_code || athlete.id}</div>
             </div>
             <p>Presentare questo codice all'allenatore per registrare la presenza</p>
           </body>
@@ -2663,7 +2663,7 @@ export default function AdminAthleteDetail() {
                 style={styles.qrModalImage}
                 resizeMode="contain"
               />
-              <Text style={styles.qrModalCodeText}>Codice: {athlete.athlete_code || athlete.id}</Text>
+              <Text style={styles.qrModalCodeText}>Codice: {athlete.qr_identifier || athlete.athlete_code || athlete.id}</Text>
             </View>
             <Text style={styles.qrModalInstructions}>
               Mostra questo QR code al coach per registrare la presenza
