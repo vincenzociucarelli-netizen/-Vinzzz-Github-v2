@@ -66,6 +66,12 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
   - Print function generates clean printable page with athlete name and QR code
   - Share function allows sharing QR as image/HTML
   - Perfect for minivolley kids without phones - parents can print and laminate
+- [x] **Admin Audit Logs Page**: Created dedicated page to view all audit logs
+  - Path: `/admin/settings/audit-logs`
+  - Filters by action type (Login, Certificati, Override, Compensi, Documenti, Eliminazioni)
+  - Shows: timestamp, user, target user, action details, IP address
+  - Pagination with "load more" for large datasets
+  - Accessible from Admin Settings menu
 
 ### Completed Previously (28/02/2026)
 - [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Sconto - Pagato` (now shows €200 correctly)

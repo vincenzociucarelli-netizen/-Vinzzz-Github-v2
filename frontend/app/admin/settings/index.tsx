@@ -56,6 +56,24 @@ export default function SettingsIndex() {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#E65100" />
         </TouchableOpacity>
+
+        {/* Card Audit Logs */}
+        <TouchableOpacity 
+          style={[styles.card, { borderColor: '#5856D6', backgroundColor: '#EDE7F6' }]}
+          onPress={() => router.push('/admin/settings/audit-logs')}
+          data-testid="settings-audit-logs-btn"
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#5856D6' }]}>
+            <Ionicons name="shield-checkmark" size={32} color="#fff" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: '#5856D6' }]}>Audit Log</Text>
+            <Text style={styles.cardDescription}>
+              Cronologia accessi, modifiche e azioni critiche (GDPR)
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#5856D6" />
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
