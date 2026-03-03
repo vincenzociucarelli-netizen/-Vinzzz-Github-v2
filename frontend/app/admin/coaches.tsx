@@ -344,14 +344,7 @@ export default function CoachesScreen() {
         onLongPress={() => openActionModal(item)}
       >
         <View style={styles.userAvatar}>
-          {item.profile_photo_artistic || item.profile_photo ? (
-            <Image 
-              source={{ uri: `data:image/jpeg;base64,${item.profile_photo_artistic || item.profile_photo}` }}
-              style={styles.coachPhoto}
-            />
-          ) : (
-            <Text style={{ fontSize: 22 }}>🏋️</Text>
-          )}
+          <Text style={{ fontSize: 22 }}>🏋️</Text>
         </View>
         <View style={styles.userInfo}>
           <View style={styles.nameRow}>

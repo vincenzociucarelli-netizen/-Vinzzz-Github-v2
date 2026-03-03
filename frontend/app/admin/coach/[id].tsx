@@ -602,36 +602,13 @@ export default function AdminCoachDetail() {
           );
         })()}
 
-        {/* Profile Photo */}
+        {/* Profile Photo - RIMOSSA per privacy, mostra solo icona */}
         <View style={styles.photoSection}>
-          <TouchableOpacity 
-            style={styles.photoContainer}
-            onPress={() => {
-              const photo = coach.profile_photo_artistic || coach.profile_photo;
-              if (photo) {
-                setViewingImage(photo);
-                setViewingImageTitle('Foto Profilo');
-                setImageViewerVisible(true);
-              }
-            }}
-            disabled={!coach.profile_photo && !coach.profile_photo_artistic}
-          >
-            {coach.profile_photo_artistic || coach.profile_photo ? (
-              <Image
-                source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
-                style={styles.profilePhoto}
-              />
-            ) : (
-              <View style={styles.photoPlaceholder}>
-                <Ionicons name="fitness" size={60} color="#FF9500" />
-              </View>
-            )}
-            {(coach.profile_photo || coach.profile_photo_artistic) && (
-              <View style={styles.photoZoomHint}>
-                <Ionicons name="expand" size={16} color="#fff" />
-              </View>
-            )}
-          </TouchableOpacity>
+          <View style={styles.photoContainer}>
+            <View style={styles.photoPlaceholder}>
+              <Ionicons name="fitness" size={60} color="#FF9500" />
+            </View>
+          </View>
           <Text style={styles.photoName}>{coach.full_name}</Text>
           <Text style={styles.photoRole}>🏃 Coach</Text>
           

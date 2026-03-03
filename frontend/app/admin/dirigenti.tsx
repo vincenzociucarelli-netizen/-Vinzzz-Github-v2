@@ -10,7 +10,6 @@ import {
   RefreshControl,
   Platform,
   ActivityIndicator,
-  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
@@ -26,8 +25,6 @@ interface Dirigente {
   created_at: string;
   approved_at?: string;
   is_scorekeeper?: boolean;  // Segnapunti
-  profile_photo?: string;
-  profile_photo_artistic?: string;
   qualification?: string;  // Carica nella società
 }
 
@@ -221,18 +218,11 @@ export default function DirigentiScreen() {
       onLongPress={() => openActionModal(item)}
     >
       <View style={styles.userAvatar}>
-        {item.profile_photo_artistic || item.profile_photo ? (
-          <Image
-            source={{ uri: `data:image/jpeg;base64,${item.profile_photo_artistic || item.profile_photo}` }}
-            style={styles.userAvatarImage}
-          />
-        ) : (
-          <Ionicons 
-            name={item.role === 'admin' ? 'shield-checkmark' : 'briefcase'} 
-            size={24} 
-            color={item.role === 'admin' ? '#007AFF' : '#8E44AD'} 
-          />
-        )}
+        <Ionicons 
+          name={item.role === 'admin' ? 'shield-checkmark' : 'briefcase'} 
+          size={24} 
+          color={item.role === 'admin' ? '#007AFF' : '#8E44AD'} 
+        />
       </View>
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{item.full_name}</Text>
@@ -488,11 +478,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-  },
-  userAvatarImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
   },
   userInfo: {
     flex: 1,

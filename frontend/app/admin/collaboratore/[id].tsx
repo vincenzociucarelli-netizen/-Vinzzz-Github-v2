@@ -441,25 +441,11 @@ export default function AdminCollaboratoreDetail() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} />}
       >
-        {/* Profile Photo */}
+        {/* Profile Photo - RIMOSSA per privacy, mostra solo icona */}
         <View style={styles.profileSection}>
-          {collaboratore.profile_photo_artistic || collaboratore.profile_photo ? (
-            <Image
-              source={{ uri: collaboratore.profile_photo_artistic?.startsWith('data:') 
-                ? collaboratore.profile_photo_artistic 
-                : collaboratore.profile_photo_artistic 
-                  ? `data:image/jpeg;base64,${collaboratore.profile_photo_artistic}`
-                  : collaboratore.profile_photo?.startsWith('data:')
-                    ? collaboratore.profile_photo
-                    : `data:image/jpeg;base64,${collaboratore.profile_photo}`
-              }}
-              style={styles.profilePhoto}
-            />
-          ) : (
-            <View style={[styles.profilePhoto, styles.profilePhotoPlaceholder]}>
-              <Ionicons name="person" size={60} color="#ccc" />
-            </View>
-          )}
+          <View style={[styles.profilePhoto, styles.profilePhotoPlaceholder]}>
+            <Ionicons name="person" size={60} color="#ccc" />
+          </View>
           <Text style={styles.profileName}>{collaboratore.full_name}</Text>
           <View style={[styles.statusBadge, { backgroundColor: collaboratore.status === 'approved' ? '#34C759' : '#FF9500' }]}>
             <Text style={styles.statusBadgeText}>{collaboratore.status === 'approved' ? 'ATTIVO' : 'IN ATTESA'}</Text>
@@ -759,7 +745,7 @@ export default function AdminCollaboratoreDetail() {
                             📄 Comunicazione RAS - Totale Contratto
                           </Text>
                           <Text style={{ color: '#1565C0', fontSize: 12, marginTop: 4 }}>
-                            Dal {contractStartDate.split('-').reverse().join('/')} al {contractEndDate.split('-').reverse().join('/')} = {breakdown.monthsInContract} mesi
+                            Dal {contractStartDate} al {contractEndDate} = {breakdown.monthsInContract} mesi
                           </Text>
                           <Text style={[styles.totalValue, { color: '#1565C0', fontSize: 22 }]}>
                             €{breakdown.thisClubTotal.toLocaleString()}
