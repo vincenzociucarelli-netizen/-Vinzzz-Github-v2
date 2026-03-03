@@ -51,6 +51,7 @@ export default function SocietySettings() {
   const [presidentName, setPresidentName] = useState('');
   const [societyEmail, setSocietyEmail] = useState('');
   const [societyPec, setSocietyPec] = useState('');
+  const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -76,6 +77,7 @@ export default function SocietySettings() {
       setStampSignature(response.data.stamp_signature || null);
       setSocietyEmail(response.data.email || '');
       setSocietyPec(response.data.pec || '');
+      setBlockExpiredCertificates(response.data.block_expired_certificates || false);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -104,6 +106,7 @@ export default function SocietySettings() {
         stamp_signature: stampSignature,
         email: societyEmail,
         pec: societyPec,
+        block_expired_certificates: blockExpiredCertificates,
       });
       // Clear the sport icon cache so all components reload the new image
       clearSportIconCache();
@@ -461,6 +464,42 @@ export default function SocietySettings() {
           </View>
         </View>
 
+        {/* Impostazioni Certificato Medico */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏥 Certificato Medico</Text>
+          <Text style={styles.sectionDesc}>
+            Gestione scadenza certificati medici atleti
+          </Text>
+          
+          <TouchableOpacity 
+            style={[styles.toggleContainer, blockExpiredCertificates && styles.toggleActive]}
+            onPress={() => setBlockExpiredCertificates(!blockExpiredCertificates)}
+          >
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleTitle}>Blocco automatico atleti</Text>
+              <Text style={styles.toggleDesc}>
+                {blockExpiredCertificates 
+                  ? '✅ Attivo: La scansione QR verrà bloccata per atleti con certificato scaduto'
+                  : '⚠️ Disattivo: Solo alert, nessun blocco tecnico'}
+              </Text>
+            </View>
+            <View style={[styles.toggleSwitch, blockExpiredCertificates && styles.toggleSwitchOn]}>
+              <View style={[styles.toggleKnob, blockExpiredCertificates && styles.toggleKnobOn]} />
+            </View>
+          </TouchableOpacity>
+          
+          {blockExpiredCertificates && (
+            <View style={styles.toggleNote}>
+              <Text style={styles.toggleNoteText}>
+                📌 Alla scadenza del certificato:{'\n'}
+                • QR non consente registrazione presenze{'\n'}
+                • Solo l'Admin può fare override temporaneo{'\n'}
+                • Ogni override viene tracciato con log
+              </Text>
+            </View>
+          )}
+        </View>
+
         {/* Spacer */}
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -652,5 +691,72 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  // Toggle styles
+  toggleContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+  },
+  toggleActive: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#F1F8E9',
+  },
+  toggleInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  toggleTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  toggleDesc: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+  },
+  toggleSwitch: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#ccc',
+    padding: 2,
+  },
+  toggleSwitchOn: {
+    backgroundColor: '#4CAF50',
+  },
+  toggleKnob: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  toggleKnobOn: {
+    transform: [{ translateX: 22 }],
+  },
+  toggleNote: {
+    marginTop: 12,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFA000',
+  },
+  toggleNoteText: {
+    fontSize: 13,
+    color: '#795548',
+    lineHeight: 20,
   },
 });

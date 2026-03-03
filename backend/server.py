@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Depends, status
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Depends, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse, FileResponse
 from dotenv import load_dotenv
@@ -577,17 +577,14 @@ class Athlete(BaseModel):
     iban_holder_last_name: Optional[str] = None  # Cognome intestatario conto
     # Documenti identità (per atleti maggiorenni con compenso)
     document_type: Optional[str] = None  # Tipo documento (carta_identita, patente, passaporto)
-    document_number: Optional[str] = None  # Numero documento
-    document_expiry: Optional[str] = None  # Scadenza documento (ISO string)
-    document_front: Optional[str] = None  # Fronte documento (base64)
-    document_back: Optional[str] = None  # Retro documento (base64)
+    # Documento identità - RIMOSSO per privacy (solo metadati gestiti in sede)
     # Campi dinamici (non persistiti, aggiunti nelle risposte)
     team_name: Optional[str] = None  # Nome squadra (riempito dinamicamente)
     profile_photo: Optional[str] = None  # Foto profilo (può venire da user)
-    # Certificato medico
+    # Certificato medico - SOLO metadati, niente file
     medical_certificate_expiry: Optional[str] = None  # Scadenza certificato medico
-    medical_certificate_url: Optional[str] = None  # URL/base64 certificato medico
-    privacy_signature: Optional[str] = None  # Firma privacy (base64)
+    medical_certificate_verified: Optional[bool] = None  # Verificato dal dirigente
+    privacy_signature: Optional[str] = None  # Firma privacy (base64) - DA RIMUOVERE in futuro
     privacy_pdf_url: Optional[str] = None  # URL PDF privacy firmato
 
 class AthleteCreate(BaseModel):
@@ -956,20 +953,65 @@ async def check_athlete_status(athlete_id: str):
     if datetime.utcnow() > athlete["trial_end_date"] and not athlete.get("privacy_accepted"):
         return {"allowed": False, "reason": "Privacy non accettata - periodo di prova terminato", "warning": None}
     
+    # Get society settings for certificate blocking
+    settings = await db.settings.find_one({"type": "society"})
+    block_expired_certificates = settings.get("block_expired_certificates", False) if settings else False
+    
     # Check certificate
     certificate = await db.certificates.find_one({"athlete_id": athlete_id})
-    if not certificate:
-        return {"allowed": False, "reason": "Certificato medico mancante", "warning": None}
+    cert_expiry = athlete.get("medical_certificate_expiry")
     
-    # Certificate expired - BLOCK
-    if datetime.utcnow() > certificate["expiry_date"]:
-        return {"allowed": False, "reason": "⛔ CERTIFICATO MEDICO SCADUTO - Atleta NON ammesso all'allenamento", "warning": None}
+    # Determine certificate expiry date
+    expiry_date = None
+    if certificate and certificate.get("expiry_date"):
+        expiry_date = certificate["expiry_date"]
+        if isinstance(expiry_date, str):
+            try:
+                expiry_date = datetime.fromisoformat(expiry_date.replace('Z', '+00:00')).replace(tzinfo=None)
+            except:
+                expiry_date = None
+    elif cert_expiry:
+        try:
+            expiry_date = datetime.fromisoformat(cert_expiry.replace('Z', '+00:00')).replace(tzinfo=None)
+        except:
+            expiry_date = None
+    
+    if not certificate and not cert_expiry:
+        if block_expired_certificates:
+            return {"allowed": False, "reason": "⛔ CERTIFICATO MEDICO MANCANTE - Atleta NON ammesso", "warning": None}
+        else:
+            return {"allowed": True, "reason": "⚠️ CERTIFICATO MEDICO MANCANTE", "warning": "⚠️ CERTIFICATO MEDICO MANCANTE"}
+    
+    # Check if certificate is expired
+    if expiry_date and datetime.utcnow() > expiry_date:
+        # Check for active override
+        override_until = athlete.get("certificate_override_until")
+        if override_until:
+            try:
+                override_dt = datetime.fromisoformat(override_until.replace('Z', '+00:00')).replace(tzinfo=None)
+                if datetime.utcnow() < override_dt:
+                    # Override is active
+                    override_reason = athlete.get("certificate_override_reason", "Autorizzato dall'admin")
+                    return {
+                        "allowed": True, 
+                        "reason": f"⚠️ CERTIFICATO SCADUTO (Override attivo: {override_reason})", 
+                        "warning": f"⚠️ CERTIFICATO SCADUTO - Override attivo fino a {override_dt.strftime('%d/%m/%Y %H:%M')}"
+                    }
+            except:
+                pass
+        
+        # No override - check if blocking is enabled
+        if block_expired_certificates:
+            return {"allowed": False, "reason": "⛔ CERTIFICATO MEDICO SCADUTO - Atleta NON ammesso all'allenamento", "warning": None}
+        else:
+            return {"allowed": True, "reason": "⚠️ CERTIFICATO MEDICO SCADUTO", "warning": "⚠️ CERTIFICATO MEDICO SCADUTO - Provvedere al rinnovo!"}
     
     # Check if certificate is expiring soon (within 30 days)
-    days_to_expiry = (certificate["expiry_date"] - datetime.utcnow()).days
     cert_warning = None
-    if days_to_expiry <= 30:
-        cert_warning = f"⚠️ ATTENZIONE: CERTIFICATO MEDICO IN SCADENZA tra {days_to_expiry} giorni! Provvedere al rinnovo prima della scadenza per evitare di non essere ammessi agli allenamenti."
+    if expiry_date:
+        days_to_expiry = (expiry_date - datetime.utcnow()).days
+        if days_to_expiry <= 30:
+            cert_warning = f"⚠️ ATTENZIONE: CERTIFICATO MEDICO IN SCADENZA tra {days_to_expiry} giorni! Provvedere al rinnovo prima della scadenza per evitare di non essere ammessi agli allenamenti."
     
     # Check payments - upcoming due (within 7 days)
     payment_warning = None
@@ -1954,6 +1996,8 @@ class SocietySettingsUpdate(BaseModel):
     # Season settings
     season_start_month: Optional[int] = None  # Month when season starts (1-12, default 7 = July)
     season_start_day: Optional[int] = None  # Day when season starts (1-31, default 1)
+    # Medical certificate settings
+    block_expired_certificates: Optional[bool] = None  # If True, QR scan blocked for expired certificates
 
 @api_router.get("/settings/society")
 async def get_society_settings():
@@ -2006,7 +2050,8 @@ async def get_society_settings():
         "pec": settings.get("pec"),
         "pro_enabled": settings.get("pro_enabled", False),
         "season_start_month": settings.get("season_start_month", 7),
-        "season_start_day": settings.get("season_start_day", 1)
+        "season_start_day": settings.get("season_start_day", 1),
+        "block_expired_certificates": settings.get("block_expired_certificates", False)
     }
 
 @api_router.patch("/settings/society")
@@ -2065,6 +2110,8 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
         update_dict["season_start_month"] = data.season_start_month
     if data.season_start_day is not None:
         update_dict["season_start_day"] = data.season_start_day
+    if data.block_expired_certificates is not None:
+        update_dict["block_expired_certificates"] = data.block_expired_certificates
     
     if update_dict:
         await db.settings.update_one(
@@ -6099,16 +6146,16 @@ async def upload_certificate_base64(
 class CertificateSimple(BaseModel):
     athlete_id: str
     expiry_date: str  # ISO format
-    pdf_data: Optional[str] = None  # Optional image of the certificate (base64)
+    verified: Optional[bool] = None  # Certificato verificato dal dirigente
 
 @api_router.post("/certificates/simple")
 async def create_certificate_simple(
     data: CertificateSimple,
     current_user = Depends(get_current_user)
 ):
-    """Create/update certificate with just expiry date - Admin only"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può aggiungere certificati")
+    """Create/update certificate with just expiry date and verified flag - Admin/Dirigente only"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.DIRIGENTE]:
+        raise HTTPException(status_code=403, detail="Solo admin o dirigente può aggiornare certificati")
     
     # Check athlete exists
     athlete = await db.athletes.find_one({"id": data.athlete_id})
@@ -6121,13 +6168,23 @@ async def create_certificate_simple(
     except:
         raise HTTPException(status_code=400, detail="Formato data non valido")
     
-    # Delete old certificate if exists
+    # Update athlete with certificate metadata (no file storage)
+    update_data = {
+        "medical_certificate_expiry": expiry_dt.isoformat(),
+        "medical_certificate_verified": data.verified if data.verified is not None else False
+    }
+    
+    await db.athletes.update_one(
+        {"id": data.athlete_id},
+        {"$set": update_data}
+    )
+    
+    # Also update certificates collection for compatibility
     await db.certificates.delete_many({"athlete_id": data.athlete_id})
     
-    # Create certificate
     certificate = Certificate(
         athlete_id=data.athlete_id,
-        pdf_data=data.pdf_data or "",
+        pdf_data="",  # No file stored
         issue_date=datetime.utcnow(),
         validity_months=12,
         expiry_date=expiry_dt
@@ -6139,8 +6196,83 @@ async def create_certificate_simple(
         "id": certificate.id,
         "athlete_id": certificate.athlete_id,
         "expiry_date": certificate.expiry_date.isoformat(),
+        "verified": data.verified,
         "message": "Certificato salvato con successo"
     }
+
+# Override blocco certificato scaduto (solo Admin)
+class CertificateOverrideRequest(BaseModel):
+    athlete_id: str
+    reason: str  # Motivo dell'override
+
+@api_router.post("/certificates/override")
+async def override_certificate_block(
+    data: CertificateOverrideRequest,
+    request: Request,
+    current_user = Depends(get_current_user)
+):
+    """Override certificate block for an athlete - Admin only, always logged"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può fare override del blocco")
+    
+    # Check athlete exists
+    athlete = await db.athletes.find_one({"id": data.athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Get client IP
+    client_ip = request.client.host if request.client else "unknown"
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+    
+    # Create override log entry
+    override_log = {
+        "id": str(uuid.uuid4()),
+        "athlete_id": data.athlete_id,
+        "athlete_name": athlete.get("full_name"),
+        "user_id": current_user["id"],
+        "user_name": current_user.get("full_name", current_user.get("email")),
+        "reason": data.reason,
+        "timestamp": datetime.utcnow().isoformat(),
+        "ip_address": client_ip,
+        "type": "certificate_block_override"
+    }
+    
+    # Save to audit log collection
+    await db.audit_logs.insert_one(override_log)
+    
+    # Set temporary override on athlete (valid for 24 hours)
+    override_until = datetime.utcnow() + timedelta(hours=24)
+    await db.athletes.update_one(
+        {"id": data.athlete_id},
+        {"$set": {
+            "certificate_override_until": override_until.isoformat(),
+            "certificate_override_by": current_user["id"],
+            "certificate_override_reason": data.reason
+        }}
+    )
+    
+    return {
+        "message": "Override attivato con successo",
+        "override_until": override_until.isoformat(),
+        "log_id": override_log["id"]
+    }
+
+@api_router.get("/certificates/override-logs")
+async def get_certificate_override_logs(current_user = Depends(get_current_user)):
+    """Get all certificate override logs - Admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i log")
+    
+    logs = await db.audit_logs.find(
+        {"type": "certificate_block_override"}
+    ).sort("timestamp", -1).to_list(100)
+    
+    for log in logs:
+        clean_mongo_doc(log)
+    
+    return logs
 
 
 @api_router.get("/certificates/expiring")

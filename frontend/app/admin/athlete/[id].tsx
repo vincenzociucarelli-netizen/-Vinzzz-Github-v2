@@ -101,6 +101,7 @@ export default function AdminAthleteDetail() {
   const [certIssueDate, setCertIssueDate] = useState('');
   const [certValidityMonths, setCertValidityMonths] = useState('12');
   const [certImage, setCertImage] = useState<string | null>(null);
+  const [certVerified, setCertVerified] = useState(false);
   const [savingCert, setSavingCert] = useState(false);
   
   // Certificate viewer modal
@@ -873,17 +874,18 @@ export default function AdminAthleteDetail() {
       const response = await api.post('/certificates/simple', {
         athlete_id: id,
         expiry_date: expiryDate.toISOString(),
-        pdf_data: certImage || null,
+        verified: certVerified,
       });
       setCertificate({
         id: response.data.id,
         athlete_id: id as string,
         expiry_date: response.data.expiry_date,
+        verified: response.data.verified,
       });
       setCertModalVisible(false);
       setCertIssueDate('');
       setCertValidityMonths('12');
-      setCertImage(null);
+      setCertVerified(false);
       showAlert('Successo', 'Certificato medico salvato');
     } catch (error: any) {
       console.error('Error saving certificate:', error);
@@ -3184,19 +3186,22 @@ export default function AdminAthleteDetail() {
               </View>
             )}
             
-            <Text style={styles.inputLabel}>Foto Certificato (opzionale)</Text>
-            <TouchableOpacity style={styles.certImageBtn} onPress={pickCertImage}>
-              {certImage ? (
-                <Image 
-                  source={{ uri: `data:image/jpeg;base64,${certImage}` }} 
-                  style={styles.certImagePreview} 
-                />
-              ) : (
-                <View style={styles.certImagePlaceholder}>
-                  <Ionicons name="camera" size={24} color="#007AFF" />
-                  <Text style={styles.certImageText}>Carica foto</Text>
-                </View>
-              )}
+            {/* Checkbox verifica certificato */}
+            <TouchableOpacity 
+              style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, padding: 12, backgroundColor: certVerified ? '#E8F5E9' : '#f5f5f5', borderRadius: 8, borderWidth: 1, borderColor: certVerified ? '#4CAF50' : '#ddd' }}
+              onPress={() => setCertVerified(!certVerified)}
+            >
+              <View style={{ width: 24, height: 24, borderRadius: 4, borderWidth: 2, borderColor: certVerified ? '#4CAF50' : '#999', backgroundColor: certVerified ? '#4CAF50' : '#fff', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                {certVerified && <Ionicons name="checkmark" size={18} color="#fff" />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: certVerified ? '#2E7D32' : '#333' }}>
+                  Certificato medico verificato dal dirigente
+                </Text>
+                <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
+                  Confermo di aver verificato il certificato medico originale
+                </Text>
+              </View>
             </TouchableOpacity>
             
             <View style={styles.modalButtons}>
@@ -3206,7 +3211,7 @@ export default function AdminAthleteDetail() {
                   setCertModalVisible(false);
                   setCertIssueDate('');
                   setCertValidityMonths('12');
-                  setCertImage(null);
+                  setCertVerified(false);
                 }}
               >
                 <Text style={styles.cancelButtonText}>Annulla</Text>
