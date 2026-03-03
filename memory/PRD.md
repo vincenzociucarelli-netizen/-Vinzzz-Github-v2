@@ -54,6 +54,13 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
   - **Admin Endpoints**: 
     - `POST /api/admin/generate-all-qr-identifiers` - Generate QR for all athletes
     - `POST /api/admin/regenerate-all-qr-codes` - Regenerate all (invalidates old QRs)
+- [x] **QR Code System Refactor (Frontend Coach)**: Updated attendance scanner UI
+  - Added team selector before scanning (required)
+  - Auto-selects team if coach has only one
+  - Shows athlete name in success/error messages
+  - "Already registered" shows detailed popup with time and team name
+  - Force registration now includes note input
+  - Added Modal for team selection
 
 ### Completed Previously (28/02/2026)
 - [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Sconto - Pagato` (now shows €200 correctly)

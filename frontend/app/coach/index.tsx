@@ -100,6 +100,13 @@ export default function CoachScreen() {
     loadDirigenti();
   }, []);
 
+  // Auto-select team if only one
+  useEffect(() => {
+    if (teams.length === 1 && !selectedTeamId) {
+      setSelectedTeamId(teams[0].id);
+    }
+  }, [teams]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadTeams();
@@ -111,6 +118,17 @@ export default function CoachScreen() {
   // State for force registration
   const [pendingQrCode, setPendingQrCode] = useState<string | null>(null);
   const [forceModalVisible, setForceModalVisible] = useState(false);
+  const [forceNote, setForceNote] = useState('');
+  const [pendingAttendance, setPendingAttendance] = useState<{
+    athlete_name?: string;
+    team_name?: string;
+    check_in_time?: string;
+    block_reason?: string;
+  } | null>(null);
+  
+  // Team selection for scanner
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [teamSelectModalVisible, setTeamSelectModalVisible] = useState(false);
 
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
@@ -120,78 +138,117 @@ export default function CoachScreen() {
     }
   };
 
-  const showForceRegistrationDialog = (qrCode: string) => {
+  const showForceRegistrationDialog = (qrCode: string, attendanceData: any) => {
     setPendingQrCode(qrCode);
+    setPendingAttendance(attendanceData);
+    setForceNote('');
+    
+    const athleteName = attendanceData?.athlete_name || 'Atleta';
+    const checkInTime = attendanceData?.check_in_time ? 
+      new Date(attendanceData.check_in_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : 
+      '';
+    const teamName = attendanceData?.team_name || '';
+    
     if (Platform.OS === 'web') {
       setForceModalVisible(true);
     } else {
       Alert.alert(
-        '⚠️ GIÀ REGISTRATA',
-        'Questa atleta è già stata registrata oggi.\n\nSe fa allenamento con due squadre diverse, puoi forzare la registrazione.',
+        '⚠️ PRESENZA GIÀ REGISTRATA',
+        `${athleteName} è già stato/a registrato/a oggi alle ${checkInTime}${teamName ? ` per ${teamName}` : ''}.\n\nSe fa allenamento con due squadre diverse, puoi forzare la registrazione.`,
         [
           {
             text: 'Annulla',
             style: 'cancel',
-            onPress: () => setPendingQrCode(null)
+            onPress: () => {
+              setPendingQrCode(null);
+              setPendingAttendance(null);
+            }
           },
           {
             text: 'FORZA REGISTRAZIONE',
             style: 'destructive',
-            onPress: () => handleForceRegistration(qrCode)
+            onPress: () => {
+              // On native, prompt for note
+              Alert.prompt(
+                'Nota forzatura',
+                'Inserisci una nota (opzionale):',
+                [
+                  { text: 'Annulla', style: 'cancel' },
+                  { text: 'Conferma', onPress: (note) => handleForceRegistration(qrCode, note || '') }
+                ],
+                'plain-text'
+              );
+            }
           }
         ]
       );
     }
   };
 
-  const handleForceRegistration = async (qrCode: string) => {
+  const handleForceRegistration = async (qrCode: string, note: string = '') => {
     setForceModalVisible(false);
     try {
-      const response = await api.post('/attendance/check', { qr_code: qrCode, force: true });
+      const response = await api.post('/attendance/check', { 
+        qr_code: qrCode, 
+        team_id: selectedTeamId,
+        force: true,
+        force_note: note || forceNote || 'Forzatura coach'
+      });
       const attendance = response.data;
       
       if (attendance.status === 'blocked') {
         showAlert('⛔ ACCESSO NEGATO', attendance.block_reason || 'Atleta non autorizzato');
       } else {
-        showAlert('✅ Presenza Registrata (Forzata)', 'Seconda presenza registrata per allenamento con altra squadra.');
+        showAlert('✅ Presenza Registrata (Forzata)', `Presenza forzata registrata per ${attendance.athlete_name || 'atleta'}.`);
       }
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante la registrazione');
     }
     setPendingQrCode(null);
+    setPendingAttendance(null);
+    setForceNote('');
   };
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     setScanning(false);
     
+    // Check if team is selected
+    if (!selectedTeamId) {
+      showAlert('⚠️ Seleziona Squadra', 'Devi selezionare una squadra prima di registrare le presenze.');
+      setTeamSelectModalVisible(true);
+      return;
+    }
+    
     try {
-      const response = await api.post('/attendance/check', { qr_code: data });
+      const response = await api.post('/attendance/check', { 
+        qr_code: data,
+        team_id: selectedTeamId
+      });
       const attendance = response.data;
       
       if (attendance.status === 'already_registered') {
-        // Already registered today - show force option
-        showForceRegistrationDialog(data);
+        // Already registered today - show force option with details
+        showForceRegistrationDialog(data, attendance);
       } else if (attendance.status === 'blocked') {
         // Blocked - show error with red styling
         showAlert(
           '⛔ ACCESSO NEGATO',
-          attendance.block_reason || 'Atleta non autorizzato'
+          `${attendance.athlete_name || 'Atleta'}\n\n${attendance.block_reason || 'Non autorizzato'}`
         );
       } else {
-        // Allowed - check for warnings
+        // Allowed - show success with athlete name
+        const athleteName = attendance.athlete_name || 'Atleta';
         const hasWarning = attendance.block_reason && attendance.block_reason.trim() !== '';
         
         if (hasWarning) {
-          // Allowed but with warnings (certificate expiring, payment due)
           showAlert(
             '✅ PRESENZA REGISTRATA - ATTENZIONE!',
-            `Atleta ammesso all'allenamento.\n\n${attendance.block_reason}`
+            `${athleteName} ammesso/a all'allenamento.\n\n${attendance.block_reason}`
           );
         } else {
-          // All clear
           showAlert(
             '✅ Presenza Registrata',
-            'Atleta autorizzato e presenza registrata con successo!'
+            `${athleteName} - Presenza registrata con successo!`
           );
         }
       }
@@ -547,6 +604,20 @@ export default function CoachScreen() {
           <Text style={styles.scannerTitle}>Pronto per scansionare</Text>
           <Text style={styles.scannerSubtitle}>Registra le presenze degli atleti</Text>
           
+          {/* Team Selection */}
+          <TouchableOpacity 
+            style={[styles.teamSelector, selectedTeamId && styles.teamSelectorActive]}
+            onPress={() => setTeamSelectModalVisible(true)}
+          >
+            <Ionicons name="people" size={20} color={selectedTeamId ? "#34C759" : "#999"} />
+            <Text style={[styles.teamSelectorText, selectedTeamId && styles.teamSelectorTextActive]}>
+              {selectedTeamId 
+                ? `📋 ${teams.find(t => t.id === selectedTeamId)?.name || 'Squadra selezionata'}`
+                : '⚠️ Seleziona una squadra'}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color="#666" />
+          </TouchableOpacity>
+          
           {Platform.OS === 'web' ? (
             <>
               <TouchableOpacity style={styles.scannerButton} onPress={startWebScanner}>
@@ -668,11 +739,23 @@ export default function CoachScreen() {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>⚠️ GIÀ REGISTRATA</Text>
+              <Text style={styles.modalTitle}>⚠️ PRESENZA GIÀ REGISTRATA</Text>
               <Text style={styles.modalSubtitle}>
-                Questa atleta è già stata registrata oggi.{'\n\n'}
+                {pendingAttendance?.athlete_name || 'Atleta'} è già stato/a registrato/a oggi
+                {pendingAttendance?.check_in_time ? ` alle ${new Date(pendingAttendance.check_in_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                {pendingAttendance?.team_name ? ` per ${pendingAttendance.team_name}` : ''}.
+                {'\n\n'}
                 Se fa allenamento con due squadre diverse, puoi forzare la registrazione.
               </Text>
+              
+              <TextInput
+                style={styles.forceNoteInput}
+                placeholder="Nota (es. doppio allenamento, arrivato in ritardo...)"
+                placeholderTextColor="#999"
+                value={forceNote}
+                onChangeText={setForceNote}
+                multiline
+              />
               
               <View style={styles.modalButtons}>
                 <TouchableOpacity
@@ -680,6 +763,8 @@ export default function CoachScreen() {
                   onPress={() => {
                     setForceModalVisible(false);
                     setPendingQrCode(null);
+                    setPendingAttendance(null);
+                    setForceNote('');
                   }}
                 >
                   <Text style={styles.modalButtonCancelText}>Annulla</Text>
@@ -687,11 +772,63 @@ export default function CoachScreen() {
                 
                 <TouchableOpacity
                   style={[styles.modalButton, styles.forceButton]}
-                  onPress={() => pendingQrCode && handleForceRegistration(pendingQrCode)}
+                  onPress={() => pendingQrCode && handleForceRegistration(pendingQrCode, forceNote)}
                 >
                   <Text style={styles.forceButtonText}>FORZA REGISTRAZIONE</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Team Selection Modal */}
+        <Modal
+          visible={teamSelectModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setTeamSelectModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>📋 Seleziona Squadra</Text>
+              <Text style={styles.modalSubtitle}>
+                Seleziona la squadra per cui vuoi registrare le presenze:
+              </Text>
+              
+              <ScrollView style={{ maxHeight: 300, marginVertical: 16 }}>
+                {teams.map((team) => (
+                  <TouchableOpacity
+                    key={team.id}
+                    style={[
+                      styles.teamSelectItem,
+                      selectedTeamId === team.id && styles.teamSelectItemActive
+                    ]}
+                    onPress={() => {
+                      setSelectedTeamId(team.id);
+                      setTeamSelectModalVisible(false);
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Ionicons 
+                        name={selectedTeamId === team.id ? "checkmark-circle" : "ellipse-outline"} 
+                        size={24} 
+                        color={selectedTeamId === team.id ? "#34C759" : "#ccc"} 
+                      />
+                      <View style={{ marginLeft: 12 }}>
+                        <Text style={styles.teamSelectName}>{team.name}</Text>
+                        {team.sport && <Text style={styles.teamSelectSport}>{team.sport}</Text>}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel, { alignSelf: 'center' }]}
+                onPress={() => setTeamSelectModalVisible(false)}
+              >
+                <Text style={styles.modalButtonCancelText}>Chiudi</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -1785,14 +1922,68 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-  },
-  emptyText: {
+  // Force note input
+  forceNoteInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 12,
+    minHeight: 60,
+    textAlignVertical: 'top',
     fontSize: 14,
-    color: '#999',
-    marginTop: 12,
+  },
+  // Team selection
+  teamSelectItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  teamSelectItemActive: {
+    borderColor: '#34C759',
+    backgroundColor: '#f0fff4',
+  },
+  teamSelectName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  teamSelectSport: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  // Team selector in scanner
+  teamSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    width: '100%',
+    maxWidth: 350,
+  },
+  teamSelectorActive: {
+    backgroundColor: '#f0fff4',
+    borderColor: '#34C759',
+  },
+  teamSelectorText: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  teamSelectorTextActive: {
+    color: '#333',
+    fontWeight: '500',
   },
 });
