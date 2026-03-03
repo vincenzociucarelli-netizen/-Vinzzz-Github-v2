@@ -35,6 +35,17 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
   - Issue: `split('-')` was used on dates in `dd/mm/yyyy` format
   - Fix: Dates now display directly without transformation
   - Verified: Month calculation works correctly (e.g., 10 mesi for Sep 2025 - Jun 2026)
+- [x] **GDPR Audit Logging System**: Implemented comprehensive audit trail for critical actions
+  - New `audit_logs` collection in MongoDB
+  - Standardized `log_audit()` function for consistent logging
+  - Actions logged:
+    1. **Login utenti**: User email, role, IP address
+    2. **Modifica data certificato**: Old/new expiry date, verified status
+    3. **Override certificato**: Reason, IP address, single-session type
+    4. **Modifica compensi**: Old/new compensation, contract date changes
+    5. **Accettazione documenti**: Document type (privacy), accepting role
+    6. **Cancellazione utenti**: Deleted user details (role, email, name)
+  - Admin API endpoint: `GET /api/audit-logs` to view logs
 
 ### Completed Previously (28/02/2026)
 - [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Sconto - Pagato` (now shows €200 correctly)
@@ -84,7 +95,7 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 - P3: Discount field input bug results in leading zeros (e.g., "075")
 
 ## Upcoming Tasks (Priority Order)
-1. P1: Implement comprehensive logging for critical actions (logins, QR scans, certificate overrides, compensation changes)
+1. ~~P1: Implement comprehensive logging for critical actions~~ ✅ COMPLETED
 2. P1: Strengthen authentication security: implement rate limiting on login and session timeouts
 3. P2: Verify that all backend database queries strictly filter by `society_id` for data isolation
 4. P2: Apply "end-of-trial" logic for Parent of minor athlete
@@ -101,6 +112,7 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 - `POST /api/athletes/upload-medical-certificate` - Upload medical cert
 - `GET /api/birthdays/today` - Today's birthdays
 - `GET /api/societies/invite-code` - Society invite code
+- `GET /api/audit-logs` - View audit logs (admin only) ✅ NEW
 
 ## Test Credentials
 - Admin: `test.admin@test.com` / `Test1234`

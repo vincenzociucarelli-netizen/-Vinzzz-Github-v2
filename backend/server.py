@@ -98,6 +98,56 @@ async def health():
     """Health check endpoint"""
     return {"status": "healthy", "service": "backend"}
 
+# ==================== AUDIT LOGGING ====================
+
+class AuditAction:
+    """Azioni tracciabili per GDPR compliance"""
+    LOGIN = "login"
+    CERTIFICATE_MODIFIED = "certificate_modified"
+    CERTIFICATE_OVERRIDE = "certificate_override"
+    COMPENSATION_MODIFIED = "compensation_modified"
+    DOCUMENT_ACCEPTED = "document_accepted"
+    USER_DELETED = "user_deleted"
+
+async def log_audit(
+    action: str,
+    user_id: str,
+    user_email: str,
+    society_id: str,
+    details: dict = None,
+    target_user_id: str = None,
+    target_user_name: str = None,
+    ip_address: str = None
+):
+    """
+    Log azioni critiche per audit trail GDPR.
+    
+    Actions logged:
+    - login: Login utenti
+    - certificate_modified: Modifica data certificato medico
+    - certificate_override: Override certificato scaduto
+    - compensation_modified: Inserimento/modifica compensi
+    - document_accepted: Accettazione documenti digitali
+    - user_deleted: Cancellazione atleta o coach
+    """
+    audit_entry = {
+        "id": str(ObjectId()),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "action": action,
+        "user_id": user_id,
+        "user_email": user_email,
+        "society_id": society_id,
+        "target_user_id": target_user_id,
+        "target_user_name": target_user_name,
+        "ip_address": ip_address,
+        "details": details or {}
+    }
+    
+    try:
+        await db.audit_logs.insert_one(audit_entry)
+    except Exception as e:
+        logging.error(f"Failed to log audit entry: {e}")
+
 # ==================== MODELS ====================
 
 import secrets
@@ -1394,7 +1444,7 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     }
 
 @api_router.post("/auth/login", response_model=TokenResponse)
-async def login(credentials: UserLogin):
+async def login(credentials: UserLogin, request: Request):
     user = await db.users.find_one({"email": credentials.email})
     if not user or not verify_password(credentials.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Email o password non corretti")
@@ -1417,6 +1467,16 @@ async def login(credentials: UserLogin):
             athlete_status = athlete.get("status")
     
     token = create_token(user["id"], user["role"])
+    
+    # AUDIT LOG: Login
+    await log_audit(
+        action=AuditAction.LOGIN,
+        user_id=user["id"],
+        user_email=user["email"],
+        society_id=user.get("society_id", ""),
+        ip_address=request.client.host if request.client else None,
+        details={"role": user["role"]}
+    )
     
     return TokenResponse(
         token=token,
@@ -2579,6 +2639,22 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
             {"id": user_id},
             {"$set": update_data}
         )
+        
+        # AUDIT LOG: Compensation modified
+        await log_audit(
+            action=AuditAction.COMPENSATION_MODIFIED,
+            user_id=current_user["id"],
+            user_email=current_user["email"],
+            society_id=current_user.get("society_id", ""),
+            target_user_id=user_id,
+            target_user_name=user.get("full_name"),
+            details={
+                "old_compensation": user.get("monthly_compensation", 0),
+                "new_compensation": update_data.get("monthly_compensation"),
+                "other_annual": update_data.get("other_annual_compensation"),
+                "contract_dates_updated": "contract_start_date" in update_data or "contract_end_date" in update_data
+            }
+        )
     
     return {"message": "Compenso aggiornato con successo"}
 
@@ -2595,6 +2671,17 @@ async def delete_user(user_id: str, current_user = Depends(get_current_user)):
     user = await db.users.find_one({"id": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    # AUDIT LOG: User deletion
+    await log_audit(
+        action=AuditAction.USER_DELETED,
+        user_id=current_user["id"],
+        user_email=current_user["email"],
+        society_id=current_user.get("society_id", ""),
+        target_user_id=user_id,
+        target_user_name=user.get("full_name"),
+        details={"deleted_role": user.get("role"), "deleted_email": user.get("email")}
+    )
     
     await db.users.delete_one({"id": user_id})
     
@@ -5855,6 +5942,17 @@ async def delete_athlete(athlete_id: str, current_user = Depends(get_current_use
         if not is_primary and not is_second:
             raise HTTPException(status_code=403, detail="Accesso negato")
     
+    # AUDIT LOG: Athlete deletion
+    await log_audit(
+        action=AuditAction.USER_DELETED,
+        user_id=current_user["id"],
+        user_email=current_user["email"],
+        society_id=current_user.get("society_id", ""),
+        target_user_id=athlete_id,
+        target_user_name=athlete.get("full_name"),
+        details={"deleted_role": "athlete", "deleted_by_role": current_user["role"]}
+    )
+    
     # Delete all related data
     await db.certificates.delete_many({"athlete_id": athlete_id})
     await db.payments.delete_many({"athlete_id": athlete_id})
@@ -5970,6 +6068,9 @@ async def create_certificate_simple(
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
+    # Get old expiry for audit log
+    old_expiry = athlete.get("medical_certificate_expiry")
+    
     # Parse expiry date
     try:
         expiry_dt = datetime.fromisoformat(data.expiry_date.replace('Z', '+00:00'))
@@ -5999,6 +6100,21 @@ async def create_certificate_simple(
     )
     
     await db.certificates.insert_one(certificate.dict())
+    
+    # AUDIT LOG: Certificate modified
+    await log_audit(
+        action=AuditAction.CERTIFICATE_MODIFIED,
+        user_id=current_user["id"],
+        user_email=current_user["email"],
+        society_id=current_user.get("society_id", ""),
+        target_user_id=data.athlete_id,
+        target_user_name=athlete.get("full_name"),
+        details={
+            "old_expiry": old_expiry,
+            "new_expiry": expiry_dt.isoformat(),
+            "verified": data.verified
+        }
+    )
     
     return {
         "id": certificate.id,
@@ -6052,8 +6168,20 @@ async def override_certificate_block(
         "override_type": "single_session"  # Valido solo per singola sessione
     }
     
-    # Save to audit log collection
+    # Save to audit log collection (legacy format)
     await db.audit_logs.insert_one(override_log)
+    
+    # AUDIT LOG: Certificate override (standardized format)
+    await log_audit(
+        action=AuditAction.CERTIFICATE_OVERRIDE,
+        user_id=current_user["id"],
+        user_email=current_user["email"],
+        society_id=current_user.get("society_id", ""),
+        target_user_id=data.athlete_id,
+        target_user_name=athlete.get("full_name"),
+        ip_address=client_ip,
+        details={"reason": data.reason.strip(), "override_type": "single_session"}
+    )
     
     # Set override on athlete - valid for SINGLE attendance registration only
     # The override will be consumed when attendance is registered
@@ -9141,6 +9269,17 @@ async def accept_privacy_and_continue(athlete_id: str, current_user = Depends(ge
         }}
     )
     
+    # AUDIT LOG: Document accepted (privacy)
+    await log_audit(
+        action=AuditAction.DOCUMENT_ACCEPTED,
+        user_id=current_user["id"],
+        user_email=current_user["email"],
+        society_id=current_user.get("society_id", ""),
+        target_user_id=athlete_id,
+        target_user_name=athlete.get("full_name"),
+        details={"document_type": "privacy", "accepted_by_role": current_user["role"]}
+    )
+    
     return {
         "message": f"Privacy accettata per {athlete.get('full_name')}. L'atleta è ora attivo.",
         "status": "active"
@@ -10889,9 +11028,23 @@ async def delete_collaboratore(collaboratore_id: str, current_user = Depends(get
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può eliminare collaboratori")
     
+    # Get user before deleting for audit log
+    collaboratore = await db.users.find_one({"id": collaboratore_id, "role": UserRole.COLLABORATORE})
+    
     result = await db.users.delete_one({"id": collaboratore_id, "role": UserRole.COLLABORATORE})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Collaboratore non trovato")
+    
+    # AUDIT LOG: Collaboratore deletion
+    await log_audit(
+        action=AuditAction.USER_DELETED,
+        user_id=current_user["id"],
+        user_email=current_user["email"],
+        society_id=current_user.get("society_id", ""),
+        target_user_id=collaboratore_id,
+        target_user_name=collaboratore.get("full_name") if collaboratore else None,
+        details={"deleted_role": "collaboratore", "deleted_email": collaboratore.get("email") if collaboratore else None}
+    )
     
     # Also delete compensation records
     await db.collaboratore_compensations.delete_many({"collaboratore_id": collaboratore_id})
@@ -12518,6 +12671,41 @@ async def delete_my_data(current_user = Depends(get_current_user)):
 async def api_health():
     """Health check endpoint for Kubernetes"""
     return {"status": "healthy", "service": "backend"}
+
+# ==================== AUDIT LOGS ENDPOINT ====================
+
+@api_router.get("/audit-logs")
+async def get_audit_logs(
+    skip: int = 0,
+    limit: int = 50,
+    action: Optional[str] = None,
+    current_user = Depends(get_current_user)
+):
+    """Get audit logs - Admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i log di audit")
+    
+    # Build query
+    query = {"society_id": current_user.get("society_id", "")}
+    if action:
+        query["action"] = action
+    
+    # Get total count
+    total = await db.audit_logs.count_documents(query)
+    
+    # Get logs sorted by timestamp descending
+    logs = await db.audit_logs.find(query).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Clean MongoDB _id
+    for log in logs:
+        log.pop("_id", None)
+    
+    return {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "logs": logs
+    }
 
 # Include the router in the main app
 app.include_router(api_router)
