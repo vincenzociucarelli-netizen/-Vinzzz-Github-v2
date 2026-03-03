@@ -441,11 +441,8 @@ export default function AdminCollaboratoreDetail() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} />}
       >
-        {/* Profile Photo - RIMOSSA per privacy, mostra solo icona */}
+        {/* Header con nome e contatti */}
         <View style={styles.profileSection}>
-          <View style={[styles.profilePhoto, styles.profilePhotoPlaceholder]}>
-            <Ionicons name="person" size={60} color="#ccc" />
-          </View>
           <Text style={styles.profileName}>{collaboratore.full_name}</Text>
           <View style={[styles.statusBadge, { backgroundColor: collaboratore.status === 'approved' ? '#34C759' : '#FF9500' }]}>
             <Text style={styles.statusBadgeText}>{collaboratore.status === 'approved' ? 'ATTIVO' : 'IN ATTESA'}</Text>

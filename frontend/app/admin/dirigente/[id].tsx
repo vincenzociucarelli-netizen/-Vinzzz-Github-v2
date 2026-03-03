@@ -419,14 +419,8 @@ export default function AdminDirigenteDetail() {
           </Text>
         </View>
 
-        {/* Profile Photo */}
-        {/* Profile Photo - RIMOSSA per privacy, mostra solo icona */}
+        {/* Header con nome e contatti */}
         <View style={styles.photoSection}>
-          <View style={styles.photoContainer}>
-            <View style={styles.photoPlaceholder}>
-              <Ionicons name="person" size={60} color="#ccc" />
-            </View>
-          </View>
           <Text style={styles.photoName}>{dirigente.full_name}</Text>
           <Text style={styles.photoRole}>
             {dirigente.role === 'admin' ? '👑 Amministratore' : '👔 Dirigente'}

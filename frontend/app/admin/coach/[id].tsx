@@ -602,13 +602,8 @@ export default function AdminCoachDetail() {
           );
         })()}
 
-        {/* Profile Photo - RIMOSSA per privacy, mostra solo icona */}
+        {/* Header con nome e contatti */}
         <View style={styles.photoSection}>
-          <View style={styles.photoContainer}>
-            <View style={styles.photoPlaceholder}>
-              <Ionicons name="fitness" size={60} color="#FF9500" />
-            </View>
-          </View>
           <Text style={styles.photoName}>{coach.full_name}</Text>
           <Text style={styles.photoRole}>🏃 Coach</Text>
           
