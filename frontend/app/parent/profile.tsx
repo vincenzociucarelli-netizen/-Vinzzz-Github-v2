@@ -401,48 +401,7 @@ export default function ParentProfile() {
             </View>
           )}
 
-          {/* Profile Photo Section */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>📸 Foto Profilo</Text>
-            <View style={styles.profilePhotoContainer}>
-              {transformingPhoto ? (
-                <View style={styles.photoPlaceholder}>
-                  <ActivityIndicator size="large" color="#E91E63" />
-                  <Text style={styles.transformingText}>Creando ritratto artistico...</Text>
-                </View>
-              ) : profilePhotoArtistic ? (
-                <Image
-                  source={{ uri: `data:image/jpeg;base64,${profilePhotoArtistic}` }}
-                  style={styles.profilePhotoLarge}
-                />
-              ) : profilePhoto ? (
-                <Image
-                  source={{ uri: `data:image/jpeg;base64,${profilePhoto}` }}
-                  style={styles.profilePhotoLarge}
-                />
-              ) : (
-                <View style={styles.photoPlaceholder}>
-                  <Ionicons name="person" size={64} color="#ccc" />
-                  <Text style={styles.photoPlaceholderText}>Nessuna foto</Text>
-                </View>
-              )}
-              
-              <TouchableOpacity
-                style={[styles.uploadPhotoButton, transformingPhoto && styles.buttonDisabled]}
-                onPress={handlePickPhoto}
-                disabled={transformingPhoto}
-              >
-                <Ionicons name="camera" size={20} color="#fff" />
-                <Text style={styles.uploadPhotoButtonText}>
-                  {profilePhotoArtistic ? 'Cambia Foto' : 'Carica Foto'}
-                </Text>
-              </TouchableOpacity>
-              
-              <Text style={styles.photoHint}>
-                🎨 La foto verrà trasformata automaticamente in stile artistico
-              </Text>
-            </View>
-          </View>
+          {/* Profile Photo Section - RIMOSSA per privacy */}
 
           {/* Account Info */}
           <View style={styles.card}>

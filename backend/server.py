@@ -547,9 +547,7 @@ class Athlete(BaseModel):
     is_withdrawn: bool = False  # Flag: atleta ritirato dalla squadra
     withdrawn_date: Optional[datetime] = None  # Data ritiro
     withdrawn_reason: Optional[str] = None  # Motivo ritiro
-    # Dati tecnici (gestiti da Coach)
-    athlete_photo: Optional[str] = None  # Foto atleta (base64)
-    athlete_photo_artistic: Optional[str] = None  # Foto stile artistico (base64)
+    # Dati tecnici (gestiti da Coach) - FOTO RIMOSSE per privacy
     athlete_role: Optional[str] = None  # Ruolo dell'atleta
     athlete_height: Optional[int] = None  # Altezza in cm
     athlete_weight: Optional[int] = None  # Peso in kg
@@ -580,7 +578,6 @@ class Athlete(BaseModel):
     # Documento identità - RIMOSSO per privacy (solo metadati gestiti in sede)
     # Campi dinamici (non persistiti, aggiunti nelle risposte)
     team_name: Optional[str] = None  # Nome squadra (riempito dinamicamente)
-    profile_photo: Optional[str] = None  # Foto profilo (può venire da user)
     # Certificato medico - SOLO metadati, niente file
     medical_certificate_expiry: Optional[str] = None  # Scadenza certificato medico
     medical_certificate_verified: Optional[bool] = None  # Verificato dal dirigente
@@ -650,9 +647,7 @@ class AthleteUpdate(BaseModel):
     data_password: Optional[str] = None  # Nuova password protezione dati
     is_withdrawn: Optional[bool] = None  # Ritiro atleta
     withdrawn_reason: Optional[str] = None  # Motivo ritiro
-    # Dati tecnici
-    athlete_photo: Optional[str] = None
-    athlete_photo_artistic: Optional[str] = None
+    # Dati tecnici - FOTO RIMOSSE per privacy
     athlete_role: Optional[str] = None
     athlete_height: Optional[int] = None
     athlete_weight: Optional[int] = None
@@ -953,9 +948,7 @@ async def check_athlete_status(athlete_id: str):
     if datetime.utcnow() > athlete["trial_end_date"] and not athlete.get("privacy_accepted"):
         return {"allowed": False, "reason": "Privacy non accettata - periodo di prova terminato", "warning": None}
     
-    # Get society settings for certificate blocking
-    settings = await db.settings.find_one({"type": "society"})
-    block_expired_certificates = settings.get("block_expired_certificates", False) if settings else False
+    # BLOCCO AUTOMATICO SEMPRE ATTIVO - nessun check impostazioni
     
     # Check certificate
     certificate = await db.certificates.find_one({"athlete_id": athlete_id})
@@ -976,35 +969,27 @@ async def check_athlete_status(athlete_id: str):
         except:
             expiry_date = None
     
+    # Certificato mancante = BLOCCATO
     if not certificate and not cert_expiry:
-        if block_expired_certificates:
-            return {"allowed": False, "reason": "⛔ CERTIFICATO MEDICO MANCANTE - Atleta NON ammesso", "warning": None}
-        else:
-            return {"allowed": True, "reason": "⚠️ CERTIFICATO MEDICO MANCANTE", "warning": "⚠️ CERTIFICATO MEDICO MANCANTE"}
+        return {"allowed": False, "reason": "⛔ CERTIFICATO MEDICO MANCANTE - Atleta NON ammesso", "warning": None}
     
     # Check if certificate is expired
     if expiry_date and datetime.utcnow() > expiry_date:
-        # Check for active override
-        override_until = athlete.get("certificate_override_until")
-        if override_until:
-            try:
-                override_dt = datetime.fromisoformat(override_until.replace('Z', '+00:00')).replace(tzinfo=None)
-                if datetime.utcnow() < override_dt:
-                    # Override is active
-                    override_reason = athlete.get("certificate_override_reason", "Autorizzato dall'admin")
-                    return {
-                        "allowed": True, 
-                        "reason": f"⚠️ CERTIFICATO SCADUTO (Override attivo: {override_reason})", 
-                        "warning": f"⚠️ CERTIFICATO SCADUTO - Override attivo fino a {override_dt.strftime('%d/%m/%Y %H:%M')}"
-                    }
-            except:
-                pass
+        # Check for active single-session override
+        override_active = athlete.get("certificate_override_active", False)
+        if override_active:
+            # Override is active for this single session
+            override_reason = athlete.get("certificate_override_reason", "Autorizzato dall'admin")
+            return {
+                "allowed": True, 
+                "reason": f"⚠️ CERTIFICATO SCADUTO (Override singola sessione: {override_reason})", 
+                "warning": f"⚠️ CERTIFICATO SCADUTO - Override attivo SOLO per questa sessione",
+                "override_active": True,  # Flag per consumare l'override dopo registrazione
+                "athlete_id": athlete_id
+            }
         
-        # No override - check if blocking is enabled
-        if block_expired_certificates:
-            return {"allowed": False, "reason": "⛔ CERTIFICATO MEDICO SCADUTO - Atleta NON ammesso all'allenamento", "warning": None}
-        else:
-            return {"allowed": True, "reason": "⚠️ CERTIFICATO MEDICO SCADUTO", "warning": "⚠️ CERTIFICATO MEDICO SCADUTO - Provvedere al rinnovo!"}
+        # No override - BLOCCATO
+        return {"allowed": False, "reason": "⛔ CERTIFICATO MEDICO SCADUTO - Atleta NON ammesso all'allenamento", "warning": None}
     
     # Check if certificate is expiring soon (within 30 days)
     cert_warning = None
@@ -1686,87 +1671,8 @@ class ImageTransformRequest(BaseModel):
 
 @api_router.post("/auth/me/transform-photo")
 async def transform_user_photo(data: ImageTransformRequest, current_user = Depends(get_current_user)):
-    """Transform user profile photo to artistic style using AI - for coach, dirigente, collaboratore and parent"""
-    if current_user["role"] not in [UserRole.COACH, UserRole.VIEWER, UserRole.ADMIN, "collaboratore", UserRole.PARENT]:
-        raise HTTPException(status_code=403, detail="Funzionalità disponibile solo per coach, dirigenti, collaboratori e genitori")
-    
-    try:
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
-        if not api_key:
-            raise HTTPException(status_code=500, detail="Chiave API non configurata")
-        
-        if HAS_OPENAI_CLIENT:
-            client = AsyncOpenAI(
-                api_key=api_key,
-                base_url="https://llm.integrations.emergent.sh/v1"
-            )
-            
-            image_bytes = base64.b64decode(data.image_base64)
-            
-            response = await client.images.edit(
-                model="gpt-image-1",
-                image=image_bytes,
-                prompt="Transform into a BLACK AND WHITE PENCIL SKETCH drawing. Remove ALL colors. Only use black, white and gray tones. Add visible pencil strokes and cross-hatching. Make it look hand-drawn on white paper.",
-                n=1,
-                size="1024x1024"
-            )
-            
-            if response.data and len(response.data) > 0:
-                result = response.data[0]
-                if hasattr(result, 'b64_json') and result.b64_json:
-                    artistic_base64 = result.b64_json
-                elif hasattr(result, 'url') and result.url:
-                    import httpx
-                    async with httpx.AsyncClient() as http_client:
-                        img_response = await http_client.get(result.url)
-                        artistic_base64 = base64.b64encode(img_response.content).decode('utf-8')
-                else:
-                    raise HTTPException(status_code=500, detail="Formato risposta non valido")
-                
-                # Save to user profile
-                await db.users.update_one(
-                    {"id": current_user["id"]},
-                    {"$set": {
-                        "profile_photo": data.image_base64,
-                        "profile_photo_artistic": artistic_base64
-                    }}
-                )
-                
-                return {
-                    "success": True,
-                    "artistic_photo": artistic_base64
-                }
-            else:
-                raise HTTPException(status_code=500, detail="Nessuna immagine generata")
-        else:
-            # Fallback
-            await db.users.update_one(
-                {"id": current_user["id"]},
-                {"$set": {
-                    "profile_photo": data.image_base64,
-                    "profile_photo_artistic": data.image_base64
-                }}
-            )
-            return {
-                "success": True,
-                "artistic_photo": data.image_base64,
-                "note": "Trasformazione non disponibile"
-            }
-            
-    except Exception as e:
-        logging.error(f"Error transforming user photo: {str(e)}")
-        await db.users.update_one(
-            {"id": current_user["id"]},
-            {"$set": {
-                "profile_photo": data.image_base64,
-                "profile_photo_artistic": data.image_base64
-            }}
-        )
-        return {
-            "success": True,
-            "artistic_photo": data.image_base64,
-            "note": f"Errore: {str(e)}"
-        }
+    """DISABILITATO - Foto profilo rimosse per privacy"""
+    raise HTTPException(status_code=410, detail="Funzionalità foto profilo rimossa per privacy")
 
 async def send_password_reset_email(to_email: str, reset_token: str, user_name: str):
     """Send password reset email via Brevo/SendGrid"""
@@ -5798,107 +5704,9 @@ async def get_archived_certificate(certificate_id: str, current_user = Depends(g
 
 @api_router.post("/athletes/{athlete_id}/transform-photo")
 async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, current_user = Depends(get_current_user)):
-    """Transform athlete photo to artistic style using AI"""
-    
-    athlete = await db.athletes.find_one({"id": athlete_id})
-    if not athlete:
-        raise HTTPException(status_code=404, detail="Atleta non trovato")
-    
-    # Check permissions - admin, coach, parent of athlete, or athlete themselves
-    if current_user["role"] == UserRole.PARENT:
-        is_primary = athlete.get("parent_id") == current_user["id"]
-        is_second = athlete.get("second_parent_id") == current_user["id"]
-        if not is_primary and not is_second:
-            raise HTTPException(status_code=403, detail="Accesso negato")
-    elif current_user["role"] == "athlete":
-        # Athlete can only transform their own photo
-        if current_user.get("athlete_id") != athlete_id:
-            raise HTTPException(status_code=403, detail="Puoi modificare solo la tua foto")
-    
-    try:
-        # Get API key
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
-        if not api_key:
-            raise HTTPException(status_code=500, detail="Chiave API non configurata")
-        
-        # Use OpenAI client for image editing
-        if HAS_OPENAI_CLIENT:
-            client = AsyncOpenAI(
-                api_key=api_key,
-                base_url="https://llm.integrations.emergent.sh/v1"
-            )
-            
-            # Decode base64 to bytes
-            image_bytes = base64.b64decode(data.image_base64)
-            
-            # Create image edit request - transform to pencil sketch style
-            response = await client.images.edit(
-                model="gpt-image-1",
-                image=image_bytes,
-                prompt="Transform into a BLACK AND WHITE PENCIL SKETCH drawing. Remove ALL colors. Only use black, white and gray tones. Add visible pencil strokes and cross-hatching. Make it look hand-drawn on white paper.",
-                n=1,
-                size="1024x1024"
-            )
-            
-            if response.data and len(response.data) > 0:
-                # Get the result - could be base64 or URL
-                result = response.data[0]
-                if hasattr(result, 'b64_json') and result.b64_json:
-                    artistic_base64 = result.b64_json
-                elif hasattr(result, 'url') and result.url:
-                    # Download from URL and convert to base64
-                    import httpx
-                    async with httpx.AsyncClient() as http_client:
-                        img_response = await http_client.get(result.url)
-                        artistic_base64 = base64.b64encode(img_response.content).decode('utf-8')
-                else:
-                    raise HTTPException(status_code=500, detail="Formato risposta non valido")
-                
-                # Save both photos to the athlete record
-                await db.athletes.update_one(
-                    {"id": athlete_id},
-                    {"$set": {
-                        "athlete_photo": data.image_base64,
-                        "athlete_photo_artistic": artistic_base64
-                    }}
-                )
-                
-                return {
-                    "success": True,
-                    "artistic_photo": artistic_base64
-                }
-            else:
-                raise HTTPException(status_code=500, detail="Nessuna immagine generata")
-        else:
-            # Fallback - save original photo without transformation
-            await db.athletes.update_one(
-                {"id": athlete_id},
-                {"$set": {
-                    "athlete_photo": data.image_base64,
-                    "athlete_photo_artistic": data.image_base64
-                }}
-            )
-            return {
-                "success": True,
-                "artistic_photo": data.image_base64,
-                "note": "Trasformazione non disponibile, salvata foto originale"
-            }
-            
-    except Exception as e:
-        logging.error(f"Error generating artistic photo: {str(e)}")
-        # Fallback - save original photo
-        await db.athletes.update_one(
-            {"id": athlete_id},
-            {"$set": {
-                "athlete_photo": data.image_base64,
-                "athlete_photo_artistic": data.image_base64
-            }}
-        )
-        return {
-            "success": True,
-            "artistic_photo": data.image_base64,
-            "note": f"Errore trasformazione: {str(e)}"
-        }
+    """DISABILITATO - Foto profilo rimosse per privacy"""
+    raise HTTPException(status_code=410, detail="Funzionalità foto profilo rimossa per privacy")
+
 
 @api_router.post("/athletes/{athlete_id}/request-deletion")
 async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_current_user)):
@@ -6203,7 +6011,7 @@ async def create_certificate_simple(
 # Override blocco certificato scaduto (solo Admin)
 class CertificateOverrideRequest(BaseModel):
     athlete_id: str
-    reason: str  # Motivo dell'override
+    reason: str  # Motivo dell'override - OBBLIGATORIO
 
 @api_router.post("/certificates/override")
 async def override_certificate_block(
@@ -6211,9 +6019,13 @@ async def override_certificate_block(
     request: Request,
     current_user = Depends(get_current_user)
 ):
-    """Override certificate block for an athlete - Admin only, always logged"""
+    """Override certificate block for an athlete - Admin only, valid for SINGLE SESSION, always logged"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può fare override del blocco")
+    
+    # Validate reason is not empty
+    if not data.reason or len(data.reason.strip()) < 5:
+        raise HTTPException(status_code=400, detail="Motivo obbligatorio (minimo 5 caratteri)")
     
     # Check athlete exists
     athlete = await db.athletes.find_one({"id": data.athlete_id})
@@ -6233,30 +6045,33 @@ async def override_certificate_block(
         "athlete_name": athlete.get("full_name"),
         "user_id": current_user["id"],
         "user_name": current_user.get("full_name", current_user.get("email")),
-        "reason": data.reason,
+        "reason": data.reason.strip(),
         "timestamp": datetime.utcnow().isoformat(),
         "ip_address": client_ip,
-        "type": "certificate_block_override"
+        "type": "certificate_block_override",
+        "override_type": "single_session"  # Valido solo per singola sessione
     }
     
     # Save to audit log collection
     await db.audit_logs.insert_one(override_log)
     
-    # Set temporary override on athlete (valid for 24 hours)
-    override_until = datetime.utcnow() + timedelta(hours=24)
+    # Set override on athlete - valid for SINGLE attendance registration only
+    # The override will be consumed when attendance is registered
     await db.athletes.update_one(
         {"id": data.athlete_id},
         {"$set": {
-            "certificate_override_until": override_until.isoformat(),
+            "certificate_override_active": True,  # Flag per singola sessione
             "certificate_override_by": current_user["id"],
-            "certificate_override_reason": data.reason
+            "certificate_override_reason": data.reason.strip(),
+            "certificate_override_timestamp": datetime.utcnow().isoformat()
         }}
     )
     
     return {
-        "message": "Override attivato con successo",
-        "override_until": override_until.isoformat(),
-        "log_id": override_log["id"]
+        "message": "⚠️ Override attivato per SINGOLA SESSIONE",
+        "warning": "L'atleta potrà partecipare SOLO a questa sessione. Il blocco si riattiverà automaticamente.",
+        "log_id": override_log["id"],
+        "athlete_name": athlete.get("full_name")
     }
 
 @api_router.get("/certificates/override-logs")
@@ -7535,6 +7350,26 @@ async def check_attendance(attendance_data: AttendanceCreate, current_user = Dep
         status="allowed" if status_check["allowed"] else "blocked",
         block_reason=status_check["reason"]
     )
+    
+    # If allowed and override was active, CONSUME the override (single session only)
+    if status_check["allowed"] and status_check.get("override_active"):
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {
+                "certificate_override_active": False,  # Consuma l'override
+                "certificate_override_consumed_at": datetime.utcnow().isoformat()
+            }}
+        )
+        # Log override consumption
+        await db.audit_logs.insert_one({
+            "id": str(uuid.uuid4()),
+            "type": "certificate_override_consumed",
+            "athlete_id": athlete_id,
+            "athlete_name": athlete.get("full_name"),
+            "consumed_at": datetime.utcnow().isoformat(),
+            "coach_id": current_user["id"],
+            "coach_name": current_user.get("full_name", current_user.get("email"))
+        })
     
     await db.attendances.insert_one(attendance.dict())
     

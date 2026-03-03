@@ -471,33 +471,27 @@ export default function SocietySettings() {
             Gestione scadenza certificati medici atleti
           </Text>
           
-          <TouchableOpacity 
-            style={[styles.toggleContainer, blockExpiredCertificates && styles.toggleActive]}
-            onPress={() => setBlockExpiredCertificates(!blockExpiredCertificates)}
-          >
+          <View style={[styles.toggleContainer, styles.toggleActive]}>
             <View style={styles.toggleInfo}>
-              <Text style={styles.toggleTitle}>Blocco automatico atleti</Text>
+              <Text style={styles.toggleTitle}>🔒 Blocco automatico ATTIVO</Text>
               <Text style={styles.toggleDesc}>
-                {blockExpiredCertificates 
-                  ? '✅ Attivo: La scansione QR verrà bloccata per atleti con certificato scaduto'
-                  : '⚠️ Disattivo: Solo alert, nessun blocco tecnico'}
+                La scansione QR è bloccata per atleti con certificato scaduto o mancante
               </Text>
             </View>
-            <View style={[styles.toggleSwitch, blockExpiredCertificates && styles.toggleSwitchOn]}>
-              <View style={[styles.toggleKnob, blockExpiredCertificates && styles.toggleKnobOn]} />
+            <View style={[styles.toggleSwitch, styles.toggleSwitchOn]}>
+              <View style={[styles.toggleKnob, styles.toggleKnobOn]} />
             </View>
-          </TouchableOpacity>
+          </View>
           
-          {blockExpiredCertificates && (
-            <View style={styles.toggleNote}>
-              <Text style={styles.toggleNoteText}>
-                📌 Alla scadenza del certificato:{'\n'}
-                • QR non consente registrazione presenze{'\n'}
-                • Solo l'Admin può fare override temporaneo{'\n'}
-                • Ogni override viene tracciato con log
-              </Text>
-            </View>
-          )}
+          <View style={styles.toggleNote}>
+            <Text style={styles.toggleNoteText}>
+              📌 Regole:{'\n'}
+              • QR non consente registrazione presenze con certificato scaduto{'\n'}
+              • Solo Admin può fare override (valido per singola sessione){'\n'}
+              • Motivo override obbligatorio{'\n'}
+              • Ogni override viene tracciato con log
+            </Text>
+          </View>
         </View>
 
         {/* Spacer */}
