@@ -22,9 +22,21 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 - Birthday notifications
 - Invite code system for society registration
 
-## Current Status (as of 2026-02-28)
+## Current Status (as of 2026-03-03)
 
-### Completed Today (28/02/2026)
+### Completed Today (03/03/2026)
+- [x] **GDPR Facilitator Model - Profile Photo Removal**: Completed removal of profile photos from all Admin views
+  - Dirigenti list: Now shows icon (shield-checkmark for admin, briefcase for dirigente)
+  - Coaches list: Already using emoji icons only
+  - Collaboratori list: Already using emoji icons only
+  - Athletes list: Already text-only without photos
+  - All detail pages (Coach, Collaboratore, Dirigente): Show placeholder icon instead of photo
+- [x] **Compensation Calculation Bug Fix**: Fixed date format bug in Collaboratore detail page
+  - Issue: `split('-')` was used on dates in `dd/mm/yyyy` format
+  - Fix: Dates now display directly without transformation
+  - Verified: Month calculation works correctly (e.g., 10 mesi for Sep 2025 - Jun 2026)
+
+### Completed Previously (28/02/2026)
 - [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Sconto - Pagato` (now shows €200 correctly)
 - [x] **3ª Rata con Sconto**: Shows "(con sconto)" label and discounted amount (€250 - €50 = €200)
 - [x] **Notifications Removed**: Removed "Scadenze in arrivo" section from athlete dashboard
@@ -68,14 +80,18 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 
 ### Known Issues
 - P2: `@expo/vector-icons` not rendering correctly on web (recurring)
-- P1: Admin dashboard sometimes fails to load lists (intermittent)
+- P2: Admin dashboard sometimes fails to load lists (intermittent)
+- P3: Discount field input bug results in leading zeros (e.g., "075")
 
 ## Upcoming Tasks (Priority Order)
-1. P0: Apply "end-of-trial" logic for Parent of minor athlete
-2. P1: Prepare assets and legal documents for app store submission
-3. P2: Stabilize "PRO" Module
-4. P3: Stripe Integration for premium plans (postponed)
-5. P3: Freemium logic with upgrade prompts
+1. P1: Implement comprehensive logging for critical actions (logins, QR scans, certificate overrides, compensation changes)
+2. P1: Strengthen authentication security: implement rate limiting on login and session timeouts
+3. P2: Verify that all backend database queries strictly filter by `society_id` for data isolation
+4. P2: Apply "end-of-trial" logic for Parent of minor athlete
+5. P2: Data export feature (CSV format for athletes, attendance, compensations, logs)
+6. P2: Technical limit of 150 athletes per sports club (ASD)
+7. P3: Stripe Integration for premium plans
+8. P3: Refactor the monolithic `server.py` into a modular structure
 
 ## Key API Endpoints
 - `GET /api/stats/overview` - Dashboard statistics (admin only)
