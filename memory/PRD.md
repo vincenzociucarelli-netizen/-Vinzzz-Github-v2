@@ -78,6 +78,13 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
   - Downloads CSV files with Italian headers
   - API endpoints: `/api/export-csv/athletes`, `/api/export-csv/attendances`, `/api/export-csv/compensations`, `/api/export-csv/audit-logs`
   - Accessible from Admin Settings menu (cyan card)
+- [x] **Society Isolation (Multi-tenancy)**: Verified and fixed data isolation
+  - All major endpoints now filter by `society_id`:
+    - `/teams`, `/athletes`, `/athletes/pending`
+    - `/users/coaches`, `/users/collaboratorees`, `/users/dirigentees`, `/users/parents`, `/users/pending`
+    - `/stats/overview`, `/birthdays/today`
+  - Fixed legacy data: assigned `society_id` to 6 teams, 4 athletes, 7 users missing it
+  - Each ASD can only see their own data
 
 ### Completed Previously (28/02/2026)
 - [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Sconto - Pagato` (now shows €200 correctly)

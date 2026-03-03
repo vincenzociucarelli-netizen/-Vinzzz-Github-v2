@@ -2311,12 +2311,14 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
     if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH, UserRole.COLLABORATORE]:
         raise HTTPException(status_code=403, detail="Solo admin, coach e collaboratori possono vedere i dirigenti")
     
+    society_id = current_user.get("society_id")
     dirigenti = await db.users.find({
-        "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]}
+        "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]},
+        "society_id": society_id
     }).to_list(1000)
     
-    # Get all teams to resolve team names
-    teams = await db.teams.find({}).to_list(1000)
+    # Get all teams for this society to resolve team names
+    teams = await db.teams.find({"society_id": society_id}).to_list(1000)
     team_dict = {t["id"]: t["name"] for t in teams}
     
     result = []
@@ -2361,7 +2363,11 @@ async def get_coaches(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i coach")
     
-    coaches = await db.users.find({"role": UserRole.COACH}).to_list(1000)
+    society_id = current_user.get("society_id")
+    coaches = await db.users.find({
+        "role": UserRole.COACH,
+        "society_id": society_id
+    }).to_list(1000)
     
     result = []
     for c in coaches:
@@ -2399,7 +2405,11 @@ async def get_collaboratorees(current_user = Depends(get_current_user)):
     if current_user["role"] not in [UserRole.ADMIN, "viewer"]:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i collaboratori")
     
-    collaboratori = await db.users.find({"role": "collaboratore"}).to_list(1000)
+    society_id = current_user.get("society_id")
+    collaboratori = await db.users.find({
+        "role": "collaboratore",
+        "society_id": society_id
+    }).to_list(1000)
     
     result = []
     for c in collaboratori:
@@ -2440,10 +2450,15 @@ async def get_parents(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i genitori")
     
-    parents = await db.users.find({"role": UserRole.PARENT}).to_list(1000)
+    society_id = current_user.get("society_id")
+    parents = await db.users.find({
+        "role": UserRole.PARENT,
+        "society_id": society_id
+    }).to_list(1000)
     
     # Batch fetch athlete counts using aggregation (avoid N+1 queries)
     pipeline = [
+        {"$match": {"society_id": society_id}},
         {"$group": {"_id": "$parent_id", "count": {"$sum": 1}}}
     ]
     athlete_counts = await db.athletes.aggregate(pipeline).to_list(1000)
@@ -2471,7 +2486,11 @@ async def get_pending_users(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere gli utenti in attesa")
     
-    pending = await db.users.find({"status": UserStatus.PENDING}).to_list(1000)
+    society_id = current_user.get("society_id")
+    pending = await db.users.find({
+        "status": UserStatus.PENDING,
+        "society_id": society_id
+    }).to_list(1000)
     
     result = []
     for u in pending:
@@ -4025,7 +4044,8 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
 
 @api_router.get("/teams", response_model=List[Team])
 async def get_teams(current_user = Depends(get_current_user)):
-    teams = await db.teams.find().to_list(1000)
+    society_id = current_user.get("society_id")
+    teams = await db.teams.find({"society_id": society_id}).to_list(1000)
     clean_mongo_docs(teams)
     return [Team(**team) for team in teams]
 
@@ -4319,7 +4339,8 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere tutti gli atleti")
     
-    athletes = await db.athletes.find({}).to_list(5000)
+    society_id = current_user.get("society_id")
+    athletes = await db.athletes.find({"society_id": society_id}).to_list(5000)
     
     # Enrich with team names
     team_ids = list(set([a.get("team_id") for a in athletes if a.get("team_id")]))
@@ -5086,13 +5107,17 @@ async def get_pending_athletes(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere gli atleti in attesa")
     
-    pending = await db.athletes.find({"status": AthleteStatus.PENDING}).to_list(1000)
+    society_id = current_user.get("society_id")
+    pending = await db.athletes.find({
+        "status": AthleteStatus.PENDING,
+        "society_id": society_id
+    }).to_list(1000)
     
     # Batch fetch teams and users to avoid N+1 queries
-    teams_list = await db.teams.find().to_list(1000)
+    teams_list = await db.teams.find({"society_id": society_id}).to_list(1000)
     teams_dict = {t["id"]: t for t in teams_list}
     
-    users_list = await db.users.find().to_list(1000)
+    users_list = await db.users.find({"society_id": society_id}).to_list(1000)
     users_dict = {u["id"]: u for u in users_list}
     
     result = []
@@ -8348,14 +8373,21 @@ async def get_stats_overview(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere statistiche")
     
-    total_teams = await db.teams.count_documents({})
-    total_athletes = await db.athletes.count_documents({})
-    active_athletes = await db.athletes.count_documents({"status": "active"})
+    society_id = current_user.get("society_id")
     
-    # Today's attendances
+    total_teams = await db.teams.count_documents({"society_id": society_id})
+    total_athletes = await db.athletes.count_documents({"society_id": society_id})
+    active_athletes = await db.athletes.count_documents({"status": "active", "society_id": society_id})
+    
+    # Today's attendances - need to check team_id belongs to society
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    # Get all team IDs for this society
+    society_teams = await db.teams.find({"society_id": society_id}, {"id": 1}).to_list(100)
+    team_ids = [t["id"] for t in society_teams]
+    
     today_attendances = await db.attendances.count_documents({
-        "check_in_time": {"$gte": today_start}
+        "check_in_time": {"$gte": today_start},
+        "team_id": {"$in": team_ids}
     })
     
     return {
