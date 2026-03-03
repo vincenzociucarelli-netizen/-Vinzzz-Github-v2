@@ -46,6 +46,11 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
     5. **Accettazione documenti**: Document type (privacy), accepting role
     6. **Cancellazione utenti**: Deleted user details (role, email, name)
   - Admin API endpoint: `GET /api/audit-logs` to view logs
+- [x] **Rate Limiting (Login Security)**: Implemented brute-force protection
+  - Library: `slowapi` (backup rate limiter in FastAPI)
+  - Limit: 5 login attempts per minute per IP
+  - Uses `X-Forwarded-For` header for real IP detection behind proxy
+  - Response 429 with message: "Troppi tentativi di login. Riprova tra un minuto."
 
 ### Completed Previously (28/02/2026)
 - [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Sconto - Pagato` (now shows €200 correctly)
@@ -96,7 +101,7 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 
 ## Upcoming Tasks (Priority Order)
 1. ~~P1: Implement comprehensive logging for critical actions~~ ✅ COMPLETED
-2. P1: Strengthen authentication security: implement rate limiting on login and session timeouts
+2. ~~P1: Strengthen authentication security: rate limiting on login~~ ✅ COMPLETED
 3. P2: Verify that all backend database queries strictly filter by `society_id` for data isolation
 4. P2: Apply "end-of-trial" logic for Parent of minor athlete
 5. P2: Data export feature (CSV format for athletes, attendance, compensations, logs)

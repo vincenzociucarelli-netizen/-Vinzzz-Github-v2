@@ -18,6 +18,12 @@ import io
 import qrcode
 from bson import ObjectId
 
+# Rate limiting
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi.responses import JSONResponse
+
 # Codice Fiscale calculation
 try:
     from codicefiscale import codicefiscale
@@ -90,6 +96,24 @@ ALGORITHM = "HS256"
 # Create the main app
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
+
+# Rate limiter configuration - 5 login attempts per minute per IP
+def get_real_ip(request: Request) -> str:
+    """Get real client IP from X-Forwarded-For header or fall back to remote address"""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return get_remote_address(request)
+
+limiter = Limiter(key_func=get_real_ip)
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Troppi tentativi di login. Riprova tra un minuto."}
+    )
 
 # ==================== HEALTH CHECK (ROOT) ====================
 # Health check endpoint for Kubernetes
@@ -1444,7 +1468,8 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     }
 
 @api_router.post("/auth/login", response_model=TokenResponse)
-async def login(credentials: UserLogin, request: Request):
+@limiter.limit("5/minute")
+async def login(request: Request, credentials: UserLogin):
     user = await db.users.find_one({"email": credentials.email})
     if not user or not verify_password(credentials.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Email o password non corretti")
