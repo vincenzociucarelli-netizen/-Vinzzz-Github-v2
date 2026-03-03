@@ -4452,6 +4452,18 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
     parent_user = await db.users.find_one({"id": current_user["id"]})
     society_id = parent_user.get("society_id") if parent_user else None
     
+    # Check athlete limit (150 athletes until 30/06/2026)
+    ATHLETE_LIMIT = 150
+    LIMIT_END_DATE = datetime(2026, 6, 30, 23, 59, 59)
+    
+    if datetime.utcnow() < LIMIT_END_DATE and society_id:
+        current_athlete_count = await db.athletes.count_documents({"society_id": society_id})
+        if current_athlete_count >= ATHLETE_LIMIT:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Limite di {ATHLETE_LIMIT} atleti raggiunto per questa stagione. Contatta l'amministratore per informazioni sui piani premium."
+            )
+    
     # Generate unique athlete code
     athlete_code = await generate_unique_athlete_code(
         athlete_data.last_name,
@@ -8390,11 +8402,23 @@ async def get_stats_overview(current_user = Depends(get_current_user)):
         "team_id": {"$in": team_ids}
     })
     
+    # Athlete limit info
+    ATHLETE_LIMIT = 150
+    LIMIT_END_DATE = datetime(2026, 6, 30, 23, 59, 59)
+    limit_active = datetime.utcnow() < LIMIT_END_DATE
+    
     return {
         "total_teams": total_teams,
         "total_athletes": total_athletes,
         "active_athletes": active_athletes,
-        "today_attendances": today_attendances
+        "today_attendances": today_attendances,
+        "athlete_limit": {
+            "max": ATHLETE_LIMIT,
+            "current": total_athletes,
+            "remaining": max(0, ATHLETE_LIMIT - total_athletes),
+            "active": limit_active,
+            "end_date": LIMIT_END_DATE.strftime("%Y-%m-%d") if limit_active else None
+        }
     }
 
 @api_router.get("/birthdays/today")

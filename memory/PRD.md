@@ -85,6 +85,11 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
     - `/stats/overview`, `/birthdays/today`
   - Fixed legacy data: assigned `society_id` to 6 teams, 4 athletes, 7 users missing it
   - Each ASD can only see their own data
+- [x] **Athlete Limit (150 per ASD)**: Technical limit until 30/06/2026
+  - Check enforced on `POST /api/athletes` when parent registers athlete
+  - Error message: "Limite di 150 atleti raggiunto. Contatta l'amministratore per piani premium."
+  - `/api/stats/overview` now includes `athlete_limit` object with max, current, remaining, active, end_date
+  - Limit automatically disabled after 30/06/2026
 
 ### Completed Previously (28/02/2026)
 - [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Sconto - Pagato` (now shows €200 correctly)
