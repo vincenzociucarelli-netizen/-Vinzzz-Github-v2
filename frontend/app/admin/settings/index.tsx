@@ -74,6 +74,24 @@ export default function SettingsIndex() {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#5856D6" />
         </TouchableOpacity>
+
+        {/* Card Export Dati */}
+        <TouchableOpacity 
+          style={[styles.card, { borderColor: '#00BCD4', backgroundColor: '#E0F7FA' }]}
+          onPress={() => router.push('/admin/settings/export-data')}
+          data-testid="settings-export-data-btn"
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#00BCD4' }]}>
+            <Ionicons name="download" size={32} color="#fff" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: '#00BCD4' }]}>Esporta Dati</Text>
+            <Text style={styles.cardDescription}>
+              Scarica CSV di atleti, presenze, compensi e log
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#00BCD4" />
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );

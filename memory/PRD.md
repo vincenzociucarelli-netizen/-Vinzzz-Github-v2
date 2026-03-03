@@ -72,6 +72,12 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
   - Shows: timestamp, user, target user, action details, IP address
   - Pagination with "load more" for large datasets
   - Accessible from Admin Settings menu
+- [x] **CSV Export Feature**: Export data for GDPR compliance and reporting
+  - Path: `/admin/settings/export-data`
+  - 4 export types: Atleti, Presenze, Compensi Staff, Audit Log
+  - Downloads CSV files with Italian headers
+  - API endpoints: `/api/export-csv/athletes`, `/api/export-csv/attendances`, `/api/export-csv/compensations`, `/api/export-csv/audit-logs`
+  - Accessible from Admin Settings menu (cyan card)
 
 ### Completed Previously (28/02/2026)
 - [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Sconto - Pagato` (now shows €200 correctly)

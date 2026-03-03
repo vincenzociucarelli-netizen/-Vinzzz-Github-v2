@@ -15,6 +15,7 @@ from passlib.context import CryptContext
 import jwt
 import base64
 import io
+import csv
 import qrcode
 from bson import ObjectId
 
@@ -13097,6 +13098,244 @@ async def get_audit_logs(
         "limit": limit,
         "logs": logs
     }
+
+# ==================== CSV EXPORT ENDPOINTS ====================
+
+@api_router.get("/export-csv/athletes")
+async def export_athletes_csv(current_user = Depends(get_current_user)):
+    """Export athletes list as CSV - Admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può esportare dati")
+    
+    society_id = current_user.get("society_id")
+    athletes = await db.athletes.find({"society_id": society_id}).to_list(1000)
+    
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    
+    # Header
+    writer.writerow([
+        'Nome', 'Cognome', 'Codice Fiscale', 'Data Nascita', 'Luogo Nascita',
+        'Email', 'Telefono', 'Squadra', 'Stato', 'Codice Atleta', 'QR Identifier',
+        'Certificato Scadenza', 'Certificato Verificato', 'Data Iscrizione'
+    ])
+    
+    # Data
+    for a in athletes:
+        # Get team name
+        team = await db.teams.find_one({"id": a.get("team_id")})
+        team_name = team.get("name") if team else ""
+        
+        created_at = a.get("created_at", "")
+        if isinstance(created_at, datetime):
+            created_at = created_at.strftime("%Y-%m-%d")
+        elif created_at:
+            created_at = str(created_at)[:10]
+        
+        writer.writerow([
+            a.get("first_name", ""),
+            a.get("last_name", ""),
+            a.get("codice_fiscale", ""),
+            a.get("birth_date", ""),
+            a.get("birth_place", ""),
+            a.get("email", ""),
+            a.get("phone", ""),
+            team_name,
+            a.get("status", ""),
+            a.get("athlete_code", ""),
+            a.get("qr_identifier", ""),
+            a.get("medical_certificate_expiry", ""),
+            "Sì" if a.get("medical_certificate_verified") else "No",
+            created_at
+        ])
+    
+    # Return as streaming response
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=atleti_{datetime.now().strftime('%Y%m%d')}.csv"}
+    )
+
+@api_router.get("/export-csv/attendances")
+async def export_attendances_csv(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    team_id: Optional[str] = None,
+    current_user = Depends(get_current_user)
+):
+    """Export attendances as CSV - Admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può esportare dati")
+    
+    society_id = current_user.get("society_id")
+    
+    # Build query
+    query = {}
+    if start_date:
+        query["date"] = {"$gte": start_date}
+    if end_date:
+        if "date" in query:
+            query["date"]["$lte"] = end_date
+        else:
+            query["date"] = {"$lte": end_date}
+    if team_id:
+        query["team_id"] = team_id
+    
+    attendances = await db.attendances.find(query).sort("date", -1).to_list(5000)
+    
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    
+    # Header
+    writer.writerow([
+        'Data', 'Ora Check-in', 'Atleta', 'Squadra', 'Stato', 
+        'Motivo Blocco', 'Forzata', 'Nota Forzatura', 'Coach', 'QR Usato'
+    ])
+    
+    # Build lookup caches
+    athlete_cache = {}
+    team_cache = {}
+    coach_cache = {}
+    
+    for att in attendances:
+        # Get athlete name
+        athlete_id = att.get("athlete_id")
+        if athlete_id not in athlete_cache:
+            athlete = await db.athletes.find_one({"id": athlete_id})
+            athlete_cache[athlete_id] = athlete.get("full_name", "") if athlete else ""
+        
+        # Get team name
+        team_id_val = att.get("team_id")
+        if team_id_val and team_id_val not in team_cache:
+            team = await db.teams.find_one({"id": team_id_val})
+            team_cache[team_id_val] = team.get("name", "") if team else ""
+        
+        # Get coach name
+        coach_id = att.get("coach_id")
+        if coach_id and coach_id not in coach_cache:
+            coach = await db.users.find_one({"id": coach_id})
+            coach_cache[coach_id] = coach.get("full_name", "") if coach else ""
+        
+        check_in = att.get("check_in_time")
+        if isinstance(check_in, datetime):
+            check_in_str = check_in.strftime("%H:%M")
+        else:
+            check_in_str = str(check_in)[:5] if check_in else ""
+        
+        writer.writerow([
+            att.get("date", ""),
+            check_in_str,
+            athlete_cache.get(athlete_id, ""),
+            team_cache.get(team_id_val, ""),
+            att.get("status", ""),
+            att.get("block_reason", ""),
+            "Sì" if att.get("forced") else "No",
+            att.get("force_note", ""),
+            coach_cache.get(coach_id, ""),
+            att.get("qr_code_used", "")
+        ])
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=presenze_{datetime.now().strftime('%Y%m%d')}.csv"}
+    )
+
+@api_router.get("/export-csv/compensations")
+async def export_compensations_csv(current_user = Depends(get_current_user)):
+    """Export staff compensations as CSV - Admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può esportare dati")
+    
+    society_id = current_user.get("society_id")
+    
+    # Get all users with compensations (coach, collaboratore, dirigente)
+    users = await db.users.find({
+        "society_id": society_id,
+        "role": {"$in": ["coach", "collaboratore", "dirigente"]},
+        "monthly_compensation": {"$exists": True, "$ne": None}
+    }).to_list(500)
+    
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    
+    # Header
+    writer.writerow([
+        'Nome', 'Ruolo', 'Email', 'Compenso Mensile', 'Compensi Altri',
+        'Inizio Contratto', 'Fine Contratto', 'Stato'
+    ])
+    
+    for u in users:
+        writer.writerow([
+            u.get("full_name", ""),
+            u.get("role", ""),
+            u.get("email", ""),
+            u.get("monthly_compensation", 0),
+            u.get("other_annual_compensation", 0),
+            u.get("contract_start_date", ""),
+            u.get("contract_end_date", ""),
+            u.get("status", "")
+        ])
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=compensi_{datetime.now().strftime('%Y%m%d')}.csv"}
+    )
+
+@api_router.get("/export-csv/audit-logs")
+async def export_audit_logs_csv(
+    action: Optional[str] = None,
+    current_user = Depends(get_current_user)
+):
+    """Export audit logs as CSV - Admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può esportare dati")
+    
+    society_id = current_user.get("society_id")
+    
+    query = {"society_id": society_id}
+    if action:
+        query["action"] = action
+    
+    logs = await db.audit_logs.find(query).sort("timestamp", -1).to_list(5000)
+    
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    
+    # Header
+    writer.writerow([
+        'Data/Ora', 'Azione', 'Utente', 'Target', 'IP', 'Dettagli'
+    ])
+    
+    for log in logs:
+        ts = log.get("timestamp", "")
+        if isinstance(ts, datetime):
+            ts = ts.strftime("%Y-%m-%d %H:%M:%S")
+        
+        details = log.get("details", {})
+        details_str = "; ".join([f"{k}={v}" for k, v in details.items()]) if details else ""
+        
+        writer.writerow([
+            ts,
+            log.get("action", ""),
+            log.get("user_email", ""),
+            log.get("target_user_name", ""),
+            log.get("ip_address", ""),
+            details_str
+        ])
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=audit_logs_{datetime.now().strftime('%Y%m%d')}.csv"}
+    )
 
 # Include the router in the main app
 app.include_router(api_router)

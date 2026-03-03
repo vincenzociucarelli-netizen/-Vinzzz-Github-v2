@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import api from '../../../services/api';
+import api from '../../../src/services/api';
 
 interface AuditLog {
   id: string;
