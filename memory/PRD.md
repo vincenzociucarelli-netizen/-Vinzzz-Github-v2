@@ -38,22 +38,22 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 - [x] **GDPR Audit Logging System**: Implemented comprehensive audit trail for critical actions
   - New `audit_logs` collection in MongoDB
   - Standardized `log_audit()` function for consistent logging
-  - Actions logged:
-    1. **Login utenti**: User email, role, IP address
-    2. **Modifica data certificato**: Old/new expiry date, verified status
-    3. **Override certificato**: Reason, IP address, single-session type
-    4. **Modifica compensi**: Old/new compensation, contract date changes
-    5. **Accettazione documenti**: Document type (privacy), accepting role
-    6. **Cancellazione utenti**: Deleted user details (role, email, name)
+  - Actions logged: Login, Certificate Modified, Certificate Override, Compensation Modified, Document Accepted, User Deleted
   - Admin API endpoint: `GET /api/audit-logs` to view logs
 - [x] **Progressive Rate Limiting (Login Security)**: Implemented brute-force protection
   - Uses `login_rate_limits` MongoDB collection to track attempts per IP
-  - Progressive escalation:
-    - 5 failed attempts → 1 minute block
-    - 10 failed attempts → 5 minutes block
-    - 15+ failed attempts → 1 hour block + password reset suggestion
-  - Uses `X-Forwarded-For` header for real IP detection behind proxy
+  - Progressive escalation: 5 attempts→1min, 10→5min, 15+→1hr+password reset suggestion
   - Resets on successful login
+- [x] **Profile Photo Space Removal**: Removed placeholder icons from Coach, Collaboratore, Dirigente detail pages for cleaner UI
+- [x] **QR Code System Refactor (Backend)**: Implemented new attendance system per spec
+  - **QR Identifier**: 12-char alphanumeric code per athlete (permanent, no personal data)
+  - **Attendance Model**: athlete_id + team_id + date + training_slot
+  - **Validation**: Active athlete check, medical certificate check, duplicate detection
+  - **Double Scan**: Returns "already_registered" with info popup option
+  - **Force Registration**: Creates new record with `forced=true` and `force_note`
+  - **Admin Endpoints**: 
+    - `POST /api/admin/generate-all-qr-identifiers` - Generate QR for all athletes
+    - `POST /api/admin/regenerate-all-qr-codes` - Regenerate all (invalidates old QRs)
 
 ### Completed Previously (28/02/2026)
 - [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Sconto - Pagato` (now shows €200 correctly)

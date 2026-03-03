@@ -637,6 +637,8 @@ class Athlete(BaseModel):
     parent_id: Optional[str] = None  # User ID of parent/guardian (None per atleti maggiorenni)
     # Codice univoco atleta (auto-generato: COGNOME3+NOME3-SQUADRA)
     athlete_code: Optional[str] = None  # Es: ROSMAR-U16
+    # QR Identifier - codice alfanumerico unico 12 caratteri (permanente per stagione)
+    qr_identifier: Optional[str] = None  # Es: A7X9K2M4P1Q3
     # Tesseramento (gestito da Admin)
     federal_code: Optional[str] = None  # Codice Federale
     is_registered: bool = False  # Tesserato sì/no
@@ -922,14 +924,23 @@ class AssignmentRequest(BaseModel):
 class Attendance(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     athlete_id: str
+    team_id: str  # Squadra per cui è registrata la presenza
     coach_id: str
     check_in_time: datetime = Field(default_factory=datetime.utcnow)
-    status: str  # 'allowed' or 'blocked'
+    date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))  # Data in formato YYYY-MM-DD
+    training_slot: Optional[dict] = None  # {day: str, start_time: str, end_time: str, venue: str}
+    status: str  # 'allowed', 'blocked', 'already_registered'
     block_reason: Optional[str] = None
+    # Forzatura
+    forced: bool = False  # Se True, presenza forzata dal coach
+    force_note: Optional[str] = None  # Nota libera per forzatura
+    qr_code_used: Optional[str] = None  # QR identifier usato per la scansione
 
 class AttendanceCreate(BaseModel):
     qr_code: str
-    force: bool = False  # Allow coach to force registration for multi-team training
+    team_id: str  # Squadra selezionata dal coach
+    force: bool = False  # Forza registrazione (es. doppio allenamento)
+    force_note: Optional[str] = None  # Nota per forzatura
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -995,6 +1006,29 @@ def generate_qr_code(athlete_id: str) -> str:
     """Generate QR code and return as base64 string"""
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(athlete_id)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Convert to base64
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    
+    return f"data:image/png;base64,{img_str}"
+
+def generate_qr_identifier() -> str:
+    """Generate unique 12-char alphanumeric QR identifier for athlete"""
+    import secrets
+    import string
+    # Use uppercase letters and digits, excluding confusing chars (0, O, I, 1, L)
+    alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+    return ''.join(secrets.choice(alphabet) for _ in range(12))
+
+def generate_qr_code_from_identifier(qr_identifier: str) -> str:
+    """Generate QR code image from qr_identifier"""
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(qr_identifier)
     qr.make(fit=True)
     
     img = qr.make_image(fill_color="black", back_color="white")
@@ -4356,6 +4390,7 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
             # Other fields
             "is_withdrawn": a.get("is_withdrawn", False),
             "qr_code": a.get("qr_code"),
+            "qr_identifier": a.get("qr_identifier"),
             "athlete_code": a.get("athlete_code"),
         })
     
@@ -7533,82 +7568,199 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
 
 # ==================== ATTENDANCE ENDPOINTS (COACH) ====================
 
-@api_router.post("/attendance/check", response_model=Attendance)
+def get_current_training_slot(team: dict) -> Optional[dict]:
+    """Find the current training slot based on day and time"""
+    now = datetime.now()
+    current_day = now.strftime("%A").lower()  # monday, tuesday, etc.
+    current_time = now.strftime("%H:%M")
+    
+    # Map Italian day names
+    day_mapping = {
+        "monday": ["lunedì", "lunedi", "monday", "lun"],
+        "tuesday": ["martedì", "martedi", "tuesday", "mar"],
+        "wednesday": ["mercoledì", "mercoledi", "wednesday", "mer"],
+        "thursday": ["giovedì", "giovedi", "thursday", "gio"],
+        "friday": ["venerdì", "venerdi", "friday", "ven"],
+        "saturday": ["sabato", "saturday", "sab"],
+        "sunday": ["domenica", "sunday", "dom"]
+    }
+    
+    training_sessions = team.get("training_sessions", [])
+    
+    for session in training_sessions:
+        session_day = (session.get("day") or "").lower()
+        # Check if day matches
+        for eng_day, variants in day_mapping.items():
+            if session_day in variants and current_day == eng_day:
+                # Check if time is within range (with 30 min tolerance before)
+                start_time = session.get("start_time", "00:00")
+                end_time = session.get("end_time", "23:59")
+                
+                # Add 30 min tolerance before start
+                try:
+                    start_dt = datetime.strptime(start_time, "%H:%M")
+                    tolerance_start = (start_dt - timedelta(minutes=30)).strftime("%H:%M")
+                except:
+                    tolerance_start = start_time
+                
+                if tolerance_start <= current_time <= end_time:
+                    return {
+                        "day": session.get("day"),
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "venue": session.get("venue", team.get("venue"))
+                    }
+    
+    return None
+
+@api_router.post("/attendance/check")
 async def check_attendance(attendance_data: AttendanceCreate, current_user = Depends(get_current_user)):
+    """
+    Registra presenza atleta con nuova logica:
+    - Verifica atleta attivo
+    - Verifica certificato medico
+    - Check duplicato per atleta + squadra + slot + data
+    - Supporta forzatura con nota
+    """
     if current_user["role"] != UserRole.COACH:
         raise HTTPException(status_code=403, detail="Solo coach può registrare presenze")
     
-    # Extract athlete_id from QR code - can be either athlete_id or athlete_code
-    qr_code_value = attendance_data.qr_code.strip()
+    qr_code_value = attendance_data.qr_code.strip().upper()
+    team_id = attendance_data.team_id
+    today = datetime.now().strftime("%Y-%m-%d")
     
-    # Find athlete - try by id first, then by athlete_code
-    athlete = await db.athletes.find_one({"id": qr_code_value})
+    # 1. Find athlete by qr_identifier, athlete_code, or id
+    athlete = await db.athletes.find_one({"qr_identifier": qr_code_value})
     if not athlete:
-        # Try by athlete_code (manual input)
-        athlete = await db.athletes.find_one({"athlete_code": qr_code_value.upper()})
+        athlete = await db.athletes.find_one({"athlete_code": qr_code_value})
     if not athlete:
-        # Try case-insensitive search on athlete_code
+        athlete = await db.athletes.find_one({"id": qr_code_value})
+    if not athlete:
+        # Case-insensitive fallback
         athlete = await db.athletes.find_one({"athlete_code": {"$regex": f"^{qr_code_value}$", "$options": "i"}})
+    
     if not athlete:
         raise HTTPException(status_code=404, detail="QR code non valido o atleta non trovato")
     
     athlete_id = athlete["id"]
+    athlete_name = athlete.get("full_name", "Atleta")
     
-    # Check if already registered today (skip if force=True)
-    if not attendance_data.force:
-        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        today_end = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
-        
-        existing_attendance = await db.attendances.find_one({
-            "athlete_id": athlete_id,
-            "check_in_time": {"$gte": today_start, "$lte": today_end}
-        })
-        
-        if existing_attendance:
-            # Return a NEW attendance object with "already_registered" status
-            # This does NOT create a new record in the database
-            return Attendance(
-                id=existing_attendance["id"],
-                athlete_id=athlete_id,
-                coach_id=existing_attendance["coach_id"],
-                check_in_time=existing_attendance["check_in_time"],
-                status="already_registered",
-                block_reason="GIÀ REGISTRATA OGGI"
-            )
+    # 2. Check if athlete is active
+    athlete_status = athlete.get("status", "pending")
+    if athlete_status not in ["active", "trial", "approved"]:
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Atleta non attivo per la stagione corrente. Stato: {athlete_status}"
+        )
     
-    # Check status
+    # Check if athlete is withdrawn
+    if athlete.get("is_withdrawn"):
+        raise HTTPException(status_code=403, detail="Atleta ritirato dalla squadra")
+    
+    # 3. Get team and training slot
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    training_slot = get_current_training_slot(team)
+    
+    # 4. Check medical certificate status
     status_check = await check_athlete_status(athlete_id)
     
-    attendance = Attendance(
-        athlete_id=athlete_id,
-        coach_id=current_user["id"],
-        status="allowed" if status_check["allowed"] else "blocked",
-        block_reason=status_check["reason"]
-    )
+    # 5. Check for existing attendance (same athlete + team + date)
+    existing_attendance = await db.attendances.find_one({
+        "athlete_id": athlete_id,
+        "team_id": team_id,
+        "date": today
+    })
     
-    # If allowed and override was active, CONSUME the override (single session only)
+    if existing_attendance and not attendance_data.force:
+        # Return info about existing attendance
+        existing_time = existing_attendance.get("check_in_time")
+        if isinstance(existing_time, datetime):
+            time_str = existing_time.strftime("%H:%M")
+        else:
+            time_str = str(existing_time)[:5] if existing_time else "N/D"
+        
+        return {
+            "id": existing_attendance["id"],
+            "athlete_id": athlete_id,
+            "athlete_name": athlete_name,
+            "team_id": team_id,
+            "team_name": team.get("name"),
+            "coach_id": existing_attendance.get("coach_id"),
+            "check_in_time": existing_attendance.get("check_in_time").isoformat() if isinstance(existing_attendance.get("check_in_time"), datetime) else str(existing_attendance.get("check_in_time", "")),
+            "date": today,
+            "training_slot": existing_attendance.get("training_slot"),
+            "status": "already_registered",
+            "block_reason": f"Presenza già registrata oggi alle {time_str}",
+            "forced": False,
+            "force_note": None,
+            "qr_code_used": qr_code_value,
+            "can_force": True  # Frontend può mostrare opzione forzatura
+        }
+    
+    # 6. Create attendance record
+    attendance_dict = {
+        "id": str(ObjectId()),
+        "athlete_id": athlete_id,
+        "team_id": team_id,
+        "coach_id": current_user["id"],
+        "check_in_time": datetime.now(),
+        "date": today,
+        "training_slot": training_slot,
+        "status": "allowed" if status_check["allowed"] else "blocked",
+        "block_reason": status_check.get("reason"),
+        "forced": attendance_data.force,
+        "force_note": attendance_data.force_note if attendance_data.force else None,
+        "qr_code_used": qr_code_value
+    }
+    
+    # 7. If forcing, don't overwrite - create new record with forced flag
+    if attendance_data.force and existing_attendance:
+        attendance_dict["forced"] = True
+        attendance_dict["force_note"] = attendance_data.force_note or "Forzatura coach"
+    
+    # 8. Handle certificate override consumption
     if status_check["allowed"] and status_check.get("override_active"):
         await db.athletes.update_one(
             {"id": athlete_id},
             {"$set": {
-                "certificate_override_active": False,  # Consuma l'override
+                "certificate_override_active": False,
                 "certificate_override_consumed_at": datetime.utcnow().isoformat()
             }}
         )
-        # Log override consumption
         await db.audit_logs.insert_one({
             "id": str(uuid.uuid4()),
             "type": "certificate_override_consumed",
             "athlete_id": athlete_id,
-            "athlete_name": athlete.get("full_name"),
+            "athlete_name": athlete_name,
             "consumed_at": datetime.utcnow().isoformat(),
             "coach_id": current_user["id"],
             "coach_name": current_user.get("full_name", current_user.get("email"))
         })
     
-    await db.attendances.insert_one(attendance.dict())
+    # 9. Save attendance
+    await db.attendances.insert_one(attendance_dict)
     
-    return attendance
+    # 10. Return response with athlete name for display (ensure all values are JSON serializable)
+    response = {
+        "id": str(attendance_dict["id"]),
+        "athlete_id": str(attendance_dict["athlete_id"]),
+        "athlete_name": str(athlete_name),
+        "team_id": str(attendance_dict["team_id"]),
+        "team_name": str(team.get("name", "")),
+        "coach_id": str(attendance_dict["coach_id"]),
+        "check_in_time": attendance_dict["check_in_time"].isoformat() if isinstance(attendance_dict["check_in_time"], datetime) else str(attendance_dict["check_in_time"]),
+        "date": str(attendance_dict["date"]),
+        "training_slot": attendance_dict.get("training_slot"),
+        "status": str(attendance_dict["status"]),
+        "block_reason": attendance_dict.get("block_reason"),
+        "forced": bool(attendance_dict.get("forced", False)),
+        "force_note": attendance_dict.get("force_note"),
+        "qr_code_used": str(attendance_dict.get("qr_code_used", ""))
+    }
+    return response
 
 @api_router.get("/attendance/athlete/{athlete_id}", response_model=List[Attendance])
 async def get_athlete_attendances(athlete_id: str, current_user = Depends(get_current_user)):
@@ -7639,6 +7791,138 @@ async def get_today_attendances(current_user = Depends(get_current_user)):
             })
     
     return result
+
+# ==================== QR IDENTIFIER MANAGEMENT ====================
+
+@api_router.post("/athletes/{athlete_id}/generate-qr-identifier")
+async def generate_athlete_qr_identifier(athlete_id: str, current_user = Depends(get_current_user)):
+    """Generate QR identifier for a single athlete (Admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può generare QR identifier")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Generate unique QR identifier
+    while True:
+        qr_id = generate_qr_identifier()
+        existing = await db.athletes.find_one({"qr_identifier": qr_id})
+        if not existing:
+            break
+    
+    # Generate QR code image
+    qr_code_image = generate_qr_code_from_identifier(qr_id)
+    
+    # Update athlete
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "qr_identifier": qr_id,
+            "qr_code": qr_code_image
+        }}
+    )
+    
+    return {
+        "athlete_id": athlete_id,
+        "qr_identifier": qr_id,
+        "qr_code": qr_code_image,
+        "message": "QR identifier generato con successo"
+    }
+
+@api_router.post("/admin/generate-all-qr-identifiers")
+async def generate_all_qr_identifiers(current_user = Depends(get_current_user)):
+    """Generate QR identifiers for all athletes without one (Admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può generare QR identifier")
+    
+    society_id = current_user.get("society_id")
+    
+    # Find athletes without qr_identifier (check for missing, None, empty, or "None" string)
+    athletes = await db.athletes.find({
+        "society_id": society_id,
+        "$or": [
+            {"qr_identifier": {"$exists": False}},
+            {"qr_identifier": None},
+            {"qr_identifier": ""},
+            {"qr_identifier": "None"}
+        ]
+    }).to_list(500)
+    
+    updated_count = 0
+    for athlete in athletes:
+        # Generate unique QR identifier
+        while True:
+            qr_id = generate_qr_identifier()
+            existing = await db.athletes.find_one({"qr_identifier": qr_id})
+            if not existing:
+                break
+        
+        # Generate QR code image
+        qr_code_image = generate_qr_code_from_identifier(qr_id)
+        
+        # Update athlete
+        await db.athletes.update_one(
+            {"id": athlete["id"]},
+            {"$set": {
+                "qr_identifier": qr_id,
+                "qr_code": qr_code_image
+            }}
+        )
+        updated_count += 1
+    
+    return {
+        "message": f"QR identifier generati per {updated_count} atleti",
+        "updated_count": updated_count
+    }
+
+@api_router.post("/admin/regenerate-all-qr-codes")
+async def regenerate_all_qr_codes(current_user = Depends(get_current_user)):
+    """Regenerate ALL QR identifiers for all athletes (Admin only) - Use with caution!"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può rigenerare QR")
+    
+    society_id = current_user.get("society_id")
+    
+    # Find all athletes in society
+    athletes = await db.athletes.find({"society_id": society_id}).to_list(500)
+    
+    updated_count = 0
+    for athlete in athletes:
+        # Generate unique QR identifier
+        while True:
+            qr_id = generate_qr_identifier()
+            existing = await db.athletes.find_one({"qr_identifier": qr_id})
+            if not existing:
+                break
+        
+        # Generate QR code image
+        qr_code_image = generate_qr_code_from_identifier(qr_id)
+        
+        # Update athlete
+        await db.athletes.update_one(
+            {"id": athlete["id"]},
+            {"$set": {
+                "qr_identifier": qr_id,
+                "qr_code": qr_code_image
+            }}
+        )
+        updated_count += 1
+    
+    # Log this action
+    await log_audit(
+        action="qr_codes_regenerated",
+        user_id=current_user["id"],
+        user_email=current_user["email"],
+        society_id=society_id,
+        details={"athletes_count": updated_count}
+    )
+    
+    return {
+        "message": f"QR codes rigenerati per {updated_count} atleti. I vecchi QR non sono più validi.",
+        "updated_count": updated_count,
+        "warning": "Tutti i QR precedenti sono stati invalidati. Gli atleti devono stampare i nuovi QR."
+    }
 
 # ==================== COACH ENDPOINTS ====================
 
