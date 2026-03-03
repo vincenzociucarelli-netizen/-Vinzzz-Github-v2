@@ -97,7 +97,7 @@ ALGORITHM = "HS256"
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-# Rate limiter configuration - 5 login attempts per minute per IP
+# Progressive rate limiting configuration
 def get_real_ip(request: Request) -> str:
     """Get real client IP from X-Forwarded-For header or fall back to remote address"""
     forwarded = request.headers.get("x-forwarded-for")
@@ -105,15 +105,82 @@ def get_real_ip(request: Request) -> str:
         return forwarded.split(",")[0].strip()
     return get_remote_address(request)
 
-limiter = Limiter(key_func=get_real_ip)
-app.state.limiter = limiter
+async def check_login_rate_limit(ip: str) -> dict:
+    """
+    Progressive rate limiting:
+    - 5 attempts: 1 minute block
+    - 10 attempts: 5 minutes block  
+    - 15+ attempts: 1 hour block + suggest password reset
+    """
+    now = datetime.now(timezone.utc)
+    
+    # Get or create rate limit record for this IP
+    record = await db.login_rate_limits.find_one({"ip": ip})
+    
+    if not record:
+        return {"allowed": True, "attempts": 0}
+    
+    attempts = record.get("attempts", 0)
+    blocked_until = record.get("blocked_until")
+    
+    # Check if currently blocked
+    if blocked_until:
+        blocked_dt = datetime.fromisoformat(blocked_until.replace('Z', '+00:00')) if isinstance(blocked_until, str) else blocked_until
+        if now < blocked_dt:
+            remaining = (blocked_dt - now).total_seconds()
+            if remaining > 3600:
+                time_msg = f"{int(remaining // 3600)} ora"
+            elif remaining > 60:
+                time_msg = f"{int(remaining // 60)} minuti"
+            else:
+                time_msg = f"{int(remaining)} secondi"
+            
+            # Message based on attempt count
+            if attempts >= 15:
+                msg = f"Account temporaneamente bloccato. Riprova tra {time_msg}. Ti consigliamo di richiedere il reset della password."
+            else:
+                msg = f"Troppi tentativi di login. Riprova tra {time_msg}."
+            
+            return {"allowed": False, "message": msg, "attempts": attempts, "count_attempt": True}
+    
+    return {"allowed": True, "attempts": attempts}
 
-@app.exception_handler(RateLimitExceeded)
-async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    return JSONResponse(
-        status_code=429,
-        content={"detail": "Troppi tentativi di login. Riprova tra un minuto."}
+async def record_failed_login(ip: str):
+    """Record a failed login attempt and apply progressive blocking"""
+    now = datetime.now(timezone.utc)
+    
+    # Get current record
+    record = await db.login_rate_limits.find_one({"ip": ip})
+    attempts = (record.get("attempts", 0) if record else 0) + 1
+    
+    # Determine block duration based on attempts
+    block_duration = None
+    if attempts >= 15:
+        block_duration = timedelta(hours=1)
+    elif attempts >= 10:
+        block_duration = timedelta(minutes=5)
+    elif attempts >= 5:
+        block_duration = timedelta(minutes=1)
+    
+    blocked_until = (now + block_duration).isoformat() if block_duration else None
+    
+    # Update or create record
+    await db.login_rate_limits.update_one(
+        {"ip": ip},
+        {"$set": {
+            "ip": ip,
+            "attempts": attempts,
+            "blocked_until": blocked_until,
+            "last_attempt": now.isoformat()
+        }},
+        upsert=True
     )
+    
+    return attempts
+
+async def reset_login_rate_limit(ip: str):
+    """Reset rate limit on successful login"""
+    await db.login_rate_limits.delete_one({"ip": ip})
 
 # ==================== HEALTH CHECK (ROOT) ====================
 # Health check endpoint for Kubernetes
@@ -1468,10 +1535,22 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     }
 
 @api_router.post("/auth/login", response_model=TokenResponse)
-@limiter.limit("5/minute")
 async def login(request: Request, credentials: UserLogin):
+    # Get client IP for rate limiting
+    client_ip = get_real_ip(request)
+    
+    # Check progressive rate limit
+    rate_check = await check_login_rate_limit(client_ip)
+    if not rate_check["allowed"]:
+        # Count the attempt even while blocked (for progressive escalation)
+        if rate_check.get("count_attempt"):
+            await record_failed_login(client_ip)
+        raise HTTPException(status_code=429, detail=rate_check["message"])
+    
     user = await db.users.find_one({"email": credentials.email})
     if not user or not verify_password(credentials.password, user["password_hash"]):
+        # Record failed attempt
+        await record_failed_login(client_ip)
         raise HTTPException(status_code=401, detail="Email o password non corretti")
     
     # Check if user is approved (except parents who are auto-approved)
@@ -1502,6 +1581,9 @@ async def login(request: Request, credentials: UserLogin):
         ip_address=request.client.host if request.client else None,
         details={"role": user["role"]}
     )
+    
+    # Reset rate limit on successful login
+    await reset_login_rate_limit(client_ip)
     
     return TokenResponse(
         token=token,

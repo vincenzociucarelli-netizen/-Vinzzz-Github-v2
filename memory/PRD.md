@@ -46,11 +46,14 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
     5. **Accettazione documenti**: Document type (privacy), accepting role
     6. **Cancellazione utenti**: Deleted user details (role, email, name)
   - Admin API endpoint: `GET /api/audit-logs` to view logs
-- [x] **Rate Limiting (Login Security)**: Implemented brute-force protection
-  - Library: `slowapi` (backup rate limiter in FastAPI)
-  - Limit: 5 login attempts per minute per IP
+- [x] **Progressive Rate Limiting (Login Security)**: Implemented brute-force protection
+  - Uses `login_rate_limits` MongoDB collection to track attempts per IP
+  - Progressive escalation:
+    - 5 failed attempts → 1 minute block
+    - 10 failed attempts → 5 minutes block
+    - 15+ failed attempts → 1 hour block + password reset suggestion
   - Uses `X-Forwarded-For` header for real IP detection behind proxy
-  - Response 429 with message: "Troppi tentativi di login. Riprova tra un minuto."
+  - Resets on successful login
 
 ### Completed Previously (28/02/2026)
 - [x] **Residuo Dovuto Fix**: Fixed calculation to use `Quota Totale - Sconto - Pagato` (now shows €200 correctly)
