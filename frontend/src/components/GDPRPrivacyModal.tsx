@@ -70,6 +70,8 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
   const [hasSignature, setHasSignature] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [society, setSociety] = useState<SocietyInfo | null>(societyInfo || null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Load society info if not provided
   useEffect(() => {
@@ -84,6 +86,57 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
       setSociety(response.data);
     } catch (error) {
       console.error('Error loading society info:', error);
+    }
+  };
+
+  const handlePreviewPDF = async () => {
+    setLoadingPreview(true);
+    try {
+      const payload: any = {
+        document_type: documentType,
+        signer_name: signerInfo.name,
+        signer_surname: signerInfo.surname,
+        signer_fiscal_code: signerInfo.fiscal_code,
+        signer_birth_date: signerInfo.birth_date,
+        signer_birth_place: signerInfo.birth_place,
+        signer_address: signerInfo.address,
+        signer_city: signerInfo.city,
+        signer_province: signerInfo.province,
+      };
+
+      if (documentType === 'gdpr_minor' && minorInfo) {
+        payload.minor_id = minorInfo.id;
+        payload.minor_name = minorInfo.name;
+        payload.minor_surname = minorInfo.surname;
+        payload.minor_fiscal_code = minorInfo.fiscal_code;
+        payload.minor_birth_date = minorInfo.birth_date;
+        payload.minor_birth_place = minorInfo.birth_place;
+      }
+
+      const response = await api.post('/documents/preview-gdpr-privacy', payload);
+      
+      if (response.data.pdf_base64) {
+        // Create blob URL for PDF viewing
+        const byteCharacters = atob(response.data.pdf_base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        
+        // Open in new tab
+        if (Platform.OS === 'web') {
+          window.open(url, '_blank');
+        }
+        setPreviewUrl(url);
+      }
+    } catch (error: any) {
+      console.error('Error generating preview:', error);
+      alert(error.response?.data?.detail || 'Errore nella generazione dell\'anteprima');
+    } finally {
+      setLoadingPreview(false);
     }
   };
 
@@ -374,6 +427,22 @@ Con la sottoscrizione digitale del presente documento il sottoscritto genitore/t
                 <View style={{ height: 20 }} />
               </ScrollView>
 
+              {/* Preview PDF Button */}
+              <TouchableOpacity
+                style={[styles.previewButton, loadingPreview && styles.previewButtonLoading]}
+                onPress={handlePreviewPDF}
+                disabled={loadingPreview}
+              >
+                {loadingPreview ? (
+                  <ActivityIndicator size="small" color="#8E44AD" />
+                ) : (
+                  <>
+                    <Ionicons name="eye-outline" size={18} color="#8E44AD" />
+                    <Text style={styles.previewButtonText}>Visualizza Anteprima PDF</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={[styles.nextButton, isMinor && styles.nextButtonMinor]}
                 onPress={() => setStep(2)}
@@ -588,6 +657,26 @@ const styles = StyleSheet.create({
   },
   userDataLabel: {
     fontWeight: '600',
+  },
+  previewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    backgroundColor: '#F5EEF8',
+    borderWidth: 1,
+    borderColor: '#8E44AD',
+    gap: 8,
+  },
+  previewButtonLoading: {
+    opacity: 0.7,
+  },
+  previewButtonText: {
+    color: '#8E44AD',
+    fontSize: 14,
+    fontWeight: '500',
   },
   nextButton: {
     backgroundColor: '#8E44AD',

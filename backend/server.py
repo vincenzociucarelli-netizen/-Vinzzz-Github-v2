@@ -11792,6 +11792,172 @@ async def sign_gdpr_privacy_document(
     }
 
 
+class GDPRPreviewRequest(BaseModel):
+    """Request model for GDPR privacy preview (no signature)"""
+    document_type: str  # "gdpr_adult" or "gdpr_minor"
+    # For adult privacy
+    signer_name: Optional[str] = None
+    signer_surname: Optional[str] = None
+    signer_fiscal_code: Optional[str] = None
+    signer_birth_date: Optional[str] = None
+    signer_birth_place: Optional[str] = None
+    signer_address: Optional[str] = None
+    signer_city: Optional[str] = None
+    signer_province: Optional[str] = None
+    # For minor privacy
+    minor_id: Optional[str] = None
+    minor_name: Optional[str] = None
+    minor_surname: Optional[str] = None
+    minor_fiscal_code: Optional[str] = None
+    minor_birth_date: Optional[str] = None
+    minor_birth_place: Optional[str] = None
+
+
+@api_router.post("/documents/preview-gdpr-privacy")
+async def preview_gdpr_privacy_document(
+    request: GDPRPreviewRequest, 
+    req: Request,
+    current_user = Depends(get_current_user)
+):
+    """
+    Generate a preview of the GDPR privacy document WITHOUT signature.
+    Returns a base64-encoded PDF that can be viewed before signing.
+    """
+    import hashlib
+    
+    # Get society info
+    society = await db.societies.find_one()
+    if not society:
+        raise HTTPException(status_code=404, detail="Nessuna società configurata")
+    
+    society_id = society.get("id", str(society.get("_id", "")))
+    society_name = society.get("name", "")
+    society_address = society.get("address", "") or ""
+    society_city = society.get("city", "")
+    society_province = society.get("province", "")
+    society_full_address = f"{society_address}, {society_city}" if society_address else society_city
+    if society_province:
+        society_full_address += f" ({society_province})"
+    society_cf_piva = society.get("fiscal_code", "") or society.get("vat_number", "")
+    society_email = society.get("email", "") or society.get("contact_email", "")
+    
+    # Preview timestamp and metadata
+    timestamp_str = "[DATA FIRMA]"
+    document_version = "2.0.0-GDPR"
+    document_hash = "[HASH GENERATO ALLA FIRMA]"
+    
+    try:
+        if request.document_type == "gdpr_adult":
+            signer_name = request.signer_name or current_user.get("first_name", "")
+            signer_surname = request.signer_surname or current_user.get("last_name", "")
+            
+            if not signer_name and current_user.get("full_name"):
+                parts = current_user.get("full_name", "").split()
+                if len(parts) >= 2:
+                    signer_surname = parts[0]
+                    signer_name = " ".join(parts[1:])
+                else:
+                    signer_surname = parts[0] if parts else ""
+                    signer_name = ""
+            
+            pdf_bytes = generate_gdpr_adult_privacy_pdf(
+                society_name=society_name,
+                society_address=society_full_address,
+                society_cf_piva=society_cf_piva,
+                society_email=society_email,
+                signer_name=signer_name,
+                signer_surname=signer_surname,
+                signer_fiscal_code=request.signer_fiscal_code or current_user.get("fiscal_code", ""),
+                signer_birth_date=request.signer_birth_date or "",
+                signer_birth_place=request.signer_birth_place or current_user.get("place_of_birth", ""),
+                signer_address=request.signer_address or current_user.get("address", ""),
+                signer_city=request.signer_city or current_user.get("city", ""),
+                signer_province=request.signer_province or current_user.get("province", ""),
+                signature_base64="",  # No signature for preview
+                timestamp=timestamp_str,
+                ip_address="[IP REGISTRATO ALLA FIRMA]",
+                user_agent="[DISPOSITIVO REGISTRATO ALLA FIRMA]",
+                document_version=document_version,
+                document_hash=document_hash,
+                user_id=current_user["id"],
+                society_id=society_id
+            )
+            doc_title = "ANTEPRIMA - Informativa Privacy GDPR - Collaboratori"
+            
+        elif request.document_type == "gdpr_minor":
+            if not request.minor_id:
+                raise HTTPException(status_code=400, detail="ID del minore richiesto")
+            
+            minor = await db.athletes.find_one({"id": request.minor_id})
+            if not minor:
+                raise HTTPException(status_code=404, detail="Atleta minore non trovato")
+            
+            parent_name = request.signer_name or current_user.get("first_name", "")
+            parent_surname = request.signer_surname or current_user.get("last_name", "")
+            
+            if not parent_name and current_user.get("full_name"):
+                parts = current_user.get("full_name", "").split()
+                if len(parts) >= 2:
+                    parent_surname = parts[0]
+                    parent_name = " ".join(parts[1:])
+            
+            minor_full_name = minor.get("full_name", "")
+            minor_parts = minor_full_name.split() if minor_full_name else []
+            minor_surname_val = request.minor_surname or (minor_parts[0] if minor_parts else "")
+            minor_name_val = request.minor_name or (" ".join(minor_parts[1:]) if len(minor_parts) > 1 else "")
+            
+            minor_birth_date = request.minor_birth_date or minor.get("birth_date", "") or minor.get("date_of_birth", "")
+            if minor_birth_date and hasattr(minor_birth_date, 'strftime'):
+                minor_birth_date = minor_birth_date.strftime("%d/%m/%Y")
+            elif minor_birth_date and isinstance(minor_birth_date, str) and 'T' in minor_birth_date:
+                try:
+                    minor_birth_date = datetime.fromisoformat(minor_birth_date.replace('Z', '+00:00')).strftime("%d/%m/%Y")
+                except:
+                    pass
+            
+            pdf_bytes = generate_gdpr_minor_privacy_pdf(
+                society_name=society_name,
+                society_address=society_full_address,
+                society_cf_piva=society_cf_piva,
+                society_email=society_email,
+                parent_name=parent_name,
+                parent_surname=parent_surname,
+                parent_fiscal_code=request.signer_fiscal_code or current_user.get("fiscal_code", ""),
+                minor_name=minor_name_val,
+                minor_surname=minor_surname_val,
+                minor_fiscal_code=request.minor_fiscal_code or minor.get("fiscal_code", ""),
+                minor_birth_date=minor_birth_date,
+                minor_birth_place=request.minor_birth_place or minor.get("place_of_birth", "") or minor.get("birth_place", ""),
+                signature_base64="",  # No signature for preview
+                timestamp=timestamp_str,
+                ip_address="[IP REGISTRATO ALLA FIRMA]",
+                user_agent="[DISPOSITIVO REGISTRATO ALLA FIRMA]",
+                document_version=document_version,
+                document_hash=document_hash,
+                user_id=current_user["id"],
+                society_id=society_id
+            )
+            doc_title = f"ANTEPRIMA - Informativa Privacy GDPR - Minore {minor_full_name}"
+        else:
+            raise HTTPException(status_code=400, detail="Tipo documento non valido")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error generating GDPR preview: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore nella generazione dell'anteprima: {str(e)}")
+    
+    # Return base64-encoded PDF
+    pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+    
+    return {
+        "success": True,
+        "document_title": doc_title,
+        "pdf_base64": pdf_base64,
+        "message": "Questa è un'anteprima. Il documento finale includerà la tua firma e i metadati di validità legale."
+    }
+
+
 # ==================== DIRIGENTE COMPENSATION ENDPOINTS ====================
 
 @api_router.get("/dirigente/{dirigente_id}/compensation")

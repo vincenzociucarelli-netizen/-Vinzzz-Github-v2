@@ -139,12 +139,17 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 - Created 2 new GDPR-compliant PDF templates:
   - `generate_gdpr_adult_privacy_pdf()` - For adults (collaborators, coaches, directors, adult athletes)
   - `generate_gdpr_minor_privacy_pdf()` - For parents signing for minors
-- New endpoint: `POST /api/documents/sign-gdpr-privacy`
+- New endpoints:
+  - `POST /api/documents/sign-gdpr-privacy` - Sign and save document
+  - `POST /api/documents/preview-gdpr-privacy` - Preview PDF without signature
 - Full legal metadata: document_version, timestamp, user_id, society_id, hash_document (SHA-256), device_type, ip_address
 - Email notification with PDF attachment via `send_document_email()`
 
 ### Frontend Updates
-- New component: `GDPRPrivacyModal.tsx` supporting both adult and minor privacy flows
+- New component: `GDPRPrivacyModal.tsx` with:
+  - 2-step flow (read → sign)
+  - "Visualizza Anteprima PDF" button to preview before signing
+  - Support for both adult and minor privacy flows
 - Updated all profile pages to use new GDPR modal:
   - `/app/collaboratore/profile.tsx`
   - `/app/coach/profile.tsx`
@@ -158,8 +163,6 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 
 ### Known Issues
 - P2: Admin dashboard sometimes fails to load lists (intermittent) - 9 parallel API calls may cause race conditions under load
-- ~~P3: `@expo/vector-icons` not rendering correctly on web~~ ✅ FIXED (04/03/2026)
-- ~~P3: Discount field input bug results in leading zeros~~ ✅ FIXED
 
 ## Upcoming Tasks (Priority Order)
 1. ~~P1: Implement comprehensive logging for critical actions~~ ✅ COMPLETED
