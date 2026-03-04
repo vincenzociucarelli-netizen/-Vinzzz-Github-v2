@@ -167,6 +167,58 @@ export default function OtherSettings() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Certificato Medico - PRIMO perché più importante */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏥 Certificato Medico</Text>
+          <Text style={styles.sectionDesc}>
+            Gestione scadenza certificati medici atleti
+          </Text>
+          
+          <TouchableOpacity 
+            style={[
+              styles.toggleContainer, 
+              blockExpiredCertificates && styles.toggleContainerActive
+            ]}
+            onPress={() => setBlockExpiredCertificates(!blockExpiredCertificates)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.toggleInfo}>
+              <Text style={[
+                styles.toggleTitle,
+                blockExpiredCertificates && styles.toggleTitleActive
+              ]}>
+                {blockExpiredCertificates ? '🔒 Blocco automatico ATTIVO' : '🔓 Blocco automatico DISATTIVO'}
+              </Text>
+              <Text style={styles.toggleDesc}>
+                {blockExpiredCertificates 
+                  ? 'La scansione QR blocca la registrazione agli allenamenti per atleti con certificato scaduto o mancante'
+                  : 'La scansione QR permette la registrazione agli allenamenti anche con certificato scaduto'}
+              </Text>
+            </View>
+            <View style={[
+              styles.toggleSwitch, 
+              blockExpiredCertificates && styles.toggleSwitchOn
+            ]}>
+              <View style={[
+                styles.toggleKnob, 
+                blockExpiredCertificates && styles.toggleKnobOn
+              ]} />
+            </View>
+          </TouchableOpacity>
+          
+          {blockExpiredCertificates && (
+            <View style={styles.toggleNote}>
+              <Text style={styles.toggleNoteText}>
+                📌 Regole quando attivo:{'\n'}
+                • QR non consente registrazione presenze con certificato scaduto{'\n'}
+                • Solo Admin può fare override (valido per singola sessione){'\n'}
+                • Motivo override obbligatorio{'\n'}
+                • Ogni override viene tracciato con log
+              </Text>
+            </View>
+          )}
+        </View>
+
         {/* Ruoli Atleti */}
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -333,58 +385,6 @@ export default function OtherSettings() {
                 </TouchableOpacity>
               </View>
             ))
-          )}
-        </View>
-
-        {/* Certificato Medico */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏥 Certificato Medico</Text>
-          <Text style={styles.sectionDesc}>
-            Gestione scadenza certificati medici atleti
-          </Text>
-          
-          <TouchableOpacity 
-            style={[
-              styles.toggleContainer, 
-              blockExpiredCertificates && styles.toggleContainerActive
-            ]}
-            onPress={() => setBlockExpiredCertificates(!blockExpiredCertificates)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.toggleInfo}>
-              <Text style={[
-                styles.toggleTitle,
-                blockExpiredCertificates && styles.toggleTitleActive
-              ]}>
-                {blockExpiredCertificates ? '🔒 Blocco automatico ATTIVO' : '🔓 Blocco automatico DISATTIVO'}
-              </Text>
-              <Text style={styles.toggleDesc}>
-                {blockExpiredCertificates 
-                  ? 'La scansione QR blocca la registrazione agli allenamenti per atleti con certificato scaduto o mancante'
-                  : 'La scansione QR permette la registrazione agli allenamenti anche con certificato scaduto'}
-              </Text>
-            </View>
-            <View style={[
-              styles.toggleSwitch, 
-              blockExpiredCertificates && styles.toggleSwitchOn
-            ]}>
-              <View style={[
-                styles.toggleKnob, 
-                blockExpiredCertificates && styles.toggleKnobOn
-              ]} />
-            </View>
-          </TouchableOpacity>
-          
-          {blockExpiredCertificates && (
-            <View style={styles.toggleNote}>
-              <Text style={styles.toggleNoteText}>
-                📌 Regole quando attivo:{'\n'}
-                • QR non consente registrazione presenze con certificato scaduto{'\n'}
-                • Solo Admin può fare override (valido per singola sessione){'\n'}
-                • Motivo override obbligatorio{'\n'}
-                • Ogni override viene tracciato con log
-              </Text>
-            </View>
           )}
         </View>
 
