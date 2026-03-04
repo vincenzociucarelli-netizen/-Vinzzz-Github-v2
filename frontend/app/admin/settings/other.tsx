@@ -50,6 +50,9 @@ export default function OtherSettings() {
   const [seasonStartMonth, setSeasonStartMonth] = useState(7);
   const [seasonStartDay, setSeasonStartDay] = useState(1);
 
+  // Blocco certificati medici scaduti
+  const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(false);
+
   useEffect(() => {
     loadSettings();
   }, []);
@@ -61,6 +64,7 @@ export default function OtherSettings() {
       setAthleteCharacteristics(response.data.athlete_characteristics || []);
       setDirigenteQualifications(response.data.dirigente_qualifications || []);
       setVenues(response.data.venues || []);
+      setBlockExpiredCertificates(response.data.block_expired_certificates || false);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -76,6 +80,7 @@ export default function OtherSettings() {
         athlete_characteristics: athleteCharacteristics,
         dirigente_qualifications: dirigenteQualifications,
         venues: venues,
+        block_expired_certificates: blockExpiredCertificates,
       });
       showAlert('Successo', 'Impostazioni salvate con successo');
     } catch (error: any) {
@@ -331,6 +336,58 @@ export default function OtherSettings() {
           )}
         </View>
 
+        {/* Certificato Medico */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏥 Certificato Medico</Text>
+          <Text style={styles.sectionDesc}>
+            Gestione scadenza certificati medici atleti
+          </Text>
+          
+          <TouchableOpacity 
+            style={[
+              styles.toggleContainer, 
+              blockExpiredCertificates && styles.toggleContainerActive
+            ]}
+            onPress={() => setBlockExpiredCertificates(!blockExpiredCertificates)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.toggleInfo}>
+              <Text style={[
+                styles.toggleTitle,
+                blockExpiredCertificates && styles.toggleTitleActive
+              ]}>
+                {blockExpiredCertificates ? '🔒 Blocco automatico ATTIVO' : '🔓 Blocco automatico DISATTIVO'}
+              </Text>
+              <Text style={styles.toggleDesc}>
+                {blockExpiredCertificates 
+                  ? 'La scansione QR è bloccata per atleti con certificato scaduto o mancante'
+                  : 'La scansione QR permette la registrazione anche con certificato scaduto'}
+              </Text>
+            </View>
+            <View style={[
+              styles.toggleSwitch, 
+              blockExpiredCertificates && styles.toggleSwitchOn
+            ]}>
+              <View style={[
+                styles.toggleKnob, 
+                blockExpiredCertificates && styles.toggleKnobOn
+              ]} />
+            </View>
+          </TouchableOpacity>
+          
+          {blockExpiredCertificates && (
+            <View style={styles.toggleNote}>
+              <Text style={styles.toggleNoteText}>
+                📌 Regole quando attivo:{'\n'}
+                • QR non consente registrazione presenze con certificato scaduto{'\n'}
+                • Solo Admin può fare override (valido per singola sessione){'\n'}
+                • Motivo override obbligatorio{'\n'}
+                • Ogni override viene tracciato con log
+              </Text>
+            </View>
+          )}
+        </View>
+
         {/* Spacer */}
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -491,5 +548,76 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  // Toggle styles for certificate settings
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    borderWidth: 1,
+    borderColor: '#FF9800',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+  },
+  toggleContainerActive: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#4CAF50',
+  },
+  toggleInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  toggleTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#E65100',
+    marginBottom: 4,
+  },
+  toggleTitleActive: {
+    color: '#2E7D32',
+  },
+  toggleDesc: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+  },
+  toggleSwitch: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#ccc',
+    justifyContent: 'center',
+    padding: 2,
+  },
+  toggleSwitchOn: {
+    backgroundColor: '#4CAF50',
+  },
+  toggleKnob: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  toggleKnobOn: {
+    alignSelf: 'flex-end',
+  },
+  toggleNote: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  toggleNoteText: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 20,
   },
 });

@@ -464,36 +464,6 @@ export default function SocietySettings() {
           </View>
         </View>
 
-        {/* Impostazioni Certificato Medico */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏥 Certificato Medico</Text>
-          <Text style={styles.sectionDesc}>
-            Gestione scadenza certificati medici atleti
-          </Text>
-          
-          <View style={[styles.toggleContainer, styles.toggleActive]}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleTitle}>🔒 Blocco automatico ATTIVO</Text>
-              <Text style={styles.toggleDesc}>
-                La scansione QR è bloccata per atleti con certificato scaduto o mancante
-              </Text>
-            </View>
-            <View style={[styles.toggleSwitch, styles.toggleSwitchOn]}>
-              <View style={[styles.toggleKnob, styles.toggleKnobOn]} />
-            </View>
-          </View>
-          
-          <View style={styles.toggleNote}>
-            <Text style={styles.toggleNoteText}>
-              📌 Regole:{'\n'}
-              • QR non consente registrazione presenze con certificato scaduto{'\n'}
-              • Solo Admin può fare override (valido per singola sessione){'\n'}
-              • Motivo override obbligatorio{'\n'}
-              • Ogni override viene tracciato con log
-            </Text>
-          </View>
-        </View>
-
         {/* Spacer */}
         <View style={{ height: 100 }} />
       </ScrollView>
