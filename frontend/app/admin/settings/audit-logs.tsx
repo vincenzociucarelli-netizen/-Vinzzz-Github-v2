@@ -15,7 +15,8 @@ import api from '../../../src/services/api';
 
 interface AuditLog {
   id: string;
-  timestamp: string;
+  timestamp?: string;
+  created_at?: string;
   action: string;
   user_id: string;
   user_email: string;
@@ -99,8 +100,14 @@ export default function AuditLogsPage() {
     }
   };
 
-  const formatDate = (timestamp: string) => {
-    const date = new Date(timestamp);
+  const formatDate = (log: AuditLog) => {
+    // Support both timestamp and created_at fields
+    const dateStr = log.timestamp || log.created_at;
+    if (!dateStr) return 'Data non disponibile';
+    
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'Data non valida';
+    
     return date.toLocaleDateString('it-IT', {
       day: '2-digit',
       month: '2-digit',
@@ -110,10 +117,26 @@ export default function AuditLogsPage() {
     });
   };
 
-  const formatDetails = (details: Record<string, any> | undefined) => {
+  const formatDetails = (log: AuditLog) => {
+    const details = log.details;
     if (!details || Object.keys(details).length === 0) return null;
     
     const items: string[] = [];
+    
+    // Handle certificate_block_changed action
+    if (log.action === 'certificate_block_changed') {
+      if (details.action_type === 'enabled') {
+        items.push('🟢 Blocco ATTIVATO');
+      } else if (details.action_type === 'disabled') {
+        items.push('🔴 Blocco DISATTIVATO');
+      }
+      if (details.old_value !== undefined) {
+        const oldText = details.old_value === true ? 'attivo' : 
+                       details.old_value === false ? 'disattivo' : 'non configurato';
+        items.push(`Prima: ${oldText}`);
+      }
+      return items.length > 0 ? items.join(' • ') : null;
+    }
     
     if (details.role) items.push(`Ruolo: ${details.role}`);
     if (details.deleted_role) items.push(`Ruolo eliminato: ${details.deleted_role}`);
@@ -129,13 +152,25 @@ export default function AuditLogsPage() {
     return items.length > 0 ? items.join(' • ') : null;
   };
 
-  const getActionInfo = (action: string) => {
-    return ACTION_LABELS[action] || { label: action, icon: 'help-circle', color: '#999' };
+  const getActionInfo = (log: AuditLog) => {
+    const action = log.action;
+    const baseInfo = ACTION_LABELS[action] || { label: action, icon: 'help-circle', color: '#999' };
+    
+    // Dynamic color for certificate_block_changed based on action_type
+    if (action === 'certificate_block_changed' && log.details?.action_type) {
+      if (log.details.action_type === 'enabled') {
+        return { ...baseInfo, color: '#34C759' }; // Green for enabled
+      } else if (log.details.action_type === 'disabled') {
+        return { ...baseInfo, color: '#FF3B30' }; // Red for disabled
+      }
+    }
+    
+    return baseInfo;
   };
 
   const renderLogItem = (log: AuditLog) => {
-    const actionInfo = getActionInfo(log.action);
-    const details = formatDetails(log.details);
+    const actionInfo = getActionInfo(log);
+    const details = formatDetails(log);
     
     return (
       <View key={log.id} style={styles.logItem}>
@@ -147,7 +182,7 @@ export default function AuditLogsPage() {
             <Text style={[styles.logAction, { color: actionInfo.color }]}>
               {actionInfo.label}
             </Text>
-            <Text style={styles.logTime}>{formatDate(log.timestamp)}</Text>
+            <Text style={styles.logTime}>{formatDate(log)}</Text>
           </View>
           <Text style={styles.logUser}>
             {log.user_email}
