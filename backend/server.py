@@ -2285,6 +2285,23 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
         update_dict["season_start_day"] = data.season_start_day
     if data.block_expired_certificates is not None:
         update_dict["block_expired_certificates"] = data.block_expired_certificates
+        # Log audit when certificate blocking is changed
+        current_settings = await db.settings.find_one({"type": "society"})
+        old_value = current_settings.get("block_expired_certificates", True) if current_settings else True
+        if old_value != data.block_expired_certificates:
+            await db.audit_logs.insert_one({
+                "user_id": current_user["id"],
+                "user_email": current_user.get("email", ""),
+                "society_id": current_user.get("society_id", ""),
+                "action": "certificate_block_changed",
+                "details": {
+                    "old_value": old_value,
+                    "new_value": data.block_expired_certificates,
+                    "action_type": "disabled" if not data.block_expired_certificates else "enabled"
+                },
+                "ip_address": "system",
+                "created_at": datetime.now(timezone.utc)
+            })
     
     if update_dict:
         await db.settings.update_one(

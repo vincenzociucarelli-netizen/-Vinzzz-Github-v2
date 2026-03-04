@@ -30,10 +30,14 @@ const ACTION_LABELS: Record<string, { label: string; icon: string; color: string
   login: { label: 'Login', icon: 'log-in', color: '#007AFF' },
   certificate_modified: { label: 'Certificato Modificato', icon: 'document-text', color: '#FF9500' },
   certificate_override: { label: 'Override Certificato', icon: 'shield-checkmark', color: '#FF3B30' },
+  certificate_block_changed: { label: 'Blocco Certificati', icon: 'medical', color: '#E65100' },
   compensation_modified: { label: 'Compenso Modificato', icon: 'cash', color: '#34C759' },
   document_accepted: { label: 'Documento Accettato', icon: 'checkmark-circle', color: '#5856D6' },
+  document_signed: { label: 'Documento Firmato', icon: 'create', color: '#8E44AD' },
   user_deleted: { label: 'Utente Eliminato', icon: 'trash', color: '#FF3B30' },
   qr_codes_regenerated: { label: 'QR Rigenerati', icon: 'qr-code', color: '#FF9500' },
+  stripe_settings_updated: { label: 'Impostazioni Stripe', icon: 'card', color: '#6772E5' },
+  stripe_keys_deleted: { label: 'Chiavi Stripe Eliminate', icon: 'card', color: '#FF3B30' },
 };
 
 const ACTION_FILTERS = [
@@ -41,6 +45,7 @@ const ACTION_FILTERS = [
   { key: 'login', label: 'Login' },
   { key: 'certificate_modified', label: 'Certificati' },
   { key: 'certificate_override', label: 'Override' },
+  { key: 'certificate_block_changed', label: 'Blocco Cert.' },
   { key: 'compensation_modified', label: 'Compensi' },
   { key: 'document_accepted', label: 'Documenti' },
   { key: 'user_deleted', label: 'Eliminazioni' },

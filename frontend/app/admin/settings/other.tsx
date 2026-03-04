@@ -51,7 +51,7 @@ export default function OtherSettings() {
   const [seasonStartDay, setSeasonStartDay] = useState(1);
 
   // Blocco certificati medici scaduti
-  const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(false);
+  const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(true); // Default ATTIVO
 
   useEffect(() => {
     loadSettings();
@@ -64,7 +64,8 @@ export default function OtherSettings() {
       setAthleteCharacteristics(response.data.athlete_characteristics || []);
       setDirigenteQualifications(response.data.dirigente_qualifications || []);
       setVenues(response.data.venues || []);
-      setBlockExpiredCertificates(response.data.block_expired_certificates || false);
+      // Default to true if not set
+      setBlockExpiredCertificates(response.data.block_expired_certificates !== false);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {

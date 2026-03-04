@@ -51,7 +51,7 @@ export default function SettingsIndex() {
           <View style={styles.cardContent}>
             <Text style={[styles.cardTitle, { color: '#E65100' }]}>Altre Impostazioni</Text>
             <Text style={styles.cardDescription}>
-              Ruoli atleti, caratteristiche, qualifiche dirigenti, palestre
+              Gestione scadenza certificati, ruoli atleti, qualifiche, palestre
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#E65100" />
