@@ -10650,6 +10650,7 @@ def generate_gdpr_adult_privacy_pdf(
 
 def generate_gdpr_minor_privacy_pdf(
     society_name: str,
+    ragione_sociale: str,
     society_address: str,
     society_cf_piva: str,
     society_email: str,
@@ -10673,6 +10674,9 @@ def generate_gdpr_minor_privacy_pdf(
     """Generate GDPR-compliant privacy consent PDF for minors (signed by parent/guardian)"""
     if not HAS_PDF_GENERATION:
         raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    # Usa ragione_sociale se disponibile, altrimenti society_name
+    nome_legale = ragione_sociale if ragione_sociale else society_name
     
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -10707,12 +10711,26 @@ def generate_gdpr_minor_privacy_pdf(
     c.setFont("Helvetica", 10)
     c.drawCentredString(width/2, height - 2.6*cm, "ai sensi del Regolamento UE 2016/679 (GDPR)")
     
-    y = height - 4*cm
+    y = height - 3.5*cm
     max_w = width - 4*cm
+    
+    # Box Dati Societari
+    c.setStrokeColor(colors.HexColor("#1565C0"))
+    c.setFillColor(colors.HexColor("#E3F2FD"))
+    c.roundRect(2*cm, y - 2.6*cm, max_w, 2.4*cm, 5, stroke=1, fill=1)
+    c.setFillColor(colors.black)
+    
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2.3*cm, y - 0.6*cm, f"Società: {nome_legale}")
+    c.setFont("Helvetica", 9)
+    c.drawString(2.3*cm, y - 1.15*cm, f"Sede: {society_address}")
+    c.drawString(2.3*cm, y - 1.65*cm, f"C.F.: {society_cf_piva}  |  Email: {society_email}")
+    
+    y -= 3.2*cm
     
     # Intro
     c.setFont("Helvetica", 10)
-    intro_text = f"Gentile Genitore/Tutore, La presente informativa descrive le modalità di trattamento dei dati personali del minore da parte di {society_name}, con sede in {society_address}, C.F./P.IVA {society_cf_piva}, email {society_email}."
+    intro_text = f"Gentile Genitore/Tutore, La presente informativa descrive le modalità di trattamento dei dati personali del minore da parte di {nome_legale}."
     y = draw_wrapped_text(c, intro_text, 2*cm, y, max_w)
     
     y -= 0.5*cm
@@ -10722,7 +10740,7 @@ def generate_gdpr_minor_privacy_pdf(
     c.drawString(2*cm, y, "1. TITOLARE DEL TRATTAMENTO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    titolare_text = f"Il Titolare del trattamento è {society_name}, con sede in {society_address} – email: {society_email}."
+    titolare_text = f"Il Titolare del trattamento è {nome_legale}, con sede in {society_address} – email: {society_email}."
     y = draw_wrapped_text(c, titolare_text, 2*cm, y, max_w)
     
     y -= 0.3*cm
@@ -10737,7 +10755,7 @@ def generate_gdpr_minor_privacy_pdf(
     finalita = [
         "a) gestione dell'iscrizione e partecipazione alle attività sportive della Società;",
         "b) adempimento degli obblighi previsti dalle normative sportive, assicurative e amministrative;",
-        "c) comunicazione con gli enti sportivi di riferimento (Federazioni, EPS, CONI);",
+        "c) comunicazione con gli enti sportivi di riferimento (Federazioni, EPS, RAS);",
         "d) organizzazione delle attività sportive e delle comunicazioni con le famiglie."
     ]
     for f in finalita:
@@ -12010,6 +12028,7 @@ async def sign_gdpr_privacy_document(
             
             pdf_bytes = generate_gdpr_minor_privacy_pdf(
                 society_name=society_name,
+                ragione_sociale=society_settings.get("ragione_sociale", "") if society_settings else "",
                 society_address=society_full_address,
                 society_cf_piva=society_cf_piva,
                 society_email=society_email,
@@ -12279,6 +12298,7 @@ async def preview_gdpr_privacy_document(
             
             pdf_bytes = generate_gdpr_minor_privacy_pdf(
                 society_name=society_name,
+                ragione_sociale=society_settings.get("ragione_sociale", "") if society_settings else "",
                 society_address=society_full_address,
                 society_cf_piva=society_cf_piva,
                 society_email=society_email,
