@@ -652,17 +652,17 @@ export default function AdminDirigenteDetail() {
                     return (
                       <>
                         {/* Box RAS - Totale Contratto */}
-                        <View style={[styles.totalBox, { backgroundColor: '#F3E5F5', marginBottom: 12 }]}>
-                          <Text style={[styles.totalLabel, { color: '#8E44AD', fontWeight: 'bold' }]}>
+                        <View style={[styles.totalBox, { backgroundColor: '#E3F2FD', marginBottom: 12 }]}>
+                          <Text style={[styles.totalLabel, { color: '#1565C0', fontWeight: 'bold' }]}>
                             📄 Comunicazione RAS - Totale Contratto
                           </Text>
-                          <Text style={{ color: '#8E44AD', fontSize: 12, marginTop: 4 }}>
+                          <Text style={{ color: '#1565C0', fontSize: 12, marginTop: 4 }}>
                             Dal {contractStartDate.split('-').reverse().join('/')} al {contractEndDate.split('-').reverse().join('/')} = {breakdown.monthsInContract} mesi
                           </Text>
-                          <Text style={[styles.totalValue, { color: '#8E44AD', fontSize: 22 }]}>
+                          <Text style={[styles.totalValue, { color: '#1565C0', fontSize: 22 }]}>
                             {formatCurrency(breakdown.thisClubTotal)}
                           </Text>
-                          <Text style={{ color: '#8E44AD', fontSize: 11 }}>
+                          <Text style={{ color: '#1565C0', fontSize: 11 }}>
                             ({breakdown.monthsInContract} mesi × {formatCurrency(parseFloat(monthlyCompensation) || 0)})
                           </Text>
                         </View>
