@@ -113,7 +113,7 @@ export default function DirigentiScreen() {
   const handleChangeRole = async (user: Dirigente, newRole: string) => {
     try {
       await api.patch(`/users/${user.id}/role`, { role: newRole });
-      showAlert('Successo', `Ruolo aggiornato a ${newRole === 'admin' ? 'Admin' : 'Visualizzatore'}`);
+      showAlert('Successo', `Ruolo aggiornato a ${newRole === 'admin' ? 'Admin' : 'Dirigente'}`);
       await loadData();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'aggiornamento');
@@ -164,7 +164,7 @@ export default function DirigentiScreen() {
   };
 
   const getRoleLabel = (role: string) => {
-    return role === 'admin' ? 'Admin' : 'Visualizzatore';
+    return role === 'admin' ? 'Admin' : 'Dirigente';
   };
 
   const getStatusColor = (status: string) => {
@@ -324,7 +324,7 @@ export default function DirigentiScreen() {
                   onPress={() => selectedUser && handleChangeRole(selectedUser, 'viewer')}
                 >
                   <Ionicons name="eye" size={20} color="#007AFF" />
-                  <Text style={styles.modalBtnText}>Rendi Visualizzatore</Text>
+                  <Text style={styles.modalBtnText}>Rendi Dirigente</Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity

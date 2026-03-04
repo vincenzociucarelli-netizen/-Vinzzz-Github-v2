@@ -989,7 +989,16 @@ export default function AdminCollaboratoreDetail() {
                   assigned_teams: selectedTeamIds,
                   assigned_venues: selectedVenueNames,
                 });
-                showAlert('Successo', 'Assegnazioni salvate');
+                // Banner auto-closing: use toast-style alert
+                if (Platform.OS === 'web') {
+                  const banner = document.createElement('div');
+                  banner.textContent = '✓ Assegnazioni salvate';
+                  banner.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#4CAF50;color:white;padding:12px 24px;border-radius:8px;z-index:9999;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+                  document.body.appendChild(banner);
+                  setTimeout(() => banner.remove(), 2500);
+                } else {
+                  Alert.alert('Successo', 'Assegnazioni salvate');
+                }
                 loadData();
               } catch (error: any) {
                 showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');

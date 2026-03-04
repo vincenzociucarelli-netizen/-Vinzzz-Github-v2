@@ -1507,7 +1507,13 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     
     # Create athlete record
     athlete_id = str(ObjectId())
-    qr_code = generate_qr_code(athlete_id)
+    
+    # Generate new 12-char alphanumeric QR identifier for adult athletes
+    qr_id = generate_qr_identifier()
+    # Ensure uniqueness
+    while await db.athletes.find_one({"qr_identifier": qr_id}):
+        qr_id = generate_qr_identifier()
+    qr_code = generate_qr_code_from_identifier(qr_id)
     
     full_name = f"{data.first_name} {data.last_name}"
     trial_end = datetime.utcnow() + timedelta(days=7)
@@ -1528,6 +1534,7 @@ async def register_adult_athlete(data: AdultAthleteRegister):
         "phone_athlete": data.phone,
         "team_id": None,  # Will be assigned by admin
         "qr_code": qr_code,
+        "qr_identifier": qr_id,
         "status": "pending",  # Adult athletes need admin approval first
         "athlete_type": "quota",  # Default to quota-paying athlete
         "parents_detached": True,  # No parents for adult athletes
@@ -4793,7 +4800,13 @@ async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(
     
     # Create athlete
     athlete_id = str(ObjectId())
-    qr_code = generate_qr_code(athlete_id)
+    
+    # Generate new 12-char alphanumeric QR identifier for adult athletes
+    qr_id = generate_qr_identifier()
+    # Ensure uniqueness
+    while await db.athletes.find_one({"qr_identifier": qr_id}):
+        qr_id = generate_qr_identifier()
+    qr_code = generate_qr_code_from_identifier(qr_id)
     
     full_name = f"{data.first_name} {data.last_name}"
     
@@ -4812,6 +4825,7 @@ async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(
         "phone_athlete": data.phone,
         "team_id": data.team_id,
         "qr_code": qr_code,
+        "qr_identifier": qr_id,
         "status": "active",  # Adult athletes are immediately active
         "athlete_type": data.athlete_type,  # "quota" or "compensated"
         "parents_detached": True,  # No parents for adult athletes

@@ -565,11 +565,10 @@ export default function AdminCoachDetail() {
         {/* Onboarding Checklist Button - Always visible when approved */}
         {coach.status === 'approved' && (() => {
           const checklist = coach.onboarding_checklist || {};
-          const totalItems = 5; // contract, ras, id, fiscal_code, criminal_record
+          const totalItems = 4; // contract, ras, fiscal_code, criminal_record
           const completedItems = [
             checklist.contract_signed,
             checklist.ras_registered,
-            checklist.id_acquired,
             checklist.fiscal_code_acquired,
             checklist.criminal_record
           ].filter(Boolean).length;
@@ -1123,16 +1122,6 @@ export default function AdminCoachDetail() {
                         })}
                       </View>
                     )}
-                    
-                    <View style={[styles.totalBox, { marginTop: 12, backgroundColor: '#E8F5E9' }]}>
-                      <Text style={[styles.totalLabel, { color: '#2E7D32' }]}>Totale Compenso Contratto (per RAS)</Text>
-                      <Text style={[styles.totalValue, { color: '#2E7D32', fontSize: 20 }]}>
-                        €{breakdown.thisClubTotal.toLocaleString()}
-                      </Text>
-                      <Text style={{ color: '#2E7D32', fontSize: 12, marginTop: 4 }}>
-                        (€{breakdown.monthly} × {breakdown.monthsInContract} mesi)
-                      </Text>
-                    </View>
                   </>
                 );
               })()}
@@ -1172,61 +1161,11 @@ export default function AdminCoachDetail() {
           )}
         </View>
 
-        {/* Documenti e IBAN - Solo visualizzazione per Admin */}
+        {/* Dati Bancari - Solo visualizzazione per Admin */}
         {coach.status === 'approved' && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🏦 Documento e Dati Bancari</Text>
+            <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
             <Text style={styles.readOnlyNote}>* Dati inseriti dal coach nel proprio profilo</Text>
-            
-            <View style={styles.readOnlyField}>
-              <Text style={styles.readOnlyLabel}>Tipo Documento</Text>
-              <Text style={styles.readOnlyValue}>{coach.id_type || '-'}</Text>
-            </View>
-            
-            <View style={styles.readOnlyField}>
-              <Text style={styles.readOnlyLabel}>Numero Documento</Text>
-              <Text style={styles.readOnlyValue}>{coach.id_front || '-'}</Text>
-            </View>
-            
-            <View style={styles.readOnlyField}>
-              <Text style={styles.readOnlyLabel}>Scadenza Documento</Text>
-              <Text style={styles.readOnlyValue}>{coach.id_back || '-'}</Text>
-            </View>
-            
-            {/* Foto Documenti se presenti - in riga compatta */}
-            {(coach.doc_front_image || coach.doc_back_image) && (
-              <View style={styles.readOnlyField}>
-                <Text style={styles.readOnlyLabel}>Foto Documento (clicca per ingrandire)</Text>
-                <View style={styles.docImagesRowAdmin}>
-                  {coach.doc_front_image && (
-                    <TouchableOpacity 
-                      style={styles.docImageContainerAdmin}
-                      onPress={() => openImageViewer(coach.doc_front_image!, 'Documento Fronte')}
-                    >
-                      <Text style={styles.docImageLabelAdmin}>Fronte</Text>
-                      <Image 
-                        source={{ uri: `data:image/jpeg;base64,${coach.doc_front_image}` }} 
-                        style={styles.docImagePreviewSmall} 
-                      />
-                      <Text style={styles.tapToEnlarge}>👆 Tocca per ingrandire</Text>
-                    </TouchableOpacity>
-                  )}
-                  {coach.doc_back_image && (
-                    <TouchableOpacity 
-                      style={styles.docImageContainerAdmin}
-                      onPress={() => openImageViewer(coach.doc_back_image!, 'Documento Retro')}
-                    >
-                      <Text style={styles.docImageLabelAdmin}>Retro</Text>
-                      <Image 
-                        source={{ uri: `data:image/jpeg;base64,${coach.doc_back_image}` }} 
-                        style={styles.docImagePreviewSmall} 
-                      />
-                      <Text style={styles.tapToEnlarge}>👆 Tocca per ingrandire</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            )}
             
             <View style={styles.readOnlyField}>
               <Text style={styles.readOnlyLabel}>IBAN</Text>
@@ -1373,14 +1312,6 @@ export default function AdminCoachDetail() {
               >
                 <Text style={{ fontSize: 22 }}>{checklistItems.ras_registered ? '☑️' : '⬜'}</Text>
                 <Text style={styles.onboardingChecklistText}>Iscrizione RAS (Registro Attività Sportive)</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.onboardingChecklistItem, checklistItems.id_acquired && styles.onboardingChecklistItemChecked]}
-                onPress={() => setChecklistItems({...checklistItems, id_acquired: !checklistItems.id_acquired})}
-              >
-                <Text style={{ fontSize: 22 }}>{checklistItems.id_acquired ? '☑️' : '⬜'}</Text>
-                <Text style={styles.onboardingChecklistText}>Documento d'identità acquisito</Text>
               </TouchableOpacity>
               
               <TouchableOpacity

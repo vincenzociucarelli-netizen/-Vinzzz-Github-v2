@@ -27,7 +27,7 @@ import PhotoViewer from '../../src/components/PhotoViewer';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://medical-cert-block.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://admin-coach-fixes.preview.emergentagent.com';
 
 export default function CollaboratoreProfile() {
   const router = useRouter();
