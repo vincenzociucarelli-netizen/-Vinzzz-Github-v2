@@ -2235,10 +2235,15 @@ async def get_society_settings():
     }
 
 @api_router.patch("/settings/society")
-async def update_society_settings(data: SocietySettingsUpdate, current_user = Depends(get_current_user)):
+async def update_society_settings(request: Request, data: SocietySettingsUpdate, current_user = Depends(get_current_user)):
     """Update society settings (admin only)"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può modificare le impostazioni")
+    
+    # Get client IP
+    client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown")
+    if client_ip and "," in client_ip:
+        client_ip = client_ip.split(",")[0].strip()
     
     update_dict = {}
     if data.name is not None:
@@ -2308,7 +2313,7 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
                     "new_value": data.block_expired_certificates,
                     "action_type": "disabled" if not data.block_expired_certificates else "enabled"
                 },
-                "ip_address": "system",
+                "ip_address": client_ip,
                 "created_at": datetime.now(timezone.utc)
             })
     
