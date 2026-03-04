@@ -19,7 +19,6 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
-import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,8 +28,6 @@ import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://audit-compliance-14.preview.emergentagent.com';
-
-const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
 export default function CollaboratoreProfile() {
   const router = useRouter();
@@ -94,10 +91,6 @@ export default function CollaboratoreProfile() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
-  
-  // Document images
-  const [docFrontImage, setDocFrontImage] = useState(null);
-  const [docBackImage, setDocBackImage] = useState(null);
   
   // Profile photo (artistic)
   const [profilePhoto, setProfilePhoto] = useState(null);
@@ -308,30 +301,6 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
       return `${day}/${month}/${year}`;
     } catch {
       return '';
-    }
-  };
-
-  const pickImage = async (side) => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.7,
-        base64: true,
-      });
-
-      if (!result.canceled && result.assets[0].base64) {
-        if (side === 'front') {
-          setDocFrontImage(result.assets[0].base64);
-          setEditData({...editData, doc_front_image: result.assets[0].base64});
-        } else {
-          setDocBackImage(result.assets[0].base64);
-          setEditData({...editData, doc_back_image: result.assets[0].base64});
-        }
-      }
-    } catch (error) {
-      showAlert('Errore', 'Impossibile selezionare l\'immagine');
     }
   };
 
@@ -1188,10 +1157,10 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           <Ionicons name="chevron-forward" size={24} color="#E53935" />
         </TouchableOpacity>
 
-        {/* Documento e Dati Bancari */}
+        {/* Dati Bancari */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>🏦 Documento e Dati Bancari</Text>
+            <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
             <TouchableOpacity onPress={() => setEditingBank(!editingBank)}>
               <Ionicons name={editingBank ? "close" : "create"} size={22} color="#007AFF" />
             </TouchableOpacity>
@@ -1199,83 +1168,6 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           
           {editingBank ? (
             <>
-              <Text style={styles.inputLabel}>Tipo Documento</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={editData.id_type}
-                  onValueChange={(v) => setEditData({...editData, id_type: v})}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Seleziona..." value="" />
-                  {DOC_TYPES.map((type) => (
-                    <Picker.Item key={type} label={type} value={type} />
-                  ))}
-                </Picker>
-              </View>
-              
-              <Text style={styles.inputLabel}>Numero Documento</Text>
-              <TextInput
-                style={styles.input}
-                value={editData.id_front}
-                onChangeText={(v) => setEditData({...editData, id_front: v.toUpperCase()})}
-                placeholder="es. AX1234567"
-                placeholderTextColor="#ccc"
-                autoCapitalize="characters"
-              />
-              
-              <Text style={styles.inputLabel}>Scadenza Documento</Text>
-              <TextInput
-                style={styles.input}
-                value={editData.id_back}
-                onChangeText={(v) => {
-                  // Auto-format: add / after day and month
-                  let formatted = v.replace(/[^0-9]/g, '');
-                  if (formatted.length > 2) {
-                    formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
-                  }
-                  if (formatted.length > 5) {
-                    formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
-                  }
-                  setEditData({...editData, id_back: formatted});
-                }}
-                placeholder="gg/mm/aaaa"
-                placeholderTextColor="#ccc"
-                maxLength={10}
-                keyboardType="numeric"
-              />
-              
-              {/* Foto Documento - Due icone in una riga */}
-              <Text style={styles.inputLabel}>Foto Documento</Text>
-              <View style={styles.docImagesRow}>
-                <TouchableOpacity style={styles.docImageBtnSmall} onPress={() => pickImage('front')}>
-                  {(docFrontImage || editData.doc_front_image) ? (
-                    <Image 
-                      source={{ uri: `data:image/jpeg;base64,${docFrontImage || editData.doc_front_image}` }} 
-                      style={styles.docImageSmall} 
-                    />
-                  ) : (
-                    <View style={styles.docImagePlaceholderSmall}>
-                      <Ionicons name="card-outline" size={24} color="#007AFF" />
-                      <Text style={styles.docImageTextSmall}>Fronte</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.docImageBtnSmall} onPress={() => pickImage('back')}>
-                  {(docBackImage || editData.doc_back_image) ? (
-                    <Image 
-                      source={{ uri: `data:image/jpeg;base64,${docBackImage || editData.doc_back_image}` }} 
-                      style={styles.docImageSmall} 
-                    />
-                  ) : (
-                    <View style={styles.docImagePlaceholderSmall}>
-                      <Ionicons name="card-outline" size={24} color="#007AFF" />
-                      <Text style={styles.docImageTextSmall}>Retro</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-              
               <Text style={styles.inputLabel}>IBAN</Text>
               <TextInput
                 style={styles.input}
@@ -1312,36 +1204,17 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   setSavingBank(true);
                   try {
                     const payload: any = {
-                      id_type: editData.id_type,
-                      id_front: editData.id_front,
-                      id_back: editData.id_back,
                       iban: editData.iban,
                       account_holder: editData.account_holder,
                       bank_name: editData.bank_name,
                     };
-                    // Add images only if they exist and are not too large
-                    if (docFrontImage) {
-                      payload.doc_front_image = docFrontImage;
-                    } else if (editData.doc_front_image) {
-                      payload.doc_front_image = editData.doc_front_image;
-                    }
-                    if (docBackImage) {
-                      payload.doc_back_image = docBackImage;
-                    } else if (editData.doc_back_image) {
-                      payload.doc_back_image = editData.doc_back_image;
-                    }
                     
                     await api.patch('/users/me/bank-details', payload);
                     setProfileData({
                       ...profileData,
-                      id_type: editData.id_type,
-                      id_front: editData.id_front,
-                      id_back: editData.id_back,
                       iban: editData.iban,
                       account_holder: editData.account_holder,
                       bank_name: editData.bank_name,
-                      doc_front_image: docFrontImage || editData.doc_front_image || '',
-                      doc_back_image: docBackImage || editData.doc_back_image || '',
                     });
                     setEditingBank(false);
                     showAlert('Salvato', 'Dati bancari aggiornati');
@@ -1361,79 +1234,6 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </>
           ) : (
             <>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Tipo Documento</Text>
-                <Text style={styles.fieldValue}>{profileData.id_type || '-'}</Text>
-              </View>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Numero Documento</Text>
-                <Text style={styles.fieldValue}>{profileData.id_front || '-'}</Text>
-              </View>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Scadenza</Text>
-                <Text style={styles.fieldValue}>{profileData.id_back || '-'}</Text>
-              </View>
-              
-              {/* Document Images */}
-              <View style={styles.docImagesContainer}>
-                <TouchableOpacity 
-                  style={styles.docImageWrapper}
-                  onPress={() => {
-                    if (profileData.doc_front_image) {
-                      setSelectedPhoto(profileData.doc_front_image);
-                      setSelectedPhotoTitle('Fronte Documento');
-                      setPhotoViewerVisible(true);
-                    }
-                  }}
-                  disabled={!profileData.doc_front_image}
-                >
-                  <Text style={styles.docImageLabel}>Fronte Documento</Text>
-                  {profileData.doc_front_image ? (
-                    <Image 
-                      source={{ uri: `data:image/jpeg;base64,${profileData.doc_front_image}` }}
-                      style={styles.docImagePreview}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={styles.docImagePlaceholder}>
-                      <Ionicons name="id-card-outline" size={32} color="#ccc" />
-                      <Text style={styles.docImagePlaceholderText}>Non caricato</Text>
-                    </View>
-                  )}
-                  {profileData.doc_front_image && (
-                    <Text style={styles.tapToEnlarge}>Tocca per ingrandire</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.docImageWrapper}
-                  onPress={() => {
-                    if (profileData.doc_back_image) {
-                      setSelectedPhoto(profileData.doc_back_image);
-                      setSelectedPhotoTitle('Retro Documento');
-                      setPhotoViewerVisible(true);
-                    }
-                  }}
-                  disabled={!profileData.doc_back_image}
-                >
-                  <Text style={styles.docImageLabel}>Retro Documento</Text>
-                  {profileData.doc_back_image ? (
-                    <Image 
-                      source={{ uri: `data:image/jpeg;base64,${profileData.doc_back_image}` }}
-                      style={styles.docImagePreview}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={styles.docImagePlaceholder}>
-                      <Ionicons name="id-card-outline" size={32} color="#ccc" />
-                      <Text style={styles.docImagePlaceholderText}>Non caricato</Text>
-                    </View>
-                  )}
-                  {profileData.doc_back_image && (
-                    <Text style={styles.tapToEnlarge}>Tocca per ingrandire</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>IBAN</Text>
                 <Text style={styles.fieldValue}>{profileData.iban || '-'}</Text>
