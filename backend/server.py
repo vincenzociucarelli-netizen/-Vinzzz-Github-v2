@@ -2294,15 +2294,17 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
         update_dict["block_expired_certificates"] = data.block_expired_certificates
         # Log audit when certificate blocking is changed
         current_settings = await db.settings.find_one({"type": "society"})
-        old_value = current_settings.get("block_expired_certificates", True) if current_settings else True
-        if old_value != data.block_expired_certificates:
+        # Get old value - if no settings exist or field not set, consider it as None (unset)
+        old_value = current_settings.get("block_expired_certificates") if current_settings else None
+        # Log if value is being set for first time (old_value is None) or if it changed
+        if old_value is None or old_value != data.block_expired_certificates:
             await db.audit_logs.insert_one({
                 "user_id": current_user["id"],
                 "user_email": current_user.get("email", ""),
                 "society_id": current_user.get("society_id", ""),
                 "action": "certificate_block_changed",
                 "details": {
-                    "old_value": old_value,
+                    "old_value": old_value if old_value is not None else "non configurato",
                     "new_value": data.block_expired_certificates,
                     "action_type": "disabled" if not data.block_expired_certificates else "enabled"
                 },
@@ -14539,8 +14541,8 @@ async def get_audit_logs(
     # Get total count
     total = await db.audit_logs.count_documents(query)
     
-    # Get logs sorted by timestamp descending
-    logs = await db.audit_logs.find(query).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+    # Get logs sorted by created_at descending
+    logs = await db.audit_logs.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     # Clean MongoDB _id
     for log in logs:
