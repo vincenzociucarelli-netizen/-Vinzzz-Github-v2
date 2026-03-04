@@ -459,17 +459,17 @@ export default function AdminDirigenteDetail() {
             <View style={styles.alertContent}>
               {signedReceipts.some(r => r.exceeded_5000) && (
                 <>
-                  <Text style={styles.alertTitle}>⚠️ SUPERAMENTO €5.000</Text>
+                  <Text style={styles.alertTitle}>⚠️ SUPERAMENTO € 5.000,00</Text>
                   <Text style={styles.alertText}>
-                    Il dirigente ha superato il limite di €5.000 annui.
+                    Il dirigente ha superato il limite di € 5.000,00 annui.
                   </Text>
                 </>
               )}
               {signedReceipts.some(r => r.exceeded_15000) && (
                 <>
-                  <Text style={[styles.alertTitle, { marginTop: 8 }]}>🚨 SUPERAMENTO €15.000</Text>
+                  <Text style={[styles.alertTitle, { marginTop: 8 }]}>🚨 SUPERAMENTO € 15.000,00</Text>
                   <Text style={styles.alertText}>
-                    Superato anche il limite di €15.000 - obblighi fiscali aggiuntivi!
+                    Superato anche il limite di € 15.000,00 - obblighi fiscali aggiuntivi!
                   </Text>
                 </>
               )}
@@ -684,28 +684,28 @@ export default function AdminDirigenteDetail() {
                             }]}>
                               {yearlyBreakdown[years[0]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[0]} ({yearlyBreakdown[years[0]].startMonth}-Dic: {yearlyBreakdown[years[0]].months} mesi)
                             </Text>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, flexWrap: 'wrap' }}>
-                              <View style={{ marginRight: 8 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, flexWrap: 'wrap', gap: 16 }}>
+                              <View>
                                 <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
                                 <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[0]].total)}</Text>
                               </View>
                               {prior > 0 && (
-                                <View style={{ marginRight: 8 }}>
+                                <View>
                                   <Text style={{ fontSize: 12, color: '#E65100' }}>+ Pregressi:</Text>
                                   <Text style={{ fontSize: 14, fontWeight: '600', color: '#E65100' }}>{formatCurrency(prior)}</Text>
                                 </View>
                               )}
-                              <View>
-                                <Text style={{ fontSize: 12, color: '#333' }}>Totale:</Text>
-                                <Text style={{ fontSize: 18, fontWeight: 'bold', color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
-                                  {formatCurrency(yearlyBreakdown[years[0]].grandTotal)}
-                                </Text>
-                              </View>
+                            </View>
+                            <View style={{ alignItems: 'center', marginTop: 12 }}>
+                              <Text style={{ fontSize: 12, color: '#333' }}>Totale:</Text>
+                              <Text style={{ fontSize: 20, fontWeight: 'bold', color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
+                                {formatCurrency(yearlyBreakdown[years[0]].grandTotal)}
+                              </Text>
                             </View>
                             {yearlyBreakdown[years[0]].exceedsThreshold5k && !yearlyBreakdown[years[0]].exceedsThreshold15k && (
                               <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 10, marginTop: 8 }}>
                                 <Text style={{ fontSize: 13, color: '#E65100', fontWeight: 'bold', textAlign: 'center' }}>
-                                  ⚠️ SUPERAMENTO €5.000
+                                  ⚠️ SUPERAMENTO € 5.000,00
                                 </Text>
                                 <Text style={{ fontSize: 11, color: '#F57F17', textAlign: 'center', marginTop: 4 }}>
                                   Contributi previdenziali INPS
@@ -715,7 +715,7 @@ export default function AdminDirigenteDetail() {
                             {yearlyBreakdown[years[0]].exceedsThreshold15k && (
                               <View style={{ backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#F44336', borderRadius: 8, padding: 10, marginTop: 8 }}>
                                 <Text style={{ fontSize: 13, color: '#C62828', fontWeight: 'bold', textAlign: 'center' }}>
-                                  🚨 SUPERAMENTO €15.000
+                                  🚨 SUPERAMENTO € 15.000,00
                                 </Text>
                                 <Text style={{ fontSize: 11, color: '#D32F2F', textAlign: 'center', marginTop: 4 }}>
                                   Tassazione IRPEF obbligatoria
@@ -737,22 +737,22 @@ export default function AdminDirigenteDetail() {
                             }]}>
                               {yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} (Gen-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
                             </Text>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, gap: 16 }}>
                               <View>
                                 <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
                                 <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[1]].total)}</Text>
                               </View>
-                              <View>
-                                <Text style={{ fontSize: 12, color: '#333' }}>Totale Anno:</Text>
-                                <Text style={{ fontSize: 18, fontWeight: 'bold', color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
-                                  {formatCurrency(yearlyBreakdown[years[1]].grandTotal)}
-                                </Text>
-                              </View>
+                            </View>
+                            <View style={{ alignItems: 'center', marginTop: 12 }}>
+                              <Text style={{ fontSize: 12, color: '#333' }}>Totale Anno:</Text>
+                              <Text style={{ fontSize: 20, fontWeight: 'bold', color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
+                                {formatCurrency(yearlyBreakdown[years[1]].grandTotal)}
+                              </Text>
                             </View>
                             {yearlyBreakdown[years[1]].exceedsThreshold5k && !yearlyBreakdown[years[1]].exceedsThreshold15k && (
                               <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 10, marginTop: 8 }}>
                                 <Text style={{ fontSize: 13, color: '#E65100', fontWeight: 'bold', textAlign: 'center' }}>
-                                  ⚠️ SUPERAMENTO €5.000
+                                  ⚠️ SUPERAMENTO € 5.000,00
                                 </Text>
                                 <Text style={{ fontSize: 11, color: '#F57F17', textAlign: 'center', marginTop: 4 }}>
                                   Contributi previdenziali INPS
@@ -762,7 +762,7 @@ export default function AdminDirigenteDetail() {
                             {yearlyBreakdown[years[1]].exceedsThreshold15k && (
                               <View style={{ backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#F44336', borderRadius: 8, padding: 10, marginTop: 8 }}>
                                 <Text style={{ fontSize: 13, color: '#C62828', fontWeight: 'bold', textAlign: 'center' }}>
-                                  🚨 SUPERAMENTO €15.000
+                                  🚨 SUPERAMENTO € 15.000,00
                                 </Text>
                                 <Text style={{ fontSize: 11, color: '#D32F2F', textAlign: 'center', marginTop: 4 }}>
                                   Tassazione IRPEF obbligatoria
