@@ -145,24 +145,34 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 - Full legal metadata: document_version, timestamp, user_id, society_id, hash_document (SHA-256), device_type, ip_address
 - Email notification with PDF attachment via `send_document_email()`
 
-### Frontend Updates
-- New component: `GDPRPrivacyModal.tsx` with:
-  - 2-step flow (read → sign)
-  - "Visualizza Anteprima PDF" button to preview before signing
-  - Support for both adult and minor privacy flows
-- Updated all profile pages to use new GDPR modal:
-  - `/app/collaboratore/profile.tsx`
-  - `/app/coach/profile.tsx`
-  - `/app/dirigente/profile.tsx`
-  - `/app/athlete/profile.tsx`
-  - `/app/athlete/index.tsx`
+### Frontend Privacy Updates
+- New component: `GDPRPrivacyModal.tsx` with preview PDF button
+- Updated all profile pages to use new GDPR modal
+- New page: `/parent/documents` - Documents grouped by child
+
+### P2 Fix - Admin Dashboard Loading
+- Implemented `fetchWithRetry()` helper with exponential backoff (max 3 retries)
+- Grouped 9 API calls into 3 batches to reduce server load
+- Dashboard now more reliable under heavy load
+
+### P3 - Stripe Payment Infrastructure
+- Backend endpoints:
+  - `GET /api/settings/stripe` - Get settings (masked keys)
+  - `PATCH /api/settings/stripe` - Save settings with validation
+  - `DELETE /api/settings/stripe/keys` - Remove all keys
+- Frontend page: `/admin/settings/stripe.tsx`
+- Each society can configure their own Stripe keys
+- Automatic test/live mode detection from key prefix
 
 ### Bug Fixes
-- Removed "Documento e Dati Bancari" section from collaborator profile (kept only IBAN/Bank)
-- Fixed @expo/vector-icons imports in export-data.tsx and audit-logs.tsx
+- Removed "Documento e Dati Bancari" section from collaborator profile
+- Fixed @expo/vector-icons imports
 
-### Known Issues
-- P2: Admin dashboard sometimes fails to load lists (intermittent) - 9 parallel API calls may cause race conditions under load
+### Files Created/Modified
+- `/app/frontend/app/admin/settings/stripe.tsx` (NEW)
+- `/app/frontend/app/parent/documents.tsx` (NEW)
+- `/app/frontend/src/components/GDPRPrivacyModal.tsx` (NEW)
+- `/app/backend/server.py` (MODIFIED - GDPR, Stripe endpoints)
 
 ## Upcoming Tasks (Priority Order)
 1. ~~P1: Implement comprehensive logging for critical actions~~ ✅ COMPLETED

@@ -94,38 +94,70 @@ export default function AdminDashboard() {
     refreshUser();
   }, []);
 
+  // Helper function for API calls with retry
+  const fetchWithRetry = async (url: string, defaultValue: any, retries = 2): Promise<any> => {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const response = await api.get(url);
+        return response;
+      } catch (error) {
+        if (i === retries) {
+          console.warn(`Failed to fetch ${url} after ${retries + 1} attempts`);
+          return { data: defaultValue };
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
+      }
+    }
+    return { data: defaultValue };
+  };
+
   const loadStats = async () => {
     try {
-      const [statsRes, pendingRes, societyRes, birthdaysRes, certsRes, inviteRes, pendingAthletesRes, deletionRes, notifRes] = await Promise.all([
-        api.get('/stats/overview').catch(() => ({ data: null })),
-        api.get('/users/pending').catch(() => ({ data: [] })),
-        api.get('/settings/society').catch(() => ({ data: { name: 'Società Sportiva', logo: null, sport_image: null } })),
-        api.get('/birthdays/today').catch(() => ({ data: [] })),
-        api.get('/certificates/expiring').catch(() => ({ data: null })),
-        api.get('/societies/invite-code').catch(() => ({ data: { invite_code: '' } })),
-        api.get('/athletes/pending').catch(() => ({ data: [] })),
-        api.get('/athletes/deletion-requests').catch(() => ({ data: [] })),
-        api.get('/admin/notifications/unread-count').catch(() => ({ data: { count: 0 } })),
+      // Group 1: Critical data (stats, society)
+      const [statsRes, societyRes] = await Promise.all([
+        fetchWithRetry('/stats/overview', null),
+        fetchWithRetry('/settings/society', { name: 'Società Sportiva', logo: null, sport_image: null }),
       ]);
+      
       if (statsRes.data) setStats(statsRes.data);
-      if (societyRes.data) setSociety(societyRes.data);
-      setBirthdays(birthdaysRes.data || []);
-      // Handle null response from certificates/expiring API
-      const certsData = certsRes.data || { count_today: 0, count_30_days: 0, expiring_today: [], expiring_soon: [] };
-      setExpiringCerts(certsData);
-      setInviteCode(inviteRes.data.invite_code || '');
+      if (societyRes.data) {
+        setSociety(societyRes.data);
+        setProEnabled(societyRes.data.pro_enabled || false);
+      }
+
+      // Group 2: User-related data
+      const [pendingRes, pendingAthletesRes, deletionRes] = await Promise.all([
+        fetchWithRetry('/users/pending', []),
+        fetchWithRetry('/athletes/pending', []),
+        fetchWithRetry('/athletes/deletion-requests', []),
+      ]);
+      
       setPendingAthletes(pendingAthletesRes.data || []);
       setDeletionRequests(deletionRes.data || []);
-      setUnreadNotifications(notifRes.data.count || 0);
-      setProEnabled(societyRes.data.pro_enabled || false);
       
       // Count pending by role
-      const pending = pendingRes.data;
+      const pending = pendingRes.data || [];
       const dirigentiPending = pending.filter((u: any) => u.role === 'admin' || u.role === 'viewer').length;
       const coachesPending = pending.filter((u: any) => u.role === 'coach').length;
       const collaboratoriPending = pending.filter((u: any) => u.role === 'collaboratore').length;
       const parentsPending = pending.filter((u: any) => u.role === 'parent').length;
       setPendingCounts({ dirigenti: dirigentiPending, coaches: coachesPending, collaboratori: collaboratoriPending, parents: parentsPending });
+
+      // Group 3: Secondary data (can load slightly delayed)
+      const [birthdaysRes, certsRes, inviteRes, notifRes] = await Promise.all([
+        fetchWithRetry('/birthdays/today', []),
+        fetchWithRetry('/certificates/expiring', { count_today: 0, count_30_days: 0, expiring_today: [], expiring_soon: [] }),
+        fetchWithRetry('/societies/invite-code', { invite_code: '' }),
+        fetchWithRetry('/admin/notifications/unread-count', { count: 0 }),
+      ]);
+      
+      setBirthdays(birthdaysRes.data || []);
+      const certsData = certsRes.data || { count_today: 0, count_30_days: 0, expiring_today: [], expiring_soon: [] };
+      setExpiringCerts(certsData);
+      setInviteCode(inviteRes.data?.invite_code || '');
+      setUnreadNotifications(notifRes.data?.count || 0);
+      
     } catch (error) {
       console.error('Error loading stats:', error);
     }

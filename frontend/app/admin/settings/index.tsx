@@ -92,6 +92,24 @@ export default function SettingsIndex() {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#00BCD4" />
         </TouchableOpacity>
+
+        {/* Card Pagamenti Stripe */}
+        <TouchableOpacity 
+          style={[styles.card, { borderColor: '#6772E5', backgroundColor: '#EEF2FF' }]}
+          onPress={() => router.push('/admin/settings/stripe')}
+          data-testid="settings-stripe-btn"
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#6772E5' }]}>
+            <Ionicons name="card" size={32} color="#fff" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: '#6772E5' }]}>Pagamenti Online</Text>
+            <Text style={styles.cardDescription}>
+              Configura Stripe per accettare pagamenti con carta
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#6772E5" />
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );

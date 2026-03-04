@@ -2156,6 +2156,22 @@ class SocietySettingsUpdate(BaseModel):
     # Medical certificate settings
     block_expired_certificates: Optional[bool] = None  # If True, QR scan blocked for expired certificates
 
+
+# ==================== STRIPE PAYMENT SETTINGS ====================
+
+class StripeSettingsUpdate(BaseModel):
+    """Stripe payment settings for each society"""
+    stripe_enabled: bool = False
+    stripe_publishable_key: Optional[str] = None  # pk_live_... or pk_test_...
+    stripe_secret_key: Optional[str] = None  # sk_live_... or sk_test_...
+    stripe_webhook_secret: Optional[str] = None  # whsec_...
+    stripe_mode: str = "test"  # "test" or "live"
+    # Payment options
+    payment_description: Optional[str] = None  # Description shown on payment page
+    currency: str = "eur"  # Currency code (eur, usd, etc.)
+    # Notification settings
+    send_payment_emails: bool = True  # Send email confirmations
+
 @api_router.get("/settings/society")
 async def get_society_settings():
     """Get society settings (public endpoint - no auth required for logo display)"""
@@ -2278,6 +2294,156 @@ async def update_society_settings(data: SocietySettingsUpdate, current_user = De
         )
     
     return {"message": "Impostazioni aggiornate con successo"}
+
+
+# ==================== STRIPE PAYMENT SETTINGS ====================
+
+@api_router.get("/settings/stripe")
+async def get_stripe_settings(current_user = Depends(get_current_user)):
+    """Get Stripe payment settings (admin only, keys partially masked)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere le impostazioni Stripe")
+    
+    settings = await db.settings.find_one({"type": "stripe"})
+    if not settings:
+        return {
+            "stripe_enabled": False,
+            "stripe_mode": "test",
+            "currency": "eur",
+            "send_payment_emails": True,
+            "has_publishable_key": False,
+            "has_secret_key": False,
+            "has_webhook_secret": False
+        }
+    
+    # Mask keys for security (show only first/last 4 chars)
+    def mask_key(key: str) -> str:
+        if not key or len(key) < 12:
+            return ""
+        return f"{key[:7]}...{key[-4:]}"
+    
+    return {
+        "stripe_enabled": settings.get("stripe_enabled", False),
+        "stripe_mode": settings.get("stripe_mode", "test"),
+        "stripe_publishable_key_masked": mask_key(settings.get("stripe_publishable_key", "")),
+        "stripe_secret_key_masked": mask_key(settings.get("stripe_secret_key", "")),
+        "stripe_webhook_secret_masked": mask_key(settings.get("stripe_webhook_secret", "")),
+        "has_publishable_key": bool(settings.get("stripe_publishable_key")),
+        "has_secret_key": bool(settings.get("stripe_secret_key")),
+        "has_webhook_secret": bool(settings.get("stripe_webhook_secret")),
+        "payment_description": settings.get("payment_description", ""),
+        "currency": settings.get("currency", "eur"),
+        "send_payment_emails": settings.get("send_payment_emails", True)
+    }
+
+
+@api_router.patch("/settings/stripe")
+async def update_stripe_settings(data: StripeSettingsUpdate, current_user = Depends(get_current_user)):
+    """Update Stripe payment settings (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare le impostazioni Stripe")
+    
+    # Validate keys format if provided
+    if data.stripe_publishable_key:
+        if not data.stripe_publishable_key.startswith(("pk_test_", "pk_live_")):
+            raise HTTPException(status_code=400, detail="La chiave pubblica Stripe deve iniziare con pk_test_ o pk_live_")
+    
+    if data.stripe_secret_key:
+        if not data.stripe_secret_key.startswith(("sk_test_", "sk_live_")):
+            raise HTTPException(status_code=400, detail="La chiave segreta Stripe deve iniziare con sk_test_ o sk_live_")
+    
+    if data.stripe_webhook_secret:
+        if not data.stripe_webhook_secret.startswith("whsec_"):
+            raise HTTPException(status_code=400, detail="Il webhook secret deve iniziare con whsec_")
+    
+    # Check key mode consistency
+    if data.stripe_publishable_key and data.stripe_secret_key:
+        pk_mode = "live" if "pk_live_" in data.stripe_publishable_key else "test"
+        sk_mode = "live" if "sk_live_" in data.stripe_secret_key else "test"
+        if pk_mode != sk_mode:
+            raise HTTPException(status_code=400, detail="Le chiavi pubblica e segreta devono essere entrambe test o entrambe live")
+        # Auto-set mode based on keys
+        data.stripe_mode = pk_mode
+    
+    update_dict = {}
+    
+    if data.stripe_enabled is not None:
+        update_dict["stripe_enabled"] = data.stripe_enabled
+    if data.stripe_publishable_key is not None:
+        update_dict["stripe_publishable_key"] = data.stripe_publishable_key
+    if data.stripe_secret_key is not None:
+        update_dict["stripe_secret_key"] = data.stripe_secret_key
+    if data.stripe_webhook_secret is not None:
+        update_dict["stripe_webhook_secret"] = data.stripe_webhook_secret
+    if data.stripe_mode is not None:
+        update_dict["stripe_mode"] = data.stripe_mode
+    if data.payment_description is not None:
+        update_dict["payment_description"] = data.payment_description
+    if data.currency is not None:
+        update_dict["currency"] = data.currency
+    if data.send_payment_emails is not None:
+        update_dict["send_payment_emails"] = data.send_payment_emails
+    
+    update_dict["type"] = "stripe"
+    update_dict["updated_at"] = datetime.now(timezone.utc)
+    update_dict["updated_by"] = current_user["id"]
+    
+    await db.settings.update_one(
+        {"type": "stripe"},
+        {"$set": update_dict},
+        upsert=True
+    )
+    
+    # Log audit event
+    await db.audit_logs.insert_one({
+        "user_id": current_user["id"],
+        "user_email": current_user.get("email", ""),
+        "society_id": current_user.get("society_id", ""),
+        "action": "stripe_settings_updated",
+        "details": {
+            "stripe_enabled": data.stripe_enabled,
+            "stripe_mode": data.stripe_mode
+        },
+        "ip_address": "system",
+        "created_at": datetime.now(timezone.utc)
+    })
+    
+    return {"message": "Impostazioni Stripe aggiornate con successo"}
+
+
+@api_router.delete("/settings/stripe/keys")
+async def delete_stripe_keys(current_user = Depends(get_current_user)):
+    """Delete all Stripe keys (admin only) - for security when switching accounts"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare le chiavi Stripe")
+    
+    await db.settings.update_one(
+        {"type": "stripe"},
+        {"$unset": {
+            "stripe_publishable_key": "",
+            "stripe_secret_key": "",
+            "stripe_webhook_secret": ""
+        },
+        "$set": {
+            "stripe_enabled": False,
+            "updated_at": datetime.now(timezone.utc),
+            "updated_by": current_user["id"]
+        }}
+    )
+    
+    # Log audit event
+    await db.audit_logs.insert_one({
+        "user_id": current_user["id"],
+        "user_email": current_user.get("email", ""),
+        "society_id": current_user.get("society_id", ""),
+        "action": "stripe_keys_deleted",
+        "details": {},
+        "ip_address": "system",
+        "created_at": datetime.now(timezone.utc)
+    })
+    
+    return {"message": "Chiavi Stripe eliminate con successo"}
+
 
 # ==================== ADMIN NOTIFICATIONS ====================
 
