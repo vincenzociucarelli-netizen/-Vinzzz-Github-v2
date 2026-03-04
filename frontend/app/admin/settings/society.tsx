@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
   backButton: {
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 20,
-    padding: 8,
+    padding: 12,
   },
   headerTitle: {
     fontSize: 20,

@@ -463,7 +463,7 @@ export default function TeamsScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Squadre</Text>
         <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Ionicons name="add-circle" size={28} color="#fff" />
+          <Ionicons name="add" size={36} color="#fff" />
         </TouchableOpacity>
       </View>
 

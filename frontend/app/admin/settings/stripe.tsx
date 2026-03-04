@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   backButton: {
-    padding: 8,
+    padding: 12,
   },
   headerTitle: {
     fontSize: 18,

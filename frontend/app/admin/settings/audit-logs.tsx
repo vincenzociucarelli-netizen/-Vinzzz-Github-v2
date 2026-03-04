@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   backButton: {
-    padding: 8,
+    padding: 12,
   },
   title: {
     fontSize: 18,
