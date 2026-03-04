@@ -514,6 +514,7 @@ export default function TeamsScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Es: Under 15"
+                placeholderTextColor="#999"
                 value={name}
                 onChangeText={setName}
               />
@@ -522,6 +523,7 @@ export default function TeamsScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Descrizione squadra (opzionale)"
+                placeholderTextColor="#999"
                 value={description}
                 onChangeText={setDescription}
                 multiline
@@ -583,6 +585,7 @@ export default function TeamsScreen() {
                         <TextInput
                           style={styles.miniInput}
                           placeholder="Es: Liceo Alessi"
+                          placeholderTextColor="#999"
                           value={training.venue}
                           onChangeText={(v) => updateTraining(index, 'venue', v)}
                         />
@@ -595,6 +598,7 @@ export default function TeamsScreen() {
                         <TextInput
                           style={styles.miniInput}
                           placeholder="18:00"
+                          placeholderTextColor="#999"
                           value={training.timeStart}
                           onChangeText={(v) => updateTraining(index, 'timeStart', v)}
                           keyboardType="number-pad"
@@ -606,6 +610,7 @@ export default function TeamsScreen() {
                         <TextInput
                           style={styles.miniInput}
                           placeholder="20:00"
+                          placeholderTextColor="#999"
                           value={training.timeEnd}
                           onChangeText={(v) => updateTraining(index, 'timeEnd', v)}
                           keyboardType="number-pad"
@@ -647,6 +652,7 @@ export default function TeamsScreen() {
                     <TextInput
                       style={styles.miniInput}
                       placeholder="17:00"
+                      placeholderTextColor="#999"
                       value={matchDay.time}
                       onChangeText={(v) => setMatchDay({...matchDay, time: formatTimeInput(v)})}
                       keyboardType="number-pad"
@@ -660,6 +666,7 @@ export default function TeamsScreen() {
                     <TextInput
                       style={styles.miniInput}
                       placeholder="Es: Palasport Perugia"
+                      placeholderTextColor="#999"
                       value={matchDay.venue}
                       onChangeText={(v) => setMatchDay({...matchDay, venue: v})}
                     />
@@ -689,6 +696,7 @@ export default function TeamsScreen() {
                         <TextInput
                           style={styles.miniInput}
                           placeholder="09:00"
+                          placeholderTextColor="#999"
                           value={rifinitura.timeStart}
                           onChangeText={(v) => setRifinitura({...rifinitura, timeStart: formatTimeInput(v)})}
                           keyboardType="number-pad"
@@ -700,6 +708,7 @@ export default function TeamsScreen() {
                         <TextInput
                           style={styles.miniInput}
                           placeholder="11:00"
+                          placeholderTextColor="#999"
                           value={rifinitura.timeEnd}
                           onChangeText={(v) => setRifinitura({...rifinitura, timeEnd: formatTimeInput(v)})}
                           keyboardType="number-pad"
@@ -713,6 +722,7 @@ export default function TeamsScreen() {
                         <TextInput
                           style={styles.miniInput}
                           placeholder="Es: Palasport Perugia"
+                          placeholderTextColor="#999"
                           value={rifinitura.venue}
                           onChangeText={(v) => setRifinitura({...rifinitura, venue: v})}
                         />
@@ -728,6 +738,7 @@ export default function TeamsScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Es: Serie C, Coppa Regionale"
+                placeholderTextColor="#999"
                 value={championships}
                 onChangeText={setChampionships}
                 multiline
@@ -738,6 +749,7 @@ export default function TeamsScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="https://federazione.it/calendario"
+                placeholderTextColor="#999"
                 value={calendarLink}
                 onChangeText={setCalendarLink}
                 keyboardType="url"
@@ -753,6 +765,7 @@ export default function TeamsScreen() {
                   <TextInput
                     style={styles.input}
                     placeholder="Es: 600"
+                    placeholderTextColor="#999"
                     value={totalAmount}
                     onChangeText={setTotalAmount}
                     keyboardType="decimal-pad"
@@ -762,6 +775,7 @@ export default function TeamsScreen() {
                   <TextInput
                     style={styles.input}
                     placeholder="Es: 250"
+                    placeholderTextColor="#999"
                     value={installment1}
                     onChangeText={setInstallment1}
                     keyboardType="decimal-pad"
@@ -771,6 +785,7 @@ export default function TeamsScreen() {
                   <TextInput
                     style={styles.input}
                     placeholder="Es: 150"
+                    placeholderTextColor="#999"
                     value={installment2}
                     onChangeText={setInstallment2}
                     keyboardType="decimal-pad"
@@ -780,6 +795,7 @@ export default function TeamsScreen() {
                   <TextInput
                     style={styles.input}
                     placeholder="GG/MM/AAAA"
+                    placeholderTextColor="#999"
                     value={installment2Date}
                     onChangeText={(text) => {
                       let formatted = text.replace(/[^0-9]/g, '');
@@ -799,6 +815,7 @@ export default function TeamsScreen() {
                   <TextInput
                     style={styles.input}
                     placeholder="Es: 200"
+                    placeholderTextColor="#999"
                     value={installment3}
                     onChangeText={setInstallment3}
                     keyboardType="decimal-pad"
@@ -808,6 +825,7 @@ export default function TeamsScreen() {
                   <TextInput
                     style={styles.input}
                     placeholder="GG/MM/AAAA"
+                    placeholderTextColor="#999"
                     value={installment3Date}
                     onChangeText={(text) => {
                       let formatted = text.replace(/[^0-9]/g, '');
@@ -829,6 +847,7 @@ export default function TeamsScreen() {
                   <TextInput
                     style={[styles.input, styles.textArea, { textTransform: 'uppercase' }]}
                     placeholder="IBAN: IT00..."
+                    placeholderTextColor="#999"
                     value={bankInfo}
                     onChangeText={(text) => setBankInfo(text.toUpperCase())}
                     autoCapitalize="characters"
@@ -840,6 +859,7 @@ export default function TeamsScreen() {
                   <TextInput
                     style={[styles.input, { textTransform: 'lowercase' }]}
                     placeholder="paypal@societa.it"
+                    placeholderTextColor="#999"
                     value={paypalEmail}
                     onChangeText={(text) => setPaypalEmail(text.toLowerCase())}
                     keyboardType="email-address"
@@ -938,6 +958,7 @@ export default function TeamsScreen() {
             <TextInput
               style={styles.deleteModalInput}
               placeholder={teamToDelete?.name || 'Nome squadra'}
+              placeholderTextColor="#999"
               value={deleteConfirmText}
               onChangeText={setDeleteConfirmText}
               autoCapitalize="none"

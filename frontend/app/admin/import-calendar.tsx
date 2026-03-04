@@ -456,6 +456,7 @@ export default function ImportCalendarScreen() {
                   value={mapping.federation_team_name}
                   onChangeText={(text) => updateTeamMappingName(index, text)}
                   placeholder="Nome squadra federazione"
+                  placeholderTextColor="#999"
                 />
                 <Ionicons name="arrow-forward" size={16} color="#666" />
                 <View style={[styles.pickerContainer, { flex: 1 }]}>

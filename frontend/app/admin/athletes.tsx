@@ -530,6 +530,7 @@ export default function AdminAthletes() {
                 value={adultForm.first_name}
                 onChangeText={(v) => setAdultForm({...adultForm, first_name: v})}
                 placeholder="Nome"
+                placeholderTextColor="#999"
                 autoCapitalize="characters"
               />
 
@@ -539,6 +540,7 @@ export default function AdminAthletes() {
                 value={adultForm.last_name}
                 onChangeText={(v) => setAdultForm({...adultForm, last_name: v})}
                 placeholder="Cognome"
+                placeholderTextColor="#999"
                 autoCapitalize="characters"
               />
 
@@ -548,6 +550,7 @@ export default function AdminAthletes() {
                 value={adultForm.email}
                 onChangeText={(v) => setAdultForm({...adultForm, email: v.toLowerCase()})}
                 placeholder="email@esempio.com"
+                placeholderTextColor="#999"
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -580,6 +583,7 @@ export default function AdminAthletes() {
                     value={adultForm.date_of_birth}
                     onChangeText={(v) => setAdultForm({...adultForm, date_of_birth: formatDateInput(v)})}
                     placeholder="GG/MM/AAAA"
+                    placeholderTextColor="#999"
                     maxLength={10}
                     keyboardType="numeric"
                   />
@@ -592,6 +596,7 @@ export default function AdminAthletes() {
                 value={adultForm.place_of_birth}
                 onChangeText={(v) => setAdultForm({...adultForm, place_of_birth: v})}
                 placeholder="Es: Roma, Perugia, Milano..."
+                placeholderTextColor="#999"
                 autoCapitalize="words"
               />
 
@@ -601,6 +606,7 @@ export default function AdminAthletes() {
                   value={adultForm.fiscal_code}
                   onChangeText={(v) => setAdultForm({...adultForm, fiscal_code: v.toUpperCase()})}
                   placeholder="CODICE FISCALE"
+                  placeholderTextColor="#999"
                   autoCapitalize="characters"
                   maxLength={16}
                 />

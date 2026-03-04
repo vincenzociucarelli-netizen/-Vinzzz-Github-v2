@@ -346,6 +346,7 @@ export default function ParentProfile() {
                     onChangeText={setCurrentPassword}
                     secureTextEntry
                     placeholder="Inserisci password attuale"
+                    placeholderTextColor="#999"
                     autoCapitalize="none"
                   />
                 </View>
@@ -358,6 +359,7 @@ export default function ParentProfile() {
                     onChangeText={setNewPassword}
                     secureTextEntry
                     placeholder="Minimo 6 caratteri"
+                    placeholderTextColor="#999"
                     autoCapitalize="none"
                   />
                 </View>
@@ -370,6 +372,7 @@ export default function ParentProfile() {
                     onChangeText={setConfirmNewPassword}
                     secureTextEntry
                     placeholder="Ripeti la nuova password"
+                    placeholderTextColor="#999"
                     autoCapitalize="none"
                   />
                 </View>

@@ -405,6 +405,7 @@ export default function CoachAthleteDetail() {
                 value={height}
                 onChangeText={setHeight}
                 placeholder="175"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
                 placeholderTextColor="#aaa"
                 maxLength={3}
@@ -418,6 +419,7 @@ export default function CoachAthleteDetail() {
                 value={weight}
                 onChangeText={setWeight}
                 placeholder="65"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
                 placeholderTextColor="#aaa"
                 maxLength={3}
@@ -431,6 +433,7 @@ export default function CoachAthleteDetail() {
                 value={elevation}
                 onChangeText={setElevation}
                 placeholder="45"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
                 placeholderTextColor="#aaa"
                 maxLength={3}

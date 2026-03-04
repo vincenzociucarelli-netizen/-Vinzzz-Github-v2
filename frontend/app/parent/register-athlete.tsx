@@ -505,6 +505,7 @@ export default function RegisterAthlete() {
             <TextInput
               style={styles.passwordInput}
               placeholder="Minimo 4 caratteri"
+              placeholderTextColor="#999"
               value={dataPassword}
               onChangeText={setDataPassword}
               secureTextEntry={!showPassword}
@@ -526,6 +527,7 @@ export default function RegisterAthlete() {
           <TextInput
             style={styles.input}
             placeholder="Ripeti la password"
+            placeholderTextColor="#999"
             value={dataPasswordConfirm}
             onChangeText={setDataPasswordConfirm}
             secureTextEntry={!showPassword}

@@ -738,6 +738,7 @@ export default function AdminMatches() {
                   setFormData({ ...formData, date: formatted });
                 }}
                 placeholder="gg/mm/aaaa"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={10}
               />
@@ -755,6 +756,7 @@ export default function AdminMatches() {
                   setFormData({ ...formData, time: formatted });
                 }}
                 placeholder="HH:mm"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={5}
               />
@@ -765,6 +767,7 @@ export default function AdminMatches() {
                 value={formData.opponent}
                 onChangeText={(v) => setFormData({ ...formData, opponent: v })}
                 placeholder="Nome squadra avversaria"
+                placeholderTextColor="#999"
               />
 
               <Text style={styles.label}>Luogo (Palestra)</Text>
@@ -773,6 +776,7 @@ export default function AdminMatches() {
                 value={formData.venue}
                 onChangeText={(v) => setFormData({ ...formData, venue: v })}
                 placeholder="Nome palestra / campo"
+                placeholderTextColor="#999"
               />
 
               <Text style={styles.label}>Indirizzo</Text>
@@ -781,6 +785,7 @@ export default function AdminMatches() {
                 value={formData.address}
                 onChangeText={(v) => setFormData({ ...formData, address: v })}
                 placeholder="Via, numero civico..."
+                placeholderTextColor="#999"
               />
 
               <Text style={styles.label}>Città</Text>
@@ -789,6 +794,7 @@ export default function AdminMatches() {
                 value={formData.city}
                 onChangeText={(v) => setFormData({ ...formData, city: v })}
                 placeholder="es: Perugia, Terni, Foligno..."
+                placeholderTextColor="#999"
               />
 
               <Text style={styles.label}>Casa / Trasferta</Text>
@@ -817,6 +823,7 @@ export default function AdminMatches() {
                 value={formData.meeting_time}
                 onChangeText={(v) => setFormData({ ...formData, meeting_time: v })}
                 placeholder="es: 1 ora prima"
+                placeholderTextColor="#999"
               />
 
               <Text style={styles.label}>Note</Text>
@@ -825,6 +832,7 @@ export default function AdminMatches() {
                 value={formData.notes}
                 onChangeText={(v) => setFormData({ ...formData, notes: v })}
                 placeholder="Note aggiuntive..."
+                placeholderTextColor="#999"
                 multiline
                 numberOfLines={3}
               />

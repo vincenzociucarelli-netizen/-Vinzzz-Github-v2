@@ -297,6 +297,7 @@ export default function SocietySettings() {
             value={societyName}
             onChangeText={setSocietyName}
             placeholder="Es: ASD Volley Club"
+            placeholderTextColor="#999"
           />
         </View>
 
@@ -310,6 +311,7 @@ export default function SocietySettings() {
             value={ragioneSociale}
             onChangeText={setRagioneSociale}
             placeholder="Es: ASD PALLAVOLO PERUGIA"
+            placeholderTextColor="#999"
           />
           
           <Text style={styles.inputLabel}>Sport Praticato</Text>
@@ -318,6 +320,7 @@ export default function SocietySettings() {
             value={sportPraticato}
             onChangeText={setSportPraticato}
             placeholder="Es: Pallavolo, Calcio, Basket..."
+            placeholderTextColor="#999"
           />
           
           <Text style={styles.inputLabel}>Indirizzo</Text>
@@ -326,6 +329,7 @@ export default function SocietySettings() {
             value={address}
             onChangeText={setAddress}
             placeholder="Es: Via Roma, 123"
+            placeholderTextColor="#999"
           />
           
           <View style={styles.row}>
@@ -336,6 +340,7 @@ export default function SocietySettings() {
                 value={postalCode}
                 onChangeText={setPostalCode}
                 placeholder="06100"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
               />
             </View>
@@ -346,6 +351,7 @@ export default function SocietySettings() {
                 value={city}
                 onChangeText={setCity}
                 placeholder="Perugia"
+                placeholderTextColor="#999"
               />
             </View>
             <View style={styles.smallInputContainer}>
@@ -355,6 +361,7 @@ export default function SocietySettings() {
                 value={province}
                 onChangeText={(text) => setProvince(text.toUpperCase())}
                 placeholder="PG"
+                placeholderTextColor="#999"
                 maxLength={2}
                 autoCapitalize="characters"
               />
@@ -367,6 +374,7 @@ export default function SocietySettings() {
             value={fiscalCode}
             onChangeText={setFiscalCode}
             placeholder="Es: 12345678901"
+            placeholderTextColor="#999"
             autoCapitalize="characters"
           />
           
@@ -378,6 +386,7 @@ export default function SocietySettings() {
                 value={phone}
                 onChangeText={setPhone}
                 placeholder="Es: 075 1234567"
+                placeholderTextColor="#999"
                 keyboardType="phone-pad"
               />
             </View>
@@ -388,6 +397,7 @@ export default function SocietySettings() {
                 value={phone2}
                 onChangeText={setPhone2}
                 placeholder="Es: 333 1234567"
+                placeholderTextColor="#999"
                 keyboardType="phone-pad"
               />
             </View>
@@ -399,6 +409,7 @@ export default function SocietySettings() {
             value={presidentName}
             onChangeText={setPresidentName}
             placeholder="Es: Mario Rossi"
+            placeholderTextColor="#999"
           />
 
           <View style={styles.row}>
@@ -409,6 +420,7 @@ export default function SocietySettings() {
                 value={societyEmail}
                 onChangeText={setSocietyEmail}
                 placeholder="info@societasportiva.it"
+                placeholderTextColor="#999"
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -420,6 +432,7 @@ export default function SocietySettings() {
                 value={societyPec}
                 onChangeText={setSocietyPec}
                 placeholder="societa@pec.it"
+                placeholderTextColor="#999"
                 keyboardType="email-address"
                 autoCapitalize="none"
               />

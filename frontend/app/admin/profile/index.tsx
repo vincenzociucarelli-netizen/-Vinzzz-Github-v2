@@ -348,6 +348,7 @@ export default function AdminProfile() {
             autoCapitalize="characters"
             maxLength={isProvinceField ? 2 : undefined}
             placeholder={isProvinceField ? 'es. PG' : undefined}
+            placeholderTextColor="#999"
           />
         ) : (
           <Text style={styles.fieldValue}>{value || '-'}</Text>
@@ -666,6 +667,7 @@ export default function AdminProfile() {
                 value={editData.iban}
                 onChangeText={(t) => setEditData({...editData, iban: t.toUpperCase()})}
                 placeholder="IT..."
+                placeholderTextColor="#999"
                 autoCapitalize="characters"
               />
 
@@ -675,6 +677,7 @@ export default function AdminProfile() {
                 value={editData.account_holder}
                 onChangeText={(t) => setEditData({...editData, account_holder: t.toUpperCase()})}
                 placeholder="Nome e Cognome"
+                placeholderTextColor="#999"
                 autoCapitalize="characters"
               />
 
@@ -684,6 +687,7 @@ export default function AdminProfile() {
                 value={editData.bank_name}
                 onChangeText={(t) => setEditData({...editData, bank_name: t})}
                 placeholder="Nome della banca"
+                placeholderTextColor="#999"
               />
 
               <View style={styles.bankButtonsRow}>

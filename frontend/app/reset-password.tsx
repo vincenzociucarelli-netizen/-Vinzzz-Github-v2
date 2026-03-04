@@ -160,6 +160,7 @@ export default function ResetPassword() {
           <TextInput
             style={styles.input}
             placeholder="La tua email"
+            placeholderTextColor="#999"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -172,6 +173,7 @@ export default function ResetPassword() {
           <TextInput
             style={[styles.input, styles.codeInput]}
             placeholder="XXXXXXXX"
+            placeholderTextColor="#999"
             value={resetCode}
             onChangeText={(text) => setResetCode(text.toUpperCase())}
             autoCapitalize="characters"
@@ -184,6 +186,7 @@ export default function ResetPassword() {
           <TextInput
             style={styles.input}
             placeholder="Minimo 6 caratteri"
+            placeholderTextColor="#999"
             value={newPassword}
             onChangeText={setNewPassword}
             secureTextEntry
@@ -195,6 +198,7 @@ export default function ResetPassword() {
           <TextInput
             style={styles.input}
             placeholder="Ripeti la password"
+            placeholderTextColor="#999"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry

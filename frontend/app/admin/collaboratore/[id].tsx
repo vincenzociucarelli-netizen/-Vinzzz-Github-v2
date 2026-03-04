@@ -545,6 +545,7 @@ export default function AdminCollaboratoreDetail() {
                 onFocus={(e) => { if (monthlyCompensation === '0') setMonthlyCompensation(''); }}
                 keyboardType="numeric"
                 placeholder="0.00"
+                placeholderTextColor="#999"
                 selectTextOnFocus={true}
               />
               
@@ -556,6 +557,7 @@ export default function AdminCollaboratoreDetail() {
                 onFocus={(e) => { if (otherAnnualCompensation === '0') setOtherAnnualCompensation(''); }}
                 keyboardType="numeric"
                 placeholder="0.00"
+                placeholderTextColor="#999"
                 selectTextOnFocus={true}
               />
               
@@ -573,6 +575,7 @@ export default function AdminCollaboratoreDetail() {
                   setContractStartDate(formatted);
                 }}
                 placeholder="gg/mm/aaaa"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={10}
               />
@@ -591,6 +594,7 @@ export default function AdminCollaboratoreDetail() {
                   setContractEndDate(formatted);
                 }}
                 placeholder="gg/mm/aaaa"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={10}
               />
@@ -1178,6 +1182,7 @@ export default function AdminCollaboratoreDetail() {
               value={newPassword}
               onChangeText={setNewPassword}
               placeholder="Nuova password (min 6 caratteri)"
+              placeholderTextColor="#999"
             />
             
             <View style={styles.modalButtons}>

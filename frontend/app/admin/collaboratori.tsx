@@ -623,6 +623,7 @@ export default function CollaboratoreesScreen() {
                   onChangeText={setProposedCompensation}
                   onFocus={() => { if (proposedCompensation === '0') setProposedCompensation(''); }}
                   placeholder="0"
+                  placeholderTextColor="#999"
                   keyboardType="decimal-pad"
                   placeholderTextColor="#999"
                   selectTextOnFocus={true}
@@ -640,6 +641,7 @@ export default function CollaboratoreesScreen() {
                   onChangeText={setPriorCompensation}
                   onFocus={() => { if (priorCompensation === '0') setPriorCompensation(''); }}
                   placeholder="0"
+                  placeholderTextColor="#999"
                   keyboardType="decimal-pad"
                   placeholderTextColor="#999"
                   selectTextOnFocus={true}

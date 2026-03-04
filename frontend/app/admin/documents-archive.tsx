@@ -340,6 +340,7 @@ export default function DocumentsArchive() {
             <TextInput
               style={styles.searchInput}
               placeholder="Cerca per nome..."
+              placeholderTextColor="#999"
               value={searchQuery}
               onChangeText={setSearchQuery}
               onSubmitEditing={handleSearch}

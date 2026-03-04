@@ -186,6 +186,7 @@ export default function MedicalCertificatesArchiveScreen() {
             <TextInput
               style={styles.searchInput}
               placeholder="Cerca per cognome o nome..."
+              placeholderTextColor="#999"
               value={searchInput}
               onChangeText={setSearchInput}
               onSubmitEditing={handleSearch}

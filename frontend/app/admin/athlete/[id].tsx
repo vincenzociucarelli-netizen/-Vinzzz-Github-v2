@@ -1648,6 +1648,7 @@ export default function AdminAthleteDetail() {
                       value={editData.athlete_role}
                       onChangeText={(t) => setEditData({...editData, athlete_role: t})}
                       placeholder="Es. Palleggiatore, Schiacciatore..."
+                      placeholderTextColor="#999"
                     />
                   )}
                   <View style={styles.rowInputsThree}>
@@ -1658,6 +1659,7 @@ export default function AdminAthleteDetail() {
                         value={editData.athlete_height}
                         onChangeText={(t) => setEditData({...editData, athlete_height: t.replace(/\D/g, '')})}
                         placeholder="175"
+                        placeholderTextColor="#999"
                         keyboardType="numeric"
                         maxLength={3}
                       />
@@ -1669,6 +1671,7 @@ export default function AdminAthleteDetail() {
                         value={editData.athlete_weight}
                         onChangeText={(t) => setEditData({...editData, athlete_weight: t.replace(/\D/g, '')})}
                         placeholder="65"
+                        placeholderTextColor="#999"
                         keyboardType="numeric"
                         maxLength={3}
                       />
@@ -1680,6 +1683,7 @@ export default function AdminAthleteDetail() {
                         value={editData.athlete_elevation}
                         onChangeText={(t) => setEditData({...editData, athlete_elevation: t.replace(/\D/g, '')})}
                         placeholder="45"
+                        placeholderTextColor="#999"
                         keyboardType="numeric"
                         maxLength={3}
                       />
@@ -1691,6 +1695,7 @@ export default function AdminAthleteDetail() {
                     value={editData.athlete_notes}
                     onChangeText={(t) => setEditData({...editData, athlete_notes: t})}
                     placeholder="Note, osservazioni, informazioni utili..."
+                    placeholderTextColor="#999"
                     multiline
                     numberOfLines={3}
                   />
@@ -1822,6 +1827,7 @@ export default function AdminAthleteDetail() {
                     value={editData.athlete_code}
                     onChangeText={(t) => setEditData({...editData, athlete_code: t.toUpperCase().replace(/[^A-Z0-9_-]/g, '')})}
                     placeholder="Es: ROSSI_MARIO_U16"
+                    placeholderTextColor="#999"
                     autoCapitalize="characters"
                   />
                   <Text style={{ fontSize: 11, color: '#666', marginTop: 4, marginBottom: 8 }}>
@@ -1865,6 +1871,7 @@ export default function AdminAthleteDetail() {
                     value={editData.federal_code}
                     onChangeText={(t) => setEditData({...editData, federal_code: t.toUpperCase()})}
                     placeholder="Inserisci codice federale"
+                    placeholderTextColor="#999"
                     autoCapitalize="characters"
                   />
                   <View style={styles.switchRow}>
@@ -1916,6 +1923,7 @@ export default function AdminAthleteDetail() {
                     value={editData.date_of_birth}
                     onChangeText={(t) => setEditData({...editData, date_of_birth: formatDateInputAuto(t)})}
                     placeholder="01/01/2010"
+                    placeholderTextColor="#999"
                     keyboardType="number-pad"
                     maxLength={10}
                   />
@@ -1950,6 +1958,7 @@ export default function AdminAthleteDetail() {
                         maxLength={2}
                         autoCapitalize="characters"
                         placeholder="PG"
+                        placeholderTextColor="#999"
                       />
                     </View>
                   </View>
@@ -2058,6 +2067,7 @@ export default function AdminAthleteDetail() {
                         keyboardType="email-address"
                         autoCapitalize="none"
                         placeholder="email@esempio.com"
+                        placeholderTextColor="#999"
                       />
                       <Text style={styles.inputHint}>👨‍👩‍👧 Se il secondo genitore si registra con questa email, vedrà automaticamente questo atleta</Text>
                     </>
@@ -2097,6 +2107,7 @@ export default function AdminAthleteDetail() {
                         maxLength={2}
                         autoCapitalize="characters"
                         placeholder="PG"
+                        placeholderTextColor="#999"
                       />
                     </View>
                   </View>
@@ -2395,6 +2406,7 @@ export default function AdminAthleteDetail() {
                 }}
                 keyboardType="decimal-pad"
                 placeholder="0"
+                placeholderTextColor="#999"
               />
               <Text style={styles.inputLabel}>Nota Sconto</Text>
               <TextInput
@@ -2402,6 +2414,7 @@ export default function AdminAthleteDetail() {
                 value={editData.discount_note}
                 onChangeText={(t) => setEditData({...editData, discount_note: t})}
                 placeholder="Es: Sconto fratello"
+                placeholderTextColor="#999"
               />
               <TouchableOpacity style={styles.saveBtn} onPress={handleSaveData}>
                 <Text style={styles.saveBtnText}>Salva Sconto</Text>
@@ -2760,6 +2773,7 @@ export default function AdminAthleteDetail() {
               onChangeText={(t) => setNewPayment({...newPayment, amount: t})}
               keyboardType="decimal-pad"
               placeholder="Es: 150"
+              placeholderTextColor="#999"
             />
             
             <Text style={styles.inputLabel}>Data Pagamento (GG/MM/AAAA) *</Text>
@@ -2768,6 +2782,7 @@ export default function AdminAthleteDetail() {
               value={newPayment.paid_date}
               onChangeText={(t) => setNewPayment({...newPayment, paid_date: formatDateInputAuto(t)})}
               placeholder="Es: 15/01/2025"
+              placeholderTextColor="#999"
               keyboardType="number-pad"
               maxLength={10}
             />
@@ -2778,6 +2793,7 @@ export default function AdminAthleteDetail() {
               value={newPayment.description}
               onChangeText={(t) => setNewPayment({...newPayment, description: t})}
               placeholder="Es: Quota Gennaio-Febbraio"
+              placeholderTextColor="#999"
             />
             
             <Text style={styles.inputLabel}>Metodo di Pagamento</Text>
@@ -2805,6 +2821,7 @@ export default function AdminAthleteDetail() {
               value={newPayment.notes}
               onChangeText={(t) => setNewPayment({...newPayment, notes: t})}
               placeholder="Note opzionali"
+              placeholderTextColor="#999"
             />
             
             <View style={styles.modalButtons}>
@@ -2852,6 +2869,7 @@ export default function AdminAthleteDetail() {
             <TextInput
               style={styles.modalInput}
               placeholder="Es: Trasferimento ad altra squadra"
+              placeholderTextColor="#999"
               value={withdrawReason}
               onChangeText={setWithdrawReason}
               multiline

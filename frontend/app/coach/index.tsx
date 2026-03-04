@@ -811,6 +811,7 @@ export default function CoachScreen() {
               <TextInput
                 style={styles.manualInput}
                 placeholder="Codice QR atleta"
+                placeholderTextColor="#999"
                 value={manualQrInput}
                 onChangeText={setManualQrInput}
                 autoCapitalize="characters"

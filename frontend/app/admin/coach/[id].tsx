@@ -803,6 +803,7 @@ export default function AdminCoachDetail() {
                   }
                 }}
                 placeholder="GG/MM/AAAA"
+                placeholderTextColor="#999"
                 maxLength={10}
               />
               
@@ -836,6 +837,7 @@ export default function AdminCoachDetail() {
                   }
                 }}
                 placeholder="GG/MM/AAAA"
+                placeholderTextColor="#999"
                 maxLength={10}
               />
               
@@ -847,6 +849,7 @@ export default function AdminCoachDetail() {
                 onFocus={() => { if (monthlyCompensation === '0') setMonthlyCompensation(''); }}
                 keyboardType="decimal-pad"
                 placeholder="0"
+                placeholderTextColor="#999"
                 selectTextOnFocus={true}
               />
               
@@ -858,6 +861,7 @@ export default function AdminCoachDetail() {
                 onFocus={() => { if (otherAnnualCompensation === '0') setOtherAnnualCompensation(''); }}
                 keyboardType="decimal-pad"
                 placeholder="0"
+                placeholderTextColor="#999"
                 selectTextOnFocus={true}
               />
               <Text style={styles.inputHint}>

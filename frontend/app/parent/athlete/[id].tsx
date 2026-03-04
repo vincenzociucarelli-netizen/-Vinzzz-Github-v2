@@ -2364,6 +2364,7 @@ export default function AthleteDetail() {
             <TextInput
               style={styles.passwordInput}
               placeholder="Password"
+              placeholderTextColor="#999"
               value={enteredPassword}
               onChangeText={setEnteredPassword}
               secureTextEntry

@@ -716,6 +716,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             keyboardType={isDateField ? 'number-pad' : 'default'}
             maxLength={isDateField ? 10 : isProvinceField ? 2 : undefined}
             placeholder={isDateField ? '01/01/1990' : isProvinceField ? 'es. PG' : undefined}
+            placeholderTextColor="#999"
           />
         ) : (
           <Text style={styles.fieldValue}>{value || '-'}</Text>
@@ -815,6 +816,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   onChangeText={setCurrentPassword}
                   secureTextEntry
                   placeholder="Inserisci password attuale"
+                  placeholderTextColor="#999"
                   autoCapitalize="none"
                 />
               </View>
@@ -827,6 +829,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   onChangeText={setNewPassword}
                   secureTextEntry
                   placeholder="Minimo 6 caratteri"
+                  placeholderTextColor="#999"
                   autoCapitalize="none"
                 />
               </View>
@@ -839,6 +842,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   onChangeText={setConfirmNewPassword}
                   secureTextEntry
                   placeholder="Ripeti la nuova password"
+                  placeholderTextColor="#999"
                   autoCapitalize="none"
                 />
               </View>
@@ -965,6 +969,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   autoCapitalize="characters"
                   maxLength={16}
                   placeholder="CODICE FISCALE"
+                  placeholderTextColor="#999"
                 />
                 <TouchableOpacity 
                   style={styles.calculateCfBtn}
@@ -1009,6 +1014,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 }}
                 keyboardType="numeric"
                 placeholder="0.00"
+                placeholderTextColor="#999"
               />
             </View>
             <Text style={{ fontSize: 11, color: '#666', marginTop: 4, fontStyle: 'italic' }}>

@@ -323,6 +323,7 @@ export default function AthleteSearchScreen() {
                 value={filters.birthYearFrom}
                 onChangeText={(text) => setFilters({...filters, birthYearFrom: text})}
                 placeholder="Da"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={4}
               />
@@ -332,6 +333,7 @@ export default function AthleteSearchScreen() {
                 value={filters.birthYearTo}
                 onChangeText={(text) => setFilters({...filters, birthYearTo: text})}
                 placeholder="A"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={4}
               />
@@ -346,6 +348,7 @@ export default function AthleteSearchScreen() {
               value={filters.postalCode}
               onChangeText={(text) => setFilters({...filters, postalCode: text})}
               placeholder="es: 061"
+              placeholderTextColor="#999"
               keyboardType="numeric"
               maxLength={5}
             />
@@ -360,6 +363,7 @@ export default function AthleteSearchScreen() {
                 value={filters.heightMin}
                 onChangeText={(text) => setFilters({...filters, heightMin: text})}
                 placeholder="Da"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={3}
               />
@@ -369,6 +373,7 @@ export default function AthleteSearchScreen() {
                 value={filters.heightMax}
                 onChangeText={(text) => setFilters({...filters, heightMax: text})}
                 placeholder="A"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={3}
               />

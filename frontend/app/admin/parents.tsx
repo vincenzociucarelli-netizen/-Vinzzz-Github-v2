@@ -371,6 +371,7 @@ export default function ParentsScreen() {
         <TextInput
           style={styles.searchInput}
           placeholder="Cerca genitore o atleta..."
+          placeholderTextColor="#999"
           value={searchQuery}
           onChangeText={setSearchQuery}
           autoCapitalize="none"

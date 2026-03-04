@@ -236,6 +236,7 @@ export default function OtherSettings() {
               value={newRole}
               onChangeText={setNewRole}
               placeholder="Aggiungi ruolo..."
+              placeholderTextColor="#999"
               onSubmitEditing={addRole}
               returnKeyType="done"
             />
@@ -273,6 +274,7 @@ export default function OtherSettings() {
               value={newCharacteristic}
               onChangeText={setNewCharacteristic}
               placeholder="Aggiungi caratteristica..."
+              placeholderTextColor="#999"
               onSubmitEditing={addCharacteristic}
               returnKeyType="done"
             />
@@ -310,6 +312,7 @@ export default function OtherSettings() {
               value={newQualification}
               onChangeText={setNewQualification}
               placeholder="Aggiungi qualifica..."
+              placeholderTextColor="#999"
               onSubmitEditing={addQualification}
               returnKeyType="done"
             />
@@ -347,12 +350,14 @@ export default function OtherSettings() {
               value={newVenueName}
               onChangeText={setNewVenueName}
               placeholder="Nome palestra (es: Palestra Liceo Alessi)"
+              placeholderTextColor="#999"
             />
             <TextInput
               style={[styles.input, { marginBottom: 8 }]}
               value={newVenueAddress}
               onChangeText={setNewVenueAddress}
               placeholder="Indirizzo (es: Via Annibale Vecchi, 1)"
+              placeholderTextColor="#999"
             />
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TextInput
@@ -360,6 +365,7 @@ export default function OtherSettings() {
                 value={newVenueCity}
                 onChangeText={setNewVenueCity}
                 placeholder="Città (es: Perugia)"
+                placeholderTextColor="#999"
               />
               <TouchableOpacity 
                 style={[styles.addBtn, { backgroundColor: '#9C27B0', height: 48, width: 48 }]} 

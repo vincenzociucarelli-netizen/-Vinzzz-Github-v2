@@ -547,6 +547,7 @@ export default function TeamDetail() {
                 value={name}
                 onChangeText={setName}
                 placeholder="Nome squadra"
+                placeholderTextColor="#999"
               />
 
               <Text style={styles.inputLabel}>Descrizione</Text>
@@ -555,6 +556,7 @@ export default function TeamDetail() {
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Descrizione opzionale"
+                placeholderTextColor="#999"
                 multiline
               />
             </View>
@@ -697,6 +699,7 @@ export default function TeamDetail() {
                 onChangeText={setTotalAmount}
                 keyboardType="decimal-pad"
                 placeholder="Es: 450"
+                placeholderTextColor="#999"
               />
 
               <Text style={styles.inputLabel}>Rate di Pagamento (max 12)</Text>
@@ -735,6 +738,7 @@ export default function TeamDetail() {
                         }}
                         keyboardType="decimal-pad"
                         placeholder="Es: 150"
+                        placeholderTextColor="#999"
                       />
                     </View>
                     {index > 0 && (
@@ -749,6 +753,7 @@ export default function TeamDetail() {
                             setInstallments(newInstallments);
                           }}
                           placeholder="GG/MM/AAAA"
+                          placeholderTextColor="#999"
                           keyboardType="numeric"
                           maxLength={10}
                         />
@@ -782,6 +787,7 @@ export default function TeamDetail() {
                 autoCapitalize="characters"
                 multiline
                 placeholder="IBAN e intestatario"
+                placeholderTextColor="#999"
               />
 
               <Text style={styles.inputLabel}>Email PayPal</Text>
@@ -792,6 +798,7 @@ export default function TeamDetail() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 placeholder="paypal@email.com"
+                placeholderTextColor="#999"
               />
             </View>
             )}
@@ -834,6 +841,7 @@ export default function TeamDetail() {
                           value={session.timeStart}
                           onChangeText={(v) => updateTrainingSession(index, 'timeStart', formatTimeInput(v))}
                           placeholder="18:00"
+                          placeholderTextColor="#999"
                           maxLength={5}
                           keyboardType="number-pad"
                         />
@@ -845,6 +853,7 @@ export default function TeamDetail() {
                           value={session.timeEnd}
                           onChangeText={(v) => updateTrainingSession(index, 'timeEnd', formatTimeInput(v))}
                           placeholder="20:00"
+                          placeholderTextColor="#999"
                           maxLength={5}
                           keyboardType="number-pad"
                         />
@@ -870,6 +879,7 @@ export default function TeamDetail() {
                             value={session.venue}
                             onChangeText={(v) => updateTrainingSession(index, 'venue', v)}
                             placeholder="Palestra"
+                            placeholderTextColor="#999"
                           />
                         )}
                       </View>
@@ -912,6 +922,7 @@ export default function TeamDetail() {
                       value={matchDay.time}
                       onChangeText={(v) => setMatchDay({...matchDay, time: formatTimeInput(v)})}
                       placeholder="17:00"
+                      placeholderTextColor="#999"
                       keyboardType="numeric"
                       maxLength={5}
                     />
@@ -937,6 +948,7 @@ export default function TeamDetail() {
                         value={matchDay.venue}
                         onChangeText={(v) => setMatchDay({...matchDay, venue: v})}
                         placeholder="Palasport"
+                        placeholderTextColor="#999"
                       />
                     )}
                   </View>
@@ -968,6 +980,7 @@ export default function TeamDetail() {
                         value={rifinitura.timeStart}
                         onChangeText={(v) => setRifinitura({...rifinitura, timeStart: formatTimeInput(v)})}
                         placeholder="09:00"
+                        placeholderTextColor="#999"
                         keyboardType="numeric"
                         maxLength={5}
                       />
@@ -979,6 +992,7 @@ export default function TeamDetail() {
                         value={rifinitura.timeEnd}
                         onChangeText={(v) => setRifinitura({...rifinitura, timeEnd: formatTimeInput(v)})}
                         placeholder="11:00"
+                        placeholderTextColor="#999"
                         keyboardType="numeric"
                         maxLength={5}
                       />
@@ -1004,6 +1018,7 @@ export default function TeamDetail() {
                           value={rifinitura.venue}
                           onChangeText={(v) => setRifinitura({...rifinitura, venue: v})}
                           placeholder="Palasport"
+                          placeholderTextColor="#999"
                         />
                       )}
                     </View>
@@ -1019,6 +1034,7 @@ export default function TeamDetail() {
                 value={championships}
                 onChangeText={setChampionships}
                 placeholder="Es: Serie C, Coppa Italia"
+                placeholderTextColor="#999"
               />
               <Text style={styles.inputLabel}>Link Calendario Federazione</Text>
               <TextInput
@@ -1026,6 +1042,7 @@ export default function TeamDetail() {
                 value={calendarLink}
                 onChangeText={setCalendarLink}
                 placeholder="https://..."
+                placeholderTextColor="#999"
               />
             </View>
           </View>
@@ -1377,6 +1394,7 @@ export default function TeamDetail() {
                         value={session.timeStart}
                         onChangeText={(value) => updateTrainingSession(index, 'timeStart', formatTimeInput(value))}
                         placeholder="18:00"
+                        placeholderTextColor="#999"
                         maxLength={5}
                         keyboardType="number-pad"
                       />
@@ -1388,6 +1406,7 @@ export default function TeamDetail() {
                         value={session.timeEnd}
                         onChangeText={(value) => updateTrainingSession(index, 'timeEnd', formatTimeInput(value))}
                         placeholder="20:00"
+                        placeholderTextColor="#999"
                         maxLength={5}
                         keyboardType="number-pad"
                       />
@@ -1402,6 +1421,7 @@ export default function TeamDetail() {
                         value={session.venue}
                         onChangeText={(value) => updateTrainingSession(index, 'venue', value)}
                         placeholder="Es: Palestra Liceo Alessi"
+                        placeholderTextColor="#999"
                       />
                     </View>
                   </View>
@@ -1443,6 +1463,7 @@ export default function TeamDetail() {
                       value={matchDay.time}
                       onChangeText={(value) => setMatchDay({...matchDay, time: value})}
                       placeholder="17:00"
+                      placeholderTextColor="#999"
                       maxLength={5}
                     />
                   </View>
@@ -1467,6 +1488,7 @@ export default function TeamDetail() {
                         value={matchDay.venue}
                         onChangeText={(value) => setMatchDay({...matchDay, venue: value})}
                         placeholder="Es: Palasport"
+                        placeholderTextColor="#999"
                       />
                     )}
                   </View>

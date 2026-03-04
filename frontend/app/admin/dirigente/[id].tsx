@@ -599,6 +599,7 @@ export default function AdminDirigenteDetail() {
                 onChangeText={setMonthlyCompensation}
                 keyboardType="decimal-pad"
                 placeholder="0"
+                placeholderTextColor="#999"
               />
               
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>Compensi Pregressi (€) - Da altre ASD/SSD nell'anno</Text>
@@ -608,6 +609,7 @@ export default function AdminDirigenteDetail() {
                 onChangeText={setOtherAnnualCompensation}
                 keyboardType="decimal-pad"
                 placeholder="0"
+                placeholderTextColor="#999"
               />
               <Text style={{ fontSize: 12, color: '#666', marginTop: 4, marginBottom: 12 }}>
                 Compensi già percepiti da altre società sportive nell'anno solare corrente
@@ -962,6 +964,7 @@ export default function AdminDirigenteDetail() {
                   value={iban}
                   onChangeText={(text) => setIban(text.toUpperCase())}
                   placeholder="IT00X0000000000000000000000"
+                  placeholderTextColor="#999"
                   autoCapitalize="characters"
                 />
 
@@ -971,6 +974,7 @@ export default function AdminDirigenteDetail() {
                   value={ibanHolder}
                   onChangeText={(text) => setIbanHolder(text.toUpperCase())}
                   placeholder="NOME COGNOME"
+                  placeholderTextColor="#999"
                   autoCapitalize="characters"
                 />
 
@@ -980,6 +984,7 @@ export default function AdminDirigenteDetail() {
                   value={bankName}
                   onChangeText={(text) => setBankName(text.toUpperCase())}
                   placeholder="ES. UNICREDIT, INTESA SANPAOLO"
+                  placeholderTextColor="#999"
                   autoCapitalize="characters"
                 />
 

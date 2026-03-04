@@ -518,6 +518,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               value={editData[key as keyof typeof editData]?.toString() || ''}
               onChangeText={(text) => formatDateInput(text, key)}
               placeholder="GG/MM/AAAA"
+              placeholderTextColor="#999"
               keyboardType="number-pad"
               maxLength={10}
             />
@@ -535,6 +536,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               autoCapitalize="characters"
               maxLength={isProvinceField ? 2 : undefined}
               placeholder={isProvinceField ? 'es. PG' : undefined}
+              placeholderTextColor="#999"
             />
           )
         ) : (
@@ -616,6 +618,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   onChangeText={setCurrentPassword}
                   secureTextEntry
                   placeholder="Inserisci password attuale"
+                  placeholderTextColor="#999"
                   autoCapitalize="none"
                 />
               </View>
@@ -628,6 +631,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   onChangeText={setNewPassword}
                   secureTextEntry
                   placeholder="Minimo 6 caratteri"
+                  placeholderTextColor="#999"
                   autoCapitalize="none"
                 />
               </View>
@@ -640,6 +644,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   onChangeText={setConfirmNewPassword}
                   secureTextEntry
                   placeholder="Ripeti la nuova password"
+                  placeholderTextColor="#999"
                   autoCapitalize="none"
                 />
               </View>
@@ -766,6 +771,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   autoCapitalize="characters"
                   maxLength={16}
                   placeholder="CODICE FISCALE"
+                  placeholderTextColor="#999"
                 />
                 <TouchableOpacity 
                   style={styles.calculateCfBtn}
