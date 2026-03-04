@@ -10355,6 +10355,7 @@ def generate_monthly_receipt_pdf(
 
 def generate_gdpr_adult_privacy_pdf(
     society_name: str,
+    ragione_sociale: str,
     society_address: str,
     society_cf_piva: str,
     society_email: str,
@@ -10378,6 +10379,9 @@ def generate_gdpr_adult_privacy_pdf(
     """Generate GDPR-compliant privacy consent PDF for adults (collaboratori, coach, dirigenti, atleti maggiorenni)"""
     if not HAS_PDF_GENERATION:
         raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    # Usa ragione_sociale se disponibile, altrimenti society_name
+    nome_legale = ragione_sociale if ragione_sociale else society_name
     
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -10417,7 +10421,7 @@ def generate_gdpr_adult_privacy_pdf(
     
     # Intro
     c.setFont("Helvetica", 10)
-    intro_text = f"Gentile Collaboratore, La presente informativa descrive le modalità di trattamento dei dati personali da parte di {society_name}, con sede in {society_address}, C.F./P.IVA {society_cf_piva}, email {society_email}."
+    intro_text = f"Gentile Collaboratore, La presente informativa descrive le modalità di trattamento dei dati personali da parte di {nome_legale}, con sede in {society_address}, C.F./P.IVA {society_cf_piva}, email {society_email}."
     y = draw_wrapped_text(c, intro_text, 2*cm, y, max_w)
     
     y -= 0.5*cm
@@ -10427,7 +10431,7 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2*cm, y, "1. TITOLARE DEL TRATTAMENTO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    titolare_text = f"Il Titolare del trattamento è {society_name}, con sede in {society_address} – email: {society_email}."
+    titolare_text = f"Il Titolare del trattamento è {nome_legale}, con sede in {society_address} – email: {society_email}."
     y = draw_wrapped_text(c, titolare_text, 2*cm, y, max_w)
     
     y -= 0.3*cm
@@ -10442,7 +10446,7 @@ def generate_gdpr_adult_privacy_pdf(
     finalita = [
         "a) Gestione del rapporto associativo/collaborativo con la Società;",
         "b) Adempimento degli obblighi di legge, fiscali e contabili;",
-        "c) Comunicazione con gli enti sportivi di riferimento (es. Federazioni, EPS, CONI);",
+        "c) Comunicazione con gli enti sportivi di riferimento (es. Federazioni, EPS, RAS);",
         "d) Gestione delle attività sportive, organizzative e amministrative della Società."
     ]
     for f in finalita:
@@ -10554,7 +10558,7 @@ def generate_gdpr_adult_privacy_pdf(
     y_box -= 0.45*cm
     c.drawString(2.5*cm, y_box, f"Residente in {signer_address}, {signer_city} ({signer_province})")
     y_box -= 0.45*cm
-    c.drawString(2.5*cm, y_box, f"Società: {society_name}")
+    c.drawString(2.5*cm, y_box, f"Società: {nome_legale}")
     
     y -= 4.5*cm
     
@@ -11577,24 +11581,41 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
             society_address = society.get("address", "") if society else ""
             society_cf_piva = society.get("cf_piva", society.get("codice_fiscale", "")) if society else ""
             society_email_addr = society.get("email", "") if society else ""
+            ragione_sociale = society.get("ragione_sociale", "") if society else ""
+            
+            # Split signer name into name and surname
+            name_parts = request.signer_name.split(" ", 1) if request.signer_name else ["", ""]
+            signer_surname = name_parts[0] if name_parts else ""
+            signer_first_name = name_parts[1] if len(name_parts) > 1 else ""
+            
+            # Generate document metadata
+            import hashlib
+            from datetime import timezone
+            doc_timestamp = datetime.now(timezone.utc).isoformat()
+            doc_version = "1.0"
+            doc_hash = hashlib.sha256(f"{request.signer_name}{doc_timestamp}".encode()).hexdigest()[:16]
             
             # Use the new GDPR adult privacy PDF format
             pdf_bytes = generate_gdpr_adult_privacy_pdf(
                 society_name=society_name,
+                ragione_sociale=ragione_sociale,
                 society_address=society_address,
                 society_cf_piva=society_cf_piva,
                 society_email=society_email_addr,
-                full_name=request.signer_name,
-                fiscal_code=fiscal_code or "",
-                birth_date=birth_date or "",
-                birth_place=user_data.get("place_of_birth", "") or athlete_data.get("place_of_birth", "") or athlete_data.get("birth_place", "") or "",
-                residence_address=user_data.get("address", "") or athlete_data.get("address", "") or "",
-                residence_city=user_data.get("city", "") or athlete_data.get("city", "") or "",
-                residence_province=user_data.get("province", "") or athlete_data.get("province", "") or "",
-                phone=user_data.get("phone", "") or athlete_data.get("phone", "") or "",
-                email=request.signer_email or user_data.get("email", "") or "",
-                role=role,
+                signer_name=signer_first_name,
+                signer_surname=signer_surname,
+                signer_fiscal_code=fiscal_code or "",
+                signer_birth_date=birth_date or "",
+                signer_birth_place=user_data.get("place_of_birth", "") or athlete_data.get("place_of_birth", "") or athlete_data.get("birth_place", "") or "",
+                signer_address=user_data.get("address", "") or athlete_data.get("address", "") or "",
+                signer_city=user_data.get("city", "") or athlete_data.get("city", "") or "",
+                signer_province=user_data.get("province", "") or athlete_data.get("province", "") or "",
                 signature_base64=request.signature_base64,
+                timestamp=doc_timestamp,
+                ip_address="web",
+                user_agent="web-client",
+                document_version=doc_version,
+                document_hash=doc_hash,
                 user_id=current_user["id"],
                 society_id=current_user.get("society_id", "")
             )
@@ -11906,6 +11927,7 @@ async def sign_gdpr_privacy_document(
             
             pdf_bytes = generate_gdpr_adult_privacy_pdf(
                 society_name=society_name,
+                ragione_sociale=society_settings.get("ragione_sociale", "") if society_settings else "",
                 society_address=society_full_address,
                 society_cf_piva=society_cf_piva,
                 society_email=society_email,
@@ -12181,6 +12203,7 @@ async def preview_gdpr_privacy_document(
             
             pdf_bytes = generate_gdpr_adult_privacy_pdf(
                 society_name=society_name,
+                ragione_sociale=society_settings.get("ragione_sociale", "") if society_settings else "",
                 society_address=society_full_address,
                 society_cf_piva=society_cf_piva,
                 society_email=society_email,
