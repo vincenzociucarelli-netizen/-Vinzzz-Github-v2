@@ -9,7 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from '../../../src/components/Icon';
 import { useRouter } from 'expo-router';
 import api from '../../../src/services/api';
 
@@ -137,7 +137,7 @@ export default function ExportDataPage() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          <Icon name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.title}>Esporta Dati</Text>
         <View style={{ width: 40 }} />
@@ -145,7 +145,7 @@ export default function ExportDataPage() {
 
       {/* Info Banner */}
       <View style={styles.infoBanner}>
-        <Ionicons name="information-circle" size={20} color="#1565C0" />
+        <Icon name="information-circle" size={20} color="#1565C0" />
         <Text style={styles.infoText}>
           I file CSV possono essere aperti con Excel, Google Sheets o altri programmi di foglio di calcolo.
         </Text>
@@ -161,7 +161,7 @@ export default function ExportDataPage() {
             disabled={downloading !== null}
           >
             <View style={[styles.iconContainer, { backgroundColor: option.color + '20' }]}>
-              <Ionicons name={option.icon as any} size={28} color={option.color} />
+              <Icon name={option.icon as any} size={28} color={option.color} />
             </View>
             <View style={styles.cardContent}>
               <Text style={styles.cardTitle}>{option.title}</Text>
@@ -170,14 +170,14 @@ export default function ExportDataPage() {
             {downloading === option.key ? (
               <ActivityIndicator size="small" color={option.color} />
             ) : (
-              <Ionicons name="download-outline" size={24} color="#666" />
+              <Icon name="download-outline" size={24} color="#666" />
             )}
           </TouchableOpacity>
         ))}
 
         {/* GDPR Notice */}
         <View style={styles.gdprNotice}>
-          <Ionicons name="shield-checkmark-outline" size={18} color="#666" />
+          <Icon name="shield-checkmark-outline" size={18} color="#666" />
           <Text style={styles.gdprText}>
             L'esportazione dei dati è conforme al GDPR. I file contengono solo i dati della tua società sportiva.
           </Text>

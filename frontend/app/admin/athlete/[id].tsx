@@ -2380,8 +2380,17 @@ export default function AdminAthleteDetail() {
                 style={styles.input}
                 value={editData.discount_amount === '0' ? '' : editData.discount_amount}
                 onChangeText={(t) => {
-                  // Remove leading zeros unless it's just "0" or "0."
-                  let cleanValue = t.replace(/^0+(?=\d)/, '');
+                  // Allow only numbers and one decimal point
+                  let cleanValue = t.replace(/[^0-9.]/g, '');
+                  // Remove leading zeros (but keep "0" or "0.x")
+                  if (cleanValue.length > 1 && cleanValue.startsWith('0') && cleanValue[1] !== '.') {
+                    cleanValue = cleanValue.replace(/^0+/, '');
+                  }
+                  // Prevent multiple decimal points
+                  const parts = cleanValue.split('.');
+                  if (parts.length > 2) {
+                    cleanValue = parts[0] + '.' + parts.slice(1).join('');
+                  }
                   setEditData({...editData, discount_amount: cleanValue || '0'});
                 }}
                 keyboardType="decimal-pad"

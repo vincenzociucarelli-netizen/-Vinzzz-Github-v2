@@ -9,7 +9,7 @@ import {
   RefreshControl,
   Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from '../../../src/components/Icon';
 import { useRouter } from 'expo-router';
 import api from '../../../src/services/api';
 
@@ -135,7 +135,7 @@ export default function AuditLogsPage() {
     return (
       <View key={log.id} style={styles.logItem}>
         <View style={[styles.logIcon, { backgroundColor: actionInfo.color + '20' }]}>
-          <Ionicons name={actionInfo.icon as any} size={20} color={actionInfo.color} />
+          <Icon name={actionInfo.icon as any} size={20} color={actionInfo.color} />
         </View>
         <View style={styles.logContent}>
           <View style={styles.logHeader}>
@@ -168,7 +168,7 @@ export default function AuditLogsPage() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          <Icon name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.title}>Audit Log</Text>
         <View style={{ width: 40 }} />
@@ -176,7 +176,7 @@ export default function AuditLogsPage() {
 
       {/* Stats */}
       <View style={styles.statsBar}>
-        <Ionicons name="shield-checkmark" size={18} color="#007AFF" />
+        <Icon name="shield-checkmark" size={18} color="#007AFF" />
         <Text style={styles.statsText}>
           {total} eventi registrati
         </Text>
@@ -232,7 +232,7 @@ export default function AuditLogsPage() {
         >
           {logs.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="document-text-outline" size={48} color="#ccc" />
+              <Icon name="document-text-outline" size={48} color="#ccc" />
               <Text style={styles.emptyText}>Nessun log trovato</Text>
             </View>
           ) : (

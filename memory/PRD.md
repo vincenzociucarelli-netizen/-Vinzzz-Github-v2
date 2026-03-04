@@ -134,9 +134,9 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 - Compensation page logic (fallback for missing contract dates)
 
 ### Known Issues
-- P2: `@expo/vector-icons` not rendering correctly on web (recurring)
-- P2: Admin dashboard sometimes fails to load lists (intermittent)
-- P3: Discount field input bug results in leading zeros (e.g., "075")
+- P2: Admin dashboard sometimes fails to load lists (intermittent) - 9 parallel API calls may cause race conditions under load
+- ~~P3: `@expo/vector-icons` not rendering correctly on web~~ ✅ FIXED (04/03/2026) - Replaced with Icon wrapper
+- ~~P3: Discount field input bug results in leading zeros~~ ✅ FIXED - Logic already present
 
 ## Upcoming Tasks (Priority Order)
 1. ~~P1: Implement comprehensive logging for critical actions~~ ✅ COMPLETED

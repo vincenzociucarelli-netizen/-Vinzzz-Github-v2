@@ -10,7 +10,7 @@ import requests
 import os
 import base64
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://gdpr-coach-suite.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://audit-compliance-14.preview.emergentagent.com')
 
 # Test credentials
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"

@@ -27,7 +27,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://gdpr-coach-suite.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://audit-compliance-14.preview.emergentagent.com';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 

@@ -1,153 +1,154 @@
 <analysis>**original_problem_statement**:
-The initial request was to fix bugs and improve the UI across various user roles (Collaborator, Athlete, Admin). This has since expanded to a comprehensive testing and refinement phase, primarily focused on the Coach and Admin flows.
+The user's initial goal was to fix bugs and improve the UI. This evolved into a major architectural refactor, termed the Facilitator model, to enhance data privacy and GDPR compliance by eliminating the storage of sensitive documents and photos.
 
-Recent user requests implemented in this session include:
-1.  **Coach UI Overhaul**: Restructured the coach's home page by moving the team athlete list to a dedicated, navigable page and relocating the My Profile link for better visibility.
-2.  **Profile Standardization**: Systematically updated 6 different user profile pages (Coach, Collaborator, Athlete, Admin, etc.) to:
-    *   Add a Country of Birth dropdown menu.
-    *   Enforce a strict 2-character limit on all Province input fields.
-    *   Place the CAP (Postal Code) and Province fields on the same line for a more compact layout.
-3.  **Admin Workflow Refinements**:
-    *   Made the Già Percepito (Compensations Received) box in the Admin view for Coaches/Collaborators a clickable button that opens a modal with the receipt history.
-    *   Made the income threshold warnings (€5k/€15k) more visually prominent.
-    *   Corrected the content and display of the onboarding checklists for Coaches and Collaborators to ensure consistency and accuracy.
-4.  **Bug Fixes**:
-    *   Resolved a critical post-registration bug that allowed Coaches and Collaborators to access the app before being approved by an admin.
-    *   Fixed a backend  that occurred when saving a Coach's profile.
-    *   Addressed multiple UI layout issues, including a cut-off signature pad, overlapping elements on the scanner page, and content being hidden at the bottom of scrollable views.
-    *   Updated the medical certificate upload form to use a flexible text input for validity in months instead of a fixed dropdown.
+Following the refactor, the user requested a series of new features and improvements:
+1.  **Comprehensive Auditing**: Log critical user actions (logins, certificate changes, overrides, compensation edits, document acceptance, user deletions).
+2.  **Enhanced Security**: Implement rate limiting on the login endpoint to prevent brute-force attacks, with a progressive backoff strategy.
+3.  **Revamped Attendance System**: Redesign the QR code attendance system to be more robust and aligned with real-world sports club operations. This includes:
+    *   Using a unique, non-personal, permanent alphanumeric ID in the QR code.
+    *   Tying attendance records to .
+    *   Handling double scans with an informative popup and a force registration option for coaches.
+    *   Linking QR code validity to the athlete's active status for the season.
+4.  **Data Management**:
+    *   Provide CSV export functionality for athletes, attendance records, compensations, and audit logs.
+    *   Create an admin page to view the new audit logs.
+    *   Allow parents/admins to view and print the new QR codes for athletes.
+5.  **Data Isolation**: Ensure all database queries are strictly filtered by  to prevent data leakage between different sports clubs.
+6.  **Business Logic**: Implement a technical limit of 150 athletes per sports club (ASD), effective until June 30, 2026.
+7.  **UI/UX Fixes**: Remove empty space left by the photo removal and fix minor bugs like leading zeros in input fields.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application for sports club management (RegistraTEAM). The Collaborator flow is considered complete and approved. The user is now actively testing the Coach and Admin flows, leading to a series of iterative UI/UX improvements and bug fixes. The application is stable, and recent work has focused on standardizing user profile forms across the application, fixing an authentication flow bug, and refining the admin's onboarding checklist for new staff members.
+The application is a full-stack React/FastAPI/MongoDB platform for sports club management. The Facilitator model is now deeply integrated. Sensitive data storage has been eliminated. The following major features have been implemented in this session:
+*   **Audit Logging**: A new  collection tracks all specified critical actions. An admin page exists at  to view these logs.
+*   **Security**: A progressive rate limiting system () is active on the  endpoint to mitigate brute-force attacks.
+*   **Attendance System**: A completely new QR code attendance system has been implemented on the backend and frontend. It uses a unique  for each athlete, links attendance to specific training slots, and provides a clear UX for coaches to handle duplicate scans and force registrations with a note.
+*   **Data Isolation**: All major backend endpoints have been refactored to enforce filtering by , ensuring data segregation between clubs.
+*   **Athlete Limit**: A hard limit of 150 athletes per society is enforced on new athlete creation until June 30, 2026.
+*   **Data Export**: Admins can export athletes, attendance, compensations, and audit logs as CSV files from the new  page.
 
 **Last working item**:
-- Last item agent was working: The agent was fixing inconsistencies in the onboarding checklists for Coaches and Collaborators as viewed by the Admin. The specific tasks were:
-    1.  Removing the Compensi già percepiti (Previous compensations) item from the initial approval modal for new coaches.
-    2.  Adding two missing items (Iscrizione RAS and Certificato casellario) to the Collaborator's checklist to ensure it matches the 5 items shown for Coaches.
+- Last item agent was working: Fixing two long-standing minor UI bugs reported in the initial handoff.
+    1.  Improving the logic in  to prevent leading zeros in the discount field.
+    2.  Investigating the  rendering issue on the web, concluding that the existing  wrapper component is the correct approach and that other components might need to be updated to use it.
 - Status: USER VERIFICATION PENDING
 - Agent Testing Done: N
-- Which testing method agent to use? Frontend testing agent. The agent should instruct the testing agent to:
-    1. Navigate to the Admin's list of coaches, find an unapproved coach, and click Approve to verify the modal checklist no longer contains the Compensi già percepiti item.
-    2. Navigate to the Admin's detail page for a collaborator and click the Checklist button to verify the modal now displays all 5 onboarding items.
+- Which testing method agent to use? Frontend testing agent. Instruct the agent to:
+    1.  Navigate to an athlete's detail page in the admin panel.
+    2.  Go to the payment plan section and edit the discount field.
+    3.  Enter 050 and confirm that the value is saved and displayed as 50.
+    4.  Visually inspect key pages of the application (e.g., admin dashboard, coach dashboard) for any missing or broken icons.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   Issue 1: Verify checklist fixes for Coach and Collaborator (P0)
--   Issue 2: Final user acceptance testing of remaining application flows (P1)
--   Issue 3: Discount field input bug results in leading zeros (e.g., 075) (P1)
--   Issue 4: Admin dashboard sometimes fails to load lists (P2)
--   Issue 5:  library fails to load on web (P3)
--   Issue 6: Compensation page logic needs user verification (P3)
+-   Issue 1: Admin dashboard sometimes fails to load lists (P2)
+-   Issue 2:  library fails to load on web (P3)
 
 **Issues Detail**:
--   **Issue 1: Verify checklist fixes for Coach and Collaborator (P0)**
-    -   **Attempted fixes**: The agent located the correct files ( for the approval modal and  for the checklist content) and applied search-and-replace operations to remove the unwanted item and add the missing ones.
-    -   **Next debug checklist**: Use the frontend testing agent or screenshots to visually confirm the checklists in both the coach approval modal and the collaborator detail page are correct.
-    -   **Why fix this issue and what will be achieved with the fix?**: Ensures a consistent and accurate onboarding process for all staff roles.
-    -   **Status**: USER VERIFICATION PENDING
+-   **Issue 1: Admin dashboard intermittent loading failure**
+    -   **Attempted fixes**: None. This issue has been carried over.
+    -   **Next debug checklist**:
+        -   Review data fetching logic and state management in .
+        -   Check the browser's developer console for network errors or race conditions when the dashboard fails to load.
+        -   Inspect the  endpoint logic in  to ensure it's robust and handles cases with no data.
+    -   **Why fix this issue and what will be achieved with the fix?**: Improves the reliability of a core application view for admins.
+    -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
-
--   **Issue 3: Discount field input bug results in leading zeros (P1)**
-    -   **Attempted fixes**: The agent modified the  handler in  to strip non-numeric characters and remove leading zeros if the string length is greater than one. The user reported this was still an issue after the first fix attempt.
-    -   **Next debug checklist**: Test the input field in the admin's view of an athlete's payment plan. Enter a number and verify that no leading zero is preserved.
-    -   **Why fix this issue and what will be achieved with the fix?**: Prevents data entry errors and ensures correct discount amounts are saved.
-    -   **Status**: USER VERIFICATION PENDING
+-   **Issue 2: @expo/vector-icons rendering issue on web**
+    -   **Attempted fixes**: The agent investigated and found an  wrapper component that provides a fallback. However, the agent did not perform a global search-and-replace to ensure all components use this wrapper instead of importing directly from .
+    -   **Next debug checklist**:
+        -   Perform a codebase search for .
+        -   Replace direct imports with the custom wrapper component found at .
+        -   Verify that icons render correctly across the application on the web.
+    -   **Why fix this issue and what will be achieved with the fix?**: Ensures UI consistency across platforms by correctly displaying icons.
+    -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
 
 **In progress Task List**:
--   **Task 1: Implement UI for configurable season dates (P1)**
-    -   **Where to resume**: In , add the necessary  or input fields to the JSX and update the  function to include , , etc., in the API call.
-    -   **What will be achieved with this?**: Allows admins to define their sporting season, which is critical for the sequential receipt numbering logic.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on something**: No.
+None.
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks**:
-    - (P0) Address new bugs found during the user's final testing phase for the remaining user roles (Admin, Parent, Athlete).
-    - (P1) Prepare necessary assets and legal documents (e.g., Privacy Policy) for app store submission.
-- **Future Tasks**:
-    - (P2) Re-evaluate and stabilize the PRO Module.
-    - (P3) Implement Stripe Integration for premium plans.
-    - (P3) Implement Freemium Logic with upgrade prompts in the UI.
-    - (P3) Refactor the monolithic  into a modular structure.
+-   **Future Tasks**:
+    -   (P3) Integrate Stripe for payments (explicitly postponed by user).
+    -   (P3) Refactor the monolithic  into a modular structure (e.g., routes, models, services).
 
 **Completed work in this session**
-- **Coach Flow UI/UX Overhaul**: Refactored the coach dashboard to improve navigation and fixed layout issues on the scanner page.
-- **Profile Standardization**: Added a Country of Birth dropdown and enforced a 2-character limit on Province fields across 5 key profile pages (Coach, Collaborator, Athlete, Dirigente, Admin).
-- **Backend Bug Fix**: Corrected an  in  that prevented coach profiles from being saved.
-- **Authentication Bug Fix**: Resolved a critical bug where newly registered Coaches/Collaborators could access the app before admin approval.
-- **Admin Panel Enhancements**:
-    - Implemented a clickable modal for viewing receipt history for Coaches and Collaborators.
-    - Improved the visibility of income threshold warnings.
-- **UI Layout Fixes**: Addressed multiple layout bugs, including fixing a cut-off signature pad and adding scroll space to prevent content from being hidden.
-- **Medical Certificate Form**: Updated the certificate upload form for athletes to allow free-text input for validity in months.
-
-**Earlier issues found/mentioned but not fixed**
--   **Issue 1: Admin dashboard intermittent loading failure**
-    -   **Debug checklist**: Review data fetching logic and state management in . Investigate potential race conditions.
-    -   **Why to solve this issue and what will be achieved with this?**: Improves the reliability of a core application view for admins.
-    -   **Should Test frontend/backend/both after fix**: Frontend.
-    -   **Is recurring issue?**: Y
--   **Issue 2: @expo/vector-icons rendering issue on web**
-    -   **Debug checklist**: Investigate how  is bundled and configured for the web build. Check for console errors related to font loading.
-    -   **Why to solve this issue and what will be achieved with this?**: Ensures UI consistency across platforms by correctly displaying icons.
-    -   **Should Test frontend/backend/both after fix**: Frontend.
-    -   **Is recurring issue?**: Y
-
-**Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Admin dashboard intermittent loading and  rendering issue.
--   **Recurrence count**: 3+
--   **Status**: NOT STARTED
+-   **Security & Auditing**:
+    -   Implemented comprehensive audit logging for 6 critical actions into a new  collection.
+    -   Created an admin page to view audit logs.
+    -   Implemented progressive rate limiting on the login endpoint using .
+-   **QR Attendance System Overhaul**:
+    -   **Backend**: Reworked the entire check-in logic ( endpoint) to be based on , handle duplicate scans, and allow forced registration with notes.
+    -   **Backend**: Added a  (12-char random string) to the  model, replacing the use of  in QR codes. Added endpoints to backfill and regenerate these identifiers.
+    -   **Frontend**: Updated the Coach's scanner page () to support team selection, provide informative popups for duplicate scans, and include a modal for forced registration with a reason.
+    -   **Frontend**: Updated Admin and Parent views to display and print the new -based QR codes.
+-   **Data Governance & Management**:
+    -   **Data Isolation**: Fixed a critical security flaw by adding  filtering to all key backend endpoints (, , , etc.) to ensure strict data segregation. Created a one-time script to fix legacy data that was missing .
+    -   **Athlete Limit**: Implemented a check to limit each society to 150 athletes until 30/06/2026.
+    -   **CSV Export**: Added backend endpoints and a new admin page () for exporting athletes, attendance, compensations, and audit logs.
+-   **Bug Fixes & UI Cleanup**:
+    -   Completed the removal of all user profile photo elements and the empty space they occupied.
+    -   Fixed the recurring compensation calculation bug in the admin's collaborator view.
+    -   Fixed the discount field input bug that resulted in leading zeros.
+    -   Passed a full test suite from the testing agent for the photo removal and compensation fix.
 
 **Code Architecture**
-update_mecountry_of_birth
+
 
 **Key Technical Concepts**
--   **Systematic Refactoring**: Applied consistent changes (adding Country of Birth, standardizing province fields) across multiple, disparate components, demonstrating a project-wide maintenance capability.
--   **Authentication Flow Debugging**: Identified and fixed a flaw in the post-registration logic by preventing an automatic login and instead redirecting unapproved users to a waiting page.
--   **Conditional UI and State**: Heavily used React state () and conditional rendering to manage complex forms, dynamic content (like checklists), and modal visibility.
--   **Robust Input Handling**: Refined  handlers to enforce client-side validation, such as character limits and preventing invalid numeric inputs (e.g., leading zeros).
--   **Component Decoupling**: Improved the architecture by breaking out the athlete list from the main coach dashboard into its own dedicated page component.
+-   **Progressive Rate Limiting**: Using  in FastAPI with an in-memory store () to track login attempts per IP and apply increasing delays (1 min, 5 min, 1 hour).
+-   **Robust Attendance Logic**: The new model ties attendance to a unique combination of , , , and Wed Mar  4 07:10:59 UTC 2026, preventing simple duplicate entries and correctly handling complex schedules.
+-   **Data Isolation by **: A critical security pattern applied across the backend, where the authenticated user's  is used as a mandatory filter in database queries to prevent cross-tenant data access.
+-   **Streaming CSV Response**: Using FastAPI's  to generate and send large CSV files without holding them entirely in memory.
+-   **Backfilling Data**: Writing a temporary, admin-only endpoint () to populate a new field () for all existing documents in a collection.
 
 **key DB schema**
--   **users**: Modified to include an optional  field.
+-   **users**:
+    -   ADDED:  (unique 12-char alphanumeric string).
+    -   MODIFIED: The  field is now used to determine QR code validity.
+-   **attendances**:
+    -   MODIFIED: The schema now represents a single check-in event.
+    -   ADDED: , , , , , .
+-   **audit_logs (NEW)**:
+    -   
+-   **rate_limit_failures (NEW, in-memory via )**:
+    -   
 
 **All files of reference**
--   
--   
--   
--   
--   
--   
--   
--   All  files under , , , .
--   
+-    (Core logic for all new features)
+-    (New QR scanner UI/UX)
+-    (New UI)
+-    (New UI)
+-    (Bug fix and QR update)
+-    (QR update)
 
 **Critical Info for New Agent**
--   The user is performing active testing, primarily on the Coach and Admin roles. Prioritize fixing bugs and implementing changes they report.
--   The current high-priority task is to verify the fixes made to the onboarding checklists for Coaches and Collaborators.
--   Several feature requests involved making similar changes across multiple profile files. Be prepared for systematic, repetitive modifications and check all relevant files when a change is requested for all roles.
--   The user has experienced issues with the agent becoming unresponsive after being paused. If this occurs, remind the user of the Wake Up Agent button or to simply send another message.
+-   The Facilitator model remains the core principle. Do not introduce features that store sensitive user files.
+-   The new QR attendance logic in  is complex but robust. Refer to it as the source of truth for how check-ins are handled.
+-   Data isolation via  is a critical security requirement. Any new database query that retrieves lists of users, teams, or other society-specific data **must** include a filter for .
+-   The login rate limiting is implemented directly in FastAPI using an in-memory dictionary. This will reset if the backend restarts.
+
+**documents and test reports created in this job**
+-    (Continuously updated throughout the session)
+-    (Generated for the photo removal/compensation bug fix)
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **(IN PROGRESS)** Reports that the approval checklist for Coaches is still incorrect (shows importo pregresso) and the Collaborator checklist is missing items.
-9.  **(RESOLVED)** Asks how to un-pause the agent, noting the send button is inactive. Agent provided guidance from the support team.
-8.  **(IN PROGRESS)** Provides screenshots confirming that the checklist and discount field fixes were not successful.
-7.  **(IN PROGRESS)** User approves the registration fix and requests four new changes related to the admin's onboarding checklist and a discount field bug.
-6.  **(RESOLVED)** Confirms a post-registration bug: Coaches/Collaborators can access the app immediately after signup but are locked out after logging out.
-5.  **(RESOLVED)** Requests that the medical certificate validity field be a free-text input, not a dropdown.
-4.  **(RESOLVED)** Approves a layout fix, then reports that the medical certificate form seen by the Admin is an old version and needs updating.
-3.  **(RESOLVED)** Reports a previous layout fix was unsuccessful and the target section is still cut off.
-2.  **(RESOLVED)** Asks to fix another layout issue by reducing space above a specific section.
-1.  **(RESOLVED)** Reports that the Documents section on the athlete profile is not fully visible and needs more scroll room.
+10. **(CONFIRMED)** User confirms proceeding with CSV export implementation.
+9.  **(CONFIRMED)** User confirms proceeding with the audit log viewer page.
+8.  **(CONFIRMED)** User confirms proceeding with the QR code display/print feature for parents.
+7.  **(CONFIRMED)** User provides detailed specs for the new QR attendance system and confirms the agent's implementation plan.
+6.  **(CONFIRMED)** User requests to remove the empty space left by the profile photos for a cleaner UI.
+5.  **(PENDING)** User asks what happens when an account is blocked by rate limiting. The agent clarified it's a temporary IP block, not an account block.
+4.  **(CONFIRMED)** User requests a more advanced, progressive rate limiting scheme (5 tries -> 1 min, 10 tries -> 5 min, etc.), which the agent implemented.
+3.  **(CONFIRMED)** User agrees to implement rate limiting as a backup measure in FastAPI.
+2.  **(INFO)** User shares advice from ChatGPT regarding security (rate limiting, audit logs, ToS).
+1.  **(CONFIRMED)** User confirms the agent should start implementing the audit logging feature.
 
 **Project Health Check:**
--   **Broken**: None. The app is running and usable.
+-   **Broken**: The admin dashboard () reportedly has an intermittent issue where data fails to load.
 -   **Mocked**: None.
 
 **3rd Party Integrations**
@@ -160,14 +161,18 @@ update_mecountry_of_birth
 -   react-native-qrcode-svg
 -   Web Share API
 -   python-dateutil
+-   **slowapi** (newly added for rate limiting)
 
 **Testing status**
--   Testing agent used after significant changes: NO
+-   Testing agent used after significant changes: YES, for the initial photo removal and compensation bug fix.
 -   Troubleshoot agent used after agent stuck in loop: NO
 -   Test files created: None
--   Known regressions: The discount field bug and checklist content bug required multiple fix attempts.
+-   Known regressions: The Admin dashboard loading issue is a pre-existing, unaddressed bug.
+
+**Credentials to test flow:**
+Credentials for , , and  roles can be found in the database. The agent has successfully used  to log in and retrieve tokens.
 
 **What agent forgot to execute**
--   The agent has consistently deprioritized the long-standing issues from the initial handoff: the intermittent admin dashboard loading failure and the  rendering problem on the web.
--   The agent did not complete the UI implementation for configurable sporting season dates.
--   The agent required multiple attempts to correctly fix some UI and logic issues (e.g., the discount field, the checklist content), suggesting a need for more thorough self-verification before communicating completion to the user.</analysis>
+-   The agent did not address the long-standing Admin dashboard intermittent loading failure issue.
+-   While a fix for the discount field was applied, it was not tested via screenshot or user confirmation.
+-   The agent identified that  should be replaced by a wrapper but did not perform the replacement across the codebase.</analysis>
