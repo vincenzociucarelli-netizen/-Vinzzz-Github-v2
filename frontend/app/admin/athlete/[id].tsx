@@ -30,6 +30,7 @@ import { SportIcon } from '../../../src/components/SportIcon';
 import { Picker } from '@react-native-picker/picker';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 
+import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
 interface PaymentSummary {
   total_due: number;
   discount: number;
@@ -2365,19 +2366,19 @@ export default function AdminAthleteDetail() {
                     <>
                       <View style={styles.infoRow}>
                         <Text style={styles.label}>Quota Totale</Text>
-                        <Text style={styles.value}>€{paymentSummary.total_due}</Text>
+                        <Text style={styles.value}>{formatCurrency(paymentSummary.total_due)}</Text>
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>1ª Rata</Text>
-                    <Text style={styles.value}>€{paymentSummary.installments.first}</Text>
+                    <Text style={styles.value}>{formatCurrency(paymentSummary.installments.first)}</Text>
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>2ª Rata</Text>
-                    <Text style={styles.value}>€{paymentSummary.installments.second}</Text>
+                    <Text style={styles.value}>{formatCurrency(paymentSummary.installments.second)}</Text>
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>3ª Rata (con sconto)</Text>
-                    <Text style={styles.value}>€{paymentSummary.installments.third}</Text>
+                    <Text style={styles.value}>{formatCurrency(paymentSummary.installments.third)}</Text>
                   </View>
                 </>
               )}
@@ -2424,7 +2425,7 @@ export default function AdminAthleteDetail() {
                 <View style={styles.discountApplied}>
                   <Ionicons name="checkmark-circle" size={16} color="#34C759" />
                   <Text style={styles.discountAppliedText}>
-                    Sconto applicato: €{paymentSummary.discount}
+                    Sconto applicato: {formatCurrency(paymentSummary.discount)}
                   </Text>
                 </View>
               )}
@@ -2435,25 +2436,25 @@ export default function AdminAthleteDetail() {
               <View style={[styles.card, styles.residualCard]}>
                 <View style={styles.residualRow}>
                   <Text style={styles.residualLabel}>Totale Pagato</Text>
-                  <Text style={styles.residualValue}>€{paymentSummary.total_paid}</Text>
+                  <Text style={styles.residualValue}>{formatCurrency(paymentSummary.total_paid)}</Text>
                 </View>
                 <View style={styles.residualRow}>
                   <Text style={styles.residualLabel}>Totale Dovuto</Text>
-                  <Text style={styles.residualValue}>€{paymentSummary.total_after_discount}</Text>
+                  <Text style={styles.residualValue}>{formatCurrency(paymentSummary.total_after_discount)}</Text>
                 </View>
                 <View style={[styles.residualRow, styles.residualTotal]}>
                   {paymentSummary.residual < 0 ? (
                     <>
                       <Text style={styles.residualTotalLabel}>DA RESTITUIRE</Text>
                       <Text style={[styles.residualTotalValue, styles.residualOverpaid]}>
-                        €{Math.abs(paymentSummary.residual)}
+                        {formatCurrency(Math.abs(paymentSummary.residual))}
                       </Text>
                     </>
                   ) : (
                     <>
                       <Text style={styles.residualTotalLabel}>RESIDUO</Text>
                       <Text style={[styles.residualTotalValue, paymentSummary.residual === 0 && styles.residualZero]}>
-                        €{paymentSummary.residual}
+                        {formatCurrency(paymentSummary.residual)}
                       </Text>
                     </>
                   )}
@@ -2462,7 +2463,7 @@ export default function AdminAthleteDetail() {
                   <View style={styles.overpaidWarning}>
                     <Ionicons name="warning" size={16} color="#FF3B30" />
                     <Text style={styles.overpaidWarningText}>
-                      L'atleta ha versato €{Math.abs(paymentSummary.residual)} in più del dovuto
+                      L'atleta ha versato {formatCurrency(Math.abs(paymentSummary.residual))} in più del dovuto
                     </Text>
                   </View>
                 )}
@@ -2499,7 +2500,7 @@ export default function AdminAthleteDetail() {
                 payments.filter((p: any) => p.paid_date).map((payment: any, index) => (
                   <View key={payment.id || index} style={styles.paymentItem}>
                     <View style={styles.paymentInfo}>
-                      <Text style={styles.paymentAmount}>€{payment.amount}</Text>
+                      <Text style={styles.paymentAmount}>{formatCurrency(payment.amount)}</Text>
                       <Text style={styles.paymentDate}>
                         {payment.paid_date ? formatDate(payment.paid_date) : '-'}
                       </Text>
@@ -2581,7 +2582,7 @@ export default function AdminAthleteDetail() {
                     <View style={styles.compensationStats}>
                       <View style={styles.compensationStatItem}>
                         <Text style={styles.compensationStatLabel}>Compenso Mensile</Text>
-                        <Text style={styles.compensationStatValue}>€{athlete.monthly_compensation || 0}</Text>
+                        <Text style={styles.compensationStatValue}>{formatCurrency(athlete.monthly_compensation || 0)}</Text>
                       </View>
                       {athlete.contract_start_date && athlete.contract_end_date && (
                         <View style={styles.compensationStatItem}>

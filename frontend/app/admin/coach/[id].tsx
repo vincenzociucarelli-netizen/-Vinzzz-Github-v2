@@ -22,6 +22,7 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { SportIcon } from '../../../src/components/SportIcon';
 
+import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
 interface Coach {
   id: string;
   email: string;
@@ -888,10 +889,10 @@ export default function AdminCoachDetail() {
                             Dal {contractStartDate.split('-').reverse().join('/')} al {contractEndDate.split('-').reverse().join('/')} = {breakdown.monthsInContract} mesi
                           </Text>
                           <Text style={[styles.totalValue, { color: '#1565C0', fontSize: 22 }]}>
-                            €{breakdown.thisClubTotal.toLocaleString()}
+                            {formatCurrency(breakdown.thisClubTotal)}
                           </Text>
                           <Text style={{ color: '#1565C0', fontSize: 11 }}>
-                            ({breakdown.monthsInContract} mesi × €{parseFloat(monthlyCompensation) || 0})
+                            ({breakdown.monthsInContract} mesi × {formatCurrency(parseFloat(monthlyCompensation) || 0)})
                           </Text>
                         </View>
                         
@@ -913,18 +914,18 @@ export default function AdminCoachDetail() {
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
                               <View>
                                 <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
-                                <Text style={{ fontSize: 14, fontWeight: '600' }}>€{yearlyBreakdown[years[0]].total.toLocaleString()}</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[0]].total)}</Text>
                               </View>
                               {prior > 0 && (
                                 <View>
                                   <Text style={{ fontSize: 12, color: '#E65100' }}>+ Pregressi:</Text>
-                                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#E65100' }}>€{prior.toLocaleString()}</Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#E65100' }}>{formatCurrency(prior)}</Text>
                                 </View>
                               )}
                               <View>
                                 <Text style={{ fontSize: 12, color: '#333' }}>Totale:</Text>
                                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
-                                  €{yearlyBreakdown[years[0]].grandTotal.toLocaleString()}
+                                  {formatCurrency(yearlyBreakdown[years[0]].grandTotal)}
                                 </Text>
                               </View>
                             </View>
@@ -969,12 +970,12 @@ export default function AdminCoachDetail() {
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
                               <View>
                                 <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
-                                <Text style={{ fontSize: 14, fontWeight: '600' }}>€{yearlyBreakdown[years[1]].total.toLocaleString()}</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[1]].total)}</Text>
                               </View>
                               <View>
                                 <Text style={{ fontSize: 12, color: '#333' }}>Totale Anno:</Text>
                                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
-                                  €{yearlyBreakdown[years[1]].grandTotal.toLocaleString()}
+                                  {formatCurrency(yearlyBreakdown[years[1]].grandTotal)}
                                 </Text>
                               </View>
                             </View>
@@ -1021,7 +1022,7 @@ export default function AdminCoachDetail() {
           ) : (
             <>
               <View style={styles.compensationDisplay}>
-                <Text style={styles.compensationAmount}>€{coach.monthly_compensation || 0}</Text>
+                <Text style={styles.compensationAmount}>{formatCurrency(coach.monthly_compensation || 0)}</Text>
                 <Text style={styles.compensationPeriod}>/mese (questa ASD)</Text>
               </View>
               
@@ -1055,7 +1056,7 @@ export default function AdminCoachDetail() {
                           Compensi Pregressi (dichiarati all'assunzione)
                         </Text>
                         <Text style={[styles.totalValue, { color: '#E65100' }]}>
-                          €{breakdown.prior.toLocaleString()}
+                          {formatCurrency(breakdown.prior)}
                         </Text>
                       </View>
                     )}
@@ -1066,7 +1067,7 @@ export default function AdminCoachDetail() {
                           Periodo Contratto: {breakdown.startMonthName} {breakdown.startYear} - {breakdown.endMonthName} {breakdown.endYear}
                         </Text>
                         <Text style={[styles.totalValue, { color: '#1565C0' }]}>
-                          €{breakdown.monthly} × {breakdown.monthsInContract} mesi = €{breakdown.thisClubTotal.toLocaleString()}
+                          {formatCurrency(breakdown.monthly)} × {breakdown.monthsInContract} mesi = {formatCurrency(breakdown.thisClubTotal)}
                         </Text>
                       </View>
                     )}
@@ -1095,10 +1096,10 @@ export default function AdminCoachDetail() {
                               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Text style={{ color: textColor, fontSize: 12 }}>
                                   {data.prior > 0 ? `Pregressi €${data.prior.toLocaleString()} + ` : ''}
-                                  €{(breakdown.monthly || 0)} × {data.months} = €{data.total.toLocaleString()}
+                                  {formatCurrency(breakdown.monthly  || 0)} × {data.months} = {formatCurrency(data.total)}
                                 </Text>
                                 <Text style={[styles.totalValue, { color: textColor, fontSize: 16 }]}>
-                                  €{data.grandTotal.toLocaleString()}
+                                  {formatCurrency(data.grandTotal)}
                                 </Text>
                               </View>
                               {data.exceedsThreshold15k && (
@@ -1152,10 +1153,10 @@ export default function AdminCoachDetail() {
                   <Ionicons name="chevron-forward" size={16} color="#1565C0" style={{ marginLeft: 4 }} />
                 </View>
                 <Text style={{ fontWeight: 'bold', color: '#1565C0', fontSize: 16 }}>
-                  € {signedReceipts
+                  {formatCurrency(signedReceipts
                     .filter((r: any) => r.receipt_signed)
                     .reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0)
-                    .toFixed(2)}
+                    )}
                 </Text>
               </View>
               <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
@@ -1379,10 +1380,10 @@ export default function AdminCoachDetail() {
               <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 10, marginBottom: 12 }}>
                 <Text style={{ color: '#2E7D32', fontWeight: '600', fontSize: 13 }}>💰 Totale Percepito</Text>
                 <Text style={{ color: '#2E7D32', fontWeight: 'bold', fontSize: 24, marginTop: 2 }}>
-                  € {signedReceipts
+                  {formatCurrency(signedReceipts
                     .filter((r: any) => r.receipt_signed)
                     .reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0)
-                    .toFixed(2)}
+                    )}
                 </Text>
                 <Text style={{ color: '#666', fontSize: 11 }}>
                   {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate
@@ -1431,7 +1432,7 @@ export default function AdminCoachDetail() {
                           )}
                         </View>
                         <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
-                          € {(receipt.amount_gross || receipt.amount || 0).toFixed(2)}
+                          {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
                         </Text>
                       </View>
                     </View>

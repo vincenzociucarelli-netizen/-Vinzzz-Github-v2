@@ -20,6 +20,7 @@ import api from '../../src/services/api';
 import { Team } from '../../src/types';
 import { exportToExcel } from '../../src/utils/excelExport';
 
+import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 interface Coach {
   id: string;
   email: string;
@@ -363,7 +364,7 @@ export default function CoachesScreen() {
             <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
             <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
             {item.monthly_compensation && item.monthly_compensation > 0 && (
-              <Text style={styles.compensationText}> • €{item.monthly_compensation}/mese</Text>
+              <Text style={styles.compensationText}> • {formatCurrency(item.monthly_compensation)}/mese</Text>
             )}
           </View>
         </View>

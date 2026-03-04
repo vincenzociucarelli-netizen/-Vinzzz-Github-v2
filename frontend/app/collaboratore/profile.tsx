@@ -27,6 +27,7 @@ import PhotoViewer from '../../src/components/PhotoViewer';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
+import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://admin-coach-fixes.preview.emergentagent.com';
 
 export default function CollaboratoreProfile() {
@@ -987,7 +988,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 onPress={handleAcceptCompensation}
               >
                 <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                <Text style={styles.acceptButtonText}>Accetta Compenso € {profileData.monthly_compensation.toFixed(2)}</Text>
+                <Text style={styles.acceptButtonText}>Accetta Compenso {formatCurrency(profileData.monthly_compensation)}</Text>
               </TouchableOpacity>
             </View>
           )}

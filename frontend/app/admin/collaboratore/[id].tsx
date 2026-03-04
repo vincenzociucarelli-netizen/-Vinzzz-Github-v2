@@ -19,6 +19,7 @@ import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
 import { SportIcon } from '../../../src/components/SportIcon';
 
+import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
 interface Collaboratore {
   id: string;
   email: string;
@@ -683,12 +684,12 @@ export default function AdminCollaboratoreDetail() {
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Compenso Mensile:</Text>
                 <Text style={[styles.infoValue, { fontWeight: 'bold', color: '#007AFF' }]}>
-                  € {(collaboratore.monthly_compensation || 0).toFixed(2)}
+                  {formatCurrency((collaboratore.monthly_compensation || 0))}
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Compensi Pregressi:</Text>
-                <Text style={styles.infoValue}>€ {(collaboratore.other_annual_compensation || 0).toFixed(2)}</Text>
+                <Text style={styles.infoValue}>{formatCurrency((collaboratore.other_annual_compensation || 0))}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Periodo Contratto:</Text>
@@ -715,10 +716,10 @@ export default function AdminCollaboratoreDetail() {
                     <Text style={[styles.infoLabel, { color: '#1565C0' }]}>💰 Già Percepito:</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Text style={[styles.infoValue, { fontWeight: 'bold', color: '#1565C0', fontSize: 16, marginRight: 8 }]}>
-                        € {signedReceipts
+                        {formatCurrency(signedReceipts
                           .filter((r: any) => r.receipt_signed)
                           .reduce((sum: number, r: any) => sum + (r.amount_gross || 0), 0)
-                          .toFixed(2)}
+                          )}
                       </Text>
                       <Ionicons name="chevron-forward" size={18} color="#1565C0" />
                     </View>
@@ -749,10 +750,10 @@ export default function AdminCollaboratoreDetail() {
                             Dal {contractStartDate} al {contractEndDate} = {breakdown.monthsInContract} mesi
                           </Text>
                           <Text style={[styles.totalValue, { color: '#1565C0', fontSize: 22 }]}>
-                            €{breakdown.thisClubTotal.toLocaleString()}
+                            {formatCurrency(breakdown.thisClubTotal)}
                           </Text>
                           <Text style={{ color: '#1565C0', fontSize: 11 }}>
-                            ({breakdown.monthsInContract} mesi × €{parseFloat(monthlyCompensation) || 0})
+                            ({breakdown.monthsInContract} mesi × {formatCurrency(parseFloat(monthlyCompensation) || 0)})
                           </Text>
                         </View>
                         
@@ -776,18 +777,18 @@ export default function AdminCollaboratoreDetail() {
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, flexWrap: 'wrap' }}>
                               <View style={{ marginRight: 8 }}>
                                 <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
-                                <Text style={{ fontSize: 14, fontWeight: '600' }}>€{yearlyBreakdown[years[0]].total.toLocaleString()}</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[0]].total)}</Text>
                               </View>
                               {prior > 0 && (
                                 <View style={{ marginRight: 8 }}>
                                   <Text style={{ fontSize: 12, color: '#E65100' }}>+ Pregressi:</Text>
-                                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#E65100' }}>€{prior.toLocaleString()}</Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#E65100' }}>{formatCurrency(prior)}</Text>
                                 </View>
                               )}
                               <View>
                                 <Text style={{ fontSize: 12, color: '#333' }}>Totale:</Text>
                                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
-                                  €{yearlyBreakdown[years[0]].grandTotal.toLocaleString()}
+                                  {formatCurrency(yearlyBreakdown[years[0]].grandTotal)}
                                 </Text>
                               </View>
                             </View>
@@ -829,12 +830,12 @@ export default function AdminCollaboratoreDetail() {
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
                               <View>
                                 <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
-                                <Text style={{ fontSize: 14, fontWeight: '600' }}>€{yearlyBreakdown[years[1]].total.toLocaleString()}</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[1]].total)}</Text>
                               </View>
                               <View>
                                 <Text style={{ fontSize: 12, color: '#333' }}>Totale Anno:</Text>
                                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
-                                  €{yearlyBreakdown[years[1]].grandTotal.toLocaleString()}
+                                  {formatCurrency(yearlyBreakdown[years[1]].grandTotal)}
                                 </Text>
                               </View>
                             </View>
@@ -1233,7 +1234,7 @@ export default function AdminCollaboratoreDetail() {
               <View style={{ backgroundColor: '#4CAF50', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, marginBottom: 16, alignItems: 'center' }}>
                 <Text style={{ color: '#fff', fontSize: 12 }}>Totale Percepito</Text>
                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 22 }}>
-                  € {signedReceipts.reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0).toFixed(2)}
+                  {formatCurrency(signedReceipts.reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0))}
                 </Text>
               </View>
             )}
@@ -1268,7 +1269,7 @@ export default function AdminCollaboratoreDetail() {
                       {receipt.month_name || `Mese ${receipt.month}`} {receipt.year}
                     </Text>
                     <Text style={{ fontSize: 14, color: '#4CAF50', fontWeight: '500' }}>
-                      € {(receipt.amount_gross || receipt.amount || 0).toFixed(2)}
+                      {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
                     </Text>
                   </View>
                   <Ionicons name="checkmark-circle" size={26} color="#4CAF50" />

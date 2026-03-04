@@ -21,6 +21,7 @@ import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import PhotoViewer from '../../../src/components/PhotoViewer';
 
+import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
 // Helper functions for date formatting
 const formatDateToItalian = (isoDate: string | null | undefined): string => {
   if (!isoDate) return '';
@@ -1244,15 +1245,15 @@ export default function TeamDetail() {
               <Text style={styles.sectionTitle}>💰 Quote</Text>
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Quota Totale:</Text>
-                <Text style={styles.value}>€{team.total_amount}</Text>
+                <Text style={styles.value}>{formatCurrency(team.total_amount)}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.label}>1ª Rata (iscrizione):</Text>
-                <Text style={styles.value}>€{team.installment_1_amount}</Text>
+                <Text style={styles.value}>{formatCurrency(team.installment_1_amount)}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.label}>2ª Rata:</Text>
-                <Text style={styles.value}>€{team.installment_2_amount}</Text>
+                <Text style={styles.value}>{formatCurrency(team.installment_2_amount)}</Text>
               </View>
               {team.installment_2_due_date && (
                 <View style={styles.infoRow}>
@@ -1262,7 +1263,7 @@ export default function TeamDetail() {
               )}
               <View style={styles.infoRow}>
                 <Text style={styles.label}>3ª Rata:</Text>
-                <Text style={styles.value}>€{team.installment_3_amount}</Text>
+                <Text style={styles.value}>{formatCurrency(team.installment_3_amount)}</Text>
               </View>
               {team.installment_3_due_date && (
                 <View style={styles.infoRow}>

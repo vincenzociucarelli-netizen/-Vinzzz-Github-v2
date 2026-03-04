@@ -23,6 +23,7 @@ import { Athlete, Team } from '../../src/types';
 import { exportToExcel } from '../../src/utils/excelExport';
 import { useAuthStore } from '../../src/store/authStore';
 
+import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 export default function AdminAthletes() {
@@ -336,7 +337,7 @@ export default function AdminAthletes() {
           )}
           {(item as any).has_overpayment && (
             <View style={styles.overpaymentBadge}>
-              <Text style={styles.overpaymentBadgeText}>⚠️ €{Math.abs((item as any).payment_residual)}</Text>
+              <Text style={styles.overpaymentBadgeText}>⚠️ {formatCurrency(Math.abs((item as any).payment_residual))}</Text>
             </View>
           )}
         </View>

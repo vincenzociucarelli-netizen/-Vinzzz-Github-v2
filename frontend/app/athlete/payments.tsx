@@ -18,6 +18,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 
+import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 interface Payment {
   id: string;
   athlete_id: string;
@@ -403,14 +404,14 @@ export default function AthletePayments() {
               {paymentInfo.total_amount && paymentInfo.total_amount > 0 && (
                 <View style={styles.feeRow}>
                   <Text style={[styles.feeLabel, { fontSize: 16, fontWeight: '700' }]}>Quota Totale:</Text>
-                  <Text style={[styles.feeAmount, { fontSize: 18, fontWeight: '700' }]}>€{paymentInfo.total_amount.toFixed(0)}</Text>
+                  <Text style={[styles.feeAmount, { fontSize: 18, fontWeight: '700' }]}>{formatCurrency(paymentInfo.total_amount, true, 0)}</Text>
                 </View>
               )}
               
               {paymentInfo.installment_1_amount && paymentInfo.installment_1_amount > 0 && (
                 <View style={styles.feeRow}>
                   <Text style={styles.feeLabel}>1ª Rata (iscrizione):</Text>
-                  <Text style={styles.feeAmount}>€{paymentInfo.installment_1_amount.toFixed(0)}</Text>
+                  <Text style={styles.feeAmount}>{formatCurrency(paymentInfo.installment_1_amount, true, 0)}</Text>
                 </View>
               )}
               
@@ -418,7 +419,7 @@ export default function AthletePayments() {
                 <>
                   <View style={styles.feeRow}>
                     <Text style={styles.feeLabel}>2ª Rata:</Text>
-                    <Text style={styles.feeAmount}>€{paymentInfo.installment_2_amount.toFixed(0)}</Text>
+                    <Text style={styles.feeAmount}>{formatCurrency(paymentInfo.installment_2_amount, true, 0)}</Text>
                   </View>
                   {paymentInfo.installment_2_due_date && (
                     <View style={styles.feeRow}>
@@ -436,9 +437,9 @@ export default function AthletePayments() {
                       3ª Rata{discount > 0 ? ' (con sconto)' : ''}:
                     </Text>
                     <Text style={styles.feeAmount}>
-                      €{discount > 0 
-                        ? (paymentInfo.installment_3_amount - discount).toFixed(0)
-                        : paymentInfo.installment_3_amount.toFixed(0)}
+                      {formatCurrency(discount > 0 
+                        ? paymentInfo.installment_3_amount - discount
+                        : paymentInfo.installment_3_amount, true, 0)}
                     </Text>
                   </View>
                   {paymentInfo.installment_3_due_date && (
@@ -456,7 +457,7 @@ export default function AthletePayments() {
                   <Text style={[styles.feeLabel, { color: '#4CAF50' }]}>
                     Sconto applicato per: {discountReason || 'Non specificato'}
                   </Text>
-                  <Text style={[styles.feeAmount, { color: '#4CAF50' }]}>- €{discount.toFixed(0)}</Text>
+                  <Text style={[styles.feeAmount, { color: '#4CAF50' }]}>- {formatCurrency(discount, true, 0)}</Text>
                 </View>
               )}
             </View>
@@ -484,7 +485,7 @@ export default function AthletePayments() {
                       Rata {index + 1}
                     </Text>
                     <Text style={[styles.installmentAmount, { color: '#4CAF50' }]}>
-                      € {payment.amount.toFixed(2)}
+                      {formatCurrency(payment.amount)}
                     </Text>
                     {payment.paid_date && (
                       <Text style={styles.installmentDue}>
@@ -509,7 +510,7 @@ export default function AthletePayments() {
             return residuo > 0 ? (
               <View style={styles.residueRow}>
                 <Text style={styles.residueLabel}>Residuo Dovuto</Text>
-                <Text style={styles.residueAmount}>€ {residuo.toFixed(2)}</Text>
+                <Text style={styles.residueAmount}>{formatCurrency(residuo)}</Text>
               </View>
             ) : null;
           })()}
@@ -569,7 +570,7 @@ export default function AthletePayments() {
             </Text>
             <View style={styles.paidSummary}>
               <View>
-                <Text style={styles.paidAmount}>€{totalPaid.toFixed(2)}</Text>
+                <Text style={styles.paidAmount}>{formatCurrency(totalPaid)}</Text>
                 {payments.filter(p => isPaid(p)).length > 0 && (
                   <Text style={styles.paidDate}>
                     {formatDate(payments.filter(p => isPaid(p))[0]?.paid_date || '')}

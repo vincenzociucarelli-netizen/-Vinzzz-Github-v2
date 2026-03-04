@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 
+import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 interface ReportSummary {
   year: number;
   month: number;

@@ -20,6 +20,7 @@ import { Ionicons } from '../../src/components/Icon';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { SportIcon } from '../../src/components/SportIcon';
 
+import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 const MONTH_NAMES = [
   '', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
   'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'
@@ -1364,7 +1365,7 @@ export default function AthleteScreen() {
         </View>
         <Text style={styles.profileName}>{profile.full_name}</Text>
         <Text style={styles.profileCompensation}>
-          Compenso mensile: €{profile.monthly_compensation?.toLocaleString('it-IT') || 0}
+          Compenso mensile: {formatCurrency(profile.monthly_compensation)}
         </Text>
         
         {/* Contract Period */}
@@ -1548,20 +1549,20 @@ export default function AthleteScreen() {
               
               <View style={styles.calcRow}>
                 <Text style={styles.calcLabel}>Compenso da contratto:</Text>
-                <Text style={styles.calcValue}>€{profile.monthly_compensation} × {data.months} = €{data.total.toLocaleString('it-IT')}</Text>
+                <Text style={styles.calcValue}>{formatCurrency(profile.monthly_compensation)} × {data.months} = {formatCurrency(data.total)}</Text>
               </View>
               
               {data.prior > 0 && (
                 <View style={[styles.calcRow, styles.priorRow]}>
                   <Text style={[styles.calcLabel, { color: '#B8860B' }]}>+ Pregressi dichiarati:</Text>
-                  <Text style={[styles.calcValue, { color: '#B8860B', fontWeight: '600' }]}>€{data.prior.toLocaleString('it-IT')}</Text>
+                  <Text style={[styles.calcValue, { color: '#B8860B', fontWeight: '600' }]}>{formatCurrency(data.prior)}</Text>
                 </View>
               )}
               
               <View style={[styles.calcRow, styles.calcTotalRow]}>
                 <Text style={styles.calcTotalLabel}>TOTALE ANNO:</Text>
                 <Text style={[styles.calcTotalValue, exceeds5K && styles.calcTotalValueWarning]}>
-                  €{yearTotal.toLocaleString('it-IT')}
+                  {formatCurrency(yearTotal)}
                 </Text>
               </View>
             </View>
@@ -1620,7 +1621,7 @@ export default function AthleteScreen() {
                           {MONTH_NAMES[month]}
                         </Text>
                         <Text style={[styles.receiptAmount, monthExceeds5K && styles.receiptAmountExceeds5K]}>
-                          €{profile.monthly_compensation}
+                          {formatCurrency(profile.monthly_compensation)}
                         </Text>
                         {signedDate && (
                           <Text style={styles.receiptDate}>
@@ -1631,14 +1632,14 @@ export default function AthleteScreen() {
                     ) : available ? (
                       <>
                         <Text style={styles.receiptMonthPending}>{MONTH_NAMES[month]}</Text>
-                        <Text style={styles.receiptAmountPending}>€{profile.monthly_compensation}</Text>
+                        <Text style={styles.receiptAmountPending}>{formatCurrency(profile.monthly_compensation)}</Text>
                         <Text style={styles.receiptAction}>Tocca per firmare</Text>
                       </>
                     ) : (
                       <>
                         <Ionicons name="time-outline" size={16} color="#999" />
                         <Text style={styles.receiptMonthUnavailable}>{MONTH_NAMES[month]}</Text>
-                        <Text style={styles.receiptAmountUnavailable}>€{profile.monthly_compensation}</Text>
+                        <Text style={styles.receiptAmountUnavailable}>{formatCurrency(profile.monthly_compensation)}</Text>
                         <Text style={styles.receiptUnavailable}>Non disponibile</Text>
                       </>
                     )}
@@ -1666,7 +1667,7 @@ export default function AthleteScreen() {
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Totale contratto:</Text>
           <Text style={styles.summaryValue}>
-            €{((profile?.monthly_compensation || 0) * getTotalMonths()).toLocaleString('it-IT')}
+            {formatCurrency((profile?.monthly_compensation || 0) * getTotalMonths())}
           </Text>
         </View>
       </View>

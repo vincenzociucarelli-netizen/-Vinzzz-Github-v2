@@ -24,6 +24,7 @@ import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { TrialEndModal } from '../../src/components/TrialEndModal';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
+import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
 export default function AthleteProfile() {

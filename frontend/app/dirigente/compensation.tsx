@@ -16,6 +16,7 @@ import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import SignaturePadInline from '../../src/components/SignaturePadInline';
 
+import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 const MONTH_NAMES = [
   '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
@@ -646,7 +647,7 @@ export default function DirigenteCompensation() {
           </View>
         </View>
         
-        <Text style={styles.monthAmount}>€ {monthlyAmount.toFixed(2)}</Text>
+        <Text style={styles.monthAmount}>{formatCurrency(monthlyAmount)}</Text>
         
         {status === 'signed' && record && (
           <Text style={styles.signedDate}>
@@ -698,7 +699,7 @@ export default function DirigenteCompensation() {
             <Ionicons name="person-circle" size={50} color="#8E44AD" />
             <View style={{ marginLeft: 12, flex: 1 }}>
               <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Dirigente'}</Text>
-              <Text style={{ fontSize: 13, color: '#666' }}>Compenso mensile: €{(profile?.monthly_compensation || 0).toFixed(2)}</Text>
+              <Text style={{ fontSize: 13, color: '#666' }}>Compenso mensile: {formatCurrency((profile?.monthly_compensation || 0))}</Text>
             </View>
           </View>
           
@@ -746,7 +747,7 @@ export default function DirigenteCompensation() {
             {priorCompensation > 0 && (
               <View style={styles.priorCompBox}>
                 <Text style={styles.priorCompLabel}>Compensi Pregressi (dichiarati all'assunzione)</Text>
-                <Text style={styles.priorCompValue}>€{priorCompensation.toLocaleString()}</Text>
+                <Text style={styles.priorCompValue}>{formatCurrency(priorCompensation)}</Text>
               </View>
             )}
             
@@ -754,15 +755,15 @@ export default function DirigenteCompensation() {
             <View style={styles.contractPeriodBox}>
               <Text style={styles.contractPeriodLabel}>Periodo Contratto: {MONTH_NAMES[contractStartMonth || 1]} {contractStartYear} - {MONTH_NAMES[contractEndMonth || 1]} {contractEndYear}</Text>
               <Text style={styles.contractPeriodValue}>
-                €{profile?.monthly_compensation || 0} × {(() => {
+                {formatCurrency(profile?.monthly_compensation || 0)} × {(() => {
                   const months1 = getContractMonthsForYear(contractStartYear).length;
                   const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
                   return months1 + months2;
-                })()} mesi = €{(() => {
+                })()} mesi = {formatCurrency((() => {
                   const months1 = getContractMonthsForYear(contractStartYear).length;
                   const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
-                  return ((profile?.monthly_compensation || 0) * (months1 + months2)).toLocaleString();
-                })()}
+                  return (profile?.monthly_compensation || 0) * (months1 + months2);
+                })())}
               </Text>
             </View>
             
@@ -787,8 +788,8 @@ export default function DirigenteCompensation() {
                   </Text>
                   
                   <Text style={styles.yearBoxCalc}>
-                    {summary.priorCompensation > 0 && `Pregressi €${summary.priorCompensation.toLocaleString()} + `}€{summary.monthlyComp} × {summary.monthCount} = €{summary.priorCompensation > 0 ? (summary.priorCompensation + summary.yearlyFromContract).toLocaleString() : summary.yearlyFromContract.toLocaleString()}
-                    <Text style={[styles.yearBoxTotal, { color: textColor }]}>€{summary.totalProjected.toLocaleString()}</Text>
+                    {summary.priorCompensation > 0 && `Pregressi ${formatAmount(summary.priorCompensation)} + `}{formatCurrency(summary.monthlyComp)} × {summary.monthCount} = {formatCurrency(summary.priorCompensation > 0 ? (summary.priorCompensation + summary.yearlyFromContract).toLocaleString() : summary.yearlyFromContract)}
+                    <Text style={[styles.yearBoxTotal, { color: textColor }]}>{formatCurrency(summary.totalProjected)}</Text>
                   </Text>
                   
                   {exceeds5k && !exceeds15k && (
@@ -823,8 +824,8 @@ export default function DirigenteCompensation() {
                   </Text>
                   
                   <Text style={styles.yearBoxCalc}>
-                    €{summary.monthlyComp} × {summary.monthCount} = €{summary.yearlyFromContract.toLocaleString()}
-                    <Text style={[styles.yearBoxTotal, { color: textColor }]}>€{summary.totalProjected.toLocaleString()}</Text>
+                    {formatCurrency(summary.monthlyComp)} × {summary.monthCount} = {formatCurrency(summary.yearlyFromContract)}
+                    <Text style={[styles.yearBoxTotal, { color: textColor }]}>{formatCurrency(summary.totalProjected)}</Text>
                   </Text>
                   
                   {exceeds5k && !exceeds15k && (
@@ -847,14 +848,14 @@ export default function DirigenteCompensation() {
             <View style={styles.totalContractBox}>
               <Text style={styles.totalContractLabel}>Totale Compenso Contratto (per RAS)</Text>
               <Text style={styles.totalContractValue}>
-                €{(() => {
+                {formatCurrency((() => {
                   const months1 = getContractMonthsForYear(contractStartYear).length;
                   const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
-                  return ((profile?.monthly_compensation || 0) * (months1 + months2)).toLocaleString();
-                })()}
+                  return (profile?.monthly_compensation || 0) * (months1 + months2);
+                })())}
               </Text>
               <Text style={styles.totalContractSubtext}>
-                (€{profile?.monthly_compensation || 0} × {(() => {
+                ({formatCurrency(profile?.monthly_compensation || 0)} × {(() => {
                   const months1 = getContractMonthsForYear(contractStartYear).length;
                   const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
                   return months1 + months2;
@@ -869,11 +870,11 @@ export default function DirigenteCompensation() {
             <Text style={styles.summaryTitle}>Riepilogo {currentYear}</Text>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Compenso mensile:</Text>
-              <Text style={styles.summaryValue}>€ {(profile?.monthly_compensation || 0).toFixed(2)}</Text>
+              <Text style={styles.summaryValue}>{formatCurrency((profile?.monthly_compensation || 0))}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Totale quietanzato:</Text>
-              <Text style={[styles.summaryValue, styles.summaryTotal]}>€ {yearlyTotal.toFixed(2)}</Text>
+              <Text style={[styles.summaryValue, styles.summaryTotal]}>{formatCurrency(yearlyTotal)}</Text>
             </View>
           </View>
         )}
@@ -953,7 +954,7 @@ export default function DirigenteCompensation() {
                 <Text style={styles.receiptText}>
                   Collaboratore: {profile?.full_name}{'\n'}
                   Mese: {MONTH_NAMES[selectedMonth || 0]} {selectedYear}{'\n'}
-                  Compenso lordo: € {(profile?.monthly_compensation || 0).toFixed(2)}{'\n'}
+                  Compenso lordo: {formatCurrency((profile?.monthly_compensation || 0))}{'\n'}
                   {'\n'}
                   Il collaboratore dichiara che non sono intervenute variazioni rispetto all'autocertificazione precedente.
                 </Text>

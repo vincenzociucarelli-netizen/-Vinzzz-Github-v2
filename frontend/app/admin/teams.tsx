@@ -21,6 +21,7 @@ import { Team } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
 import { SportIcon } from '../../src/components/SportIcon';
 
+import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 export default function TeamsScreen() {
   const router = useRouter();
   const { logout } = useAuthStore();
@@ -433,7 +434,7 @@ export default function TeamsScreen() {
             </View>
             {!item.is_prima_squadra && (
               <Text style={styles.teamAmount}>
-                Quota: €{(item.installment_1_amount || 0) + (item.installment_2_amount || 0) + (item.installment_3_amount || 0)} (€{item.installment_1_amount || 0}/€{item.installment_2_amount || 0}/€{item.installment_3_amount || 0})
+                Quota: {formatCurrency((item.installment_1_amount || 0) + (item.installment_2_amount || 0) + (item.installment_3_amount || 0))} ({formatCurrency(item.installment_1_amount || 0)}/{formatCurrency(item.installment_2_amount || 0)}/{formatCurrency(item.installment_3_amount || 0)})
               </Text>
             )}
             {item.is_prima_squadra && (

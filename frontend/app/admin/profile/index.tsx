@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 
+import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
 export default function AdminProfile() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
@@ -776,7 +777,7 @@ export default function AdminProfile() {
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>Compenso Mensile</Text>
                 <Text style={styles.compensationAmount}>
-                  € {profileData.monthly_compensation.toFixed(2)}
+                  {formatCurrency(profileData.monthly_compensation)}
                 </Text>
               </View>
               

@@ -22,6 +22,7 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import * as ImagePicker from 'expo-image-picker';
 
+import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
 interface Dirigente {
   id: string;
   email: string;
@@ -628,13 +629,13 @@ export default function AdminDirigenteDetail() {
           ) : (
             <>
               <View style={styles.compensationDisplay}>
-                <Text style={styles.compensationAmount}>€{dirigente.monthly_compensation || 0}</Text>
+                <Text style={styles.compensationAmount}>{formatCurrency(dirigente.monthly_compensation || 0)}</Text>
                 <Text style={styles.compensationPeriod}>/mese (questa ASD)</Text>
               </View>
               {(dirigente as any).other_annual_compensation > 0 && (
                 <View style={{ marginTop: 8, padding: 10, backgroundColor: '#FFF8E1', borderRadius: 8, borderWidth: 1, borderColor: '#F9A825' }}>
                   <Text style={{ fontSize: 12, color: '#F9A825', fontWeight: '600' }}>
-                    + €{(dirigente as any).other_annual_compensation} compensi pregressi da altre ASD
+                    + {formatCurrency((dirigente as any).other_annual_compensation)} compensi pregressi da altre ASD
                   </Text>
                 </View>
               )}
@@ -659,10 +660,10 @@ export default function AdminDirigenteDetail() {
                             Dal {contractStartDate.split('-').reverse().join('/')} al {contractEndDate.split('-').reverse().join('/')} = {breakdown.monthsInContract} mesi
                           </Text>
                           <Text style={[styles.totalValue, { color: '#8E44AD', fontSize: 22 }]}>
-                            €{breakdown.thisClubTotal.toLocaleString()}
+                            {formatCurrency(breakdown.thisClubTotal)}
                           </Text>
                           <Text style={{ color: '#8E44AD', fontSize: 11 }}>
-                            ({breakdown.monthsInContract} mesi × €{parseFloat(monthlyCompensation) || 0})
+                            ({breakdown.monthsInContract} mesi × {formatCurrency(parseFloat(monthlyCompensation) || 0)})
                           </Text>
                         </View>
                         
@@ -686,18 +687,18 @@ export default function AdminDirigenteDetail() {
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, flexWrap: 'wrap' }}>
                               <View style={{ marginRight: 8 }}>
                                 <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
-                                <Text style={{ fontSize: 14, fontWeight: '600' }}>€{yearlyBreakdown[years[0]].total.toLocaleString()}</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[0]].total)}</Text>
                               </View>
                               {prior > 0 && (
                                 <View style={{ marginRight: 8 }}>
                                   <Text style={{ fontSize: 12, color: '#E65100' }}>+ Pregressi:</Text>
-                                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#E65100' }}>€{prior.toLocaleString()}</Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#E65100' }}>{formatCurrency(prior)}</Text>
                                 </View>
                               )}
                               <View>
                                 <Text style={{ fontSize: 12, color: '#333' }}>Totale:</Text>
                                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
-                                  €{yearlyBreakdown[years[0]].grandTotal.toLocaleString()}
+                                  {formatCurrency(yearlyBreakdown[years[0]].grandTotal)}
                                 </Text>
                               </View>
                             </View>
@@ -739,12 +740,12 @@ export default function AdminDirigenteDetail() {
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
                               <View>
                                 <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
-                                <Text style={{ fontSize: 14, fontWeight: '600' }}>€{yearlyBreakdown[years[1]].total.toLocaleString()}</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[1]].total)}</Text>
                               </View>
                               <View>
                                 <Text style={{ fontSize: 12, color: '#333' }}>Totale Anno:</Text>
                                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
-                                  €{yearlyBreakdown[years[1]].grandTotal.toLocaleString()}
+                                  {formatCurrency(yearlyBreakdown[years[1]].grandTotal)}
                                 </Text>
                               </View>
                             </View>
@@ -791,10 +792,10 @@ export default function AdminDirigenteDetail() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ color: '#2E7D32', fontWeight: '500' }}>💰 Già Percepito:</Text>
                 <Text style={{ fontWeight: 'bold', color: '#2E7D32', fontSize: 16 }}>
-                  € {signedReceipts
+                  {formatCurrency(signedReceipts
                     .filter((r: any) => r.receipt_signed)
                     .reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0)
-                    .toFixed(2)}
+                    )}
                 </Text>
               </View>
               <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>

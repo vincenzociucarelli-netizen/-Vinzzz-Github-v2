@@ -28,6 +28,7 @@ import { it } from 'date-fns/locale';
 import { useAuthStore } from '../../../src/store/authStore';
 import { SportIcon } from '../../../src/components/SportIcon';
 
+import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
 export default function AthleteDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
@@ -1554,11 +1555,11 @@ export default function AthleteDetail() {
               <View style={styles.paymentSummaryRow}>
                 <Text style={styles.paymentSummaryLabel}>Quota Stagionale:</Text>
                 <Text style={styles.paymentSummaryValue}>
-                  € {(
+                  {formatCurrency((
                     (paymentSettings.installment_1_amount || 0) + 
                     (paymentSettings.installment_2_amount || 0) + 
                     (paymentSettings.installment_3_amount || 0)
-                  ).toFixed(2)}
+                  ))}
                 </Text>
               </View>
               {athlete && athlete.discount_amount && athlete.discount_amount > 0 ? (
@@ -1567,7 +1568,7 @@ export default function AthleteDetail() {
                     Sconto applicato per: {athlete.discount_reason || 'Non specificato'}
                   </Text>
                   <Text style={[styles.paymentSummaryValue, { color: '#34C759' }]}>
-                    - € {athlete.discount_amount.toFixed(2)}
+                    - {formatCurrency(athlete.discount_amount)}
                   </Text>
                 </View>
               ) : null}
@@ -1658,7 +1659,7 @@ export default function AthleteDetail() {
                     ]}>
                       <View style={styles.paymentInfo}>
                         <Text style={styles.paymentTitle}>{rate.name}</Text>
-                        <Text style={styles.paymentAmount}>€ {rate.amount.toFixed(2)}</Text>
+                        <Text style={styles.paymentAmount}>{formatCurrency(rate.amount)}</Text>
                         <Text style={[
                           styles.paymentDue,
                           isOverdue && { color: '#FF3B30', fontWeight: '600' }
@@ -1699,7 +1700,7 @@ export default function AthleteDetail() {
                     styles.residuoAmount,
                     { color: allRates.filter(r => !r.paid).reduce((sum, r) => sum + r.amount, 0) > 0 ? '#FF3B30' : '#34C759' }
                   ]}>
-                    € {allRates.filter(r => !r.paid).reduce((sum, r) => sum + r.amount, 0).toFixed(2)}
+                    {formatCurrency(allRates.filter(r => !r.paid).reduce((sum, r) => sum + r.amount, 0))}
                   </Text>
                 </View>
               </>
@@ -1733,7 +1734,7 @@ export default function AthleteDetail() {
                 {payments.map((p, idx) => (
                   <View key={p.id || idx} style={styles.manualPaymentRow}>
                     <View style={styles.manualPaymentInfo}>
-                      <Text style={styles.manualPaymentAmount}>€{p.amount?.toFixed(2)}</Text>
+                      <Text style={styles.manualPaymentAmount}>{formatCurrency(p.amount)}</Text>
                       <Text style={styles.manualPaymentDate}>
                         {p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : 'Data non specificata'}
                       </Text>
@@ -1769,7 +1770,7 @@ export default function AthleteDetail() {
               {payments.map((p, idx) => (
                 <View key={p.id || idx} style={styles.manualPaymentRow}>
                   <View style={styles.manualPaymentInfo}>
-                    <Text style={styles.manualPaymentAmount}>€{p.amount?.toFixed(2)}</Text>
+                    <Text style={styles.manualPaymentAmount}>{formatCurrency(p.amount)}</Text>
                     <Text style={styles.manualPaymentDate}>
                       {p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : 'Data non specificata'}
                     </Text>
