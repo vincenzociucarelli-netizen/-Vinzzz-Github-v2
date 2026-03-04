@@ -135,6 +135,48 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 
 ## Latest Session Updates (04/03/2026)
 
+### P0 - 6 Admin UI/Logic Fixes Complete
+Implemented all 6 modifications requested by the user for the Admin section:
+
+1. **Coach Checklist**: Removed "Documento d'identità acquisito" item from onboarding checklist
+   - File: `/app/frontend/app/admin/coach/[id].tsx`
+   - Reduced totalItems from 5 to 4
+   - Removed id_acquired from completedItems array and modal display
+
+2. **Coach Compensation Display**: Removed duplicate "Totale Compenso Contratto (per RAS)" box
+   - File: `/app/frontend/app/admin/coach/[id].tsx`
+   - Kept only the "Comunicazione RAS - Totale Contratto" box in edit mode
+   - Removed redundant totalBox in view mode
+
+3. **Coach Document Fields**: Removed ID document fields (Type, Number, Expiry) from profile
+   - File: `/app/frontend/app/admin/coach/[id].tsx`
+   - Section now shows only IBAN, Intestatario Conto, Banca
+   - Card title changed from "Documento e Dati Bancari" to "Dati Bancari"
+
+4. **Collaborator Assignment Banner**: Added auto-close for "Assegnazioni salvate" success banner
+   - File: `/app/frontend/app/admin/collaboratore/[id].tsx`
+   - Web: Creates toast-style banner that auto-removes after 2.5 seconds
+   - Mobile: Uses native Alert (no change needed)
+
+5. **Rename Role "Visualizzatore" to "Dirigente"**: Updated all occurrences
+   - File: `/app/frontend/app/admin/dirigenti.tsx`
+   - getRoleLabel() now returns "Dirigente" instead of "Visualizzatore"
+   - Modal button text changed to "Rendi Dirigente"
+   - Success alert message updated
+
+6. **Adult Athlete QR Code**: Updated to use new 12-char alphanumeric identifier
+   - File: `/app/backend/server.py`
+   - Both adult athlete creation endpoints now use `generate_qr_identifier()` + `generate_qr_code_from_identifier()`
+   - `qr_identifier` field added to athlete records for consistency with existing minor athlete flow
+
+### Collaborator Checklist Consistency Fix
+- Also removed "Documento d'identità acquisito" from Collaboratore checklist to match Coach
+- File: `/app/frontend/app/admin/collaboratore/[id].tsx`
+- Updated totalItems from 5 to 4, filtered out id_acquired from display
+
+### Testing: 5/5 Frontend Tests Passed
+- Test Report: `/app/test_reports/iteration_27.json`
+
 ### P0 - Certificate Override Popup Complete
 - **Backend**: Added `POST /api/certificates/deny-access` endpoint
   - Logs denial of access for expired certificate in audit log
