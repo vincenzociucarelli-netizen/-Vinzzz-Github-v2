@@ -11547,7 +11547,7 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
     # Generate PDF - use appropriate function based on document type
     try:
         if request.document_type == "privacy_consent":
-            # Use the new professional privacy consent PDF format
+            # Use the new professional GDPR privacy consent PDF format
             role = request.additional_data.get("role", "") if request.additional_data else ""
             fiscal_code = request.additional_data.get("fiscal_code", "") if request.additional_data else ""
             
@@ -11564,18 +11564,39 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
                     birth_date = datetime.fromisoformat(birth_date.replace('Z', '+00:00')).strftime("%d/%m/%Y")
                 except:
                     pass
+            elif birth_date and isinstance(birth_date, str) and '-' in birth_date:
+                try:
+                    parts = birth_date.split('-')
+                    if len(parts) == 3:
+                        birth_date = f"{parts[2]}/{parts[1]}/{parts[0]}"
+                except:
+                    pass
             
-            pdf_bytes = generate_privacy_consent_pdf(
+            # Get society details
+            society = await db.settings.find_one({"type": "society"})
+            society_address = society.get("address", "") if society else ""
+            society_cf_piva = society.get("cf_piva", society.get("codice_fiscale", "")) if society else ""
+            society_email_addr = society.get("email", "") if society else ""
+            
+            # Use the new GDPR adult privacy PDF format
+            pdf_bytes = generate_gdpr_adult_privacy_pdf(
                 society_name=society_name,
-                signer_name=request.signer_name,
-                signer_role=role,
-                fiscal_code=fiscal_code,
-                birth_date=birth_date,
-                birth_place=user_data.get("place_of_birth", "") or athlete_data.get("place_of_birth", "") or athlete_data.get("birth_place", ""),
-                address=user_data.get("address", "") or athlete_data.get("address", ""),
-                city=user_data.get("city", "") or athlete_data.get("city", ""),
-                province=user_data.get("province", "") or athlete_data.get("province", ""),
-                signature_base64=request.signature_base64
+                society_address=society_address,
+                society_cf_piva=society_cf_piva,
+                society_email=society_email_addr,
+                full_name=request.signer_name,
+                fiscal_code=fiscal_code or "",
+                birth_date=birth_date or "",
+                birth_place=user_data.get("place_of_birth", "") or athlete_data.get("place_of_birth", "") or athlete_data.get("birth_place", "") or "",
+                residence_address=user_data.get("address", "") or athlete_data.get("address", "") or "",
+                residence_city=user_data.get("city", "") or athlete_data.get("city", "") or "",
+                residence_province=user_data.get("province", "") or athlete_data.get("province", "") or "",
+                phone=user_data.get("phone", "") or athlete_data.get("phone", "") or "",
+                email=request.signer_email or user_data.get("email", "") or "",
+                role=role,
+                signature_base64=request.signature_base64,
+                user_id=current_user["id"],
+                society_id=current_user.get("society_id", "")
             )
         else:
             # Use the generic signed PDF function for other document types
