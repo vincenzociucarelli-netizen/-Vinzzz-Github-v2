@@ -10416,12 +10416,26 @@ def generate_gdpr_adult_privacy_pdf(
     c.setFont("Helvetica", 10)
     c.drawCentredString(width/2, height - 2.6*cm, "ai sensi del Regolamento UE 2016/679 (GDPR)")
     
-    y = height - 4*cm
+    y = height - 3.5*cm
     max_w = width - 4*cm
+    
+    # Box Dati Societari
+    c.setStrokeColor(colors.HexColor("#1565C0"))
+    c.setFillColor(colors.HexColor("#E3F2FD"))
+    c.roundRect(2*cm, y - 2.2*cm, max_w, 2*cm, 5, stroke=1, fill=1)
+    c.setFillColor(colors.black)
+    
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2.3*cm, y - 0.5*cm, f"Società: {nome_legale}")
+    c.setFont("Helvetica", 9)
+    c.drawString(2.3*cm, y - 1*cm, f"Sede: {society_address}")
+    c.drawString(2.3*cm, y - 1.4*cm, f"C.F./P.IVA: {society_cf_piva}  |  Email: {society_email}")
+    
+    y -= 2.8*cm
     
     # Intro
     c.setFont("Helvetica", 10)
-    intro_text = f"Gentile Collaboratore, La presente informativa descrive le modalità di trattamento dei dati personali da parte di {nome_legale}, con sede in {society_address}, C.F./P.IVA {society_cf_piva}, email {society_email}."
+    intro_text = f"Gentile Collaboratore, La presente informativa descrive le modalità di trattamento dei dati personali da parte di {nome_legale}."
     y = draw_wrapped_text(c, intro_text, 2*cm, y, max_w)
     
     y -= 0.5*cm
