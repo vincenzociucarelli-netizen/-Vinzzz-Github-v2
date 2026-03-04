@@ -762,6 +762,16 @@ L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la
           <Ionicons name="add-circle" size={24} color="#fff" />
           <Text style={styles.addButtonText}>Registra Nuovo Atleta</Text>
         </TouchableOpacity>
+
+        {/* Documents Button */}
+        <TouchableOpacity
+          style={styles.documentsButton}
+          onPress={() => router.push('/parent/documents')}
+        >
+          <Ionicons name="folder-open" size={24} color="#8E44AD" />
+          <Text style={styles.documentsButtonText}>I Miei Documenti</Text>
+          <Ionicons name="chevron-forward" size={20} color="#8E44AD" />
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Modal per modifica nome */}
@@ -1439,5 +1449,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 2,
+  },
+  documentsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5EEF8',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#8E44AD',
+    gap: 12,
+  },
+  documentsButtonText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8E44AD',
   },
 });

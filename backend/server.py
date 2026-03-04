@@ -14065,7 +14065,7 @@ async def download_document(
 async def get_my_documents(
     current_user = Depends(get_current_user)
 ):
-    """Get documents signed by the current user"""
+    """Get documents signed by the current user, grouped by minor for parents"""
     user_id = current_user.get("id")
     role = current_user.get("role")
     
@@ -14079,7 +14079,7 @@ async def get_my_documents(
     ]}
     
     documents = []
-    async for doc in db.signed_documents.find(query).sort("signed_at", -1):
+    async for doc in db.signed_documents.find(query).sort("created_at", -1):
         doc.pop("_id", None)
         documents.append({
             "id": doc.get("id"),
@@ -14089,12 +14089,51 @@ async def get_my_documents(
             "year": doc.get("year"),
             "amount_gross": doc.get("amount_gross"),
             "athlete_name": doc.get("athlete_name"),
+            # Minor info for grouping
+            "minor_id": doc.get("minor_id"),
+            "minor_name": doc.get("minor_name"),
+            "related_entity_id": doc.get("related_entity_id"),
+            # Timestamps
             "signed_at": doc.get("signed_at").isoformat() if doc.get("signed_at") else None,
-            "pdf_filename": doc.get("pdf_filename")
+            "created_at": doc.get("created_at").isoformat() if doc.get("created_at") else None,
+            "pdf_filename": doc.get("pdf_filename"),
+            # GDPR metadata if present
+            "gdpr_metadata": doc.get("gdpr_metadata")
         })
     
+    # Group documents by minor for better organization
+    grouped = {
+        "personal": [],  # Documents of the signer themselves
+        "minors": {}     # Documents grouped by minor_id
+    }
+    
+    for doc in documents:
+        minor_id = doc.get("minor_id") or doc.get("related_entity_id")
+        minor_name = doc.get("minor_name") or doc.get("athlete_name")
+        
+        # Check if this is a document for a minor (gdpr_minor type or has minor_id)
+        is_minor_doc = doc.get("document_type") == "gdpr_minor" or (minor_id and minor_name)
+        
+        if is_minor_doc and minor_id:
+            if minor_id not in grouped["minors"]:
+                grouped["minors"][minor_id] = {
+                    "minor_id": minor_id,
+                    "minor_name": minor_name,
+                    "documents": []
+                }
+            grouped["minors"][minor_id]["documents"].append(doc)
+        else:
+            grouped["personal"].append(doc)
+    
+    # Convert minors dict to list for easier frontend handling
+    minors_list = list(grouped["minors"].values())
+    
     return {
-        "documents": documents,
+        "documents": documents,  # Flat list for backwards compatibility
+        "grouped": {
+            "personal": grouped["personal"],
+            "minors": minors_list
+        },
         "total": len(documents)
     }
 
