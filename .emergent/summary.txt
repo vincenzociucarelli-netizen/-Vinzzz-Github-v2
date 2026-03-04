@@ -1,157 +1,191 @@
 <analysis>**original_problem_statement**:
-The user's initial goal was to fix bugs and improve the UI. This evolved into a major architectural refactor, termed the Facilitator model, to enhance data privacy and GDPR compliance by eliminating the storage of sensitive documents and photos.
+The user's initial goal was to fix minor UI bugs. This expanded into a series of major feature implementations and refactors focused on privacy, security, and usability.
 
-Following the refactor, the user requested a series of new features and improvements:
-1.  **Comprehensive Auditing**: Log critical user actions (logins, certificate changes, overrides, compensation edits, document acceptance, user deletions).
-2.  **Enhanced Security**: Implement rate limiting on the login endpoint to prevent brute-force attacks, with a progressive backoff strategy.
-3.  **Revamped Attendance System**: Redesign the QR code attendance system to be more robust and aligned with real-world sports club operations. This includes:
-    *   Using a unique, non-personal, permanent alphanumeric ID in the QR code.
-    *   Tying attendance records to .
-    *   Handling double scans with an informative popup and a force registration option for coaches.
-    *   Linking QR code validity to the athlete's active status for the season.
-4.  **Data Management**:
-    *   Provide CSV export functionality for athletes, attendance records, compensations, and audit logs.
-    *   Create an admin page to view the new audit logs.
-    *   Allow parents/admins to view and print the new QR codes for athletes.
-5.  **Data Isolation**: Ensure all database queries are strictly filtered by  to prevent data leakage between different sports clubs.
-6.  **Business Logic**: Implement a technical limit of 150 athletes per sports club (ASD), effective until June 30, 2026.
-7.  **UI/UX Fixes**: Remove empty space left by the photo removal and fix minor bugs like leading zeros in input fields.
+The key requests implemented or in progress during this session were:
+1.  **GDPR Document Overhaul**: Replace the existing privacy consent with a much more robust system based on templates provided by the user.
+    *   Create two distinct PDF templates: one for adults and one for parents signing for minors.
+    *   The signature process must capture extensive metadata for legal probity: document version, timestamp, user/society ID, a SHA-256 hash of the document content, device type, and IP address.
+    *   The signed document must be stored for the user and admin and also sent via email to both.
+    *   A preview function must be available before signing.
+2.  **Collaborator Profile Cleanup**: Remove sensitive document fields (ID type, number, expiry, photos) from the collaborator's profile page, leaving only IBAN details, to align with GDPR principles.
+3.  **Parent Document Organization**: Create a dedicated My Documents page for parents that groups signed documents by child, instead of showing a single flat list.
+4.  **Medical Certificate Flow Refinement**:
+    *   Relocate the Medical Certificate Block setting from the Society page to a more logical position at the top of Other Settings.
+    *   Make the text more specific, clarifying it applies to allenamenti (training).
+    *   Set the block to be **active by default** for new societies.
+    *   Log any changes to this setting in the audit log.
+    *   Implement a user-friendly override mechanism for coaches: when a coach (who is also an admin) scans the QR code of an athlete blocked due to an expired certificate, a popup should appear allowing them to override the block for that single session, requiring a reason. This must have explicit Accept and Reject options.
+5.  **Stripe Integration (Postponed)**: Prepare the application to allow each sports club to add their own Stripe API keys for payment processing. This was implemented and then rolled back at the user's request, to be revisited next season.
+6.  **Bug Fixes**:
+    *   Address the  rendering issue by replacing direct imports with a custom wrapper component.
+    *   Address an intermittent loading issue on the admin dashboard caused by multiple parallel API calls.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application is a full-stack React/FastAPI/MongoDB platform for sports club management. The Facilitator model is now deeply integrated. Sensitive data storage has been eliminated. The following major features have been implemented in this session:
-*   **Audit Logging**: A new  collection tracks all specified critical actions. An admin page exists at  to view these logs.
-*   **Security**: A progressive rate limiting system () is active on the  endpoint to mitigate brute-force attacks.
-*   **Attendance System**: A completely new QR code attendance system has been implemented on the backend and frontend. It uses a unique  for each athlete, links attendance to specific training slots, and provides a clear UX for coaches to handle duplicate scans and force registrations with a note.
-*   **Data Isolation**: All major backend endpoints have been refactored to enforce filtering by , ensuring data segregation between clubs.
-*   **Athlete Limit**: A hard limit of 150 athletes per society is enforced on new athlete creation until June 30, 2026.
-*   **Data Export**: Admins can export athletes, attendance, compensations, and audit logs as CSV files from the new  page.
+The application has undergone significant feature development.
+- The new, comprehensive GDPR privacy document system is fully implemented, including PDF generation for adults and minors, capture of extensive security metadata, a preview function, and replacement of the old modal across all user profiles.
+- The Collaborator profile page has been cleaned of sensitive document fields.
+- A new My Documents page exists for parents, which fetches and is ready to display documents grouped by child.
+- The medical certificate setting has been moved to the top of Other Settings, is active by default, and its changes are logged.
+- The backend and frontend logic for the coach's QR scanner has been modified to support the new certificate override flow. A modal popup is implemented but requires final adjustments.
+- The Stripe integration UI/backend was created and then removed from the user-facing settings, but the code may still exist.
 
 **Last working item**:
-- Last item agent was working: Fixing two long-standing minor UI bugs reported in the initial handoff.
-    1.  Improving the logic in  to prevent leading zeros in the discount field.
-    2.  Investigating the  rendering issue on the web, concluding that the existing  wrapper component is the correct approach and that other components might need to be updated to use it.
-- Status: USER VERIFICATION PENDING
+- Last item agent was working: Modifying the coach's QR scanner override popup () to include distinct RIFIUTA (Reject) and AUTORIZZA (Authorize) buttons, as per the user's final request. The agent had just started adding the logic for the Reject action.
+- Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? Frontend testing agent. Instruct the agent to:
-    1.  Navigate to an athlete's detail page in the admin panel.
-    2.  Go to the payment plan section and edit the discount field.
-    3.  Enter 050 and confirm that the value is saved and displayed as 50.
-    4.  Visually inspect key pages of the application (e.g., admin dashboard, coach dashboard) for any missing or broken icons.
+- Which testing method agent to use? Frontend testing agent. The test should cover this specific flow:
+    1.  Log in as an Admin.
+    2.  Navigate to the Coach QR scanner page.
+    3.  Scan the QR code of an athlete whose medical certificate is expired (this may need to be set up in the DB).
+    4.  Verify a modal appears with the athlete's name and RIFIUTA and AUTORIZZA buttons.
+    5.  Click RIFIUTA, verify the modal closes, and no attendance is logged (check audit log for refusal action).
+    6.  Scan the same QR code again.
+    7.  Click AUTORIZZA, enter a reason, and submit.
+    8.  Verify the attendance is logged and the override is recorded in the audit log.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   Issue 1: Admin dashboard sometimes fails to load lists (P2)
--   Issue 2:  library fails to load on web (P3)
+-   Issue 1: Complete the coach's override popup to include Accept and Reject buttons. (P0)
+-   Issue 2: The fix for the intermittent admin dashboard loading has been implemented but never tested or verified. (P2)
+-   Issue 3: The  library fix was only applied to two files. A global check and replacement might still be needed to prevent future issues. (P3)
 
 **Issues Detail**:
--   **Issue 1: Admin dashboard intermittent loading failure**
-    -   **Attempted fixes**: None. This issue has been carried over.
+-   **Issue 1: Complete coach's override popup**
+    -   **Attempted fixes**: The agent created the modal and backend logic. It was in the process of adding the Reject/Accept buttons when the session ended.
     -   **Next debug checklist**:
-        -   Review data fetching logic and state management in .
-        -   Check the browser's developer console for network errors or race conditions when the dashboard fails to load.
-        -   Inspect the  endpoint logic in  to ensure it's robust and handles cases with no data.
+        -   In , complete the  JSX to include both RIFIUTA and AUTORIZZA buttons.
+        -   Ensure the  function correctly logs the refusal to the audit log without creating an attendance record.
+        -   Ensure the  function (for AUTORIZZA) correctly logs the override and creates the attendance record.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical usability feature requested by the user to handle real-world exceptions to the medical certificate block.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Both
+-   **Issue 2: Admin dashboard intermittent loading failure**
+    -   **Attempted fixes**: The agent implemented a fix by replacing the  logic with a more robust solution involving retries and batching in .
+    -   **Next debug checklist**:
+        -   Review the implemented fix in .
+        -   Manually test the admin dashboard by reloading it multiple times to see if the issue persists.
+        -   If possible, simulate a failing API call to ensure the retry logic works as expected.
     -   **Why fix this issue and what will be achieved with the fix?**: Improves the reliability of a core application view for admins.
-    -   **Status**: NOT STARTED
+    -   **Status**: TESTING PENDING
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
--   **Issue 2: @expo/vector-icons rendering issue on web**
-    -   **Attempted fixes**: The agent investigated and found an  wrapper component that provides a fallback. However, the agent did not perform a global search-and-replace to ensure all components use this wrapper instead of importing directly from .
+-   **Issue 3: @expo/vector-icons rendering issue on web**
+    -   **Attempted fixes**: The agent replaced direct imports in  and  with the custom  wrapper.
     -   **Next debug checklist**:
-        -   Perform a codebase search for .
-        -   Replace direct imports with the custom wrapper component found at .
-        -   Verify that icons render correctly across the application on the web.
-    -   **Why fix this issue and what will be achieved with the fix?**: Ensures UI consistency across platforms by correctly displaying icons.
+        -   Perform a global codebase search for any remaining direct imports from .
+        -   Replace any found instances with the  wrapper.
+    -   **Why fix this issue and what will be achieved with the fix?**: Ensures UI consistency across the application by preventing broken icons.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
 
 **In progress Task List**:
-None.
+None apart from the issue above.
 
 **Upcoming and Future Tasks**
+-   **Upcoming Tasks**:
+    -   (P1) User verification of the new parent document view. The page is created but needs to be tested with a parent account that has signed documents for multiple children to confirm the grouping works visually.
 -   **Future Tasks**:
-    -   (P3) Integrate Stripe for payments (explicitly postponed by user).
+    -   (P3) Re-implement Stripe integration for the next season, allowing each club to manage its own payments.
     -   (P3) Refactor the monolithic  into a modular structure (e.g., routes, models, services).
 
 **Completed work in this session**
--   **Security & Auditing**:
-    -   Implemented comprehensive audit logging for 6 critical actions into a new  collection.
-    -   Created an admin page to view audit logs.
-    -   Implemented progressive rate limiting on the login endpoint using .
--   **QR Attendance System Overhaul**:
-    -   **Backend**: Reworked the entire check-in logic ( endpoint) to be based on , handle duplicate scans, and allow forced registration with notes.
-    -   **Backend**: Added a  (12-char random string) to the  model, replacing the use of  in QR codes. Added endpoints to backfill and regenerate these identifiers.
-    -   **Frontend**: Updated the Coach's scanner page () to support team selection, provide informative popups for duplicate scans, and include a modal for forced registration with a reason.
-    -   **Frontend**: Updated Admin and Parent views to display and print the new -based QR codes.
--   **Data Governance & Management**:
-    -   **Data Isolation**: Fixed a critical security flaw by adding  filtering to all key backend endpoints (, , , etc.) to ensure strict data segregation. Created a one-time script to fix legacy data that was missing .
-    -   **Athlete Limit**: Implemented a check to limit each society to 150 athletes until 30/06/2026.
-    -   **CSV Export**: Added backend endpoints and a new admin page () for exporting athletes, attendance, compensations, and audit logs.
--   **Bug Fixes & UI Cleanup**:
-    -   Completed the removal of all user profile photo elements and the empty space they occupied.
-    -   Fixed the recurring compensation calculation bug in the admin's collaborator view.
-    -   Fixed the discount field input bug that resulted in leading zeros.
-    -   Passed a full test suite from the testing agent for the photo removal and compensation fix.
+-   **GDPR Document System**:
+    -   Implemented backend logic in  to generate two new, complex PDF privacy documents.
+    -   Created a new endpoint  that captures extensive security metadata (hash, IP, device, etc.).
+    -   Implemented a PDF preview endpoint .
+    -   Created a new  component and integrated it into all user profile pages, replacing the old system.
+    -   Fixed a Metro bundler cache issue (yarn run v1.22.22
+$ expo start --reset-cache
+env: load .env
+env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT EXPO_DEVTOOLS_LISTEN_ADDRESS REACT_NATIVE_PACKAGER_HOSTNAME
+Starting project at /app/frontend
+Fast resolver is enabled.
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.) that was preventing the frontend from building.
+-   **Parent Document View**:
+    -   Updated the  endpoint to group documents by child for parent accounts.
+    -   Created a new page  to display these grouped documents.
+    -   Added a navigation link to the new page from the parent dashboard.
+-   **UI/UX & Business Logic Refinements**:
+    -   Removed sensitive document information from the collaborator profile page ().
+    -   Moved the Medical Certificate Block setting from the  to the  settings page.
+    -   Updated the setting to be **active by default** and to log any changes to the audit log.
+    -   Refined the certificate override flow to happen on the coach's scanner UI.
+-   **Bug Fixes**:
+    -   Fixed broken icons in  and  by using the  wrapper.
+    -   Implemented (but did not test) a fix for the admin dashboard's intermittent loading issue.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Progressive Rate Limiting**: Using  in FastAPI with an in-memory store () to track login attempts per IP and apply increasing delays (1 min, 5 min, 1 hour).
--   **Robust Attendance Logic**: The new model ties attendance to a unique combination of , , , and Wed Mar  4 07:10:59 UTC 2026, preventing simple duplicate entries and correctly handling complex schedules.
--   **Data Isolation by **: A critical security pattern applied across the backend, where the authenticated user's  is used as a mandatory filter in database queries to prevent cross-tenant data access.
--   **Streaming CSV Response**: Using FastAPI's  to generate and send large CSV files without holding them entirely in memory.
--   **Backfilling Data**: Writing a temporary, admin-only endpoint () to populate a new field () for all existing documents in a collection.
+-   **Dynamic PDF Generation**: Using  in Python to create complex, multi-page PDFs with dynamic data (user names, society info, etc.).
+-   **Document Integrity Hashing**: Using Python's  to create a SHA-256 hash of the generated PDF content to ensure non-repudiation and integrity.
+-   **Role-Based Conditional UI**: Modifying the coach's scanner to show an override modal only if the logged-in user has an  role.
+-   **Frontend State Management for Complex Modals**: Handling state for data, loading, errors, and user input within a single modal for a multi-step process (e.g., the override modal).
+-   **Data Grouping on the Backend**: Using Python to process a list of database documents and group them by a specific key () before sending them to the frontend, simplifying the client-side logic.
+-   **Metro Bundler Cache**: Encountered and resolved a frontend build issue by clearing the Metro bundler cache using yarn run v1.22.22
+$ expo start --reset-cache
+env: load .env
+env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT EXPO_DEVTOOLS_LISTEN_ADDRESS REACT_NATIVE_PACKAGER_HOSTNAME
+Starting project at /app/frontend
+Fast resolver is enabled.
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command..
 
 **key DB schema**
--   **users**:
-    -   ADDED:  (unique 12-char alphanumeric string).
-    -   MODIFIED: The  field is now used to determine QR code validity.
--   **attendances**:
-    -   MODIFIED: The schema now represents a single check-in event.
-    -   ADDED: , , , , , .
--   **audit_logs (NEW)**:
-    -   
--   **rate_limit_failures (NEW, in-memory via )**:
-    -   
+-   **documents**:
+    -   ADDED (for GDPR docs): , ,  (dict containing , ), , .
+-   **societies**:
+    -   ADDED:  (defaults to ).
 
 **All files of reference**
--    (Core logic for all new features)
--    (New QR scanner UI/UX)
--    (New UI)
--    (New UI)
--    (Bug fix and QR update)
--    (QR update)
+-    (Core logic for GDPR documents and certificate override)
+-    (New override modal logic)
+-    (New central component for privacy signing)
+-    (New page for parents)
+-    (New home for certificate settings)
+-    (Cleaned UI)
 
 **Critical Info for New Agent**
--   The Facilitator model remains the core principle. Do not introduce features that store sensitive user files.
--   The new QR attendance logic in  is complex but robust. Refer to it as the source of truth for how check-ins are handled.
--   Data isolation via  is a critical security requirement. Any new database query that retrieves lists of users, teams, or other society-specific data **must** include a filter for .
--   The login rate limiting is implemented directly in FastAPI using an in-memory dictionary. This will reset if the backend restarts.
+-   The medical certificate block is now **active by default**. Any new logic related to society settings must respect this.
+-   The GDPR signing flow is a critical legal feature. The metadata capture (hits	command
+   1	/usr/bin/mkdir, , etc.) is essential and must not be altered.
+-   The user has postponed Stripe integration until the next season. Do not work on it unless explicitly asked.
+-   The user strongly prefers interactive, context-aware solutions (like the override popup appearing for the coach) over solutions that require navigating through admin panels.
 
 **documents and test reports created in this job**
--    (Continuously updated throughout the session)
--    (Generated for the photo removal/compensation bug fix)
+-   None. The previous PRD was updated but no new reports were generated.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **(CONFIRMED)** User confirms proceeding with CSV export implementation.
-9.  **(CONFIRMED)** User confirms proceeding with the audit log viewer page.
-8.  **(CONFIRMED)** User confirms proceeding with the QR code display/print feature for parents.
-7.  **(CONFIRMED)** User provides detailed specs for the new QR attendance system and confirms the agent's implementation plan.
-6.  **(CONFIRMED)** User requests to remove the empty space left by the profile photos for a cleaner UI.
-5.  **(PENDING)** User asks what happens when an account is blocked by rate limiting. The agent clarified it's a temporary IP block, not an account block.
-4.  **(CONFIRMED)** User requests a more advanced, progressive rate limiting scheme (5 tries -> 1 min, 10 tries -> 5 min, etc.), which the agent implemented.
-3.  **(CONFIRMED)** User agrees to implement rate limiting as a backup measure in FastAPI.
-2.  **(INFO)** User shares advice from ChatGPT regarding security (rate limiting, audit logs, ToS).
-1.  **(CONFIRMED)** User confirms the agent should start implementing the audit logging feature.
+10. **(CONFIRMED)** User confirms the override popup is a better idea than a button in the admin panel.
+9.  **(REQUEST)** User asks to move the certificate setting to the top of the Other Settings page.
+8.  **(REQUEST)** User asks to make the text in the certificate setting more specific (agli allenamenti).
+7.  **(REQUEST)** User asks to move the certificate settings section out of the Society page.
+6.  **(INFO)** User clarifies that Stripe integration should be postponed to the next season.
+5.  **(CONFIRMED)** User confirms to proceed with fixing P2 (admin dashboard) and P3 (Stripe predisposition).
+4.  **(CONFIRMED)** User confirms they force-pushed to GitHub to resolve a conflict.
+3.  **(CONFIRMED)** User confirms the proposed architecture for Stripe (separate keys per society) is correct.
+2.  **(CONFIRMED)** User confirms the agent should proceed with implementing the document grouping for parents.
+1.  **(REQUEST)** User's final request: The certificate override popup **must** have Accept and Reject buttons, and the action must be logged.
 
 **Project Health Check:**
--   **Broken**: The admin dashboard () reportedly has an intermittent issue where data fails to load.
+-   **Broken**: None.
 -   **Mocked**: None.
+-   **Removed**: Stripe integration UI was built and then removed from view at the user's request.
 
 **3rd Party Integrations**
+-   slowapi
 -   reportlab
 -   react-signature-canvas
 -   python-codicefiscale
@@ -161,18 +195,16 @@ None.
 -   react-native-qrcode-svg
 -   Web Share API
 -   python-dateutil
--   **slowapi** (newly added for rate limiting)
 
 **Testing status**
--   Testing agent used after significant changes: YES, for the initial photo removal and compensation bug fix.
+-   Testing agent used after significant changes: NO
 -   Troubleshoot agent used after agent stuck in loop: NO
--   Test files created: None
--   Known regressions: The Admin dashboard loading issue is a pre-existing, unaddressed bug.
+-   Test files created: []
+-   Known regressions: None.
 
 **Credentials to test flow:**
-Credentials for , , and  roles can be found in the database. The agent has successfully used  to log in and retrieve tokens.
+- The agent successfully used  and . The passwords are . These should be used for testing the parent and admin/coach flows.
 
 **What agent forgot to execute**
--   The agent did not address the long-standing Admin dashboard intermittent loading failure issue.
--   While a fix for the discount field was applied, it was not tested via screenshot or user confirmation.
--   The agent identified that  should be replaced by a wrapper but did not perform the replacement across the codebase.</analysis>
+- The agent implemented a fix for the admin dashboard loading issue but never got confirmation from the user or a testing agent that it was resolved.
+- The agent only fixed the  issue in two files, not globally as implied by the original handoff summary.</analysis>

@@ -231,16 +231,50 @@ export default function CoachScreen() {
 
       // Show success message
       showAlert(
-        '✅ OVERRIDE ESEGUITO',
+        '✅ ACCESSO AUTORIZZATO',
         `${certificateOverrideData.athleteName} è stato/a registrato/a all'allenamento.\n\n⚠️ L'override è valido SOLO per questa sessione.`
       );
-
-      // Refresh today's attendances
-      loadTodayAttendances();
     } catch (error: any) {
       showAlert(
         'Errore Override',
         error.response?.data?.detail || 'Impossibile effettuare l\'override'
+      );
+    } finally {
+      setOverrideLoading(false);
+    }
+  };
+
+  // Handle certificate access denial (Admin only)
+  const handleCertificateDenial = async () => {
+    if (!certificateOverrideData) return;
+
+    setOverrideLoading(true);
+    try {
+      // Log the denial in audit logs
+      await api.post('/certificates/deny-access', {
+        athlete_id: certificateOverrideData.athleteId,
+        athlete_name: certificateOverrideData.athleteName,
+        reason: certificateOverrideData.blockReason
+      });
+
+      setCertificateOverrideModal(false);
+      setCertificateOverrideData(null);
+      setOverrideReason('');
+
+      // Show denial message
+      showAlert(
+        '⛔ ACCESSO RIFIUTATO',
+        `${certificateOverrideData.athleteName} NON è stato/a ammesso/a all'allenamento per certificato medico scaduto.`
+      );
+    } catch (error: any) {
+      // Even if logging fails, close the modal and show denial
+      setCertificateOverrideModal(false);
+      setCertificateOverrideData(null);
+      setOverrideReason('');
+      
+      showAlert(
+        '⛔ ACCESSO RIFIUTATO',
+        `${certificateOverrideData?.athleteName || 'Atleta'} NON è stato/a ammesso/a all'allenamento.`
       );
     } finally {
       setOverrideLoading(false);
@@ -901,23 +935,32 @@ export default function CoachScreen() {
                 numberOfLines={3}
               />
               
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.modalButtonCancel]}
-                  onPress={() => {
-                    setCertificateOverrideModal(false);
-                    setCertificateOverrideData(null);
-                    setOverrideReason('');
-                  }}
-                >
-                  <Text style={styles.modalButtonCancelText}>Annulla</Text>
-                </TouchableOpacity>
-                
+              {/* Two main action buttons - RIFIUTA and AUTORIZZA */}
+              <View style={styles.certificateActionButtons}>
+                {/* RIFIUTA Button - Red, prominent */}
                 <TouchableOpacity
                   style={[
-                    styles.modalButton, 
-                    styles.certificateOverrideButton,
-                    (!overrideReason.trim() || overrideLoading) && styles.certificateOverrideButtonDisabled
+                    styles.certificateDenyButton,
+                    overrideLoading && styles.certificateButtonDisabled
+                  ]}
+                  onPress={handleCertificateDenial}
+                  disabled={overrideLoading}
+                >
+                  {overrideLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Text style={styles.certificateDenyButtonIcon}>⛔</Text>
+                      <Text style={styles.certificateDenyButtonText}>RIFIUTA</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+                
+                {/* AUTORIZZA Button - Green, requires reason */}
+                <TouchableOpacity
+                  style={[
+                    styles.certificateAuthorizeButton,
+                    (!overrideReason.trim() || overrideLoading) && styles.certificateButtonDisabled
                   ]}
                   onPress={handleCertificateOverride}
                   disabled={!overrideReason.trim() || overrideLoading}
@@ -925,10 +968,25 @@ export default function CoachScreen() {
                   {overrideLoading ? (
                     <ActivityIndicator color="#fff" size="small" />
                   ) : (
-                    <Text style={styles.certificateOverrideButtonText}>AUTORIZZA ACCESSO</Text>
+                    <>
+                      <Text style={styles.certificateAuthorizeButtonIcon}>✅</Text>
+                      <Text style={styles.certificateAuthorizeButtonText}>AUTORIZZA</Text>
+                    </>
                   )}
                 </TouchableOpacity>
               </View>
+              
+              {/* Cancel link */}
+              <TouchableOpacity
+                style={styles.certificateCancelLink}
+                onPress={() => {
+                  setCertificateOverrideModal(false);
+                  setCertificateOverrideData(null);
+                  setOverrideReason('');
+                }}
+              >
+                <Text style={styles.certificateCancelLinkText}>Annulla</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -2212,5 +2270,76 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  // New certificate action buttons styles
+  certificateActionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 16,
+  },
+  certificateDenyButton: {
+    flex: 1,
+    backgroundColor: '#E74C3C',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#E74C3C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  certificateDenyButtonIcon: {
+    fontSize: 18,
+  },
+  certificateDenyButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  certificateAuthorizeButton: {
+    flex: 1,
+    backgroundColor: '#27AE60',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#27AE60',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  certificateAuthorizeButtonIcon: {
+    fontSize: 18,
+  },
+  certificateAuthorizeButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  certificateButtonDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  certificateCancelLink: {
+    alignSelf: 'center',
+    marginTop: 16,
+    padding: 8,
+  },
+  certificateCancelLinkText: {
+    color: '#666',
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
 });

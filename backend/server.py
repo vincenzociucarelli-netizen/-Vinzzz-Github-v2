@@ -6614,6 +6614,64 @@ async def override_certificate_block(
         "athlete_name": athlete.get("full_name")
     }
 
+
+class CertificateDenyAccessRequest(BaseModel):
+    athlete_id: str
+    athlete_name: str
+    reason: str  # Motivo del blocco (es: certificato scaduto)
+
+
+@api_router.post("/certificates/deny-access")
+async def deny_certificate_access(
+    data: CertificateDenyAccessRequest,
+    request: Request,
+    current_user = Depends(get_current_user)
+):
+    """Log denial of access due to expired certificate - Admin/Coach only"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH]:
+        raise HTTPException(status_code=403, detail="Solo admin o coach può registrare il rifiuto")
+    
+    # Get client IP
+    client_ip = request.client.host if request.client else "unknown"
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+    
+    # Create denial log entry
+    denial_log = {
+        "id": str(uuid.uuid4()),
+        "athlete_id": data.athlete_id,
+        "athlete_name": data.athlete_name,
+        "user_id": current_user["id"],
+        "user_name": current_user.get("full_name", current_user.get("email")),
+        "reason": data.reason,
+        "timestamp": datetime.utcnow().isoformat(),
+        "ip_address": client_ip,
+        "type": "certificate_access_denied"
+    }
+    
+    # Save to audit log collection
+    await db.audit_logs.insert_one(denial_log)
+    
+    # AUDIT LOG: Certificate access denied (standardized format)
+    await log_audit(
+        action="certificate_access_denied",
+        user_id=current_user["id"],
+        user_email=current_user["email"],
+        society_id=current_user.get("society_id", ""),
+        target_user_id=data.athlete_id,
+        target_user_name=data.athlete_name,
+        ip_address=client_ip,
+        details={"reason": data.reason, "action": "access_denied_expired_certificate"}
+    )
+    
+    return {
+        "message": "⛔ Accesso rifiutato registrato",
+        "log_id": denial_log["id"],
+        "athlete_name": data.athlete_name
+    }
+
+
 @api_router.get("/certificates/override-logs")
 async def get_certificate_override_logs(current_user = Depends(get_current_user)):
     """Get all certificate override logs - Admin only"""

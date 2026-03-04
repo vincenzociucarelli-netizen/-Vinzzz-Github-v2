@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 
 # Base URL from environment
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://audit-compliance-14.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://medical-cert-block.preview.emergentagent.com')
 if not BASE_URL.startswith('http'):
     BASE_URL = f"https://{BASE_URL}"
 BASE_URL = BASE_URL.rstrip('/')
