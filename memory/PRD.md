@@ -135,6 +135,20 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 
 ## Latest Session Updates (04/03/2026)
 
+### P0 - Certificate Override Popup Complete
+- **Backend**: Added `POST /api/certificates/deny-access` endpoint
+  - Logs denial of access for expired certificate in audit log
+  - Accessible by Admin and Coach roles
+  - Returns: `{message, log_id, athlete_name}`
+- **Frontend**: Updated coach QR scanner modal (`/app/frontend/app/coach/index.tsx`)
+  - Added two distinct buttons: "RIFIUTA" (red) and "AUTORIZZA" (green)
+  - RIFIUTA: Immediately denies access and logs to audit
+  - AUTORIZZA: Requires mandatory reason (min 5 chars) before allowing single-session override
+  - Added cancel link to close modal without action
+  - New styles: `certificateActionButtons`, `certificateDenyButton`, `certificateAuthorizeButton`
+- **Testing**: 100% backend tests passed (10/10)
+  - Test file: `/app/backend/tests/test_certificate_override.py`
+
 ### GDPR Privacy Templates Implementation
 - Created 2 new GDPR-compliant PDF templates:
   - `generate_gdpr_adult_privacy_pdf()` - For adults (collaborators, coaches, directors, adult athletes)
@@ -177,12 +191,13 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 ## Upcoming Tasks (Priority Order)
 1. ~~P1: Implement comprehensive logging for critical actions~~ ✅ COMPLETED
 2. ~~P1: Strengthen authentication security: rate limiting on login~~ ✅ COMPLETED
-3. P2: Verify that all backend database queries strictly filter by `society_id` for data isolation
-4. P2: Apply "end-of-trial" logic for Parent of minor athlete
-5. P2: Data export feature (CSV format for athletes, attendance, compensations, logs)
-6. P2: Technical limit of 150 athletes per sports club (ASD)
-7. P3: Stripe Integration for premium plans
-8. P3: Refactor the monolithic `server.py` into a modular structure
+3. ~~P0: Certificate override popup with RIFIUTA/AUTORIZZA buttons~~ ✅ COMPLETED (04/03/2026)
+4. P2: Verify frontend certificate override popup when ngrok tunnel is operational
+5. P2: Test admin dashboard intermittent loading fix
+6. P2: Apply "end-of-trial" logic for Parent of minor athlete
+7. P3: Global check for @expo/vector-icons imports
+8. P3: Stripe Integration for premium plans (postponed to next season)
+9. P3: Refactor the monolithic `server.py` into a modular structure
 
 ## Key API Endpoints
 - `GET /api/stats/overview` - Dashboard statistics (admin only)
