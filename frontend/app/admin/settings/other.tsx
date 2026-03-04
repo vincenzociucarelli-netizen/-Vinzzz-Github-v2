@@ -360,8 +360,8 @@ export default function OtherSettings() {
               </Text>
               <Text style={styles.toggleDesc}>
                 {blockExpiredCertificates 
-                  ? 'La scansione QR è bloccata per atleti con certificato scaduto o mancante'
-                  : 'La scansione QR permette la registrazione anche con certificato scaduto'}
+                  ? 'La scansione QR blocca la registrazione agli allenamenti per atleti con certificato scaduto o mancante'
+                  : 'La scansione QR permette la registrazione agli allenamenti anche con certificato scaduto'}
               </Text>
             </View>
             <View style={[
