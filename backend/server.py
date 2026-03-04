@@ -10429,7 +10429,7 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2.3*cm, y - 0.5*cm, f"Società: {nome_legale}")
     c.setFont("Helvetica", 9)
     c.drawString(2.3*cm, y - 1*cm, f"Sede: {society_address}")
-    c.drawString(2.3*cm, y - 1.4*cm, f"C.F./P.IVA: {society_cf_piva}  |  Email: {society_email}")
+    c.drawString(2.3*cm, y - 1.4*cm, f"C.F.: {society_cf_piva}  |  Email: {society_email}")
     
     y -= 2.8*cm
     
@@ -11908,7 +11908,7 @@ async def sign_gdpr_privacy_document(
     society_full_address = f"{society_address}, {society_city}" if society_address else society_city
     if society_province:
         society_full_address += f" ({society_province})"
-    society_cf_piva = (society_settings.get("cf_piva", "") if society_settings else "") or (society.get("fiscal_code", "") if society else "") or ""
+    society_cf_piva = (society_settings.get("fiscal_code", "") if society_settings else "") or (society.get("fiscal_code", "") if society else "") or ""
     society_email = (society_settings.get("email", "") if society_settings else "") or (society.get("email", "") if society else "") or ""
     
     # Generate timestamp
@@ -12199,7 +12199,7 @@ async def preview_gdpr_privacy_document(
     society_full_address = f"{society_address}, {society_city}" if society_address else society_city
     if society_province:
         society_full_address += f" ({society_province})"
-    society_cf_piva = (society_settings.get("cf_piva", "") if society_settings else "") or (society.get("fiscal_code", "") if society else "") or ""
+    society_cf_piva = (society_settings.get("fiscal_code", "") if society_settings else "") or (society.get("fiscal_code", "") if society else "") or ""
     society_email = (society_settings.get("email", "") if society_settings else "") or (society.get("email", "") if society else "") or ""
     
     # Preview timestamp and metadata
