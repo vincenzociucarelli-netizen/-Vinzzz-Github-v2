@@ -12,6 +12,7 @@ import {
   Modal,
   Linking,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -63,6 +64,17 @@ export default function CoachScreen() {
   const [manualInputModalVisible, setManualInputModalVisible] = useState(false);
   const webScannerRef = useRef<any>(null);
   const scannerContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Certificate override modal state
+  const [certificateOverrideModal, setCertificateOverrideModal] = useState(false);
+  const [certificateOverrideData, setCertificateOverrideData] = useState<{
+    athleteId: string;
+    athleteName: string;
+    teamId: string;
+    blockReason: string;
+  } | null>(null);
+  const [overrideReason, setOverrideReason] = useState('');
+  const [overrideLoading, setOverrideLoading] = useState(false);
 
   const loadTeams = async () => {
     try {
@@ -185,6 +197,56 @@ export default function CoachScreen() {
     }
   };
 
+  // Handle certificate override (Admin only)
+  const handleCertificateOverride = async () => {
+    if (!certificateOverrideData || !overrideReason.trim()) {
+      showAlert('Errore', 'Inserisci il motivo dell\'override (obbligatorio)');
+      return;
+    }
+
+    if (overrideReason.trim().length < 5) {
+      showAlert('Errore', 'Il motivo deve essere di almeno 5 caratteri');
+      return;
+    }
+
+    setOverrideLoading(true);
+    try {
+      // 1. First, call the override endpoint
+      await api.post('/certificates/override', {
+        athlete_id: certificateOverrideData.athleteId,
+        reason: overrideReason.trim()
+      });
+
+      // 2. Now register the attendance with override flag
+      const response = await api.post('/attendance/check', {
+        qr_code: certificateOverrideData.athleteId,
+        team_id: certificateOverrideData.teamId,
+        force: true,
+        force_note: `Override certificato: ${overrideReason.trim()}`
+      });
+
+      setCertificateOverrideModal(false);
+      setCertificateOverrideData(null);
+      setOverrideReason('');
+
+      // Show success message
+      showAlert(
+        '✅ OVERRIDE ESEGUITO',
+        `${certificateOverrideData.athleteName} è stato/a registrato/a all'allenamento.\n\n⚠️ L'override è valido SOLO per questa sessione.`
+      );
+
+      // Refresh today's attendances
+      loadTodayAttendances();
+    } catch (error: any) {
+      showAlert(
+        'Errore Override',
+        error.response?.data?.detail || 'Impossibile effettuare l\'override'
+      );
+    } finally {
+      setOverrideLoading(false);
+    }
+  };
+
   const handleForceRegistration = async (qrCode: string, note: string = '') => {
     setForceModalVisible(false);
     try {
@@ -230,11 +292,24 @@ export default function CoachScreen() {
         // Already registered today - show force option with details
         showForceRegistrationDialog(data, attendance);
       } else if (attendance.status === 'blocked') {
-        // Blocked - show error with red styling
-        showAlert(
-          '⛔ ACCESSO NEGATO',
-          `${attendance.athlete_name || 'Atleta'}\n\n${attendance.block_reason || 'Non autorizzato'}`
-        );
+        // Check if blocked due to certificate
+        if (attendance.certificate_blocked && attendance.can_override && user?.role === 'admin') {
+          // Show override modal for admin
+          setCertificateOverrideData({
+            athleteId: attendance.athlete_id,
+            athleteName: attendance.athlete_name || 'Atleta',
+            teamId: attendance.team_id,
+            blockReason: attendance.block_reason || 'Certificato scaduto'
+          });
+          setOverrideReason('');
+          setCertificateOverrideModal(true);
+        } else {
+          // Blocked - show error with red styling
+          showAlert(
+            '⛔ ACCESSO NEGATO',
+            `${attendance.athlete_name || 'Atleta'}\n\n${attendance.block_reason || 'Non autorizzato'}`
+          );
+        }
       } else {
         // Allowed - show success with athlete name
         const athleteName = attendance.athlete_name || 'Atleta';
@@ -775,6 +850,83 @@ export default function CoachScreen() {
                   onPress={() => pendingQrCode && handleForceRegistration(pendingQrCode, forceNote)}
                 >
                   <Text style={styles.forceButtonText}>FORZA REGISTRAZIONE</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Certificate Override Modal (Admin only) */}
+        <Modal
+          visible={certificateOverrideModal}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => {
+            setCertificateOverrideModal(false);
+            setCertificateOverrideData(null);
+            setOverrideReason('');
+          }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, styles.certificateOverrideModal]}>
+              <View style={styles.certificateOverrideHeader}>
+                <Text style={styles.certificateOverrideIcon}>🏥</Text>
+                <Text style={styles.certificateOverrideTitle}>CERTIFICATO SCADUTO</Text>
+              </View>
+              
+              <View style={styles.certificateOverrideAthleteBox}>
+                <Text style={styles.certificateOverrideAthleteName}>
+                  {certificateOverrideData?.athleteName}
+                </Text>
+                <Text style={styles.certificateOverrideReason}>
+                  {certificateOverrideData?.blockReason}
+                </Text>
+              </View>
+              
+              <Text style={styles.certificateOverrideWarning}>
+                ⚠️ L'override è valido SOLO per questa sessione di allenamento.
+                Il blocco si riattiverà automaticamente.
+              </Text>
+              
+              <Text style={styles.certificateOverrideLabel}>
+                Motivo dell'override (obbligatorio):
+              </Text>
+              <TextInput
+                style={styles.certificateOverrideInput}
+                placeholder="es. Certificato in fase di rinnovo, gara imminente..."
+                placeholderTextColor="#999"
+                value={overrideReason}
+                onChangeText={setOverrideReason}
+                multiline
+                numberOfLines={3}
+              />
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonCancel]}
+                  onPress={() => {
+                    setCertificateOverrideModal(false);
+                    setCertificateOverrideData(null);
+                    setOverrideReason('');
+                  }}
+                >
+                  <Text style={styles.modalButtonCancelText}>Annulla</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.modalButton, 
+                    styles.certificateOverrideButton,
+                    (!overrideReason.trim() || overrideLoading) && styles.certificateOverrideButtonDisabled
+                  ]}
+                  onPress={handleCertificateOverride}
+                  disabled={!overrideReason.trim() || overrideLoading}
+                >
+                  {overrideLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.certificateOverrideButtonText}>AUTORIZZA ACCESSO</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -1985,5 +2137,80 @@ const styles = StyleSheet.create({
   teamSelectorTextActive: {
     color: '#333',
     fontWeight: '500',
+  },
+  // Certificate Override Modal
+  certificateOverrideModal: {
+    borderWidth: 2,
+    borderColor: '#E74C3C',
+  },
+  certificateOverrideHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  certificateOverrideIcon: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  certificateOverrideTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#E74C3C',
+    textAlign: 'center',
+  },
+  certificateOverrideAthleteBox: {
+    backgroundColor: '#FDEDEC',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#E74C3C',
+  },
+  certificateOverrideAthleteName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  certificateOverrideReason: {
+    fontSize: 14,
+    color: '#C0392B',
+  },
+  certificateOverrideWarning: {
+    backgroundColor: '#FFF3CD',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    fontSize: 13,
+    color: '#856404',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  certificateOverrideLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  certificateOverrideInput: {
+    backgroundColor: '#f8f8f8',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    fontSize: 14,
+  },
+  certificateOverrideButton: {
+    backgroundColor: '#E74C3C',
+  },
+  certificateOverrideButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  certificateOverrideButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 });

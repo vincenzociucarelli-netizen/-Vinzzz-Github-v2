@@ -7953,7 +7953,43 @@ async def check_attendance(attendance_data: AttendanceCreate, current_user = Dep
             "can_force": True  # Frontend può mostrare opzione forzatura
         }
     
-    # 6. Create attendance record
+    # 6. Check if blocked due to certificate
+    certificate_blocked = False
+    certificate_block_reason = None
+    if not status_check["allowed"]:
+        reason = status_check.get("reason", "")
+        if "CERTIFICATO" in reason.upper():
+            certificate_blocked = True
+            certificate_block_reason = reason
+    
+    # If blocked (not by certificate or no override possible), return blocked status
+    if not status_check["allowed"] and not certificate_blocked:
+        return {
+            "id": None,
+            "athlete_id": athlete_id,
+            "athlete_name": athlete_name,
+            "team_id": team_id,
+            "team_name": team.get("name"),
+            "status": "blocked",
+            "block_reason": status_check.get("reason"),
+            "certificate_blocked": False
+        }
+    
+    # If blocked by certificate, allow override option for admin
+    if certificate_blocked and not attendance_data.force:
+        return {
+            "id": None,
+            "athlete_id": athlete_id,
+            "athlete_name": athlete_name,
+            "team_id": team_id,
+            "team_name": team.get("name"),
+            "status": "blocked",
+            "block_reason": certificate_block_reason,
+            "certificate_blocked": True,
+            "can_override": True  # Frontend can show override option
+        }
+    
+    # 7. Create attendance record
     attendance_dict = {
         "id": str(ObjectId()),
         "athlete_id": athlete_id,
