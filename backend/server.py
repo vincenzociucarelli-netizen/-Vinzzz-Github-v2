@@ -11892,21 +11892,24 @@ async def sign_gdpr_privacy_document(
     if forwarded_for:
         client_ip = forwarded_for.split(",")[0].strip()
     
-    # Get society info
+    # Get society info from settings (has ragione_sociale)
+    society_settings = await db.settings.find_one({"type": "society"})
     society = await db.societies.find_one()
-    if not society:
+    if not society and not society_settings:
         raise HTTPException(status_code=404, detail="Nessuna società configurata")
     
-    society_id = society.get("id", str(society.get("_id", "")))
-    society_name = society.get("name", "")
-    society_address = society.get("address", "") or ""
-    society_city = society.get("city", "")
-    society_province = society.get("province", "")
+    society_id = society.get("id", str(society.get("_id", ""))) if society else ""
+    # Use ragione_sociale if available
+    ragione_sociale = society_settings.get("ragione_sociale", "") if society_settings else ""
+    society_name = ragione_sociale or (society_settings.get("name", "") if society_settings else "") or (society.get("name", "") if society else "")
+    society_address = (society_settings.get("address", "") if society_settings else "") or (society.get("address", "") if society else "") or ""
+    society_city = (society_settings.get("city", "") if society_settings else "") or (society.get("city", "") if society else "")
+    society_province = (society_settings.get("province", "") if society_settings else "") or (society.get("province", "") if society else "")
     society_full_address = f"{society_address}, {society_city}" if society_address else society_city
     if society_province:
         society_full_address += f" ({society_province})"
-    society_cf_piva = society.get("fiscal_code", "") or society.get("vat_number", "")
-    society_email = society.get("email", "") or society.get("contact_email", "")
+    society_cf_piva = (society_settings.get("cf_piva", "") if society_settings else "") or (society.get("fiscal_code", "") if society else "") or ""
+    society_email = (society_settings.get("email", "") if society_settings else "") or (society.get("email", "") if society else "") or ""
     
     # Generate timestamp
     timestamp = datetime.now(timezone.utc)
@@ -12180,21 +12183,24 @@ async def preview_gdpr_privacy_document(
     """
     import hashlib
     
-    # Get society info
+    # Get society info from settings (has ragione_sociale)
+    society_settings = await db.settings.find_one({"type": "society"})
     society = await db.societies.find_one()
-    if not society:
+    if not society and not society_settings:
         raise HTTPException(status_code=404, detail="Nessuna società configurata")
     
-    society_id = society.get("id", str(society.get("_id", "")))
-    society_name = society.get("name", "")
-    society_address = society.get("address", "") or ""
-    society_city = society.get("city", "")
-    society_province = society.get("province", "")
+    society_id = society.get("id", str(society.get("_id", ""))) if society else ""
+    # Use ragione_sociale if available, otherwise fall back to name
+    ragione_sociale = society_settings.get("ragione_sociale", "") if society_settings else ""
+    society_name = ragione_sociale or (society_settings.get("name", "") if society_settings else "") or (society.get("name", "") if society else "")
+    society_address = (society_settings.get("address", "") if society_settings else "") or (society.get("address", "") if society else "") or ""
+    society_city = (society_settings.get("city", "") if society_settings else "") or (society.get("city", "") if society else "")
+    society_province = (society_settings.get("province", "") if society_settings else "") or (society.get("province", "") if society else "")
     society_full_address = f"{society_address}, {society_city}" if society_address else society_city
     if society_province:
         society_full_address += f" ({society_province})"
-    society_cf_piva = society.get("fiscal_code", "") or society.get("vat_number", "")
-    society_email = society.get("email", "") or society.get("contact_email", "")
+    society_cf_piva = (society_settings.get("cf_piva", "") if society_settings else "") or (society.get("fiscal_code", "") if society else "") or ""
+    society_email = (society_settings.get("email", "") if society_settings else "") or (society.get("email", "") if society else "") or ""
     
     # Preview timestamp and metadata
     timestamp_str = "[DATA FIRMA]"
