@@ -10422,16 +10422,16 @@ def generate_gdpr_adult_privacy_pdf(
     # Box Dati Societari
     c.setStrokeColor(colors.HexColor("#1565C0"))
     c.setFillColor(colors.HexColor("#E3F2FD"))
-    c.roundRect(2*cm, y - 2.2*cm, max_w, 2*cm, 5, stroke=1, fill=1)
+    c.roundRect(2*cm, y - 2.6*cm, max_w, 2.4*cm, 5, stroke=1, fill=1)
     c.setFillColor(colors.black)
     
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(2.3*cm, y - 0.5*cm, f"Società: {nome_legale}")
+    c.drawString(2.3*cm, y - 0.6*cm, f"Società: {nome_legale}")
     c.setFont("Helvetica", 9)
-    c.drawString(2.3*cm, y - 1*cm, f"Sede: {society_address}")
-    c.drawString(2.3*cm, y - 1.4*cm, f"C.F.: {society_cf_piva}  |  Email: {society_email}")
+    c.drawString(2.3*cm, y - 1.15*cm, f"Sede: {society_address}")
+    c.drawString(2.3*cm, y - 1.65*cm, f"C.F.: {society_cf_piva}  |  Email: {society_email}")
     
-    y -= 2.8*cm
+    y -= 3.2*cm
     
     # Intro
     c.setFont("Helvetica", 10)
