@@ -21,7 +21,7 @@ import { Ionicons } from '../../src/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
 import PhotoViewer from '../../src/components/PhotoViewer';
-import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
+import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -1468,14 +1468,26 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         </View>
       )}
 
-      {/* Adult Privacy Modal */}
-      <AdultPrivacyModal
+      {/* GDPR Privacy Modal */}
+      <GDPRPrivacyModal
         visible={showPrivacyModal}
         onClose={() => setShowPrivacyModal(false)}
-        onSign={handlePrivacySign}
-        signerName={profileData.full_name || `${profileData.first_name} ${profileData.last_name}`}
-        signerRole="coach"
-        societyName={societyName}
+        onSign={(success, documentId) => {
+          if (success) {
+            handlePrivacySign('');
+          }
+        }}
+        documentType="gdpr_adult"
+        signerInfo={{
+          name: profileData.first_name || (profileData.full_name?.split(' ').slice(1).join(' ') || ''),
+          surname: profileData.last_name || (profileData.full_name?.split(' ')[0] || ''),
+          fiscal_code: profileData.fiscal_code || '',
+          birth_date: profileData.date_of_birth || '',
+          birth_place: profileData.place_of_birth || '',
+          address: profileData.address || '',
+          city: profileData.city || '',
+          province: profileData.province || '',
+        }}
       />
 
       {/* All Documents Modal */}

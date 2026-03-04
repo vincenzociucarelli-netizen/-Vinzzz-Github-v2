@@ -133,10 +133,33 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 ### Pending User Verification
 - Compensation page logic (fallback for missing contract dates)
 
+## Latest Session Updates (04/03/2026)
+
+### GDPR Privacy Templates Implementation
+- Created 2 new GDPR-compliant PDF templates:
+  - `generate_gdpr_adult_privacy_pdf()` - For adults (collaborators, coaches, directors, adult athletes)
+  - `generate_gdpr_minor_privacy_pdf()` - For parents signing for minors
+- New endpoint: `POST /api/documents/sign-gdpr-privacy`
+- Full legal metadata: document_version, timestamp, user_id, society_id, hash_document (SHA-256), device_type, ip_address
+- Email notification with PDF attachment via `send_document_email()`
+
+### Frontend Updates
+- New component: `GDPRPrivacyModal.tsx` supporting both adult and minor privacy flows
+- Updated all profile pages to use new GDPR modal:
+  - `/app/collaboratore/profile.tsx`
+  - `/app/coach/profile.tsx`
+  - `/app/dirigente/profile.tsx`
+  - `/app/athlete/profile.tsx`
+  - `/app/athlete/index.tsx`
+
+### Bug Fixes
+- Removed "Documento e Dati Bancari" section from collaborator profile (kept only IBAN/Bank)
+- Fixed @expo/vector-icons imports in export-data.tsx and audit-logs.tsx
+
 ### Known Issues
 - P2: Admin dashboard sometimes fails to load lists (intermittent) - 9 parallel API calls may cause race conditions under load
-- ~~P3: `@expo/vector-icons` not rendering correctly on web~~ ✅ FIXED (04/03/2026) - Replaced with Icon wrapper
-- ~~P3: Discount field input bug results in leading zeros~~ ✅ FIXED - Logic already present
+- ~~P3: `@expo/vector-icons` not rendering correctly on web~~ ✅ FIXED (04/03/2026)
+- ~~P3: Discount field input bug results in leading zeros~~ ✅ FIXED
 
 ## Upcoming Tasks (Priority Order)
 1. ~~P1: Implement comprehensive logging for critical actions~~ ✅ COMPLETED

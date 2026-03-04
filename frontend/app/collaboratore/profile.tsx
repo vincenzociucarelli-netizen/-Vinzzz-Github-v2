@@ -24,7 +24,7 @@ import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import PhotoViewer from '../../src/components/PhotoViewer';
-import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
+import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://audit-compliance-14.preview.emergentagent.com';
@@ -1274,14 +1274,26 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         </View>
       )}
 
-      {/* Adult Privacy Modal */}
-      <AdultPrivacyModal
+      {/* GDPR Privacy Modal */}
+      <GDPRPrivacyModal
         visible={showPrivacyModal}
         onClose={() => setShowPrivacyModal(false)}
-        onSign={handlePrivacySign}
-        signerName={profileData.full_name || `${profileData.first_name} ${profileData.last_name}`}
-        signerRole="collaboratore"
-        societyName={societyName}
+        onSign={(success, documentId) => {
+          if (success) {
+            handlePrivacySign('');
+          }
+        }}
+        documentType="gdpr_adult"
+        signerInfo={{
+          name: profileData.first_name || (profileData.full_name?.split(' ').slice(1).join(' ') || ''),
+          surname: profileData.last_name || (profileData.full_name?.split(' ')[0] || ''),
+          fiscal_code: profileData.fiscal_code || '',
+          birth_date: profileData.date_of_birth || '',
+          birth_place: profileData.place_of_birth || '',
+          address: profileData.address || '',
+          city: profileData.city || '',
+          province: profileData.province || '',
+        }}
       />
 
       {/* Photo Viewer for documents */}

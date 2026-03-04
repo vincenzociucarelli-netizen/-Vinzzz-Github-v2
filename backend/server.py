@@ -1864,6 +1864,55 @@ from email_service import send_transactional_email, send_email_with_pdf
 
 SENDER_EMAIL = os.environ.get("SENDGRID_FROM_EMAIL", "info@pallavoloperugia.it")
 
+
+async def send_document_email(
+    to_email: str,
+    subject: str,
+    document_title: str,
+    signer_name: str,
+    pdf_bytes: bytes,
+    filename: str
+):
+    """Send a signed document PDF via email"""
+    try:
+        import base64
+        pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+        
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2 style="color: #8E44AD;">{document_title}</h2>
+            <p>Gentile {signer_name},</p>
+            <p>In allegato trova il documento firmato digitalmente.</p>
+            <p>Questo documento è stato generato automaticamente e contiene i metadati 
+            di firma per garantirne la validità legale (timestamp, IP, hash del documento).</p>
+            <br>
+            <p style="color: #666; font-size: 12px;">
+                Conservi questo documento per i suoi archivi.<br>
+                In caso di domande, contatti la società sportiva.
+            </p>
+        </body>
+        </html>
+        """
+        
+        result = await send_email_with_pdf(
+            to_email=to_email,
+            subject=subject,
+            html_content=html_content,
+            pdf_base64=pdf_base64,
+            pdf_filename=filename,
+            to_name=signer_name
+        )
+        
+        if result and not result.get('success', True):
+            logging.warning(f"Email send warning: {result.get('error', 'Unknown error')}")
+            
+        return result
+    except Exception as e:
+        logging.warning(f"Could not send document email: {e}")
+        return None
+
+
 def generate_reset_token():
     """Generate a secure random token for password reset"""
     return secrets.token_urlsafe(32)
@@ -9859,6 +9908,30 @@ class SignatureDocumentRequest(BaseModel):
     related_entity_id: Optional[str] = None  # athlete_id, coach_id, etc.
     additional_data: Optional[dict] = None  # Any extra data to include
 
+
+class GDPRPrivacySignRequest(BaseModel):
+    """Request model for GDPR-compliant privacy consent signing"""
+    document_type: str  # "gdpr_adult" or "gdpr_minor"
+    signature_base64: str  # Base64 encoded signature image
+    user_agent: str  # Browser/device info
+    # For adult privacy
+    signer_name: Optional[str] = None
+    signer_surname: Optional[str] = None
+    signer_fiscal_code: Optional[str] = None
+    signer_birth_date: Optional[str] = None
+    signer_birth_place: Optional[str] = None
+    signer_address: Optional[str] = None
+    signer_city: Optional[str] = None
+    signer_province: Optional[str] = None
+    # For minor privacy (additional fields)
+    minor_id: Optional[str] = None  # athlete_id of the minor
+    minor_name: Optional[str] = None
+    minor_surname: Optional[str] = None
+    minor_fiscal_code: Optional[str] = None
+    minor_birth_date: Optional[str] = None
+    minor_birth_place: Optional[str] = None
+
+
 def generate_monthly_receipt_pdf(
     society_name: str,
     collaborator_name: str,
@@ -9973,6 +10046,560 @@ def generate_monthly_receipt_pdf(
             c.drawImage(img_reader, width - 8*cm, y - 2.5*cm, width=6*cm, height=2*cm, preserveAspectRatio=True)
         except Exception as e:
             logging.error(f"Error adding signature: {e}")
+    
+    c.save()
+    return buffer.getvalue()
+
+
+# =============================================================================
+# GDPR PRIVACY TEMPLATES - NEW COMPLIANT VERSIONS
+# =============================================================================
+
+def generate_gdpr_adult_privacy_pdf(
+    society_name: str,
+    society_address: str,
+    society_cf_piva: str,
+    society_email: str,
+    signer_name: str,
+    signer_surname: str,
+    signer_fiscal_code: str,
+    signer_birth_date: str,
+    signer_birth_place: str,
+    signer_address: str,
+    signer_city: str,
+    signer_province: str,
+    signature_base64: str,
+    timestamp: str,
+    ip_address: str,
+    user_agent: str,
+    document_version: str,
+    document_hash: str,
+    user_id: str,
+    society_id: str
+) -> bytes:
+    """Generate GDPR-compliant privacy consent PDF for adults (collaboratori, coach, dirigenti, atleti maggiorenni)"""
+    if not HAS_PDF_GENERATION:
+        raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    def draw_wrapped_text(canvas_obj, text, x, y, max_width, font_name="Helvetica", font_size=10, line_height=0.45):
+        """Helper function to draw wrapped text"""
+        canvas_obj.setFont(font_name, font_size)
+        words = text.split(' ')
+        lines = []
+        current_line = ""
+        for word in words:
+            test_line = current_line + " " + word if current_line else word
+            if canvas_obj.stringWidth(test_line, font_name, font_size) < max_width:
+                current_line = test_line
+            else:
+                if current_line:
+                    lines.append(current_line)
+                current_line = word
+        if current_line:
+            lines.append(current_line)
+        
+        for line in lines:
+            canvas_obj.drawString(x, y, line)
+            y -= line_height * cm
+        return y
+    
+    # ==================== PAGE 1 ====================
+    # Header
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(width/2, height - 2*cm, "INFORMATIVA PRIVACY PER COLLABORATORI")
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(width/2, height - 2.6*cm, "ai sensi del Regolamento UE 2016/679 (GDPR)")
+    
+    y = height - 4*cm
+    max_w = width - 4*cm
+    
+    # Intro
+    c.setFont("Helvetica", 10)
+    intro_text = f"Gentile Collaboratore, La presente informativa descrive le modalità di trattamento dei dati personali da parte di {society_name}, con sede in {society_address}, C.F./P.IVA {society_cf_piva}, email {society_email}."
+    y = draw_wrapped_text(c, intro_text, 2*cm, y, max_w)
+    
+    y -= 0.5*cm
+    
+    # Section 1 - Titolare
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "1. TITOLARE DEL TRATTAMENTO")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    titolare_text = f"Il Titolare del trattamento è {society_name}, con sede in {society_address} – email: {society_email}."
+    y = draw_wrapped_text(c, titolare_text, 2*cm, y, max_w)
+    
+    y -= 0.3*cm
+    
+    # Section 2 - Finalità
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "2. FINALITÀ E BASE GIURIDICA DEL TRATTAMENTO")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    c.drawString(2*cm, y, "I dati personali saranno trattati per le seguenti finalità:")
+    y -= 0.45*cm
+    finalita = [
+        "a) Gestione del rapporto associativo/collaborativo con la Società;",
+        "b) Adempimento degli obblighi di legge, fiscali e contabili;",
+        "c) Comunicazione con gli enti sportivi di riferimento (es. Federazioni, EPS, CONI);",
+        "d) Gestione delle attività sportive, organizzative e amministrative della Società."
+    ]
+    for f in finalita:
+        c.drawString(2.3*cm, y, f)
+        y -= 0.45*cm
+    
+    y -= 0.2*cm
+    base_giuridica = "La base giuridica del trattamento è l'esecuzione del rapporto collaborativo e l'adempimento di obblighi di legge."
+    y = draw_wrapped_text(c, base_giuridica, 2*cm, y, max_w)
+    
+    y -= 0.3*cm
+    
+    # Section 3 - Tipologia dati
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "3. TIPOLOGIA DI DATI TRATTATI")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    c.drawString(2*cm, y, "La Società può trattare le seguenti categorie di dati personali:")
+    y -= 0.45*cm
+    dati = [
+        "- dati anagrafici (nome, cognome, data e luogo di nascita, codice fiscale);",
+        "- dati di contatto (telefono, email, indirizzo);",
+        "- dati relativi all'attività sportiva svolta;",
+        "- eventuali dati amministrativi e fiscali connessi ai compensi sportivi dilettantistici."
+    ]
+    for d in dati:
+        c.drawString(2.3*cm, y, d)
+        y -= 0.45*cm
+    
+    y -= 0.3*cm
+    
+    # Section 4 - Modalità
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "4. MODALITÀ DI TRATTAMENTO")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    modalita_text = "Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei, con logiche organizzative strettamente correlate alle finalità indicate e nel rispetto delle misure di sicurezza previste dal GDPR. I dati sono accessibili esclusivamente a soggetti autorizzati dalla Società."
+    y = draw_wrapped_text(c, modalita_text, 2*cm, y, max_w)
+    
+    y -= 0.3*cm
+    
+    # Section 5 - Conservazione
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "5. PERIODO DI CONSERVAZIONE")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    conservazione_text = "I dati personali saranno conservati per tutta la durata del rapporto collaborativo con la Società e successivamente per il periodo previsto dalle normative fiscali, amministrative e sportive applicabili."
+    y = draw_wrapped_text(c, conservazione_text, 2*cm, y, max_w)
+    
+    y -= 0.3*cm
+    
+    # Section 6 - Diritti
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "6. DIRITTI DELL'INTERESSATO")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    c.drawString(2*cm, y, "L'interessato può esercitare i diritti previsti dagli artt. 15-22 del GDPR:")
+    y -= 0.45*cm
+    diritti = [
+        "- accesso ai dati personali;",
+        "- rettifica o cancellazione degli stessi;",
+        "- limitazione del trattamento;",
+        "- opposizione al trattamento;",
+        "- portabilità dei dati."
+    ]
+    for d in diritti:
+        c.drawString(2.3*cm, y, d)
+        y -= 0.4*cm
+    
+    y -= 0.2*cm
+    contatto_text = f"Per esercitare tali diritti è possibile contattare il Titolare del trattamento all'indirizzo: {society_email}."
+    y = draw_wrapped_text(c, contatto_text, 2*cm, y, max_w)
+    
+    # Footer page 1
+    c.setFont("Helvetica", 8)
+    c.drawCentredString(width/2, 1.5*cm, "Pagina 1 di 2")
+    
+    c.showPage()
+    
+    # ==================== PAGE 2 ====================
+    y = height - 2*cm
+    
+    # Section 7 - Consenso
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "7. CONSENSO E SOTTOSCRIZIONE DIGITALE")
+    y -= 0.6*cm
+    c.setFont("Helvetica", 10)
+    consenso_text = "Con la sottoscrizione digitale del presente documento tramite l'App, il Collaboratore dichiara di aver letto e compreso la presente informativa e prende atto del trattamento dei dati personali per le finalità sopra indicate."
+    y = draw_wrapped_text(c, consenso_text, 2*cm, y, max_w)
+    
+    y -= 1*cm
+    
+    # Signer data box
+    c.setStrokeColor(colors.HexColor("#8E44AD"))
+    c.setFillColor(colors.HexColor("#F5EEF8"))
+    c.roundRect(2*cm, y - 3.5*cm, width - 4*cm, 4*cm, 5, fill=1, stroke=1)
+    
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2.5*cm, y - 0.4*cm, "DATI DEL FIRMATARIO")
+    
+    c.setFont("Helvetica", 10)
+    y_box = y - 0.9*cm
+    c.drawString(2.5*cm, y_box, f"Collaboratore: {signer_surname} {signer_name}")
+    y_box -= 0.45*cm
+    c.drawString(2.5*cm, y_box, f"Codice Fiscale: {signer_fiscal_code}")
+    y_box -= 0.45*cm
+    c.drawString(2.5*cm, y_box, f"Nato/a a {signer_birth_place} il {signer_birth_date}")
+    y_box -= 0.45*cm
+    c.drawString(2.5*cm, y_box, f"Residente in {signer_address}, {signer_city} ({signer_province})")
+    y_box -= 0.45*cm
+    c.drawString(2.5*cm, y_box, f"Società: {society_name}")
+    
+    y -= 4.5*cm
+    
+    # Signature
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2*cm, y, "Firma digitale:")
+    
+    y -= 0.5*cm
+    
+    # Draw signature
+    if signature_base64 and HAS_PIL:
+        try:
+            if ',' in signature_base64:
+                signature_base64_clean = signature_base64.split(',')[1]
+            else:
+                signature_base64_clean = signature_base64
+            
+            sig_data = base64.b64decode(signature_base64_clean)
+            sig_image = Image.open(io.BytesIO(sig_data))
+            
+            if sig_image.mode != 'RGB':
+                if sig_image.mode == 'RGBA':
+                    background = Image.new('RGB', sig_image.size, (255, 255, 255))
+                    background.paste(sig_image, mask=sig_image.split()[3])
+                    sig_image = background
+                else:
+                    sig_image = sig_image.convert('RGB')
+            
+            sig_buffer = io.BytesIO()
+            sig_image.save(sig_buffer, format='PNG')
+            sig_buffer.seek(0)
+            
+            from reportlab.lib.utils import ImageReader
+            img_reader = ImageReader(sig_buffer)
+            c.drawImage(img_reader, 2*cm, y - 2*cm, width=6*cm, height=2*cm, preserveAspectRatio=True)
+        except Exception as e:
+            logging.error(f"Error adding signature: {e}")
+    
+    y -= 2.5*cm
+    
+    # Technical metadata box (very important for legal validity)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(2*cm, y, "METADATI DI FIRMA (validità probatoria)")
+    y -= 0.4*cm
+    
+    c.setStrokeColor(colors.HexColor("#2C3E50"))
+    c.setFillColor(colors.HexColor("#ECF0F1"))
+    c.roundRect(2*cm, y - 3*cm, width - 4*cm, 3*cm, 3, fill=1, stroke=1)
+    
+    c.setFillColor(colors.black)
+    c.setFont("Courier", 8)
+    y_meta = y - 0.4*cm
+    c.drawString(2.3*cm, y_meta, f"document_version: {document_version}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"timestamp: {timestamp}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"user_id: {user_id}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"society_id: {society_id}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"hash_document: {document_hash}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"device_type: {user_agent[:60]}..." if len(user_agent) > 60 else f"device_type: {user_agent}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"ip_address: {ip_address}")
+    
+    # Footer page 2
+    c.setFont("Helvetica", 8)
+    c.setFillColor(colors.black)
+    c.drawCentredString(width/2, 1.5*cm, "Pagina 2 di 2")
+    
+    c.save()
+    return buffer.getvalue()
+
+
+def generate_gdpr_minor_privacy_pdf(
+    society_name: str,
+    society_address: str,
+    society_cf_piva: str,
+    society_email: str,
+    parent_name: str,
+    parent_surname: str,
+    parent_fiscal_code: str,
+    minor_name: str,
+    minor_surname: str,
+    minor_fiscal_code: str,
+    minor_birth_date: str,
+    minor_birth_place: str,
+    signature_base64: str,
+    timestamp: str,
+    ip_address: str,
+    user_agent: str,
+    document_version: str,
+    document_hash: str,
+    user_id: str,
+    society_id: str
+) -> bytes:
+    """Generate GDPR-compliant privacy consent PDF for minors (signed by parent/guardian)"""
+    if not HAS_PDF_GENERATION:
+        raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    def draw_wrapped_text(canvas_obj, text, x, y, max_width, font_name="Helvetica", font_size=10, line_height=0.45):
+        """Helper function to draw wrapped text"""
+        canvas_obj.setFont(font_name, font_size)
+        words = text.split(' ')
+        lines = []
+        current_line = ""
+        for word in words:
+            test_line = current_line + " " + word if current_line else word
+            if canvas_obj.stringWidth(test_line, font_name, font_size) < max_width:
+                current_line = test_line
+            else:
+                if current_line:
+                    lines.append(current_line)
+                current_line = word
+        if current_line:
+            lines.append(current_line)
+        
+        for line in lines:
+            canvas_obj.drawString(x, y, line)
+            y -= line_height * cm
+        return y
+    
+    # ==================== PAGE 1 ====================
+    # Header
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(width/2, height - 2*cm, "INFORMATIVA PRIVACY PER MINORI")
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(width/2, height - 2.6*cm, "ai sensi del Regolamento UE 2016/679 (GDPR)")
+    
+    y = height - 4*cm
+    max_w = width - 4*cm
+    
+    # Intro
+    c.setFont("Helvetica", 10)
+    intro_text = f"Gentile Genitore/Tutore, La presente informativa descrive le modalità di trattamento dei dati personali del minore da parte di {society_name}, con sede in {society_address}, C.F./P.IVA {society_cf_piva}, email {society_email}."
+    y = draw_wrapped_text(c, intro_text, 2*cm, y, max_w)
+    
+    y -= 0.5*cm
+    
+    # Section 1 - Titolare
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "1. TITOLARE DEL TRATTAMENTO")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    titolare_text = f"Il Titolare del trattamento è {society_name}, con sede in {society_address} – email: {society_email}."
+    y = draw_wrapped_text(c, titolare_text, 2*cm, y, max_w)
+    
+    y -= 0.3*cm
+    
+    # Section 2 - Finalità
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "2. FINALITÀ DEL TRATTAMENTO")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    c.drawString(2*cm, y, "I dati personali del minore saranno trattati per le seguenti finalità:")
+    y -= 0.45*cm
+    finalita = [
+        "a) gestione dell'iscrizione e partecipazione alle attività sportive della Società;",
+        "b) adempimento degli obblighi previsti dalle normative sportive, assicurative e amministrative;",
+        "c) comunicazione con gli enti sportivi di riferimento (Federazioni, EPS, CONI);",
+        "d) organizzazione delle attività sportive e delle comunicazioni con le famiglie."
+    ]
+    for f in finalita:
+        y = draw_wrapped_text(c, f, 2.3*cm, y, max_w - 0.3*cm)
+    
+    y -= 0.3*cm
+    
+    # Section 3 - Tipologia dati
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "3. TIPOLOGIA DI DATI TRATTATI")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    c.drawString(2*cm, y, "La Società può trattare le seguenti categorie di dati:")
+    y -= 0.45*cm
+    dati = [
+        "- dati anagrafici del minore (nome, cognome, data e luogo di nascita);",
+        "- dati di contatto del genitore/tutore (telefono, email, indirizzo);",
+        "- dati relativi all'attività sportiva svolta dal minore;",
+        "- eventuali dati amministrativi connessi alla gestione dell'attività sportiva."
+    ]
+    for d in dati:
+        c.drawString(2.3*cm, y, d)
+        y -= 0.45*cm
+    
+    y -= 0.3*cm
+    
+    # Section 4 - Modalità
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "4. MODALITÀ DI TRATTAMENTO")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    modalita_text = "Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei, con modalità idonee a garantire la sicurezza e la riservatezza dei dati personali. L'accesso ai dati è limitato ai soggetti autorizzati dalla Società."
+    y = draw_wrapped_text(c, modalita_text, 2*cm, y, max_w)
+    
+    y -= 0.3*cm
+    
+    # Section 5 - Conservazione
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "5. PERIODO DI CONSERVAZIONE")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    conservazione_text = "I dati saranno conservati per tutta la durata del rapporto sportivo con la Società e successivamente per il periodo necessario all'adempimento degli obblighi legali, amministrativi e sportivi previsti dalla normativa vigente."
+    y = draw_wrapped_text(c, conservazione_text, 2*cm, y, max_w)
+    
+    y -= 0.3*cm
+    
+    # Section 6 - Diritti
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "6. DIRITTI DELL'INTERESSATO")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    diritti_text = f"Il genitore/tutore può esercitare i diritti previsti dagli artt. 15-22 del GDPR, tra cui accesso ai dati, rettifica, cancellazione, limitazione del trattamento, opposizione e portabilità dei dati. Per l'esercizio dei diritti è possibile contattare il Titolare del trattamento all'indirizzo: {society_email}."
+    y = draw_wrapped_text(c, diritti_text, 2*cm, y, max_w)
+    
+    # Footer page 1
+    c.setFont("Helvetica", 8)
+    c.drawCentredString(width/2, 1.5*cm, "Pagina 1 di 2")
+    
+    c.showPage()
+    
+    # ==================== PAGE 2 ====================
+    y = height - 2*cm
+    
+    # Section 7 - Dichiarazione genitore
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "7. DICHIARAZIONE DEL GENITORE/TUTORE")
+    y -= 0.6*cm
+    c.setFont("Helvetica", 10)
+    dichiarazione_text = "Con la sottoscrizione digitale del presente documento il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente informativa e autorizza il trattamento dei dati personali del minore per le finalità sopra indicate."
+    y = draw_wrapped_text(c, dichiarazione_text, 2*cm, y, max_w)
+    
+    y -= 1*cm
+    
+    # Parent data box
+    c.setStrokeColor(colors.HexColor("#27AE60"))
+    c.setFillColor(colors.HexColor("#E8F8F5"))
+    c.roundRect(2*cm, y - 2*cm, width - 4*cm, 2.5*cm, 5, fill=1, stroke=1)
+    
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2.5*cm, y - 0.4*cm, "DATI DEL GENITORE/TUTORE")
+    
+    c.setFont("Helvetica", 10)
+    y_box = y - 0.9*cm
+    c.drawString(2.5*cm, y_box, f"Genitore/Tutore: {parent_surname} {parent_name}")
+    y_box -= 0.45*cm
+    c.drawString(2.5*cm, y_box, f"Codice Fiscale: {parent_fiscal_code}")
+    
+    y -= 3*cm
+    
+    # Minor data box
+    c.setStrokeColor(colors.HexColor("#3498DB"))
+    c.setFillColor(colors.HexColor("#EBF5FB"))
+    c.roundRect(2*cm, y - 2.5*cm, width - 4*cm, 3*cm, 5, fill=1, stroke=1)
+    
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2.5*cm, y - 0.4*cm, "DATI DEL MINORE")
+    
+    c.setFont("Helvetica", 10)
+    y_box = y - 0.9*cm
+    c.drawString(2.5*cm, y_box, f"Minore: {minor_surname} {minor_name}")
+    y_box -= 0.45*cm
+    c.drawString(2.5*cm, y_box, f"Codice Fiscale: {minor_fiscal_code}")
+    y_box -= 0.45*cm
+    c.drawString(2.5*cm, y_box, f"Nato/a a {minor_birth_place} il {minor_birth_date}")
+    y_box -= 0.45*cm
+    c.drawString(2.5*cm, y_box, f"Società sportiva: {society_name}")
+    
+    y -= 4*cm
+    
+    # Signature
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2*cm, y, "Firma digitale del Genitore/Tutore:")
+    
+    y -= 0.5*cm
+    
+    # Draw signature
+    if signature_base64 and HAS_PIL:
+        try:
+            if ',' in signature_base64:
+                signature_base64_clean = signature_base64.split(',')[1]
+            else:
+                signature_base64_clean = signature_base64
+            
+            sig_data = base64.b64decode(signature_base64_clean)
+            sig_image = Image.open(io.BytesIO(sig_data))
+            
+            if sig_image.mode != 'RGB':
+                if sig_image.mode == 'RGBA':
+                    background = Image.new('RGB', sig_image.size, (255, 255, 255))
+                    background.paste(sig_image, mask=sig_image.split()[3])
+                    sig_image = background
+                else:
+                    sig_image = sig_image.convert('RGB')
+            
+            sig_buffer = io.BytesIO()
+            sig_image.save(sig_buffer, format='PNG')
+            sig_buffer.seek(0)
+            
+            from reportlab.lib.utils import ImageReader
+            img_reader = ImageReader(sig_buffer)
+            c.drawImage(img_reader, 2*cm, y - 2*cm, width=6*cm, height=2*cm, preserveAspectRatio=True)
+        except Exception as e:
+            logging.error(f"Error adding signature: {e}")
+    
+    y -= 2.5*cm
+    
+    # Technical metadata box
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(2*cm, y, "METADATI DI FIRMA (validità probatoria)")
+    y -= 0.4*cm
+    
+    c.setStrokeColor(colors.HexColor("#2C3E50"))
+    c.setFillColor(colors.HexColor("#ECF0F1"))
+    c.roundRect(2*cm, y - 3*cm, width - 4*cm, 3*cm, 3, fill=1, stroke=1)
+    
+    c.setFillColor(colors.black)
+    c.setFont("Courier", 8)
+    y_meta = y - 0.4*cm
+    c.drawString(2.3*cm, y_meta, f"document_version: {document_version}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"timestamp: {timestamp}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"user_id: {user_id}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"society_id: {society_id}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"hash_document: {document_hash}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"device_type: {user_agent[:60]}..." if len(user_agent) > 60 else f"device_type: {user_agent}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"ip_address: {ip_address}")
+    
+    # Footer page 2
+    c.setFont("Helvetica", 8)
+    c.setFillColor(colors.black)
+    c.drawCentredString(width/2, 1.5*cm, "Pagina 2 di 2")
     
     c.save()
     return buffer.getvalue()
@@ -10889,6 +11516,281 @@ async def list_signed_documents(
         clean_mongo_doc(doc)
     
     return documents
+
+
+@api_router.post("/documents/sign-gdpr-privacy")
+async def sign_gdpr_privacy_document(
+    request: GDPRPrivacySignRequest, 
+    req: Request,
+    current_user = Depends(get_current_user)
+):
+    """
+    Create a GDPR-compliant privacy consent document with full metadata.
+    Used for:
+    - gdpr_adult: All adult figures (collaboratori, coach, dirigenti, adult athletes)
+    - gdpr_minor: Parents signing for their minor children
+    """
+    import hashlib
+    
+    # Get client IP
+    client_ip = req.client.host if req.client else "unknown"
+    forwarded_for = req.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+    
+    # Get society info
+    society = await db.societies.find_one()
+    if not society:
+        raise HTTPException(status_code=404, detail="Nessuna società configurata")
+    
+    society_id = society.get("id", str(society.get("_id", "")))
+    society_name = society.get("name", "")
+    society_address = society.get("address", "") or ""
+    society_city = society.get("city", "")
+    society_province = society.get("province", "")
+    society_full_address = f"{society_address}, {society_city}" if society_address else society_city
+    if society_province:
+        society_full_address += f" ({society_province})"
+    society_cf_piva = society.get("fiscal_code", "") or society.get("vat_number", "")
+    society_email = society.get("email", "") or society.get("contact_email", "")
+    
+    # Generate timestamp
+    timestamp = datetime.now(timezone.utc)
+    timestamp_str = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    timestamp_display = timestamp.strftime("%d/%m/%Y %H:%M:%S UTC")
+    
+    # Document version
+    document_version = "2.0.0-GDPR"
+    
+    # Generate document hash (before signature for integrity)
+    hash_content = f"{document_version}|{timestamp_str}|{current_user['id']}|{society_id}|{request.document_type}"
+    if request.document_type == "gdpr_minor" and request.minor_id:
+        hash_content += f"|{request.minor_id}"
+    document_hash = hashlib.sha256(hash_content.encode()).hexdigest()
+    
+    # Generate PDF based on document type
+    try:
+        if request.document_type == "gdpr_adult":
+            # Get signer data from request or current_user
+            signer_name = request.signer_name or current_user.get("first_name", "")
+            signer_surname = request.signer_surname or current_user.get("last_name", "") or current_user.get("full_name", "").split()[0] if current_user.get("full_name") else ""
+            
+            # If full_name is "COGNOME NOME" format
+            if not signer_name and current_user.get("full_name"):
+                parts = current_user.get("full_name", "").split()
+                if len(parts) >= 2:
+                    signer_surname = parts[0]
+                    signer_name = " ".join(parts[1:])
+                else:
+                    signer_surname = parts[0] if parts else ""
+                    signer_name = ""
+            
+            pdf_bytes = generate_gdpr_adult_privacy_pdf(
+                society_name=society_name,
+                society_address=society_full_address,
+                society_cf_piva=society_cf_piva,
+                society_email=society_email,
+                signer_name=signer_name,
+                signer_surname=signer_surname,
+                signer_fiscal_code=request.signer_fiscal_code or current_user.get("fiscal_code", ""),
+                signer_birth_date=request.signer_birth_date or "",
+                signer_birth_place=request.signer_birth_place or current_user.get("place_of_birth", ""),
+                signer_address=request.signer_address or current_user.get("address", ""),
+                signer_city=request.signer_city or current_user.get("city", ""),
+                signer_province=request.signer_province or current_user.get("province", ""),
+                signature_base64=request.signature_base64,
+                timestamp=timestamp_display,
+                ip_address=client_ip,
+                user_agent=request.user_agent,
+                document_version=document_version,
+                document_hash=document_hash,
+                user_id=current_user["id"],
+                society_id=society_id
+            )
+            
+            doc_title = "Informativa Privacy GDPR - Collaboratori"
+            related_entity_id = None
+            minor_data = {}
+            
+        elif request.document_type == "gdpr_minor":
+            # Get minor data
+            if not request.minor_id:
+                raise HTTPException(status_code=400, detail="ID del minore richiesto per questo tipo di documento")
+            
+            minor = await db.athletes.find_one({"id": request.minor_id})
+            if not minor:
+                raise HTTPException(status_code=404, detail="Atleta minore non trovato")
+            
+            # Get parent data
+            parent_name = request.signer_name or current_user.get("first_name", "")
+            parent_surname = request.signer_surname or current_user.get("last_name", "")
+            
+            if not parent_name and current_user.get("full_name"):
+                parts = current_user.get("full_name", "").split()
+                if len(parts) >= 2:
+                    parent_surname = parts[0]
+                    parent_name = " ".join(parts[1:])
+                else:
+                    parent_surname = parts[0] if parts else ""
+                    parent_name = ""
+            
+            # Get minor data
+            minor_full_name = minor.get("full_name", "")
+            minor_parts = minor_full_name.split() if minor_full_name else []
+            minor_surname_val = request.minor_surname or (minor_parts[0] if minor_parts else "")
+            minor_name_val = request.minor_name or (" ".join(minor_parts[1:]) if len(minor_parts) > 1 else "")
+            
+            # Format birth date
+            minor_birth_date = request.minor_birth_date or minor.get("birth_date", "") or minor.get("date_of_birth", "")
+            if minor_birth_date and hasattr(minor_birth_date, 'strftime'):
+                minor_birth_date = minor_birth_date.strftime("%d/%m/%Y")
+            elif minor_birth_date and isinstance(minor_birth_date, str) and 'T' in minor_birth_date:
+                try:
+                    minor_birth_date = datetime.fromisoformat(minor_birth_date.replace('Z', '+00:00')).strftime("%d/%m/%Y")
+                except:
+                    pass
+            
+            pdf_bytes = generate_gdpr_minor_privacy_pdf(
+                society_name=society_name,
+                society_address=society_full_address,
+                society_cf_piva=society_cf_piva,
+                society_email=society_email,
+                parent_name=parent_name,
+                parent_surname=parent_surname,
+                parent_fiscal_code=request.signer_fiscal_code or current_user.get("fiscal_code", ""),
+                minor_name=minor_name_val,
+                minor_surname=minor_surname_val,
+                minor_fiscal_code=request.minor_fiscal_code or minor.get("fiscal_code", ""),
+                minor_birth_date=minor_birth_date,
+                minor_birth_place=request.minor_birth_place or minor.get("place_of_birth", "") or minor.get("birth_place", ""),
+                signature_base64=request.signature_base64,
+                timestamp=timestamp_display,
+                ip_address=client_ip,
+                user_agent=request.user_agent,
+                document_version=document_version,
+                document_hash=document_hash,
+                user_id=current_user["id"],
+                society_id=society_id
+            )
+            
+            doc_title = f"Informativa Privacy GDPR - Minore {minor_full_name}"
+            related_entity_id = request.minor_id
+            minor_data = {
+                "minor_id": request.minor_id,
+                "minor_name": minor_full_name,
+                "minor_fiscal_code": minor.get("fiscal_code", "")
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Tipo documento non valido. Usa 'gdpr_adult' o 'gdpr_minor'")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error generating GDPR PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
+    
+    # Save PDF to disk
+    document_id = str(uuid.uuid4())
+    timestamp_file = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_doc_type = request.document_type.replace(" ", "_").lower()
+    filename = f"{safe_doc_type}_{document_id}_{timestamp_file}.pdf"
+    pdf_path = os.path.join(SIGNED_DOCS_DIR, filename)
+    
+    with open(pdf_path, 'wb') as f:
+        f.write(pdf_bytes)
+    
+    # Store document record with full metadata
+    document_record = {
+        "id": document_id,
+        "document_type": request.document_type,
+        "document_title": doc_title,
+        "signer_id": current_user["id"],
+        "signer_name": f"{request.signer_surname or ''} {request.signer_name or ''}".strip() or current_user.get("full_name", ""),
+        "signer_email": current_user.get("email", ""),
+        "signer_fiscal_code": request.signer_fiscal_code or current_user.get("fiscal_code", ""),
+        "related_entity_id": related_entity_id,
+        "society_id": society_id,
+        "society_name": society_name,
+        # GDPR metadata for legal validity
+        "gdpr_metadata": {
+            "document_version": document_version,
+            "timestamp": timestamp_str,
+            "timestamp_display": timestamp_display,
+            "ip_address": client_ip,
+            "user_agent": request.user_agent,
+            "document_hash": document_hash,
+            "hash_algorithm": "SHA-256"
+        },
+        # Minor data if applicable
+        **minor_data,
+        # File storage
+        "pdf_path": pdf_path,
+        "pdf_base64": base64.b64encode(pdf_bytes).decode('utf-8'),
+        "created_at": timestamp,
+        "status": "signed"
+    }
+    
+    await db.signed_documents.insert_one(document_record)
+    
+    # Send email to signer
+    try:
+        await send_document_email(
+            to_email=current_user.get("email", ""),
+            subject=f"Documento firmato: {doc_title}",
+            document_title=doc_title,
+            signer_name=document_record["signer_name"],
+            pdf_bytes=pdf_bytes,
+            filename=filename
+        )
+    except Exception as e:
+        logging.warning(f"Could not send email to signer: {e}")
+    
+    # Send email to admin(s)
+    try:
+        admins = await db.users.find({"role": "admin", "society_id": society_id}).to_list(10)
+        for admin in admins:
+            if admin.get("email"):
+                await send_document_email(
+                    to_email=admin["email"],
+                    subject=f"Nuovo documento firmato: {doc_title}",
+                    document_title=doc_title,
+                    signer_name=document_record["signer_name"],
+                    pdf_bytes=pdf_bytes,
+                    filename=filename
+                )
+    except Exception as e:
+        logging.warning(f"Could not send email to admins: {e}")
+    
+    # Log audit event
+    await db.audit_logs.insert_one({
+        "user_id": current_user["id"],
+        "user_email": current_user.get("email", ""),
+        "society_id": society_id,
+        "action": "document_signed",
+        "details": {
+            "document_type": request.document_type,
+            "document_id": document_id,
+            "document_title": doc_title,
+            "gdpr_hash": document_hash
+        },
+        "ip_address": client_ip,
+        "created_at": timestamp
+    })
+    
+    # Return response with document info
+    return {
+        "success": True,
+        "message": "Documento privacy GDPR firmato con successo",
+        "document_id": document_id,
+        "document_title": doc_title,
+        "pdf_url": f"/api/documents/signed/{document_id}/pdf",
+        "gdpr_metadata": {
+            "document_version": document_version,
+            "timestamp": timestamp_display,
+            "document_hash": document_hash
+        }
+    }
+
 
 # ==================== DIRIGENTE COMPENSATION ENDPOINTS ====================
 

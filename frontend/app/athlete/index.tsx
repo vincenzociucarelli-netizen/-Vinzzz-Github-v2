@@ -17,7 +17,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
-import { AdultPrivacyModal } from '../../src/components/AdultPrivacyModal';
+import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { SportIcon } from '../../src/components/SportIcon';
 
 const MONTH_NAMES = [
@@ -1070,27 +1070,13 @@ export default function AthleteScreen() {
         
       </ScrollView>
       
-      {/* Privacy Modal - using AdultPrivacyModal component */}
-      <AdultPrivacyModal
+      {/* Privacy Modal - using GDPRPrivacyModal component */}
+      <GDPRPrivacyModal
         visible={showPrivacyModal}
         onClose={() => setShowPrivacyModal(false)}
-        onSign={async (signatureBase64: string) => {
+        onSign={async (success: boolean, documentId?: string) => {
+          if (!success) return;
           try {
-            // First, sign the privacy document (generates PDF)
-            const signResponse = await api.post('/documents/sign', {
-              document_type: 'privacy_consent',
-              document_title: 'Privacy - Informativa GDPR',
-              document_text: 'Accettazione informativa sulla privacy',
-              signer_name: profile?.full_name || '',
-              signer_email: user?.email || profile?.email || '',
-              signature_base64: signatureBase64,
-              related_entity_id: profile?.id,
-              additional_data: {
-                role: 'athlete',
-                fiscal_code: profile?.fiscal_code || ''
-              }
-            });
-            
             // Only call withdraw-trial-stay if athlete is in trial status
             if (profile?.status === 'trial') {
               await api.post('/athletes/withdraw-trial-stay');
@@ -1101,8 +1087,7 @@ export default function AthleteScreen() {
               status: 'active',
               privacy_accepted: true,
               privacy_accepted_date: new Date().toISOString(),
-              privacy_signature: signatureBase64,
-              privacy_pdf_url: signResponse.data?.pdf_url || null
+              privacy_pdf_url: documentId ? `/api/documents/signed/${documentId}/pdf` : null
             });
             
             // Also update user status via accept-privacy endpoint
@@ -1133,18 +1118,19 @@ export default function AthleteScreen() {
             } else {
               Alert.alert('Errore', msg);
             }
-            throw error;
           }
         }}
-        signerName={profile?.full_name || ''}
-        signerRole="athlete"
-        societyName={societySettings?.ragione_sociale || societySettings?.name || 'PALLAVOLO PERUGIA SSD A RL'}
-        fiscalCode={profile?.fiscal_code || ''}
-        birthDate={profile?.birth_date || ''}
-        birthPlace={profile?.birth_place || ''}
-        address={profile?.address || ''}
-        city={profile?.city || ''}
-        province={profile?.province || ''}
+        documentType="gdpr_adult"
+        signerInfo={{
+          name: profile?.full_name?.split(' ').slice(1).join(' ') || '',
+          surname: profile?.full_name?.split(' ')[0] || '',
+          fiscal_code: profile?.fiscal_code || '',
+          birth_date: profile?.birth_date || '',
+          birth_place: profile?.birth_place || '',
+          address: profile?.address || '',
+          city: profile?.city || '',
+          province: profile?.province || '',
+        }}
       />
       
       {/* Certificate Viewer Modal */}
