@@ -28,7 +28,7 @@ import * as Sharing from 'expo-sharing';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://admin-coach-fixes.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://id-docs-purge.preview.emergentagent.com';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
@@ -1189,7 +1189,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           )}
         </View>
 
-        {/* Documento e Dati Bancari */}
+        {/* Dati Bancari */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
@@ -1285,79 +1285,6 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </>
           ) : (
             <>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Tipo Documento</Text>
-                <Text style={styles.fieldValue}>{profileData.id_type || '-'}</Text>
-              </View>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Numero Documento</Text>
-                <Text style={styles.fieldValue}>{profileData.id_front || '-'}</Text>
-              </View>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Scadenza</Text>
-                <Text style={styles.fieldValue}>{profileData.id_back || '-'}</Text>
-              </View>
-              
-              {/* Document Images */}
-              <View style={styles.docImagesContainer}>
-                <TouchableOpacity 
-                  style={styles.docImageWrapper}
-                  onPress={() => {
-                    if (profileData.doc_front_image) {
-                      setSelectedPhoto(profileData.doc_front_image);
-                      setSelectedPhotoTitle('Fronte Documento');
-                      setPhotoViewerVisible(true);
-                    }
-                  }}
-                  disabled={!profileData.doc_front_image}
-                >
-                  <Text style={styles.docImageLabel}>Fronte Documento</Text>
-                  {profileData.doc_front_image ? (
-                    <Image 
-                      source={{ uri: `data:image/jpeg;base64,${profileData.doc_front_image}` }}
-                      style={styles.docImagePreview}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={styles.docImagePlaceholder}>
-                      <Ionicons name="id-card-outline" size={32} color="#ccc" />
-                      <Text style={styles.docImagePlaceholderText}>Non caricato</Text>
-                    </View>
-                  )}
-                  {profileData.doc_front_image && (
-                    <Text style={styles.tapToEnlarge}>Tocca per ingrandire</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.docImageWrapper}
-                  onPress={() => {
-                    if (profileData.doc_back_image) {
-                      setSelectedPhoto(profileData.doc_back_image);
-                      setSelectedPhotoTitle('Retro Documento');
-                      setPhotoViewerVisible(true);
-                    }
-                  }}
-                  disabled={!profileData.doc_back_image}
-                >
-                  <Text style={styles.docImageLabel}>Retro Documento</Text>
-                  {profileData.doc_back_image ? (
-                    <Image 
-                      source={{ uri: `data:image/jpeg;base64,${profileData.doc_back_image}` }}
-                      style={styles.docImagePreview}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={styles.docImagePlaceholder}>
-                      <Ionicons name="id-card-outline" size={32} color="#ccc" />
-                      <Text style={styles.docImagePlaceholderText}>Non caricato</Text>
-                    </View>
-                  )}
-                  {profileData.doc_back_image && (
-                    <Text style={styles.tapToEnlarge}>Tocca per ingrandire</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>IBAN</Text>
                 <Text style={styles.fieldValue}>{profileData.iban || '-'}</Text>

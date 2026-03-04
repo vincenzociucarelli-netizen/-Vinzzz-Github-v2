@@ -133,9 +133,20 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
 ### Pending User Verification
 - Compensation page logic (fallback for missing contract dates)
 
-## Latest Session Updates (04/03/2026)
+## Latest Session Updates (04-05/03/2026)
 
-### P0 - 6 Admin UI/Logic Fixes Complete
+### P0 - Coach Document Fields COMPLETE (05/03/2026)
+**Recurring Issue RESOLVED**: Removed ID document fields from Coach profile page
+- **Issue**: User reported the same issue twice - document fields were still visible
+- **Root Cause**: Previous fix only addressed Admin view (`admin/coach/[id].tsx`), but Coach's OWN profile page (`coach/profile.tsx`) still displayed the fields
+- **Fix Applied**:
+  - File: `/app/frontend/app/coach/profile.tsx`
+  - Removed: Tipo Documento, Numero Documento, Scadenza fields from display
+  - Removed: Fronte Documento/Retro Documento image placeholders
+  - Result: Section "🏦 Dati Bancari" now shows ONLY: IBAN, Intestatario, Banca
+- **Verified**: Screenshot confirms only banking fields visible in coach profile
+
+### P0 - 6 Admin UI/Logic Fixes Complete (04/03/2026)
 Implemented all 6 modifications requested by the user for the Admin section:
 
 1. **Coach Checklist**: Removed "Documento d'identità acquisito" item from onboarding checklist
@@ -148,7 +159,7 @@ Implemented all 6 modifications requested by the user for the Admin section:
    - Kept only the "Comunicazione RAS - Totale Contratto" box in edit mode
    - Removed redundant totalBox in view mode
 
-3. **Coach Document Fields**: Removed ID document fields (Type, Number, Expiry) from profile
+3. **Coach Document Fields (Admin View)**: Removed ID document fields (Type, Number, Expiry) from admin view
    - File: `/app/frontend/app/admin/coach/[id].tsx`
    - Section now shows only IBAN, Intestatario Conto, Banca
    - Card title changed from "Documento e Dati Bancari" to "Dati Bancari"
