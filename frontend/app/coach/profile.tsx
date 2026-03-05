@@ -195,10 +195,12 @@ export default function CoachProfile() {
       // Privacy will be shown when user clicks Save, not automatically
       setPrivacyAccepted(isPrivacyAccepted);
       
-      // Load society name
+      // Load society name (use ragione_sociale which is the legal full name)
       try {
         const societyRes = await api.get('/settings/society');
-        if (societyRes.data?.name) {
+        if (societyRes.data?.ragione_sociale) {
+          setSocietyName(societyRes.data.ragione_sociale);
+        } else if (societyRes.data?.name) {
           setSocietyName(societyRes.data.name);
         }
       } catch (e) {

@@ -194,10 +194,12 @@ export default function DirigenteProfile() {
       // Save privacy state for later use
       setPrivacyAccepted(isPrivacyAccepted);
       
-      // Load society name
+      // Load society name (use ragione_sociale which is the legal full name)
       try {
         const societyRes = await api.get('/settings/society');
-        if (societyRes.data?.name) {
+        if (societyRes.data?.ragione_sociale) {
+          setSocietyName(societyRes.data.ragione_sociale);
+        } else if (societyRes.data?.name) {
           setSocietyName(societyRes.data.name);
         }
       } catch (e) {
@@ -990,10 +992,10 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         </View>
 
 
-        {/* Documento e Dati Bancari */}
+        {/* Dati Bancari */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>🏦 Documento e Dati Bancari</Text>
+            <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
             <TouchableOpacity onPress={() => setEditingBank(!editingBank)}>
               <Ionicons name={editingBank ? "close" : "create"} size={22} color="#8E44AD" />
             </TouchableOpacity>
@@ -1001,81 +1003,6 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           
           {editingBank ? (
             <>
-              <Text style={styles.inputLabel}>Tipo Documento</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={editData.id_type}
-                  onValueChange={(v) => setEditData({...editData, id_type: v})}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Seleziona..." value="" />
-                  {DOC_TYPES.map((type) => (
-                    <Picker.Item key={type} label={type} value={type} />
-                  ))}
-                </Picker>
-              </View>
-              
-              <Text style={styles.inputLabel}>Numero Documento</Text>
-              <TextInput
-                style={styles.input}
-                value={editData.id_front}
-                onChangeText={(v) => setEditData({...editData, id_front: v})}
-                placeholder="es. AX1234567"
-                placeholderTextColor="#ccc"
-              />
-              
-              <Text style={styles.inputLabel}>Scadenza Documento</Text>
-              <TextInput
-                style={styles.input}
-                value={editData.id_back}
-                onChangeText={(v) => {
-                  let formatted = v.replace(/[^0-9]/g, '');
-                  if (formatted.length > 2) {
-                    formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
-                  }
-                  if (formatted.length > 5) {
-                    formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
-                  }
-                  setEditData({...editData, id_back: formatted});
-                }}
-                placeholder="gg/mm/aaaa"
-                placeholderTextColor="#ccc"
-                maxLength={10}
-                keyboardType="numeric"
-              />
-              
-              {/* Foto Documento - Due icone in una riga */}
-              <Text style={styles.inputLabel}>Foto Documento</Text>
-              <View style={styles.docImagesRow}>
-                <TouchableOpacity style={styles.docImageBtnSmall} onPress={() => pickImage('front')}>
-                  {(docFrontImage || editData.doc_front_image) ? (
-                    <Image 
-                      source={{ uri: `data:image/jpeg;base64,${docFrontImage || editData.doc_front_image}` }} 
-                      style={styles.docImageSmall} 
-                    />
-                  ) : (
-                    <View style={styles.docImagePlaceholderSmall}>
-                      <Ionicons name="card-outline" size={24} color="#007AFF" />
-                      <Text style={styles.docImageTextSmall}>Fronte</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.docImageBtnSmall} onPress={() => pickImage('back')}>
-                  {(docBackImage || editData.doc_back_image) ? (
-                    <Image 
-                      source={{ uri: `data:image/jpeg;base64,${docBackImage || editData.doc_back_image}` }} 
-                      style={styles.docImageSmall} 
-                    />
-                  ) : (
-                    <View style={styles.docImagePlaceholderSmall}>
-                      <Ionicons name="card-outline" size={24} color="#007AFF" />
-                      <Text style={styles.docImageTextSmall}>Retro</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-              
               <Text style={styles.inputLabel}>IBAN</Text>
               <TextInput
                 style={styles.input}
@@ -1149,36 +1076,6 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </>
           ) : (
             <>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Tipo Documento</Text>
-                <Text style={styles.fieldValue}>{profileData.id_type || '-'}</Text>
-              </View>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Numero Documento</Text>
-                <Text style={styles.fieldValue}>{profileData.id_front || '-'}</Text>
-              </View>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Scadenza</Text>
-                <Text style={styles.fieldValue}>{profileData.id_back || '-'}</Text>
-              </View>
-              {profileData.doc_front_image && (
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Documento Fronte</Text>
-                  <Image 
-                    source={{ uri: `data:image/jpeg;base64,${profileData.doc_front_image}` }} 
-                    style={styles.docImage} 
-                  />
-                </View>
-              )}
-              {profileData.doc_back_image && (
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Documento Retro</Text>
-                  <Image 
-                    source={{ uri: `data:image/jpeg;base64,${profileData.doc_back_image}` }} 
-                    style={styles.docImage} 
-                  />
-                </View>
-              )}
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>IBAN</Text>
                 <Text style={styles.fieldValue}>{profileData.iban || '-'}</Text>
