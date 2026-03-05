@@ -542,10 +542,18 @@ export default function AdminCollaboratoreDetail() {
               <TextInput
                 style={styles.input}
                 value={monthlyCompensation}
-                onChangeText={setMonthlyCompensation}
-                onFocus={(e) => { if (monthlyCompensation === '0') setMonthlyCompensation(''); }}
+                onChangeText={(text) => {
+                  // Remove non-numeric chars except decimal
+                  const cleaned = text.replace(/[^0-9]/g, '');
+                  setMonthlyCompensation(cleaned);
+                }}
+                onFocus={() => { 
+                  if (monthlyCompensation === '0' || monthlyCompensation === '') {
+                    setMonthlyCompensation('');
+                  }
+                }}
                 keyboardType="numeric"
-                placeholder="0.00"
+                placeholder="€ 0,00"
                 placeholderTextColor="#999"
                 selectTextOnFocus={true}
               />
@@ -554,10 +562,18 @@ export default function AdminCollaboratoreDetail() {
               <TextInput
                 style={styles.input}
                 value={otherAnnualCompensation}
-                onChangeText={setOtherAnnualCompensation}
-                onFocus={(e) => { if (otherAnnualCompensation === '0') setOtherAnnualCompensation(''); }}
+                onChangeText={(text) => {
+                  // Remove non-numeric chars
+                  const cleaned = text.replace(/[^0-9]/g, '');
+                  setOtherAnnualCompensation(cleaned);
+                }}
+                onFocus={() => { 
+                  if (otherAnnualCompensation === '0' || otherAnnualCompensation === '') {
+                    setOtherAnnualCompensation('');
+                  }
+                }}
                 keyboardType="numeric"
-                placeholder="0.00"
+                placeholder="€ 0,00"
                 placeholderTextColor="#999"
                 selectTextOnFocus={true}
               />
@@ -1309,6 +1325,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#f9f9f9',
+    color: '#999',
   },
   saveButton: {
     backgroundColor: '#007AFF',

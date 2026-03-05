@@ -846,10 +846,13 @@ export default function AdminCoachDetail() {
               <TextInput
                 style={styles.input}
                 value={monthlyCompensation}
-                onChangeText={setMonthlyCompensation}
-                onFocus={() => { if (monthlyCompensation === '0') setMonthlyCompensation(''); }}
-                keyboardType="decimal-pad"
-                placeholder="0"
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9]/g, '');
+                  setMonthlyCompensation(cleaned);
+                }}
+                onFocus={() => { if (monthlyCompensation === '0' || monthlyCompensation === '') setMonthlyCompensation(''); }}
+                keyboardType="numeric"
+                placeholder="€ 0,00"
                 placeholderTextColor="#999"
                 selectTextOnFocus={true}
               />
@@ -858,10 +861,13 @@ export default function AdminCoachDetail() {
               <TextInput
                 style={styles.input}
                 value={otherAnnualCompensation}
-                onChangeText={setOtherAnnualCompensation}
-                onFocus={() => { if (otherAnnualCompensation === '0') setOtherAnnualCompensation(''); }}
-                keyboardType="decimal-pad"
-                placeholder="0"
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9]/g, '');
+                  setOtherAnnualCompensation(cleaned);
+                }}
+                onFocus={() => { if (otherAnnualCompensation === '0' || otherAnnualCompensation === '') setOtherAnnualCompensation(''); }}
+                keyboardType="numeric"
+                placeholder="€ 0,00"
                 placeholderTextColor="#999"
                 selectTextOnFocus={true}
               />
@@ -1750,7 +1756,7 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     borderWidth: 1, 
     borderColor: '#e0e0e0',
-    color: '#000',
+    color: '#999',
   },
   saveBtn: { 
     backgroundColor: '#FF9500', 

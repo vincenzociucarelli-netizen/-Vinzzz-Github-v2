@@ -597,20 +597,30 @@ export default function AdminDirigenteDetail() {
               <TextInput
                 style={styles.input}
                 value={monthlyCompensation}
-                onChangeText={setMonthlyCompensation}
-                keyboardType="decimal-pad"
-                placeholder="0"
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9]/g, '');
+                  setMonthlyCompensation(cleaned);
+                }}
+                onFocus={() => { if (monthlyCompensation === '0' || monthlyCompensation === '') setMonthlyCompensation(''); }}
+                keyboardType="numeric"
+                placeholder="€ 0,00"
                 placeholderTextColor="#999"
+                selectTextOnFocus={true}
               />
               
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>Compensi Pregressi (€) - Da altre ASD/SSD nell'anno</Text>
               <TextInput
                 style={styles.input}
                 value={otherAnnualCompensation}
-                onChangeText={setOtherAnnualCompensation}
-                keyboardType="decimal-pad"
-                placeholder="0"
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9]/g, '');
+                  setOtherAnnualCompensation(cleaned);
+                }}
+                onFocus={() => { if (otherAnnualCompensation === '0' || otherAnnualCompensation === '') setOtherAnnualCompensation(''); }}
+                keyboardType="numeric"
+                placeholder="€ 0,00"
                 placeholderTextColor="#999"
+                selectTextOnFocus={true}
               />
               <Text style={{ fontSize: 12, color: '#666', marginTop: 4, marginBottom: 12 }}>
                 Compensi già percepiti da altre società sportive nell'anno solare corrente
@@ -1480,7 +1490,7 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     borderWidth: 1, 
     borderColor: '#e0e0e0',
-    color: '#000',
+    color: '#999',
   },
   saveBtn: { 
     backgroundColor: '#8E44AD', 
