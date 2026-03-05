@@ -255,12 +255,13 @@ export default function AdminCollaboratoreDetail() {
         isoEndDate = `${yyyy}-${mm}-${dd}`;
       }
       
-      const newCompensation = parseFloat(monthlyCompensation) || 0;
+      // Convert Italian format (comma) to standard format (dot) for parseFloat
+      const newCompensation = parseFloat(monthlyCompensation.replace(',', '.')) || 0;
       const oldCompensation = collaboratore?.monthly_compensation || 0;
       
       await api.patch(`/users/${id}`, {
         monthly_compensation: newCompensation,
-        other_annual_compensation: parseFloat(otherAnnualCompensation) || 0,
+        other_annual_compensation: parseFloat(otherAnnualCompensation.replace(',', '.')) || 0,
         contract_start_date: isoStartDate,
         contract_end_date: isoEndDate,
         assigned_teams: selectedTeamIds,

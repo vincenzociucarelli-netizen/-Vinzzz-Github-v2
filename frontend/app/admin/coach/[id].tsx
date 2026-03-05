@@ -303,8 +303,8 @@ export default function AdminCoachDetail() {
     setSaving(true);
     try {
       await api.patch(`/users/${id}/compensation`, {
-        monthly_compensation: parseFloat(monthlyCompensation) || 0,
-        other_annual_compensation: parseFloat(otherAnnualCompensation) || 0,
+        monthly_compensation: parseFloat(monthlyCompensation.replace(',', '.')) || 0,
+        other_annual_compensation: parseFloat(otherAnnualCompensation.replace(',', '.')) || 0,
         contract_start_date: contractStartDate || null,
         contract_end_date: contractEndDate || null,
       });
@@ -320,7 +320,7 @@ export default function AdminCoachDetail() {
 
   // Calculate total annual compensation - considera data inizio e fine contratto
   const getTotalAnnualCompensation = () => {
-    const monthly = parseFloat(monthlyCompensation) || 0;
+    const monthly = parseFloat(monthlyCompensation.replace(',', '.')) || 0;
     const prior = coach?.prior_compensation || 0;  // Compensi pregressi (prima del contratto)
     
     // Calcola mesi del contratto
@@ -344,8 +344,8 @@ export default function AdminCoachDetail() {
   
   // Calcola breakdown per ANNO SOLARE (per soglie €5k e €15k)
   const getYearlyBreakdown = () => {
-    const monthly = parseFloat(monthlyCompensation) || 0;
-    const prior = parseFloat(otherAnnualCompensation) || 0;  // Compensi pregressi dichiarati
+    const monthly = parseFloat(monthlyCompensation.replace(',', '.')) || 0;
+    const prior = parseFloat(otherAnnualCompensation.replace(',', '.')) || 0;  // Compensi pregressi dichiarati
     const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
     
     const years: { [year: number]: { months: number, startMonth: string, endMonth: string, total: number, prior: number, grandTotal: number, exceedsThreshold5k: boolean, exceedsThreshold15k: boolean } } = {};
@@ -405,8 +405,8 @@ export default function AdminCoachDetail() {
   
   // Calcola dettaglio compensi per display (totale contratto)
   const getCompensationBreakdown = () => {
-    const monthly = parseFloat(monthlyCompensation) || 0;
-    const prior = parseFloat(otherAnnualCompensation) || 0;  // Compensi pregressi dichiarati
+    const monthly = parseFloat(monthlyCompensation.replace(',', '.')) || 0;
+    const prior = parseFloat(otherAnnualCompensation.replace(',', '.')) || 0;  // Compensi pregressi dichiarati
     const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
                         'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
     
@@ -888,7 +888,7 @@ export default function AdminCoachDetail() {
                     const breakdown = getCompensationBreakdown();
                     const yearlyBreakdown = getYearlyBreakdown();
                     const years = Object.keys(yearlyBreakdown).map(Number).sort();
-                    const prior = parseFloat(otherAnnualCompensation) || 0;
+                    const prior = parseFloat(otherAnnualCompensation.replace(',', '.')) || 0;
                     
                     return (
                       <>
@@ -904,7 +904,7 @@ export default function AdminCoachDetail() {
                             {formatCurrency(breakdown.thisClubTotal)}
                           </Text>
                           <Text style={{ color: '#1565C0', fontSize: 11 }}>
-                            ({breakdown.monthsInContract} mesi × {formatCurrency(parseFloat(monthlyCompensation) || 0)})
+                            ({breakdown.monthsInContract} mesi × {formatCurrency(parseFloat(monthlyCompensation.replace(',', '.')) || 0)})
                           </Text>
                         </View>
                         

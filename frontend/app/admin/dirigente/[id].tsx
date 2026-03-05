@@ -208,8 +208,8 @@ export default function AdminDirigenteDetail() {
 
   // Calcolo breakdown per anno solare
   const getYearlyBreakdown = () => {
-    const monthly = parseFloat(monthlyCompensation) || 0;
-    const prior = parseFloat(otherAnnualCompensation) || 0;
+    const monthly = parseFloat(monthlyCompensation.replace(',', '.')) || 0;
+    const prior = parseFloat(otherAnnualCompensation.replace(',', '.')) || 0;
     const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
     
     const years: { [year: number]: { months: number, startMonth: string, endMonth: string, total: number, prior: number, grandTotal: number, exceedsThreshold5k: boolean, exceedsThreshold15k: boolean } } = {};
@@ -248,8 +248,8 @@ export default function AdminDirigenteDetail() {
   };
   
   const getCompensationBreakdown = () => {
-    const monthly = parseFloat(monthlyCompensation) || 0;
-    const prior = parseFloat(otherAnnualCompensation) || 0;
+    const monthly = parseFloat(monthlyCompensation.replace(',', '.')) || 0;
+    const prior = parseFloat(otherAnnualCompensation.replace(',', '.')) || 0;
     const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
                         'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
     
@@ -308,8 +308,8 @@ export default function AdminDirigenteDetail() {
     setSaving(true);
     try {
       await api.patch(`/users/${id}/compensation`, {
-        monthly_compensation: parseFloat(monthlyCompensation) || 0,
-        other_annual_compensation: parseFloat(otherAnnualCompensation) || 0,
+        monthly_compensation: parseFloat(monthlyCompensation.replace(',', '.')) || 0,
+        other_annual_compensation: parseFloat(otherAnnualCompensation.replace(',', '.')) || 0,
       });
       showAlert('Successo', 'Compenso aggiornato con successo');
       setEditing(false);
@@ -663,7 +663,7 @@ export default function AdminDirigenteDetail() {
                     const breakdown = getCompensationBreakdown();
                     const yearlyBreakdown = getYearlyBreakdown();
                     const years = Object.keys(yearlyBreakdown).map(Number).sort();
-                    const prior = parseFloat(otherAnnualCompensation) || 0;
+                    const prior = parseFloat(otherAnnualCompensation.replace(',', '.')) || 0;
                     
                     return (
                       <>
@@ -679,7 +679,7 @@ export default function AdminDirigenteDetail() {
                             {formatCurrency(breakdown.thisClubTotal)}
                           </Text>
                           <Text style={{ color: '#1565C0', fontSize: 11 }}>
-                            ({breakdown.monthsInContract} mesi × {formatCurrency(parseFloat(monthlyCompensation) || 0)})
+                            ({breakdown.monthsInContract} mesi × {formatCurrency(parseFloat(monthlyCompensation.replace(',', '.')) || 0)})
                           </Text>
                         </View>
                         
