@@ -23,6 +23,7 @@ import { it } from 'date-fns/locale';
 import * as ImagePicker from 'expo-image-picker';
 
 import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
+
 interface Dirigente {
   id: string;
   email: string;
@@ -96,6 +97,11 @@ export default function AdminDirigenteDetail() {
   const [iban, setIban] = useState('');
   const [ibanHolder, setIbanHolder] = useState('');
   const [bankName, setBankName] = useState('');
+  // Teams and Venues
+  const [teams, setTeams] = useState<{id: string, name: string}[]>([]);
+  const [availableVenues, setAvailableVenues] = useState<{name: string}[]>([]);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  const [selectedVenueNames, setSelectedVenueNames] = useState<string[]>([]);
   // Signed receipts
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
   const openImageViewer = (imageBase64: string, title: string) => {
@@ -127,16 +133,30 @@ export default function AdminDirigenteDetail() {
 
   const loadData = async () => {
     try {
-      const [userResponse, settingsResponse] = await Promise.all([
+      const [userResponse, settingsResponse, teamsResponse] = await Promise.all([
         api.get(`/users/${id}`),
         api.get('/settings/society'),
+        api.get('/teams'),
       ]);
       
       setDirigente(userResponse.data);
       setMonthlyCompensation(userResponse.data.monthly_compensation?.toString() || '0');
       setOtherAnnualCompensation(userResponse.data.other_annual_compensation?.toString() || '0');
-      setContractStartDate(userResponse.data.contract_start_date || '');
-      setContractEndDate(userResponse.data.contract_end_date || '');
+      
+      // Format dates from ISO to dd/mm/yyyy for display
+      if (userResponse.data.contract_start_date) {
+        const [y, m, d] = userResponse.data.contract_start_date.split('-');
+        setContractStartDate(`${d}/${m}/${y}`);
+      } else {
+        setContractStartDate('');
+      }
+      if (userResponse.data.contract_end_date) {
+        const [y, m, d] = userResponse.data.contract_end_date.split('-');
+        setContractEndDate(`${d}/${m}/${y}`);
+      } else {
+        setContractEndDate('');
+      }
+      
       setQualification(userResponse.data.qualification || '');
       setDocumentType(userResponse.data.document_type || '');
       setDocumentFront(userResponse.data.document_front || '');
@@ -144,6 +164,12 @@ export default function AdminDirigenteDetail() {
       setIban(userResponse.data.iban || '');
       setIbanHolder(userResponse.data.iban_holder || '');
       setBankName(userResponse.data.bank_name || '');
+      
+      // Load teams and venues
+      setTeams(teamsResponse.data || []);
+      setSelectedTeamIds(userResponse.data.assigned_teams || []);
+      setAvailableVenues(settingsResponse.data.venues || []);
+      setSelectedVenueNames(userResponse.data.assigned_venues || []);
       
       // Load signed receipts from compensation endpoint
       try {
@@ -307,9 +333,26 @@ export default function AdminDirigenteDetail() {
   const handleSaveCompensation = async () => {
     setSaving(true);
     try {
+      // Convert dd/mm/yyyy to ISO format for backend
+      let isoStartDate = null;
+      let isoEndDate = null;
+      
+      if (contractStartDate && contractStartDate.length === 10) {
+        const [dd, mm, yyyy] = contractStartDate.split('/');
+        isoStartDate = `${yyyy}-${mm}-${dd}`;
+      }
+      if (contractEndDate && contractEndDate.length === 10) {
+        const [dd, mm, yyyy] = contractEndDate.split('/');
+        isoEndDate = `${yyyy}-${mm}-${dd}`;
+      }
+      
       await api.patch(`/users/${id}/compensation`, {
         monthly_compensation: parseFloat(monthlyCompensation.replace(',', '.')) || 0,
         other_annual_compensation: parseFloat(otherAnnualCompensation.replace(',', '.')) || 0,
+        contract_start_date: isoStartDate,
+        contract_end_date: isoEndDate,
+        assigned_teams: selectedTeamIds,
+        assigned_venues: selectedVenueNames,
       });
       showAlert('Successo', 'Compenso aggiornato con successo');
       setEditing(false);
@@ -631,6 +674,111 @@ export default function AdminDirigenteDetail() {
               <Text style={{ fontSize: 12, color: '#666', marginTop: 4, marginBottom: 12 }}>
                 Compensi già percepiti da altre società sportive nell'anno solare corrente
               </Text>
+              
+              <Text style={styles.inputLabel}>Data Inizio Contratto</Text>
+              <TextInput
+                style={styles.input}
+                value={contractStartDate}
+                onChangeText={(text) => {
+                  // Auto-format as dd/mm/yyyy
+                  const cleaned = text.replace(/\D/g, '');
+                  let formatted = '';
+                  if (cleaned.length > 0) formatted = cleaned.substring(0, 2);
+                  if (cleaned.length > 2) formatted += '/' + cleaned.substring(2, 4);
+                  if (cleaned.length > 4) formatted += '/' + cleaned.substring(4, 8);
+                  setContractStartDate(formatted);
+                }}
+                placeholder="gg/mm/aaaa"
+                placeholderTextColor="#999"
+                keyboardType="numeric"
+                maxLength={10}
+              />
+              
+              <Text style={styles.inputLabel}>Data Fine Contratto</Text>
+              <TextInput
+                style={styles.input}
+                value={contractEndDate}
+                onChangeText={(text) => {
+                  // Auto-format as dd/mm/yyyy
+                  const cleaned = text.replace(/\D/g, '');
+                  let formatted = '';
+                  if (cleaned.length > 0) formatted = cleaned.substring(0, 2);
+                  if (cleaned.length > 2) formatted += '/' + cleaned.substring(2, 4);
+                  if (cleaned.length > 4) formatted += '/' + cleaned.substring(4, 8);
+                  setContractEndDate(formatted);
+                }}
+                placeholder="gg/mm/aaaa"
+                placeholderTextColor="#999"
+                keyboardType="numeric"
+                maxLength={10}
+              />
+              
+              {/* Assegnazione Squadre */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
+                <Ionicons name="people" size={18} color="#007AFF" />
+                <Text style={[styles.inputLabel, { marginLeft: 6, marginTop: 0, marginBottom: 0 }]}>Squadre Assegnate</Text>
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                {teams.map((team) => (
+                  <TouchableOpacity
+                    key={team.id}
+                    onPress={() => {
+                      if (selectedTeamIds.includes(team.id)) {
+                        setSelectedTeamIds(selectedTeamIds.filter(t => t !== team.id));
+                      } else {
+                        setSelectedTeamIds([...selectedTeamIds, team.id]);
+                      }
+                    }}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      borderWidth: 2,
+                      borderColor: selectedTeamIds.includes(team.id) ? '#007AFF' : '#ddd',
+                      backgroundColor: selectedTeamIds.includes(team.id) ? '#E3F2FD' : '#f9f9f9',
+                    }}
+                  >
+                    <Text style={{ color: selectedTeamIds.includes(team.id) ? '#007AFF' : '#666', fontWeight: selectedTeamIds.includes(team.id) ? '600' : '400' }}>
+                      {team.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                {teams.length === 0 && (
+                  <Text style={{ color: '#999', fontStyle: 'italic' }}>Nessuna squadra disponibile</Text>
+                )}
+              </View>
+
+              {/* Assegnazione Palestre */}
+              <Text style={[styles.inputLabel, { marginTop: 8 }]}>🏟️ Palestre Assegnate</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {availableVenues.map((venue, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => {
+                      if (selectedVenueNames.includes(venue.name)) {
+                        setSelectedVenueNames(selectedVenueNames.filter(v => v !== venue.name));
+                      } else {
+                        setSelectedVenueNames([...selectedVenueNames, venue.name]);
+                      }
+                    }}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      borderWidth: 2,
+                      borderColor: selectedVenueNames.includes(venue.name) ? '#FF9500' : '#ddd',
+                      backgroundColor: selectedVenueNames.includes(venue.name) ? '#FFF3E0' : '#f9f9f9',
+                    }}
+                  >
+                    <Text style={{ color: selectedVenueNames.includes(venue.name) ? '#E65100' : '#666', fontWeight: selectedVenueNames.includes(venue.name) ? '600' : '400' }}>
+                      {venue.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                {availableVenues.length === 0 && (
+                  <Text style={{ color: '#999', fontStyle: 'italic' }}>Nessuna palestra configurata nelle impostazioni</Text>
+                )}
+              </View>
               
               <TouchableOpacity
                 style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
