@@ -1064,27 +1064,24 @@ export default function CollaboratoreCompensation() {
               contentContainerStyle={{ paddingBottom: 40 }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={true}
+              contentContainerStyle={{ paddingBottom: 20 }}
             >
-              {/* Receipt Preview */}
-              <View style={styles.receiptPreview}>
-                <Text style={styles.receiptTitle}>QUIETANZA COMPENSO SPORTIVO DILETTANTISTICO</Text>
-                <Text style={styles.receiptText}>
-                  Collaboratore: {profile?.full_name}{'\n'}
-                  Mese: {MONTH_NAMES[selectedMonth || 0]} {selectedYear}{'\n'}
-                  Compenso lordo: {formatCurrency((profile?.monthly_compensation || 0))}{'\n'}
-                  {'\n'}
-                  Il collaboratore dichiara che non sono intervenute variazioni rispetto all'autocertificazione precedente.
+              {/* Receipt Preview - Compact */}
+              <View style={[styles.receiptPreview, { padding: 12, marginBottom: 12 }]}>
+                <Text style={[styles.receiptTitle, { fontSize: 13, marginBottom: 6 }]}>QUIETANZA COMPENSO SPORTIVO</Text>
+                <Text style={[styles.receiptText, { fontSize: 12, lineHeight: 18 }]}>
+                  {profile?.full_name} • {MONTH_NAMES[selectedMonth || 0]} {selectedYear} • {formatCurrency((profile?.monthly_compensation || 0))}
                 </Text>
               </View>
 
               {/* Signature Pad */}
-              <View style={{ marginTop: 10, marginBottom: 20 }}>
-                <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
+              <View style={{ marginBottom: 10 }}>
+                <Text style={[styles.signatureLabel, { marginBottom: 8 }]}>Firma qui sotto:</Text>
                 <SignaturePadInline
                   ref={signatureRef}
                   onSave={(sig) => setSignature(sig)}
                   onClear={() => setSignature(null)}
-                  height={250}
+                  height={150}
                 />
               </View>
             </ScrollView>
@@ -1180,7 +1177,7 @@ export default function CollaboratoreCompensation() {
               <SignaturePadInline
                 onSave={(sig) => setDeclarationSignature(sig)}
                 onClear={() => setDeclarationSignature(null)}
-                height={250}
+                height={150}
               />
             </ScrollView>
 
