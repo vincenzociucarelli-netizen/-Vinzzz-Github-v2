@@ -237,7 +237,7 @@ ai sensi del Regolamento UE 2016/679 (GDPR)
 
 Gentile Collaboratore,
 
-La presente informativa descrive le modalità di trattamento dei dati personali da parte di ${societyName}, con sede in ${societyAddress}, C.F./P.IVA ${societyCfPiva}, email ${societyEmail}.
+La presente informativa descrive le modalità di trattamento dei dati personali da parte di ${societyName}, con sede in ${societyAddress}, C.F. ${societyCfPiva}, email ${societyEmail}.
 
 1. TITOLARE DEL TRATTAMENTO
 Il Titolare del trattamento è ${societyName}, con sede in ${societyAddress} – email: ${societyEmail}.
@@ -246,7 +246,7 @@ Il Titolare del trattamento è ${societyName}, con sede in ${societyAddress} –
 I dati personali saranno trattati per le seguenti finalità:
 a) Gestione del rapporto associativo/collaborativo con la Società;
 b) Adempimento degli obblighi di legge, fiscali e contabili;
-c) Comunicazione con gli enti sportivi di riferimento (es. Federazioni, EPS, CONI);
+c) Comunicazione con gli enti sportivi di riferimento (es. Federazioni, EPS, RAS);
 d) Gestione delle attività sportive, organizzative e amministrative della Società.
 
 La base giuridica del trattamento è l'esecuzione del rapporto collaborativo e l'adempimento di obblighi di legge.
@@ -284,7 +284,7 @@ ai sensi del Regolamento UE 2016/679 (GDPR)
 
 Gentile Genitore/Tutore,
 
-La presente informativa descrive le modalità di trattamento dei dati personali del minore da parte di ${societyName}, con sede in ${societyAddress}, C.F./P.IVA ${societyCfPiva}, email ${societyEmail}.
+La presente informativa descrive le modalità di trattamento dei dati personali del minore da parte di ${societyName}, con sede in ${societyAddress}, C.F. ${societyCfPiva}, email ${societyEmail}.
 
 1. TITOLARE DEL TRATTAMENTO
 Il Titolare del trattamento è ${societyName}, con sede in ${societyAddress} – email: ${societyEmail}.
@@ -293,7 +293,7 @@ Il Titolare del trattamento è ${societyName}, con sede in ${societyAddress} –
 I dati personali del minore saranno trattati per le seguenti finalità:
 a) gestione dell'iscrizione e partecipazione alle attività sportive della Società;
 b) adempimento degli obblighi previsti dalle normative sportive, assicurative e amministrative;
-c) comunicazione con gli enti sportivi di riferimento (Federazioni, EPS, CONI);
+c) comunicazione con gli enti sportivi di riferimento (Federazioni, EPS, RAS);
 d) organizzazione delle attività sportive e delle comunicazioni con le famiglie.
 
 3. TIPOLOGIA DI DATI TRATTATI

@@ -125,7 +125,7 @@ Il Titolare del trattamento è ${societyName}.
 I Suoi dati personali saranno trattati per le seguenti finalità:
 a) Gestione del rapporto associativo/collaborativo con la Società;
 b) Adempimento degli obblighi di legge, fiscali e contabili;
-c) Comunicazione con gli enti sportivi di riferimento (FIPAV, CONI, ecc.);
+c) Comunicazione con gli enti sportivi di riferimento (FIPAV, RAS, ecc.);
 d) Gestione delle attività sportive e organizzative della Società;
 e) Eventuale pubblicazione di foto/video su canali social e sito web della Società.
 
