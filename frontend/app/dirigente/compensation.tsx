@@ -965,7 +965,7 @@ export default function DirigenteCompensation() {
                 ref={signatureRef}
                 onSave={(sig) => setSignature(sig)}
                 onClear={() => setSignature(null)}
-                height={200}
+                height={220}
               />
             </ScrollView>
 
@@ -1057,7 +1057,7 @@ export default function DirigenteCompensation() {
               <SignaturePadInline
                 onSave={(sig) => setDeclarationSignature(sig)}
                 onClear={() => setDeclarationSignature(null)}
-                height={200}
+                height={220}
               />
             </ScrollView>
 

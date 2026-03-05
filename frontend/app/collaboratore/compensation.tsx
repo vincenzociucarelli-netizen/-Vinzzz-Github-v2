@@ -1084,7 +1084,7 @@ export default function CollaboratoreCompensation() {
                   ref={signatureRef}
                   onSave={(sig) => setSignature(sig)}
                   onClear={() => setSignature(null)}
-                  height={180}
+                  height={220}
                 />
               </View>
             </ScrollView>
@@ -1180,7 +1180,7 @@ export default function CollaboratoreCompensation() {
               <SignaturePadInline
                 onSave={(sig) => setDeclarationSignature(sig)}
                 onClear={() => setDeclarationSignature(null)}
-                height={200}
+                height={220}
               />
             </ScrollView>
 

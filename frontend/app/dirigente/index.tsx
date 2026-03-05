@@ -293,95 +293,34 @@ export default function DirigenteIndex() {
             teams.map((item) => (
               <View key={item.id}>
                 <TouchableOpacity
-                  style={[styles.teamCard, selectedTeam?.id === item.id && styles.teamCardSelected]}
+                  style={styles.teamCard}
                   onPress={() => {
-                    console.log('Team selected:', item.name);
-                    setSelectedTeam(selectedTeam?.id === item.id ? null : item);
+                    router.push({
+                      pathname: '/dirigente/team/[id]',
+                      params: { id: item.id, name: item.name }
+                    });
                   }}
                   activeOpacity={0.7}
                 >
                   <View style={styles.teamIcon}>
-                    <Ionicons name="people" size={24} color={selectedTeam?.id === item.id ? '#fff' : '#8E44AD'} />
+                    <Ionicons name="people" size={24} color="#8E44AD" />
                   </View>
                   <View style={styles.teamInfo}>
-                    <Text style={[styles.teamName, selectedTeam?.id === item.id && styles.teamNameSelected]}>
+                    <Text style={styles.teamName}>
                       {item.name}
                     </Text>
                     {item.category && (
-                      <Text style={[styles.teamCategory, selectedTeam?.id === item.id && styles.teamCategorySelected]}>
+                      <Text style={styles.teamCategory}>
                         {item.category}
                       </Text>
                     )}
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    {selectedTeam?.id === item.id && (
-                      <Text style={{ color: '#fff', fontSize: 12, marginRight: 8 }}>
-                        {athletes.length} atleti
-                      </Text>
-                    )}
-                    <Ionicons 
-                      name={selectedTeam?.id === item.id ? "chevron-down" : "chevron-forward"}
-                      size={20} 
-                      color={selectedTeam?.id === item.id ? '#fff' : '#999'} 
-                    />
-                  </View>
+                  <Ionicons 
+                    name="chevron-forward"
+                    size={20} 
+                    color="#999" 
+                  />
                 </TouchableOpacity>
-                
-                {/* Athletes list shown inline when team is selected */}
-                {selectedTeam?.id === item.id && (
-                  <View style={styles.inlineAthletesContainer}>
-                    {/* Certificate Legend - compact */}
-                    <View style={[styles.legendContainer, { marginBottom: 8, paddingVertical: 6 }]}>
-                      <View style={styles.legendItems}>
-                        <View style={styles.legendItem}>
-                          <View style={[styles.legendDot, { backgroundColor: '#34C759' }]} />
-                          <Text style={[styles.legendText, { fontSize: 11 }]}>Valido</Text>
-                        </View>
-                        <View style={styles.legendItem}>
-                          <View style={[styles.legendDot, { backgroundColor: '#FF9500' }]} />
-                          <Text style={[styles.legendText, { fontSize: 11 }]}>In scadenza</Text>
-                        </View>
-                        <View style={styles.legendItem}>
-                          <View style={[styles.legendDot, { backgroundColor: '#FF3B30' }]} />
-                          <Text style={[styles.legendText, { fontSize: 11 }]}>Mancante</Text>
-                        </View>
-                      </View>
-                    </View>
-                    
-                    {athletes.length === 0 ? (
-                      <View style={[styles.emptyCard, { marginVertical: 8 }]}>
-                        <Text style={styles.emptyText}>Nessun atleta in questa squadra</Text>
-                      </View>
-                    ) : (
-                      athletes.map((athlete) => {
-                        const certStatus = getCertificateStatus(athlete);
-                        return (
-                          <View key={athlete.id} style={[styles.athleteCard, athlete.is_withdrawn && styles.athleteCardWithdrawn]}>
-                            <View style={styles.athleteInfo}>
-                              <Text style={[styles.athleteName, athlete.is_withdrawn && styles.athleteNameWithdrawn]}>
-                                {athlete.full_name}
-                              </Text>
-                              <View style={styles.athleteMeta}>
-                                <View style={[styles.statusBadge, { backgroundColor: athlete.is_withdrawn ? '#FF3B30' : (athlete.status === 'trial' ? '#FF9500' : '#34C759') }]}>
-                                  <Text style={styles.statusBadgeText}>
-                                    {athlete.is_withdrawn ? 'RITIRATO' : (athlete.status === 'trial' ? 'IN PROVA' : 'ATTIVO')}
-                                  </Text>
-                                </View>
-                              </View>
-                            </View>
-                            <View style={styles.certificateInfo}>
-                              <View style={[styles.certBadge, { backgroundColor: certStatus.color + '20' }]}>
-                                <Ionicons name={certStatus.icon as any} size={16} color={certStatus.color} />
-                                <Text style={[styles.certText, { color: certStatus.color }]}>{certStatus.text}</Text>
-                              </View>
-                              <Text style={styles.certDate}>{formatExpiryDate(athlete.certificate_expiry)}</Text>
-                            </View>
-                          </View>
-                        );
-                      })
-                    )}
-                  </View>
-                )}
               </View>
             ))
           )}
