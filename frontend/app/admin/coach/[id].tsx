@@ -1762,7 +1762,7 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     borderWidth: 1, 
     borderColor: '#e0e0e0',
-    color: '#999',
+    color: '#333',
   },
   saveBtn: { 
     backgroundColor: '#FF9500', 

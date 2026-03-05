@@ -3041,6 +3041,13 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
         else:
             update_data["contract_end_date"] = None
     
+    # Handle assigned teams and venues
+    if "assigned_teams" in data:
+        update_data["assigned_teams"] = data["assigned_teams"]
+    
+    if "assigned_venues" in data:
+        update_data["assigned_venues"] = data["assigned_venues"]
+    
     if update_data:
         await db.users.update_one(
             {"id": user_id},
