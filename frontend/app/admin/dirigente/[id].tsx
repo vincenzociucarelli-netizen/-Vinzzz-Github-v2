@@ -625,6 +625,65 @@ export default function AdminDirigenteDetail() {
           )}
         </View>
 
+        {/* Incarichi Assegnati (sempre visibili) */}
+        {(selectedTeamIds.length > 0 || selectedVenueNames.length > 0) && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📋 Incarichi Assegnati</Text>
+            
+            {selectedTeamIds.length > 0 && (
+              <View style={{ marginBottom: selectedVenueNames.length > 0 ? 12 : 0 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Ionicons name="people" size={16} color="#007AFF" />
+                  <Text style={{ marginLeft: 6, fontSize: 13, fontWeight: '600', color: '#333' }}>Squadre</Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {teams.filter(t => selectedTeamIds.includes(t.id)).map((team) => (
+                    <View
+                      key={team.id}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: 14,
+                        backgroundColor: '#E3F2FD',
+                        borderWidth: 1,
+                        borderColor: '#007AFF',
+                      }}
+                    >
+                      <Text style={{ color: '#007AFF', fontWeight: '500', fontSize: 12 }}>{team.name}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+            
+            {selectedVenueNames.length > 0 && (
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Ionicons name="location" size={16} color="#FF9500" />
+                  <Text style={{ marginLeft: 6, fontSize: 13, fontWeight: '600', color: '#333' }}>Palestre</Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {selectedVenueNames.map((venue, idx) => (
+                    <View
+                      key={idx}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: 14,
+                        backgroundColor: '#FFF3E0',
+                        borderWidth: 1,
+                        borderColor: '#FF9500',
+                      }}
+                    >
+                      <Text style={{ color: '#E65100', fontWeight: '500', fontSize: 12 }}>{venue}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Compenso */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
