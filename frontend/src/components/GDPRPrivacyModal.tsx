@@ -16,6 +16,7 @@ import api from '../services/api';
 
 interface SocietyInfo {
   name: string;
+  ragione_sociale?: string;
   address?: string;
   city?: string;
   province?: string;
@@ -221,7 +222,7 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
     onClose();
   };
 
-  const societyName = society?.name || societyInfo?.name || 'La Società Sportiva';
+  const societyName = society?.ragione_sociale || society?.name || societyInfo?.name || 'La Società Sportiva';
   const societyAddress = society?.address 
     ? `${society.address}, ${society.city || ''}${society.province ? ` (${society.province})` : ''}`
     : '';
