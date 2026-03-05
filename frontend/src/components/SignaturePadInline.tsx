@@ -195,14 +195,18 @@ const styles = StyleSheet.create({
   },
   clearBtn: {
     alignSelf: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFE5E5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+    marginTop: 12,
   },
   clearBtnText: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 14,
+    color: '#FF3B30',
+    fontWeight: '600',
   },
 });
 

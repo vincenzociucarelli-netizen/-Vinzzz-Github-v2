@@ -965,7 +965,7 @@ export default function DirigenteCompensation() {
                 ref={signatureRef}
                 onSave={(sig) => setSignature(sig)}
                 onClear={() => setSignature(null)}
-                height={220}
+                height={250}
               />
             </ScrollView>
 
@@ -1057,7 +1057,7 @@ export default function DirigenteCompensation() {
               <SignaturePadInline
                 onSave={(sig) => setDeclarationSignature(sig)}
                 onClear={() => setDeclarationSignature(null)}
-                height={220}
+                height={250}
               />
             </ScrollView>
 
@@ -1313,6 +1313,8 @@ const styles = StyleSheet.create({
   },
   modalScroll: {
     padding: 16,
+    paddingBottom: 40,
+    flexGrow: 1,
   },
   receiptPreview: {
     backgroundColor: '#f9f9f9',
