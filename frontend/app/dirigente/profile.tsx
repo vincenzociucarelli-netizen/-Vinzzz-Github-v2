@@ -246,7 +246,6 @@ export default function DirigenteProfile() {
       } catch (err) {
         console.log('Error loading assignments');
       }
-      }
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
