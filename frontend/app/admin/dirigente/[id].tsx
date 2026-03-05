@@ -598,11 +598,14 @@ export default function AdminDirigenteDetail() {
                 style={styles.input}
                 value={monthlyCompensation}
                 onChangeText={(text) => {
-                  const cleaned = text.replace(/[^0-9]/g, '');
-                  setMonthlyCompensation(cleaned);
+                  // Allow numbers and comma for decimals (Italian format)
+                  const cleaned = text.replace(/[^0-9,]/g, '');
+                  const parts = cleaned.split(',');
+                  const formatted = parts.length > 2 ? parts[0] + ',' + parts.slice(1).join('') : cleaned;
+                  setMonthlyCompensation(formatted);
                 }}
                 onFocus={() => { if (monthlyCompensation === '0' || monthlyCompensation === '') setMonthlyCompensation(''); }}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
                 placeholder="€ 0,00"
                 placeholderTextColor="#999"
                 selectTextOnFocus={true}
@@ -613,11 +616,14 @@ export default function AdminDirigenteDetail() {
                 style={styles.input}
                 value={otherAnnualCompensation}
                 onChangeText={(text) => {
-                  const cleaned = text.replace(/[^0-9]/g, '');
-                  setOtherAnnualCompensation(cleaned);
+                  // Allow numbers and comma for decimals (Italian format)
+                  const cleaned = text.replace(/[^0-9,]/g, '');
+                  const parts = cleaned.split(',');
+                  const formatted = parts.length > 2 ? parts[0] + ',' + parts.slice(1).join('') : cleaned;
+                  setOtherAnnualCompensation(formatted);
                 }}
                 onFocus={() => { if (otherAnnualCompensation === '0' || otherAnnualCompensation === '') setOtherAnnualCompensation(''); }}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
                 placeholder="€ 0,00"
                 placeholderTextColor="#999"
                 selectTextOnFocus={true}
