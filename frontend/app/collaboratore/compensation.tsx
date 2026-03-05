@@ -951,25 +951,6 @@ export default function CollaboratoreCompensation() {
                 </View>
               );
             })()}
-            
-            {/* Totale Compenso Contratto */}
-            <View style={styles.totalContractBox}>
-              <Text style={styles.totalContractLabel}>Totale Compenso Contratto (per RAS)</Text>
-              <Text style={styles.totalContractValue}>
-                {formatCurrency((() => {
-                  const months1 = getContractMonthsForYear(contractStartYear).length;
-                  const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
-                  return (profile?.monthly_compensation || 0) * (months1 + months2);
-                })())}
-              </Text>
-              <Text style={styles.totalContractSubtext}>
-                ({formatCurrency(profile?.monthly_compensation || 0)} × {(() => {
-                  const months1 = getContractMonthsForYear(contractStartYear).length;
-                  const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
-                  return months1 + months2;
-                })()} mesi)
-              </Text>
-            </View>
           </>
         )}
         
