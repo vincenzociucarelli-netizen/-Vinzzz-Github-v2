@@ -1105,33 +1105,6 @@ export default function AdminCollaboratoreDetail() {
           </View>
         </Modal>
 
-        {/* Document Images */}
-        {(collaboratore.document_front || collaboratore.document_back) && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>🪪 Documento</Text>
-            <View style={styles.documentsRow}>
-              {collaboratore.document_front && (
-                <TouchableOpacity
-                  style={styles.documentThumb}
-                  onPress={() => openImageViewer(collaboratore.document_front!, 'Fronte Documento')}
-                >
-                  <Image source={{ uri: collaboratore.document_front }} style={styles.documentImage} />
-                  <Text style={styles.documentLabel}>Fronte</Text>
-                </TouchableOpacity>
-              )}
-              {collaboratore.document_back && (
-                <TouchableOpacity
-                  style={styles.documentThumb}
-                  onPress={() => openImageViewer(collaboratore.document_back!, 'Retro Documento')}
-                >
-                  <Image source={{ uri: collaboratore.document_back }} style={styles.documentImage} />
-                  <Text style={styles.documentLabel}>Retro</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        )}
-
         {/* Bank Info */}
         {collaboratore.iban && (
           <View style={styles.card}>

@@ -146,6 +146,17 @@ Full-stack React Native (Expo) + FastAPI + MongoDB application for sports club m
   - Result: Section "🏦 Dati Bancari" now shows ONLY: IBAN, Intestatario, Banca
 - **Verified**: Screenshot confirms only banking fields visible in coach profile
 
+### P0 - Document Fields Removed from ALL Staff Profiles (05/03/2026)
+Extended the document field removal to Collaboratore and Dirigente profiles:
+- **Collaboratore Admin View** (`admin/collaboratore/[id].tsx`):
+  - Removed entire "🪪 Documento" card with Fronte/Retro images
+  - Only "🏦 Dati Bancari" section remains
+- **Dirigente Admin View** (`admin/dirigente/[id].tsx`):
+  - Removed from editing mode: Tipo Documento selector, Fronte/Retro upload buttons
+  - Removed from view mode: Tipo Documento, Documento status, Fronte/Retro images
+  - Changed title from "Documento e Dati Bancari" to "🏦 Dati Bancari"
+  - Only IBAN, Intestatario, Banca fields remain
+
 ### P0 - 6 Admin UI/Logic Fixes Complete (04/03/2026)
 Implemented all 6 modifications requested by the user for the Admin section:
 

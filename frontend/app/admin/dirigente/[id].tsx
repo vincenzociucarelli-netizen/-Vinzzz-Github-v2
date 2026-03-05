@@ -912,7 +912,7 @@ export default function AdminDirigenteDetail() {
         {dirigente.status === 'approved' && (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>🏦 Documento e Dati Bancari</Text>
+              <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
               <TouchableOpacity onPress={() => setEditingBank(!editingBank)}>
                 <Ionicons name={editingBank ? "close" : "create"} size={22} color="#8E44AD" />
               </TouchableOpacity>
@@ -920,45 +920,6 @@ export default function AdminDirigenteDetail() {
 
             {editingBank ? (
               <>
-                <Text style={styles.inputLabel}>Tipo Documento</Text>
-                <View style={styles.docTypeButtons}>
-                  {['C.I.', 'Passaporto', 'Patente'].map((type) => (
-                    <TouchableOpacity
-                      key={type}
-                      style={[styles.docTypeBtn, documentType === type && styles.docTypeBtnActive]}
-                      onPress={() => setDocumentType(type)}
-                    >
-                      <Text style={[styles.docTypeBtnText, documentType === type && styles.docTypeBtnTextActive]}>
-                        {type}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <Text style={styles.inputLabel}>Documento Fronte</Text>
-                <TouchableOpacity style={styles.uploadBtn} onPress={() => pickImage('front')}>
-                  {documentFront ? (
-                    <Image source={{ uri: `data:image/jpeg;base64,${documentFront}` }} style={styles.docPreview} />
-                  ) : (
-                    <>
-                      <Ionicons name="camera" size={24} color="#8E44AD" />
-                      <Text style={styles.uploadBtnText}>Carica Fronte</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-
-                <Text style={styles.inputLabel}>Documento Retro</Text>
-                <TouchableOpacity style={styles.uploadBtn} onPress={() => pickImage('back')}>
-                  {documentBack ? (
-                    <Image source={{ uri: `data:image/jpeg;base64,${documentBack}` }} style={styles.docPreview} />
-                  ) : (
-                    <>
-                      <Ionicons name="camera" size={24} color="#8E44AD" />
-                      <Text style={styles.uploadBtnText}>Carica Retro</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-
                 <Text style={styles.inputLabel}>IBAN</Text>
                 <TextInput
                   style={styles.input}
@@ -1001,39 +962,6 @@ export default function AdminDirigenteDetail() {
               </>
             ) : (
               <>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Tipo Documento</Text>
-                  <Text style={styles.value}>{dirigente.document_type || '-'}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Documento</Text>
-                  <Text style={styles.value}>
-                    {dirigente.doc_front_image ? '✅ Caricato' : '❌ Mancante'}
-                  </Text>
-                </View>
-                {(dirigente.doc_front_image || dirigente.doc_back_image) && (
-                  <View style={styles.docImagesRow}>
-                    <Text style={styles.tapHint}>👆 Tocca per ingrandire</Text>
-                    {dirigente.doc_front_image && (
-                      <TouchableOpacity 
-                        style={styles.docImageContainer}
-                        onPress={() => openImageViewer(dirigente.doc_front_image!, 'Documento Fronte')}
-                      >
-                        <Text style={styles.docImageLabel}>Fronte</Text>
-                        <Image source={{ uri: `data:image/jpeg;base64,${dirigente.doc_front_image}` }} style={styles.docThumb} />
-                      </TouchableOpacity>
-                    )}
-                    {dirigente.doc_back_image && (
-                      <TouchableOpacity 
-                        style={styles.docImageContainer}
-                        onPress={() => openImageViewer(dirigente.doc_back_image!, 'Documento Retro')}
-                      >
-                        <Text style={styles.docImageLabel}>Retro</Text>
-                        <Image source={{ uri: `data:image/jpeg;base64,${dirigente.doc_back_image}` }} style={styles.docThumb} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
                 <View style={styles.infoRow}>
                   <Text style={styles.label}>IBAN</Text>
                   <Text style={[styles.value, styles.valueCode]}>{dirigente.iban || '-'}</Text>
