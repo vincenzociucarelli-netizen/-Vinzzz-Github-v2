@@ -675,43 +675,48 @@ export default function AdminDirigenteDetail() {
                 Compensi già percepiti da altre società sportive nell'anno solare corrente
               </Text>
               
-              <Text style={styles.inputLabel}>Data Inizio Contratto</Text>
-              <TextInput
-                style={styles.input}
-                value={contractStartDate}
-                onChangeText={(text) => {
-                  // Auto-format as dd/mm/yyyy
-                  const cleaned = text.replace(/\D/g, '');
-                  let formatted = '';
-                  if (cleaned.length > 0) formatted = cleaned.substring(0, 2);
-                  if (cleaned.length > 2) formatted += '/' + cleaned.substring(2, 4);
-                  if (cleaned.length > 4) formatted += '/' + cleaned.substring(4, 8);
-                  setContractStartDate(formatted);
-                }}
-                placeholder="gg/mm/aaaa"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-                maxLength={10}
-              />
-              
-              <Text style={styles.inputLabel}>Data Fine Contratto</Text>
-              <TextInput
-                style={styles.input}
-                value={contractEndDate}
-                onChangeText={(text) => {
-                  // Auto-format as dd/mm/yyyy
-                  const cleaned = text.replace(/\D/g, '');
-                  let formatted = '';
-                  if (cleaned.length > 0) formatted = cleaned.substring(0, 2);
-                  if (cleaned.length > 2) formatted += '/' + cleaned.substring(2, 4);
-                  if (cleaned.length > 4) formatted += '/' + cleaned.substring(4, 8);
-                  setContractEndDate(formatted);
-                }}
-                placeholder="gg/mm/aaaa"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-                maxLength={10}
-              />
+              {/* Date Contratto - Una riga */}
+              <Text style={styles.inputLabel}>📅 Periodo Contratto</Text>
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Data Inizio</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={contractStartDate}
+                    onChangeText={(text) => {
+                      const cleaned = text.replace(/\D/g, '');
+                      let formatted = '';
+                      if (cleaned.length > 0) formatted = cleaned.substring(0, 2);
+                      if (cleaned.length > 2) formatted += '/' + cleaned.substring(2, 4);
+                      if (cleaned.length > 4) formatted += '/' + cleaned.substring(4, 8);
+                      setContractStartDate(formatted);
+                    }}
+                    placeholder="gg/mm/aaaa"
+                    placeholderTextColor="#999"
+                    keyboardType="numeric"
+                    maxLength={10}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Data Fine</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={contractEndDate}
+                    onChangeText={(text) => {
+                      const cleaned = text.replace(/\D/g, '');
+                      let formatted = '';
+                      if (cleaned.length > 0) formatted = cleaned.substring(0, 2);
+                      if (cleaned.length > 2) formatted += '/' + cleaned.substring(2, 4);
+                      if (cleaned.length > 4) formatted += '/' + cleaned.substring(4, 8);
+                      setContractEndDate(formatted);
+                    }}
+                    placeholder="gg/mm/aaaa"
+                    placeholderTextColor="#999"
+                    keyboardType="numeric"
+                    maxLength={10}
+                  />
+                </View>
+              </View>
               
               {/* Assegnazione Squadre */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>

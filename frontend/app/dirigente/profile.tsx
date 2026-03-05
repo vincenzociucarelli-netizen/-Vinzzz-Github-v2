@@ -69,6 +69,10 @@ export default function DirigenteProfile() {
   const [myDocuments, setMyDocuments] = useState<any[]>([]);
   const [showAllDocumentsModal, setShowAllDocumentsModal] = useState(false);
   
+  // Assigned teams and venues (set by admin)
+  const [assignedTeams, setAssignedTeams] = useState<{id: string, name: string}[]>([]);
+  const [assignedVenues, setAssignedVenues] = useState<string[]>([]);
+  
   // Profile data
   const [profileData, setProfileData] = useState({
     email: '',
@@ -224,6 +228,24 @@ export default function DirigenteProfile() {
         }
       } catch (err) {
         console.log('No documents found');
+      }
+      
+      // Load assigned teams and venues
+      try {
+        // Get assigned team IDs from user data
+        const teamIds = data.assigned_teams || [];
+        if (teamIds.length > 0) {
+          // Fetch team names
+          const teamsRes = await api.get('/teams');
+          const allTeams = teamsRes.data || [];
+          const assignedTeamsList = allTeams.filter((t: any) => teamIds.includes(t.id));
+          setAssignedTeams(assignedTeamsList);
+        }
+        // Get assigned venues from user data
+        setAssignedVenues(data.assigned_venues || []);
+      } catch (err) {
+        console.log('Error loading assignments');
+      }
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -857,6 +879,65 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Incarichi Assegnati */}
+        {(assignedTeams.length > 0 || assignedVenues.length > 0) && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📋 Incarichi Assegnati</Text>
+            
+            {assignedTeams.length > 0 && (
+              <View style={{ marginBottom: assignedVenues.length > 0 ? 16 : 0 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Ionicons name="people" size={18} color="#007AFF" />
+                  <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Squadre</Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {assignedTeams.map((team) => (
+                    <View
+                      key={team.id}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 16,
+                        backgroundColor: '#E3F2FD',
+                        borderWidth: 1,
+                        borderColor: '#007AFF',
+                      }}
+                    >
+                      <Text style={{ color: '#007AFF', fontWeight: '500', fontSize: 13 }}>{team.name}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+            
+            {assignedVenues.length > 0 && (
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Ionicons name="location" size={18} color="#FF9500" />
+                  <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Palestre</Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {assignedVenues.map((venue, idx) => (
+                    <View
+                      key={idx}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 16,
+                        backgroundColor: '#FFF3E0',
+                        borderWidth: 1,
+                        borderColor: '#FF9500',
+                      }}
+                    >
+                      <Text style={{ color: '#E65100', fontWeight: '500', fontSize: 13 }}>{venue}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* I Miei Documenti */}
         <View style={styles.card}>
