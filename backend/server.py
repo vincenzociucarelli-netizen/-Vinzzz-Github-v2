@@ -12166,6 +12166,7 @@ async def sign_gdpr_privacy_document(
         # Minor data if applicable
         **minor_data,
         # File storage
+        "pdf_filename": filename,
         "pdf_path": pdf_path,
         "pdf_base64": base64.b64encode(pdf_bytes).decode('utf-8'),
         "created_at": timestamp,

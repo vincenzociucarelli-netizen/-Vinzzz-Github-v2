@@ -73,6 +73,7 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
   const [society, setSociety] = useState<SocietyInfo | null>(societyInfo || null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
 
   // Load society info if not provided
   useEffect(() => {
@@ -127,9 +128,9 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
         const blob = new Blob([byteArray], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
         
-        // Open in new tab
+        // Open in PDF viewer modal instead of new tab
         if (Platform.OS === 'web') {
-          window.open(url, '_blank');
+          setShowPdfViewer(true);
         }
         setPreviewUrl(url);
       }
@@ -320,6 +321,7 @@ Con la sottoscrizione digitale del presente documento il sottoscritto genitore/t
   const privacyText = isMinor ? privacyTextMinor : privacyTextAdult;
 
   return (
+    <>
     <Modal
       visible={visible}
       animationType="slide"
@@ -524,6 +526,47 @@ Con la sottoscrizione digitale del presente documento il sottoscritto genitore/t
         </View>
       </View>
     </Modal>
+
+    {/* PDF Viewer Modal */}
+    {showPdfViewer && previewUrl && Platform.OS === 'web' && (
+      <Modal
+        visible={showPdfViewer}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowPdfViewer(false)}
+      >
+        <View style={styles.pdfViewerOverlay}>
+          <View style={styles.pdfViewerContainer}>
+            <View style={styles.pdfViewerHeader}>
+              <Text style={styles.pdfViewerTitle}>Anteprima Documento</Text>
+              <TouchableOpacity 
+                style={styles.pdfViewerCloseBtn} 
+                onPress={() => setShowPdfViewer(false)}
+              >
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <iframe
+              src={previewUrl}
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                border: 'none',
+                flex: 1,
+              } as any}
+              title="PDF Preview"
+            />
+            <TouchableOpacity 
+              style={styles.pdfViewerCloseButton}
+              onPress={() => setShowPdfViewer(false)}
+            >
+              <Text style={styles.pdfViewerCloseButtonText}>CHIUDI</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    )}
+    </>
   );
 };
 
@@ -777,6 +820,48 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     color: '#fff',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  // PDF Viewer Modal Styles
+  pdfViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pdfViewerContainer: {
+    width: '95%',
+    height: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  pdfViewerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#8E44AD',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  pdfViewerTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  pdfViewerCloseBtn: {
+    padding: 4,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 20,
+  },
+  pdfViewerCloseButton: {
+    backgroundColor: '#8E44AD',
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  pdfViewerCloseButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });
