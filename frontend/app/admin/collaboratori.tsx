@@ -590,14 +590,6 @@ export default function CollaboratoreesScreen() {
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={[styles.checklistItem, checklistItems.id_acquired && styles.checklistItemChecked]}
-                onPress={() => setChecklistItems({...checklistItems, id_acquired: !checklistItems.id_acquired})}
-              >
-                <Text style={{ fontSize: 22 }}>{checklistItems.id_acquired ? '☑️' : '⬜'}</Text>
-                <Text style={styles.checklistText}>Documento d'identità acquisito</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
                 style={[styles.checklistItem, checklistItems.fiscal_code_acquired && styles.checklistItemChecked]}
                 onPress={() => setChecklistItems({...checklistItems, fiscal_code_acquired: !checklistItems.fiscal_code_acquired})}
               >

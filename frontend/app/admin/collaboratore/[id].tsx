@@ -122,7 +122,15 @@ export default function AdminCollaboratoreDetail() {
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [selectedVenueNames, setSelectedVenueNames] = useState<string[]>([]);
   const [availableVenues, setAvailableVenues] = useState<{name: string, address: string, city: string}[]>([]);
-
+  const [originalTeamIds, setOriginalTeamIds] = useState<string[]>([]);
+  const [originalVenueNames, setOriginalVenueNames] = useState<string[]>([]);
+  
+  // Check if assignments have changed
+  const hasAssignmentChanges = () => {
+    const teamsChanged = JSON.stringify([...selectedTeamIds].sort()) !== JSON.stringify([...originalTeamIds].sort());
+    const venuesChanged = JSON.stringify([...selectedVenueNames].sort()) !== JSON.stringify([...originalVenueNames].sort());
+    return teamsChanged || venuesChanged;
+  };
   // Helper: genera i mesi del contratto
   const getContractMonths = () => {
     const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
@@ -192,6 +200,9 @@ export default function AdminCollaboratoreDetail() {
       setOtherAnnualCompensation(collabRes.data.other_annual_compensation?.toString() || '0');
       setSelectedTeamIds(collabRes.data.assigned_teams || []);
       setSelectedVenueNames(collabRes.data.assigned_venues || []);
+      // Store original values to track changes
+      setOriginalTeamIds(collabRes.data.assigned_teams || []);
+      setOriginalVenueNames(collabRes.data.assigned_venues || []);
       
       // Load contract dates and convert to Italian format dd/mm/yyyy
       if (collabRes.data.contract_start_date) {
@@ -1008,7 +1019,8 @@ export default function AdminCollaboratoreDetail() {
             )}
           </View>
 
-          {/* Pulsante Salva Assegnazioni */}
+          {/* Pulsante Salva Assegnazioni - Visibile solo quando ci sono modifiche */}
+          {hasAssignmentChanges() && (
           <TouchableOpacity
             style={[styles.saveButton, { backgroundColor: '#9C27B0', marginTop: 8 }]}
             onPress={async () => {
@@ -1017,6 +1029,9 @@ export default function AdminCollaboratoreDetail() {
                   assigned_teams: selectedTeamIds,
                   assigned_venues: selectedVenueNames,
                 });
+                // Update original values so button disappears
+                setOriginalTeamIds([...selectedTeamIds]);
+                setOriginalVenueNames([...selectedVenueNames]);
                 // Banner auto-closing: use toast-style alert
                 if (Platform.OS === 'web') {
                   const banner = document.createElement('div');
@@ -1027,7 +1042,6 @@ export default function AdminCollaboratoreDetail() {
                 } else {
                   Alert.alert('Successo', 'Assegnazioni salvate');
                 }
-                loadData();
               } catch (error: any) {
                 showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
               }
@@ -1035,6 +1049,7 @@ export default function AdminCollaboratoreDetail() {
           >
             <Text style={styles.saveButtonText}>💾 Salva Assegnazioni</Text>
           </TouchableOpacity>
+          )}
         </View>
 
         {/* Onboarding Checklist Button */}
