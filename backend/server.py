@@ -9219,7 +9219,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             "signature_timestamp_utc": now.isoformat(),
             "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
             "contract_start_date": coach.get('contract_start_date'),
-            "monthly_compensation_rate": monthly_compensation,
+            "monthly_compensation_rate": coach.get('monthly_compensation', 0),
         } if (first_time_exceeded_5000 or first_time_exceeded_15000) else None
     }
     await db.signed_documents.insert_one(document_record)
@@ -12613,7 +12613,7 @@ async def sign_dirigente_compensation_receipt(
             "signature_timestamp_utc": now.isoformat(),
             "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
             "contract_start_date": dirigente.get('contract_start_date'),
-            "monthly_compensation_rate": monthly_compensation,
+            "monthly_compensation_rate": dirigente.get('monthly_compensation', 0),
         } if (first_time_exceeded_5000 or first_time_exceeded_15000) else None
     }
     await db.signed_documents.insert_one(document_record)
