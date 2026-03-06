@@ -2555,13 +2555,13 @@ class CoachAssignTeams(BaseModel):
 
 @api_router.get("/users/dirigenti")
 async def get_dirigenti(current_user = Depends(get_current_user)):
-    """Get all dirigenti (dirigente role) - accessible by admin, coach and collaboratore"""
+    """Get all dirigenti (admin, viewer, dirigente roles) - accessible by admin, coach and collaboratore"""
     if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH, UserRole.COLLABORATORE]:
         raise HTTPException(status_code=403, detail="Solo admin, coach e collaboratori possono vedere i dirigenti")
     
     society_id = current_user.get("society_id")
     dirigenti = await db.users.find({
-        "role": UserRole.DIRIGENTE,
+        "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE]},
         "society_id": society_id
     }).to_list(1000)
     
