@@ -68,7 +68,7 @@ export default function Login() {
         router.replace('/collaboratore');
       } else if (role === 'parent') {
         router.replace('/parent');
-      } else if (role === 'viewer') {
+      } else if (role === 'viewer' || role === 'dirigente') {
         router.replace('/dirigente');
       } else if (role === 'athlete') {
         router.replace('/athlete');

@@ -19,8 +19,8 @@ export default function DirigenteLayout() {
 
   useEffect(() => {
     if (!isChecking && !isLoading) {
-      // Dirigente can be accessed by 'viewer' role OR 'admin' role (admin can act as dirigente)
-      if (!user || (user.role !== 'viewer' && user.role !== 'admin')) {
+      // Dirigente can be accessed by 'viewer', 'dirigente' role OR 'admin' role (admin can act as dirigente)
+      if (!user || (user.role !== 'viewer' && user.role !== 'admin' && user.role !== 'dirigente')) {
         router.replace('/login');
       }
     }
@@ -34,7 +34,7 @@ export default function DirigenteLayout() {
     );
   }
 
-  if (!user || (user.role !== 'viewer' && user.role !== 'admin')) {
+  if (!user || (user.role !== 'viewer' && user.role !== 'admin' && user.role !== 'dirigente')) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#8E44AD" />
