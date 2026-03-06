@@ -13262,13 +13262,18 @@ async def sign_collaboratore_compensation_receipt(
         
         logging.info(f"Collaboratore PDF generation: first_5k={first_time_exceeded_5000}, first_15k={first_time_exceeded_15000}, yearly_total={yearly_total}, new_total={new_total}")
         
+        # Calculate prior compensation for metadata - only if first year of contract
+        prior_for_metadata = 0
+        if contract_start and contract_year == request.year:
+            prior_for_metadata = prior_compensation
+        
         # Generate the appropriate PDF based on threshold status
         if first_time_exceeded_15000:
             # Generate €15K threshold communication with metadata
             threshold_meta_15k = {
                 "yearly_total_before": yearly_total,
                 "yearly_total_after": new_total,
-                "prior_compensation_declared": prior_compensation if contract_start and int(contract_start.split('-')[0]) == request.year else 0,
+                "prior_compensation_declared": prior_for_metadata,
                 "threshold_crossed": "15000",
                 "signature_timestamp_utc": now.isoformat(),
                 "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
@@ -13291,7 +13296,7 @@ async def sign_collaboratore_compensation_receipt(
             threshold_meta = {
                 "yearly_total_before": yearly_total,
                 "yearly_total_after": new_total,
-                "prior_compensation_declared": prior_compensation if contract_start and int(contract_start.split('-')[0]) == request.year else 0,
+                "prior_compensation_declared": prior_for_metadata,
                 "threshold_crossed": "5000",
                 "signature_timestamp_utc": now.isoformat(),
                 "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,

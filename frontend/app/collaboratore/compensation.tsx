@@ -289,9 +289,11 @@ export default function CollaboratoreCompensation() {
     
     const newTotal = yearTotalBeforeThis + monthlyAmount;
     
-    // Check if THIS month will be the first to exceed thresholds
-    const willExceed5k = newTotal >= 5000 && yearTotalBeforeThis < 5000;
-    const willExceed15k = newTotal >= 15000 && yearTotalBeforeThis < 15000;
+    // Check if THIS month will be the first to EXCEED thresholds (go OVER, not just reach)
+    // €5.000 esatti = ancora esente, €5.001 = superamento
+    // €15.000 esatti = ancora solo contributi, €15.001 = superamento fiscale
+    const willExceed5k = newTotal > 5000 && yearTotalBeforeThis <= 5000;
+    const willExceed15k = newTotal > 15000 && yearTotalBeforeThis <= 15000;
     
     console.log('Threshold check for modal:', { yearTotalBeforeThis, monthlyAmount, newTotal, willExceed5k, willExceed15k });
     
