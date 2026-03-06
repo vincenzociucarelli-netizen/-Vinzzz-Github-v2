@@ -951,10 +951,11 @@ def clean_mongo_doc(doc):
     """Remove _id from MongoDB document and convert datetime fields for JSON serialization"""
     if doc:
         doc.pop('_id', None)
-        # Convert datetime fields to ISO string
+        # Convert datetime fields to ISO string WITH TIME AND TIMEZONE
         for key, value in list(doc.items()):
             if isinstance(value, datetime):
-                doc[key] = value.strftime("%Y-%m-%d")
+                # Include time and UTC timezone for proper frontend parsing
+                doc[key] = value.replace(tzinfo=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
     return doc
 
 def clean_mongo_docs(docs):
@@ -2487,9 +2488,20 @@ async def get_admin_notifications(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin può vedere le notifiche")
     
     notifications = await db.admin_notifications.find({}).sort("created_at", -1).to_list(100)
+    result = []
     for n in notifications:
         clean_mongo_doc(n)
-    return notifications
+        # Convert created_at to ISO string with timezone info for proper frontend parsing
+        if 'created_at' in n and n['created_at']:
+            ca = n['created_at']
+            if isinstance(ca, datetime):
+                # Add UTC timezone info and convert to ISO format with time
+                n['created_at'] = ca.replace(tzinfo=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S+00:00')
+            elif isinstance(ca, str) and len(ca) == 10:
+                # If it's a date-only string, add time
+                n['created_at'] = ca + 'T00:00:00+00:00'
+        result.append(n)
+    return JSONResponse(content=result)
 
 @api_router.get("/admin/notifications/unread-count")
 async def get_unread_notifications_count(current_user = Depends(get_current_user)):
