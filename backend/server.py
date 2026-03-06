@@ -13183,18 +13183,29 @@ async def sign_collaboratore_compensation_receipt(
     settings = await db.settings.find_one({"type": "society"})
     admin_email = settings.get("admin_email") if settings else None
     
-    # Calculate yearly total
+    # Calculate yearly total - check both collections (collaboratore_compensations and coach_compensations)
     yearly_records = await db.collaboratore_compensations.find({
         "collaboratore_id": collaboratore_id,
         "year": request.year,
         "receipt_signed": True
     }).to_list(12)
     
-    yearly_total = sum(r.get("amount_gross", 0) for r in yearly_records)
+    # Also check coach_compensations as backup (some data may be stored there)
+    coach_records = await db.coach_compensations.find({
+        "coach_id": collaboratore_id,
+        "year": request.year,
+        "receipt_signed": True
+    }).to_list(12)
+    
+    yearly_total_collab = sum(r.get("amount_gross", 0) for r in yearly_records)
+    yearly_total_coach = sum(r.get("amount_gross", 0) for r in coach_records)
+    yearly_total = yearly_total_collab + yearly_total_coach  # Combine both
+    
     # Check both field names for prior compensation (other_annual_compensation is the primary one)
     prior_compensation = collaboratore.get("other_annual_compensation", 0) or collaboratore.get("prior_year_compensation", 0) or 0
     
     contract_start = collaboratore.get("contract_start_date")
+    contract_year = None
     if contract_start:
         try:
             contract_year = int(str(contract_start).split('-')[0].split('T')[0])
@@ -13208,6 +13219,21 @@ async def sign_collaboratore_compensation_receipt(
     # Check thresholds
     first_time_exceeded_5000 = yearly_total < 5000 and new_total >= 5000
     first_time_exceeded_15000 = yearly_total < 15000 and new_total >= 15000
+    
+    # Detailed logging for debugging
+    logging.info(f"=== COLLABORATORE RECEIPT THRESHOLD CHECK ===")
+    logging.info(f"Collaboratore: {collaboratore.get('full_name')} (ID: {collaboratore_id})")
+    logging.info(f"Month/Year: {request.month}/{request.year}")
+    logging.info(f"Amount gross: €{request.amount_gross}")
+    logging.info(f"Prior compensation: €{prior_compensation}")
+    logging.info(f"Contract start year: {contract_year}")
+    logging.info(f"Yearly records (collaboratore_compensations): {len(yearly_records)} = €{yearly_total_collab}")
+    logging.info(f"Yearly records (coach_compensations): {len(coach_records)} = €{yearly_total_coach}")
+    logging.info(f"Yearly total (before this receipt): €{yearly_total}")
+    logging.info(f"New total (after this receipt): €{new_total}")
+    logging.info(f"first_time_exceeded_5000: {first_time_exceeded_5000} (yearly_total < 5000: {yearly_total < 5000}, new_total >= 5000: {new_total >= 5000})")
+    logging.info(f"first_time_exceeded_15000: {first_time_exceeded_15000} (yearly_total < 15000: {yearly_total < 15000}, new_total >= 15000: {new_total >= 15000})")
+    logging.info(f"=============================================")
     
     # Calculate net amount
     amount_net = request.amount_gross
