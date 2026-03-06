@@ -1070,14 +1070,45 @@ export default function CollaboratoreCompensation() {
               contentContainerStyle={{ paddingBottom: 40 }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={true}
-              contentContainerStyle={{ paddingBottom: 20 }}
             >
-              {/* Receipt Preview - Compact */}
-              <View style={[styles.receiptPreview, { padding: 12, marginBottom: 12 }]}>
-                <Text style={[styles.receiptTitle, { fontSize: 13, marginBottom: 6 }]}>QUIETANZA COMPENSO SPORTIVO</Text>
-                <Text style={[styles.receiptText, { fontSize: 12, lineHeight: 18 }]}>
-                  {profile?.full_name} • {MONTH_NAMES[selectedMonth || 0]} {selectedYear} • {formatCurrency((profile?.monthly_compensation || 0))}
+              {/* Receipt Preview - Full Details */}
+              <View style={[styles.receiptPreview, { padding: 16, marginBottom: 12, backgroundColor: '#FFFBF0', borderWidth: 1, borderColor: '#E0D5C0' }]}>
+                <Text style={[styles.receiptTitle, { fontSize: 14, marginBottom: 12, textAlign: 'center', fontWeight: '700' }]}>
+                  QUIETANZA COMPENSO SPORTIVO
                 </Text>
+                
+                <View style={{ borderTopWidth: 1, borderTopColor: '#E0D5C0', paddingTop: 12 }}>
+                  <View style={{ marginBottom: 10 }}>
+                    <Text style={{ fontSize: 11, color: '#666', marginBottom: 2 }}>COLLABORATORE</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>{profile?.full_name}</Text>
+                  </View>
+                  
+                  <View style={{ marginBottom: 10 }}>
+                    <Text style={{ fontSize: 11, color: '#666', marginBottom: 2 }}>CODICE FISCALE</Text>
+                    <Text style={{ fontSize: 13, color: '#333' }}>{profile?.fiscal_code || 'N/D'}</Text>
+                  </View>
+                  
+                  <View style={{ flexDirection: 'row', marginBottom: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 11, color: '#666', marginBottom: 2 }}>PERIODO</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>
+                        {MONTH_NAMES[selectedMonth || 0]} {selectedYear}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 11, color: '#666', marginBottom: 2 }}>IMPORTO LORDO</Text>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#2E7D32' }}>
+                        {formatCurrency(profile?.monthly_compensation || 0)}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={{ backgroundColor: '#F5F5F5', padding: 10, borderRadius: 6, marginTop: 4 }}>
+                    <Text style={{ fontSize: 11, color: '#666', textAlign: 'center', lineHeight: 16 }}>
+                      Il sottoscritto dichiara di aver ricevuto il compenso sopra indicato per l'attività sportiva dilettantistica svolta nel mese di riferimento.
+                    </Text>
+                  </View>
+                </View>
               </View>
 
               {/* Signature Pad */}
