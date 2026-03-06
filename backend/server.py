@@ -9054,6 +9054,14 @@ async def sign_compensation_receipt(
     admin_email = (society_settings.get("email") if society_settings else None) or (society.get("email") if society else None)
     society_city = (society_settings.get("city") if society_settings else None) or (society.get("city") if society else None) or "Perugia"
     
+    # Fallback: try to get admin email from admin user
+    if not admin_email:
+        admin_user = await db.users.find_one({"role": "admin"})
+        if admin_user:
+            admin_email = admin_user.get("email")
+    
+    logging.info(f"Coach receipt: admin_email={admin_email}")
+    
     # Get prior compensation (declared at hiring)
     prior_compensation = coach.get("other_annual_compensation", 0) or 0
     
@@ -12556,6 +12564,14 @@ async def sign_dirigente_compensation_receipt(
     society_name = (society_settings.get("ragione_sociale") if society_settings else None) or (society.get("ragione_sociale") if society else None) or (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
     admin_email = (society_settings.get("email") if society_settings else None) or (society.get("email") if society else None)
     society_city = (society_settings.get("city") if society_settings else None) or (society.get("city") if society else None) or "Perugia"
+    
+    # Fallback: try to get admin email from admin user
+    if not admin_email:
+        admin_user = await db.users.find_one({"role": "admin"})
+        if admin_user:
+            admin_email = admin_user.get("email")
+    
+    logging.info(f"Dirigente receipt: admin_email={admin_email}")
     
     # Get prior compensation (declared at hiring)
     prior_compensation = dirigente.get("other_annual_compensation", 0) or 0
