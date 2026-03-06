@@ -5201,9 +5201,9 @@ async def sign_athlete_compensation_receipt_with_signature(
     
     new_total = yearly_total + amount_gross
     
-    # Threshold checks - usa >= per includere il caso esatto di raggiungimento soglia
-    first_time_exceeded_5000 = (new_total >= 5000 and yearly_total < 5000)
-    first_time_exceeded_15000 = (new_total >= 15000 and yearly_total < 15000)
+    # Threshold checks - superamento scatta da OLTRE la soglia (€5.001 e €15.001)
+    first_time_exceeded_5000 = (new_total > 5000 and yearly_total <= 5000)
+    first_time_exceeded_15000 = (new_total > 15000 and yearly_total <= 15000)
     
     now = datetime.utcnow()
     month_names = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -9090,9 +9090,9 @@ async def sign_compensation_receipt(
     
     # Determina se QUESTA è la prima volta che si supera €5.000 o €15.000
     # Il backend deve calcolare questo, non affidarsi al frontend
-    # NOTA: usa >= per includere il caso esatto di raggiungimento soglia
-    first_time_exceeded_5000 = (new_total >= 5000 and yearly_total < 5000)
-    first_time_exceeded_15000 = (new_total >= 15000 and yearly_total < 15000)
+    # NOTA: superamento scatta da OLTRE la soglia (€5.001 e €15.001)
+    first_time_exceeded_5000 = (new_total > 5000 and yearly_total <= 5000)
+    first_time_exceeded_15000 = (new_total > 15000 and yearly_total <= 15000)
     
     # Log per debug
     logging.info(f"Threshold check: yearly_total={yearly_total}, new_total={new_total}, first_5k={first_time_exceeded_5000}, first_15k={first_time_exceeded_15000}")
@@ -9487,12 +9487,12 @@ async def get_coach_threshold_status(
     # Warning only if the NEXT receipt would cross the threshold
     next_total = yearly_total + monthly_compensation
     
-    # Status flags - warning only if NEXT receipt crosses threshold
-    needs_warning_5000 = yearly_total < 5000 and next_total >= 5000
-    needs_warning_15000 = yearly_total < 15000 and next_total >= 15000
+    # Status flags - warning only if NEXT receipt goes OVER threshold (€5.001 or €15.001)
+    needs_warning_5000 = yearly_total <= 5000 and next_total > 5000
+    needs_warning_15000 = yearly_total <= 15000 and next_total > 15000
     
-    needs_declaration_5000 = yearly_total >= 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
-    needs_declaration_15000 = yearly_total >= 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
+    needs_declaration_5000 = yearly_total > 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
+    needs_declaration_15000 = yearly_total > 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
     
     # Blocking status: can't sign new receipts if declaration is needed
     is_blocked = needs_declaration_5000 or needs_declaration_15000
@@ -9852,11 +9852,11 @@ async def get_all_coaches_threshold_status(
         declaration_15000 = next((d for d in declarations if d.get("threshold_type") == "15000"), None)
         
         # Calculate warning thresholds
-        warning_5000 = yearly_total >= (5000 - monthly_compensation) and yearly_total < 5000
-        warning_15000 = yearly_total >= (15000 - monthly_compensation) and yearly_total < 15000
+        warning_5000 = yearly_total >= (5000 - monthly_compensation) and yearly_total <= 5000
+        warning_15000 = yearly_total >= (15000 - monthly_compensation) and yearly_total <= 15000
         
-        needs_5000 = yearly_total >= 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
-        needs_15000 = yearly_total >= 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
+        needs_5000 = yearly_total > 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
+        needs_15000 = yearly_total > 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
         
         status = "ok"
         if needs_15000:
@@ -12592,9 +12592,9 @@ async def sign_dirigente_compensation_receipt(
     deductions = 0.0
     
     # Determina se QUESTA è la prima volta che si supera €5.000 o €15.000
-    # NOTA: usa >= per includere il caso esatto di raggiungimento soglia
-    first_time_exceeded_5000 = (new_total >= 5000 and yearly_total < 5000)
-    first_time_exceeded_15000 = (new_total >= 15000 and yearly_total < 15000)
+    # NOTA: superamento scatta da OLTRE la soglia (€5.001 e €15.001)
+    first_time_exceeded_5000 = (new_total > 5000 and yearly_total <= 5000)
+    first_time_exceeded_15000 = (new_total > 15000 and yearly_total <= 15000)
     
     logging.info(f"Dirigente threshold check: yearly_total={yearly_total}, new_total={new_total}, first_5k={first_time_exceeded_5000}, first_15k={first_time_exceeded_15000}")
     
@@ -12947,11 +12947,11 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     
     # Warning flags
     approaching_5000 = not already_over_5k_from_prior and (total_with_prior < 5000 and next_total >= 5000)
-    approaching_15000 = (total_with_prior < 15000 and next_total >= 15000)
+    approaching_15000 = (total_with_prior <= 15000 and next_total > 15000)
     
-    # Declaration needed
-    needs_5000_declaration = not already_over_5k_from_prior and (total_with_prior >= 5000 and not exceeded_5000_record)
-    needs_15000_declaration = (total_with_prior >= 15000 and not exceeded_15000_record)
+    # Declaration needed - superamento è da OLTRE la soglia (€5.001 e €15.001)
+    needs_5000_declaration = not already_over_5k_from_prior and (total_with_prior > 5000 and not exceeded_5000_record)
+    needs_15000_declaration = (total_with_prior > 15000 and not exceeded_15000_record)
     is_blocked = needs_5000_declaration or needs_15000_declaration
     
     return {
@@ -13216,9 +13216,11 @@ async def sign_collaboratore_compensation_receipt(
     
     new_total = yearly_total + request.amount_gross
     
-    # Check thresholds
-    first_time_exceeded_5000 = yearly_total < 5000 and new_total >= 5000
-    first_time_exceeded_15000 = yearly_total < 15000 and new_total >= 15000
+    # Check thresholds - superamento scatta da OLTRE la soglia (€5.001 e €15.001)
+    # €5.000 esatti = ancora esente, €5.001 = superamento previdenziale
+    # €15.000 esatti = ancora solo contributi, €15.001 = superamento fiscale
+    first_time_exceeded_5000 = yearly_total <= 5000 and new_total > 5000
+    first_time_exceeded_15000 = yearly_total <= 15000 and new_total > 15000
     
     # Detailed logging for debugging
     logging.info(f"=== COLLABORATORE RECEIPT THRESHOLD CHECK ===")
@@ -13231,8 +13233,8 @@ async def sign_collaboratore_compensation_receipt(
     logging.info(f"Yearly records (coach_compensations): {len(coach_records)} = €{yearly_total_coach}")
     logging.info(f"Yearly total (before this receipt): €{yearly_total}")
     logging.info(f"New total (after this receipt): €{new_total}")
-    logging.info(f"first_time_exceeded_5000: {first_time_exceeded_5000} (yearly_total < 5000: {yearly_total < 5000}, new_total >= 5000: {new_total >= 5000})")
-    logging.info(f"first_time_exceeded_15000: {first_time_exceeded_15000} (yearly_total < 15000: {yearly_total < 15000}, new_total >= 15000: {new_total >= 15000})")
+    logging.info(f"first_time_exceeded_5000: {first_time_exceeded_5000} (yearly_total <= 5000: {yearly_total <= 5000}, new_total > 5000: {new_total > 5000})")
+    logging.info(f"first_time_exceeded_15000: {first_time_exceeded_15000} (yearly_total <= 15000: {yearly_total <= 15000}, new_total > 15000: {new_total > 15000})")
     logging.info(f"=============================================")
     
     # Calculate net amount
@@ -13533,21 +13535,22 @@ async def get_collaboratore_threshold_status(
     declaration_15000 = next((d for d in declarations if d.get("threshold_type") == "15000"), None)
     
     # Calculate thresholds
-    # Warning only if the NEXT receipt would cross the threshold
+    # Warning only if the NEXT receipt would cross the threshold (go OVER, not reach exactly)
     next_total = total_with_prior + monthly_compensation
     
-    # Special case: if prior_compensation already >= 5000, we don't need €5k declaration
+    # Special case: if prior_compensation already > 5000, we don't need €5k declaration
     # because we already know they're subject to social security from the start
-    already_over_5k_from_prior = effective_prior >= 5000
+    already_over_5k_from_prior = effective_prior > 5000
     
-    # Status flags - warning only if NEXT receipt crosses threshold
-    needs_warning_5000 = not already_over_5k_from_prior and total_with_prior < 5000 and next_total >= 5000
-    needs_warning_15000 = total_with_prior < 15000 and next_total >= 15000
+    # Status flags - warning only if NEXT receipt goes OVER threshold (€5.001 or €15.001)
+    # €5.000 esatti = ancora esente, €15.000 esatti = ancora solo contributi
+    needs_warning_5000 = not already_over_5k_from_prior and total_with_prior <= 5000 and next_total > 5000
+    needs_warning_15000 = total_with_prior <= 15000 and next_total > 15000
     
-    # Declaration needed only if crossed threshold THIS year (not from prior)
-    # If prior >= 5000, no declaration needed (already subject from start)
-    needs_declaration_5000 = not already_over_5k_from_prior and total_with_prior >= 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
-    needs_declaration_15000 = total_with_prior >= 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
+    # Declaration needed only if EXCEEDED threshold THIS year (went OVER, not just reached)
+    # If prior > 5000, no declaration needed (already subject from start)
+    needs_declaration_5000 = not already_over_5k_from_prior and total_with_prior > 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
+    needs_declaration_15000 = total_with_prior > 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
     
     # Blocking status: can't sign new receipts if declaration is needed
     is_blocked = needs_declaration_5000 or needs_declaration_15000
