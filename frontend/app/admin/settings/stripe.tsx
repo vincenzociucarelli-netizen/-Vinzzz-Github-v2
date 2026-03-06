@@ -33,6 +33,7 @@ export default function StripeSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<StripeSettings | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   
   // Form state for new keys
   const [publishableKey, setPublishableKey] = useState('');
@@ -47,8 +48,24 @@ export default function StripeSettings() {
   const [editingKeys, setEditingKeys] = useState(false);
 
   useEffect(() => {
-    loadSettings();
+    checkAccessAndLoad();
   }, []);
+
+  const checkAccessAndLoad = async () => {
+    try {
+      const authResponse = await api.get('/auth/me');
+      if (authResponse.data?.role !== 'admin') {
+        setIsAdmin(false);
+        router.replace('/');
+        return;
+      }
+      setIsAdmin(true);
+      await loadSettings();
+    } catch (error) {
+      setIsAdmin(false);
+      router.replace('/');
+    }
+  };
 
   const loadSettings = async () => {
     try {

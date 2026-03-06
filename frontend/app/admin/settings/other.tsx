@@ -27,6 +27,7 @@ export default function OtherSettings() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   // Ruoli atleti
   const [athleteRoles, setAthleteRoles] = useState<string[]>([]);
@@ -48,14 +49,30 @@ export default function OtherSettings() {
 
   // Stagione sportiva
   const [seasonStartMonth, setSeasonStartMonth] = useState(7);
+
+  useEffect(() => {
+    checkAccessAndLoad();
+  }, []);
+
+  const checkAccessAndLoad = async () => {
+    try {
+      const authResponse = await api.get('/auth/me');
+      if (authResponse.data?.role !== 'admin') {
+        setIsAdmin(false);
+        router.replace('/');
+        return;
+      }
+      setIsAdmin(true);
+      await loadSettings();
+    } catch (error) {
+      setIsAdmin(false);
+      router.replace('/');
+    }
+  };
   const [seasonStartDay, setSeasonStartDay] = useState(1);
 
   // Blocco certificati medici scaduti
   const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(true); // Default ATTIVO
-
-  useEffect(() => {
-    loadSettings();
-  }, []);
 
   const loadSettings = async () => {
     try {

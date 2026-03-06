@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -60,6 +60,39 @@ const EXPORT_OPTIONS: ExportOption[] = [
 export default function ExportDataPage() {
   const router = useRouter();
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAccess();
+  }, []);
+
+  const checkAccess = async () => {
+    try {
+      const authResponse = await api.get('/auth/me');
+      if (authResponse.data?.role !== 'admin') {
+        setIsAdmin(false);
+        router.replace('/');
+        return;
+      }
+      setIsAdmin(true);
+    } catch (error) {
+      setIsAdmin(false);
+      router.replace('/');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#8E44AD" />
+      </View>
+    );
+  }
+
+  if (!isAdmin) return null;
 
   const handleExport = async (option: ExportOption) => {
     setDownloading(option.key);

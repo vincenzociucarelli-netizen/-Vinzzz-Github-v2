@@ -1,10 +1,46 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../../src/components/Icon';
+import api from '../../../src/services/api';
 
 export default function SettingsIndex() {
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAdminAccess = async () => {
+      try {
+        const response = await api.get('/auth/me');
+        if (response.data?.role === 'admin') {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+          // Redirect non-admin users
+          router.replace('/');
+        }
+      } catch (error) {
+        setIsAdmin(false);
+        router.replace('/');
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkAdminAccess();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#8E44AD" />
+      </View>
+    );
+  }
+
+  if (!isAdmin) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>

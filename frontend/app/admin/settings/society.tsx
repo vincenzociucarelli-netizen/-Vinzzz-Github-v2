@@ -30,6 +30,7 @@ export default function SocietySettings() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   // Logo e immagini
   const [logo, setLogo] = useState<string | null>(null);
@@ -54,8 +55,24 @@ export default function SocietySettings() {
   const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(false);
 
   useEffect(() => {
-    loadSettings();
+    checkAccessAndLoad();
   }, []);
+
+  const checkAccessAndLoad = async () => {
+    try {
+      const authResponse = await api.get('/auth/me');
+      if (authResponse.data?.role !== 'admin') {
+        setIsAdmin(false);
+        router.replace('/');
+        return;
+      }
+      setIsAdmin(true);
+      await loadSettings();
+    } catch (error) {
+      setIsAdmin(false);
+      router.replace('/');
+    }
+  };
 
   const loadSettings = async () => {
     try {

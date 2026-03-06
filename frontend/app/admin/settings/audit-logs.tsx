@@ -60,7 +60,28 @@ export default function AuditLogsPage() {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const LIMIT = 50;
+
+  useEffect(() => {
+    checkAccessAndLoad();
+  }, []);
+
+  const checkAccessAndLoad = async () => {
+    try {
+      const authResponse = await api.get('/auth/me');
+      if (authResponse.data?.role !== 'admin') {
+        setIsAdmin(false);
+        router.replace('/');
+        return;
+      }
+      setIsAdmin(true);
+      await loadLogs(true);
+    } catch (error) {
+      setIsAdmin(false);
+      router.replace('/');
+    }
+  };
 
   const loadLogs = async (reset = false) => {
     try {
