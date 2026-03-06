@@ -11142,9 +11142,10 @@ def generate_threshold_5k_pdf(
     collaborator_fiscal_code: str,
     year: int,
     signature_base64: str,
-    society_city: str = "Perugia"
+    society_city: str = "Perugia",
+    threshold_metadata: dict = None
 ) -> bytes:
-    """Generate €5,000 threshold communication PDF"""
+    """Generate €5,000 threshold communication PDF with metadata"""
     if not HAS_PDF_GENERATION:
         raise HTTPException(status_code=500, detail="PDF generation not available")
     
@@ -11152,7 +11153,7 @@ def generate_threshold_5k_pdf(
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    timestamp = datetime.now().strftime("%d/%m/%Y")
+    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     
     # Name is already stored as "COGNOME NOME" in database - use as-is
     formatted_name = collaborator_name
@@ -11280,6 +11281,26 @@ def generate_threshold_5k_pdf(
         except Exception as e:
             logging.error(f"Error adding signature: {e}")
     
+    # Add metadata section at the bottom
+    if threshold_metadata:
+        y = 3.5*cm
+        c.setFont("Helvetica", 7)
+        c.setFillColorRGB(0.4, 0.4, 0.4)
+        c.drawString(2*cm, y, "─" * 80)
+        y -= 0.4*cm
+        c.drawString(2*cm, y, "METADATI DI VERIFICA (generati automaticamente)")
+        y -= 0.35*cm
+        c.drawString(2*cm, y, f"Timestamp firma: {threshold_metadata.get('signature_timestamp_utc', 'N/D')}")
+        y -= 0.35*cm
+        c.drawString(2*cm, y, f"Totale prima: € {threshold_metadata.get('yearly_total_before', 0):,.2f} | Totale dopo: € {threshold_metadata.get('yearly_total_after', 0):,.2f}")
+        y -= 0.35*cm
+        c.drawString(2*cm, y, f"Compensi pregressi dichiarati: € {threshold_metadata.get('prior_compensation_declared', 0):,.2f}")
+        y -= 0.35*cm
+        sig_hash = threshold_metadata.get('signature_hash', 'N/D')
+        if sig_hash and len(sig_hash) > 20:
+            sig_hash = sig_hash[:20] + "..."
+        c.drawString(2*cm, y, f"Hash firma: {sig_hash}")
+    
     c.save()
     return buffer.getvalue()
 
@@ -11289,9 +11310,10 @@ def generate_threshold_15k_pdf(
     collaborator_fiscal_code: str,
     year: int,
     signature_base64: str,
-    society_city: str = "Perugia"
+    society_city: str = "Perugia",
+    threshold_metadata: dict = None
 ) -> bytes:
-    """Generate €15,000 threshold communication PDF"""
+    """Generate €15,000 threshold communication PDF with metadata"""
     if not HAS_PDF_GENERATION:
         raise HTTPException(status_code=500, detail="PDF generation not available")
     
@@ -11299,7 +11321,7 @@ def generate_threshold_15k_pdf(
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    timestamp = datetime.now().strftime("%d/%m/%Y")
+    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     
     # Name is already stored as "COGNOME NOME" in database - use as-is
     formatted_name = collaborator_name
@@ -12530,6 +12552,23 @@ async def sign_dirigente_compensation_receipt(
     month_name = month_names[request.month]
     
     try:
+        # Create threshold metadata
+        threshold_meta = None
+        if first_time_exceeded_5000 or first_time_exceeded_15000:
+            sig_hash = None
+            if request.signature_base64:
+                sig_hash = hashlib.sha256(request.signature_base64.encode()).hexdigest()
+            threshold_meta = {
+                "yearly_total_before": yearly_total,
+                "yearly_total_after": new_total,
+                "prior_compensation_declared": prior_compensation,
+                "threshold_crossed": "15000" if first_time_exceeded_15000 else "5000",
+                "signature_timestamp_utc": now.isoformat(),
+                "signature_hash": sig_hash,
+                "contract_start_date": str(dirigente.get('contract_start_date')) if dirigente.get('contract_start_date') else None,
+                "monthly_compensation_rate": dirigente.get('monthly_compensation', 0),
+            }
+        
         # Generate the appropriate PDF based on threshold status
         if first_time_exceeded_15000:
             pdf_bytes = generate_threshold_15k_pdf(
@@ -12538,7 +12577,8 @@ async def sign_dirigente_compensation_receipt(
                 collaborator_fiscal_code=dirigente.get('fiscal_code', ''),
                 year=request.year,
                 signature_base64=request.signature_base64,
-                society_city=society_city
+                society_city=society_city,
+                threshold_metadata=threshold_meta
             )
             pdf_filename_prefix = "comunicazione_15k_dirigente"
             doc_type = "threshold_15000_communication"
@@ -12550,7 +12590,8 @@ async def sign_dirigente_compensation_receipt(
                 collaborator_fiscal_code=dirigente.get('fiscal_code', ''),
                 year=request.year,
                 signature_base64=request.signature_base64,
-                society_city=society_city
+                society_city=society_city,
+                threshold_metadata=threshold_meta
             )
             pdf_filename_prefix = "comunicazione_5k_dirigente"
             doc_type = "threshold_5000_communication"
