@@ -13483,6 +13483,45 @@ async def sign_collaboratore_compensation_receipt(
     }
 
 @api_router.get("/collaboratore/{collaboratore_id}/threshold-status/{year}")
+
+
+# Temporary endpoint to delete a specific collaboratore receipt (for testing)
+@api_router.delete("/admin/collaboratore/{collaboratore_id}/receipt/{year}/{month}")
+async def delete_collaboratore_receipt(
+    collaboratore_id: str,
+    year: int,
+    month: int,
+    current_user = Depends(get_current_user)
+):
+    """Delete a collaboratore receipt - Admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può cancellare ricevute")
+    
+    # Delete from collaboratore_compensations
+    result1 = await db.collaboratore_compensations.delete_many({
+        "collaboratore_id": collaboratore_id,
+        "year": year,
+        "month": month
+    })
+    
+    # Delete from signed_documents
+    result2 = await db.signed_documents.delete_many({
+        "$or": [
+            {"collaboratore_id": collaboratore_id},
+            {"signer_id": collaboratore_id}
+        ],
+        "year": year,
+        "month": month
+    })
+    
+    logging.info(f"Deleted collaboratore receipt: collab={collaboratore_id}, {month}/{year} - compensations:{result1.deleted_count}, documents:{result2.deleted_count}")
+    
+    return {
+        "success": True,
+        "deleted_compensations": result1.deleted_count,
+        "deleted_documents": result2.deleted_count
+    }
+
 async def get_collaboratore_threshold_status(
     collaboratore_id: str,
     year: int,
