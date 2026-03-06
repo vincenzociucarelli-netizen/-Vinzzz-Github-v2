@@ -5201,9 +5201,9 @@ async def sign_athlete_compensation_receipt_with_signature(
     
     new_total = yearly_total + amount_gross
     
-    # Threshold checks
-    first_time_exceeded_5000 = (new_total > 5000 and yearly_total <= 5000)
-    first_time_exceeded_15000 = (new_total > 15000 and yearly_total <= 15000)
+    # Threshold checks - usa >= per includere il caso esatto di raggiungimento soglia
+    first_time_exceeded_5000 = (new_total >= 5000 and yearly_total < 5000)
+    first_time_exceeded_15000 = (new_total >= 15000 and yearly_total < 15000)
     
     now = datetime.utcnow()
     month_names = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -9090,8 +9090,9 @@ async def sign_compensation_receipt(
     
     # Determina se QUESTA è la prima volta che si supera €5.000 o €15.000
     # Il backend deve calcolare questo, non affidarsi al frontend
-    first_time_exceeded_5000 = (new_total > 5000 and yearly_total <= 5000)
-    first_time_exceeded_15000 = (new_total > 15000 and yearly_total <= 15000)
+    # NOTA: usa >= per includere il caso esatto di raggiungimento soglia
+    first_time_exceeded_5000 = (new_total >= 5000 and yearly_total < 5000)
+    first_time_exceeded_15000 = (new_total >= 15000 and yearly_total < 15000)
     
     # Log per debug
     logging.info(f"Threshold check: yearly_total={yearly_total}, new_total={new_total}, first_5k={first_time_exceeded_5000}, first_15k={first_time_exceeded_15000}")
@@ -11486,6 +11487,26 @@ def generate_threshold_15k_pdf(
         except Exception as e:
             logging.error(f"Error adding signature: {e}")
     
+    # Add metadata section at the bottom (same as €5k PDF)
+    if threshold_metadata:
+        y = 3.5*cm
+        c.setFont("Helvetica", 7)
+        c.setFillColorRGB(0.4, 0.4, 0.4)
+        c.drawString(2*cm, y, "─" * 80)
+        y -= 0.4*cm
+        c.drawString(2*cm, y, "METADATI DI VERIFICA (generati automaticamente)")
+        y -= 0.35*cm
+        c.drawString(2*cm, y, f"Timestamp firma: {threshold_metadata.get('signature_timestamp_utc', 'N/D')}")
+        y -= 0.35*cm
+        c.drawString(2*cm, y, f"Totale prima: € {threshold_metadata.get('yearly_total_before', 0):,.2f} | Totale dopo: € {threshold_metadata.get('yearly_total_after', 0):,.2f}")
+        y -= 0.35*cm
+        c.drawString(2*cm, y, f"Compensi pregressi dichiarati: € {threshold_metadata.get('prior_compensation_declared', 0):,.2f}")
+        y -= 0.35*cm
+        sig_hash = threshold_metadata.get('signature_hash', 'N/D')
+        if sig_hash and len(sig_hash) > 20:
+            sig_hash = sig_hash[:20] + "..."
+        c.drawString(2*cm, y, f"Hash firma: {sig_hash}")
+    
     c.save()
     return buffer.getvalue()
 
@@ -12571,8 +12592,9 @@ async def sign_dirigente_compensation_receipt(
     deductions = 0.0
     
     # Determina se QUESTA è la prima volta che si supera €5.000 o €15.000
-    first_time_exceeded_5000 = (new_total > 5000 and yearly_total <= 5000)
-    first_time_exceeded_15000 = (new_total > 15000 and yearly_total <= 15000)
+    # NOTA: usa >= per includere il caso esatto di raggiungimento soglia
+    first_time_exceeded_5000 = (new_total >= 5000 and yearly_total < 5000)
+    first_time_exceeded_15000 = (new_total >= 15000 and yearly_total < 15000)
     
     logging.info(f"Dirigente threshold check: yearly_total={yearly_total}, new_total={new_total}, first_5k={first_time_exceeded_5000}, first_15k={first_time_exceeded_15000}")
     
@@ -13169,12 +13191,16 @@ async def sign_collaboratore_compensation_receipt(
     }).to_list(12)
     
     yearly_total = sum(r.get("amount_gross", 0) for r in yearly_records)
-    prior_compensation = collaboratore.get("prior_year_compensation", 0)
+    # Check both field names for prior compensation (other_annual_compensation is the primary one)
+    prior_compensation = collaboratore.get("other_annual_compensation", 0) or collaboratore.get("prior_year_compensation", 0) or 0
     
     contract_start = collaboratore.get("contract_start_date")
     if contract_start:
-        contract_year = int(contract_start.split('-')[0]) if isinstance(contract_start, str) else contract_start.year
-        if contract_year == request.year:
+        try:
+            contract_year = int(str(contract_start).split('-')[0].split('T')[0])
+        except:
+            contract_year = None
+        if contract_year and contract_year == request.year:
             yearly_total += prior_compensation
     
     new_total = yearly_total + request.amount_gross
@@ -13196,27 +13222,85 @@ async def sign_collaboratore_compensation_receipt(
     month_name = MONTH_NAMES[request.month]
     receipt_id = str(uuid.uuid4())
     
-    # Generate PDF using existing function
+    # Generate PDF based on threshold status
     try:
         # Get society name from settings
         society_settings = await db.settings.find_one({"type": "society"})
-        society_name = society_settings.get("society_name", "ASD/SSD") if society_settings else "ASD/SSD"
+        # Prefer ragione_sociale (official name) for legal documents
+        society_name = (society_settings.get("ragione_sociale") or 
+                       society_settings.get("society_name") or 
+                       "ASD/SSD") if society_settings else "ASD/SSD"
+        society_city = society_settings.get("society_city", "PERUGIA") if society_settings else "PERUGIA"
         
-        pdf_bytes = generate_monthly_receipt_pdf(
-            society_name=society_name,
-            collaborator_name=collaboratore.get("full_name", ""),
-            collaborator_fiscal_code=collaboratore.get("fiscal_code", ""),
-            month_name=month_name,
-            year=request.year,
-            amount_gross=request.amount_gross,
-            signature_base64=request.signature_base64
-        )
+        logging.info(f"Collaboratore PDF generation: first_5k={first_time_exceeded_5000}, first_15k={first_time_exceeded_15000}, yearly_total={yearly_total}, new_total={new_total}")
+        
+        # Generate the appropriate PDF based on threshold status
+        if first_time_exceeded_15000:
+            # Generate €15K threshold communication with metadata
+            threshold_meta_15k = {
+                "yearly_total_before": yearly_total,
+                "yearly_total_after": new_total,
+                "prior_compensation_declared": prior_compensation if contract_start and int(contract_start.split('-')[0]) == request.year else 0,
+                "threshold_crossed": "15000",
+                "signature_timestamp_utc": now.isoformat(),
+                "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
+                "monthly_compensation_rate": collaboratore.get('monthly_compensation', 0),
+            }
+            pdf_bytes = generate_threshold_15k_pdf(
+                society_name=society_name,
+                collaborator_name=collaboratore.get('full_name', 'Collaboratore'),
+                collaborator_fiscal_code=collaboratore.get('fiscal_code', ''),
+                year=request.year,
+                signature_base64=request.signature_base64,
+                society_city=society_city,
+                threshold_metadata=threshold_meta_15k
+            )
+            pdf_filename_prefix = "comunicazione_15k_collaboratore"
+            doc_type = "threshold_15000_communication"
+            doc_title = f"Comunicazione Superamento €15.000 - {month_name} {request.year}"
+        elif first_time_exceeded_5000:
+            # Generate €5K threshold communication with metadata
+            threshold_meta = {
+                "yearly_total_before": yearly_total,
+                "yearly_total_after": new_total,
+                "prior_compensation_declared": prior_compensation if contract_start and int(contract_start.split('-')[0]) == request.year else 0,
+                "threshold_crossed": "5000",
+                "signature_timestamp_utc": now.isoformat(),
+                "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
+                "monthly_compensation_rate": collaboratore.get('monthly_compensation', 0),
+            }
+            pdf_bytes = generate_threshold_5k_pdf(
+                society_name=society_name,
+                collaborator_name=collaboratore.get('full_name', 'Collaboratore'),
+                collaborator_fiscal_code=collaboratore.get('fiscal_code', ''),
+                year=request.year,
+                signature_base64=request.signature_base64,
+                society_city=society_city,
+                threshold_metadata=threshold_meta
+            )
+            pdf_filename_prefix = "comunicazione_5k_collaboratore"
+            doc_type = "threshold_5000_communication"
+            doc_title = f"Comunicazione Superamento €5.000 - {month_name} {request.year}"
+        else:
+            # Generate standard receipt
+            pdf_bytes = generate_monthly_receipt_pdf(
+                society_name=society_name,
+                collaborator_name=collaboratore.get("full_name", ""),
+                collaborator_fiscal_code=collaboratore.get("fiscal_code", ""),
+                month_name=month_name,
+                year=request.year,
+                amount_gross=request.amount_gross,
+                signature_base64=request.signature_base64
+            )
+            pdf_filename_prefix = "quietanza_collaboratore"
+            doc_type = "collaboratore_compensation_receipt"
+            doc_title = f"Quietanza Compenso - {month_name} {request.year}"
     except Exception as e:
         logging.error(f"Error generating collaboratore receipt PDF: {e}")
-        raise HTTPException(status_code=500, detail="Errore generazione PDF")
+        raise HTTPException(status_code=500, detail=f"Errore generazione PDF: {str(e)}")
     
     # Save PDF
-    pdf_filename = f"quietanza_collaboratore_{collaboratore_id}_{request.year}_{request.month:02d}_{receipt_id}.pdf"
+    pdf_filename = f"{pdf_filename_prefix}_{collaboratore_id}_{request.year}_{request.month:02d}_{receipt_id}.pdf"
     pdf_path = os.path.join(SIGNED_DOCS_DIR, pdf_filename)
     with open(pdf_path, 'wb') as f:
         f.write(pdf_bytes)
@@ -13224,8 +13308,8 @@ async def sign_collaboratore_compensation_receipt(
     # Store document record
     document_record = {
         "id": receipt_id,
-        "document_type": "collaboratore_compensation_receipt",
-        "document_title": f"Quietanza Compenso - {month_name} {request.year}",
+        "document_type": doc_type,
+        "document_title": doc_title,
         "signer_id": collaboratore_id,
         "collaboratore_id": collaboratore_id,
         "collaboratore_name": collaboratore.get("full_name", ""),

@@ -13,7 +13,7 @@ import os
 import time
 from datetime import datetime
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://compliance-pdf-test.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://dina-lampa-verify.preview.emergentagent.com')
 
 # Test credentials
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"
