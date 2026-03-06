@@ -846,10 +846,22 @@ export default function CollaboratoreCompensation() {
               </View>
               <Text style={{ fontSize: 18, color: '#007AFF', fontWeight: 'bold', marginTop: 4, textAlign: 'center' }}>
                 {(() => {
-                  const startParts = profile.contract_start_date!.split('-');
-                  const endParts = profile.contract_end_date!.split('-');
-                  const startFormatted = `${startParts[2]}/${startParts[1]}/${startParts[0]}`;
-                  const endFormatted = `${endParts[2]}/${endParts[1]}/${endParts[0]}`;
+                  // Handle ISO date format with timezone
+                  const formatContractDate = (dateStr: string) => {
+                    try {
+                      // Remove timezone part if present (everything after 'T' or the date itself)
+                      const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+                      const parts = cleanDate.split('-');
+                      if (parts.length === 3) {
+                        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                      }
+                      return dateStr;
+                    } catch {
+                      return dateStr;
+                    }
+                  };
+                  const startFormatted = formatContractDate(profile.contract_start_date!);
+                  const endFormatted = formatContractDate(profile.contract_end_date!);
                   return `${startFormatted} - ${endFormatted}`;
                 })()}
               </Text>

@@ -13370,6 +13370,8 @@ async def get_collaboratore_threshold_status(
         raise HTTPException(status_code=404, detail="Collaboratore non trovato")
     
     monthly_compensation = collaboratore.get("monthly_compensation", 0) or 0
+    # Check both field names for prior compensation
+    prior_compensation = collaboratore.get("other_annual_compensation", 0) or collaboratore.get("prior_year_compensation", 0) or 0
     
     # Calculate yearly total from signed receipts
     yearly_records = await db.collaboratore_compensations.find({
@@ -13379,6 +13381,9 @@ async def get_collaboratore_threshold_status(
     }).to_list(12)
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
+    
+    # Total including prior compensation (for threshold calculations)
+    total_with_prior = yearly_total + prior_compensation
     
     # Get existing declarations for this year
     declarations = await db.threshold_declarations.find({
@@ -13390,15 +13395,15 @@ async def get_collaboratore_threshold_status(
     declaration_15000 = next((d for d in declarations if d.get("threshold_type") == "15000"), None)
     
     # Calculate thresholds
-    # Warning only if the NEXT receipt would cross the threshold
-    next_total = yearly_total + monthly_compensation
+    # Warning only if the NEXT receipt would cross the threshold (including prior compensation)
+    next_total = total_with_prior + monthly_compensation
     
     # Status flags - warning only if NEXT receipt crosses threshold
-    needs_warning_5000 = yearly_total < 5000 and next_total >= 5000
-    needs_warning_15000 = yearly_total < 15000 and next_total >= 15000
+    needs_warning_5000 = total_with_prior < 5000 and next_total >= 5000
+    needs_warning_15000 = total_with_prior < 15000 and next_total >= 15000
     
-    needs_declaration_5000 = yearly_total >= 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
-    needs_declaration_15000 = yearly_total >= 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
+    needs_declaration_5000 = total_with_prior >= 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
+    needs_declaration_15000 = total_with_prior >= 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
     
     # Blocking status: can't sign new receipts if declaration is needed
     is_blocked = needs_declaration_5000 or needs_declaration_15000
@@ -13412,7 +13417,9 @@ async def get_collaboratore_threshold_status(
         "collaboratore_name": collaboratore.get("full_name", ""),
         "year": year,
         "monthly_compensation": monthly_compensation,
+        "prior_compensation": prior_compensation,
         "yearly_total": yearly_total,
+        "total_with_prior": total_with_prior,
         "thresholds": {
             "5000": {
                 "threshold": 5000,
