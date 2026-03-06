@@ -115,8 +115,9 @@ export default function CollaboratoreCompensation() {
   const [contractEndMonth, setContractEndMonth] = useState<number | null>(null);
   const [priorCompensation, setPriorCompensation] = useState(0);
   
-  // Threshold status
+  // Threshold status per year
   const [thresholdStatus, setThresholdStatus] = useState<ThresholdStatus | null>(null);
+  const [thresholdStatus2026, setThresholdStatus2026] = useState<ThresholdStatus | null>(null);
   
   // Signature modal for receipts - consolidated into a single state object to prevent re-renders
   const [signatureModalState, setSignatureModalState] = useState<{
@@ -243,6 +244,12 @@ export default function CollaboratoreCompensation() {
       try {
         const thresholdRes = await api.get(`/collaboratore/${user?.id}/threshold-status/${thresholdYear}`);
         setThresholdStatus(thresholdRes.data);
+        
+        // Also load 2026 threshold status if needed
+        if (currentYear >= 2026 || (startYear && startYear < 2026)) {
+          const threshold2026Res = await api.get(`/collaboratore/${user?.id}/threshold-status/2026`);
+          setThresholdStatus2026(threshold2026Res.data);
+        }
       } catch (err) {
         console.log('Error loading threshold status:', err);
       }
@@ -288,20 +295,23 @@ export default function CollaboratoreCompensation() {
     
     console.log('Threshold check for modal:', { yearTotalBeforeThis, monthlyAmount, newTotal, willExceed5k, willExceed15k });
     
+    // Use the correct threshold status based on year
+    const relevantThresholdStatus = targetYear === 2026 ? thresholdStatus2026 : thresholdStatus;
+    
     // Check if blocked by threshold (already exceeded but not declared)
-    if (thresholdStatus?.is_blocked) {
+    if (relevantThresholdStatus?.is_blocked) {
       Alert.alert(
         'Azione Bloccata',
-        thresholdStatus.block_reason || 'Devi prima firmare la dichiarazione di superamento soglia.',
+        relevantThresholdStatus.block_reason || 'Devi prima firmare la dichiarazione di superamento soglia.',
         [
           { text: 'Annulla', style: 'cancel' },
           { 
             text: 'Firma Dichiarazione', 
             onPress: () => {
               // Determine which declaration is needed
-              if (thresholdStatus.thresholds['15000'].needs_declaration) {
+              if (relevantThresholdStatus.thresholds['15000'].needs_declaration) {
                 openDeclarationModal('15000');
-              } else if (thresholdStatus.thresholds['5000'].needs_declaration) {
+              } else if (relevantThresholdStatus.thresholds['5000'].needs_declaration) {
                 openDeclarationModal('5000');
               }
             }
@@ -486,7 +496,10 @@ export default function CollaboratoreCompensation() {
     if (record?.receipt_signed) {
       return 'signed';
     }
-    if (thresholdStatus?.is_blocked) {
+    
+    // Use the correct threshold status based on year
+    const relevantThresholdStatus = checkYear === 2026 ? thresholdStatus2026 : thresholdStatus;
+    if (relevantThresholdStatus?.is_blocked) {
       return 'blocked';
     }
     return 'pending';
