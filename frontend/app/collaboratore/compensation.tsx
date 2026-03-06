@@ -350,13 +350,17 @@ export default function CollaboratoreCompensation() {
       return;
     }
     
+    // Use current month if selectedMonth is not set
+    const monthToUse = selectedMonth ?? new Date().getMonth() + 1;
+    const yearToUse = selectedYear || new Date().getFullYear();
+    
     try {
       setSigningDeclaration(true);
       
       // Use the compensation receipt endpoint which now generates the correct threshold document
       const response = await api.post(`/collaboratore/${user?.id}/compensation/receipt`, {
-        month: selectedMonth,
-        year: selectedYear,
+        month: monthToUse,
+        year: yearToUse,
         amount_gross: profile?.monthly_compensation || 0,
         signature_base64: declarationSignature.replace('data:image/png;base64,', ''),
         exceeded_5000: declarationType === '5000',
@@ -364,7 +368,7 @@ export default function CollaboratoreCompensation() {
       });
       
       const thresholdAmount = declarationType === '5000' ? '5.000' : '15.000';
-      const monthName = MONTH_NAMES[selectedMonth || 0];
+      const monthName = MONTH_NAMES[monthToUse || 0];
       
       // Show PDF if available
       if (response.data.pdf_base64 && Platform.OS === 'web') {
@@ -379,7 +383,12 @@ export default function CollaboratoreCompensation() {
       );
       
       setShowDeclarationModal(false);
-      loadData(); // Reload to update status
+      setDeclarationSignature(null);
+      
+      // Delay loadData to avoid state conflicts
+      setTimeout(() => {
+        loadData();
+      }, 500);
       
     } catch (error: any) {
       Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la firma');
