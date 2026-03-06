@@ -9134,27 +9134,47 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
     try:
         # Generate the appropriate PDF based on threshold status
         if first_time_exceeded_15000:
-            # Generate €15K threshold communication
+            # Generate €15K threshold communication with metadata
+            threshold_meta_15k = {
+                "yearly_total_before": yearly_total,
+                "yearly_total_after": new_total,
+                "prior_compensation_declared": prior_compensation,
+                "threshold_crossed": "15000",
+                "signature_timestamp_utc": now.isoformat(),
+                "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
+                "monthly_compensation_rate": coach.get('monthly_compensation', 0),
+            }
             pdf_bytes = generate_threshold_15k_pdf(
                 society_name=society_name,
                 collaborator_name=coach.get('full_name', 'Collaboratore'),
                 collaborator_fiscal_code=coach.get('fiscal_code', ''),
                 year=request.year,
                 signature_base64=request.signature_base64,
-                society_city=society_city
+                society_city=society_city,
+                threshold_metadata=threshold_meta_15k
             )
             pdf_filename_prefix = "comunicazione_15k"
             doc_type = "threshold_15000_communication"
             doc_title = f"Comunicazione Superamento €15.000 - {month_name} {request.year}"
         elif first_time_exceeded_5000:
-            # Generate €5K threshold communication
+            # Generate €5K threshold communication with metadata
+            threshold_meta = {
+                "yearly_total_before": yearly_total,
+                "yearly_total_after": new_total,
+                "prior_compensation_declared": prior_compensation,
+                "threshold_crossed": "5000",
+                "signature_timestamp_utc": now.isoformat(),
+                "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
+                "monthly_compensation_rate": coach.get('monthly_compensation', 0),
+            }
             pdf_bytes = generate_threshold_5k_pdf(
                 society_name=society_name,
                 collaborator_name=coach.get('full_name', 'Collaboratore'),
                 collaborator_fiscal_code=coach.get('fiscal_code', ''),
                 year=request.year,
                 signature_base64=request.signature_base64,
-                society_city=society_city
+                society_city=society_city,
+                threshold_metadata=threshold_meta
             )
             pdf_filename_prefix = "comunicazione_5k"
             doc_type = "threshold_5000_communication"
