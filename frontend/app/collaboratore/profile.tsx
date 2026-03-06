@@ -66,6 +66,9 @@ export default function CollaboratoreProfile() {
     compensation_accepted: false,
     contract_start_date: '',
     contract_end_date: '',
+    // Assegnazioni
+    assigned_teams: [] as string[],
+    assigned_venues: [] as string[],
     // Documento e Dati Bancari
     id_type: '',
     id_front: '',
@@ -145,6 +148,9 @@ export default function CollaboratoreProfile() {
         doc_back_image: data.doc_back_image || '',
         contract_start_date: data.contract_start_date || '',
         contract_end_date: data.contract_end_date || '',
+        // Assegnazioni
+        assigned_teams: data.assigned_team_names || data.assigned_teams || [],
+        assigned_venues: data.assigned_venues || [],
       });
       setEditData({
         email: data.email || '',
@@ -1015,6 +1021,55 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Assegnazioni - Squadre e Palestre */}
+        {(profileData.assigned_teams.length > 0 || profileData.assigned_venues.length > 0) && (
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>📋 Le Mie Assegnazioni</Text>
+          </View>
+          
+          {profileData.assigned_teams.length > 0 && (
+            <View style={{ marginBottom: 12 }}>
+              <Text style={[styles.fieldLabel, { color: '#9C27B0', marginBottom: 8 }]}>🏐 Squadre</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {profileData.assigned_teams.map((team, idx) => (
+                  <View key={idx} style={{
+                    backgroundColor: '#E1BEE7',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: '#9C27B0',
+                  }}>
+                    <Text style={{ color: '#7B1FA2', fontWeight: '500' }}>{team}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+          
+          {profileData.assigned_venues.length > 0 && (
+            <View>
+              <Text style={[styles.fieldLabel, { color: '#FF9500', marginBottom: 8 }]}>🏟️ Palestre</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {profileData.assigned_venues.map((venue, idx) => (
+                  <View key={idx} style={{
+                    backgroundColor: '#FFF3E0',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: '#FF9500',
+                  }}>
+                    <Text style={{ color: '#E65100', fontWeight: '500' }}>{venue}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+        )}
 
         {/* I Miei Documenti */}
         <View style={styles.card}>

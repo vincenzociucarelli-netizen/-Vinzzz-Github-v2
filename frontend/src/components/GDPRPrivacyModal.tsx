@@ -546,16 +546,22 @@ Con la sottoscrizione digitale del presente documento il sottoscritto genitore/t
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
-            <iframe
-              src={previewUrl}
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                border: 'none',
-                flex: 1,
-              } as any}
-              title="PDF Preview"
-            />
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+              <Text style={{ fontSize: 48, marginBottom: 16 }}>📄</Text>
+              <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 24 }}>
+                Documento PDF generato con successo
+              </Text>
+              <TouchableOpacity
+                style={{ backgroundColor: '#007AFF', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 25 }}
+                onPress={() => {
+                  if (previewUrl) {
+                    window.open(previewUrl, '_blank');
+                  }
+                }}
+              >
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Visualizza PDF</Text>
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity 
               style={styles.pdfViewerCloseButton}
               onPress={() => setShowPdfViewer(false)}

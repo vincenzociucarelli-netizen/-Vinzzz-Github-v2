@@ -1655,6 +1655,12 @@ async def get_me(current_user = Depends(get_current_user)):
     user.pop("password_hash", None)
     user.pop("hashed_password", None)
     
+    # For collaboratori/coaches, resolve team IDs to names
+    if user.get("assigned_teams"):
+        teams = await db.teams.find({"id": {"$in": user["assigned_teams"]}}).to_list(100)
+        team_names = [t.get("name", "Squadra") for t in teams]
+        user["assigned_team_names"] = team_names
+    
     # For athletes, also get data from athletes collection
     if user.get("role") == "athlete" and user.get("athlete_id"):
         athlete = await db.athletes.find_one({"id": user["athlete_id"]})
