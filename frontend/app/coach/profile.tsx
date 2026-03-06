@@ -1191,7 +1191,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           )}
         </View>
 
-        {/* Dati Bancari */}
+        {/* Dati Bancari - Hidden while editing main profile to avoid data loss */}
+        {!editing && (
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
@@ -1302,6 +1303,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </>
           )}
         </View>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
