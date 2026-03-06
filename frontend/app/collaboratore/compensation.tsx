@@ -290,8 +290,8 @@ export default function CollaboratoreCompensation() {
     const newTotal = yearTotalBeforeThis + monthlyAmount;
     
     // Check if THIS month will be the first to exceed thresholds
-    const willExceed5k = newTotal > 5000 && yearTotalBeforeThis <= 5000;
-    const willExceed15k = newTotal > 15000 && yearTotalBeforeThis <= 15000;
+    const willExceed5k = newTotal >= 5000 && yearTotalBeforeThis < 5000;
+    const willExceed15k = newTotal >= 15000 && yearTotalBeforeThis < 15000;
     
     console.log('Threshold check for modal:', { yearTotalBeforeThis, monthlyAmount, newTotal, willExceed5k, willExceed15k });
     
