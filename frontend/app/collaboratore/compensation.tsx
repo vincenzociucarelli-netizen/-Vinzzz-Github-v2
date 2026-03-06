@@ -1243,6 +1243,41 @@ export default function CollaboratoreCompensation() {
                 </Text>
               </View>
 
+              {/* Metadata Section - Verifiable Data */}
+              <View style={{ backgroundColor: '#F5F5F5', padding: 12, marginVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E0E0E0' }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#666', marginBottom: 8, textAlign: 'center' }}>
+                  METADATI DI VERIFICA
+                </Text>
+                <View style={{ gap: 4 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 10, color: '#888' }}>Timestamp firma:</Text>
+                    <Text style={{ fontSize: 10, color: '#333' }}>{new Date().toLocaleString('it-IT')}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 10, color: '#888' }}>Totale prima:</Text>
+                    <Text style={{ fontSize: 10, color: '#333' }}>
+                      € {((thresholdStatus?.total_with_prior || 0) - (profile?.monthly_compensation || 0)).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 10, color: '#888' }}>Totale dopo:</Text>
+                    <Text style={{ fontSize: 10, color: '#333' }}>
+                      € {(thresholdStatus?.total_with_prior || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 10, color: '#888' }}>Compensi pregressi:</Text>
+                    <Text style={{ fontSize: 10, color: '#333' }}>
+                      € {(thresholdStatus?.prior_compensation || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 10, color: '#888' }}>Soglia superata:</Text>
+                    <Text style={{ fontSize: 10, color: '#333' }}>€ {declarationType === '5000' ? '5.000,00' : '15.000,00'}</Text>
+                  </View>
+                </View>
+              </View>
+
               {/* Signature Pad */}
               <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
               <SignaturePadInline
