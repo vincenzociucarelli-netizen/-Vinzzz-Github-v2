@@ -1936,9 +1936,9 @@ async def transform_user_photo(data: ImageTransformRequest, current_user = Depen
 
 async def send_password_reset_email(to_email: str, reset_token: str, user_name: str):
     """Send password reset email via Brevo/SendGrid"""
-    # Get society name for branding
+    # Get society name for branding - use ragione_sociale for official documents
     settings = await db.settings.find_one({"type": "society"})
-    society_name = settings.get("name", "Gestione Società") if settings else "Gestione Società"
+    society_name = (settings.get("ragione_sociale") if settings else None) or (settings.get("name", "Gestione Società") if settings else "Gestione Società")
     
     # Create reset code (first 8 chars of token for easier communication)
     reset_code = reset_token[:8].upper()
@@ -5150,7 +5150,8 @@ async def sign_athlete_compensation_receipt_with_signature(
     # Get society data
     society_settings = await db.settings.find_one({"type": "society"})
     society_rec = await db.societies.find_one()
-    society_name = (society_settings.get("name") if society_settings else None) or (society_rec.get("name") if society_rec else None) or "ASD/SSD"
+    # ALWAYS use ragione_sociale for official documents, fallback to name
+    society_name = (society_settings.get("ragione_sociale") if society_settings else None) or (society_rec.get("ragione_sociale") if society_rec else None) or (society_settings.get("name") if society_settings else None) or (society_rec.get("name") if society_rec else None) or "ASD/SSD"
     admin_email = (society_settings.get("email") if society_settings else None) or (society_rec.get("email") if society_rec else None)
     society_city = (society_settings.get("city") if society_settings else None) or (society_rec.get("city") if society_rec else None) or ""
     
@@ -9030,8 +9031,8 @@ async def sign_compensation_receipt(
     # Get society data from settings and societies collection
     society_settings = await db.settings.find_one({"type": "society"})
     society = await db.societies.find_one()
-    # Prioritize settings over societies collection
-    society_name = (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
+    # ALWAYS use ragione_sociale for official documents, fallback to name
+    society_name = (society_settings.get("ragione_sociale") if society_settings else None) or (society.get("ragione_sociale") if society else None) or (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
     admin_email = (society_settings.get("email") if society_settings else None) or (society.get("email") if society else None)
     society_city = (society_settings.get("city") if society_settings else None) or (society.get("city") if society else None) or "Perugia"
     
@@ -9534,11 +9535,12 @@ async def sign_threshold_declaration(
     
     # Get society data
     society = await db.societies.find_one()
-    society_name = society.get("name", "ASD/SSD") if society else "ASD/SSD"
+    settings = await db.settings.find_one({"type": "society"})
+    # ALWAYS use ragione_sociale for official documents
+    society_name = (settings.get("ragione_sociale") if settings else None) or (society.get("ragione_sociale") if society else None) or (settings.get("name") if settings else None) or (society.get("name") if society else None) or "ASD/SSD"
     admin_email = society.get("email") if society else None
     
     # Get settings for more society info
-    settings = await db.settings.find_one({"type": "society"})
     fiscal_code_society = settings.get("fiscal_code", "") if settings else ""
     
     # Calculate current yearly total
@@ -11633,7 +11635,9 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
     
     # Get society info
     society = await db.societies.find_one()
-    society_name = society.get("name", "PALLAVOLO PERUGIA SSD A RL") if society else "PALLAVOLO PERUGIA SSD A RL"
+    society_settings = await db.settings.find_one({"type": "society"})
+    # ALWAYS use ragione_sociale for official documents
+    society_name = (society_settings.get("ragione_sociale") if society_settings else None) or (society.get("ragione_sociale") if society else None) or (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
     
     # Get user info for privacy documents
     user_data = current_user
@@ -12509,7 +12513,8 @@ async def sign_dirigente_compensation_receipt(
     # Get society data from settings and societies collection
     society_settings = await db.settings.find_one({"type": "society"})
     society = await db.societies.find_one()
-    society_name = (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
+    # ALWAYS use ragione_sociale for official documents
+    society_name = (society_settings.get("ragione_sociale") if society_settings else None) or (society.get("ragione_sociale") if society else None) or (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
     admin_email = (society_settings.get("email") if society_settings else None) or (society.get("email") if society else None)
     society_city = (society_settings.get("city") if society_settings else None) or (society.get("city") if society else None) or "Perugia"
     
