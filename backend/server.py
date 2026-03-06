@@ -7,6 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import uuid
+import hashlib
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
@@ -9188,7 +9189,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         logging.error(f"Error saving PDF: {e}")
         raise HTTPException(status_code=500, detail="Errore nel salvataggio del documento")
     
-    # Store document record
+    # Store document record with comprehensive metadata
     document_record = {
         "id": receipt_id,
         "document_type": doc_type,
@@ -9196,6 +9197,8 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         "signer_id": coach_id,
         "coach_id": coach_id,
         "coach_name": coach.get('full_name', ''),
+        "coach_email": coach.get('email', ''),
+        "coach_fiscal_code": coach.get('fiscal_code', ''),
         "month": request.month,
         "year": request.year,
         "amount_gross": request.amount_gross,
@@ -9204,8 +9207,20 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         "pdf_path": pdf_path,
         "pdf_filename": pdf_filename,
         "signed_at": now,
+        "signed_at_iso": now.isoformat(),
         "exceeded_5000": first_time_exceeded_5000,
-        "exceeded_15000": first_time_exceeded_15000
+        "exceeded_15000": first_time_exceeded_15000,
+        # Metadata for threshold crossing verification
+        "threshold_metadata": {
+            "yearly_total_before": yearly_total,
+            "yearly_total_after": new_total,
+            "prior_compensation_declared": prior_compensation,
+            "threshold_crossed": "15000" if first_time_exceeded_15000 else ("5000" if first_time_exceeded_5000 else None),
+            "signature_timestamp_utc": now.isoformat(),
+            "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
+            "contract_start_date": coach.get('contract_start_date'),
+            "monthly_compensation_rate": monthly_compensation,
+        } if (first_time_exceeded_5000 or first_time_exceeded_15000) else None
     }
     await db.signed_documents.insert_one(document_record)
     
@@ -9428,12 +9443,12 @@ async def get_coach_threshold_status(
     declaration_15000 = next((d for d in declarations if d.get("threshold_type") == "15000"), None)
     
     # Calculate thresholds
-    warning_5000_threshold = 5000 - monthly_compensation
-    warning_15000_threshold = 15000 - monthly_compensation
+    # Warning only if the NEXT receipt would cross the threshold
+    next_total = yearly_total + monthly_compensation
     
-    # Status flags
-    needs_warning_5000 = yearly_total >= warning_5000_threshold and yearly_total < 5000
-    needs_warning_15000 = yearly_total >= warning_15000_threshold and yearly_total < 15000
+    # Status flags - warning only if NEXT receipt crosses threshold
+    needs_warning_5000 = yearly_total < 5000 and next_total >= 5000
+    needs_warning_15000 = yearly_total < 15000 and next_total >= 15000
     
     needs_declaration_5000 = yearly_total >= 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
     needs_declaration_15000 = yearly_total >= 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
@@ -12569,13 +12584,15 @@ async def sign_dirigente_compensation_receipt(
         logging.error(f"Error saving PDF for dirigente: {e}")
         raise HTTPException(status_code=500, detail="Errore nel salvataggio del documento")
     
-    # Store document record
+    # Store document record with comprehensive metadata
     document_record = {
         "id": receipt_id,
         "document_type": doc_type,
         "document_title": doc_title,
         "dirigente_id": dirigente_id,
         "dirigente_name": dirigente.get('full_name', ''),
+        "dirigente_email": dirigente.get('email', ''),
+        "dirigente_fiscal_code": dirigente.get('fiscal_code', ''),
         "month": request.month,
         "year": request.year,
         "amount_gross": request.amount_gross,
@@ -12584,8 +12601,20 @@ async def sign_dirigente_compensation_receipt(
         "pdf_path": pdf_path,
         "pdf_filename": pdf_filename,
         "signed_at": now,
+        "signed_at_iso": now.isoformat(),
         "exceeded_5000": first_time_exceeded_5000,
-        "exceeded_15000": first_time_exceeded_15000
+        "exceeded_15000": first_time_exceeded_15000,
+        # Metadata for threshold crossing verification
+        "threshold_metadata": {
+            "yearly_total_before": yearly_total,
+            "yearly_total_after": new_total,
+            "prior_compensation_declared": prior_compensation,
+            "threshold_crossed": "15000" if first_time_exceeded_15000 else ("5000" if first_time_exceeded_5000 else None),
+            "signature_timestamp_utc": now.isoformat(),
+            "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
+            "contract_start_date": dirigente.get('contract_start_date'),
+            "monthly_compensation_rate": monthly_compensation,
+        } if (first_time_exceeded_5000 or first_time_exceeded_15000) else None
     }
     await db.signed_documents.insert_one(document_record)
     
@@ -12796,9 +12825,10 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     exceeded_15000_record = next((r for r in yearly_records if r.get("exceeded_15000")), None)
     
     # Calculate if we're approaching thresholds
+    # Warning only if the NEXT receipt would cross the threshold
     next_total = yearly_total + monthly_compensation
-    approaching_5000 = (yearly_total < 5000 and next_total > 4500)
-    approaching_15000 = (yearly_total < 15000 and next_total > 14500)
+    approaching_5000 = (yearly_total < 5000 and next_total >= 5000)
+    approaching_15000 = (yearly_total < 15000 and next_total >= 15000)
     
     # Check if blocked (exceeded but not declared)
     needs_5000_declaration = (yearly_total > 5000 and not exceeded_5000_record)
@@ -13270,12 +13300,12 @@ async def get_collaboratore_annual_compensation(
         "thresholds": {
             "5000": {
                 "threshold": 5000,
-                "needs_warning": yearly_total < 5000 and next_total > 4500,
+                "needs_warning": yearly_total < 5000 and next_total >= 5000,
                 "declaration_signed": exceeded_5000 is not None
             },
             "15000": {
                 "threshold": 15000,
-                "needs_warning": yearly_total < 15000 and next_total > 14500,
+                "needs_warning": yearly_total < 15000 and next_total >= 15000,
                 "declaration_signed": exceeded_15000 is not None
             }
         }
