@@ -12873,10 +12873,10 @@ async def sign_dirigente_compensation_receipt(
 @api_router.get("/dirigente/{dirigente_id}/threshold-status/{year}")
 async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_user = Depends(get_current_user)):
     """Get threshold status for a dirigente in a specific year"""
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE]:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
-    if current_user["role"] == UserRole.VIEWER and current_user["id"] != dirigente_id:
+    if current_user["role"] in [UserRole.VIEWER, UserRole.DIRIGENTE] and current_user["id"] != dirigente_id:
         raise HTTPException(status_code=403, detail="Puoi vedere solo i tuoi dati")
     
     dirigente = await db.users.find_one({"id": dirigente_id})
@@ -12884,7 +12884,23 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
         raise HTTPException(status_code=404, detail="Dirigente non trovato")
     
     monthly_compensation = dirigente.get("monthly_compensation", 0) or 0
-    prior_compensation = dirigente.get("other_annual_compensation", 0) or 0
+    prior_compensation = dirigente.get("other_annual_compensation", 0) or dirigente.get("prior_year_compensation", 0) or 0
+    
+    # Get contract start year to determine if prior compensation applies
+    contract_start = dirigente.get("contract_start_date")
+    contract_start_year = None
+    if contract_start:
+        try:
+            if isinstance(contract_start, str):
+                contract_start_year = int(contract_start.split('-')[0].split('T')[0])
+            elif hasattr(contract_start, 'year'):
+                contract_start_year = contract_start.year
+        except:
+            pass
+    
+    # Prior compensation only applies in the FIRST year of contract
+    applies_prior = (contract_start_year == year) if contract_start_year else False
+    effective_prior = prior_compensation if applies_prior else 0
     
     yearly_records = await db.dirigente_compensations.find({
         "dirigente_id": dirigente_id,
@@ -12894,43 +12910,42 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
     
-    # Add prior compensation if this is the first year of contract
-    contract_start = dirigente.get("contract_start_date")
-    contract_start_year = None
-    if contract_start:
-        if isinstance(contract_start, str):
-            contract_start_year = int(contract_start.split('-')[0])
-        elif hasattr(contract_start, 'year'):
-            contract_start_year = contract_start.year
+    # Total including prior compensation (only for first year)
+    total_with_prior = yearly_total + effective_prior
     
-    if contract_start_year and year == contract_start_year:
-        yearly_total += prior_compensation
-    
-    # Check if thresholds have been exceeded
+    # Check if thresholds have been exceeded via records
     exceeded_5000_record = next((r for r in yearly_records if r.get("exceeded_5000")), None)
     exceeded_15000_record = next((r for r in yearly_records if r.get("exceeded_15000")), None)
     
     # Calculate if we're approaching thresholds
-    # Warning only if the NEXT receipt would cross the threshold
-    next_total = yearly_total + monthly_compensation
-    approaching_5000 = (yearly_total < 5000 and next_total >= 5000)
-    approaching_15000 = (yearly_total < 15000 and next_total >= 15000)
+    next_total = total_with_prior + monthly_compensation
     
-    # Check if blocked (exceeded but not declared)
-    needs_5000_declaration = (yearly_total > 5000 and not exceeded_5000_record)
-    needs_15000_declaration = (yearly_total > 15000 and not exceeded_15000_record)
+    # Special case: if prior >= 5000, no €5k declaration needed
+    already_over_5k_from_prior = effective_prior >= 5000
+    
+    # Warning flags
+    approaching_5000 = not already_over_5k_from_prior and (total_with_prior < 5000 and next_total >= 5000)
+    approaching_15000 = (total_with_prior < 15000 and next_total >= 15000)
+    
+    # Declaration needed
+    needs_5000_declaration = not already_over_5k_from_prior and (total_with_prior >= 5000 and not exceeded_5000_record)
+    needs_15000_declaration = (total_with_prior >= 15000 and not exceeded_15000_record)
     is_blocked = needs_5000_declaration or needs_15000_declaration
     
     return {
         "dirigente_id": dirigente_id,
         "year": year,
+        "contract_start_year": contract_start_year,
         "monthly_compensation": monthly_compensation,
         "prior_compensation": prior_compensation,
+        "effective_prior": effective_prior,
+        "already_over_5k_from_prior": already_over_5k_from_prior,
         "yearly_total": yearly_total,
+        "total_with_prior": total_with_prior,
         "thresholds": {
             "5000": {
                 "threshold": 5000,
-                "warning_at": 4500,
+                "warning_at": 5000 - monthly_compensation,
                 "needs_warning": approaching_5000,
                 "needs_declaration": needs_5000_declaration,
                 "declaration_signed": exceeded_5000_record is not None,
@@ -12938,7 +12953,7 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
             },
             "15000": {
                 "threshold": 15000,
-                "warning_at": 14500,
+                "warning_at": 15000 - monthly_compensation,
                 "needs_warning": approaching_15000,
                 "needs_declaration": needs_15000_declaration,
                 "declaration_signed": exceeded_15000_record is not None,
