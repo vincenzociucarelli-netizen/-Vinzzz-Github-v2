@@ -13183,6 +13183,14 @@ async def sign_collaboratore_compensation_receipt(
     settings = await db.settings.find_one({"type": "society"})
     admin_email = settings.get("admin_email") if settings else None
     
+    # Fallback: try to get admin email from admin user
+    if not admin_email:
+        admin_user = await db.users.find_one({"role": "admin"})
+        if admin_user:
+            admin_email = admin_user.get("email")
+    
+    logging.info(f"Collaboratore receipt: admin_email={admin_email}")
+    
     # Calculate yearly total - check both collections (collaboratore_compensations and coach_compensations)
     yearly_records = await db.collaboratore_compensations.find({
         "collaboratore_id": collaboratore_id,
