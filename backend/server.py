@@ -13338,6 +13338,7 @@ async def sign_collaboratore_compensation_receipt(
         "yearly_total": new_total,
         "exceeded_5000": first_time_exceeded_5000,
         "exceeded_15000": first_time_exceeded_15000,
+        "pdf_base64": base64.b64encode(pdf_bytes).decode() if pdf_bytes else None,
         "message": "Quietanza firmata e salvata in archivio"
     }
 

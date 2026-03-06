@@ -32,6 +32,17 @@ const matchesMonth = (recordMonth: number | string, targetMonth: number): boolea
   return monthIndex === targetMonth;
 };
 
+// Helper to convert base64 to Blob for PDF viewing
+const base64ToBlob = (base64: string, mimeType: string): Blob => {
+  const byteCharacters = atob(base64);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  return new Blob([byteArray], { type: mimeType });
+};
+
 interface CompensationRecord {
   id: string;
   month: number | string;  // Can be number (1-12) or string ("Gennaio", etc.)
@@ -355,6 +366,13 @@ export default function CollaboratoreCompensation() {
       const thresholdAmount = declarationType === '5000' ? '5.000' : '15.000';
       const monthName = MONTH_NAMES[selectedMonth || 0];
       
+      // Show PDF if available
+      if (response.data.pdf_base64 && Platform.OS === 'web') {
+        const pdfBlob = base64ToBlob(response.data.pdf_base64, 'application/pdf');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank');
+      }
+      
       Alert.alert(
         'Dichiarazione Firmata',
         `Comunicazione di superamento soglia € ${thresholdAmount} per ${monthName} ${selectedYear} firmata con successo!\n\nCompreso lordo: € ${response.data.amount_gross.toFixed(2)}\nTotale annuo: € ${response.data.yearly_total.toFixed(2)}\n\nUna copia è stata inviata alla tua email e alla società.`
@@ -417,6 +435,13 @@ export default function CollaboratoreCompensation() {
       
       // Close modal FIRST, then show success message
       closeSignatureModal();
+      
+      // Show PDF if available
+      if (response.data.pdf_base64 && Platform.OS === 'web') {
+        const pdfBlob = base64ToBlob(response.data.pdf_base64, 'application/pdf');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank');
+      }
       
       Alert.alert(
         'Quietanza Firmata',
