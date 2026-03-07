@@ -1,188 +1,159 @@
 <analysis>**original_problem_statement**:
-The user's initial goal was to fix minor UI bugs. This expanded into a series of major feature implementations and refactors focused on privacy, security, and usability.
+The user's initial goal was to fix a recurring issue where ID document fields were still visible on the coach's profile despite previous attempts to remove them. After resolving this, the user provided a long list of new feature requests and bug fixes focused on improving UI consistency, data handling, security, and compliance reporting across the application, particularly for the Admin, Coach, Collaborator, and Dirigente roles.
 
-The key requests implemented or in progress during this session were:
-1.  **GDPR Document Overhaul**: Replace the existing privacy consent with a much more robust system based on templates provided by the user.
-    *   Create two distinct PDF templates: one for adults and one for parents signing for minors.
-    *   The signature process must capture extensive metadata for legal probity: document version, timestamp, user/society ID, a SHA-256 hash of the document content, device type, and IP address.
-    *   The signed document must be stored for the user and admin and also sent via email to both.
-    *   A preview function must be available before signing.
-2.  **Collaborator Profile Cleanup**: Remove sensitive document fields (ID type, number, expiry, photos) from the collaborator's profile page, leaving only IBAN details, to align with GDPR principles.
-3.  **Parent Document Organization**: Create a dedicated My Documents page for parents that groups signed documents by child, instead of showing a single flat list.
-4.  **Medical Certificate Flow Refinement**:
-    *   Relocate the Medical Certificate Block setting from the Society page to a more logical position at the top of Other Settings.
-    *   Make the text more specific, clarifying it applies to allenamenti (training).
-    *   Set the block to be **active by default** for new societies.
-    *   Log any changes to this setting in the audit log.
-    *   Implement a user-friendly override mechanism for coaches: when a coach (who is also an admin) scans the QR code of an athlete blocked due to an expired certificate, a popup should appear allowing them to override the block for that single session, requiring a reason. This must have explicit Accept and Reject options.
-5.  **Stripe Integration (Postponed)**: Prepare the application to allow each sports club to add their own Stripe API keys for payment processing. This was implemented and then rolled back at the user's request, to be revisited next season.
-6.  **Bug Fixes**:
-    *   Address the  rendering issue by replacing direct imports with a custom wrapper component.
-    *   Address an intermittent loading issue on the admin dashboard caused by multiple parallel API calls.
+This session focused on fixing the display of compliance metadata on generated PDFs, which then spiraled into a major debugging and feature refinement effort. This included correcting user roles and login flows, fixing numerous UI/UX bugs reported by the user across different profiles, standardizing the use of the official company name () in all documents, fixing incorrect notification timestamps, and a deep, multi-step overhaul of the complex compensation threshold logic for collaborators to correctly handle prior-year earnings and multi-year contracts.
+
+The latest request is to improve the user interface by making the main profile sections (Personal, Fiscal, and Bank data) collapsible to save screen space and improve usability for all user roles (Coach, Dirigente, Collaborator, Atleti).
+
+**PRODUCT REQUIREMENTS**:
+The user wants to refactor the profile pages for all roles (Coach, Dirigente, Collaborator, Atleti) to improve daily usability.
+1.  **Collapsible Sections**: The Dati Anagrafici, Dati Fiscali, and Dati Bancari sections should be collapsible. Users should see only the section title by default, and clicking the title should expand or collapse the content.
+2.  **Internal Edit Button**: The Modifica (Edit) button should be moved inside each respective collapsible section, next to the title.
+3.  **Compact Account Banner**: The Account banner at the top of the profile should be made more compact, displaying the user's email on the same line as the title.
+4.  **Compensation Section Text**: In the compensation settings, clarify the text for compensi pregressi to state that it includes all sports-related compensation, not just from other clubs.
+5.  **Apply to All Roles**: These changes must be applied consistently across the profile pages for Coach, Dirigente, Collaboratore, and Atleti.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application has undergone significant feature development.
-- The new, comprehensive GDPR privacy document system is fully implemented, including PDF generation for adults and minors, capture of extensive security metadata, a preview function, and replacement of the old modal across all user profiles.
-- The Collaborator profile page has been cleaned of sensitive document fields.
-- A new My Documents page exists for parents, which fetches and is ready to display documents grouped by child.
-- The medical certificate setting has been moved to the top of Other Settings, is active by default, and its changes are logged.
-- The backend and frontend logic for the coach's QR scanner has been modified to support the new certificate override flow. A modal popup is implemented but requires final adjustments.
-- The Stripe integration UI/backend was created and then removed from the user-facing settings, but the code may still exist.
+The application is a comprehensive sports club management platform. This session successfully completed a major overhaul of the entire compensation compliance workflow for all staff roles (Collaborator, Coach, Dirigente). This included fixing the core threshold logic (triggering on amounts greater than, not equal to, the threshold), ensuring the correct legal documents are generated and emailed upon threshold crossing, fixing UI state inconsistencies (e.g., warning banners not disappearing after signing), and ensuring notification emails are correctly sent to the administrator.
+
+Beyond this core task, a significant number of user-reported UI/UX bugs and feature requests were implemented. This includes correcting date formatting, fixing timezone issues in PDFs, improving document sorting, adding a missing admin checklist for the 'Dirigente' role, and implementing numerous visual enhancements like colored banners, more prominent buttons, and multi-year warning displays.
+
+The agent has started implementing the latest request for collapsible profile sections, successfully completing the work for the **Coach** role as a proof-of-concept, including cleaning up dead code found in the banking details section.
 
 **Last working item**:
-- Last item agent was working: Modifying the coach's QR scanner override popup () to include distinct RIFIUTA (Reject) and AUTORIZZA (Authorize) buttons, as per the user's final request. The agent had just started adding the logic for the Reject action.
+- Last item agent was working: Implementing collapsible sections for profile data (Personal, Fiscal, Bank) to improve UI/UX. The agent successfully implemented this for the **Coach** profile, including moving the Edit button inside each section and clarifying text in the compensation area, as requested by the user. The next step is to replicate this functionality for all other relevant user roles.
 - Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? Frontend testing agent. The test should cover this specific flow:
-    1.  Log in as an Admin.
-    2.  Navigate to the Coach QR scanner page.
-    3.  Scan the QR code of an athlete whose medical certificate is expired (this may need to be set up in the DB).
-    4.  Verify a modal appears with the athlete's name and RIFIUTA and AUTORIZZA buttons.
-    5.  Click RIFIUTA, verify the modal closes, and no attendance is logged (check audit log for refusal action).
-    6.  Scan the same QR code again.
-    7.  Click AUTORIZZA, enter a reason, and submit.
-    8.  Verify the attendance is logged and the override is recorded in the audit log.
+- Which testing method agent to use? Frontend testing agent. The agent should apply the changes to the remaining roles (Dirigente, Collaboratore, Atleti) and then use the screenshot tool to capture the profile page for each role to verify that the new collapsible UI is working correctly and consistently.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   Issue 1: Complete the coach's override popup to include Accept and Reject buttons. (P0)
--   Issue 2: The fix for the intermittent admin dashboard loading has been implemented but never tested or verified. (P2)
--   Issue 3: The  library fix was only applied to two files. A global check and replacement might still be needed to prevent future issues. (P3)
+-   **Issue 1: Apply Collapsible Profile Sections to All Roles** (P0)
+-   **Issue 2: Admin dashboard intermittent loading failure** (P2)
+-   **Issue 3: Global check for  direct imports** (P3)
 
 **Issues Detail**:
--   **Issue 1: Complete coach's override popup**
-    -   **Attempted fixes**: The agent created the modal and backend logic. It was in the process of adding the Reject/Accept buttons when the session ended.
+-   **Issue 1: Apply Collapsible Profile Sections to All Roles**
+    -   **Attempted fixes**: The functionality has been fully implemented and refined for the  profile page (). This involved adding state for collapsed sections, refactoring the JSX to wrap sections in , moving edit buttons, and simplifying a bloated Bank Details component by removing dead code.
     -   **Next debug checklist**:
-        -   In , complete the  JSX to include both RIFIUTA and AUTORIZZA buttons.
-        -   Ensure the  function correctly logs the refusal to the audit log without creating an attendance record.
-        -   Ensure the  function (for AUTORIZZA) correctly logs the override and creates the attendance record.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical usability feature requested by the user to handle real-world exceptions to the medical certificate block.
+        1.  Open .
+        2.  Replicate the state management ( for each collapsible section) and UI structure (collapsible s with  headers) from .
+        3.  Repeat for .
+        4.  Repeat for the  (Athlete) profile page (file path to be identified).
+        5.  Ensure the compact Account banner and the updated compensation text are also applied consistently.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a direct user request to improve the daily usability of the application by reducing visual clutter on profile pages.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Both
+    -   **Should Test frontend/backend/both after fix?**: Frontend
 -   **Issue 2: Admin dashboard intermittent loading failure**
-    -   **Attempted fixes**: The agent implemented a fix by replacing the  logic with a more robust solution involving retries and batching in .
-    -   **Next debug checklist**:
-        -   Review the implemented fix in .
-        -   Manually test the admin dashboard by reloading it multiple times to see if the issue persists.
-        -   If possible, simulate a failing API call to ensure the retry logic works as expected.
+    -   **Attempted fixes**: None.
+    -   **Next debug checklist**: Manually test the admin dashboard by reloading it multiple times to see if the issue persists. Check  and the associated API calls for race conditions or unhandled errors.
     -   **Why fix this issue and what will be achieved with the fix?**: Improves the reliability of a core application view for admins.
-    -   **Status**: TESTING PENDING
+    -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
 -   **Issue 3: @expo/vector-icons rendering issue on web**
-    -   **Attempted fixes**: The agent replaced direct imports in  and  with the custom  wrapper.
-    -   **Next debug checklist**:
-        -   Perform a global codebase search for any remaining direct imports from .
-        -   Replace any found instances with the  wrapper.
-    -   **Why fix this issue and what will be achieved with the fix?**: Ensures UI consistency across the application by preventing broken icons.
+    -   **Attempted fixes**: None.
+    -   **Next debug checklist**: Perform a global codebase search for any remaining direct imports from  and replace them with the custom  wrapper.
+    -   **Why fix this issue and what will be achieved with the fix?**: Ensures UI consistency and prevents potential rendering bugs on the web platform.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
 
 **In progress Task List**:
-None apart from the issue above.
+-   **Task 1: Finalize Collapsible Profile UI Refactor** (P0)
+    -   **Where to resume**: The logic and components are complete for the Coach profile. Resume by applying the same pattern to the  profile file: .
+    -   **What will be achieved with this?**: A cleaner, more user-friendly profile interface across all roles, as requested by the user.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on something**: No.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   (P1) User verification of the new parent document view. The page is created but needs to be tested with a parent account that has signed documents for multiple children to confirm the grouping works visually.
+    -   (P1) Conduct a full regression check on the profiles and core flows for **Atleti 18+**, **Coach**, **Collaboratori**, and **Dirigente** now that many changes have been made.
+    -   (P2) Begin implementation of features and flows for **Minorenni** (minor athletes).
 -   **Future Tasks**:
-    -   (P3) Re-implement Stripe integration for the next season, allowing each club to manage its own payments.
+    -   (P3) Re-implement Stripe integration for the next season.
     -   (P3) Refactor the monolithic  into a modular structure (e.g., routes, models, services).
+    -   (P3) Update the  file with all the completed work and new requirements.
 
 **Completed work in this session**
--   **GDPR Document System**:
-    -   Implemented backend logic in  to generate two new, complex PDF privacy documents.
-    -   Created a new endpoint  that captures extensive security metadata (hash, IP, device, etc.).
-    -   Implemented a PDF preview endpoint .
-    -   Created a new  component and integrated it into all user profile pages, replacing the old system.
-    -   Fixed a Metro bundler cache issue (yarn run v1.22.22
-$ expo start --reset-cache
-env: load .env
-env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT EXPO_DEVTOOLS_LISTEN_ADDRESS REACT_NATIVE_PACKAGER_HOSTNAME
-Starting project at /app/frontend
-Fast resolver is enabled.
-Starting Metro Bundler
-warning: Bundler cache is empty, rebuilding (this may take a minute)
-Waiting on http://localhost:8081
-Logs for your project will appear below.
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.) that was preventing the frontend from building.
--   **Parent Document View**:
-    -   Updated the  endpoint to group documents by child for parent accounts.
-    -   Created a new page  to display these grouped documents.
-    -   Added a navigation link to the new page from the parent dashboard.
--   **UI/UX & Business Logic Refinements**:
-    -   Removed sensitive document information from the collaborator profile page ().
-    -   Moved the Medical Certificate Block setting from the  to the  settings page.
-    -   Updated the setting to be **active by default** and to log any changes to the audit log.
-    -   Refined the certificate override flow to happen on the coach's scanner UI.
--   **Bug Fixes**:
-    -   Fixed broken icons in  and  by using the  wrapper.
-    -   Implemented (but did not test) a fix for the admin dashboard's intermittent loading issue.
+-   **Compensation Logic Overhaul (All Roles)**: Corrected threshold trigger from  to  to align with business rules (superamento is > €15,000, not on the dot).
+-   **Compliance Document Generation**: Fixed backend logic to generate the correct Communication of Threshold Crossing PDF instead of a standard receipt.
+-   **Admin Email Notifications**: Implemented a robust fallback to ensure admins are always notified of compliance events, even if the primary admin email setting is missing.
+-   **Post-Signature UI State**: Fixed a bug where warning banners remained visible even after the user signed the required compliance document.
+-   **UI/UX Bug Fixes**:
+    -   Corrected unreadable contract dates on profile pages.
+    -   Fixed PDF timestamps to use the 'Europe/Rome' timezone instead of UTC.
+    -   Reversed document list sorting to show newest first.
+    -   Fixed data loss bug when editing profiles.
+    -   Resolved layout issue where signature buttons were hidden on smaller screens.
+-   **New UI Features Implemented**:
+    -   Added the admin checklist feature to the Dirigente profile.
+    -   Implemented multi-year threshold warnings on the compensation page.
+    -   Enhanced UI with more prominent buttons and color-coded visual cues for different years and threshold statuses.
+    -   **Initiated a major UI refactor for collapsible profile sections, completing it for the Coach role.**
+-   **Code Refactoring**: Removed significant dead code from the bank details component in the Coach profile.
+
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1: Admin dashboard intermittent loading failure**
+    -   **Debug checklist**: Review , manually reload the page multiple times. Check network requests for race conditions.
+    -   **Why to solve this issue and what will be achieved with this?**: To ensure the main admin page is reliable.
+    -   **Should Test frontend/backend/both after fix**: Frontend
+    -   **Is recurring issue?**: Y
+-   **Issue 2: @expo/vector-icons rendering issue on web**
+    -   **Debug checklist**: Global search for  imports and replace with the custom wrapper.
+    -   **Why to solve this issue and what will be achieved with this?**: To ensure UI icon consistency across the app.
+    -   **Should Test frontend/backend/both after fix**: Frontend
+    -   **Is recurring issue?**: Y
+
+**Known issue recurrence from previous fork**
+-   The admin dashboard loading issue and the  import issue have been carried over again and were not addressed.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Dynamic PDF Generation**: Using  in Python to create complex, multi-page PDFs with dynamic data (user names, society info, etc.).
--   **Document Integrity Hashing**: Using Python's  to create a SHA-256 hash of the generated PDF content to ensure non-repudiation and integrity.
--   **Role-Based Conditional UI**: Modifying the coach's scanner to show an override modal only if the logged-in user has an  role.
--   **Frontend State Management for Complex Modals**: Handling state for data, loading, errors, and user input within a single modal for a multi-step process (e.g., the override modal).
--   **Data Grouping on the Backend**: Using Python to process a list of database documents and group them by a specific key () before sending them to the frontend, simplifying the client-side logic.
--   **Metro Bundler Cache**: Encountered and resolved a frontend build issue by clearing the Metro bundler cache using yarn run v1.22.22
-$ expo start --reset-cache
-env: load .env
-env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT EXPO_DEVTOOLS_LISTEN_ADDRESS REACT_NATIVE_PACKAGER_HOSTNAME
-Starting project at /app/frontend
-Fast resolver is enabled.
-Starting Metro Bundler
-warning: Bundler cache is empty, rebuilding (this may take a minute)
-Waiting on http://localhost:8081
-Logs for your project will appear below.
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command..
+-   **Business Logic vs. Programming Logic**: The key pivot from  to  demonstrated a deep understanding of the user's business requirement that reaching a threshold is different from exceeding it.
+-   **Defensive Backend Programming**: Adding a fallback for the admin email demonstrates robust design, preventing silent failures.
+-   **State Management for Dynamic UI**: Implementing collapsible sections required adding and managing new state variables () to control UI visibility.
+-   **Cross-Role Refactoring**: The agent has been tasked with applying a single UI pattern (collapsible sections) across multiple, similar-but-different profile components, requiring careful, repetitive code modification.
+-   **Code Archeology and Cleanup**: The agent successfully identified and removed dead code from the bank details component, which was causing confusion and bloating the file.
 
 **key DB schema**
--   **documents**:
-    -   ADDED (for GDPR docs): , ,  (dict containing , ), , .
--   **societies**:
-    -   ADDED:  (defaults to ).
+-   No schema changes. However, the logic for querying  (to check for signed compliance forms) and  (for the admin email fallback) was significantly improved in .
 
 **All files of reference**
--    (Core logic for GDPR documents and certificate override)
--    (New override modal logic)
--    (New central component for privacy signing)
--    (New page for parents)
--    (New home for certificate settings)
--    (Cleaned UI)
+-   
+-    (template for the pending task)
+-    (next file to be modified)
+-    (to be modified)
+-   
+-   
 
 **Critical Info for New Agent**
--   The medical certificate block is now **active by default**. Any new logic related to society settings must respect this.
--   The GDPR signing flow is a critical legal feature. The metadata capture (hits	command
-   1	/usr/bin/mkdir, , etc.) is essential and must not be altered.
--   The user has postponed Stripe integration until the next season. Do not work on it unless explicitly asked.
--   The user strongly prefers interactive, context-aware solutions (like the override popup appearing for the coach) over solutions that require navigating through admin panels.
-
-**documents and test reports created in this job**
--   None. The previous PRD was updated but no new reports were generated.
+-   **Top Priority**: Your immediate task is to finish the UI refactor for collapsible profile sections. Use  as the template and apply the same changes to the profile pages for , , and .
+-   **User Interaction**: The user is highly engaged and provides detailed feedback with screenshots. Pay close attention to their requests for visual tweaks. They appreciate being shown progress and asked for confirmation.
+-   **Consistency is Key**: The user has explicitly asked for these UI changes to be applied to all relevant figures. Ensure the final result is consistent across all profile pages.
+-   **Don't Re-litigate Old Fixes**: The compensation logic is now stable after extensive back-and-forth. Do not modify it unless explicitly requested.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **(CONFIRMED)** User confirms the override popup is a better idea than a button in the admin panel.
-9.  **(REQUEST)** User asks to move the certificate setting to the top of the Other Settings page.
-8.  **(REQUEST)** User asks to make the text in the certificate setting more specific (agli allenamenti).
-7.  **(REQUEST)** User asks to move the certificate settings section out of the Society page.
-6.  **(INFO)** User clarifies that Stripe integration should be postponed to the next season.
-5.  **(CONFIRMED)** User confirms to proceed with fixing P2 (admin dashboard) and P3 (Stripe predisposition).
-4.  **(CONFIRMED)** User confirms they force-pushed to GitHub to resolve a conflict.
-3.  **(CONFIRMED)** User confirms the proposed architecture for Stripe (separate keys per society) is correct.
-2.  **(CONFIRMED)** User confirms the agent should proceed with implementing the document grouping for parents.
-1.  **(REQUEST)** User's final request: The certificate override popup **must** have Accept and Reject buttons, and the action must be logged.
+1.  **User**: Asks to make the Quietanze Mensili button more evident for all roles. (RESOLVED)
+2.  **User**: Reports that 2026 alerts disappeared after a previous fix. (RESOLVED)
+3.  **User**: Provides a screenshot clarifying a previous state and confirms the issue of disappearing alerts. (RESOLVED)
+4.  **User**: Confirms the latest fixes for alerts and colors are perfect. (RESOLVED)
+5.  **User**: **New Major Request**: Asks to make profile sections collapsible for all roles to save space and improve usability. Provides a screenshot with annotations. (IN PROGRESS)
+6.  **User**: Points out that the agent's assessment of the Bank Details section being complex is wrong and it should only have 3 fields, suspecting dead code. (RESOLVED, agent found and removed dead code)
+7.  **User**: Provides feedback on the first implementation of collapsible sections: move the edit button inside each section and correct the text for prior compensation. (RESOLVED for Coach profile)
+8.  **User**: Confirms the privacy feature for the coach is okay. (DONE)
+9.  **User**: Reports two new issues for the Coach: a double banner and a missing warning for the €5k threshold when €15k is also projected to be exceeded. (RESOLVED)
+10. **User**: Confirms the Dirigente and Collaboratore roles are working well and expresses hope that future changes won't break them. (DONE)
 
 **Project Health Check:**
 -   **Broken**: None.
 -   **Mocked**: None.
--   **Removed**: Stripe integration UI was built and then removed from view at the user's request.
 
 **3rd Party Integrations**
 -   slowapi
@@ -200,11 +171,12 @@ info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this comm
 -   Testing agent used after significant changes: NO
 -   Troubleshoot agent used after agent stuck in loop: NO
 -   Test files created: []
--   Known regressions: None.
+-   Known regressions: None identified in this session.
 
 **Credentials to test flow:**
-- The agent successfully used  and . The passwords are . These should be used for testing the parent and admin/coach flows.
+-   Admin:  / 
+-   User will provide credentials for other roles (Coach, Dirigente, etc.) for testing if needed.
 
 **What agent forgot to execute**
-- The agent implemented a fix for the admin dashboard loading issue but never got confirmation from the user or a testing agent that it was resolved.
-- The agent only fixed the  issue in two files, not globally as implied by the original handoff summary.</analysis>
+-   The two recurring technical debt issues were not addressed: the **intermittent admin dashboard loading failure** and the need for a **global check for  direct imports**.
+-   The  file has not been updated with the extensive work completed.</analysis>

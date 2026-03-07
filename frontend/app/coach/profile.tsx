@@ -28,7 +28,7 @@ import * as Sharing from 'expo-sharing';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dina-lampa-verify.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://role-profiles.preview.emergentagent.com';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
@@ -908,11 +908,16 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             onPress={() => toggleSection('anagrafici')}
           >
             <Text style={styles.cardTitle}>📋 Dati Anagrafici</Text>
-            <Ionicons 
-              name={sectionsExpanded.anagrafici ? "chevron-up" : "chevron-down"} 
-              size={24} 
-              color="#666" 
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, anagrafici: true})); setEditing(true); }}>
+                <Ionicons name="create-outline" size={20} color="#007AFF" />
+              </TouchableOpacity>
+              <Ionicons 
+                name={sectionsExpanded.anagrafici ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color="#666" 
+              />
+            </View>
           </TouchableOpacity>
           
           {sectionsExpanded.anagrafici && (
@@ -968,11 +973,16 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             onPress={() => toggleSection('fiscali')}
           >
             <Text style={styles.cardTitle}>💼 Dati Fiscali</Text>
-            <Ionicons 
-              name={sectionsExpanded.fiscali ? "chevron-up" : "chevron-down"} 
-              size={24} 
-              color="#666" 
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, fiscali: true})); setEditing(true); }}>
+                <Ionicons name="create-outline" size={20} color="#007AFF" />
+              </TouchableOpacity>
+              <Ionicons 
+                name={sectionsExpanded.fiscali ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color="#666" 
+              />
+            </View>
           </TouchableOpacity>
           
           {sectionsExpanded.fiscali && (
@@ -1035,9 +1045,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
 
         {/* Compensation Info */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>💰 Compenso</Text>
+          <Text style={styles.cardTitle}>💰 Compenso Mensile</Text>
           <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Compenso Mensile</Text>
             <Text style={styles.compensationAmount}>
               {profileData.monthly_compensation > 0 
                 ? `€ ${profileData.monthly_compensation.toFixed(2)}`
@@ -1047,7 +1056,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           
           {/* Prior Compensation Field */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Compensi Pregressi (altre società nell'anno)</Text>
+            <Text style={styles.fieldLabel}>COMPENSI PREGRESSI (NELL'ANNO)</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
               <Text style={{ fontSize: 16, marginRight: 4 }}>€</Text>
               <TextInput
@@ -1063,7 +1072,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               />
             </View>
             <Text style={{ fontSize: 11, color: '#666', marginTop: 4, fontStyle: 'italic' }}>
-              Inserisci l'importo totale di compensi sportivi già percepiti da altre società nell'anno corrente (per il calcolo delle soglie fiscali)
+              Inserisci l'importo totale di compensi sportivi già percepiti nell'anno corrente (per il calcolo delle soglie fiscali)
             </Text>
           </View>
           
