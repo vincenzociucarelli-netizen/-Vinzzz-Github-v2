@@ -876,37 +876,49 @@ export default function CoachCompensation() {
               <Text style={styles.yearCalcHeaderText}>📊 Calcolo per Anno Solare (soglie €5k/€15k)</Text>
             </View>
             
-            {/* First Year Summary (with prior compensation) */}
+            {/* First Year Summary (with prior compensation) - GREEN theme */}
             {(() => {
               const summary = getYearSummary(contractStartYear);
               const exceeds5k = summary.totalProjected > 5000;
               const exceeds15k = summary.totalProjected > 15000;
-              const bgColor = exceeds15k ? '#FFEBEE' : exceeds5k ? '#FFF8E1' : '#E8F5E9';
-              const textColor = exceeds15k ? '#C62828' : exceeds5k ? '#F57F17' : '#2E7D32';
+              // First year: GREEN base color
+              const bgColor = '#E8F5E9';  // Light green
+              const borderColor = '#4CAF50';  // Green border
+              const headerColor = '#2E7D32';  // Dark green for header
               const icon = exceeds15k ? '🚨' : exceeds5k ? '⚠️' : '✅';
               
               return (
-                <View key={`summary-${contractStartYear}`} style={[styles.yearBox, { backgroundColor: bgColor }]}>
-                  <Text style={[styles.yearBoxTitle, { color: textColor }]}>
+                <View key={`summary-${contractStartYear}`} style={[styles.yearBox, { backgroundColor: bgColor, borderLeftWidth: 4, borderLeftColor: borderColor }]}>
+                  <Text style={[styles.yearBoxTitle, { color: headerColor }]}>
                     {icon} Anno {contractStartYear} ({MONTH_NAMES[contractStartMonth || 9].substring(0,3)}-Dic: {summary.monthCount} mesi)
                   </Text>
                   
                   {/* Calculation breakdown */}
-                  <Text style={styles.yearBoxCalc}>
-                    {summary.priorCompensation > 0 && `Pregressi ${formatAmount(summary.priorCompensation)} + `}{formatCurrency(summary.monthlyComp)} × {summary.monthCount} = {formatCurrency(summary.priorCompensation > 0 ? (summary.priorCompensation + summary.yearlyFromContract).toLocaleString() : summary.yearlyFromContract)}
-                    <Text style={[styles.yearBoxTotal, { color: textColor }]}>{formatCurrency(summary.totalProjected)}</Text>
-                  </Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={styles.yearBoxCalcLabel}>Compenso ASD:</Text>
+                    <Text style={styles.yearBoxCalcValue}>{formatCurrency(summary.yearlyFromContract)}</Text>
+                  </View>
+                  {summary.priorCompensation > 0 && (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text style={[styles.yearBoxCalcLabel, { color: '#FF9800' }]}>+ Pregressi:</Text>
+                      <Text style={[styles.yearBoxCalcValue, { color: '#FF9800' }]}>{formatCurrency(summary.priorCompensation)}</Text>
+                    </View>
+                  )}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 8 }}>
+                    <Text style={[styles.yearBoxCalcLabel, { fontWeight: '700' }]}>Totale:</Text>
+                    <Text style={[styles.yearBoxTotal, { color: exceeds15k ? '#C62828' : exceeds5k ? '#F57F17' : headerColor }]}>{formatCurrency(summary.totalProjected)}</Text>
+                  </View>
                   
                   {/* Threshold Warnings */}
                   {exceeds5k && !exceeds15k && (
                     <View style={styles.thresholdWarningBox5k}>
-                      <Text style={styles.thresholdWarningTitle5k}>⚠️ SUPERAMENTO €5.000</Text>
+                      <Text style={styles.thresholdWarningTitle5k}>⚠️ SUPERAMENTO € 5.000,00</Text>
                       <Text style={styles.thresholdWarningText5k}>Contributi previdenziali INPS</Text>
                     </View>
                   )}
                   {exceeds15k && (
                     <View style={styles.thresholdWarningBox15k}>
-                      <Text style={styles.thresholdWarningTitle15k}>🚨 SUPERAMENTO €15.000</Text>
+                      <Text style={styles.thresholdWarningTitle15k}>🚨 SUPERAMENTO € 15.000,00</Text>
                       <Text style={styles.thresholdWarningText15k}>Tassazione IRPEF obbligatoria</Text>
                     </View>
                   )}
@@ -914,37 +926,43 @@ export default function CoachCompensation() {
               );
             })()}
             
-            {/* Second Year Summary (if contract spans 2 years) */}
+            {/* Second Year Summary (if contract spans 2 years) - BLUE theme */}
             {contractEndYear > contractStartYear && (() => {
               const summary = getYearSummary(contractEndYear);
               const exceeds5k = summary.totalProjected > 5000;
               const exceeds15k = summary.totalProjected > 15000;
-              const bgColor = exceeds15k ? '#FFEBEE' : exceeds5k ? '#FFF8E1' : '#E8F5E9';
-              const textColor = exceeds15k ? '#C62828' : exceeds5k ? '#F57F17' : '#2E7D32';
+              // Second year: BLUE base color
+              const bgColor = '#E3F2FD';  // Light blue
+              const borderColor = '#2196F3';  // Blue border
+              const headerColor = '#1565C0';  // Dark blue for header
               const icon = exceeds15k ? '🚨' : exceeds5k ? '⚠️' : '✅';
               
               return (
-                <View key={`summary-${contractEndYear}`} style={[styles.yearBox, { backgroundColor: bgColor }]}>
-                  <Text style={[styles.yearBoxTitle, { color: textColor }]}>
+                <View key={`summary-${contractEndYear}`} style={[styles.yearBox, { backgroundColor: bgColor, borderLeftWidth: 4, borderLeftColor: borderColor }]}>
+                  <Text style={[styles.yearBoxTitle, { color: headerColor }]}>
                     {icon} Anno {contractEndYear} (Gen-{MONTH_NAMES[contractEndMonth || 5].substring(0,3)}: {summary.monthCount} mesi)
                   </Text>
                   
                   {/* Calculation breakdown */}
-                  <Text style={styles.yearBoxCalc}>
-                    {formatCurrency(summary.monthlyComp)} × {summary.monthCount} = {formatCurrency(summary.yearlyFromContract)}
-                    <Text style={[styles.yearBoxTotal, { color: textColor }]}>{formatCurrency(summary.totalProjected)}</Text>
-                  </Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={styles.yearBoxCalcLabel}>Compenso ASD:</Text>
+                    <Text style={styles.yearBoxCalcValue}>{formatCurrency(summary.yearlyFromContract)}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 8 }}>
+                    <Text style={[styles.yearBoxCalcLabel, { fontWeight: '700' }]}>Totale Anno:</Text>
+                    <Text style={[styles.yearBoxTotal, { color: exceeds15k ? '#C62828' : exceeds5k ? '#F57F17' : headerColor }]}>{formatCurrency(summary.totalProjected)}</Text>
+                  </View>
                   
                   {/* Threshold Warnings */}
                   {exceeds5k && !exceeds15k && (
                     <View style={styles.thresholdWarningBox5k}>
-                      <Text style={styles.thresholdWarningTitle5k}>⚠️ SUPERAMENTO €5.000</Text>
+                      <Text style={styles.thresholdWarningTitle5k}>⚠️ SUPERAMENTO € 5.000,00</Text>
                       <Text style={styles.thresholdWarningText5k}>Contributi previdenziali INPS</Text>
                     </View>
                   )}
                   {exceeds15k && (
                     <View style={styles.thresholdWarningBox15k}>
-                      <Text style={styles.thresholdWarningTitle15k}>🚨 SUPERAMENTO €15.000</Text>
+                      <Text style={styles.thresholdWarningTitle15k}>🚨 SUPERAMENTO € 15.000,00</Text>
                       <Text style={styles.thresholdWarningText15k}>Tassazione IRPEF obbligatoria</Text>
                     </View>
                   )}

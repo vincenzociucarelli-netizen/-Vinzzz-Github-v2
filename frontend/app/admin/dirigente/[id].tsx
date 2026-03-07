@@ -60,6 +60,13 @@ interface Dirigente {
   iban?: string;
   account_holder?: string;
   bank_name?: string;
+  // Onboarding checklist
+  onboarding_checklist?: {
+    contract_signed?: boolean;
+    ras_registered?: boolean;
+    fiscal_code_acquired?: boolean;
+    criminal_record?: boolean;
+  };
 }
 
 export default function AdminDirigenteDetail() {
@@ -81,6 +88,16 @@ export default function AdminDirigenteDetail() {
   const [resetPasswordVisible, setResetPasswordVisible] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
+  
+  // Onboarding checklist edit state
+  const [editingOnboarding, setEditingOnboarding] = useState(false);
+  const [savingOnboarding, setSavingOnboarding] = useState(false);
+  const [checklistItems, setChecklistItems] = useState({
+    contract_signed: false,
+    ras_registered: false,
+    fiscal_code_acquired: false,
+    criminal_record: false,
+  });
   
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
@@ -183,6 +200,15 @@ export default function AdminDirigenteDetail() {
       
       // Load available qualifications from settings
       setAvailableQualifications(settingsResponse.data.dirigente_qualifications || []);
+      
+      // Initialize onboarding checklist state
+      const checklist = userResponse.data.onboarding_checklist || {};
+      setChecklistItems({
+        contract_signed: checklist.contract_signed || false,
+        ras_registered: checklist.ras_registered || false,
+        fiscal_code_acquired: checklist.fiscal_code_acquired || false,
+        criminal_record: checklist.criminal_record || false,
+      });
     } catch (error) {
       console.error('Error loading dirigente data:', error);
     } finally {
@@ -205,6 +231,22 @@ export default function AdminDirigenteDetail() {
       window.alert(`${title}\n\n${message}`);
     } else {
       Alert.alert(title, message);
+    }
+  };
+
+  const handleSaveOnboarding = async () => {
+    setSavingOnboarding(true);
+    try {
+      await api.patch(`/users/${id}`, {
+        onboarding_checklist: checklistItems,
+      });
+      showAlert('Successo', 'Checklist onboarding aggiornata');
+      setEditingOnboarding(false);
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Impossibile salvare la checklist');
+    } finally {
+      setSavingOnboarding(false);
     }
   };
 
@@ -462,6 +504,45 @@ export default function AdminDirigenteDetail() {
             {getStatusLabel(dirigente.status)}
           </Text>
         </View>
+
+        {/* Onboarding Checklist Button - Always visible when approved */}
+        {dirigente.status === 'approved' && (() => {
+          const checklist = dirigente.onboarding_checklist || {};
+          const totalItems = 4; // contract, ras, fiscal_code, criminal_record
+          const completedItems = [
+            checklist.contract_signed,
+            checklist.ras_registered,
+            checklist.fiscal_code_acquired,
+            checklist.criminal_record
+          ].filter(Boolean).length;
+          
+          const isComplete = completedItems === totalItems;
+          
+          return (
+            <TouchableOpacity 
+              style={[
+                styles.checklistButton,
+                isComplete ? styles.checklistButtonComplete : styles.checklistButtonIncomplete
+              ]}
+              onPress={() => setEditingOnboarding(true)}
+            >
+              <Ionicons 
+                name={isComplete ? "checkmark-circle" : "alert-circle"} 
+                size={24} 
+                color="#fff" 
+              />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.checklistButtonTitle}>
+                  Checklist Onboarding
+                </Text>
+                <Text style={styles.checklistButtonSubtitle}>
+                  {completedItems}/{totalItems} completati
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#fff" />
+            </TouchableOpacity>
+          );
+        })()}
 
         {/* Header con nome e contatti */}
         <View style={styles.photoSection}>
@@ -1316,6 +1397,77 @@ export default function AdminDirigenteDetail() {
         </View>
       </Modal>
 
+      {/* Onboarding Checklist Edit Modal */}
+      <Modal
+        visible={editingOnboarding}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditingOnboarding(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.onboardingModalContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>📋 Checklist Onboarding</Text>
+              <Text style={styles.modalSubtitle}>{dirigente?.full_name}</Text>
+              
+              <Text style={styles.onboardingChecklistHeader}>Spunta le voci completate:</Text>
+              
+              <TouchableOpacity
+                style={[styles.onboardingChecklistItem, checklistItems.contract_signed && styles.onboardingChecklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, contract_signed: !checklistItems.contract_signed})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.contract_signed ? '☑️' : '⬜'}</Text>
+                <Text style={styles.onboardingChecklistText}>Contratto/Lettera d'incarico firmata</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.onboardingChecklistItem, checklistItems.ras_registered && styles.onboardingChecklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, ras_registered: !checklistItems.ras_registered})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.ras_registered ? '☑️' : '⬜'}</Text>
+                <Text style={styles.onboardingChecklistText}>Iscrizione RAS (Registro Attività Sportive)</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.onboardingChecklistItem, checklistItems.fiscal_code_acquired && styles.onboardingChecklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, fiscal_code_acquired: !checklistItems.fiscal_code_acquired})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.fiscal_code_acquired ? '☑️' : '⬜'}</Text>
+                <Text style={styles.onboardingChecklistText}>Codice fiscale acquisito</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.onboardingChecklistItem, checklistItems.criminal_record && styles.onboardingChecklistItemChecked]}
+                onPress={() => setChecklistItems({...checklistItems, criminal_record: !checklistItems.criminal_record})}
+              >
+                <Text style={{ fontSize: 22 }}>{checklistItems.criminal_record ? '☑️' : '⬜'}</Text>
+                <Text style={styles.onboardingChecklistText}>Certificato casellario giudiziale (se richiesto)</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.onboardingModalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setEditingOnboarding(false)}
+                >
+                  <Text style={styles.modalCancelBtnText}>Annulla</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.onboardingSaveBtn, savingOnboarding && styles.disabledBtn]}
+                  onPress={handleSaveOnboarding}
+                  disabled={savingOnboarding}
+                >
+                  {savingOnboarding ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.onboardingSaveBtnText}>Salva</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* Reset Password Modal */}
       <Modal
         visible={resetPasswordVisible}
@@ -1864,5 +2016,84 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginTop: 4,
+  },
+  // Checklist button styles
+  checklistButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 12,
+  },
+  checklistButtonComplete: {
+    backgroundColor: '#4CAF50',
+  },
+  checklistButtonIncomplete: {
+    backgroundColor: '#F44336',
+  },
+  checklistButtonTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  checklistButtonSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  // Onboarding modal styles
+  onboardingModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '92%',
+    maxWidth: 500,
+    maxHeight: '90%',
+  },
+  onboardingChecklistHeader: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  onboardingChecklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 10,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  onboardingChecklistItemChecked: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#34C759',
+  },
+  onboardingChecklistText: {
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 12,
+    flex: 1,
+  },
+  onboardingModalButtons: {
+    flexDirection: 'row',
+    marginTop: 20,
+    gap: 12,
+  },
+  onboardingSaveBtn: {
+    flex: 1.5,
+    padding: 14,
+    backgroundColor: '#34C759',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onboardingSaveBtnText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
   },
 });
