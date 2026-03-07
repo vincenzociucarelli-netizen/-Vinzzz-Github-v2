@@ -45,6 +45,20 @@ export default function CoachProfile() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [selectedPhotoTitle, setSelectedPhotoTitle] = useState('');
   
+  // Collapsible sections state
+  const [sectionsExpanded, setSectionsExpanded] = useState({
+    anagrafici: false,
+    fiscali: false,
+    bancari: false,
+  });
+  
+  const toggleSection = (section: 'anagrafici' | 'fiscali' | 'bancari') => {
+    setSectionsExpanded(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+  
   // Profile data
   const [profileData, setProfileData] = useState({
     email: '',
@@ -879,116 +893,144 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
 
         {/* Profile Photo Section - RIMOSSA per privacy */}
 
-        {/* Account Info */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>👤 Account</Text>
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Email</Text>
-            <Text style={styles.fieldValue}>{profileData.email}</Text>
+        {/* Account Info - Compact */}
+        <View style={[styles.card, { paddingVertical: 12 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>👤 Account</Text>
+            <Text style={{ fontSize: 14, color: '#666' }}>{profileData.email}</Text>
           </View>
         </View>
 
-        {/* Personal Data */}
+        {/* Personal Data - Collapsible */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📋 Dati Anagrafici</Text>
-          {renderField('Nome', profileData.first_name, 'first_name')}
-          {renderField('Cognome', profileData.last_name, 'last_name')}
-          {renderField('Data di Nascita', profileData.date_of_birth, 'date_of_birth')}
+          <TouchableOpacity 
+            style={styles.collapsibleHeader}
+            onPress={() => toggleSection('anagrafici')}
+          >
+            <Text style={styles.cardTitle}>📋 Dati Anagrafici</Text>
+            <Ionicons 
+              name={sectionsExpanded.anagrafici ? "chevron-up" : "chevron-down"} 
+              size={24} 
+              color="#666" 
+            />
+          </TouchableOpacity>
           
-          {/* Stato di Nascita - Dropdown */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Stato di Nascita</Text>
-            {editing ? (
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={editData.country_of_birth}
-                  onValueChange={(value) => setEditData({...editData, country_of_birth: value})}
-                  style={styles.picker}
-                >
-                  {COUNTRIES.map((country) => (
-                    <Picker.Item key={country} label={country} value={country} />
-                  ))}
-                </Picker>
+          {sectionsExpanded.anagrafici && (
+            <View style={styles.collapsibleContent}>
+              {renderField('Nome', profileData.first_name, 'first_name')}
+              {renderField('Cognome', profileData.last_name, 'last_name')}
+              {renderField('Data di Nascita', profileData.date_of_birth, 'date_of_birth')}
+              
+              {/* Stato di Nascita - Dropdown */}
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Stato di Nascita</Text>
+                {editing ? (
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={editData.country_of_birth}
+                      onValueChange={(value) => setEditData({...editData, country_of_birth: value})}
+                      style={styles.picker}
+                    >
+                      {COUNTRIES.map((country) => (
+                        <Picker.Item key={country} label={country} value={country} />
+                      ))}
+                    </Picker>
+                  </View>
+                ) : (
+                  <Text style={styles.fieldValue}>{profileData.country_of_birth || DEFAULT_COUNTRY}</Text>
+                )}
               </View>
-            ) : (
-              <Text style={styles.fieldValue}>{profileData.country_of_birth || DEFAULT_COUNTRY}</Text>
-            )}
-          </View>
-          
-          {renderField('Luogo di Nascita', profileData.place_of_birth, 'place_of_birth')}
-          {renderField('Provincia di Nascita', profileData.province_of_birth, 'province_of_birth')}
-          {renderField('Indirizzo', profileData.address, 'address')}
-          {renderField('Città', profileData.city, 'city')}
-          
-          {/* CAP e Provincia sulla stessa riga */}
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              {renderField('CAP', profileData.postal_code, 'postal_code')}
+              
+              {renderField('Luogo di Nascita', profileData.place_of_birth, 'place_of_birth')}
+              {renderField('Provincia di Nascita', profileData.province_of_birth, 'province_of_birth')}
+              {renderField('Indirizzo', profileData.address, 'address')}
+              {renderField('Città', profileData.city, 'city')}
+              
+              {/* CAP e Provincia sulla stessa riga */}
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  {renderField('CAP', profileData.postal_code, 'postal_code')}
+                </View>
+                <View style={{ flex: 1 }}>
+                  {renderField('Provincia', profileData.province, 'province')}
+                </View>
+              </View>
+              
+              {renderField('Telefono', profileData.phone, 'phone')}
             </View>
-            <View style={{ flex: 1 }}>
-              {renderField('Provincia', profileData.province, 'province')}
-            </View>
-          </View>
-          
-          {renderField('Telefono', profileData.phone, 'phone')}
+          )}
         </View>
 
-        {/* Fiscal Data */}
+        {/* Fiscal Data - Collapsible */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>💼 Dati Fiscali</Text>
+          <TouchableOpacity 
+            style={styles.collapsibleHeader}
+            onPress={() => toggleSection('fiscali')}
+          >
+            <Text style={styles.cardTitle}>💼 Dati Fiscali</Text>
+            <Ionicons 
+              name={sectionsExpanded.fiscali ? "chevron-up" : "chevron-down"} 
+              size={24} 
+              color="#666" 
+            />
+          </TouchableOpacity>
           
-          {/* Gender Selection */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Sesso</Text>
-            {editing ? (
-              <View style={styles.genderButtons}>
-                <TouchableOpacity 
-                  style={[styles.genderBtn, editData.gender === 'M' && styles.genderBtnActive]}
-                  onPress={() => setEditData({...editData, gender: 'M'})}
-                >
-                  <Text style={[styles.genderBtnText, editData.gender === 'M' && styles.genderBtnTextActive]}>M</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.genderBtn, editData.gender === 'F' && styles.genderBtnActive]}
-                  onPress={() => setEditData({...editData, gender: 'F'})}
-                >
-                  <Text style={[styles.genderBtnText, editData.gender === 'F' && styles.genderBtnTextActive]}>F</Text>
-                </TouchableOpacity>
+          {sectionsExpanded.fiscali && (
+            <View style={styles.collapsibleContent}>
+              {/* Gender Selection */}
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Sesso</Text>
+                {editing ? (
+                  <View style={styles.genderButtons}>
+                    <TouchableOpacity 
+                      style={[styles.genderBtn, editData.gender === 'M' && styles.genderBtnActive]}
+                      onPress={() => setEditData({...editData, gender: 'M'})}
+                    >
+                      <Text style={[styles.genderBtnText, editData.gender === 'M' && styles.genderBtnTextActive]}>M</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.genderBtn, editData.gender === 'F' && styles.genderBtnActive]}
+                      onPress={() => setEditData({...editData, gender: 'F'})}
+                    >
+                      <Text style={[styles.genderBtnText, editData.gender === 'F' && styles.genderBtnTextActive]}>F</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <Text style={styles.fieldValue}>{profileData.gender || '-'}</Text>
+                )}
               </View>
-            ) : (
-              <Text style={styles.fieldValue}>{profileData.gender || '-'}</Text>
-            )}
-          </View>
 
-          {/* Codice Fiscale with Calculate Button */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Codice Fiscale</Text>
-            {editing ? (
-              <View style={styles.cfCalculateRow}>
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  value={editData.fiscal_code || ''}
-                  onChangeText={(text) => setEditData({...editData, fiscal_code: text.toUpperCase()})}
-                  autoCapitalize="characters"
-                  maxLength={16}
-                  placeholder="CODICE FISCALE"
-                  placeholderTextColor="#999"
-                />
-                <TouchableOpacity 
-                  style={styles.calculateCfBtn}
-                  onPress={handleCalculateCF}
-                  disabled={!editData.gender || !editData.date_of_birth || !editData.place_of_birth || !editData.first_name || !editData.last_name}
-                >
-                  <Ionicons name="calculator" size={18} color="#fff" />
-                  <Text style={styles.calculateCfBtnText}>Calcola</Text>
-                </TouchableOpacity>
+              {/* Codice Fiscale with Calculate Button */}
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Codice Fiscale</Text>
+                {editing ? (
+                  <View style={styles.cfCalculateRow}>
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      value={editData.fiscal_code || ''}
+                      onChangeText={(text) => setEditData({...editData, fiscal_code: text.toUpperCase()})}
+                      autoCapitalize="characters"
+                      maxLength={16}
+                      placeholder="CODICE FISCALE"
+                      placeholderTextColor="#999"
+                    />
+                    <TouchableOpacity 
+                      style={styles.calculateCfBtn}
+                      onPress={handleCalculateCF}
+                      disabled={!editData.gender || !editData.date_of_birth || !editData.place_of_birth || !editData.first_name || !editData.last_name}
+                    >
+                      <Ionicons name="calculator" size={18} color="#fff" />
+                      <Text style={styles.calculateCfBtnText}>Calcola</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <Text style={styles.fieldValue}>{profileData.fiscal_code || '-'}</Text>
+                )}
               </View>
-            ) : (
-              <Text style={styles.fieldValue}>{profileData.fiscal_code || '-'}</Text>
-            )}
-          </View>
 
-          {renderField('N° Tesserino Allenatore', profileData.coach_license_number, 'coach_license_number')}
+              {renderField('N° Tesserino Allenatore', profileData.coach_license_number, 'coach_license_number')}
+            </View>
+          )}
         </View>
 
         {/* Compensation Info */}
@@ -1655,6 +1697,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 16,
+  },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 8,
+  },
+  collapsibleContent: {
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
   fieldContainer: {
     marginBottom: 12,
