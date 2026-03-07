@@ -122,6 +122,9 @@ export default function AdminDirigenteDetail() {
   // Signed receipts
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
   
+  // Modal quietanze firmate
+  const [receiptsModalVisible, setReceiptsModalVisible] = useState(false);
+  
   // Documenti firmati
   const [userDocuments, setUserDocuments] = useState<any[]>([]);
   const [documentsModalVisible, setDocumentsModalVisible] = useState(false);
@@ -1129,12 +1132,19 @@ export default function AdminDirigenteDetail() {
             </View>
           )}
           
-          {/* Totale già percepito (quietanze firmate) */}
+          {/* Totale già percepito (quietanze firmate) - Banner cliccabile */}
           {signedReceipts.filter((r: any) => r.receipt_signed).length > 0 && (
-            <View style={{ marginTop: 12, padding: 12, backgroundColor: '#E8F5E9', borderRadius: 8 }}>
+            <TouchableOpacity 
+              style={{ marginTop: 12, padding: 12, backgroundColor: '#E3F2FD', borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9' }}
+              onPress={() => setReceiptsModalVisible(true)}
+              activeOpacity={0.7}
+            >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ color: '#2E7D32', fontWeight: '500' }}>💰 Già Percepito:</Text>
-                <Text style={{ fontWeight: 'bold', color: '#2E7D32', fontSize: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ color: '#1565C0', fontWeight: '500' }}>💰 Già Percepito:</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#1565C0" style={{ marginLeft: 4 }} />
+                </View>
+                <Text style={{ fontWeight: 'bold', color: '#1565C0', fontSize: 16 }}>
                   {formatCurrency(signedReceipts
                     .filter((r: any) => r.receipt_signed)
                     .reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0)
@@ -1142,128 +1152,13 @@ export default function AdminDirigenteDetail() {
                 </Text>
               </View>
               <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate
+                {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate - Tocca per vedere
               </Text>
-            </View>
+            </TouchableOpacity>
           )}
         </View>
 
-        {/* Storico Quietanze Firmate - Dati reali dal database */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>📋 Quietanze Firmate</Text>
-          <Text style={styles.historySubtitle}>Quietanze effettivamente firmate dal dirigente</Text>
-          
-          {signedReceipts.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>Nessuna quietanza firmata</Text>
-            </View>
-          ) : (
-            (() => {
-              const signedOnly = signedReceipts.filter(r => r.receipt_signed === true);
-              
-              // Sort chronologically to calculate thresholds
-              const sortedForCalc = [...signedOnly].sort((a: any, b: any) => {
-                if (a.year !== b.year) return a.year - b.year;
-                return a.month - b.month;
-              });
-              
-              // Calculate threshold months per year based on cumulative totals
-              const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
-              const cumulativeByYear: { [year: number]: number } = {};
-              const priorComp = dirigente?.other_annual_compensation || 0;
-              const contractYear = dirigente?.contract_start_date ? parseInt(dirigente.contract_start_date.split('-')[0]) : new Date().getFullYear();
-              
-              // Add prior compensation to first year
-              if (priorComp > 0) {
-                cumulativeByYear[contractYear] = priorComp;
-              }
-              
-              for (const r of sortedForCalc) {
-                if (!thresholdsByYear[r.year]) {
-                  thresholdsByYear[r.year] = { first5k: null, first15k: null };
-                }
-                if (!cumulativeByYear[r.year]) {
-                  cumulativeByYear[r.year] = r.year === contractYear ? (priorComp || 0) : 0;
-                }
-                
-                cumulativeByYear[r.year] += (r.amount_gross || r.amount || 0);
-                
-                if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
-                  thresholdsByYear[r.year].first5k = r.month;
-                }
-                if (cumulativeByYear[r.year] > 15000 && thresholdsByYear[r.year].first15k === null) {
-                  thresholdsByYear[r.year].first15k = r.month;
-                }
-              }
-              
-              // Sort for display (newest first)
-              const sortedForDisplay = [...signedOnly].sort((a: any, b: any) => {
-                if (a.year !== b.year) return b.year - a.year;
-                return b.month - a.month;
-              });
-              
-              return sortedForDisplay.map((receipt: any) => {
-                const monthNames = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 
-                                   'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
-                const monthLabel = `${monthNames[receipt.month]} ${receipt.year}`;
-                
-                // Check if this month is at or after threshold
-                const yearThresholds = thresholdsByYear[receipt.year] || { first5k: null, first15k: null };
-                const isAfter5k = yearThresholds.first5k !== null && receipt.month >= yearThresholds.first5k;
-                const isAfter15k = yearThresholds.first15k !== null && receipt.month >= yearThresholds.first15k;
-                const isThreshold5kMonth = yearThresholds.first5k === receipt.month;
-                const isThreshold15kMonth = yearThresholds.first15k === receipt.month;
-                
-                return (
-                  <View key={`${receipt.year}-${receipt.month}`} style={[
-                    {
-                      backgroundColor: isAfter15k ? '#F3E5F5' : isAfter5k ? '#FFF8E1' : '#E8F5E9',
-                      paddingVertical: 8, 
-                      paddingHorizontal: 10,
-                      marginBottom: 6,
-                      borderLeftWidth: 3,
-                      borderLeftColor: isAfter15k ? '#8E44AD' : isAfter5k ? '#FF9800' : '#4CAF50',
-                      borderRadius: 6,
-                    }
-                  ]}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>
-                          {monthLabel}
-                        </Text>
-                        {isThreshold5kMonth && !isThreshold15kMonth && (
-                          <View style={{ backgroundColor: '#FF9800', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
-                            <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;5K</Text>
-                          </View>
-                        )}
-                        {isThreshold15kMonth && (
-                          <View style={{ backgroundColor: '#8E44AD', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
-                            <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;15K</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
-                        {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
-                      </Text>
-                    </View>
-                    <View style={styles.monthStatus}>
-                      <View style={[styles.paidBadge, styles.paidBadgeActive]}>
-                        <Ionicons name="checkmark" size={14} color="#fff" />
-                        <Text style={[styles.paidText, styles.paidTextActive]}>FIRMATA</Text>
-                      </View>
-                    </View>
-                  </View>
-                );
-              });
-            })()
-          )}
-          
-          {signedReceipts.filter(r => r.receipt_signed === true).length === 0 && signedReceipts.length > 0 && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>Nessuna quietanza firmata ancora</Text>
-            </View>
-          )}
-        </View>
+        {/* Dati Bancari - Solo visualizzazione per Admin */}
 
         {/* Documenti e IBAN - Solo per utenti approvati */}
         {dirigente.status === 'approved' && (
@@ -1441,6 +1336,136 @@ export default function AdminDirigenteDetail() {
             >
               <Text style={styles.qualificationModalCancelText}>Annulla</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Quietanze Firmate Modal */}
+      <Modal
+        visible={receiptsModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setReceiptsModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '85%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333' }}>📋 Quietanze Firmate</Text>
+              <TouchableOpacity onPress={() => setReceiptsModalVisible(false)}>
+                <Ionicons name="close-circle" size={28} color="#999" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={{ padding: 12 }}>
+              {/* Totale */}
+              <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 10, marginBottom: 12 }}>
+                <Text style={{ color: '#2E7D32', fontWeight: '600', fontSize: 13 }}>💰 Totale Percepito</Text>
+                <Text style={{ color: '#2E7D32', fontWeight: 'bold', fontSize: 24, marginTop: 2 }}>
+                  {formatCurrency(signedReceipts
+                    .filter((r: any) => r.receipt_signed)
+                    .reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0)
+                    )}
+                </Text>
+                <Text style={{ color: '#666', fontSize: 11 }}>
+                  {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate
+                </Text>
+              </View>
+              
+              {/* Lista quietanze compatta - con calcolo soglie dinamico */}
+              {(() => {
+                const signedOnly = signedReceipts.filter((r: any) => r.receipt_signed);
+                
+                // Sort chronologically to calculate thresholds
+                const sortedForCalc = [...signedOnly].sort((a: any, b: any) => {
+                  if (a.year !== b.year) return a.year - b.year;
+                  return a.month - b.month;
+                });
+                
+                // Calculate threshold months per year
+                const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
+                const cumulativeByYear: { [year: number]: number } = {};
+                const priorComp = dirigente?.other_annual_compensation || 0;
+                const contractYear = dirigente?.contract_start_date ? parseInt(dirigente.contract_start_date.split('-')[0]) : new Date().getFullYear();
+                
+                // Add prior compensation to first year
+                if (priorComp > 0) {
+                  cumulativeByYear[contractYear] = priorComp;
+                }
+                
+                for (const r of sortedForCalc) {
+                  if (!thresholdsByYear[r.year]) {
+                    thresholdsByYear[r.year] = { first5k: null, first15k: null };
+                  }
+                  if (!cumulativeByYear[r.year]) {
+                    cumulativeByYear[r.year] = r.year === contractYear ? (priorComp || 0) : 0;
+                  }
+                  
+                  cumulativeByYear[r.year] += (r.amount_gross || r.amount || 0);
+                  
+                  if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
+                    thresholdsByYear[r.year].first5k = r.month;
+                  }
+                  if (cumulativeByYear[r.year] > 15000 && thresholdsByYear[r.year].first15k === null) {
+                    thresholdsByYear[r.year].first15k = r.month;
+                  }
+                }
+                
+                // Now render sorted by most recent first
+                const sortedForDisplay = [...signedOnly].sort((a: any, b: any) => {
+                  if (a.year !== b.year) return b.year - a.year;
+                  return b.month - a.month;
+                });
+                
+                return sortedForDisplay.map((receipt: any, index: number) => {
+                  const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                  
+                  // Check if this month is at or after threshold
+                  const yearThresholds = thresholdsByYear[receipt.year] || { first5k: null, first15k: null };
+                  const isAfter5k = yearThresholds.first5k !== null && receipt.month >= yearThresholds.first5k;
+                  const isAfter15k = yearThresholds.first15k !== null && receipt.month >= yearThresholds.first15k;
+                  const isThreshold5kMonth = yearThresholds.first5k === receipt.month;
+                  const isThreshold15kMonth = yearThresholds.first15k === receipt.month;
+                  
+                  return (
+                    <View 
+                      key={index} 
+                      style={{ 
+                        backgroundColor: isAfter15k ? '#F3E5F5' : isAfter5k ? '#FFF8E1' : '#E8F5E9',
+                        paddingVertical: 8, 
+                        paddingHorizontal: 10,
+                        marginBottom: 6,
+                        borderLeftWidth: 3,
+                        borderLeftColor: isAfter15k ? '#8E44AD' : isAfter5k ? '#FF9800' : '#4CAF50',
+                        borderRadius: 6,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>
+                            {MONTH_NAMES[receipt.month]} {receipt.year}
+                          </Text>
+                          {isThreshold5kMonth && !isThreshold15kMonth && (
+                            <View style={{ backgroundColor: '#FF9800', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
+                              <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;5K</Text>
+                            </View>
+                          )}
+                          {isThreshold15kMonth && (
+                            <View style={{ backgroundColor: '#8E44AD', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
+                              <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;15K</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
+                          {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                });
+              })()}
+              
+              <View style={{ height: 20 }} />
+            </ScrollView>
           </View>
         </View>
       </Modal>
