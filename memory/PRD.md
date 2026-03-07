@@ -19,6 +19,13 @@ Piattaforma di gestione per società sportive dilettantistiche, con focus su ges
 
 ## Implementazioni Completate
 
+### 7 Marzo 2026 (Mattina)
+- ✅ **Date contratto leggibili**: Formato `01/09/2025 - 31/05/2026` invece di ISO con timestamp
+- ✅ **Timestamp PDF ora Roma**: Convertito da UTC a Europe/Rome (gestisce ora legale/solare)
+- ✅ **Documenti ordinati**: "I Miei Documenti" ora mostra i più recenti in alto
+- ✅ **Freccia ritorno più grande**: Vista squadre dirigente - icona 28px con sfondo grigio
+- ✅ **Sezione Compenso nascosta durante editing**: Profilo dirigente - previene perdita dati
+
 ### 6 Marzo 2026
 - ✅ Corretto logica soglie: superamento da €5.001 e €15.001 (non €5.000 e €15.000)
 - ✅ Uniformato comportamento per Collaboratori, Coach, Dirigenti
@@ -28,20 +35,13 @@ Piattaforma di gestione per società sportive dilettantistiche, con focus su ges
 - ✅ Fix banner "Dichiarazione richiesta" dopo firma
 - ✅ Endpoint DELETE per cancellare ricevute (admin only)
 
-### Sessioni Precedenti
-- ✅ Gestione ruolo `dirigente` con login e routing
-- ✅ Standardizzazione `ragione_sociale` su tutti i documenti
-- ✅ Fix timestamp notifiche
-- ✅ Fix data loss su profili
-- ✅ Visualizzazione assegnazioni collaboratori
-- ✅ Rimozione item obsoleti da checklist admin
+## Ruoli Testati e Funzionanti
+- ✅ **Dirigente**: Profilo, compensi, soglie €5k/€15k, email
+- ✅ **Collaboratore**: Profilo, compensi, soglie €5k/€15k, email
 
-## Ruoli Supportati
-- **Admin**: Gestione completa
-- **Coach**: Profilo, compensi, squadre
-- **Collaboratore**: Profilo, compensi, assegnazioni
-- **Dirigente**: Profilo, compensi
-- **Atleta 18+**: Profilo, documenti
+## Ruoli Da Testare
+- ⏳ **Coach**: Flusso compensi e soglie (struttura già allineata)
+- ⏳ **Atleta 18+**: Regressione completa
 
 ## Soglie Fiscali (Logica Corretta)
 ```
@@ -50,15 +50,17 @@ Piattaforma di gestione per società sportive dilettantistiche, con focus su ges
 €15.001+: IRPEF + INPS (ritenuta ~33%)
 ```
 
-## File Chiave
-- `/app/backend/server.py` - API principale
-- `/app/frontend/app/collaboratore/compensation.tsx` - Compensi collaboratore
-- `/app/frontend/app/coach/compensation.tsx` - Compensi coach
-- `/app/frontend/app/dirigente/compensation.tsx` - Compensi dirigente
+## File Modificati Oggi
+- `/app/frontend/app/dirigente/compensation.tsx` - formatContractDate helper
+- `/app/frontend/app/coach/compensation.tsx` - formatContractDate helper
+- `/app/frontend/app/collaboratore/compensation.tsx` - formatContractDate helper
+- `/app/frontend/app/dirigente/team/[id].tsx` - freccia back più grande
+- `/app/frontend/app/dirigente/profile.tsx` - sezione Compenso nascosta in editing
+- `/app/backend/server.py` - to_rome_time, format_rome_timestamp, ordinamento documenti
 
 ## Backlog (P1)
 - [ ] Test completo flusso coach superamento €15k
-- [ ] Regressione completa Atleti 18+, Coach, Collaboratori
+- [ ] Regressione completa Atleti 18+
 - [ ] Implementazione flussi Minorenni
 
 ## Backlog (P2-P3)
@@ -69,4 +71,5 @@ Piattaforma di gestione per società sportive dilettantistiche, con focus su ges
 
 ## Credenziali Test
 - Admin: `pallavoloperugia@gmail.com` / `password`
+- Dirigente (Remo): `remo@test.com`
 - Collaboratore (Dina Lampa): `dina@test.com`
