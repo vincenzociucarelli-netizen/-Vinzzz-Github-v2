@@ -774,13 +774,6 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           ) : (
             <View style={styles.headerButtonsRow}>
               <TouchableOpacity
-                style={[styles.actionButton, styles.editButton]}
-                onPress={() => setEditing(true)}
-              >
-                <Ionicons name="pencil" size={20} color="#007AFF" />
-                <Text style={styles.editButtonText}>Modifica Dati</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={[styles.actionButton, styles.passwordButton]}
                 onPress={() => setShowChangePassword(!showChangePassword)}
               >
@@ -1798,7 +1791,7 @@ const styles = StyleSheet.create({
     color: '#F57C00',
   },
   compensationAmount: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#007AFF',
     marginTop: 4,
