@@ -9560,16 +9560,37 @@ async def get_coach_threshold_status(
     # Warning only if the NEXT receipt would cross the threshold
     next_total = yearly_total + monthly_compensation
     
+    # Get prior compensation for the first year of contract
+    prior_compensation = coach.get("other_annual_compensation", 0) or coach.get("prior_year_compensation", 0) or 0
+    contract_start = coach.get("contract_start_date")
+    contract_year = None
+    if contract_start:
+        try:
+            contract_year = int(str(contract_start).split('-')[0].split('T')[0])
+        except:
+            pass
+    
+    # Only apply prior compensation to the first year
+    if contract_year and contract_year != year:
+        prior_compensation = 0
+    
+    # IMPORTANT: If prior compensation already exceeded €5k, that declaration was made to OTHER clubs
+    # We only need €5k declaration if the threshold is crossed WITH US (not already exceeded via pregressi)
+    prior_already_exceeded_5k = prior_compensation > 5000
+    prior_already_exceeded_15k = prior_compensation > 15000
+    
     # Status flags - warning only if NEXT receipt goes OVER threshold (€5.001 or €15.001)
-    needs_warning_5000 = yearly_total <= 5000 and next_total > 5000
-    needs_warning_15000 = yearly_total <= 15000 and next_total > 15000
+    # Don't warn for €5k if pregressi already exceeded it
+    needs_warning_5000 = (not prior_already_exceeded_5k) and yearly_total <= 5000 and next_total > 5000
+    needs_warning_15000 = (not prior_already_exceeded_15k) and yearly_total <= 15000 and next_total > 15000
     
     # Calculate warning threshold values (when warning should show)
     warning_5000_threshold = 5000 - monthly_compensation if monthly_compensation > 0 else 5000
     warning_15000_threshold = 15000 - monthly_compensation if monthly_compensation > 0 else 15000
     
-    needs_declaration_5000 = yearly_total > 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
-    needs_declaration_15000 = yearly_total > 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
+    # Don't require €5k declaration if pregressi already exceeded it (they declared it to other clubs)
+    needs_declaration_5000 = (not prior_already_exceeded_5k) and yearly_total > 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
+    needs_declaration_15000 = (not prior_already_exceeded_15k) and yearly_total > 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
     
     # Blocking status: can't sign new receipts if declaration is needed
     is_blocked = needs_declaration_5000 or needs_declaration_15000
@@ -13029,16 +13050,17 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     # Calculate if we're approaching thresholds
     next_total = total_with_prior + monthly_compensation
     
-    # Special case: if prior >= 5000, no €5k declaration needed
-    already_over_5k_from_prior = effective_prior >= 5000
+    # Special case: if prior > 5000, no €5k declaration needed (already declared to other clubs)
+    already_over_5k_from_prior = effective_prior > 5000
+    already_over_15k_from_prior = effective_prior > 15000
     
     # Warning flags
     approaching_5000 = not already_over_5k_from_prior and (total_with_prior < 5000 and next_total >= 5000)
-    approaching_15000 = (total_with_prior <= 15000 and next_total > 15000)
+    approaching_15000 = not already_over_15k_from_prior and (total_with_prior <= 15000 and next_total > 15000)
     
     # Declaration needed - superamento è da OLTRE la soglia (€5.001 e €15.001)
     needs_5000_declaration = not already_over_5k_from_prior and (total_with_prior > 5000 and not exceeded_5000_record)
-    needs_15000_declaration = (total_with_prior > 15000 and not exceeded_15000_record)
+    needs_15000_declaration = not already_over_15k_from_prior and (total_with_prior > 15000 and not exceeded_15000_record)
     is_blocked = needs_5000_declaration or needs_15000_declaration
     
     return {
@@ -13653,16 +13675,23 @@ async def get_collaboratore_threshold_status(
     # Calculate thresholds - Warning only if the NEXT receipt would cross the threshold
     next_total = yearly_total + monthly_compensation
     
+    # IMPORTANT: If prior compensation already exceeded €5k, that declaration was made to OTHER clubs
+    # We only need €5k declaration if the threshold is crossed WITH US (not already exceeded via pregressi)
+    prior_already_exceeded_5k = prior_compensation > 5000
+    prior_already_exceeded_15k = prior_compensation > 15000
+    
     # Status flags - warning only if NEXT receipt goes OVER threshold (€5.001 or €15.001)
-    needs_warning_5000 = yearly_total <= 5000 and next_total > 5000
-    needs_warning_15000 = yearly_total <= 15000 and next_total > 15000
+    # Don't warn for €5k if pregressi already exceeded it
+    needs_warning_5000 = (not prior_already_exceeded_5k) and yearly_total <= 5000 and next_total > 5000
+    needs_warning_15000 = (not prior_already_exceeded_15k) and yearly_total <= 15000 and next_total > 15000
     
     # Calculate warning threshold values
     warning_5000_threshold = 5000 - monthly_compensation if monthly_compensation > 0 else 5000
     warning_15000_threshold = 15000 - monthly_compensation if monthly_compensation > 0 else 15000
     
-    needs_declaration_5000 = yearly_total > 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
-    needs_declaration_15000 = yearly_total > 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
+    # Don't require €5k declaration if pregressi already exceeded it (they declared it to other clubs)
+    needs_declaration_5000 = (not prior_already_exceeded_5k) and yearly_total > 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
+    needs_declaration_15000 = (not prior_already_exceeded_15k) and yearly_total > 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
     
     # Blocking status: can't sign new receipts if declaration is needed
     is_blocked = needs_declaration_5000 or needs_declaration_15000
