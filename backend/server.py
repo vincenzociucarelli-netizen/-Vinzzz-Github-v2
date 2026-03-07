@@ -13572,6 +13572,130 @@ async def sign_collaboratore_compensation_receipt(
     }
 
 @api_router.get("/collaboratore/{collaboratore_id}/threshold-status/{year}")
+async def get_collaboratore_threshold_status(
+    collaboratore_id: str,
+    year: int,
+    current_user = Depends(get_current_user)
+):
+    """
+    Get the threshold status for a collaboratore for a specific year.
+    Returns info about €5.000 and €15.000 thresholds including:
+    - Current yearly total
+    - Monthly compensation
+    - Warning thresholds (total >= threshold - monthly_compensation)
+    - Required declarations (total >= threshold)
+    - Signed declarations
+    """
+    # Verify access
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COLLABORATORE]:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    if current_user["role"] == UserRole.COLLABORATORE and current_user["id"] != collaboratore_id:
+        raise HTTPException(status_code=403, detail="Puoi vedere solo i tuoi dati")
+    
+    # Get collaboratore data
+    collaboratore = await db.users.find_one({"id": collaboratore_id})
+    if not collaboratore:
+        raise HTTPException(status_code=404, detail="Collaboratore non trovato")
+    
+    monthly_compensation = collaboratore.get("monthly_compensation", 0) or 0
+    
+    # Calculate yearly total from signed receipts
+    yearly_records = await db.collaboratore_compensations.find({
+        "collaboratore_id": collaboratore_id,
+        "year": year,
+        "receipt_signed": True
+    }).to_list(12)
+    
+    yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
+    
+    # Add prior compensation if this is the first year of the contract
+    prior_compensation = collaboratore.get("other_annual_compensation", 0) or collaboratore.get("prior_year_compensation", 0) or 0
+    contract_start = collaboratore.get("contract_start_date")
+    if contract_start and prior_compensation > 0:
+        try:
+            contract_year = int(str(contract_start).split('-')[0].split('T')[0])
+            if contract_year == year:
+                yearly_total += prior_compensation
+        except:
+            pass
+    
+    # Get existing declarations for this year from threshold_declarations collection
+    declarations = await db.threshold_declarations.find({
+        "collaboratore_id": collaboratore_id,
+        "year": year
+    }).to_list(10)
+    
+    declaration_5000 = next((d for d in declarations if d.get("threshold_type") == "5000"), None)
+    declaration_15000 = next((d for d in declarations if d.get("threshold_type") == "15000"), None)
+    
+    # Also check signed_documents collection for threshold communications
+    signed_threshold_docs = await db.signed_documents.find({
+        "$or": [
+            {"collaboratore_id": collaboratore_id},
+            {"signer_id": collaboratore_id}
+        ],
+        "year": year,
+        "document_type": {"$in": ["threshold_5000_communication", "threshold_15000_communication"]}
+    }).to_list(10)
+    
+    # Check if threshold communications exist in signed_documents
+    if not declaration_5000:
+        declaration_5000 = next((d for d in signed_threshold_docs if d.get("document_type") == "threshold_5000_communication"), None)
+        if declaration_5000:
+            declaration_5000["signed"] = True
+    
+    if not declaration_15000:
+        declaration_15000 = next((d for d in signed_threshold_docs if d.get("document_type") == "threshold_15000_communication"), None)
+        if declaration_15000:
+            declaration_15000["signed"] = True
+    
+    # Calculate thresholds - Warning only if the NEXT receipt would cross the threshold
+    next_total = yearly_total + monthly_compensation
+    
+    # Status flags - warning only if NEXT receipt goes OVER threshold (€5.001 or €15.001)
+    needs_warning_5000 = yearly_total <= 5000 and next_total > 5000
+    needs_warning_15000 = yearly_total <= 15000 and next_total > 15000
+    
+    # Calculate warning threshold values
+    warning_5000_threshold = 5000 - monthly_compensation if monthly_compensation > 0 else 5000
+    warning_15000_threshold = 15000 - monthly_compensation if monthly_compensation > 0 else 15000
+    
+    needs_declaration_5000 = yearly_total > 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
+    needs_declaration_15000 = yearly_total > 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
+    
+    # Blocking status: can't sign new receipts if declaration is needed
+    is_blocked = needs_declaration_5000 or needs_declaration_15000
+    
+    return {
+        "collaboratore_id": collaboratore_id,
+        "collaboratore_name": collaboratore.get("full_name", ""),
+        "year": year,
+        "monthly_compensation": monthly_compensation,
+        "yearly_total": yearly_total,
+        "thresholds": {
+            "5000": {
+                "threshold": 5000,
+                "warning_at": warning_5000_threshold,
+                "needs_warning": needs_warning_5000,
+                "needs_declaration": needs_declaration_5000,
+                "declaration_signed": bool(declaration_5000 and declaration_5000.get("signed")),
+                "declaration_date": declaration_5000.get("signed_date") if declaration_5000 else None,
+                "document_id": declaration_5000.get("document_id") if declaration_5000 else None
+            },
+            "15000": {
+                "threshold": 15000,
+                "warning_at": warning_15000_threshold,
+                "needs_warning": needs_warning_15000,
+                "needs_declaration": needs_declaration_15000,
+                "declaration_signed": bool(declaration_15000 and declaration_15000.get("signed")),
+                "declaration_date": declaration_15000.get("signed_date") if declaration_15000 else None,
+                "document_id": declaration_15000.get("document_id") if declaration_15000 else None
+            }
+        },
+        "is_blocked": is_blocked,
+        "block_reason": "Devi firmare la dichiarazione di superamento soglia prima di poter firmare nuove quietanze" if is_blocked else None
+    }
 
 
 # Temporary endpoint to delete a specific collaboratore receipt (for testing)

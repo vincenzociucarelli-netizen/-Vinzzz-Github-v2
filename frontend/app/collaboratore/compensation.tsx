@@ -588,13 +588,14 @@ export default function CollaboratoreCompensation() {
     
     const warnings = [];
     
+    // ==================== FIRST YEAR (contractStartYear) WARNINGS ====================
     // Warning for approaching €5.000
     if (thresholdStatus.thresholds['5000'].needs_warning && !thresholdStatus.thresholds['5000'].declaration_signed) {
       warnings.push(
         <View key="warning-5000" style={[styles.thresholdBanner, { backgroundColor: '#FFF3CD' }]}>
           <Ionicons name="warning" size={18} color="#856404" />
           <View style={styles.thresholdBannerContent}>
-            <Text style={styles.thresholdBannerTitle}>Attenzione: Prossima soglia €5.000</Text>
+            <Text style={styles.thresholdBannerTitle}>Anno {contractStartYear}: Prossima soglia €5.000</Text>
             <Text style={styles.thresholdBannerText}>
               Con la prossima quietanza supererai la soglia previdenziale di €5.000.
             </Text>
@@ -609,7 +610,7 @@ export default function CollaboratoreCompensation() {
         <View key="warning-15000" style={[styles.thresholdBanner, { backgroundColor: '#F8D7DA' }]}>
           <Ionicons name="alert-circle" size={18} color="#721C24" />
           <View style={styles.thresholdBannerContent}>
-            <Text style={[styles.thresholdBannerTitle, { color: '#721C24' }]}>Attenzione: Prossima soglia €15.000</Text>
+            <Text style={[styles.thresholdBannerTitle, { color: '#721C24' }]}>Anno {contractStartYear}: Prossima soglia €15.000</Text>
             <Text style={[styles.thresholdBannerText, { color: '#721C24' }]}>
               Con la prossima quietanza supererai la soglia fiscale di €15.000.
             </Text>
@@ -630,7 +631,7 @@ export default function CollaboratoreCompensation() {
           <Ionicons name="lock-closed" size={18} color="#fff" />
           <View style={styles.thresholdBannerContent}>
             <Text style={[styles.thresholdBannerTitle, { color: '#fff' }]}>
-              Dichiarazione €5.000 richiesta
+              Anno {contractStartYear}: Dichiarazione €5.000 richiesta
             </Text>
             <Text style={[styles.thresholdBannerText, { color: '#fff' }]}>
               Tocca qui per firmare la dichiarazione e sbloccare le quietanze
@@ -653,7 +654,7 @@ export default function CollaboratoreCompensation() {
           <Ionicons name="lock-closed" size={18} color="#fff" />
           <View style={styles.thresholdBannerContent}>
             <Text style={[styles.thresholdBannerTitle, { color: '#fff' }]}>
-              URGENTE: Dichiarazione €15.000 richiesta
+              Anno {contractStartYear}: URGENTE - Dichiarazione €15.000 richiesta
             </Text>
             <Text style={[styles.thresholdBannerText, { color: '#fff' }]}>
               Tocca qui per firmare la dichiarazione fiscale
@@ -664,14 +665,14 @@ export default function CollaboratoreCompensation() {
       );
     }
     
-    // Show signed declarations
+    // Show signed declarations for first year
     if (thresholdStatus.thresholds['5000'].declaration_signed) {
       warnings.push(
         <View key="signed-5000" style={[styles.thresholdBanner, { backgroundColor: '#D4EDDA' }]}>
           <Ionicons name="checkmark-circle" size={18} color="#155724" />
           <View style={styles.thresholdBannerContent}>
             <Text style={[styles.thresholdBannerTitle, { color: '#155724' }]}>
-              Dichiarazione €5.000 firmata
+              Anno {contractStartYear}: Dichiarazione €5.000 firmata
             </Text>
             <Text style={[styles.thresholdBannerText, { color: '#155724' }]}>
               Soglia previdenziale comunicata
@@ -687,7 +688,7 @@ export default function CollaboratoreCompensation() {
           <Ionicons name="checkmark-circle" size={18} color="#155724" />
           <View style={styles.thresholdBannerContent}>
             <Text style={[styles.thresholdBannerTitle, { color: '#155724' }]}>
-              Dichiarazione €15.000 firmata
+              Anno {contractStartYear}: Dichiarazione €15.000 firmata
             </Text>
             <Text style={[styles.thresholdBannerText, { color: '#155724' }]}>
               Soglia fiscale comunicata
@@ -695,6 +696,66 @@ export default function CollaboratoreCompensation() {
           </View>
         </View>
       );
+    }
+    
+    // ==================== SECOND YEAR (2026) WARNINGS ====================
+    if (thresholdStatus2026 && contractEndYear && contractEndYear > contractStartYear) {
+      const year2026 = contractEndYear;
+      
+      // Show signed declarations for 2026
+      if (thresholdStatus2026.thresholds['5000'].declaration_signed) {
+        warnings.push(
+          <View key="signed-5000-2026" style={[styles.thresholdBanner, { backgroundColor: '#E3F2FD', borderLeftColor: '#2196F3', borderLeftWidth: 4 }]}>
+            <Ionicons name="checkmark-circle" size={18} color="#1565C0" />
+            <View style={styles.thresholdBannerContent}>
+              <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Dichiarazione €5.000 firmata</Text>
+              <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>Soglia previdenziale comunicata</Text>
+            </View>
+          </View>
+        );
+      }
+      
+      if (thresholdStatus2026.thresholds['15000'].declaration_signed) {
+        warnings.push(
+          <View key="signed-15000-2026" style={[styles.thresholdBanner, { backgroundColor: '#FCE4EC', borderLeftColor: '#E91E63', borderLeftWidth: 4 }]}>
+            <Ionicons name="checkmark-circle" size={18} color="#C2185B" />
+            <View style={styles.thresholdBannerContent}>
+              <Text style={[styles.thresholdBannerTitle, { color: '#C2185B' }]}>Anno {year2026}: Dichiarazione €15.000 firmata</Text>
+              <Text style={[styles.thresholdBannerText, { color: '#C2185B' }]}>Soglia fiscale comunicata</Text>
+            </View>
+          </View>
+        );
+      }
+      
+      // Warning for approaching €5.000 in 2026 (not yet signed)
+      if (thresholdStatus2026.thresholds['5000'].needs_warning && !thresholdStatus2026.thresholds['5000'].declaration_signed) {
+        warnings.push(
+          <View key="warning-5000-2026" style={[styles.thresholdBanner, { backgroundColor: '#E3F2FD', borderLeftColor: '#2196F3', borderLeftWidth: 4 }]}>
+            <Ionicons name="information-circle" size={18} color="#1565C0" />
+            <View style={styles.thresholdBannerContent}>
+              <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Prossima soglia €5.000</Text>
+              <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>
+                Con la prossima quietanza del {year2026} supererai la soglia previdenziale.
+              </Text>
+            </View>
+          </View>
+        );
+      }
+      
+      // Warning for approaching €15.000 in 2026 (not yet signed)
+      if (thresholdStatus2026.thresholds['15000'].needs_warning && !thresholdStatus2026.thresholds['15000'].declaration_signed) {
+        warnings.push(
+          <View key="warning-15000-2026" style={[styles.thresholdBanner, { backgroundColor: '#FCE4EC', borderLeftColor: '#E91E63', borderLeftWidth: 4 }]}>
+            <Ionicons name="alert-circle" size={18} color="#C2185B" />
+            <View style={styles.thresholdBannerContent}>
+              <Text style={[styles.thresholdBannerTitle, { color: '#C2185B' }]}>Anno {year2026}: Prossima soglia €15.000</Text>
+              <Text style={[styles.thresholdBannerText, { color: '#C2185B' }]}>
+                Con la prossima quietanza del {year2026} supererai la soglia fiscale.
+              </Text>
+            </View>
+          </View>
+        );
+      }
     }
     
     return warnings.length > 0 ? <View style={styles.warningsContainer}>{warnings}</View> : null;
