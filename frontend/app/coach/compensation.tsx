@@ -847,18 +847,15 @@ export default function CoachCompensation() {
         {/* Year Summaries - Contract-based - ENHANCED STYLE */}
         {contractStartYear && contractEndYear && (
           <>
-            {/* Compensi Pregressi - Prominent Display */}
-            {priorCompensation > 0 && (
-              <View style={styles.priorCompBox}>
-                <Text style={styles.priorCompLabel}>Compensi Pregressi (dichiarati all'assunzione)</Text>
-                <Text style={styles.priorCompValue}>{formatCurrency(priorCompensation)}</Text>
-              </View>
-            )}
-            
-            {/* Contract Period Summary */}
-            <View style={styles.contractPeriodBox}>
-              <Text style={styles.contractPeriodLabel}>Periodo Contratto: {MONTH_NAMES[contractStartMonth || 1]} {contractStartYear} - {MONTH_NAMES[contractEndMonth || 1]} {contractEndYear}</Text>
-              <Text style={styles.contractPeriodValue}>
+            {/* Combined: Pregressi + Periodo Contratto + Totale RAS - Single unified banner */}
+            <View style={styles.unifiedContractBanner}>
+              {/* Header: Periodo Contratto */}
+              <Text style={styles.unifiedBannerPeriod}>
+                Periodo Contratto: {MONTH_NAMES[contractStartMonth || 1]} {contractStartYear} - {MONTH_NAMES[contractEndMonth || 1]} {contractEndYear}
+              </Text>
+              
+              {/* Calculation row */}
+              <Text style={styles.unifiedBannerCalc}>
                 {formatCurrency(profile?.monthly_compensation || 0)} × {(() => {
                   const months1 = getContractMonthsForYear(contractStartYear).length;
                   const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
@@ -869,6 +866,26 @@ export default function CoachCompensation() {
                   return (profile?.monthly_compensation || 0) * (months1 + months2);
                 })())}
               </Text>
+              
+              {/* Prior compensation if any */}
+              {priorCompensation > 0 && (
+                <View style={styles.unifiedBannerPrior}>
+                  <Text style={styles.unifiedBannerPriorLabel}>+ Compensi Pregressi (dichiarati)</Text>
+                  <Text style={styles.unifiedBannerPriorValue}>{formatCurrency(priorCompensation)}</Text>
+                </View>
+              )}
+              
+              {/* Total for RAS */}
+              <View style={styles.unifiedBannerTotal}>
+                <Text style={styles.unifiedBannerTotalLabel}>TOTALE PER RAS:</Text>
+                <Text style={styles.unifiedBannerTotalValue}>
+                  {formatCurrency((() => {
+                    const months1 = getContractMonthsForYear(contractStartYear).length;
+                    const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
+                    return (profile?.monthly_compensation || 0) * (months1 + months2) + (priorCompensation || 0);
+                  })())}
+                </Text>
+              </View>
             </View>
             
             {/* Calcolo per Anno Solare Header */}
@@ -909,8 +926,8 @@ export default function CoachCompensation() {
                     <Text style={[styles.yearBoxTotal, { color: exceeds15k ? '#C62828' : exceeds5k ? '#F57F17' : headerColor }]}>{formatCurrency(summary.totalProjected)}</Text>
                   </View>
                   
-                  {/* Threshold Warnings */}
-                  {exceeds5k && !exceeds15k && (
+                  {/* Threshold Warnings - Show both if both exceeded */}
+                  {exceeds5k && (
                     <View style={styles.thresholdWarningBox5k}>
                       <Text style={styles.thresholdWarningTitle5k}>⚠️ SUPERAMENTO € 5.000,00</Text>
                       <Text style={styles.thresholdWarningText5k}>Contributi previdenziali INPS</Text>
@@ -953,8 +970,8 @@ export default function CoachCompensation() {
                     <Text style={[styles.yearBoxTotal, { color: exceeds15k ? '#C62828' : exceeds5k ? '#F57F17' : headerColor }]}>{formatCurrency(summary.totalProjected)}</Text>
                   </View>
                   
-                  {/* Threshold Warnings */}
-                  {exceeds5k && !exceeds15k && (
+                  {/* Threshold Warnings - Show both if both exceeded */}
+                  {exceeds5k && (
                     <View style={styles.thresholdWarningBox5k}>
                       <Text style={styles.thresholdWarningTitle5k}>⚠️ SUPERAMENTO € 5.000,00</Text>
                       <Text style={styles.thresholdWarningText5k}>Contributi previdenziali INPS</Text>
@@ -969,25 +986,6 @@ export default function CoachCompensation() {
                 </View>
               );
             })()}
-            
-            {/* Totale Compenso Contratto */}
-            <View style={styles.totalContractBox}>
-              <Text style={styles.totalContractLabel}>Totale Compenso Contratto (per RAS)</Text>
-              <Text style={styles.totalContractValue}>
-                {formatCurrency((() => {
-                  const months1 = getContractMonthsForYear(contractStartYear).length;
-                  const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
-                  return (profile?.monthly_compensation || 0) * (months1 + months2);
-                })())}
-              </Text>
-              <Text style={styles.totalContractSubtext}>
-                ({formatCurrency(profile?.monthly_compensation || 0)} × {(() => {
-                  const months1 = getContractMonthsForYear(contractStartYear).length;
-                  const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
-                  return months1 + months2;
-                })()} mesi)
-              </Text>
-            </View>
           </>
         )}
         
@@ -1712,5 +1710,66 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#388E3C',
     marginTop: 4,
+  },
+  // Unified contract banner styles
+  unifiedContractBanner: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1976D2',
+  },
+  unifiedBannerPeriod: {
+    fontSize: 14,
+    color: '#1565C0',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  unifiedBannerCalc: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1565C0',
+    marginBottom: 8,
+  },
+  unifiedBannerPrior: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF9800',
+  },
+  unifiedBannerPriorLabel: {
+    fontSize: 13,
+    color: '#E65100',
+    fontWeight: '500',
+  },
+  unifiedBannerPriorValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E65100',
+  },
+  unifiedBannerTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#1976D2',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  unifiedBannerTotalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  unifiedBannerTotalValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
   },
 });

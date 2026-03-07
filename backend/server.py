@@ -9531,6 +9531,10 @@ async def get_coach_threshold_status(
     needs_warning_5000 = yearly_total <= 5000 and next_total > 5000
     needs_warning_15000 = yearly_total <= 15000 and next_total > 15000
     
+    # Calculate warning threshold values (when warning should show)
+    warning_5000_threshold = 5000 - monthly_compensation if monthly_compensation > 0 else 5000
+    warning_15000_threshold = 15000 - monthly_compensation if monthly_compensation > 0 else 15000
+    
     needs_declaration_5000 = yearly_total > 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
     needs_declaration_15000 = yearly_total > 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
     
