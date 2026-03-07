@@ -1103,87 +1103,118 @@ export default function AdminCollaboratoreDetail() {
           );
         })()}
 
-        {/* Documenti Firmati Section */}
-        <View style={styles.assignmentsSection}>
-          <Text style={styles.assignmentsSectionTitle}>📁 Documenti Firmati</Text>
-          
-          {userDocuments.length === 0 ? (
-            <Text style={{ color: '#666', fontStyle: 'italic', padding: 10 }}>
-              Nessun documento firmato
+        {/* Documenti Firmati Button - Same style as Checklist Onboarding */}
+        <TouchableOpacity 
+          style={[
+            styles.checklistButton,
+            { backgroundColor: '#3498DB' }  // Blue for documents
+          ]}
+          onPress={() => setDocumentsModalVisible(true)}
+        >
+          <Ionicons name="folder-open" size={24} color="#fff" />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.checklistButtonTitle}>
+              Documenti Firmati
             </Text>
-          ) : (
-            <View style={{ marginTop: 8 }}>
-              {userDocuments.slice(0, 3).map((doc: any, index: number) => (
-                <TouchableOpacity
-                  key={doc.id || index}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingVertical: 10,
-                    paddingHorizontal: 8,
-                    backgroundColor: '#fff',
-                    borderRadius: 8,
-                    marginBottom: 6,
-                    borderLeftWidth: 3,
-                    borderLeftColor: doc.document_type === 'privacy_consent' ? '#4CAF50' : 
-                                    doc.document_type?.includes('compensation') ? '#007AFF' :
-                                    doc.document_type?.includes('5000') ? '#FF9800' :
-                                    doc.document_type?.includes('15000') ? '#F44336' : '#007AFF',
-                  }}
-                  onPress={async () => {
-                    try {
-                      const response = await api.get(`/documents/download/${doc.id}`, { responseType: 'blob' });
-                      if (Platform.OS === 'web') {
-                        const url = window.URL.createObjectURL(new Blob([response.data]));
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = doc.pdf_filename || 'documento.pdf';
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        window.URL.revokeObjectURL(url);
-                      }
-                    } catch (err) {
-                      showAlert('Errore', 'Impossibile scaricare il documento');
-                    }
-                  }}
-                >
-                  <Ionicons 
-                    name={doc.document_type === 'privacy_consent' ? 'shield-checkmark' : 
-                          doc.document_type?.includes('compensation') ? 'receipt' :
-                          doc.document_type?.includes('5000') ? 'alert-circle' :
-                          doc.document_type?.includes('15000') ? 'warning' : 'document-text'} 
-                    size={20} 
-                    color={doc.document_type === 'privacy_consent' ? '#4CAF50' : 
-                           doc.document_type?.includes('compensation') ? '#007AFF' :
-                           doc.document_type?.includes('5000') ? '#FF9800' :
-                           doc.document_type?.includes('15000') ? '#F44336' : '#007AFF'} 
-                  />
-                  <View style={{ marginLeft: 10, flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: '#333' }} numberOfLines={1}>
-                      {doc.document_title}
-                    </Text>
-                    <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
-                      {doc.signed_at ? new Date(doc.signed_at).toLocaleDateString('it-IT') : ''}
-                    </Text>
-                  </View>
-                  <Ionicons name="download-outline" size={18} color="#007AFF" />
+            <Text style={styles.checklistButtonSubtitle}>
+              {userDocuments.length} documenti
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+
+        {/* Documents Modal */}
+        <Modal
+          visible={documentsModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setDocumentsModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '85%' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333' }}>📁 Documenti Firmati</Text>
+                <TouchableOpacity onPress={() => setDocumentsModalVisible(false)}>
+                  <Ionicons name="close-circle" size={28} color="#999" />
                 </TouchableOpacity>
-              ))}
+              </View>
               
-              {userDocuments.length > 3 && (
-                <TouchableOpacity
-                  style={{ alignItems: 'center', paddingVertical: 8 }}
-                  onPress={() => setDocumentsModalVisible(true)}
-                >
-                  <Text style={{ color: '#007AFF', fontWeight: '600', fontSize: 13 }}>
-                    Vedi tutti ({userDocuments.length}) →
+              <ScrollView style={{ padding: 12 }}>
+                {userDocuments.length === 0 ? (
+                  <Text style={{ color: '#666', fontStyle: 'italic', padding: 20, textAlign: 'center' }}>
+                    Nessun documento firmato
                   </Text>
-                </TouchableOpacity>
-              )}
+                ) : (
+                  userDocuments
+                    .sort((a: any, b: any) => new Date(b.signed_at || 0).getTime() - new Date(a.signed_at || 0).getTime())
+                    .map((doc: any, index: number) => (
+                    <TouchableOpacity
+                      key={doc.id || index}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 12,
+                        paddingHorizontal: 10,
+                        backgroundColor: '#fff',
+                        borderRadius: 8,
+                        marginBottom: 8,
+                        borderLeftWidth: 3,
+                        borderLeftColor: doc.document_type === 'privacy_consent' ? '#4CAF50' : 
+                                        doc.document_type?.includes('compensation') ? '#007AFF' :
+                                        doc.document_type?.includes('5000') ? '#FF9800' :
+                                        doc.document_type?.includes('15000') ? '#8E44AD' : '#007AFF',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 2,
+                        elevation: 2,
+                      }}
+                      onPress={async () => {
+                        try {
+                          const response = await api.get(`/documents/download/${doc.id}`, { responseType: 'blob' });
+                          if (Platform.OS === 'web') {
+                            const url = window.URL.createObjectURL(new Blob([response.data]));
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = doc.pdf_filename || 'documento.pdf';
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            window.URL.revokeObjectURL(url);
+                          }
+                        } catch (err) {
+                          showAlert('Errore', 'Impossibile scaricare il documento');
+                        }
+                      }}
+                    >
+                      <Ionicons 
+                        name={doc.document_type === 'privacy_consent' ? 'shield-checkmark' : 
+                              doc.document_type?.includes('compensation') ? 'receipt' :
+                              doc.document_type?.includes('5000') ? 'alert-circle' :
+                              doc.document_type?.includes('15000') ? 'warning' : 'document-text'} 
+                        size={22} 
+                        color={doc.document_type === 'privacy_consent' ? '#4CAF50' : 
+                               doc.document_type?.includes('compensation') ? '#007AFF' :
+                               doc.document_type?.includes('5000') ? '#FF9800' :
+                               doc.document_type?.includes('15000') ? '#8E44AD' : '#007AFF'} 
+                      />
+                      <View style={{ marginLeft: 12, flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '500', color: '#333' }} numberOfLines={2}>
+                          {doc.document_title}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: '#666', marginTop: 3 }}>
+                          {doc.signed_at ? new Date(doc.signed_at).toLocaleDateString('it-IT') : ''}
+                        </Text>
+                      </View>
+                      <Ionicons name="download-outline" size={20} color="#007AFF" />
+                    </TouchableOpacity>
+                  ))
+                )}
+                <View style={{ height: 20 }} />
+              </ScrollView>
             </View>
-          )}
-        </View>
+          </View>
+        </Modal>
 
         {/* Onboarding Modal */}
         <Modal

@@ -58,6 +58,10 @@ Sistema gestionale per società sportiva che include:
 - [x] Sezioni collassabili per Dirigente
 - [x] Sezioni collassabili per Atleta
 - [x] Fix bug JSX admin/dirigente/[id].tsx
+- [x] Banner "Documenti Firmati" per Collaboratore, Dirigente, Coach (stile Checklist Onboarding)
+- [x] Modal documenti firmati (ordinati dal più recente)
+- [x] Colori corretti soglie: Verde ≤€5K, Arancione €5K-€15K, Viola >€15K
+- [x] Logica calcolo soglie dinamico basato su cumulativo (non solo flag DB)
 
 ## P1 - Media Priorità
 - [ ] Regression check completo su tutti i profili
