@@ -9514,7 +9514,7 @@ async def get_coach_threshold_status(
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
     
-    # Get existing declarations for this year
+    # Get existing declarations for this year from threshold_declarations collection
     declarations = await db.threshold_declarations.find({
         "coach_id": coach_id,
         "year": year
@@ -9522,6 +9522,28 @@ async def get_coach_threshold_status(
     
     declaration_5000 = next((d for d in declarations if d.get("threshold_type") == "5000"), None)
     declaration_15000 = next((d for d in declarations if d.get("threshold_type") == "15000"), None)
+    
+    # Also check signed_documents collection for threshold communications
+    # These are created when signing a receipt that crosses the threshold
+    signed_threshold_docs = await db.signed_documents.find({
+        "$or": [
+            {"coach_id": coach_id},
+            {"signer_id": coach_id}
+        ],
+        "year": year,
+        "document_type": {"$in": ["threshold_5000_communication", "threshold_15000_communication"]}
+    }).to_list(10)
+    
+    # Check if threshold communications exist in signed_documents
+    if not declaration_5000:
+        declaration_5000 = next((d for d in signed_threshold_docs if d.get("document_type") == "threshold_5000_communication"), None)
+        if declaration_5000:
+            declaration_5000["signed"] = True  # If it exists, it's signed
+    
+    if not declaration_15000:
+        declaration_15000 = next((d for d in signed_threshold_docs if d.get("document_type") == "threshold_15000_communication"), None)
+        if declaration_15000:
+            declaration_15000["signed"] = True  # If it exists, it's signed
     
     # Calculate thresholds
     # Warning only if the NEXT receipt would cross the threshold

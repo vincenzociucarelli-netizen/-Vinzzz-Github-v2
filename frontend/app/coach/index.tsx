@@ -1163,14 +1163,14 @@ export default function CoachScreen() {
           </Text>
         </View>
 
-        {/* Profile Link - Moved up */}
+        {/* Profile Link - Moved up, highlighted */}
         <TouchableOpacity
           style={styles.profileLink}
           onPress={() => router.push('/coach/profile')}
         >
-          <Ionicons name="person-circle" size={24} color="#007AFF" />
+          <Ionicons name="person-circle" size={28} color="#1565C0" />
           <Text style={styles.profileLinkText}>Il Mio Profilo</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
+          <Ionicons name="chevron-forward" size={22} color="#1565C0" />
         </TouchableOpacity>
 
         {/* IMPEGNI Section */}
@@ -2010,22 +2010,24 @@ const styles = StyleSheet.create({
   profileLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#E3F2FD',
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    borderWidth: 2,
+    borderColor: '#2196F3',
+    shadowColor: '#2196F3',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 4,
   },
   profileLinkText: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#1565C0',
     marginLeft: 12,
   },
   // Society Tab Styles
