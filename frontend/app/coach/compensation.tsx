@@ -629,7 +629,7 @@ export default function CoachCompensation() {
           <Ionicons name="checkmark-circle" size={18} color="#155724" />
           <View style={styles.thresholdBannerContent}>
             <Text style={[styles.thresholdBannerTitle, { color: '#155724' }]}>
-              Dichiarazione €5.000 firmata
+              Anno {contractStartYear}: Dichiarazione €5.000 firmata
             </Text>
             <Text style={[styles.thresholdBannerText, { color: '#155724' }]}>
               Soglia previdenziale comunicata
@@ -645,7 +645,7 @@ export default function CoachCompensation() {
           <Ionicons name="checkmark-circle" size={18} color="#155724" />
           <View style={styles.thresholdBannerContent}>
             <Text style={[styles.thresholdBannerTitle, { color: '#155724' }]}>
-              Dichiarazione €15.000 firmata
+              Anno {contractStartYear}: Dichiarazione €15.000 firmata
             </Text>
             <Text style={[styles.thresholdBannerText, { color: '#155724' }]}>
               Soglia fiscale comunicata
@@ -765,6 +765,8 @@ export default function CoachCompensation() {
         style={[
           styles.monthCard,
           getCardStyle(),
+          // Purple background when exceeded €15k
+          exceeded15k && status === 'signed' && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
         ]}
         onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
         disabled={status === 'future'}
@@ -776,7 +778,7 @@ export default function CoachCompensation() {
             position: 'absolute',
             top: -8,
             right: -8,
-            backgroundColor: exceeded15k ? '#E65100' : '#F9A825',
+            backgroundColor: exceeded15k ? '#8E44AD' : '#F9A825',
             paddingHorizontal: 6,
             paddingVertical: 3,
             borderRadius: 8,
