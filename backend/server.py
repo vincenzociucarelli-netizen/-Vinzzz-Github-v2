@@ -99,6 +99,35 @@ ALGORITHM = "HS256"
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Helper function to convert UTC datetime to Rome timezone (Europe/Rome)
+def to_rome_time(dt: datetime) -> datetime:
+    """Convert UTC datetime to Rome timezone (CET/CEST)"""
+    # Rome is UTC+1 in winter, UTC+2 in summer (DST)
+    # Using a simple calculation for CET (we could use pytz for more accuracy)
+    # Check if DST is active (last Sunday of March to last Sunday of October)
+    year = dt.year
+    # Last Sunday of March
+    march_last_sunday = datetime(year, 3, 31, 2, 0, tzinfo=timezone.utc)
+    while march_last_sunday.weekday() != 6:  # 6 = Sunday
+        march_last_sunday -= timedelta(days=1)
+    # Last Sunday of October  
+    october_last_sunday = datetime(year, 10, 31, 3, 0, tzinfo=timezone.utc)
+    while october_last_sunday.weekday() != 6:
+        october_last_sunday -= timedelta(days=1)
+    
+    # Determine if DST is active
+    if march_last_sunday <= dt.replace(tzinfo=timezone.utc) < october_last_sunday:
+        # Summer time (CEST) - UTC+2
+        return dt + timedelta(hours=2)
+    else:
+        # Winter time (CET) - UTC+1
+        return dt + timedelta(hours=1)
+
+def format_rome_timestamp(dt: datetime) -> str:
+    """Format datetime as Rome timezone string"""
+    rome_dt = to_rome_time(dt)
+    return rome_dt.strftime('%Y-%m-%d %H:%M:%S')
+
 # Progressive rate limiting configuration
 def get_real_ip(request: Request) -> str:
     """Get real client IP from X-Forwarded-For header or fall back to remote address"""
@@ -9170,6 +9199,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 "prior_compensation_declared": prior_compensation,
                 "threshold_crossed": "15000",
                 "signature_timestamp_utc": now.isoformat(),
+                "signature_timestamp_rome": format_rome_timestamp(now),
                 "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
                 "monthly_compensation_rate": coach.get('monthly_compensation', 0),
             }
@@ -9193,6 +9223,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 "prior_compensation_declared": prior_compensation,
                 "threshold_crossed": "5000",
                 "signature_timestamp_utc": now.isoformat(),
+                "signature_timestamp_rome": format_rome_timestamp(now),
                 "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
                 "monthly_compensation_rate": coach.get('monthly_compensation', 0),
             }
@@ -9266,6 +9297,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             "prior_compensation_declared": prior_compensation,
             "threshold_crossed": "15000" if first_time_exceeded_15000 else ("5000" if first_time_exceeded_5000 else None),
             "signature_timestamp_utc": now.isoformat(),
+                "signature_timestamp_rome": format_rome_timestamp(now),
             "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
             "contract_start_date": coach.get('contract_start_date'),
             "monthly_compensation_rate": coach.get('monthly_compensation', 0),
@@ -11340,7 +11372,7 @@ def generate_threshold_5k_pdf(
         y -= 0.4*cm
         c.drawString(2*cm, y, "METADATI DI VERIFICA (generati automaticamente)")
         y -= 0.35*cm
-        c.drawString(2*cm, y, f"Timestamp firma: {threshold_metadata.get('signature_timestamp_utc', 'N/D')}")
+        c.drawString(2*cm, y, f"Timestamp firma: {threshold_metadata.get('signature_timestamp_rome', 'N/D')}")
         y -= 0.35*cm
         c.drawString(2*cm, y, f"Totale prima: € {threshold_metadata.get('yearly_total_before', 0):,.2f} | Totale dopo: € {threshold_metadata.get('yearly_total_after', 0):,.2f}")
         y -= 0.35*cm
@@ -11504,7 +11536,7 @@ def generate_threshold_15k_pdf(
         y -= 0.4*cm
         c.drawString(2*cm, y, "METADATI DI VERIFICA (generati automaticamente)")
         y -= 0.35*cm
-        c.drawString(2*cm, y, f"Timestamp firma: {threshold_metadata.get('signature_timestamp_utc', 'N/D')}")
+        c.drawString(2*cm, y, f"Timestamp firma: {threshold_metadata.get('signature_timestamp_rome', 'N/D')}")
         y -= 0.35*cm
         c.drawString(2*cm, y, f"Totale prima: € {threshold_metadata.get('yearly_total_before', 0):,.2f} | Totale dopo: € {threshold_metadata.get('yearly_total_after', 0):,.2f}")
         y -= 0.35*cm
@@ -12647,6 +12679,7 @@ async def sign_dirigente_compensation_receipt(
                 "prior_compensation_declared": prior_compensation,
                 "threshold_crossed": "15000" if first_time_exceeded_15000 else "5000",
                 "signature_timestamp_utc": now.isoformat(),
+                "signature_timestamp_rome": format_rome_timestamp(now),
                 "signature_hash": sig_hash,
                 "contract_start_date": str(dirigente.get('contract_start_date')) if dirigente.get('contract_start_date') else None,
                 "monthly_compensation_rate": dirigente.get('monthly_compensation', 0),
@@ -12735,6 +12768,7 @@ async def sign_dirigente_compensation_receipt(
             "prior_compensation_declared": prior_compensation,
             "threshold_crossed": "15000" if first_time_exceeded_15000 else ("5000" if first_time_exceeded_5000 else None),
             "signature_timestamp_utc": now.isoformat(),
+                "signature_timestamp_rome": format_rome_timestamp(now),
             "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
             "contract_start_date": dirigente.get('contract_start_date'),
             "monthly_compensation_rate": dirigente.get('monthly_compensation', 0),
@@ -13300,6 +13334,7 @@ async def sign_collaboratore_compensation_receipt(
                 "prior_compensation_declared": prior_for_metadata,
                 "threshold_crossed": "15000",
                 "signature_timestamp_utc": now.isoformat(),
+                "signature_timestamp_rome": format_rome_timestamp(now),
                 "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
                 "monthly_compensation_rate": collaboratore.get('monthly_compensation', 0),
             }
@@ -13323,6 +13358,7 @@ async def sign_collaboratore_compensation_receipt(
                 "prior_compensation_declared": prior_for_metadata,
                 "threshold_crossed": "5000",
                 "signature_timestamp_utc": now.isoformat(),
+                "signature_timestamp_rome": format_rome_timestamp(now),
                 "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if request.signature_base64 else None,
                 "monthly_compensation_rate": collaboratore.get('monthly_compensation', 0),
             }
@@ -14927,7 +14963,7 @@ async def get_my_documents(
     ]}
     
     documents = []
-    async for doc in db.signed_documents.find(query).sort("created_at", -1):
+    async for doc in db.signed_documents.find(query).sort([("signed_at", -1), ("created_at", -1)]):
         doc.pop("_id", None)
         documents.append({
             "id": doc.get("id"),

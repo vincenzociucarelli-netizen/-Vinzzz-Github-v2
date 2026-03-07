@@ -32,6 +32,18 @@ const matchesMonth = (recordMonth: number | string, targetMonth: number): boolea
   return monthIndex === targetMonth;
 };
 
+// Helper to format ISO date string to DD/MM/YYYY
+const formatContractDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  // Handle ISO format: "2025-09-01T00:00:00+00:00" or simple "2025-09-01"
+  const cleanDate = dateStr.split('T')[0]; // Remove time part
+  const parts = cleanDate.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY
+  }
+  return dateStr; // Return as-is if unexpected format
+};
+
 interface CompensationRecord {
   id: string;
   month: number | string;  // Can be number (1-12) or string ("Gennaio", etc.) for legacy data
@@ -718,13 +730,7 @@ export default function DirigenteCompensation() {
                 <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>Periodo Contratto</Text>
               </View>
               <Text style={{ fontSize: 18, color: '#8E44AD', fontWeight: 'bold', marginTop: 4, textAlign: 'center' }}>
-                {(() => {
-                  const startParts = profile.contract_start_date!.split('-');
-                  const endParts = profile.contract_end_date!.split('-');
-                  const startFormatted = `${startParts[2]}/${startParts[1]}/${startParts[0]}`;
-                  const endFormatted = `${endParts[2]}/${endParts[1]}/${endParts[0]}`;
-                  return `${startFormatted} - ${endFormatted}`;
-                })()}
+                {formatContractDate(profile.contract_start_date!)} - {formatContractDate(profile.contract_end_date!)}
               </Text>
             </View>
           )}

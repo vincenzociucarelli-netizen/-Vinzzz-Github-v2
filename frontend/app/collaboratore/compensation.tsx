@@ -32,6 +32,18 @@ const matchesMonth = (recordMonth: number | string, targetMonth: number): boolea
   return monthIndex === targetMonth;
 };
 
+// Helper to format ISO date string to DD/MM/YYYY
+const formatContractDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  // Handle ISO format: "2025-09-01T00:00:00+00:00" or simple "2025-09-01"
+  const cleanDate = dateStr.split('T')[0]; // Remove time part
+  const parts = cleanDate.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY
+  }
+  return dateStr; // Return as-is if unexpected format
+};
+
 // Helper to convert base64 to Blob for PDF viewing
 const base64ToBlob = (base64: string, mimeType: string): Blob => {
   const byteCharacters = atob(base64);
