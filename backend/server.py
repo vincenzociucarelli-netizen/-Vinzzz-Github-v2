@@ -9514,6 +9514,17 @@ async def get_coach_threshold_status(
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
     
+    # Add prior compensation if this is the first year of the contract
+    prior_compensation = coach.get("other_annual_compensation", 0) or coach.get("prior_year_compensation", 0) or 0
+    contract_start = coach.get("contract_start_date")
+    if contract_start and prior_compensation > 0:
+        try:
+            contract_year = int(str(contract_start).split('-')[0].split('T')[0])
+            if contract_year == year:
+                yearly_total += prior_compensation
+        except:
+            pass
+    
     # Get existing declarations for this year from threshold_declarations collection
     declarations = await db.threshold_declarations.find({
         "coach_id": coach_id,
