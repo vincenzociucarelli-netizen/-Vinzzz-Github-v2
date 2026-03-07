@@ -118,6 +118,7 @@ export default function CoachCompensation() {
   
   // Threshold status
   const [thresholdStatus, setThresholdStatus] = useState<ThresholdStatus | null>(null);
+  const [thresholdStatus2026, setThresholdStatus2026] = useState<ThresholdStatus | null>(null);
   
   // Signature modal for receipts - consolidated into a single state object to prevent re-renders
   const [signatureModalState, setSignatureModalState] = useState<{
@@ -242,6 +243,16 @@ export default function CoachCompensation() {
         setThresholdStatus(thresholdRes.data);
       } catch (err) {
         console.log('Error loading threshold status:', err);
+      }
+      
+      // Load threshold status for second year if contract spans two years
+      if (endYear && endYear > startYear) {
+        try {
+          const threshold2026Res = await api.get(`/coach/${user?.id}/threshold-status/${endYear}`);
+          setThresholdStatus2026(threshold2026Res.data);
+        } catch (err) {
+          console.log('Error loading threshold status for second year:', err);
+        }
       }
       
     } catch (error) {
@@ -642,6 +653,42 @@ export default function CoachCompensation() {
           </View>
         </View>
       );
+    }
+    
+    // ==================== 2026 WARNINGS ====================
+    // Add warnings for the second year (2026) if contract spans two years
+    if (thresholdStatus2026 && contractEndYear && contractEndYear > contractStartYear) {
+      const year2026 = contractEndYear;
+      
+      // Warning for approaching €5.000 in 2026
+      if (thresholdStatus2026.thresholds['5000'].needs_warning && !thresholdStatus2026.thresholds['5000'].declaration_signed) {
+        warnings.push(
+          <View key="warning-5000-2026" style={[styles.thresholdBanner, { backgroundColor: '#E3F2FD', borderLeftColor: '#2196F3', borderLeftWidth: 4 }]}>
+            <Ionicons name="information-circle" size={18} color="#1565C0" />
+            <View style={styles.thresholdBannerContent}>
+              <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Prossima soglia €5.000</Text>
+              <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>
+                Con la prossima quietanza del {year2026} supererai la soglia previdenziale.
+              </Text>
+            </View>
+          </View>
+        );
+      }
+      
+      // Warning for approaching €15.000 in 2026
+      if (thresholdStatus2026.thresholds['15000'].needs_warning && !thresholdStatus2026.thresholds['15000'].declaration_signed) {
+        warnings.push(
+          <View key="warning-15000-2026" style={[styles.thresholdBanner, { backgroundColor: '#FCE4EC', borderLeftColor: '#E91E63', borderLeftWidth: 4 }]}>
+            <Ionicons name="alert-circle" size={18} color="#C2185B" />
+            <View style={styles.thresholdBannerContent}>
+              <Text style={[styles.thresholdBannerTitle, { color: '#C2185B' }]}>Anno {year2026}: Prossima soglia €15.000</Text>
+              <Text style={[styles.thresholdBannerText, { color: '#C2185B' }]}>
+                Con la prossima quietanza del {year2026} supererai la soglia fiscale.
+              </Text>
+            </View>
+          </View>
+        );
+      }
     }
     
     return warnings.length > 0 ? <View style={styles.warningsContainer}>{warnings}</View> : null;

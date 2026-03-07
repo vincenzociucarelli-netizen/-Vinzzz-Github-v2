@@ -855,27 +855,29 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: '#F3E5F5',
-                padding: 14,
-                borderRadius: 10,
+                backgroundColor: '#8E44AD',
+                padding: 16,
+                borderRadius: 12,
                 marginTop: 12,
-                borderWidth: 1,
-                borderColor: '#8E44AD',
-                borderStyle: 'dashed',
+                shadowColor: '#8E44AD',
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.3,
+                shadowRadius: 5,
+                elevation: 5,
               }}
               onPress={() => router.push('/dirigente/compensation')}
               data-testid="go-to-compensation-btn"
             >
-              <Ionicons name="receipt-outline" size={24} color="#8E44AD" />
+              <Ionicons name="receipt-outline" size={24} color="#fff" />
               <View style={{ marginLeft: 12, flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#8E44AD' }}>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#fff' }}>
                   Firma Quietanze Mensili
                 </Text>
-                <Text style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
+                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
                   Genera e firma le quietanze dei compensi sportivi
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={22} color="#8E44AD" />
+              <Ionicons name="chevron-forward" size={22} color="#fff" />
             </TouchableOpacity>
           )}
         </View>

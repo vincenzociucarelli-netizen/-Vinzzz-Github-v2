@@ -1056,9 +1056,9 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               onPress={() => router.push('/coach/compensation')}
               data-testid="compensation-receipts-btn"
             >
-              <Ionicons name="document-text" size={20} color="#007AFF" />
+              <Ionicons name="document-text" size={22} color="#fff" />
               <Text style={styles.compensationLinkText}>Quietanze Mensili</Text>
-              <Ionicons name="chevron-forward" size={20} color="#007AFF" />
+              <Ionicons name="chevron-forward" size={22} color="#fff" />
             </TouchableOpacity>
           )}
         </View>
@@ -1823,17 +1823,22 @@ const styles = StyleSheet.create({
   compensationLinkButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E3F2FD',
-    padding: 14,
-    borderRadius: 10,
+    backgroundColor: '#FF9800',
+    padding: 16,
+    borderRadius: 12,
     marginTop: 12,
     gap: 10,
+    shadowColor: '#FF9800',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
   },
   compensationLinkText: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   cardSubtitle: {
     fontSize: 13,
