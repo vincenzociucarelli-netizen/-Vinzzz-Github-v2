@@ -810,7 +810,7 @@ export default function AdminCollaboratoreDetail() {
                             </Text>
                             <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, flexWrap: 'wrap', gap: 16 }}>
                               <View>
-                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
+                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD/SSD:</Text>
                                 <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[0]].total)}</Text>
                               </View>
                               {prior > 0 && (
@@ -863,7 +863,7 @@ export default function AdminCollaboratoreDetail() {
                             </Text>
                             <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, gap: 16 }}>
                               <View>
-                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
+                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD/SSD:</Text>
                                 <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[1]].total)}</Text>
                               </View>
                             </View>

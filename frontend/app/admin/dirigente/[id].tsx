@@ -776,7 +776,7 @@ export default function AdminDirigenteDetail() {
           
           {editing ? (
             <>
-              <Text style={styles.inputLabel}>Importo Mensile (€) - Questa ASD</Text>
+              <Text style={styles.inputLabel}>Importo Mensile (€) - Questa ASD/SSD</Text>
               <TextInput
                 style={styles.input}
                 value={monthlyCompensation}
@@ -939,12 +939,12 @@ export default function AdminDirigenteDetail() {
             <>
               <View style={styles.compensationDisplay}>
                 <Text style={styles.compensationAmount}>{formatCurrency(dirigente.monthly_compensation || 0)}</Text>
-                <Text style={styles.compensationPeriod}>/mese (questa ASD)</Text>
+                <Text style={styles.compensationPeriod}>/mese (questa ASD/SSD)</Text>
               </View>
               {(dirigente as any).other_annual_compensation > 0 && (
                 <View style={{ marginTop: 8, padding: 10, backgroundColor: '#FFF8E1', borderRadius: 8, borderWidth: 1, borderColor: '#F9A825' }}>
                   <Text style={{ fontSize: 12, color: '#F9A825', fontWeight: '600' }}>
-                    + {formatCurrency((dirigente as any).other_annual_compensation)} compensi pregressi da altre ASD
+                    + {formatCurrency((dirigente as any).other_annual_compensation)} compensi pregressi da altre ASD/SSD
                   </Text>
                 </View>
               )}
@@ -995,7 +995,7 @@ export default function AdminDirigenteDetail() {
                             </Text>
                             <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, flexWrap: 'wrap', gap: 16 }}>
                               <View>
-                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
+                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD/SSD:</Text>
                                 <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[0]].total)}</Text>
                               </View>
                               {prior > 0 && (
@@ -1048,7 +1048,7 @@ export default function AdminDirigenteDetail() {
                             </Text>
                             <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, gap: 16 }}>
                               <View>
-                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD:</Text>
+                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD/SSD:</Text>
                                 <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[1]].total)}</Text>
                               </View>
                             </View>

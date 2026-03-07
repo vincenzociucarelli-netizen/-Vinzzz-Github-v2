@@ -565,15 +565,33 @@ export default function DirigenteCompensation() {
     
     // Track thresholds PER YEAR (they reset each calendar year)
     const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
+    const monthlyComp = profile?.monthly_compensation || 0;
+    
+    // Calculate cumulative totals per year to find threshold months
+    const cumulativeByYear: { [year: number]: number } = {};
+    
+    // Add prior compensation to first year
+    if (contractStartYear && priorCompensation > 0) {
+      cumulativeByYear[contractStartYear] = priorCompensation;
+    }
     
     for (const r of sorted) {
       if (!thresholdsByYear[r.year]) {
         thresholdsByYear[r.year] = { first5k: null, first15k: null };
       }
-      if (r.exceeded_5000 && thresholdsByYear[r.year].first5k === null) {
+      if (!cumulativeByYear[r.year]) {
+        cumulativeByYear[r.year] = r.year === contractStartYear ? (priorCompensation || 0) : 0;
+      }
+      
+      // Add this month's compensation to cumulative
+      cumulativeByYear[r.year] += monthlyComp;
+      
+      // Check if this month crosses €5k threshold
+      if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
         thresholdsByYear[r.year].first5k = r.month;
       }
-      if (r.exceeded_15000 && thresholdsByYear[r.year].first15k === null) {
+      // Check if this month crosses €15k threshold  
+      if (cumulativeByYear[r.year] > 15000 && thresholdsByYear[r.year].first15k === null) {
         thresholdsByYear[r.year].first15k = r.month;
       }
     }
@@ -598,12 +616,13 @@ export default function DirigenteCompensation() {
     const record = records.find(r => matchesMonth(r.month, month) && r.year === displayYear);
     const monthlyAmount = profile?.monthly_compensation || 0;
     
-    const exceeded5k = record?.exceeded_5000 === true;
-    const exceeded15k = record?.exceeded_15000 === true;
-    
     const thresholdsByYear = getThresholdMonths();
     const isAfter5k = status === 'signed' && isMonthAfterThreshold(month, displayYear, thresholdsByYear, '5k');
     const isAfter15k = status === 'signed' && isMonthAfterThreshold(month, displayYear, thresholdsByYear, '15k');
+    
+    // Use calculated thresholds for badge display (not DB values which may be stale)
+    const showBadge5k = isAfter5k && !isAfter15k;
+    const showBadge15k = isAfter15k;
     
     const getCardStyle = () => {
       if (status === 'signed') {
@@ -623,25 +642,25 @@ export default function DirigenteCompensation() {
           styles.monthCard,
           getCardStyle(),
           // Purple background when exceeded €15k
-          exceeded15k && status === 'signed' && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
+          isAfter15k && status === 'signed' && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
         ]}
         onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
         disabled={status === 'future'}
         data-testid={`month-card-${displayYear}-${month}`}
       >
-        {(exceeded5k || exceeded15k) && (
+        {(showBadge5k || showBadge15k) && (
           <View style={{
             position: 'absolute',
             top: -8,
             right: -8,
-            backgroundColor: exceeded15k ? '#8E44AD' : '#F9A825',
+            backgroundColor: showBadge15k ? '#8E44AD' : '#F9A825',
             paddingHorizontal: 6,
             paddingVertical: 3,
             borderRadius: 8,
             zIndex: 10,
           }}>
             <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
-              {exceeded15k ? '>15K' : '>5K'}
+              {showBadge15k ? '>15K' : '>5K'}
             </Text>
           </View>
         )}
@@ -816,7 +835,7 @@ export default function DirigenteCompensation() {
                   
                   {/* Calculation breakdown */}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <Text style={styles.yearBoxCalcLabel}>Compenso ASD:</Text>
+                    <Text style={styles.yearBoxCalcLabel}>Compenso ASD/SSD:</Text>
                     <Text style={styles.yearBoxCalcValue}>{formatCurrency(summary.yearlyFromContract)}</Text>
                   </View>
                   {summary.priorCompensation > 0 && (
@@ -866,7 +885,7 @@ export default function DirigenteCompensation() {
                   
                   {/* Calculation breakdown */}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <Text style={styles.yearBoxCalcLabel}>Compenso ASD:</Text>
+                    <Text style={styles.yearBoxCalcLabel}>Compenso ASD/SSD:</Text>
                     <Text style={styles.yearBoxCalcValue}>{formatCurrency(summary.yearlyFromContract)}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 8 }}>

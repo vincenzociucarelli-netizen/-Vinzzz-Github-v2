@@ -368,8 +368,8 @@ class User(BaseModel):
     coach_license_expiry: Optional[datetime] = None
     
     # Coach specific - Compensi
-    monthly_compensation: Optional[float] = None  # Compenso mensile da questa ASD
-    other_annual_compensation: Optional[float] = None  # Compensi annuali da altre ASD/SSD dichiarati
+    monthly_compensation: Optional[float] = None  # Compenso mensile da questa ASD/SSD
+    other_annual_compensation: Optional[float] = None  # Compensi annuali da altre ASD/SSD/SSD dichiarati
     compensation_accepted: bool = False  # Flag accettazione compenso
     compensation_accepted_date: Optional[datetime] = None
     contract_start_date: Optional[datetime] = None  # Data inizio contratto
@@ -737,7 +737,7 @@ class Athlete(BaseModel):
     # Prime Squadre / Compensi fields
     is_compensated: bool = False  # Flag: atleta con compensi attivi
     monthly_compensation: float = 0.0  # Compenso mensile
-    other_annual_compensation: float = 0.0  # Compensi già percepiti da altre ASD nell'anno
+    other_annual_compensation: float = 0.0  # Compensi già percepiti da altre ASD/SSD nell'anno
     contract_start_date: Optional[str] = None  # Data inizio contratto (ISO string)
     contract_end_date: Optional[str] = None  # Data fine contratto (ISO string)
     fees_waived: bool = False  # Se true, l'atleta non paga le quote
@@ -6169,7 +6169,7 @@ async def upload_medical_certificate(data: UploadMedicalCertificateRequest, curr
     # Calculate issue date (12 months before expiry for standard certificates)
     issue_date = expiry_date - timedelta(days=365)
     
-    # Archive the certificate for 5-year retention (legal requirement for ASD)
+    # Archive the certificate for 5-year retention (legal requirement for ASD/SSD)
     archive_entry = {
         "id": str(uuid.uuid4()),
         "athlete_id": athlete_id,
@@ -6208,7 +6208,7 @@ async def get_medical_certificates_archive(
     search: str = None,
     current_user = Depends(get_current_user)
 ):
-    """Get archived medical certificates for admin (5-year retention for ASD compliance)"""
+    """Get archived medical certificates for admin (5-year retention for ASD/SSD compliance)"""
     if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
         raise HTTPException(status_code=403, detail="Accesso riservato agli amministratori")
     
