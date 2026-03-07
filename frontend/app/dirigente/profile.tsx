@@ -91,6 +91,7 @@ export default function DirigenteProfile() {
     province: '',
     phone: '',
     monthly_compensation: 0,
+    other_annual_compensation: 0,
     compensation_accepted: false,
     // Documento e Dati Bancari
     id_type: '',
@@ -150,6 +151,7 @@ export default function DirigenteProfile() {
         province: data.province || '',
         phone: data.phone || '',
         monthly_compensation: data.monthly_compensation || 0,
+        other_annual_compensation: data.other_annual_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
         id_type: data.id_type || '',
         id_front: data.id_front || '',
@@ -177,6 +179,7 @@ export default function DirigenteProfile() {
         province: data.province || '',
         phone: data.phone || '',
         monthly_compensation: data.monthly_compensation || 0,
+        other_annual_compensation: data.other_annual_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
         id_type: data.id_type || '',
         id_front: data.id_front || '',
@@ -821,6 +824,28 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               {profileData.monthly_compensation > 0 
                 ? `€ ${profileData.monthly_compensation.toFixed(2)}`
                 : 'Non ancora impostato'}
+            </Text>
+          </View>
+          
+          {/* Prior Compensation Field */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>COMPENSI PREGRESSI (NELL'ANNO)</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              <Text style={{ fontSize: 16, marginRight: 4 }}>€</Text>
+              <TextInput
+                style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                value={editData.other_annual_compensation?.toString() || '0'}
+                onChangeText={(text) => {
+                  const numValue = parseFloat(text.replace(',', '.')) || 0;
+                  setEditData({...editData, other_annual_compensation: numValue});
+                }}
+                keyboardType="numeric"
+                placeholder="0.00"
+                placeholderTextColor="#999"
+              />
+            </View>
+            <Text style={{ fontSize: 11, color: '#666', marginTop: 4, fontStyle: 'italic' }}>
+              Inserisci l'importo totale di compensi sportivi già percepiti nell'anno corrente (per il calcolo delle soglie fiscali)
             </Text>
           </View>
           
