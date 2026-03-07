@@ -1395,12 +1395,12 @@ export default function AdminCollaboratoreDetail() {
                     <View 
                       key={index} 
                       style={{ 
-                        backgroundColor: isAfter15k ? '#FFEBEE' : isAfter5k ? '#FFF8E1' : '#fff',
+                        backgroundColor: isAfter15k ? '#F3E5F5' : isAfter5k ? '#FFF8E1' : '#E8F5E9',
                         paddingVertical: 8, 
                         paddingHorizontal: 10,
                         marginBottom: 6,
                         borderLeftWidth: 3,
-                        borderLeftColor: isAfter15k ? '#F44336' : isAfter5k ? '#FF9800' : '#4CAF50',
+                        borderLeftColor: isAfter15k ? '#8E44AD' : isAfter5k ? '#FF9800' : '#4CAF50',
                         borderRadius: 6,
                       }}
                     >
@@ -1415,7 +1415,7 @@ export default function AdminCollaboratoreDetail() {
                             </View>
                           )}
                           {isThreshold15kMonth && (
-                            <View style={{ backgroundColor: '#F44336', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
+                            <View style={{ backgroundColor: '#8E44AD', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
                               <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;15K</Text>
                             </View>
                           )}
