@@ -1233,116 +1233,123 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           )}
         </View>
 
-        {/* Dati Bancari - Hidden while editing main profile to avoid data loss */}
+        {/* Dati Bancari - Collapsible */}
         {!editing && (
         <View style={styles.card}>
-          <View style={styles.cardHeader}>
+          <TouchableOpacity 
+            style={styles.collapsibleHeader}
+            onPress={() => toggleSection('bancari')}
+          >
             <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
-            <TouchableOpacity onPress={() => setEditingBank(!editingBank)}>
-              <Ionicons name={editingBank ? "close" : "create"} size={22} color="#007AFF" />
-            </TouchableOpacity>
-          </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              {!sectionsExpanded.bancari && (
+                <TouchableOpacity onPress={() => { toggleSection('bancari'); setEditingBank(true); }}>
+                  <Ionicons name="create" size={20} color="#007AFF" />
+                </TouchableOpacity>
+              )}
+              <Ionicons 
+                name={sectionsExpanded.bancari ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color="#666" 
+              />
+            </View>
+          </TouchableOpacity>
           
-          {editingBank ? (
-            <>
-              <Text style={styles.inputLabel}>IBAN</Text>
-              <TextInput
-                style={styles.input}
-                value={editData.iban}
-                onChangeText={(v) => setEditData({...editData, iban: v.toUpperCase()})}
-                placeholder="es. IT60X0542811101000000123456"
-                placeholderTextColor="#999"
-                autoCapitalize="characters"
-              />
-              
-              <Text style={styles.inputLabel}>Intestatario Conto</Text>
-              <TextInput
-                style={styles.input}
-                value={editData.account_holder}
-                onChangeText={(v) => setEditData({...editData, account_holder: v.toUpperCase()})}
-                placeholder="es. MARIO ROSSI"
-                placeholderTextColor="#ccc"
-                autoCapitalize="characters"
-              />
-              
-              <Text style={styles.inputLabel}>Nome Banca</Text>
-              <TextInput
-                style={styles.input}
-                value={editData.bank_name}
-                onChangeText={(v) => setEditData({...editData, bank_name: v.toUpperCase()})}
-                placeholder="es. INTESA SANPAOLO"
-                placeholderTextColor="#ccc"
-                autoCapitalize="characters"
-              />
-              
-              <TouchableOpacity
-                style={[styles.saveBankButtonFixed, savingBank && styles.saveButtonDisabled]}
-                onPress={async () => {
-                  setSavingBank(true);
-                  try {
-                    const payload: any = {
-                      id_type: editData.id_type,
-                      id_front: editData.id_front,
-                      id_back: editData.id_back,
-                      iban: editData.iban,
-                      account_holder: editData.account_holder,
-                      bank_name: editData.bank_name,
-                    };
-                    // Add images only if they exist and are not too large
-                    if (docFrontImage) {
-                      payload.doc_front_image = docFrontImage;
-                    } else if (editData.doc_front_image) {
-                      payload.doc_front_image = editData.doc_front_image;
-                    }
-                    if (docBackImage) {
-                      payload.doc_back_image = docBackImage;
-                    } else if (editData.doc_back_image) {
-                      payload.doc_back_image = editData.doc_back_image;
-                    }
-                    
-                    await api.patch('/users/me/bank-details', payload);
-                    setProfileData({
-                      ...profileData,
-                      id_type: editData.id_type,
-                      id_front: editData.id_front,
-                      id_back: editData.id_back,
-                      iban: editData.iban,
-                      account_holder: editData.account_holder,
-                      bank_name: editData.bank_name,
-                      doc_front_image: docFrontImage || editData.doc_front_image || '',
-                      doc_back_image: docBackImage || editData.doc_back_image || '',
-                    });
-                    setEditingBank(false);
-                    showAlert('Salvato', 'Dati bancari aggiornati');
-                  } catch (error: any) {
-                    console.error('Error saving bank details:', error);
-                    showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio. Riprova.');
-                  } finally {
-                    setSavingBank(false);
-                  }
-                }}
-                disabled={savingBank}
-              >
-                <Text style={styles.saveBankButtonText}>
-                  {savingBank ? 'Salvataggio...' : '💾 SALVA DATI BANCARI'}
-                </Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>IBAN</Text>
-                <Text style={styles.fieldValue}>{profileData.iban || '-'}</Text>
-              </View>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Intestatario</Text>
-                <Text style={styles.fieldValue}>{profileData.account_holder || '-'}</Text>
-              </View>
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Banca</Text>
-                <Text style={styles.fieldValue}>{profileData.bank_name || '-'}</Text>
-              </View>
-            </>
+          {sectionsExpanded.bancari && (
+            <View style={styles.collapsibleContent}>
+              {editingBank ? (
+                <>
+                  <Text style={styles.inputLabel}>IBAN</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editData.iban}
+                    onChangeText={(v) => setEditData({...editData, iban: v.toUpperCase()})}
+                    placeholder="es. IT60X0542811101000000123456"
+                    placeholderTextColor="#999"
+                    autoCapitalize="characters"
+                  />
+                  
+                  <Text style={styles.inputLabel}>Intestatario Conto</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editData.account_holder}
+                    onChangeText={(v) => setEditData({...editData, account_holder: v.toUpperCase()})}
+                    placeholder="es. MARIO ROSSI"
+                    placeholderTextColor="#ccc"
+                    autoCapitalize="characters"
+                  />
+                  
+                  <Text style={styles.inputLabel}>Nome Banca</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editData.bank_name}
+                    onChangeText={(v) => setEditData({...editData, bank_name: v.toUpperCase()})}
+                    placeholder="es. INTESA SANPAOLO"
+                    placeholderTextColor="#ccc"
+                    autoCapitalize="characters"
+                  />
+                  
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                    <TouchableOpacity
+                      style={{ flex: 1, padding: 12, backgroundColor: '#f0f0f0', borderRadius: 8, alignItems: 'center' }}
+                      onPress={() => setEditingBank(false)}
+                    >
+                      <Text style={{ color: '#666' }}>Annulla</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[{ flex: 2, padding: 12, backgroundColor: '#34C759', borderRadius: 8, alignItems: 'center' }, savingBank && { opacity: 0.6 }]}
+                      onPress={async () => {
+                        setSavingBank(true);
+                        try {
+                          await api.patch('/users/me/bank-details', {
+                            iban: editData.iban,
+                            account_holder: editData.account_holder,
+                            bank_name: editData.bank_name,
+                          });
+                          setProfileData({
+                            ...profileData,
+                            iban: editData.iban,
+                            account_holder: editData.account_holder,
+                            bank_name: editData.bank_name,
+                          });
+                          setEditingBank(false);
+                          showAlert('Salvato', 'Dati bancari aggiornati');
+                        } catch (error: any) {
+                          showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
+                        } finally {
+                          setSavingBank(false);
+                        }
+                      }}
+                      disabled={savingBank}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: '600' }}>
+                        {savingBank ? 'Salvataggio...' : '💾 Salva'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.fieldLabel}>IBAN</Text>
+                      <Text style={styles.fieldValue}>{profileData.iban || '-'}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setEditingBank(true)}>
+                      <Ionicons name="create" size={20} color="#007AFF" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Intestatario</Text>
+                    <Text style={styles.fieldValue}>{profileData.account_holder || '-'}</Text>
+                  </View>
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Banca</Text>
+                    <Text style={styles.fieldValue}>{profileData.bank_name || '-'}</Text>
+                  </View>
+                </>
+              )}
+            </View>
           )}
         </View>
         )}
