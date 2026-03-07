@@ -983,9 +983,9 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           <View style={styles.fieldContainer}>
             <Text style={styles.fieldLabel}>COMPENSI PREGRESSI (NELL'ANNO)</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              <Text style={{ fontSize: 14, marginRight: 4 }}>€</Text>
+              <Text style={{ fontSize: 18, marginRight: 4 }}>€</Text>
               <TextInput
-                style={[styles.input, { flex: 1, paddingVertical: 6, fontSize: 14 }]}
+                style={[styles.input, { flex: 1, paddingVertical: 10, fontSize: 18 }]}
                 value={editData.other_annual_compensation?.toString() || '0'}
                 onChangeText={(text) => {
                   const numValue = parseFloat(text.replace(',', '.')) || 0;
@@ -996,7 +996,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 placeholderTextColor="#999"
               />
             </View>
-            <Text style={{ fontSize: 10, color: '#666', marginTop: 4, fontStyle: 'italic' }}>
+            <Text style={{ fontSize: 11, color: '#666', marginTop: 4, fontStyle: 'italic' }}>
               Inserisci l'importo totale di compensi sportivi già percepiti nell'anno corrente (per il calcolo delle soglie fiscali)
             </Text>
           </View>
@@ -1917,7 +1917,7 @@ const styles = StyleSheet.create({
     color: '#F57C00',
   },
   compensationAmount: {
-    fontSize: 36,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#007AFF',
     marginTop: 4,
