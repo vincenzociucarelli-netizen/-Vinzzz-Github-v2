@@ -615,13 +615,6 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           ) : (
             <View style={styles.headerButtonsRow}>
               <TouchableOpacity
-                style={[styles.actionButton, styles.editButton]}
-                onPress={() => setEditing(true)}
-              >
-                <Ionicons name="pencil" size={20} color="#8E44AD" />
-                <Text style={styles.editButtonText}>Modifica Dati</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={[styles.actionButton, styles.passwordButton]}
                 onPress={() => setShowChangePassword(!showChangePassword)}
               >
@@ -831,9 +824,9 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           <View style={styles.fieldContainer}>
             <Text style={styles.fieldLabel}>COMPENSI PREGRESSI (NELL'ANNO)</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              <Text style={{ fontSize: 16, marginRight: 4 }}>€</Text>
+              <Text style={{ fontSize: 14, marginRight: 4 }}>€</Text>
               <TextInput
-                style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                style={[styles.input, { flex: 1, paddingVertical: 6, fontSize: 14 }]}
                 value={editData.other_annual_compensation?.toString() || '0'}
                 onChangeText={(text) => {
                   const numValue = parseFloat(text.replace(',', '.')) || 0;
@@ -844,7 +837,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 placeholderTextColor="#999"
               />
             </View>
-            <Text style={{ fontSize: 11, color: '#666', marginTop: 4, fontStyle: 'italic' }}>
+            <Text style={{ fontSize: 10, color: '#666', marginTop: 4, fontStyle: 'italic' }}>
               Inserisci l'importo totale di compensi sportivi già percepiti nell'anno corrente (per il calcolo delle soglie fiscali)
             </Text>
           </View>
@@ -1554,7 +1547,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   compensationAmount: {
-    fontSize: 28,
+    fontSize: 36,
     fontWeight: 'bold',
     color: '#8E44AD',
     marginTop: 4,
