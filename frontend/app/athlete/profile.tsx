@@ -95,17 +95,6 @@ export default function AthleteProfile() {
   const [editingBank, setEditingBank] = useState(false);
   const [savingBank, setSavingBank] = useState(false);
   
-  // Collapsible sections state
-  const [sectionsExpanded, setSectionsExpanded] = useState({
-    anagrafici: false,
-    fiscali: false,
-    bancari: false,
-  });
-  
-  const toggleSection = (section: 'anagrafici' | 'fiscali' | 'bancari') => {
-    setSectionsExpanded(prev => ({...prev, [section]: !prev[section]}));
-  };
-  
   // Change Password state
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -868,35 +857,18 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
 
         {/* Profile Photo Section - RIMOSSA per privacy */}
 
-        {/* Account Info - Compact */}
-        <View style={[styles.card, { paddingVertical: 12 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>👤 Account</Text>
-            <Text style={{ fontSize: 14, color: '#666' }}>{profileData.email}</Text>
+        {/* Account Info */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>👤 Account</Text>
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>Email</Text>
+            <Text style={styles.fieldValue}>{profileData.email}</Text>
           </View>
         </View>
 
-        {/* Personal Data - Collapsible */}
+        {/* Personal Data */}
         <View style={styles.card}>
-          <TouchableOpacity 
-            style={styles.collapsibleHeader}
-            onPress={() => toggleSection('anagrafici')}
-          >
-            <Text style={styles.cardTitle}>📋 Dati Anagrafici</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, anagrafici: true})); setEditing(true); }}>
-                <Ionicons name="create-outline" size={20} color="#007AFF" />
-              </TouchableOpacity>
-              <Ionicons 
-                name={sectionsExpanded.anagrafici ? "chevron-up" : "chevron-down"} 
-                size={24} 
-                color="#666" 
-              />
-            </View>
-          </TouchableOpacity>
-          
-          {sectionsExpanded.anagrafici && (
-            <View style={styles.collapsibleContent}>
+          <Text style={styles.cardTitle}>📋 Dati Anagrafici</Text>
           {renderField('Nome', profileData.first_name, 'first_name')}
           {renderField('Cognome', profileData.last_name, 'last_name')}
           {renderField('Data di Nascita', profileData.date_of_birth, 'date_of_birth')}
@@ -937,31 +909,12 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           </View>
           
           {renderField('Telefono', profileData.phone, 'phone')}
-            </View>
-          )}
         </View>
 
-        {/* Fiscal Data - Collapsible */}
+        {/* Fiscal Data */}
         <View style={styles.card}>
-          <TouchableOpacity 
-            style={styles.collapsibleHeader}
-            onPress={() => toggleSection('fiscali')}
-          >
-            <Text style={styles.cardTitle}>💼 Dati Fiscali</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, fiscali: true})); setEditing(true); }}>
-                <Ionicons name="create-outline" size={20} color="#007AFF" />
-              </TouchableOpacity>
-              <Ionicons 
-                name={sectionsExpanded.fiscali ? "chevron-up" : "chevron-down"} 
-                size={24} 
-                color="#666" 
-              />
-            </View>
-          </TouchableOpacity>
+          <Text style={styles.cardTitle}>💼 Dati Fiscali</Text>
           
-          {sectionsExpanded.fiscali && (
-            <View style={styles.collapsibleContent}>
           {/* Gender Selection */}
           <View style={styles.fieldContainer}>
             <Text style={styles.fieldLabel}>Sesso</Text>
@@ -1056,8 +1009,6 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               <Text style={styles.compensationLinkText}>Quietanze Mensili</Text>
               <Ionicons name="chevron-forward" size={20} color="#007AFF" />
             </TouchableOpacity>
-          )}
-            </View>
           )}
         </View>
         )}
@@ -1157,27 +1108,15 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           </View>
         )}
 
-        {/* Documento e Dati Bancari - Collapsible */}
+        {/* Documento e Dati Bancari */}
         <View style={styles.card}>
-          <TouchableOpacity 
-            style={styles.collapsibleHeader}
-            onPress={() => toggleSection('bancari')}
-          >
+          <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>{isQuotaAthlete ? '🪪 Documento di Identità' : '🏦 Documento e Dati Bancari'}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, bancari: true})); setEditingBank(true); }}>
-                <Ionicons name="create-outline" size={20} color="#007AFF" />
-              </TouchableOpacity>
-              <Ionicons 
-                name={sectionsExpanded.bancari ? "chevron-up" : "chevron-down"} 
-                size={24} 
-                color="#666" 
-              />
-            </View>
-          </TouchableOpacity>
+            <TouchableOpacity onPress={() => setEditingBank(!editingBank)}>
+              <Ionicons name={editingBank ? "close" : "create"} size={22} color="#007AFF" />
+            </TouchableOpacity>
+          </View>
           
-          {sectionsExpanded.bancari && (
-            <View style={styles.collapsibleContent}>
           {editingBank ? (
             <>
               <Text style={styles.inputLabel}>Tipo Documento</Text>
@@ -1438,8 +1377,6 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               </>
               )}
             </>
-          )}
-            </View>
           )}
         </View>
 
@@ -2270,17 +2207,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  collapsibleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  collapsibleContent: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
   },
 });
