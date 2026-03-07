@@ -112,6 +112,10 @@ export default function AdminCollaboratoreDetail() {
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
   const [quietanzeModalVisible, setQuietanzeModalVisible] = useState(false);
   
+  // Documenti firmati
+  const [userDocuments, setUserDocuments] = useState<any[]>([]);
+  const [documentsModalVisible, setDocumentsModalVisible] = useState(false);
+  
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
   const [otherAnnualCompensation, setOtherAnnualCompensation] = useState('0');
@@ -236,6 +240,15 @@ export default function AdminCollaboratoreDetail() {
         setSignedReceipts(records);
       } catch (compError) {
         setSignedReceipts([]);
+      }
+      
+      // Load user's signed documents (admin can see all with signer_id)
+      try {
+        const docsRes = await api.get(`/documents/my-documents?signer_id=${id}`);
+        setUserDocuments(docsRes.data?.documents || []);
+      } catch (docError) {
+        console.log('No documents found for user');
+        setUserDocuments([]);
       }
     } catch (error) {
       console.error('Error loading collaboratore:', error);
@@ -1090,6 +1103,88 @@ export default function AdminCollaboratoreDetail() {
           );
         })()}
 
+        {/* Documenti Firmati Section */}
+        <View style={styles.assignmentsSection}>
+          <Text style={styles.assignmentsSectionTitle}>📁 Documenti Firmati</Text>
+          
+          {userDocuments.length === 0 ? (
+            <Text style={{ color: '#666', fontStyle: 'italic', padding: 10 }}>
+              Nessun documento firmato
+            </Text>
+          ) : (
+            <View style={{ marginTop: 8 }}>
+              {userDocuments.slice(0, 3).map((doc: any, index: number) => (
+                <TouchableOpacity
+                  key={doc.id || index}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 10,
+                    paddingHorizontal: 8,
+                    backgroundColor: '#fff',
+                    borderRadius: 8,
+                    marginBottom: 6,
+                    borderLeftWidth: 3,
+                    borderLeftColor: doc.document_type === 'privacy_consent' ? '#4CAF50' : 
+                                    doc.document_type?.includes('compensation') ? '#007AFF' :
+                                    doc.document_type?.includes('5000') ? '#FF9800' :
+                                    doc.document_type?.includes('15000') ? '#F44336' : '#007AFF',
+                  }}
+                  onPress={async () => {
+                    try {
+                      const response = await api.get(`/documents/download/${doc.id}`, { responseType: 'blob' });
+                      if (Platform.OS === 'web') {
+                        const url = window.URL.createObjectURL(new Blob([response.data]));
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = doc.pdf_filename || 'documento.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                      }
+                    } catch (err) {
+                      showAlert('Errore', 'Impossibile scaricare il documento');
+                    }
+                  }}
+                >
+                  <Ionicons 
+                    name={doc.document_type === 'privacy_consent' ? 'shield-checkmark' : 
+                          doc.document_type?.includes('compensation') ? 'receipt' :
+                          doc.document_type?.includes('5000') ? 'alert-circle' :
+                          doc.document_type?.includes('15000') ? 'warning' : 'document-text'} 
+                    size={20} 
+                    color={doc.document_type === 'privacy_consent' ? '#4CAF50' : 
+                           doc.document_type?.includes('compensation') ? '#007AFF' :
+                           doc.document_type?.includes('5000') ? '#FF9800' :
+                           doc.document_type?.includes('15000') ? '#F44336' : '#007AFF'} 
+                  />
+                  <View style={{ marginLeft: 10, flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '500', color: '#333' }} numberOfLines={1}>
+                      {doc.document_title}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
+                      {doc.signed_at ? new Date(doc.signed_at).toLocaleDateString('it-IT') : ''}
+                    </Text>
+                  </View>
+                  <Ionicons name="download-outline" size={18} color="#007AFF" />
+                </TouchableOpacity>
+              ))}
+              
+              {userDocuments.length > 3 && (
+                <TouchableOpacity
+                  style={{ alignItems: 'center', paddingVertical: 8 }}
+                  onPress={() => setDocumentsModalVisible(true)}
+                >
+                  <Text style={{ color: '#007AFF', fontWeight: '600', fontSize: 13 }}>
+                    Vedi tutti ({userDocuments.length}) →
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
+
         {/* Onboarding Modal */}
         <Modal
           visible={editingOnboarding}
@@ -1243,27 +1338,69 @@ export default function AdminCollaboratoreDetail() {
                 </Text>
               </View>
               
-              {/* Lista quietanze compatta */}
-              {signedReceipts
-                .sort((a: any, b: any) => {
+              {/* Lista quietanze compatta - con calcolo soglie dinamico */}
+              {(() => {
+                // Sort chronologically to calculate thresholds
+                const sortedForCalc = [...signedReceipts].sort((a: any, b: any) => {
+                  if (a.year !== b.year) return a.year - b.year;
+                  return a.month - b.month;
+                });
+                
+                // Calculate threshold months per year
+                const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
+                const cumulativeByYear: { [year: number]: number } = {};
+                const priorComp = collaboratore?.other_annual_compensation || 0;
+                const contractYear = collaboratore?.contract_start_date ? parseInt(collaboratore.contract_start_date.split('-')[0]) : new Date().getFullYear();
+                
+                // Add prior compensation to first year
+                if (priorComp > 0) {
+                  cumulativeByYear[contractYear] = priorComp;
+                }
+                
+                for (const r of sortedForCalc) {
+                  if (!thresholdsByYear[r.year]) {
+                    thresholdsByYear[r.year] = { first5k: null, first15k: null };
+                  }
+                  if (!cumulativeByYear[r.year]) {
+                    cumulativeByYear[r.year] = r.year === contractYear ? (priorComp || 0) : 0;
+                  }
+                  
+                  cumulativeByYear[r.year] += (r.amount_gross || r.amount || 0);
+                  
+                  if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
+                    thresholdsByYear[r.year].first5k = r.month;
+                  }
+                  if (cumulativeByYear[r.year] > 15000 && thresholdsByYear[r.year].first15k === null) {
+                    thresholdsByYear[r.year].first15k = r.month;
+                  }
+                }
+                
+                // Now render sorted by most recent first
+                const sortedForDisplay = [...signedReceipts].sort((a: any, b: any) => {
                   if (a.year !== b.year) return b.year - a.year;
                   return b.month - a.month;
-                })
-                .map((receipt: any, index: number) => {
+                });
+                
+                return sortedForDisplay.map((receipt: any, index: number) => {
                   const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
-                  const isThreshold5k = receipt.exceeded_5000 === true;
-                  const isThreshold15k = receipt.exceeded_15000 === true;
+                  
+                  // Check if this month is at or after threshold
+                  const yearThresholds = thresholdsByYear[receipt.year] || { first5k: null, first15k: null };
+                  const isAfter5k = yearThresholds.first5k !== null && receipt.month >= yearThresholds.first5k;
+                  const isAfter15k = yearThresholds.first15k !== null && receipt.month >= yearThresholds.first15k;
+                  const isThreshold5kMonth = yearThresholds.first5k === receipt.month;
+                  const isThreshold15kMonth = yearThresholds.first15k === receipt.month;
                   
                   return (
                     <View 
                       key={index} 
                       style={{ 
-                        backgroundColor: isThreshold15k ? '#FFEBEE' : isThreshold5k ? '#FFF8E1' : '#fff',
+                        backgroundColor: isAfter15k ? '#FFEBEE' : isAfter5k ? '#FFF8E1' : '#fff',
                         paddingVertical: 8, 
                         paddingHorizontal: 10,
                         marginBottom: 6,
                         borderLeftWidth: 3,
-                        borderLeftColor: isThreshold15k ? '#F44336' : isThreshold5k ? '#FF9800' : '#4CAF50',
+                        borderLeftColor: isAfter15k ? '#F44336' : isAfter5k ? '#FF9800' : '#4CAF50',
                         borderRadius: 6,
                       }}
                     >
@@ -1272,12 +1409,12 @@ export default function AdminCollaboratoreDetail() {
                           <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>
                             {MONTH_NAMES[receipt.month]} {receipt.year}
                           </Text>
-                          {isThreshold5k && !isThreshold15k && (
+                          {isThreshold5kMonth && !isThreshold15kMonth && (
                             <View style={{ backgroundColor: '#FF9800', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
                               <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;5K</Text>
                             </View>
                           )}
-                          {isThreshold15k && (
+                          {isThreshold15kMonth && (
                             <View style={{ backgroundColor: '#F44336', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
                               <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;15K</Text>
                             </View>
@@ -1289,7 +1426,8 @@ export default function AdminCollaboratoreDetail() {
                       </View>
                     </View>
                   );
-                })}
+                });
+              })()}
               
               <View style={{ height: 20 }} />
             </ScrollView>

@@ -12071,6 +12071,7 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
 @api_router.get("/documents/signed")
 async def list_signed_documents(
     related_entity_id: Optional[str] = None,
+    signer_id: Optional[str] = None,
     current_user = Depends(get_current_user)
 ):
     """List signed documents for current user or all for admin"""
@@ -12084,9 +12085,20 @@ async def list_signed_documents(
             {"signer_email": current_user.get("email", "")}
         ]
     
-    # Allow filtering by related_entity_id
-    if related_entity_id:
-        query["related_entity_id"] = related_entity_id
+    # Allow filtering by related_entity_id or signer_id (for admin viewing specific user's docs)
+    if related_entity_id or signer_id:
+        filter_conditions = []
+        if related_entity_id:
+            filter_conditions.append({"related_entity_id": related_entity_id})
+        if signer_id:
+            filter_conditions.append({"signer_id": signer_id})
+        
+        if current_user["role"] == UserRole.ADMIN:
+            query["$or"] = filter_conditions
+        else:
+            # For non-admin, add to existing $or conditions
+            if "$or" in query:
+                query["$and"] = [{"$or": query.pop("$or")}, {"$or": filter_conditions}]
     
     documents = await db.signed_documents.find(query, {"pdf_base64": 0}).to_list(100)
     
@@ -15137,19 +15149,27 @@ async def download_document(
 
 @api_router.get("/documents/my-documents")
 async def get_my_documents(
+    signer_id: Optional[str] = None,
     current_user = Depends(get_current_user)
 ):
-    """Get documents signed by the current user, grouped by minor for parents"""
-    user_id = current_user.get("id")
+    """Get documents signed by the current user, grouped by minor for parents.
+       Admin can pass signer_id to view another user's documents."""
+    
+    # If admin passes signer_id, query for that user's documents
+    if signer_id and current_user.get("role") == UserRole.ADMIN:
+        target_user_id = signer_id
+    else:
+        target_user_id = current_user.get("id")
+    
     role = current_user.get("role")
     
     # Use signer_id as primary query - works for all roles
     query = {"$or": [
-        {"signer_id": user_id},
-        {"coach_id": user_id},
-        {"dirigente_id": user_id},
-        {"collaboratore_id": user_id},
-        {"parent_id": user_id}
+        {"signer_id": target_user_id},
+        {"coach_id": target_user_id},
+        {"dirigente_id": target_user_id},
+        {"collaboratore_id": target_user_id},
+        {"parent_id": target_user_id}
     ]}
     
     documents = []
