@@ -27,7 +27,7 @@ import * as Sharing from 'expo-sharing';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://role-profiles.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://role-ui-parity.preview.emergentagent.com';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
@@ -105,6 +105,17 @@ export default function DirigenteProfile() {
   });
 
   const [editData, setEditData] = useState({ ...profileData });
+  
+  // Collapsible sections state
+  const [sectionsExpanded, setSectionsExpanded] = useState({
+    anagrafici: false,
+    fiscali: false,
+    bancari: false,
+  });
+  
+  const toggleSection = (section: 'anagrafici' | 'fiscali' | 'bancari') => {
+    setSectionsExpanded(prev => ({...prev, [section]: !prev[section]}));
+  };
 
   const pickImage = async (side: 'front' | 'back') => {
     try {
@@ -698,114 +709,152 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
 
         {/* Profile Photo Section - RIMOSSA per privacy */}
 
-        {/* Account Info */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>👤 Account</Text>
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Email</Text>
-            <Text style={styles.fieldValue}>{profileData.email}</Text>
+        {/* Account Info - Compact */}
+        <View style={[styles.card, { paddingVertical: 12 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>👤 Account</Text>
+            <Text style={{ fontSize: 14, color: '#666' }}>{profileData.email}</Text>
           </View>
         </View>
 
-        {/* Personal Data */}
+        {/* Personal Data - Collapsible */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📋 Dati Anagrafici</Text>
-          {renderField('Nome', profileData.first_name, 'first_name')}
-          {renderField('Cognome', profileData.last_name, 'last_name')}
-          {renderField('Data di Nascita', profileData.date_of_birth, 'date_of_birth')}
+          <TouchableOpacity 
+            style={styles.collapsibleHeader}
+            onPress={() => toggleSection('anagrafici')}
+          >
+            <Text style={styles.cardTitle}>📋 Dati Anagrafici</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, anagrafici: true})); setEditing(true); }}>
+                <Ionicons name="create-outline" size={20} color="#8E44AD" />
+              </TouchableOpacity>
+              <Ionicons 
+                name={sectionsExpanded.anagrafici ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color="#666" 
+              />
+            </View>
+          </TouchableOpacity>
           
-          {/* Stato di Nascita - Dropdown */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Stato di Nascita</Text>
-            {editing ? (
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={editData.country_of_birth}
-                  onValueChange={(value) => setEditData({...editData, country_of_birth: value})}
-                  style={styles.picker}
-                >
-                  {COUNTRIES.map((country) => (
-                    <Picker.Item key={country} label={country} value={country} />
-                  ))}
-                </Picker>
+          {sectionsExpanded.anagrafici && (
+            <View style={styles.collapsibleContent}>
+              {renderField('Nome', profileData.first_name, 'first_name')}
+              {renderField('Cognome', profileData.last_name, 'last_name')}
+              {renderField('Data di Nascita', profileData.date_of_birth, 'date_of_birth')}
+              
+              {/* Stato di Nascita - Dropdown */}
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Stato di Nascita</Text>
+                {editing ? (
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={editData.country_of_birth}
+                      onValueChange={(value) => setEditData({...editData, country_of_birth: value})}
+                      style={styles.picker}
+                    >
+                      {COUNTRIES.map((country) => (
+                        <Picker.Item key={country} label={country} value={country} />
+                      ))}
+                    </Picker>
+                  </View>
+                ) : (
+                  <Text style={styles.fieldValue}>{profileData.country_of_birth || DEFAULT_COUNTRY}</Text>
+                )}
               </View>
-            ) : (
-              <Text style={styles.fieldValue}>{profileData.country_of_birth || DEFAULT_COUNTRY}</Text>
-            )}
-          </View>
-          
-          {renderField('Luogo di Nascita', profileData.place_of_birth, 'place_of_birth')}
-          {renderField('Provincia di Nascita', profileData.province_of_birth || '', 'province_of_birth')}
-          {renderField('Indirizzo', profileData.address, 'address')}
-          {renderField('Città', profileData.city, 'city')}
-          
-          {/* CAP e Provincia sulla stessa riga */}
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              {renderField('CAP', profileData.postal_code, 'postal_code')}
+              
+              {renderField('Luogo di Nascita', profileData.place_of_birth, 'place_of_birth')}
+              {renderField('Provincia di Nascita', profileData.province_of_birth || '', 'province_of_birth')}
+              {renderField('Indirizzo', profileData.address, 'address')}
+              {renderField('Città', profileData.city, 'city')}
+              
+              {/* CAP e Provincia sulla stessa riga */}
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  {renderField('CAP', profileData.postal_code, 'postal_code')}
+                </View>
+                <View style={{ flex: 1 }}>
+                  {renderField('Provincia', profileData.province, 'province')}
+                </View>
+              </View>
+              
+              {renderField('Telefono', profileData.phone, 'phone')}
             </View>
-            <View style={{ flex: 1 }}>
-              {renderField('Provincia', profileData.province, 'province')}
-            </View>
-          </View>
-          
-          {renderField('Telefono', profileData.phone, 'phone')}
+          )}
         </View>
 
-        {/* Fiscal Data */}
+        {/* Fiscal Data - Collapsible */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>💼 Dati Fiscali</Text>
+          <TouchableOpacity 
+            style={styles.collapsibleHeader}
+            onPress={() => toggleSection('fiscali')}
+          >
+            <Text style={styles.cardTitle}>💼 Dati Fiscali</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, fiscali: true})); setEditing(true); }}>
+                <Ionicons name="create-outline" size={20} color="#8E44AD" />
+              </TouchableOpacity>
+              <Ionicons 
+                name={sectionsExpanded.fiscali ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color="#666" 
+              />
+            </View>
+          </TouchableOpacity>
           
-          {/* Gender Selection */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Sesso</Text>
-            {editing ? (
-              <View style={styles.genderButtons}>
-                <TouchableOpacity 
-                  style={[styles.genderBtn, editData.gender === 'M' && styles.genderBtnActive]}
-                  onPress={() => setEditData({...editData, gender: 'M'})}
-                >
-                  <Text style={[styles.genderBtnText, editData.gender === 'M' && styles.genderBtnTextActive]}>M</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.genderBtn, editData.gender === 'F' && styles.genderBtnActive]}
-                  onPress={() => setEditData({...editData, gender: 'F'})}
-                >
-                  <Text style={[styles.genderBtnText, editData.gender === 'F' && styles.genderBtnTextActive]}>F</Text>
-                </TouchableOpacity>
+          {sectionsExpanded.fiscali && (
+            <View style={styles.collapsibleContent}>
+              {/* Gender Selection */}
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Sesso</Text>
+                {editing ? (
+                  <View style={styles.genderButtons}>
+                    <TouchableOpacity 
+                      style={[styles.genderBtn, editData.gender === 'M' && styles.genderBtnActive]}
+                      onPress={() => setEditData({...editData, gender: 'M'})}
+                    >
+                      <Text style={[styles.genderBtnText, editData.gender === 'M' && styles.genderBtnTextActive]}>M</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.genderBtn, editData.gender === 'F' && styles.genderBtnActive]}
+                      onPress={() => setEditData({...editData, gender: 'F'})}
+                    >
+                      <Text style={[styles.genderBtnText, editData.gender === 'F' && styles.genderBtnTextActive]}>F</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <Text style={styles.fieldValue}>{profileData.gender || '-'}</Text>
+                )}
               </View>
-            ) : (
-              <Text style={styles.fieldValue}>{profileData.gender || '-'}</Text>
-            )}
-          </View>
 
-          {/* Codice Fiscale with Calculate Button */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Codice Fiscale</Text>
-            {editing ? (
-              <View style={styles.cfCalculateRow}>
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  value={editData.fiscal_code || ''}
-                  onChangeText={(text) => setEditData({...editData, fiscal_code: text.toUpperCase()})}
-                  autoCapitalize="characters"
-                  maxLength={16}
-                  placeholder="CODICE FISCALE"
-                  placeholderTextColor="#999"
-                />
-                <TouchableOpacity 
-                  style={styles.calculateCfBtn}
-                  onPress={handleCalculateCF}
-                  disabled={!editData.gender || !editData.date_of_birth || !editData.place_of_birth || !editData.first_name || !editData.last_name}
-                >
-                  <Ionicons name="calculator" size={18} color="#fff" />
-                  <Text style={styles.calculateCfBtnText}>Calcola</Text>
-                </TouchableOpacity>
+              {/* Codice Fiscale with Calculate Button */}
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Codice Fiscale</Text>
+                {editing ? (
+                  <View style={styles.cfCalculateRow}>
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      value={editData.fiscal_code || ''}
+                      onChangeText={(text) => setEditData({...editData, fiscal_code: text.toUpperCase()})}
+                      autoCapitalize="characters"
+                      maxLength={16}
+                      placeholder="CODICE FISCALE"
+                      placeholderTextColor="#999"
+                    />
+                    <TouchableOpacity 
+                      style={styles.calculateCfBtn}
+                      onPress={handleCalculateCF}
+                      disabled={!editData.gender || !editData.date_of_birth || !editData.place_of_birth || !editData.first_name || !editData.last_name}
+                    >
+                      <Ionicons name="calculator" size={18} color="#fff" />
+                      <Text style={styles.calculateCfBtnText}>Calcola</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <Text style={styles.fieldValue}>{profileData.fiscal_code || '-'}</Text>
+                )}
               </View>
-            ) : (
-              <Text style={styles.fieldValue}>{profileData.fiscal_code || '-'}</Text>
-            )}
-          </View>
+            </View>
+          )}
         </View>
 
         {/* Compensation Info - Hidden during editing to prevent data loss */}
@@ -1093,16 +1142,28 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         </View>
 
 
-        {/* Dati Bancari - Hidden while editing main profile to avoid data loss */}
+        {/* Dati Bancari - Collapsible - Hidden while editing main profile to avoid data loss */}
         {!editing && (
         <View style={styles.card}>
-          <View style={styles.cardHeader}>
+          <TouchableOpacity 
+            style={styles.collapsibleHeader}
+            onPress={() => toggleSection('bancari')}
+          >
             <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
-            <TouchableOpacity onPress={() => setEditingBank(!editingBank)}>
-              <Ionicons name={editingBank ? "close" : "create"} size={22} color="#8E44AD" />
-            </TouchableOpacity>
-          </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, bancari: true})); setEditingBank(true); }}>
+                <Ionicons name="create-outline" size={20} color="#8E44AD" />
+              </TouchableOpacity>
+              <Ionicons 
+                name={sectionsExpanded.bancari ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color="#666" 
+              />
+            </View>
+          </TouchableOpacity>
           
+          {sectionsExpanded.bancari && (
+            <View style={styles.collapsibleContent}>
           {editingBank ? (
             <>
               <Text style={styles.inputLabel}>IBAN</Text>
@@ -1191,6 +1252,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 <Text style={styles.fieldValue}>{profileData.bank_name || '-'}</Text>
               </View>
             </>
+          )}
+            </View>
           )}
         </View>
         )}
@@ -1433,6 +1496,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 16,
+  },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  collapsibleContent: {
+    marginTop: 16,
   },
   cardSubtitle: {
     fontSize: 13,

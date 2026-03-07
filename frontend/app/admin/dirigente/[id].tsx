@@ -1161,12 +1161,9 @@ export default function AdminDirigenteDetail() {
               const sortedForDisplay = [...sortedByDate].reverse();
               
               return sortedForDisplay.map((receipt) => {
-                const monthNames = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 
-                                   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+                const monthNames = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 
+                                   'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
                 const monthLabel = `${monthNames[receipt.month]} ${receipt.year}`;
-                const signedDate = receipt.receipt_signed_date 
-                  ? format(new Date(receipt.receipt_signed_date), 'dd/MM/yyyy', { locale: it })
-                  : '-';
                 
                 // Check if this is THE month where threshold was crossed (show badge)
                 const isThreshold5kMonth = receipt.exceeded_5000 === true;
@@ -1178,25 +1175,35 @@ export default function AdminDirigenteDetail() {
                 
                 return (
                   <View key={`${receipt.year}-${receipt.month}`} style={[
-                    styles.monthRow,
-                    isAfter15k && { backgroundColor: '#FFF3E0', borderLeftWidth: 4, borderLeftColor: '#E65100' },
-                    isAfter5k && !isAfter15k && { backgroundColor: '#FFF8E1', borderLeftWidth: 4, borderLeftColor: '#F9A825' }
+                    {
+                      backgroundColor: isAfter15k ? '#FFEBEE' : isAfter5k ? '#FFF8E1' : '#fff',
+                      paddingVertical: 8, 
+                      paddingHorizontal: 10,
+                      marginBottom: 6,
+                      borderLeftWidth: 3,
+                      borderLeftColor: isAfter15k ? '#F44336' : isAfter5k ? '#FF9800' : '#4CAF50',
+                      borderRadius: 6,
+                    }
                   ]}>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Text style={styles.monthLabel}>{monthLabel}</Text>
-                        {isThreshold15kMonth && (
-                          <View style={{ backgroundColor: '#E65100', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                            <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>&gt;15K</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>
+                          {monthLabel}
+                        </Text>
+                        {isThreshold5kMonth && !isThreshold15kMonth && (
+                          <View style={{ backgroundColor: '#FF9800', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
+                            <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;5K</Text>
                           </View>
                         )}
-                        {isThreshold5kMonth && !isThreshold15kMonth && (
-                          <View style={{ backgroundColor: '#F9A825', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                            <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>&gt;5K</Text>
+                        {isThreshold15kMonth && (
+                          <View style={{ backgroundColor: '#F44336', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
+                            <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;15K</Text>
                           </View>
                         )}
                       </View>
-                      <Text style={styles.signedDateText}>Firmata il: {signedDate}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
+                        {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
+                      </Text>
                     </View>
                     <View style={styles.monthStatus}>
                       <View style={[styles.paidBadge, styles.paidBadgeActive]}>

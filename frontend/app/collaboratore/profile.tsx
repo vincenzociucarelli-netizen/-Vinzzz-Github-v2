@@ -28,7 +28,7 @@ import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://role-profiles.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://role-ui-parity.preview.emergentagent.com';
 
 export default function CollaboratoreProfile() {
   const router = useRouter();

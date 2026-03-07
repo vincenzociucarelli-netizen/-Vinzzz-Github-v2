@@ -1220,80 +1220,79 @@ export default function AdminCollaboratoreDetail() {
         </View>
       </Modal>
 
-      {/* Quietanze Modal */}
+      {/* Quietanze Modal - Stile Coach */}
       <Modal visible={quietanzeModalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: '90%', width: '95%' }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ backgroundColor: '#4CAF50', padding: 8, borderRadius: 10, marginRight: 10 }}>
-                  <Ionicons name="receipt" size={24} color="#fff" />
-                </View>
-                <View>
-                  <Text style={[styles.modalTitle, { marginBottom: 0 }]}>Quietanze Firmate</Text>
-                  <Text style={{ fontSize: 13, color: '#388E3C', fontWeight: '600' }}>
-                    {signedReceipts.length} {signedReceipts.length === 1 ? 'quietanza' : 'quietanze'}
-                  </Text>
-                </View>
-              </View>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '85%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333' }}>📋 Quietanze Firmate</Text>
               <TouchableOpacity onPress={() => setQuietanzeModalVisible(false)}>
-                <Ionicons name="close" size={28} color="#666" />
+                <Ionicons name="close-circle" size={28} color="#999" />
               </TouchableOpacity>
             </View>
             
-            {signedReceipts.length > 0 && (
-              <View style={{ backgroundColor: '#4CAF50', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, marginBottom: 16, alignItems: 'center' }}>
-                <Text style={{ color: '#fff', fontSize: 12 }}>Totale Percepito</Text>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 22 }}>
+            <ScrollView style={{ padding: 12 }}>
+              {/* Totale */}
+              <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 10, marginBottom: 12 }}>
+                <Text style={{ color: '#2E7D32', fontWeight: '600', fontSize: 13 }}>💰 Totale Percepito</Text>
+                <Text style={{ color: '#2E7D32', fontWeight: 'bold', fontSize: 24, marginTop: 2 }}>
                   {formatCurrency(signedReceipts.reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0))}
                 </Text>
+                <Text style={{ color: '#666', fontSize: 11 }}>
+                  {signedReceipts.length} quietanze firmate
+                </Text>
               </View>
-            )}
-            
-            {/* Month Icons Grid - Solo mesi del contratto */}
-            {contractMonths.length > 0 && (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16, backgroundColor: '#f5f5f5', borderRadius: 10, padding: 8 }}>
-                {contractMonths.map(({ name: monthName, month: monthNum, year }) => {
-                  const isSigned = signedReceipts.some((r: any) => r.month === monthNum && r.year === year);
+              
+              {/* Lista quietanze compatta */}
+              {signedReceipts
+                .sort((a: any, b: any) => {
+                  if (a.year !== b.year) return b.year - a.year;
+                  return b.month - a.month;
+                })
+                .map((receipt: any, index: number) => {
+                  const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                  const isThreshold5k = receipt.exceeded_5000 === true;
+                  const isThreshold15k = receipt.exceeded_15000 === true;
+                  
                   return (
-                    <View key={`${monthName}-${year}`} style={{ width: contractMonths.length <= 5 ? `${100/contractMonths.length}%` : '20%', alignItems: 'center', paddingVertical: 6 }}>
-                      <View style={{ 
-                        width: 36, height: 36, borderRadius: 18, 
-                        backgroundColor: isSigned ? '#4CAF50' : '#e0e0e0',
-                        alignItems: 'center', justifyContent: 'center', marginBottom: 2
-                      }}>
-                        <Ionicons name={isSigned ? "checkmark" : "remove"} size={20} color={isSigned ? '#fff' : '#999'} />
+                    <View 
+                      key={index} 
+                      style={{ 
+                        backgroundColor: isThreshold15k ? '#FFEBEE' : isThreshold5k ? '#FFF8E1' : '#fff',
+                        paddingVertical: 8, 
+                        paddingHorizontal: 10,
+                        marginBottom: 6,
+                        borderLeftWidth: 3,
+                        borderLeftColor: isThreshold15k ? '#F44336' : isThreshold5k ? '#FF9800' : '#4CAF50',
+                        borderRadius: 6,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>
+                            {MONTH_NAMES[receipt.month]} {receipt.year}
+                          </Text>
+                          {isThreshold5k && !isThreshold15k && (
+                            <View style={{ backgroundColor: '#FF9800', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
+                              <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;5K</Text>
+                            </View>
+                          )}
+                          {isThreshold15k && (
+                            <View style={{ backgroundColor: '#F44336', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
+                              <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;15K</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
+                          {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
+                        </Text>
                       </View>
-                      <Text style={{ fontSize: 11, color: isSigned ? '#4CAF50' : '#999', fontWeight: '600' }}>{monthName}</Text>
                     </View>
                   );
                 })}
-              </View>
-            )}
-
-            <ScrollView style={{ maxHeight: 300 }}>
-              {signedReceipts.map((receipt, index) => (
-                <View key={receipt.id || index} style={{ backgroundColor: '#fff', borderRadius: 8, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E8F5E9' }}>
-                  <Ionicons name="document-text" size={24} color="#4CAF50" />
-                  <View style={{ marginLeft: 12, flex: 1 }}>
-                    <Text style={{ fontWeight: '600', fontSize: 15, color: '#333' }}>
-                      {receipt.month_name || `Mese ${receipt.month}`} {receipt.year}
-                    </Text>
-                    <Text style={{ fontSize: 14, color: '#4CAF50', fontWeight: '500' }}>
-                      {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
-                    </Text>
-                  </View>
-                  <Ionicons name="checkmark-circle" size={26} color="#4CAF50" />
-                </View>
-              ))}
+              
+              <View style={{ height: 20 }} />
             </ScrollView>
-
-            <TouchableOpacity 
-              style={{ backgroundColor: '#4CAF50', padding: 14, borderRadius: 10, marginTop: 16, alignItems: 'center' }}
-              onPress={() => setQuietanzeModalVisible(false)}
-            >
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chiudi</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
