@@ -979,9 +979,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         {/* Compensation Info - Only show for compensated athletes */}
         {!isQuotaAthlete && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>💰 Compenso</Text>
+          <Text style={styles.cardTitle}>💰 Compenso Mensile</Text>
           <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Compenso Mensile</Text>
             <Text style={styles.compensationAmount}>
               {profileData.monthly_compensation > 0 
                 ? `€ ${profileData.monthly_compensation.toFixed(2)}`
