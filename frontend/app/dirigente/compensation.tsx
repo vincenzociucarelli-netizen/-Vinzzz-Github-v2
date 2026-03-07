@@ -770,7 +770,7 @@ export default function DirigenteCompensation() {
         {/* Year Summaries - Contract-based - ENHANCED STYLE */}
         {contractStartYear && contractEndYear && (
           <>
-            {/* Combined: Pregressi + Periodo Contratto + Totale RAS - Single unified banner */}
+            {/* Combined: Periodo Contratto + Totale RAS - Single unified banner */}
             <View style={styles.unifiedContractBanner}>
               {/* Header: Periodo Contratto */}
               <Text style={styles.unifiedBannerPeriod}>
@@ -790,22 +790,14 @@ export default function DirigenteCompensation() {
                 })())}
               </Text>
               
-              {/* Prior compensation if any */}
-              {priorCompensation > 0 && (
-                <View style={styles.unifiedBannerPrior}>
-                  <Text style={styles.unifiedBannerPriorLabel}>+ Compensi Pregressi (dichiarati)</Text>
-                  <Text style={styles.unifiedBannerPriorValue}>{formatCurrency(priorCompensation)}</Text>
-                </View>
-              )}
-              
-              {/* Total for RAS */}
+              {/* Total for RAS - ONLY this ASD/SSD compensation (prior comp already reported by other clubs) */}
               <View style={styles.unifiedBannerTotal}>
                 <Text style={styles.unifiedBannerTotalLabel}>TOTALE PER RAS:</Text>
                 <Text style={styles.unifiedBannerTotalValue}>
                   {formatCurrency((() => {
                     const months1 = getContractMonthsForYear(contractStartYear).length;
                     const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
-                    return (profile?.monthly_compensation || 0) * (months1 + months2) + (priorCompensation || 0);
+                    return (profile?.monthly_compensation || 0) * (months1 + months2);
                   })())}
                 </Text>
               </View>
