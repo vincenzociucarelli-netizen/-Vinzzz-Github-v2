@@ -107,7 +107,7 @@ export default function TeamAthletes() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>{name || 'Squadra'}</Text>
@@ -231,8 +231,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   backButton: {
-    padding: 8,
+    padding: 12,
     marginRight: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
   },
   headerContent: {
     flex: 1,

@@ -812,7 +812,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           </View>
         </View>
 
-        {/* Compensation Info */}
+        {/* Compensation Info - Hidden during editing to prevent data loss */}
+        {!editing && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>💰 Compenso</Text>
           <View style={styles.fieldContainer}>
@@ -878,6 +879,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </TouchableOpacity>
           )}
         </View>
+        )}
 
         {/* Incarichi Assegnati */}
         {(assignedTeams.length > 0 || assignedVenues.length > 0) && (
