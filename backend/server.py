@@ -10904,6 +10904,7 @@ def generate_gdpr_adult_privacy_pdf(
     y -= 0.5*cm
     
     # Draw signature
+    logging.info(f"[GDPR PDF] signature_base64 present: {bool(signature_base64)}, length: {len(signature_base64) if signature_base64 else 0}")
     if signature_base64 and HAS_PIL:
         try:
             if ',' in signature_base64:
@@ -12319,6 +12320,9 @@ async def sign_gdpr_privacy_document(
     if request.document_type == "gdpr_minor" and request.minor_id:
         hash_content += f"|{request.minor_id}"
     document_hash = hashlib.sha256(hash_content.encode()).hexdigest()
+    
+    # Debug log
+    logging.info(f"[GDPR Sign] signature_base64 received: {bool(request.signature_base64)}, length: {len(request.signature_base64) if request.signature_base64 else 0}")
     
     # Generate PDF based on document type
     try:
