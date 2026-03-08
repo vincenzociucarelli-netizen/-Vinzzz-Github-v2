@@ -406,8 +406,14 @@ export default function CoachCompensation() {
     try {
       setSigning(true);
       
-      // Calculate if thresholds will be exceeded
-      const monthlyAmount = profile.monthly_compensation || 0;
+      // Check if there's already a record for this month (e.g., admin-created with custom amount)
+      const existingRecord = records.find(r => 
+        (r.month === selectedMonth || matchesMonth(r.month, selectedMonth)) && 
+        r.year === selectedYear
+      );
+      
+      // Use existing record amount if available, otherwise use monthly compensation
+      const monthlyAmount = existingRecord?.amount_gross || existingRecord?.amount || profile.monthly_compensation || 0;
       const priorComp = profile.other_annual_compensation || 0;
       
       // Calculate total for the selected year (not current display year)
@@ -431,12 +437,12 @@ export default function CoachCompensation() {
       const exceeded5000 = newTotal > 5000 && yearTotalBeforeThis <= 5000;
       const exceeded15000 = newTotal > 15000 && yearTotalBeforeThis <= 15000;
       
-      console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYearLocal, selectedYear });
+      console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYearLocal, selectedYear, existingRecordAmount: existingRecord?.amount_gross });
       
       const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
-        amount_gross: profile.monthly_compensation,
+        amount_gross: monthlyAmount,  // Use the correct amount (custom or standard)
         signature_base64: signature.replace('data:image/png;base64,', ''),
         exceeded_5000: exceeded5000,
         exceeded_15000: exceeded15000,

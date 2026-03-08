@@ -9473,12 +9473,30 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 detail=f"Quietanza per {month_names[request.month]} {request.year} già firmata il {existing.get('receipt_signed_date', 'data sconosciuta')}"
             )
         
+        # IMPORTANT: If admin created a receipt with custom amount, preserve that amount
+        # Only use request.amount_gross if it's provided and different, otherwise keep existing
+        final_amount_gross = existing.get("amount_gross") or request.amount_gross
+        if existing.get("admin_generated"):
+            # Admin-generated receipts: always use the existing amount
+            final_amount_gross = existing.get("amount_gross", request.amount_gross)
+            logging.info(f"Admin-generated receipt: preserving amount {final_amount_gross}")
+        
+        # Recalculate net amount based on final amount
+        final_amount_net = final_amount_gross
+        final_deductions = 0.0
+        if new_total > 5000:
+            if new_total > 15000:
+                final_deductions = final_amount_gross * 0.33
+            else:
+                final_deductions = final_amount_gross * 0.23
+            final_amount_net = final_amount_gross - final_deductions
+        
         await db.coach_compensations.update_one(
             {"id": existing["id"]},
             {"$set": {
-                "amount_gross": request.amount_gross,
-                "amount_net": amount_net,
-                "deductions": deductions,
+                "amount_gross": final_amount_gross,
+                "amount_net": final_amount_net,
+                "deductions": final_deductions,
                 "received": True,
                 "received_date": now,
                 "receipt_signed": True,

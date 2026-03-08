@@ -1077,8 +1077,9 @@ export default function AdminCoachDetail() {
             <>
               <View style={styles.compensationDisplay}>
                 <Text style={styles.compensationAmount}>{formatCurrency(coach.monthly_compensation || 0)}</Text>
-                <Text style={styles.compensationPeriod}>/mese (questa ASD/SSD)</Text>
+                <Text style={styles.compensationPeriod}>/mese</Text>
               </View>
+              <Text style={{ fontSize: 13, color: '#666', marginTop: 4 }}>Da questa ASD/SSD</Text>
               
               {/* Calcolo per Anno Solare - Stesso formato del collaboratore */}
               {(coach.contract_start_date || coach.contract_end_date) && (() => {
