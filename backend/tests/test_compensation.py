@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://role-ui-parity.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://compliance-signing.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 COACH_EMAIL = "coach.pietro@test.com"

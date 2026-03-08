@@ -27,7 +27,7 @@ import * as Sharing from 'expo-sharing';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://role-ui-parity.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://compliance-signing.preview.emergentagent.com';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
@@ -1287,9 +1287,32 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
       <GDPRPrivacyModal
         visible={showPrivacyModal}
         onClose={() => setShowPrivacyModal(false)}
-        onSign={(success, documentId) => {
+        onSign={async (success, documentId) => {
           if (success) {
-            handlePrivacySign('');
+            try {
+              // GDPRPrivacyModal already saved the signed document via /documents/sign-gdpr-privacy
+              // We just need to update the privacy_accepted flag and save the profile
+              await api.patch('/auth/me', {
+                privacy_accepted: true,
+              });
+              setPrivacyAccepted(true);
+              setShowPrivacyModal(false);
+              // Now save the profile
+              await performSave();
+              Alert.alert(
+                'Privacy Confermata',
+                'La tua conferma privacy è stata registrata. Una copia è stata inviata alla tua email e salvata nell\'archivio.',
+                [{ text: 'OK' }]
+              );
+              // Reload profile to get updated data
+              await loadProfile();
+            } catch (error: any) {
+              console.error('Error updating privacy status:', error);
+              Alert.alert(
+                'Errore',
+                error.response?.data?.detail || 'Errore durante l\'aggiornamento. Riprova.'
+              );
+            }
           }
         }}
         documentType="gdpr_adult"

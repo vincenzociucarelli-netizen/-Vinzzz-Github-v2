@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import sys
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://role-ui-parity.preview.emergentagent.com/api"
+BACKEND_URL = "https://compliance-signing.preview.emergentagent.com/api"
 
 class TestResults:
     def __init__(self):
