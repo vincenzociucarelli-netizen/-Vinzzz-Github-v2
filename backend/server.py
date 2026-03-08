@@ -12486,6 +12486,7 @@ async def sign_gdpr_privacy_document(
         "pdf_path": pdf_path,
         "pdf_base64": base64.b64encode(pdf_bytes).decode('utf-8'),
         "created_at": timestamp,
+        "signed_at": timestamp,
         "status": "signed"
     }
     
