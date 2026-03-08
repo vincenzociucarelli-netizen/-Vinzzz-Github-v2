@@ -347,8 +347,13 @@ export default function CoachCompensation() {
   };
 
   const openDeclarationModal = (type: '5000' | '15000') => {
+    // Use current month/year when opening declaration directly
+    const now = new Date();
+    const currentMonthNum = now.getMonth() + 1;
+    const currentYearNum = now.getFullYear();
     setDeclarationType(type);
     setDeclarationSignature(null);
+    setSignatureModalState(prev => ({ ...prev, month: currentMonthNum, year: currentYearNum }));
     setShowDeclarationModal(true);
   };
 
@@ -819,7 +824,14 @@ export default function CoachCompensation() {
           // Purple background when exceeded €15k
           isAfter15k && status === 'signed' && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
         ]}
-        onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
+        onPress={() => {
+          console.log('Month card pressed:', { month, displayYear, status });
+          if (status === 'pending' || status === 'blocked') {
+            handleOpenSignature(month, displayYear);
+          } else if (status === 'signed') {
+            Alert.alert('Già firmata', `La quietanza di ${MONTH_NAMES[month]} ${displayYear} è già stata firmata.`);
+          }
+        }}
         disabled={status === 'future'}
         data-testid={`month-card-${displayYear}-${month}`}
       >
