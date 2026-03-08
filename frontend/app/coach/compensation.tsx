@@ -263,9 +263,12 @@ export default function CoachCompensation() {
   };
 
   const handleOpenSignature = (month: number, year?: number) => {
+    console.log('handleOpenSignature called:', { month, year, loading, thresholdStatus });
+    
     // Prevent action if still loading
     if (loading) {
       console.log('Still loading, ignoring click');
+      Alert.alert('Caricamento', 'Attendi il caricamento dei dati...');
       return;
     }
     
@@ -1293,8 +1296,14 @@ export default function CoachCompensation() {
               {/* Signature Pad */}
               <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
               <SignaturePadInline
-                onSave={(sig) => setDeclarationSignature(sig)}
-                onClear={() => setDeclarationSignature(null)}
+                onSave={(sig) => {
+                  console.log('Declaration signature saved, length:', sig?.length || 0);
+                  setDeclarationSignature(sig);
+                }}
+                onClear={() => {
+                  console.log('Declaration signature cleared');
+                  setDeclarationSignature(null);
+                }}
                 height={200}
               />
             </ScrollView>

@@ -75,10 +75,16 @@ const SignaturePadInline = forwardRef<SignaturePadInlineRef, SignaturePadInlineP
     }));
 
     const handleWebEnd = () => {
-      if (webCanvasRef.current && !webCanvasRef.current.isEmpty()) {
-        setIsEmpty(false);
-        const dataUrl = webCanvasRef.current.toDataURL('image/png');
-        onSave?.(dataUrl);
+      console.log('handleWebEnd called');
+      if (webCanvasRef.current) {
+        const isEmpty = webCanvasRef.current.isEmpty();
+        console.log('Canvas isEmpty:', isEmpty);
+        if (!isEmpty) {
+          setIsEmpty(false);
+          const dataUrl = webCanvasRef.current.toDataURL('image/png');
+          console.log('Signature dataUrl length:', dataUrl?.length || 0);
+          onSave?.(dataUrl);
+        }
       }
     };
 
@@ -142,9 +148,26 @@ const SignaturePadInline = forwardRef<SignaturePadInlineRef, SignaturePadInlineP
           <Text style={styles.hint}>
             {isEmpty ? 'Usa il mouse o il dito per firmare' : 'Firma registrata'}
           </Text>
-          <TouchableOpacity style={styles.clearBtn} onPress={handleClear}>
-            <Text style={styles.clearBtnText}>Cancella firma</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 8 }}>
+            {/* Manual confirm button for mobile */}
+            <TouchableOpacity 
+              style={[styles.clearBtn, { backgroundColor: isEmpty ? '#ccc' : '#34C759' }]} 
+              onPress={() => {
+                if (webCanvasRef.current && !webCanvasRef.current.isEmpty()) {
+                  setIsEmpty(false);
+                  const dataUrl = webCanvasRef.current.toDataURL('image/png');
+                  console.log('Manual confirm - signature length:', dataUrl?.length);
+                  onSave?.(dataUrl);
+                }
+              }}
+              disabled={isEmpty}
+            >
+              <Text style={[styles.clearBtnText, { color: isEmpty ? '#666' : '#fff' }]}>Conferma firma</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.clearBtn} onPress={handleClear}>
+              <Text style={styles.clearBtnText}>Cancella firma</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
