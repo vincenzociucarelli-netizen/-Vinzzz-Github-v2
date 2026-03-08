@@ -9060,6 +9060,165 @@ class CompensationReceiptRequest(BaseModel):
     exceeded_5000: bool = False
     exceeded_15000: bool = False
 
+class AdminCreateReceiptRequest(BaseModel):
+    month: int
+    year: int
+    amount_gross: float  # Admin can specify custom amount
+
+@api_router.post("/admin/coach/{coach_id}/compensation/create-receipt")
+async def admin_create_coach_receipt(
+    coach_id: str,
+    request: AdminCreateReceiptRequest,
+    current_user = Depends(get_current_user)
+):
+    """Admin crea una quietanza per un coach con importo personalizzato (da firmare poi dal coach)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo l'admin può creare quietanze")
+    
+    # Get coach data
+    coach = await db.users.find_one({"id": coach_id})
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach non trovato")
+    
+    # Check if receipt already exists
+    existing = await db.coach_compensations.find_one({
+        "coach_id": coach_id,
+        "year": request.year,
+        "month": request.month
+    })
+    
+    if existing:
+        # Update existing receipt with new amount
+        await db.coach_compensations.update_one(
+            {"coach_id": coach_id, "year": request.year, "month": request.month},
+            {"$set": {
+                "amount_gross": request.amount_gross,
+                "amount": request.amount_gross,
+                "amount_net": request.amount_gross,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_by": current_user["id"]
+            }}
+        )
+        return {"message": f"Quietanza aggiornata: {request.month}/{request.year} - €{request.amount_gross}", "updated": True}
+    else:
+        # Create new receipt
+        receipt_id = str(uuid.uuid4())[:8]
+        new_receipt = {
+            "id": receipt_id,
+            "coach_id": coach_id,
+            "year": request.year,
+            "month": request.month,
+            "amount_gross": request.amount_gross,
+            "amount": request.amount_gross,
+            "amount_net": request.amount_gross,
+            "received": True,
+            "receipt_signed": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": current_user["id"]
+        }
+        await db.coach_compensations.insert_one(new_receipt)
+        return {"message": f"Quietanza creata: {request.month}/{request.year} - €{request.amount_gross}", "created": True, "id": receipt_id}
+
+@api_router.post("/admin/collaboratore/{collaboratore_id}/compensation/create-receipt")
+async def admin_create_collaboratore_receipt(
+    collaboratore_id: str,
+    request: AdminCreateReceiptRequest,
+    current_user = Depends(get_current_user)
+):
+    """Admin crea una quietanza per un collaboratore con importo personalizzato"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo l'admin può creare quietanze")
+    
+    collaboratore = await db.users.find_one({"id": collaboratore_id})
+    if not collaboratore:
+        raise HTTPException(status_code=404, detail="Collaboratore non trovato")
+    
+    existing = await db.collaboratore_compensations.find_one({
+        "collaboratore_id": collaboratore_id,
+        "year": request.year,
+        "month": request.month
+    })
+    
+    if existing:
+        await db.collaboratore_compensations.update_one(
+            {"collaboratore_id": collaboratore_id, "year": request.year, "month": request.month},
+            {"$set": {
+                "amount_gross": request.amount_gross,
+                "amount": request.amount_gross,
+                "amount_net": request.amount_gross,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_by": current_user["id"]
+            }}
+        )
+        return {"message": f"Quietanza aggiornata: {request.month}/{request.year} - €{request.amount_gross}", "updated": True}
+    else:
+        receipt_id = str(uuid.uuid4())[:8]
+        new_receipt = {
+            "id": receipt_id,
+            "collaboratore_id": collaboratore_id,
+            "year": request.year,
+            "month": request.month,
+            "amount_gross": request.amount_gross,
+            "amount": request.amount_gross,
+            "amount_net": request.amount_gross,
+            "received": True,
+            "receipt_signed": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": current_user["id"]
+        }
+        await db.collaboratore_compensations.insert_one(new_receipt)
+        return {"message": f"Quietanza creata: {request.month}/{request.year} - €{request.amount_gross}", "created": True, "id": receipt_id}
+
+@api_router.post("/admin/dirigente/{dirigente_id}/compensation/create-receipt")
+async def admin_create_dirigente_receipt(
+    dirigente_id: str,
+    request: AdminCreateReceiptRequest,
+    current_user = Depends(get_current_user)
+):
+    """Admin crea una quietanza per un dirigente con importo personalizzato"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo l'admin può creare quietanze")
+    
+    dirigente = await db.users.find_one({"id": dirigente_id})
+    if not dirigente:
+        raise HTTPException(status_code=404, detail="Dirigente non trovato")
+    
+    existing = await db.dirigente_compensations.find_one({
+        "dirigente_id": dirigente_id,
+        "year": request.year,
+        "month": request.month
+    })
+    
+    if existing:
+        await db.dirigente_compensations.update_one(
+            {"dirigente_id": dirigente_id, "year": request.year, "month": request.month},
+            {"$set": {
+                "amount_gross": request.amount_gross,
+                "amount": request.amount_gross,
+                "amount_net": request.amount_gross,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_by": current_user["id"]
+            }}
+        )
+        return {"message": f"Quietanza aggiornata: {request.month}/{request.year} - €{request.amount_gross}", "updated": True}
+    else:
+        receipt_id = str(uuid.uuid4())[:8]
+        new_receipt = {
+            "id": receipt_id,
+            "dirigente_id": dirigente_id,
+            "year": request.year,
+            "month": request.month,
+            "amount_gross": request.amount_gross,
+            "amount": request.amount_gross,
+            "amount_net": request.amount_gross,
+            "received": True,
+            "receipt_signed": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": current_user["id"]
+        }
+        await db.dirigente_compensations.insert_one(new_receipt)
+        return {"message": f"Quietanza creata: {request.month}/{request.year} - €{request.amount_gross}", "created": True, "id": receipt_id}
+
 @api_router.post("/coach/{coach_id}/compensation/receipt")
 async def sign_compensation_receipt(
     coach_id: str,

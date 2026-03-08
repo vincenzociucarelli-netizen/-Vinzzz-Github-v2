@@ -125,6 +125,13 @@ export default function AdminDirigenteDetail() {
   // Modal quietanze firmate
   const [receiptsModalVisible, setReceiptsModalVisible] = useState(false);
   
+  // Modal per creare quietanza (Admin)
+  const [createReceiptModalVisible, setCreateReceiptModalVisible] = useState(false);
+  const [newReceiptMonth, setNewReceiptMonth] = useState(new Date().getMonth() + 1);
+  const [newReceiptYear, setNewReceiptYear] = useState(new Date().getFullYear());
+  const [newReceiptAmount, setNewReceiptAmount] = useState('');
+  const [creatingReceipt, setCreatingReceipt] = useState(false);
+  
   // Documenti firmati
   const [userDocuments, setUserDocuments] = useState<any[]>([]);
   const [documentsModalVisible, setDocumentsModalVisible] = useState(false);
@@ -1158,6 +1165,28 @@ export default function AdminDirigenteDetail() {
               </Text>
             </TouchableOpacity>
           )}
+          
+          {/* Pulsante Genera Quietanza - Solo Admin */}
+          <TouchableOpacity 
+            style={{ 
+              marginTop: 12, 
+              padding: 12, 
+              backgroundColor: '#4CAF50', 
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onPress={() => {
+              setNewReceiptAmount(dirigente?.monthly_compensation?.toString() || '0');
+              setCreateReceiptModalVisible(true);
+            }}
+          >
+            <Ionicons name="add-circle" size={20} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 8 }}>
+              Genera Quietanza Personalizzata
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Dati Bancari - Solo visualizzazione per Admin */}
@@ -1468,6 +1497,126 @@ export default function AdminDirigenteDetail() {
               
               <View style={{ height: 20 }} />
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Create Receipt Modal - Admin Only */}
+      <Modal
+        visible={createReceiptModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setCreateReceiptModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '90%', maxWidth: 400 }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 16 }}>
+              📝 Genera Quietanza Personalizzata
+            </Text>
+            
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
+              Crea una quietanza con importo personalizzato per questo mese. Il dirigente dovrà poi firmarla.
+            </Text>
+            
+            {/* Mese e Anno */}
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Mese</Text>
+                <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8 }}>
+                  <Picker
+                    selectedValue={newReceiptMonth}
+                    onValueChange={(value) => setNewReceiptMonth(value)}
+                    style={{ height: 50 }}
+                  >
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                      <Picker.Item key={m} label={['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][m-1]} value={m} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Anno</Text>
+                <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8 }}>
+                  <Picker
+                    selectedValue={newReceiptYear}
+                    onValueChange={(value) => setNewReceiptYear(value)}
+                    style={{ height: 50 }}
+                  >
+                    {[2024,2025,2026,2027].map(y => (
+                      <Picker.Item key={y} label={y.toString()} value={y} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            </View>
+            
+            {/* Importo */}
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Importo Lordo (€)</Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#ddd',
+                  borderRadius: 8,
+                  padding: 12,
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                  textAlign: 'center'
+                }}
+                value={newReceiptAmount}
+                onChangeText={setNewReceiptAmount}
+                keyboardType="numeric"
+                placeholder="0.00"
+              />
+              <Text style={{ fontSize: 11, color: '#999', marginTop: 4, textAlign: 'center' }}>
+                Compenso base: {formatCurrency(dirigente?.monthly_compensation || 0)}
+              </Text>
+            </View>
+            
+            {/* Buttons */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                style={{ flex: 1, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 8, alignItems: 'center' }}
+                onPress={() => setCreateReceiptModalVisible(false)}
+              >
+                <Text style={{ color: '#666' }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ 
+                  flex: 1, 
+                  padding: 12, 
+                  backgroundColor: creatingReceipt ? '#ccc' : '#4CAF50', 
+                  borderRadius: 8, 
+                  alignItems: 'center' 
+                }}
+                disabled={creatingReceipt}
+                onPress={async () => {
+                  if (!newReceiptAmount || parseFloat(newReceiptAmount) <= 0) {
+                    showAlert('Errore', 'Inserisci un importo valido');
+                    return;
+                  }
+                  setCreatingReceipt(true);
+                  try {
+                    const response = await api.post(`/admin/dirigente/${id}/compensation/create-receipt`, {
+                      month: newReceiptMonth,
+                      year: newReceiptYear,
+                      amount_gross: parseFloat(newReceiptAmount)
+                    });
+                    showAlert('Successo', response.data.message);
+                    setCreateReceiptModalVisible(false);
+                    loadData();
+                  } catch (error: any) {
+                    showAlert('Errore', error.response?.data?.detail || 'Errore nella creazione');
+                  } finally {
+                    setCreatingReceipt(false);
+                  }
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>
+                  {creatingReceipt ? 'Creazione...' : 'Genera'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
