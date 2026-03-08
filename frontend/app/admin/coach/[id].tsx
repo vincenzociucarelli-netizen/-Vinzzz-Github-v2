@@ -15,6 +15,7 @@ import {
   Dimensions,
   Linking,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
