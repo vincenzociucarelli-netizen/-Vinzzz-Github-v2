@@ -245,7 +245,9 @@ export default function AdminCollaboratoreDetail() {
       // Load user's signed documents (admin can see all with signer_id)
       try {
         const docsRes = await api.get(`/documents/my-documents?signer_id=${id}`);
-        setUserDocuments(docsRes.data?.documents || []);
+        // Filter only signed documents (with signed_at date)
+        const signedDocs = (docsRes.data?.documents || []).filter((doc: any) => doc.signed_at);
+        setUserDocuments(signedDocs);
       } catch (docError) {
         console.log('No documents found for user');
         setUserDocuments([]);
@@ -812,14 +814,14 @@ export default function AdminCollaboratoreDetail() {
                         {/* Box Anno Inizio */}
                         {years.length > 0 && years[0] && yearlyBreakdown[years[0]] && (
                           <View style={[styles.totalBox, { 
-                            backgroundColor: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9',
+                            backgroundColor: yearlyBreakdown[years[0]].exceedsThreshold15k ? '#F3E5F5' : yearlyBreakdown[years[0]].exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9',
                             marginBottom: 12 
                           }]}>
                             <Text style={[styles.totalLabel, { 
-                              color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32',
+                              color: yearlyBreakdown[years[0]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32',
                               fontWeight: 'bold' 
                             }]}>
-                              {yearlyBreakdown[years[0]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[0]} ({yearlyBreakdown[years[0]].startMonth}-Dic: {yearlyBreakdown[years[0]].months} mesi)
+                              {yearlyBreakdown[years[0]].exceedsThreshold15k ? '🚨' : yearlyBreakdown[years[0]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[0]} ({yearlyBreakdown[years[0]].startMonth}-Dic: {yearlyBreakdown[years[0]].months} mesi)
                             </Text>
                             <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, flexWrap: 'wrap', gap: 16 }}>
                               <View>
@@ -835,7 +837,7 @@ export default function AdminCollaboratoreDetail() {
                             </View>
                             <View style={{ alignItems: 'center', marginTop: 12 }}>
                               <Text style={{ fontSize: 12, color: '#333' }}>Totale:</Text>
-                              <Text style={{ fontSize: 20, fontWeight: 'bold', color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
+                              <Text style={{ fontSize: 20, fontWeight: 'bold', color: yearlyBreakdown[years[0]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
                                 {formatCurrency(yearlyBreakdown[years[0]].grandTotal)}
                               </Text>
                             </View>
@@ -850,11 +852,11 @@ export default function AdminCollaboratoreDetail() {
                               </View>
                             )}
                             {yearlyBreakdown[years[0]].exceedsThreshold15k && (
-                              <View style={{ backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#F44336', borderRadius: 8, padding: 10, marginTop: 8 }}>
-                                <Text style={{ fontSize: 13, color: '#C62828', fontWeight: 'bold', textAlign: 'center' }}>
+                              <View style={{ backgroundColor: '#EDE7F6', borderWidth: 2, borderColor: '#8E44AD', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#8E44AD', fontWeight: 'bold', textAlign: 'center' }}>
                                   🚨 SUPERAMENTO € 15.000,00
                                 </Text>
-                                <Text style={{ fontSize: 11, color: '#D32F2F', textAlign: 'center', marginTop: 4 }}>
+                                <Text style={{ fontSize: 11, color: '#7B1FA2', textAlign: 'center', marginTop: 4 }}>
                                   Tassazione IRPEF obbligatoria
                                 </Text>
                               </View>
@@ -865,14 +867,14 @@ export default function AdminCollaboratoreDetail() {
                         {/* Box Anno Fine (se diverso) */}
                         {years.length > 1 && years[1] && yearlyBreakdown[years[1]] && (
                           <View style={[styles.totalBox, { 
-                            backgroundColor: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9',
+                            backgroundColor: yearlyBreakdown[years[1]].exceedsThreshold15k ? '#F3E5F5' : yearlyBreakdown[years[1]].exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9',
                             marginBottom: 12 
                           }]}>
                             <Text style={[styles.totalLabel, { 
-                              color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32',
+                              color: yearlyBreakdown[years[1]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32',
                               fontWeight: 'bold' 
                             }]}>
-                              {yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} (Gen-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
+                              {yearlyBreakdown[years[1]].exceedsThreshold15k ? '🚨' : yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} (Gen-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
                             </Text>
                             <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, gap: 16 }}>
                               <View>
@@ -882,7 +884,7 @@ export default function AdminCollaboratoreDetail() {
                             </View>
                             <View style={{ alignItems: 'center', marginTop: 12 }}>
                               <Text style={{ fontSize: 12, color: '#333' }}>Totale Anno:</Text>
-                              <Text style={{ fontSize: 20, fontWeight: 'bold', color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
+                              <Text style={{ fontSize: 20, fontWeight: 'bold', color: yearlyBreakdown[years[1]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
                                 {formatCurrency(yearlyBreakdown[years[1]].grandTotal)}
                               </Text>
                             </View>
@@ -897,11 +899,11 @@ export default function AdminCollaboratoreDetail() {
                               </View>
                             )}
                             {yearlyBreakdown[years[1]].exceedsThreshold15k && (
-                              <View style={{ backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#F44336', borderRadius: 8, padding: 10, marginTop: 8 }}>
-                                <Text style={{ fontSize: 13, color: '#C62828', fontWeight: 'bold', textAlign: 'center' }}>
+                              <View style={{ backgroundColor: '#EDE7F6', borderWidth: 2, borderColor: '#8E44AD', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#8E44AD', fontWeight: 'bold', textAlign: 'center' }}>
                                   🚨 SUPERAMENTO € 15.000,00
                                 </Text>
-                                <Text style={{ fontSize: 11, color: '#D32F2F', textAlign: 'center', marginTop: 4 }}>
+                                <Text style={{ fontSize: 11, color: '#7B1FA2', textAlign: 'center', marginTop: 4 }}>
                                   Tassazione IRPEF obbligatoria
                                 </Text>
                               </View>

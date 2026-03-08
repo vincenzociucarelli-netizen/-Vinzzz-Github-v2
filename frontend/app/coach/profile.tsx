@@ -233,7 +233,9 @@ export default function CoachProfile() {
       try {
         const docsRes = await api.get('/documents/my-documents');
         if (docsRes.data?.documents) {
-          setMyDocuments(docsRes.data.documents);
+          // Filter only signed documents (with signed_at date)
+          const signedDocs = docsRes.data.documents.filter((doc: any) => doc.signed_at);
+          setMyDocuments(signedDocs);
         }
       } catch (err) {
         console.log('No documents found');
