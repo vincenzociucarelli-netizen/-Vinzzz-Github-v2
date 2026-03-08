@@ -1295,8 +1295,11 @@ export default function CoachCompensation() {
                   declarationType === '15000' && { backgroundColor: '#721C24' },
                   !declarationSignature && styles.buttonDisabled
                 ]}
-                onPress={handleSignDeclaration}
-                disabled={!declarationSignature || signingDeclaration}
+                onPress={() => {
+                  console.log('Button pressed, declarationSignature:', declarationSignature ? 'SET' : 'NULL');
+                  handleSignDeclaration();
+                }}
+                disabled={signingDeclaration}
               >
                 {signingDeclaration ? (
                   <ActivityIndicator size="small" color="#fff" />

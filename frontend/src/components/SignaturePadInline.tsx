@@ -84,6 +84,10 @@ const SignaturePadInline = forwardRef<SignaturePadInlineRef, SignaturePadInlineP
 
     const handleNativeEnd = () => {
       setIsEmpty(false);
+      // Automatically read and save signature when user finishes drawing
+      if (nativeCanvasRef.current) {
+        nativeCanvasRef.current.readSignature();
+      }
     };
 
     const handleNativeOK = (signature: string) => {
