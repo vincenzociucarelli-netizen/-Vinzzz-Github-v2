@@ -468,12 +468,19 @@ export default function CoachCompensation() {
     
     // Use matchesMonth helper for legacy support
     const record = records.find(r => matchesMonth(r.month, month) && r.year === checkYear);
+    
+    // FIRST check if already signed - signed months should show as signed
     if (record?.receipt_signed) {
       return 'signed';
     }
-    if (thresholdStatus?.is_blocked) {
+    
+    // Only show blocked status for 2026+ years and if threshold is blocked
+    // Use the correct threshold status for the year being checked
+    const relevantThresholdStatus = checkYear === 2026 ? thresholdStatus2026 : thresholdStatus;
+    if (relevantThresholdStatus?.is_blocked) {
       return 'blocked';
     }
+    
     return 'pending';
   };
   
@@ -779,7 +786,8 @@ export default function CoachCompensation() {
     const status = getMonthStatus(month, displayYear);
     // Use matchesMonth for legacy support
     const record = records.find(r => matchesMonth(r.month, month) && r.year === displayYear);
-    const monthlyAmount = profile?.monthly_compensation || 0;
+    // Use record amount if exists, otherwise use profile's monthly compensation
+    const monthlyAmount = record?.amount_gross || record?.amount || profile?.monthly_compensation || 0;
     
     // Check if this month is after threshold was crossed IN THE SAME YEAR (for highlighting)
     const thresholdsByYear = getThresholdMonths();
