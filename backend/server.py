@@ -10733,7 +10733,7 @@ def generate_gdpr_adult_privacy_pdf(
     # ==================== PAGE 1 ====================
     # Header
     c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(width/2, height - 2*cm, "INFORMATIVA PRIVACY PER COLLABORATORI")
+    c.drawCentredString(width/2, height - 2*cm, "INFORMATIVA PRIVACY STAFF")
     c.setFont("Helvetica", 10)
     c.drawCentredString(width/2, height - 2.6*cm, "ai sensi del Regolamento UE 2016/679 (GDPR)")
     
@@ -10756,7 +10756,7 @@ def generate_gdpr_adult_privacy_pdf(
     
     # Intro
     c.setFont("Helvetica", 10)
-    intro_text = f"Gentile Collaboratore, La presente informativa descrive le modalità di trattamento dei dati personali da parte di {nome_legale}."
+    intro_text = f"Gentile membro dello Staff, La presente informativa descrive le modalità di trattamento dei dati personali da parte di {nome_legale}."
     y = draw_wrapped_text(c, intro_text, 2*cm, y, max_w)
     
     y -= 0.5*cm
@@ -10885,7 +10885,7 @@ def generate_gdpr_adult_privacy_pdf(
     
     c.setFont("Helvetica", 10)
     y_box = y - 0.9*cm
-    c.drawString(2.5*cm, y_box, f"Collaboratore: {signer_surname} {signer_name}")
+    c.drawString(2.5*cm, y_box, f"Nome: {signer_surname} {signer_name}")
     y_box -= 0.45*cm
     c.drawString(2.5*cm, y_box, f"Codice Fiscale: {signer_fiscal_code}")
     y_box -= 0.45*cm
@@ -12365,7 +12365,7 @@ async def sign_gdpr_privacy_document(
                 society_id=society_id
             )
             
-            doc_title = "Informativa Privacy GDPR - Collaboratori"
+            doc_title = "Informativa Privacy GDPR - Staff"
             related_entity_id = None
             minor_data = {}
             
@@ -12646,7 +12646,7 @@ async def preview_gdpr_privacy_document(
                 user_id=current_user["id"],
                 society_id=society_id
             )
-            doc_title = "ANTEPRIMA - Informativa Privacy GDPR - Collaboratori"
+            doc_title = "ANTEPRIMA - Informativa Privacy GDPR - Staff"
             
         elif request.document_type == "gdpr_minor":
             if not request.minor_id:
