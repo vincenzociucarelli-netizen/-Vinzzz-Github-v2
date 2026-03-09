@@ -127,6 +127,9 @@ export default function CoachProfile() {
   // My documents (privacy, receipts, etc.)
   const [myDocuments, setMyDocuments] = useState<any[]>([]);
   const [showAllDocumentsModal, setShowAllDocumentsModal] = useState(false);
+  
+  // Assigned teams
+  const [teams, setTeams] = useState<Array<{id: string; name: string}>>([]);
 
   const loadProfile = async () => {
     try {
@@ -239,6 +242,14 @@ export default function CoachProfile() {
         }
       } catch (err) {
         console.log('No documents found');
+      }
+      
+      // Load assigned teams
+      try {
+        const teamsRes = await api.get('/coach/my-teams');
+        setTeams(teamsRes.data || []);
+      } catch (err) {
+        console.log('Error loading teams:', err);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -1106,6 +1117,23 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               <Text style={styles.compensationLinkText}>Quietanze Mensili</Text>
               <Ionicons name="chevron-forward" size={22} color="#fff" />
             </TouchableOpacity>
+          )}
+          
+          {/* Squadre Assegnate */}
+          {teams.length > 0 && (
+            <View style={{ marginTop: 12, backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#FF9800' }}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#E65100', marginBottom: 8 }}>🏐 Squadre Assegnate</Text>
+              {teams.map((team) => (
+                <TouchableOpacity 
+                  key={team.id}
+                  style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4 }}
+                  onPress={() => router.push(`/admin/team/${team.id}`)}
+                >
+                  <Text style={{ fontSize: 13, color: '#333' }}>• </Text>
+                  <Text style={{ fontSize: 13, color: '#1565C0', textDecorationLine: 'underline' }}>{team.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
         </View>
 
