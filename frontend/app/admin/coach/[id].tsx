@@ -386,7 +386,18 @@ export default function AdminCoachDetail() {
         const yearEndMonth = (year === endYear) ? end.getMonth() : 11;
         
         const monthsThisYear = yearEndMonth - yearStartMonth + 1;
-        const totalThisYear = monthly * monthsThisYear;
+        
+        // Calculate total from actual receipts if available, otherwise use standard rate
+        // This ensures custom amounts (admin-generated) are properly counted
+        const yearReceipts = (signedReceipts || []).filter((r: any) => r.year === year);
+        let totalThisYear = 0;
+        
+        for (let m = yearStartMonth; m <= yearEndMonth; m++) {
+          const monthNum = m + 1; // Convert 0-indexed to 1-indexed
+          const receipt = yearReceipts.find((r: any) => r.month === monthNum);
+          // Use receipt amount if exists, otherwise use standard monthly rate
+          totalThisYear += receipt?.amount_gross || receipt?.amount || monthly;
+        }
         
         // I pregressi si applicano SOLO al primo anno (anno di assunzione)
         const priorThisYear = (year === startYear) ? prior : 0;
@@ -408,7 +419,17 @@ export default function AdminCoachDetail() {
       const year = start.getFullYear();
       const startMonth = start.getMonth();
       const monthsThisYear = 12 - startMonth;
-      const totalThisYear = monthly * monthsThisYear;
+      
+      // Calculate total from actual receipts
+      const yearReceipts = (signedReceipts || []).filter((r: any) => r.year === year);
+      let totalThisYear = 0;
+      
+      for (let m = startMonth; m <= 11; m++) {
+        const monthNum = m + 1;
+        const receipt = yearReceipts.find((r: any) => r.month === monthNum);
+        totalThisYear += receipt?.amount_gross || receipt?.amount || monthly;
+      }
+      
       const grandTotalThisYear = prior + totalThisYear;
       
       years[year] = {
