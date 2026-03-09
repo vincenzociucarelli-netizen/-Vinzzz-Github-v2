@@ -432,11 +432,27 @@ export default function DirigenteCompensation() {
     const monthsInYear = getContractMonthsForYear(year);
     const monthlyComp = profile?.monthly_compensation || 0;
     const monthCount = monthsInYear.length;
-    const yearlyFromContract = monthlyComp * monthCount;
+    const yearlyFromContractBase = monthlyComp * monthCount;  // Base compensation
     
+    // Calculate actual total from receipts (includes custom amounts)
+    let actualYearlyTotal = 0;
+    let supplementaryTotal = 0;
+    
+    monthsInYear.forEach(month => {
+      const receipt = records.find(r => r.year === year && r.month === month);
+      const receiptAmount = receipt?.amount_gross || receipt?.amount || monthlyComp;
+      actualYearlyTotal += receiptAmount;
+      
+      // Calculate supplementary (amount above standard monthly)
+      if (receiptAmount > monthlyComp) {
+        supplementaryTotal += (receiptAmount - monthlyComp);
+      }
+    });
+    
+    // Add prior compensation only for the first year of contract
     const includePrior = year === contractStartYear;
     const prior = includePrior ? priorCompensation : 0;
-    const total = yearlyFromContract + prior;
+    const total = actualYearlyTotal + prior;  // Use actual amounts, not base
     
     const signedTotal = records
       .filter(r => r.year === year && r.receipt_signed)
@@ -446,7 +462,9 @@ export default function DirigenteCompensation() {
       year,
       monthCount,
       monthlyComp,
-      yearlyFromContract,
+      yearlyFromContract: actualYearlyTotal,  // Now includes supplementary amounts
+      yearlyFromContractBase,  // Base compensation (monthly × months)
+      supplementaryTotal,  // Amount above standard monthly
       priorCompensation: prior,
       totalProjected: total,
       signedTotal: signedTotal + prior,
@@ -862,23 +880,27 @@ export default function DirigenteCompensation() {
               </Text>
               
               {/* Linear layout like Coach view */}
-              <View style={{ marginTop: 8 }}>
-                <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency((() => {
-                  const months1 = getContractMonthsForYear(contractStartYear).length;
-                  const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
-                  return (profile?.monthly_compensation || 0) * (months1 + months2);
-                })())}</Text></Text>
-                <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({(() => {
-                  const months1 = getContractMonthsForYear(contractStartYear).length;
-                  const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
-                  return months1 + months2;
-                })()} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text>
-                <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency((() => {
-                  const months1 = getContractMonthsForYear(contractStartYear).length;
-                  const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
-                  return (profile?.monthly_compensation || 0) * (months1 + months2);
-                })())}</Text></Text>
-              </View>
+              {(() => {
+                const summary1 = getYearSummary(contractStartYear);
+                const summary2 = contractEndYear > contractStartYear ? getYearSummary(contractEndYear) : { yearlyFromContractBase: 0, supplementaryTotal: 0 };
+                const totalBase = (summary1.yearlyFromContractBase || 0) + (summary2.yearlyFromContractBase || 0);
+                const totalSupplementary = (summary1.supplementaryTotal || 0) + (summary2.supplementaryTotal || 0);
+                const grandTotal = totalBase + totalSupplementary;
+                const months1 = getContractMonthsForYear(contractStartYear).length;
+                const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
+                const totalMonths = months1 + months2;
+                
+                return (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalBase)}</Text></Text>
+                    <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({totalMonths} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text>
+                    {totalSupplementary > 0 && (
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalSupplementary)}</Text></Text>
+                    )}
+                    <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(grandTotal)}</Text></Text>
+                  </View>
+                );
+              })()}
             </View>
             
             {/* Calcolo per Anno Solare Header */}
@@ -905,7 +927,8 @@ export default function DirigenteCompensation() {
                   
                   {/* Linear layout like Coach view */}
                   <View style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContract || 0)}</Text></Text>
+                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
+                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
                     {summary.priorCompensation > 0 && (
                       <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.priorCompensation)}</Text></Text>
                     )}
@@ -948,7 +971,8 @@ export default function DirigenteCompensation() {
                   
                   {/* Linear layout like Coach view */}
                   <View style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContract || 0)}</Text></Text>
+                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
+                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
                     <Text style={{ fontSize: 15, color: exceeds15k ? '#8E44AD' : exceeds5k ? '#F57F17' : headerColor, fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.totalProjected)}</Text></Text>
                   </View>
                   
