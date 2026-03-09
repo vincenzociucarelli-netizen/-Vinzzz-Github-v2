@@ -392,7 +392,12 @@ export default function AdminCoachDetail() {
         
         // Calculate total from actual receipts if available, otherwise use standard rate
         // This ensures custom amounts (admin-generated) are properly counted
-        const yearReceipts = (signedReceipts || []).filter((r: any) => r.year === year);
+        // IMPORTANT: Only count receipts within the contract period for this year
+        const yearReceipts = (signedReceipts || []).filter((r: any) => {
+          if (r.year !== year) return false;
+          const monthIndex = r.month - 1; // Convert to 0-indexed
+          return monthIndex >= yearStartMonth && monthIndex <= yearEndMonth;
+        });
         
         // Simple calculation: base amount + supplementary from receipts
         const baseAmountThisYear = monthly * monthsThisYear;
@@ -1080,9 +1085,9 @@ export default function AdminCoachDetail() {
                               </Text>
                               {/* Dettaglio calcolo */}
                               <Text style={{ fontSize: 10, color: '#666', marginTop: 4 }}>
-                                ({formatCurrency(yearlyBreakdown[years[0]].baseAmount || 0)}
-                                {(yearlyBreakdown[years[0]].supplementary || 0) > 0 && ` + €${(yearlyBreakdown[years[0]].supplementary || 0).toLocaleString('it-IT', {minimumFractionDigits: 2})} suppl.`}
-                                {prior > 0 && ` + €${prior.toLocaleString('it-IT', {minimumFractionDigits: 2})} pregr.`})
+                                ({yearlyBreakdown[years[0]].months} mesi × {formatCurrency(parseFloat(monthlyCompensation.replace(',', '.')) || 0)} = {formatCurrency(yearlyBreakdown[years[0]].baseAmount || 0)}
+                                {(yearlyBreakdown[years[0]].supplementary || 0) > 0 && ` + suppl. €${(yearlyBreakdown[years[0]].supplementary || 0).toLocaleString('it-IT', {minimumFractionDigits: 2})}`}
+                                {prior > 0 && ` + pregr. €${prior.toLocaleString('it-IT', {minimumFractionDigits: 2})}`})
                               </Text>
                             </View>
                             {yearlyBreakdown[years[0]].exceedsThreshold5k && !yearlyBreakdown[years[0]].exceedsThreshold15k && (
@@ -1137,10 +1142,10 @@ export default function AdminCoachDetail() {
                               <Text style={{ fontSize: 20, fontWeight: 'bold', color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
                                 {formatCurrency(yearlyBreakdown[years[1]].grandTotal)}
                               </Text>
-                              {/* Dettaglio calcolo */}
+                            {/* Dettaglio calcolo */}
                               <Text style={{ fontSize: 10, color: '#666', marginTop: 4 }}>
-                                ({formatCurrency(yearlyBreakdown[years[1]].baseAmount || 0)}
-                                {(yearlyBreakdown[years[1]].supplementary || 0) > 0 && ` + €${(yearlyBreakdown[years[1]].supplementary || 0).toLocaleString('it-IT', {minimumFractionDigits: 2})} suppl.`})
+                                ({yearlyBreakdown[years[1]].months} mesi × {formatCurrency(parseFloat(monthlyCompensation.replace(',', '.')) || 0)} = {formatCurrency(yearlyBreakdown[years[1]].baseAmount || 0)}
+                                {(yearlyBreakdown[years[1]].supplementary || 0) > 0 && ` + suppl. €${(yearlyBreakdown[years[1]].supplementary || 0).toLocaleString('it-IT', {minimumFractionDigits: 2})}`})
                               </Text>
                             </View>
                             {yearlyBreakdown[years[1]].exceedsThreshold5k && !yearlyBreakdown[years[1]].exceedsThreshold15k && (
