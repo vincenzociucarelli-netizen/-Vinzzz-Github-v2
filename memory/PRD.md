@@ -24,6 +24,13 @@ Sistema gestionale per società sportiva che include:
 
 ## What's Been Implemented
 
+### Session 9 March 2026
+- **Sincronizzazione UI Admin-Coach per Compensi**: Le viste Admin e Coach ora mostrano i dati compensi con layout identico
+- **Layout Lineare Box RAS**: Il box "TOTALE PER RAS" ora usa layout lineare con bullet points (• Compenso base, • Somme suppl., • TOTALE RAS) in entrambe le viste
+- **Importi in Grassetto**: Tutti gli importi nei box annuali e RAS sono ora in grassetto per maggiore leggibilità
+- **Fix Box Anno 2 Admin**: Aggiunti valori in grassetto anche al box del secondo anno (Anno 2026)
+- **Sincronizzazione `getYearSummary`**: La funzione calcola correttamente `yearlyFromContractBase` e `supplementaryTotal` in entrambe le viste
+
 ### Session 7 December 2025
 - **Sezioni Collapsabili Dirigente**: Implementate sezioni collapsabili per Dati Anagrafici, Fiscali e Bancari
 - **Sezioni Collapsabili Atleta**: Implementate sezioni collapsabili per Dati Anagrafici, Fiscali e Documento/Dati Bancari
@@ -54,7 +61,7 @@ Sistema gestionale per società sportiva che include:
         └── services/         # API services
 ```
 
-## P0 - Priorità Alta (Completed Today)
+## P0 - Priorità Alta (Completed)
 - [x] Sezioni collassabili per Dirigente
 - [x] Sezioni collassabili per Atleta
 - [x] Fix bug JSX admin/dirigente/[id].tsx
@@ -62,10 +69,12 @@ Sistema gestionale per società sportiva che include:
 - [x] Modal documenti firmati (ordinati dal più recente)
 - [x] Colori corretti soglie: Verde ≤€5K, Arancione €5K-€15K, Viola >€15K
 - [x] Logica calcolo soglie dinamico basato su cumulativo (non solo flag DB)
+- [x] **Sincronizzazione UI Admin-Coach**: Layout lineare identico con bullet points e importi in grassetto
 
 ## P1 - Media Priorità
+- [ ] Visualizzare squadre assegnate nel profilo coach
+- [ ] Implementazione funzionalità Atleti +18
 - [ ] Regression check completo su tutti i profili
-- [ ] Verifica standardizzazione vista Admin compensi
 
 ## P2 - Bassa Priorità
 - [ ] Admin dashboard - problema caricamento intermittente
