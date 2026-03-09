@@ -30,8 +30,9 @@ Sistema gestionale per società sportiva che include:
   - Dirigente (user e admin view)
   - Collaboratore (user e admin view)
 - **Box RAS Lineare**: Tutti i box "TOTALE PER RAS" ora usano layout lineare con bullet points
-- **Squadre Assegnate Coach**: Aggiunta sezione "Squadre Assegnate" nella vista coach compensation con link alle pagine delle squadre
+- **Squadre Assegnate Coach**: Aggiunta sezione "Squadre Assegnate" nella vista coach profile (sotto "Compenso Mensile") con link alle pagine delle squadre
 - **Sincronizzazione `getYearSummary`**: La funzione calcola correttamente `yearlyFromContractBase` e `supplementaryTotal` in tutte le viste
+- **Compensi Pregressi Verificati**: Confermato che dirigenti e collaboratori hanno il campo "COMPENSI PREGRESSI (NELL'ANNO)" editabile identico al coach
 
 ### Session 7 December 2025
 - **Sezioni Collapsabili Dirigente**: Implementate sezioni collapsabili per Dati Anagrafici, Fiscali e Bancari
