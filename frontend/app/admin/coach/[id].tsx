@@ -393,23 +393,21 @@ export default function AdminCoachDetail() {
         // Calculate total from actual receipts if available, otherwise use standard rate
         // This ensures custom amounts (admin-generated) are properly counted
         const yearReceipts = (signedReceipts || []).filter((r: any) => r.year === year);
-        let totalThisYear = 0;
-        let supplementaryThisYear = 0;  // Somme supplementari per questo anno
         
-        for (let m = yearStartMonth; m <= yearEndMonth; m++) {
-          const monthNum = m + 1; // Convert 0-indexed to 1-indexed
-          const receipt = yearReceipts.find((r: any) => r.month === monthNum);
-          const receiptAmount = receipt?.amount_gross || receipt?.amount || monthly;
-          totalThisYear += receiptAmount;
-          
-          // Calculate supplementary for this month
+        // Simple calculation: base amount + supplementary from receipts
+        const baseAmountThisYear = monthly * monthsThisYear;
+        
+        // Calculate supplementary: sum of (receipt_amount - monthly) for all receipts with amount > monthly
+        let supplementaryThisYear = 0;
+        yearReceipts.forEach((receipt: any) => {
+          const receiptAmount = receipt.amount_gross || receipt.amount || 0;
           if (receiptAmount > monthly) {
             supplementaryThisYear += (receiptAmount - monthly);
           }
-        }
+        });
         
-        // Base amount (standard monthly × months) - for display
-        const baseAmountThisYear = monthly * monthsThisYear;
+        // Total = base + supplementary
+        const totalThisYear = baseAmountThisYear + supplementaryThisYear;
         
         // I pregressi si applicano SOLO al primo anno (anno di assunzione)
         const priorThisYear = (year === startYear) ? prior : 0;
@@ -434,23 +432,22 @@ export default function AdminCoachDetail() {
       const startMonth = start.getMonth();
       const monthsThisYear = 12 - startMonth;
       
-      // Calculate total from actual receipts
+      // Calculate from actual receipts
       const yearReceipts = (signedReceipts || []).filter((r: any) => r.year === year);
-      let totalThisYear = 0;
-      let supplementaryThisYear = 0;
       
-      for (let m = startMonth; m <= 11; m++) {
-        const monthNum = m + 1;
-        const receipt = yearReceipts.find((r: any) => r.month === monthNum);
-        const receiptAmount = receipt?.amount_gross || receipt?.amount || monthly;
-        totalThisYear += receiptAmount;
-        
+      // Base amount
+      const baseAmountThisYear = monthly * monthsThisYear;
+      
+      // Supplementary from receipts
+      let supplementaryThisYear = 0;
+      yearReceipts.forEach((receipt: any) => {
+        const receiptAmount = receipt.amount_gross || receipt.amount || 0;
         if (receiptAmount > monthly) {
           supplementaryThisYear += (receiptAmount - monthly);
         }
-      }
+      });
       
-      const baseAmountThisYear = monthly * monthsThisYear;
+      const totalThisYear = baseAmountThisYear + supplementaryThisYear;
       const grandTotalThisYear = prior + totalThisYear;
       
       years[year] = {
