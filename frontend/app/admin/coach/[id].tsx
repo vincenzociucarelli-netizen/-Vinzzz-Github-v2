@@ -476,6 +476,21 @@ export default function AdminCoachDetail() {
       startYear = start.getFullYear();
     }
     
+    // Calculate base total (monthly × months)
+    const thisClubTotal = monthly * monthsInContract;
+    
+    // Calculate supplementary amounts from receipts with custom amounts
+    let supplementaryTotal = 0;
+    if (signedReceipts && signedReceipts.length > 0) {
+      signedReceipts.forEach((receipt: any) => {
+        const receiptAmount = receipt.amount_gross || receipt.amount || 0;
+        // If this receipt has a different amount than standard monthly, add the difference
+        if (receiptAmount > monthly) {
+          supplementaryTotal += (receiptAmount - monthly);
+        }
+      });
+    }
+    
     return {
       monthly,
       prior,
@@ -484,8 +499,9 @@ export default function AdminCoachDetail() {
       endMonthName,
       startYear,
       endYear,
-      thisClubTotal: monthly * monthsInContract,
-      grandTotal: prior + (monthly * monthsInContract)
+      thisClubTotal,
+      supplementaryTotal,  // New: somme supplementari
+      grandTotal: prior + thisClubTotal + supplementaryTotal  // Updated to include supplementary
     };
   };
 
@@ -1125,12 +1141,32 @@ export default function AdminCoachDetail() {
                           return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : coach.contract_end_date;
                         })() : 'N/D'} = {breakdown.monthsInContract} mesi
                       </Text>
-                      <Text style={[styles.totalValue, { color: '#1565C0', fontSize: 22 }]}>
-                        {formatCurrency(breakdown.thisClubTotal)}
+                      <Text style={{ color: '#1565C0', fontSize: 14, marginTop: 4 }}>
+                        Compenso base: {formatCurrency(breakdown.thisClubTotal)}
                       </Text>
                       <Text style={{ color: '#1565C0', fontSize: 11 }}>
                         ({breakdown.monthsInContract} mesi × {formatCurrency(coach.monthly_compensation || 0)})
                       </Text>
+                      
+                      {/* Somme supplementari - solo se presenti */}
+                      {breakdown.supplementaryTotal > 0 && (
+                        <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#90CAF9' }}>
+                          <Text style={{ color: '#1565C0', fontSize: 13 }}>
+                            + Somme supplementari {breakdown.startYear}/{breakdown.endYear}:
+                          </Text>
+                          <Text style={{ color: '#1565C0', fontSize: 16, fontWeight: '600' }}>
+                            {formatCurrency(breakdown.supplementaryTotal)}
+                          </Text>
+                        </View>
+                      )}
+                      
+                      {/* Totale per RAS */}
+                      <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 2, borderTopColor: '#1565C0' }}>
+                        <Text style={{ color: '#1565C0', fontSize: 12, fontWeight: 'bold' }}>TOTALE PER RAS:</Text>
+                        <Text style={[styles.totalValue, { color: '#1565C0', fontSize: 24 }]}>
+                          {formatCurrency(breakdown.grandTotal)}
+                        </Text>
+                      </View>
                     </View>
                     
                     {/* Header Calcolo per Anno */}

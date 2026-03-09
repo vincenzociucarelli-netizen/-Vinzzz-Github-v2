@@ -538,12 +538,27 @@ export default function CoachCompensation() {
     const monthsInYear = getContractMonthsForYear(year);
     const monthlyComp = profile?.monthly_compensation || 0;
     const monthCount = monthsInYear.length;
-    const yearlyFromContract = monthlyComp * monthCount;
+    const yearlyFromContractBase = monthlyComp * monthCount;  // Base compensation
+    
+    // Calculate actual total from receipts (includes custom amounts)
+    let actualYearlyTotal = 0;
+    let supplementaryTotal = 0;
+    
+    monthsInYear.forEach(month => {
+      const receipt = records.find(r => r.year === year && r.month === month);
+      const receiptAmount = receipt?.amount_gross || receipt?.amount || monthlyComp;
+      actualYearlyTotal += receiptAmount;
+      
+      // Calculate supplementary (amount above standard monthly)
+      if (receiptAmount > monthlyComp) {
+        supplementaryTotal += (receiptAmount - monthlyComp);
+      }
+    });
     
     // Add prior compensation only for the first year of contract
     const includePrior = year === contractStartYear;
     const prior = includePrior ? priorCompensation : 0;
-    const total = yearlyFromContract + prior;
+    const total = actualYearlyTotal + prior;  // Use actual amounts, not base
     
     // Calculate signed total for this year
     const signedTotal = records
@@ -554,7 +569,9 @@ export default function CoachCompensation() {
       year,
       monthCount,
       monthlyComp,
-      yearlyFromContract,
+      yearlyFromContract: actualYearlyTotal,  // Now includes supplementary amounts
+      yearlyFromContractBase,  // Base compensation (monthly × months)
+      supplementaryTotal,  // Amount above standard monthly
       priorCompensation: prior,
       totalProjected: total,
       signedTotal: signedTotal + prior,
@@ -988,14 +1005,36 @@ export default function CoachCompensation() {
                 })())}
               </Text>
               
+              {/* Supplementary amounts - show if present */}
+              {(() => {
+                const summary1 = getYearSummary(contractStartYear);
+                const summary2 = contractEndYear > contractStartYear ? getYearSummary(contractEndYear) : { supplementaryTotal: 0 };
+                const totalSupplementary = (summary1.supplementaryTotal || 0) + (summary2.supplementaryTotal || 0);
+                
+                if (totalSupplementary > 0) {
+                  return (
+                    <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#4A90D9' }}>
+                      <Text style={{ color: '#1565C0', fontSize: 13 }}>
+                        + Somme supplementari {contractStartYear}/{contractEndYear}:
+                      </Text>
+                      <Text style={{ color: '#1565C0', fontSize: 16, fontWeight: '600' }}>
+                        {formatCurrency(totalSupplementary)}
+                      </Text>
+                    </View>
+                  );
+                }
+                return null;
+              })()}
+              
               {/* Total for RAS - ONLY this ASD/SSD compensation (prior comp already reported by other clubs) */}
-              <View style={styles.unifiedBannerTotal}>
+              <View style={[styles.unifiedBannerTotal, { marginTop: 10, paddingTop: 10, borderTopWidth: 2, borderTopColor: '#1565C0' }]}>
                 <Text style={styles.unifiedBannerTotalLabel}>TOTALE PER RAS:</Text>
                 <Text style={styles.unifiedBannerTotalValue}>
                   {formatCurrency((() => {
-                    const months1 = getContractMonthsForYear(contractStartYear).length;
-                    const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
-                    return (profile?.monthly_compensation || 0) * (months1 + months2);
+                    const summary1 = getYearSummary(contractStartYear);
+                    const summary2 = contractEndYear > contractStartYear ? getYearSummary(contractEndYear) : { yearlyFromContract: 0 };
+                    // Total from contract includes actual amounts (with supplementary)
+                    return (summary1.yearlyFromContract || 0) + (summary2.yearlyFromContract || 0);
                   })())}
                 </Text>
               </View>
