@@ -1069,9 +1069,15 @@ export default function AdminCoachDetail() {
                               )}
                             </View>
                             <View style={{ alignItems: 'center', marginTop: 12 }}>
-                              <Text style={{ fontSize: 12, color: '#333' }}>Totale:</Text>
+                              <Text style={{ fontSize: 12, color: '#333' }}>Totale Anno:</Text>
                               <Text style={{ fontSize: 20, fontWeight: 'bold', color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
                                 {formatCurrency(yearlyBreakdown[years[0]].grandTotal)}
+                              </Text>
+                              {/* Dettaglio calcolo */}
+                              <Text style={{ fontSize: 10, color: '#666', marginTop: 4 }}>
+                                ({formatCurrency(yearlyBreakdown[years[0]].baseAmount || 0)}
+                                {(yearlyBreakdown[years[0]].supplementary || 0) > 0 && ` + €${(yearlyBreakdown[years[0]].supplementary || 0).toLocaleString('it-IT', {minimumFractionDigits: 2})} suppl.`}
+                                {prior > 0 && ` + €${prior.toLocaleString('it-IT', {minimumFractionDigits: 2})} pregr.`})
                               </Text>
                             </View>
                             {yearlyBreakdown[years[0]].exceedsThreshold5k && !yearlyBreakdown[years[0]].exceedsThreshold15k && (
@@ -1125,6 +1131,11 @@ export default function AdminCoachDetail() {
                               <Text style={{ fontSize: 12, color: '#333' }}>Totale Anno:</Text>
                               <Text style={{ fontSize: 20, fontWeight: 'bold', color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32' }}>
                                 {formatCurrency(yearlyBreakdown[years[1]].grandTotal)}
+                              </Text>
+                              {/* Dettaglio calcolo */}
+                              <Text style={{ fontSize: 10, color: '#666', marginTop: 4 }}>
+                                ({formatCurrency(yearlyBreakdown[years[1]].baseAmount || 0)}
+                                {(yearlyBreakdown[years[1]].supplementary || 0) > 0 && ` + €${(yearlyBreakdown[years[1]].supplementary || 0).toLocaleString('it-IT', {minimumFractionDigits: 2})} suppl.`})
                               </Text>
                             </View>
                             {yearlyBreakdown[years[1]].exceedsThreshold5k && !yearlyBreakdown[years[1]].exceedsThreshold15k && (
