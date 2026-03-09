@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -469,6 +469,11 @@ export default function AdminCoachDetail() {
     
     return years;
   };
+  
+  // Memoize yearlyBreakdown to recalculate when data changes
+  const yearlyBreakdownMemo = useMemo(() => {
+    return getYearlyBreakdown();
+  }, [signedReceipts, monthlyCompensation, otherAnnualCompensation, contractStartDate, contractEndDate]);
   
   // Calcola dettaglio compensi per display (totale contratto)
   const getCompensationBreakdown = () => {
@@ -1014,7 +1019,7 @@ export default function AdminCoachDetail() {
                 <View style={{ marginTop: 20 }}>
                   {(() => {
                     const breakdown = getCompensationBreakdown();
-                    const yearlyBreakdown = getYearlyBreakdown();
+                    const yearlyBreakdown = yearlyBreakdownMemo;
                     const years = Object.keys(yearlyBreakdown).map(Number).sort();
                     const prior = parseFloat(otherAnnualCompensation.replace(',', '.')) || 0;
                     
