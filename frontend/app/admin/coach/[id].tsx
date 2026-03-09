@@ -1186,9 +1186,7 @@ export default function AdminCoachDetail() {
                       <View style={{ marginTop: 8 }}>
                         <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.thisClubTotal)}</Text></Text>
                         <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({breakdown.monthsInContract} mesi × {formatCurrency(coach.monthly_compensation || 0)})</Text>
-                        {breakdown.supplementaryTotal > 0 && (
-                          <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.supplementaryTotal)}</Text></Text>
-                        )}
+                        <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.supplementaryTotal || 0)}</Text></Text>
                         <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.grandTotal)}</Text></Text>
                       </View>
                     </View>
