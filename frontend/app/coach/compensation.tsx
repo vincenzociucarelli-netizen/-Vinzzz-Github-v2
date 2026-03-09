@@ -116,9 +116,6 @@ export default function CoachCompensation() {
   const [contractEndMonth, setContractEndMonth] = useState<number | null>(null);
   const [priorCompensation, setPriorCompensation] = useState(0);
   
-  // Assigned teams
-  const [teams, setTeams] = useState<Array<{id: string; name: string}>>([]);
-  
   // Threshold status
   const [thresholdStatus, setThresholdStatus] = useState<ThresholdStatus | null>(null);
   const [thresholdStatus2026, setThresholdStatus2026] = useState<ThresholdStatus | null>(null);
@@ -256,14 +253,6 @@ export default function CoachCompensation() {
         } catch (err) {
           console.log('Error loading threshold status for second year:', err);
         }
-      }
-      
-      // Load assigned teams
-      try {
-        const teamsRes = await api.get('/coach/my-teams');
-        setTeams(teamsRes.data || []);
-      } catch (err) {
-        console.log('Error loading teams:', err);
       }
       
     } catch (error) {
@@ -991,23 +980,6 @@ export default function CoachCompensation() {
             <Text style={{ flex: 1, textAlign: 'right', fontSize: 12, color: '#666' }}>Dati personali, documento e IBAN</Text>
             <Ionicons name="chevron-forward" size={18} color="#007AFF" style={{ marginLeft: 8 }} />
           </TouchableOpacity>
-          
-          {/* Squadre Assegnate */}
-          {teams.length > 0 && (
-            <View style={{ marginTop: 12, backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#FF9800' }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#E65100', marginBottom: 8 }}>🏐 Squadre Assegnate</Text>
-              {teams.map((team) => (
-                <TouchableOpacity 
-                  key={team.id}
-                  style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4 }}
-                  onPress={() => router.push(`/admin/team/${team.id}`)}
-                >
-                  <Text style={{ fontSize: 13, color: '#333' }}>• </Text>
-                  <Text style={{ fontSize: 13, color: '#1565C0', textDecorationLine: 'underline' }}>{team.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
         </View>
         
         {/* Year Summaries - Contract-based - ENHANCED STYLE */}

@@ -1127,7 +1127,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 <TouchableOpacity 
                   key={team.id}
                   style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4 }}
-                  onPress={() => router.push(`/admin/team/${team.id}`)}
+                  onPress={() => router.push(`/coach/team/${team.id}`)}
                 >
                   <Text style={{ fontSize: 13, color: '#333' }}>• </Text>
                   <Text style={{ fontSize: 13, color: '#1565C0', textDecorationLine: 'underline' }}>{team.name}</Text>
