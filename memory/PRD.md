@@ -25,11 +25,13 @@ Sistema gestionale per società sportiva che include:
 ## What's Been Implemented
 
 ### Session 9 March 2026
-- **Sincronizzazione UI Admin-Coach per Compensi**: Le viste Admin e Coach ora mostrano i dati compensi con layout identico
-- **Layout Lineare Box RAS**: Il box "TOTALE PER RAS" ora usa layout lineare con bullet points (• Compenso base, • Somme suppl., • TOTALE RAS) in entrambe le viste
-- **Importi in Grassetto**: Tutti gli importi nei box annuali e RAS sono ora in grassetto per maggiore leggibilità
-- **Fix Box Anno 2 Admin**: Aggiunti valori in grassetto anche al box del secondo anno (Anno 2026)
-- **Sincronizzazione `getYearSummary`**: La funzione calcola correttamente `yearlyFromContractBase` e `supplementaryTotal` in entrambe le viste
+- **Standardizzazione UI Compensi per tutti i ruoli**: Layout lineare con bullet points (• Compenso base, • Pregressi, • Totale Anno) e importi in grassetto applicato a:
+  - Coach (user e admin view)
+  - Dirigente (user e admin view)
+  - Collaboratore (user e admin view)
+- **Box RAS Lineare**: Tutti i box "TOTALE PER RAS" ora usano layout lineare con bullet points
+- **Squadre Assegnate Coach**: Aggiunta sezione "Squadre Assegnate" nella vista coach compensation con link alle pagine delle squadre
+- **Sincronizzazione `getYearSummary`**: La funzione calcola correttamente `yearlyFromContractBase` e `supplementaryTotal` in tutte le viste
 
 ### Session 7 December 2025
 - **Sezioni Collapsabili Dirigente**: Implementate sezioni collapsabili per Dati Anagrafici, Fiscali e Bancari
@@ -72,8 +74,8 @@ Sistema gestionale per società sportiva che include:
 - [x] **Sincronizzazione UI Admin-Coach**: Layout lineare identico con bullet points e importi in grassetto
 
 ## P1 - Media Priorità
-- [ ] Visualizzare squadre assegnate nel profilo coach
-- [ ] Implementazione funzionalità Atleti +18
+- [x] **Squadre Assegnate Coach**: Sezione con link alle pagine delle squadre nella vista coach compensation
+- [ ] Implementazione funzionalità Atleti +18 (somme pagate)
 - [ ] Regression check completo su tutti i profili
 
 ## P2 - Bassa Priorità
