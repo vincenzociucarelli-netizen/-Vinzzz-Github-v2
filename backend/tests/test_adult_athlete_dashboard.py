@@ -11,7 +11,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://compliance-signing.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://receipt-calculation.preview.emergentagent.com').rstrip('/')
 
 # Test credentials for adult athlete
 ATHLETE_EMAIL = "lisa@test.com"

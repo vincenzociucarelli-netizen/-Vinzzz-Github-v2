@@ -1,131 +1,156 @@
 <analysis>**original_problem_statement**:
 The user's initial goal was to fix a recurring issue where ID document fields were still visible on the coach's profile despite previous attempts to remove them. After resolving this, the user provided a long list of new feature requests and bug fixes focused on improving UI consistency, data handling, security, and compliance reporting across the application, particularly for the Admin, Coach, Collaborator, and Dirigente roles.
 
-This session focused on a series of rapid-fire UI and business logic corrections driven by detailed user feedback. Key accomplishments include:
-- Implementing collapsible profile sections for all user roles.
-- Standardizing the compensation UI (colors, layout, calculations) across all roles (Coach, Collaboratore, Dirigente) and for the Admin view.
-- Adding a feature for Admins to generate compensation receipts with custom amounts to handle payment variations.
-- Investigating and identifying the root cause of a critical bug where the signature image was not appearing on signed privacy documents.
+The current session has focused on a series of critical bug fixes and UI refinements, primarily driven by the user's detailed feedback on the compensation management system. This included debugging PDF generation, fixing data persistence issues after signing documents with custom amounts, and correcting complex annual compensation calculations for both the Admin and Coach views.
 
 **PRODUCT REQUIREMENTS**:
-- **Collapsible Profile Sections**: The Dati Anagrafici, Dati Fiscali, and Dati Bancari sections should be collapsible. This is now **DONE** for all roles (Coach, Collaboratore, Dirigente, Atleta).
-- **Standardized Compensation View**: The compensation pages and Admin views for Coach, Collaboratore, and Dirigente must be identical. This is now **DONE**.
-- **Admin-Generated Receipts**: Admins must be able to create compensation receipts with custom amounts for users. This is **DONE**.
-- **Signed Documents UI**: Standardize the display of signed documents and show only documents that are actually signed. This is **DONE**.
-- **Fix Missing Signatures**: Ensure signature images are correctly embedded in all signed PDF documents. This is **IN PROGRESS**.
+- **Fix Missing Signatures**: Ensure signature images are correctly embedded in all signed PDF documents. **DONE**.
+- **Fix Data Persistence on Signing**: When an Admin sets a custom monthly compensation amount (e.g., €2600), that amount must persist after the coach signs the receipt, and it must not revert to the standard monthly amount (€1700). **DONE**.
+- **Correct Annual Total Calculation**: The total annual compensation must correctly sum the actual amounts from each monthly receipt, including any custom supplementary amounts set by the Admin. This calculation must be accurate in both the Admin and Coach views. **IN PROGRESS** (Done for Admin, pending for Coach).
+- **Refine Admin UI**: Improve the layout and clarity of the compensation details in the Admin view, including a better breakdown for the annual totals and RAS reporting. **IN PROGRESS**.
+- **Fix Coach View**: The compensation view for the coach () is showing incorrect data and calculations and needs to be synchronized with the fixes applied to the Admin view. **NOT STARTED**.
+- **Improve Document Naming**: Rename the generic Collaborator privacy document to Informativa Privacy Staff to avoid confusion. **DONE**.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application features a highly standardized UI for user profiles and compensation management across all roles. The complex business logic for calculating compensation thresholds (€5k/€15k) and color-coding the UI is now robust, consistent, and handles multi-year scenarios correctly. All user profiles now have collapsible sections, improving usability.
+The application's backend logic for document signing has been significantly improved. A critical bug that caused signed PDFs to be overwritten with blank ones has been fixed by removing a redundant API call. Another bug preventing the  date from being saved was also resolved.
 
-A significant feature has been added, allowing Admins to generate compensation receipts with custom amounts, providing a manual workaround for payment variations. The UI for displaying signed documents has been standardized into a clickable banner opening a modal, and it correctly filters to show only documents that have a signature date.
+The Admin view for a coach's profile () has undergone substantial refactoring. The calculation logic for annual compensation now correctly accounts for custom supplementary amounts set by the Admin. The UI for displaying annual totals (e.g., Anno 2025, Anno 2026) and the RAS (Registro Attività Sportive) summary has been changed to a clearer, linear list format at the user's request. A bug causing an incorrect supplementary amount to be calculated due to an out-of-contract receipt has also been fixed by deleting the erroneous data and refining the calculation logic.
 
-The agent has identified the root cause of a critical bug where signature images were missing from PDFs: a duplicate PDF generation call in the backend was overwriting the correct, signed document with a blank one.
+However, these fixes and UI improvements have **not yet** been applied to the coach's own view (), which remains out of sync and buggy.
 
 **Last working item**:
-- Last item agent was working: Debugging a critical issue where the signature image was not appearing on the generated PDF for the privacy consent document. The agent identified that the PDF generation function was being called twice, with the second call overwriting the first signed version with a blank one. The agent was in the process of locating the redundant call in .
+- Last item agent was working: Refactoring the UI for the compensation summary boxes in the Admin's view of a coach's profile (). The user approved the new linear layout and requested two final tweaks:
+    1. Make the monetary values bold.
+    2. Apply the same linear list layout to the TOTALE PER IL RAS box.
 - Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? Manual testing.
-  1.  After fixing the backend code, reset the  flag for a test user.
-  2.  Log in as that user and complete the privacy signing workflow.
-  3.  Download the generated PDF and visually confirm the signature image is present.
+- Which testing method agent to use? Screenshot tool to verify the UI changes in the Admin view.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Fix duplicate PDF generation for privacy documents** (P0)
--   **Issue 2: Admin dashboard intermittent loading failure** (P2)
--   **Issue 3: Global check for  direct imports** (P3)
+-   **Issue 1: Finalize Admin UI Refinements** (P0)
+-   **Issue 2: Coach View () is Broken** (P0)
+-   **Issue 3: Threshold Declaration Signing Flow is Unreliable** (P1)
+-   **Issue 4: Admin dashboard intermittent loading failure** (P2)
+-   **Issue 5: Global check for  direct imports** (P3)
 
 **Issues Detail**:
--   **Issue 1: Fix duplicate PDF generation for privacy documents**
-    -   **Attempted fixes**: Backend logging confirmed the signature data was being received correctly. Further log analysis revealed that  is called twice in succession. The first call correctly embeds the signature, but the second, redundant call (with no signature data) overwrites the file, resulting in a blank signature field.
+-   **Issue 1: Finalize Admin UI Refinements**
+    -   **Attempted fixes**: The agent successfully refactored the annual compensation boxes to a linear layout.
     -   **Next debug checklist**:
-        1.  In , examine the three locations where  is called.
-        2.  Trace the execution path during the privacy signing flow to identify which two calls are being triggered.
-        3.  Remove the redundant function call that is causing the overwrite.
-        4.  Reset the privacy flag for a test user (e.g., PIERO PIERI, ID ) and re-test the signing flow to verify the fix.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical compliance bug. A signed document without a visible signature is legally invalid.
+        1.  In , locate the JSX for the annual breakdown boxes (, ) and the RAS box.
+        2.  Wrap the monetary values in a  component with .
+        3.  Refactor the JSX for the TOTALE PER IL RAS box to match the new linear list layout of the annual boxes.
+    -   **Why fix this issue and what will be achieved with the fix?**: To complete the user's explicit UI request for better readability and consistency.
     -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: Y (This is a new bug that persisted through the debug session).
-    -   **Should Test frontend/backend/both after fix?**: Backend (fix), followed by a full E2E manual test.
--   **Issue 2: Admin dashboard intermittent loading failure**
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Frontend.
+-   **Issue 2: Coach View () is Broken**
+    -   **Attempted fixes**: None in this session. All focus was on the Admin view.
+    -   **Next debug checklist**:
+        1.  Navigate to .
+        2.  Apply the same calculation logic for  and  from .
+        3.  Ensure the UI correctly displays custom amounts for monthly receipts and that the annual totals include supplementary amounts.
+        4.  Fix any display bugs, such as months appearing with the wrong color or status.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical bug. The coach sees incorrect financial data, which breaks user trust and the core functionality of the app.
     -   **Status**: NOT STARTED
--   **Issue 3: Global check for  direct imports**
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Frontend.
+-   **Issue 3: Threshold Declaration Signing Flow is Unreliable**
+    -   **Attempted fixes**: The agent removed the  prop from the Firma button as a workaround, but the root cause (signature data not being captured reliably on mobile web) was not found. A new user was created to bypass the problem with the original test user Piero.
+    -   **Next debug checklist**:
+        1.  Investigate the  component and the  library's behavior on mobile web browsers.
+        2.  Check for issues with touch events () not firing correctly.
+        3.  Consider replacing or augmenting the signature pad with a more reliable solution or a manual Confirm Signature button if the issue persists.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a compliance-blocking issue. Users cannot sign mandatory declarations, preventing them from being paid.
     -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Frontend.
+-   **Issue 4 & 5**: Same as previous handoff. Not started.
 
 **In progress Task List**:
-- The main in-progress task is **Issue 1**, detailed above.
+-   **Task 1: Complete Admin UI Refactor**
+    -   **Where to resume**: .
+    -   **What will be achieved with this?**: Finalize the user-requested UI changes for the compensation boxes, making them bold and consistent.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: Frontend.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   (P0) Begin implementation of features for **Atleti +18** (as requested by the user).
-    -   (P1) User will test new Coach and Dirigente registrations.
+    -   (P0) **Fix Coach View**: Apply all the calculation logic and UI fixes from the Admin view to the Coach's compensation page ().
+    -   (P1) **Display Assigned Teams**: Add the list of assigned teams to the coach's main dashboard/profile page as requested by the user.
+    -   (P1) Begin implementation of features for **Atleti +18**.
 -   **Future Tasks**:
-    -   (P2) Implement features for **Minorenni** (minor athletes).
-    -   (P2) Implement compensation features for **Atleta a contratto** (contracted athlete).
-    -   (P3) Re-implement Stripe integration.
-    -   (P3) Refactor the monolithic .
-    -   (P3) Update  with all completed work.
+    -   Implement features for **Minorenni** (minor athletes).
+    -   Implement compensation features for **Atleta a contratto** (contracted athlete).
+    -   Re-implement Stripe integration.
+    -   Refactor the monolithic .
+    -   Update  with all completed work.
 
 **Completed work in this session**
--   **Collapsible Profile Sections (Dirigente & Atleta)**: Completed the UI refactor for all roles.
--   **Admin-Generated Receipts Feature**: Implemented a new backend endpoint and frontend UI for Admins to create receipts with custom amounts for Coach, Collaboratore, and Dirigente.
--   **Standardized Signed Documents View**: Created a consistent banner/modal UI for displaying signed documents across all relevant user and Admin profiles.
--   **Corrected Signed Document Filtering**: Updated all views to show only documents with a  date, hiding unsigned ones.
--   **Unified Compensation Color Logic**: Standardized the threshold-based colors (green/orange/purple) for monthly and annual compensation totals across all Admin views.
--   **Bug Investigation (Missing Signature)**: Identified the root cause of missing signature images in PDFs as a duplicate, overwriting function call in the backend.
+-   **Fixed Critical Signing Bug**: Resolved the issue where a signed privacy PDF was being overwritten by a blank one by removing a redundant API call in .
+-   **Fixed  Bug**: Corrected the backend () to ensure the  timestamp is always saved when a GDPR document is signed.
+-   **Fixed Admin Picker Bug**: Added a missing  import in  that was causing the page to crash.
+-   **Renamed Privacy Document**: Updated the PDF generation logic in  to title the document INFORMATIVA PRIVACY STAFF for clarity.
+-   **Fixed Custom Amount Reversion**: Corrected the backend logic () to ensure that when a coach signs a receipt with a custom amount, the custom amount is preserved and not reverted to the default monthly compensation.
+-   **Corrected Admin Annual Total Calculation**: Refactored the calculation logic in  to accurately sum the actual gross amounts from all receipts, including supplementary payments.
+-   **Refined Admin UI Layout**: Changed the compensation summary boxes in the Admin view to a clearer, linear list format based on user feedback.
+-   **Data Cleanup**: Manually deleted an erroneous, out-of-contract receipt from the database via  shell to fix calculation errors.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Admin dashboard intermittent loading failure**
-    -   **Debug checklist**: Review , manually reload the page multiple times. Check network requests for race conditions.
-    -   **Is recurring issue?**: Y
--   **Issue 2: @expo/vector-icons rendering issue on web**
-    -   **Debug checklist**: Global search for  imports and replace with the custom wrapper.
-    -   **Is recurring issue?**: Y
+-   **Issue 1: Unreliable Signature Pad on Mobile**: The root cause of the Firma Dichiarazione button not working was not fully resolved.
+-   **Issue 2: Monthly Cards Not Clickable**: The user reported that the monthly compensation cards (e.g., gennaio) were not clickable. This was bypassed by creating a new user, but the underlying issue may persist.
+-   **Issue 3: Admin dashboard intermittent loading failure**: Recurring issue.
+-   **Issue 4: @expo/vector-icons rendering issue on web**: Recurring issue.
 
 **Known issue recurrence from previous fork**
--   The admin dashboard loading issue and the  import issue have been carried over again and were not addressed.
+-   The admin dashboard loading issue and the  import issue were carried over again and not addressed.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend Debugging with Logging**: The agent effectively used logging to diagnose a complex backend issue where a correct PDF was being overwritten by a subsequent incorrect call, uncovering the root cause.
--   **Component Standardization**: The Signed Documents section and the compensation views were standardized into reusable patterns (banner + modal) across multiple roles to reduce code duplication and ensure a consistent UX.
--   **Direct Database Manipulation**: The agent used  shell commands to inspect and correct corrupted data (a document marked as signed but missing a signature), which was a necessary step to unblock debugging.
+-   **State Synchronization**: A key challenge was ensuring that data and calculations were consistent between the Admin view and the Coach view. The current state is that the Admin view is correct, but the Coach view is not.
+-   **Complex Data Aggregation**: Implemented and refined client-side logic to aggregate compensation data across multiple years, considering base pay, supplementary amounts, contract dates, and past earnings ().
+-   **Direct Database Debugging**: Used the  shell extensively to inspect user/document state, manually correct corrupted data (missing , incorrect flags), and delete erroneous records to unblock the user and fix calculations.
+-   **Iterative UI Refactoring**: Worked closely with the user through many small iterations to refine the UI of the compensation boxes until it met their exact requirements for clarity and layout.
 
 **key DB schema**
--   No schema changes. Interacted with  and  collections. Discovered that a  entry can have  and an empty  string.
+-   No schema changes. Interacted heavily with the , , and  collections. The  collection contains fields like , , and .
 
 **All files of reference**
--   
--   
--   
+-    (Primary file worked on)
+-    (Multiple fixes applied)
+-    (Known to be buggy and needs fixing)
+-    (Fixed the signing bug here)
 
 **Critical Info for New Agent**
--   **Top Priority (P0)**: Your first and only task before reporting back to the user is to fix the missing signature on privacy documents. The root cause is a duplicate call to  in . Find and remove the redundant call, then test the flow thoroughly.
--   **Manual Compensation Changes**: The user has agreed to a manual workaround for changing a user's monthly compensation. The new Admin-Generated Receipts feature is the tool for this. Do not build a more complex automated solution.
--   **Next Major Task**: After the signature bug is fixed and confirmed by the user, the next priority is to begin work on features for **Atleti +18**.
+-   **Top Priority**: Your first task is to finalize the UI changes in  as per the user's last request (bold amounts, linear RAS box).
+-   **Next Major Task**: Immediately after, you must fix the **** (). It is completely out of sync with the Admin view. You need to port all the new calculation logic and UI concepts (like supplementary amounts) from the Admin file to the Coach file. The user is aware of this discrepancy.
+-   **Test with a Clean User**: The previous test user Piero had a lot of corrupted data. The user created a new coach RICA FEDE to test with. Continue using a clean user for testing to avoid issues caused by old, modified data.
+-   **Do Not Get Sidetracked**: The user has been very focused on the compensation flow. Do not work on other future tasks (Stripe, Atleti, etc.) until the Admin and Coach compensation views are both fully working, consistent, and verified by the user.
 
 **documents and test reports created in this job**
 -   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Reports the signed document is still missing the signature image. (Current P0 issue).
-2.  **User:** Clarifies that a previously deleted document *did* have a visible signature, indicating a new bug.
-3.  **User:** Asks to try deleting a broken document to allow the user to re-sign.
-4.  **User:** Reports that the privacy document being shown is the one without a signature.
-5.  **User:** Asks if the custom receipt amount will be included in the total compensation calculation. (Agent confirmed: Yes, after signing).
-6.  **User:** Approves the plan to allow Admins to generate receipts with custom amounts.
-7.  **User:** Proposes that only Admins should be able to vary compensation, especially for one-off payments.
-8.  **User:** Declines a complex automated solution for compensation changes in favor of a manual workaround.
-9.  **User:** Asks for clarification on the logic behind the UI colors for annual totals.
-10. **User:** Requests unification of UI colors and asks why an unsigned privacy document is being displayed.
+1.  **User:** Praises the new linear layout (Così è stupendo, bravo) and asks to make the amounts bold and apply the same layout to the RAS box. (Current task)
+2.  **User:** Confirms the new layout with the corrected calculation looks good.
+3.  **User:** Reports that the supplementary amounts are not visible in the annual boxes. (This led to the final UI refactor)
+4.  **User:** Notes that the supplementary amount is showing up in the wrong year (2025 instead of 2026).
+5.  **User:** Confirms that after a force refresh, the supplementary amount is visible.
+6.  **User:** Asks to delete an erroneous receipt for Dec 2026 that was incorrectly adding €800 to the total.
+7.  **User:** Points out that the annual total for 2026 is €1700 too high and asks for a detailed breakdown in the UI.
+8.  **User:** Complains about the complexity and asks why the supplementary amount is visible in the main RAS total but not in the yearly breakdown boxes.
+9.  **User:** Reports the supplementary amounts are still not visible in the yearly boxes.
+10. **User:** Acknowledges the agent's work and asks them to proceed with the fix.
 
 **Project Health Check:**
--   **Broken**: The privacy document signing flow is critically broken, as it generates a PDF without the required signature image. This is the top priority fix.
+-   **Broken**:
+    -   The Coach's compensation view () is showing incorrect financial data, which is a critical issue.
+    -   The signing flow for the 15k threshold declaration is unreliable on mobile web.
 -   **Mocked**: None.
 
 **3rd Party Integrations**
@@ -144,12 +169,14 @@ The agent has identified the root cause of a critical bug where signature images
 -   Testing agent used after significant changes: NO
 -   Troubleshoot agent used after agent stuck in loop: NO
 -   Test files created: []
--   Known regressions: The privacy document signing flow is a new regression that prevents valid documents from being generated.
+-   Known regressions: None introduced in this session, but the discrepancy between the Admin and Coach views is a major functional gap.
 
 **Credentials to test flow:**
 -   Admin:  / 
--   The test Coach PIERO PIERI (ID: ) can be used to test the signature fix, as their privacy consent has been reset.
+-   The user created a new test coach **RICA FEDE**. Credentials were not shared, but the user is creating and testing with this account. You may need to ask the user to create a new test coach if needed. It's best to avoid using the old PIERO PIERI account.
 
 **What agent forgot to execute**
--   The two recurring technical debt issues were not addressed: the **intermittent admin dashboard loading failure** and the need for a **global check for  direct imports**.
--   The  file has not been updated with the extensive work completed. This should be done after fixing the current P0 bug.</analysis>
+-   The agent has not yet synced the fixes from the Admin view to the Coach view (), which the user has pointed out.
+-   The agent did not address the user's earlier request to display the coach's assigned teams on their profile.
+-   The recurring technical debt issues (Admin dashboard loading failure,  imports) were not addressed.
+-   The  file has not been updated with the extensive work completed in this session.</analysis>

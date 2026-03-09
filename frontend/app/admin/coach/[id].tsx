@@ -1215,31 +1215,13 @@ export default function AdminCoachDetail() {
                           return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : coach.contract_end_date;
                         })() : 'N/D'} = {breakdown.monthsInContract} mesi
                       </Text>
-                      <Text style={{ color: '#1565C0', fontSize: 14, marginTop: 4 }}>
-                        Compenso base: {formatCurrency(breakdown.thisClubTotal)}
-                      </Text>
-                      <Text style={{ color: '#1565C0', fontSize: 11 }}>
-                        ({breakdown.monthsInContract} mesi × {formatCurrency(coach.monthly_compensation || 0)})
-                      </Text>
-                      
-                      {/* Somme supplementari - solo se presenti */}
-                      {breakdown.supplementaryTotal > 0 && (
-                        <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#90CAF9' }}>
-                          <Text style={{ color: '#1565C0', fontSize: 13 }}>
-                            + Somme supplementari {breakdown.startYear}/{breakdown.endYear}:
-                          </Text>
-                          <Text style={{ color: '#1565C0', fontSize: 16, fontWeight: '600' }}>
-                            {formatCurrency(breakdown.supplementaryTotal)}
-                          </Text>
-                        </View>
-                      )}
-                      
-                      {/* Totale per RAS */}
-                      <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 2, borderTopColor: '#1565C0' }}>
-                        <Text style={{ color: '#1565C0', fontSize: 12, fontWeight: 'bold' }}>TOTALE PER RAS:</Text>
-                        <Text style={[styles.totalValue, { color: '#1565C0', fontSize: 24 }]}>
-                          {formatCurrency(breakdown.grandTotal)}
-                        </Text>
+                      <View style={{ marginTop: 8 }}>
+                        <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.thisClubTotal)}</Text></Text>
+                        <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({breakdown.monthsInContract} mesi × {formatCurrency(coach.monthly_compensation || 0)})</Text>
+                        {breakdown.supplementaryTotal > 0 && (
+                          <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.supplementaryTotal)}</Text></Text>
+                        )}
+                        <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.grandTotal)}</Text></Text>
                       </View>
                     </View>
                     
@@ -1261,10 +1243,10 @@ export default function AdminCoachDetail() {
                           {yearlyBreakdown[years[0]].exceedsThreshold15k ? '🚨' : yearlyBreakdown[years[0]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[0]} ({yearlyBreakdown[years[0]].startMonth}-Dic: {yearlyBreakdown[years[0]].months} mesi)
                         </Text>
                         <View style={{ marginTop: 8 }}>
-                          <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: {formatCurrency(yearlyBreakdown[years[0]].baseAmount || 0)}</Text>
-                          <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: {formatCurrency(yearlyBreakdown[years[0]].supplementary || 0)}</Text>
+                          <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].baseAmount || 0)}</Text></Text>
+                          <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].supplementary || 0)}</Text></Text>
                           {prior > 0 && (
-                            <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: {formatCurrency(prior)}</Text>
+                            <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(prior)}</Text></Text>
                           )}
                           <Text style={{ fontSize: 15, color: yearlyBreakdown[years[0]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: {formatCurrency(yearlyBreakdown[years[0]].grandTotal)}</Text>
                         </View>
@@ -1304,9 +1286,9 @@ export default function AdminCoachDetail() {
                           {yearlyBreakdown[years[1]].exceedsThreshold15k ? '🚨' : yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} (Gen-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
                         </Text>
                         <View style={{ marginTop: 8 }}>
-                          <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: {formatCurrency(yearlyBreakdown[years[1]].baseAmount || 0)}</Text>
-                          <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: {formatCurrency(yearlyBreakdown[years[1]].supplementary || 0)}</Text>
-                          <Text style={{ fontSize: 15, color: yearlyBreakdown[years[1]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: {formatCurrency(yearlyBreakdown[years[1]].grandTotal)}</Text>
+                          <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].baseAmount || 0)}</Text></Text>
+                          <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].supplementary || 0)}</Text></Text>
+                          <Text style={{ fontSize: 15, color: yearlyBreakdown[years[1]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].grandTotal)}</Text></Text>
                         </View>
                         {yearlyBreakdown[years[1]].exceedsThreshold5k && !yearlyBreakdown[years[1]].exceedsThreshold15k && (
                           <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 10, marginTop: 8 }}>
