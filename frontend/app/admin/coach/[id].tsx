@@ -1262,8 +1262,12 @@ export default function AdminCoachDetail() {
                         </Text>
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, flexWrap: 'wrap', gap: 16 }}>
                           <View>
-                            <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD/SSD:</Text>
-                            <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[0]].total)}</Text>
+                            <Text style={{ fontSize: 12, color: '#666' }}>Compenso base:</Text>
+                            <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[0]].baseAmount || 0)}</Text>
+                          </View>
+                          <View>
+                            <Text style={{ fontSize: 12, color: '#1565C0' }}>Somme suppl.:</Text>
+                            <Text style={{ fontSize: 14, fontWeight: '600', color: '#1565C0' }}>{formatCurrency(yearlyBreakdown[years[0]].supplementary || 0)}</Text>
                           </View>
                           {prior > 0 && (
                             <View>
@@ -1313,10 +1317,14 @@ export default function AdminCoachDetail() {
                         }]}>
                           {yearlyBreakdown[years[1]].exceedsThreshold15k ? '🚨' : yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} (Gen-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
                         </Text>
-                        <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, gap: 16 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, gap: 16, flexWrap: 'wrap' }}>
                           <View>
-                            <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD/SSD:</Text>
-                            <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[1]].total)}</Text>
+                            <Text style={{ fontSize: 12, color: '#666' }}>Compenso base:</Text>
+                            <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[1]].baseAmount || 0)}</Text>
+                          </View>
+                          <View>
+                            <Text style={{ fontSize: 12, color: '#1565C0' }}>Somme suppl.:</Text>
+                            <Text style={{ fontSize: 14, fontWeight: '600', color: '#1565C0' }}>{formatCurrency(yearlyBreakdown[years[1]].supplementary || 0)}</Text>
                           </View>
                         </View>
                         <View style={{ alignItems: 'center', marginTop: 12 }}>
