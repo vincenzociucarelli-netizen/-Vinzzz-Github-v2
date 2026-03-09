@@ -391,13 +391,22 @@ export default function AdminCoachDetail() {
         // This ensures custom amounts (admin-generated) are properly counted
         const yearReceipts = (signedReceipts || []).filter((r: any) => r.year === year);
         let totalThisYear = 0;
+        let supplementaryThisYear = 0;  // Somme supplementari per questo anno
         
         for (let m = yearStartMonth; m <= yearEndMonth; m++) {
           const monthNum = m + 1; // Convert 0-indexed to 1-indexed
           const receipt = yearReceipts.find((r: any) => r.month === monthNum);
-          // Use receipt amount if exists, otherwise use standard monthly rate
-          totalThisYear += receipt?.amount_gross || receipt?.amount || monthly;
+          const receiptAmount = receipt?.amount_gross || receipt?.amount || monthly;
+          totalThisYear += receiptAmount;
+          
+          // Calculate supplementary for this month
+          if (receiptAmount > monthly) {
+            supplementaryThisYear += (receiptAmount - monthly);
+          }
         }
+        
+        // Base amount (standard monthly × months) - for display
+        const baseAmountThisYear = monthly * monthsThisYear;
         
         // I pregressi si applicano SOLO al primo anno (anno di assunzione)
         const priorThisYear = (year === startYear) ? prior : 0;
@@ -407,7 +416,9 @@ export default function AdminCoachDetail() {
           months: monthsThisYear,
           startMonth: monthNames[yearStartMonth],
           endMonth: monthNames[yearEndMonth],
-          total: totalThisYear,
+          total: totalThisYear,  // Actual total (base + supplementary)
+          baseAmount: baseAmountThisYear,  // Base amount (monthly × months)
+          supplementary: supplementaryThisYear,  // Supplementary amounts for this year
           prior: priorThisYear,
           grandTotal: grandTotalThisYear,
           exceedsThreshold5k: grandTotalThisYear > 5000,
@@ -423,13 +434,20 @@ export default function AdminCoachDetail() {
       // Calculate total from actual receipts
       const yearReceipts = (signedReceipts || []).filter((r: any) => r.year === year);
       let totalThisYear = 0;
+      let supplementaryThisYear = 0;
       
       for (let m = startMonth; m <= 11; m++) {
         const monthNum = m + 1;
         const receipt = yearReceipts.find((r: any) => r.month === monthNum);
-        totalThisYear += receipt?.amount_gross || receipt?.amount || monthly;
+        const receiptAmount = receipt?.amount_gross || receipt?.amount || monthly;
+        totalThisYear += receiptAmount;
+        
+        if (receiptAmount > monthly) {
+          supplementaryThisYear += (receiptAmount - monthly);
+        }
       }
       
+      const baseAmountThisYear = monthly * monthsThisYear;
       const grandTotalThisYear = prior + totalThisYear;
       
       years[year] = {
@@ -437,6 +455,8 @@ export default function AdminCoachDetail() {
         startMonth: monthNames[startMonth],
         endMonth: 'Dic',
         total: totalThisYear,
+        baseAmount: baseAmountThisYear,
+        supplementary: supplementaryThisYear,
         prior: prior,
         grandTotal: grandTotalThisYear,
         exceedsThreshold5k: grandTotalThisYear > 5000,
@@ -459,6 +479,8 @@ export default function AdminCoachDetail() {
     let endMonthName = 'Dicembre';
     let startYear = new Date().getFullYear();
     let endYear = startYear;
+    let contractStartMonth = 0;
+    let contractEndMonth = 11;
     
     if (contractStartDate && contractEndDate) {
       const start = new Date(contractStartDate);
@@ -469,23 +491,45 @@ export default function AdminCoachDetail() {
       endMonthName = monthNames[end.getMonth()];
       startYear = start.getFullYear();
       endYear = end.getFullYear();
+      contractStartMonth = start.getMonth();
+      contractEndMonth = end.getMonth();
     } else if (contractStartDate) {
       const start = new Date(contractStartDate);
       monthsInContract = 12 - start.getMonth();
       startMonthName = monthNames[start.getMonth()];
       startYear = start.getFullYear();
+      contractStartMonth = start.getMonth();
     }
     
     // Calculate base total (monthly × months)
     const thisClubTotal = monthly * monthsInContract;
     
-    // Calculate supplementary amounts from receipts with custom amounts
+    // Calculate supplementary amounts ONLY for months within contract period
     let supplementaryTotal = 0;
     if (signedReceipts && signedReceipts.length > 0) {
       signedReceipts.forEach((receipt: any) => {
         const receiptAmount = receipt.amount_gross || receipt.amount || 0;
-        // If this receipt has a different amount than standard monthly, add the difference
-        if (receiptAmount > monthly) {
+        const receiptYear = receipt.year;
+        const receiptMonth = receipt.month - 1; // Convert to 0-indexed
+        
+        // Check if this receipt is within the contract period
+        let isInContract = false;
+        if (startYear === endYear) {
+          // Same year contract
+          isInContract = receiptYear === startYear && receiptMonth >= contractStartMonth && receiptMonth <= contractEndMonth;
+        } else {
+          // Multi-year contract
+          if (receiptYear === startYear) {
+            isInContract = receiptMonth >= contractStartMonth;
+          } else if (receiptYear === endYear) {
+            isInContract = receiptMonth <= contractEndMonth;
+          } else if (receiptYear > startYear && receiptYear < endYear) {
+            isInContract = true;
+          }
+        }
+        
+        // Only count supplementary if within contract and amount > standard
+        if (isInContract && receiptAmount > monthly) {
           supplementaryTotal += (receiptAmount - monthly);
         }
       });
@@ -500,8 +544,9 @@ export default function AdminCoachDetail() {
       startYear,
       endYear,
       thisClubTotal,
-      supplementaryTotal,  // New: somme supplementari
-      grandTotal: prior + thisClubTotal + supplementaryTotal  // Updated to include supplementary
+      supplementaryTotal,  // Somme supplementari (solo differenza sopra standard)
+      // grandTotal for RAS = ONLY thisClubTotal + supplementary (NO prior - prior is reported by other clubs)
+      grandTotal: thisClubTotal + supplementaryTotal
     };
   };
 
@@ -1007,9 +1052,15 @@ export default function AdminCoachDetail() {
                             </Text>
                             <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, flexWrap: 'wrap', gap: 16 }}>
                               <View>
-                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD/SSD:</Text>
-                                <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[0]].total)}</Text>
+                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso base:</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[0]].baseAmount || yearlyBreakdown[years[0]].total)}</Text>
                               </View>
+                              {(yearlyBreakdown[years[0]].supplementary || 0) > 0 && (
+                                <View>
+                                  <Text style={{ fontSize: 12, color: '#1565C0' }}>*Somme suppl.:</Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#1565C0' }}>+{formatCurrency(yearlyBreakdown[years[0]].supplementary)}</Text>
+                                </View>
+                              )}
                               {prior > 0 && (
                                 <View>
                                   <Text style={{ fontSize: 12, color: '#E65100' }}>+ Pregressi:</Text>
@@ -1058,11 +1109,17 @@ export default function AdminCoachDetail() {
                             }]}>
                               {yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} (Gen-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
                             </Text>
-                            <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, gap: 16 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 8, gap: 16, flexWrap: 'wrap' }}>
                               <View>
-                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso ASD/SSD:</Text>
-                                <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[1]].total)}</Text>
+                                <Text style={{ fontSize: 12, color: '#666' }}>Compenso base:</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600' }}>{formatCurrency(yearlyBreakdown[years[1]].baseAmount || yearlyBreakdown[years[1]].total)}</Text>
                               </View>
+                              {(yearlyBreakdown[years[1]].supplementary || 0) > 0 && (
+                                <View>
+                                  <Text style={{ fontSize: 12, color: '#1565C0' }}>*Somme suppl.:</Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#1565C0' }}>+{formatCurrency(yearlyBreakdown[years[1]].supplementary)}</Text>
+                                </View>
+                              )}
                             </View>
                             <View style={{ alignItems: 'center', marginTop: 12 }}>
                               <Text style={{ fontSize: 12, color: '#333' }}>Totale Anno:</Text>
