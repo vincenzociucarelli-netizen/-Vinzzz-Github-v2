@@ -371,7 +371,10 @@ export default function AdminCoachDetail() {
     const prior = parseFloat(otherAnnualCompensation.replace(',', '.')) || 0;  // Compensi pregressi dichiarati
     const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
     
-    const years: { [year: number]: { months: number, startMonth: string, endMonth: string, total: number, prior: number, grandTotal: number, exceedsThreshold5k: boolean, exceedsThreshold15k: boolean } } = {};
+    const years: { [year: number]: { months: number, startMonth: string, endMonth: string, total: number, baseAmount: number, supplementary: number, prior: number, grandTotal: number, exceedsThreshold5k: boolean, exceedsThreshold15k: boolean } } = {};
+    
+    // Debug: check signedReceipts data
+    console.log('getYearlyBreakdown called - signedReceipts:', signedReceipts?.length, 'monthly:', monthly);
     
     if (contractStartDate && contractEndDate) {
       const start = new Date(contractStartDate);
