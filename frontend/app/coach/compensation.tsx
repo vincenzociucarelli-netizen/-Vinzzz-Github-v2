@@ -679,13 +679,13 @@ export default function CoachCompensation() {
     
     if (thresholdStatus.thresholds['15000'].declaration_signed) {
       warnings.push(
-        <View key="signed-15000" style={[styles.thresholdBanner, { backgroundColor: '#D4EDDA' }]}>
-          <Ionicons name="checkmark-circle" size={18} color="#155724" />
+        <View key="signed-15000" style={[styles.thresholdBanner, { backgroundColor: '#E3F2FD', borderLeftColor: '#2196F3', borderLeftWidth: 4 }]}>
+          <Ionicons name="checkmark-circle" size={18} color="#1565C0" />
           <View style={styles.thresholdBannerContent}>
-            <Text style={[styles.thresholdBannerTitle, { color: '#155724' }]}>
+            <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>
               Anno {contractStartYear}: Dichiarazione €15.000 firmata
             </Text>
-            <Text style={[styles.thresholdBannerText, { color: '#155724' }]}>
+            <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>
               Soglia fiscale comunicata
             </Text>
           </View>
@@ -713,11 +713,11 @@ export default function CoachCompensation() {
       
       if (thresholdStatus2026.thresholds['15000'].declaration_signed) {
         warnings.push(
-          <View key="signed-15000-2026" style={[styles.thresholdBanner, { backgroundColor: '#FCE4EC', borderLeftColor: '#E91E63', borderLeftWidth: 4 }]}>
-            <Ionicons name="checkmark-circle" size={18} color="#C2185B" />
+          <View key="signed-15000-2026" style={[styles.thresholdBanner, { backgroundColor: '#E3F2FD', borderLeftColor: '#2196F3', borderLeftWidth: 4 }]}>
+            <Ionicons name="checkmark-circle" size={18} color="#1565C0" />
             <View style={styles.thresholdBannerContent}>
-              <Text style={[styles.thresholdBannerTitle, { color: '#C2185B' }]}>Anno {year2026}: Dichiarazione €15.000 firmata</Text>
-              <Text style={[styles.thresholdBannerText, { color: '#C2185B' }]}>Soglia fiscale comunicata</Text>
+              <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Dichiarazione €15.000 firmata</Text>
+              <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>Soglia fiscale comunicata</Text>
             </View>
           </View>
         );
