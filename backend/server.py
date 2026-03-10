@@ -13244,8 +13244,19 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     exceeded_5000_record = next((r for r in yearly_records if r.get("exceeded_5000")), None)
     exceeded_15000_record = next((r for r in yearly_records if r.get("exceeded_15000")), None)
     
+    # Find the NEXT unsigned receipt to get the actual amount (may be custom)
+    next_unsigned_record = await db.dirigente_compensations.find_one({
+        "dirigente_id": dirigente_id,
+        "year": year,
+        "receipt_signed": {"$ne": True}
+    })
+    # Use custom amount if exists, otherwise use standard monthly compensation
+    next_amount = monthly_compensation
+    if next_unsigned_record:
+        next_amount = next_unsigned_record.get("amount_gross", next_unsigned_record.get("amount", monthly_compensation)) or monthly_compensation
+    
     # Calculate if we're approaching thresholds
-    next_total = total_with_prior + monthly_compensation
+    next_total = total_with_prior + next_amount
     
     # Special case: if prior > 5000, no €5k declaration needed (already declared to other clubs)
     already_over_5k_from_prior = effective_prior > 5000

@@ -1350,7 +1350,7 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#8E44AD',
+    borderColor: '#E0E0E0',
     marginBottom: 10,
   },
   monthCardSigned: {
