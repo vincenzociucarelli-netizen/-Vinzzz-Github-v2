@@ -9262,10 +9262,12 @@ async def sign_compensation_receipt(
     prior_compensation = coach.get("other_annual_compensation", 0) or 0
     
     # Calculate yearly totals to check thresholds
+    # IMPORTANT: Exclude the current month from calculation to avoid counting it twice
     yearly_records = await db.coach_compensations.find({
         "coach_id": coach_id,
         "year": request.year,
-        "received": True
+        "receipt_signed": True,  # Only count already SIGNED receipts
+        "month": {"$ne": request.month}  # Exclude current month
     }).to_list(12)
     
     yearly_total_from_receipts = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
@@ -13527,17 +13529,20 @@ async def sign_collaboratore_compensation_receipt(
     logging.info(f"Collaboratore receipt: admin_email={admin_email}")
     
     # Calculate yearly total - check both collections (collaboratore_compensations and coach_compensations)
+    # IMPORTANT: Exclude the current month from calculation to avoid counting it twice
     yearly_records = await db.collaboratore_compensations.find({
         "collaboratore_id": collaboratore_id,
         "year": request.year,
-        "receipt_signed": True
+        "receipt_signed": True,
+        "month": {"$ne": request.month}  # Exclude current month
     }).to_list(12)
     
     # Also check coach_compensations as backup (some data may be stored there)
     coach_records = await db.coach_compensations.find({
         "coach_id": collaboratore_id,
         "year": request.year,
-        "receipt_signed": True
+        "receipt_signed": True,
+        "month": {"$ne": request.month}  # Exclude current month
     }).to_list(12)
     
     yearly_total_collab = sum(r.get("amount_gross", 0) for r in yearly_records)
