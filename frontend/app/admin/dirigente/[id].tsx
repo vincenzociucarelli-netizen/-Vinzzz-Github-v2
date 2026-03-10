@@ -1015,12 +1015,13 @@ export default function AdminDirigenteDetail() {
                           <Text style={{ color: '#1565C0', fontSize: 12, marginTop: 4 }}>
                             Dal {contractStartDate.split('-').reverse().join('/')} al {contractEndDate.split('-').reverse().join('/')} = {breakdown.monthsInContract} mesi
                           </Text>
-                          <Text style={[styles.totalValue, { color: '#1565C0', fontSize: 22 }]}>
-                            {formatCurrency(breakdown.thisClubTotal)}
-                          </Text>
-                          <Text style={{ color: '#1565C0', fontSize: 11 }}>
-                            ({breakdown.monthsInContract} mesi × {formatCurrency(parseFloat(monthlyCompensation.replace(',', '.')) || 0)})
-                          </Text>
+                          {/* Linear layout */}
+                          <View style={{ marginTop: 8 }}>
+                            <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.thisClubTotal)}</Text></Text>
+                            <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({breakdown.monthsInContract} mesi × {formatCurrency(parseFloat(monthlyCompensation.replace(',', '.')) || 0)})</Text>
+                            <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(0)}</Text></Text>
+                            <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.thisClubTotal)}</Text></Text>
+                          </View>
                         </View>
                         
                         {/* Header Calcolo per Anno */}
