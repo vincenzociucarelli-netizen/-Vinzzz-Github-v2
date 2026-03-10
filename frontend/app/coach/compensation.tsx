@@ -274,8 +274,10 @@ export default function CoachCompensation() {
     
     const targetYear = year || currentYear;
     
-    // Calculate if this month will exceed thresholds
-    const monthlyAmount = profile?.monthly_compensation || 0;
+    // Check if there's an existing record with a custom amount set by Admin
+    const existingRecord = records.find(r => matchesMonth(r.month, month) && r.year === targetYear);
+    const amountForThisMonth = existingRecord?.amount_gross || existingRecord?.amount || profile?.monthly_compensation || 0;
+    
     const priorComp = profile?.other_annual_compensation || 0;
     
     // Get contract start year
@@ -291,13 +293,13 @@ export default function CoachCompensation() {
       ? yearTotalFromReceipts + priorComp 
       : yearTotalFromReceipts;
     
-    const newTotal = yearTotalBeforeThis + monthlyAmount;
+    const newTotal = yearTotalBeforeThis + amountForThisMonth;
     
     // Check if THIS month will be the first to exceed thresholds
     const willExceed5k = newTotal > 5000 && yearTotalBeforeThis <= 5000;
     const willExceed15k = newTotal > 15000 && yearTotalBeforeThis <= 15000;
     
-    console.log('Threshold check for modal:', { yearTotalBeforeThis, monthlyAmount, newTotal, willExceed5k, willExceed15k });
+    console.log('Threshold check for modal:', { yearTotalBeforeThis, amountForThisMonth, newTotal, willExceed5k, willExceed15k });
     
     // Check if blocked by threshold (already exceeded but not declared)
     if (thresholdStatus?.is_blocked) {
@@ -369,11 +371,15 @@ export default function CoachCompensation() {
     try {
       setSigningDeclaration(true);
       
+      // Check if there's an existing record with a custom amount set by Admin
+      const existingRecord = records.find(r => r.month === selectedMonth && r.year === selectedYear);
+      const amountToSign = existingRecord?.amount_gross || existingRecord?.amount || profile?.monthly_compensation || 0;
+      
       // Use the compensation receipt endpoint which now generates the correct threshold document
       const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
-        amount_gross: profile?.monthly_compensation || 0,
+        amount_gross: amountToSign,
         signature_base64: declarationSignature.replace('data:image/png;base64,', ''),
         exceeded_5000: declarationType === '5000',
         exceeded_15000: declarationType === '15000',
@@ -767,7 +773,6 @@ export default function CoachCompensation() {
     
     // Track thresholds PER YEAR (they reset each calendar year)
     const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
-    const monthlyComp = profile?.monthly_compensation || 0;
     
     // Calculate cumulative totals per year to find threshold months
     const cumulativeByYear: { [year: number]: number } = {};
@@ -785,8 +790,9 @@ export default function CoachCompensation() {
         cumulativeByYear[r.year] = r.year === contractStartYear ? (priorCompensation || 0) : 0;
       }
       
-      // Add this month's compensation to cumulative
-      cumulativeByYear[r.year] += monthlyComp;
+      // Add this month's ACTUAL compensation (may be custom amount set by Admin)
+      const actualAmount = r.amount_gross || r.amount || profile?.monthly_compensation || 0;
+      cumulativeByYear[r.year] += actualAmount;
       
       // Check if this month crosses €5k threshold
       if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
