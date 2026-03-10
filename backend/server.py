@@ -343,8 +343,9 @@ class User(BaseModel):
     approved_at: Optional[datetime] = None
     approved_by: Optional[str] = None  # Admin ID who approved
     is_scorekeeper: bool = False  # For dirigenti - segnapunti
-    qualification: Optional[str] = None  # For dirigenti - qualifica (es: Presidente, Vice Presidente)
-    qualification2: Optional[str] = None  # For dirigenti - seconda qualifica (es: Segnapunti)
+    qualification: Optional[str] = None  # For dirigenti - qualifica principale (legacy, kept for backward compatibility)
+    qualification2: Optional[str] = None  # For dirigenti - seconda qualifica (legacy)
+    qualifications: Optional[List[str]] = None  # For dirigenti - array di tutte le qualifiche/incarichi
     
     # Coach specific fields - Dati Anagrafici
     first_name: Optional[str] = None
@@ -3260,11 +3261,13 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
     
     update_data = {}
     
-    # Qualification for dirigenti
+    # Qualification for dirigenti - support both legacy (qualification, qualification2) and new (qualifications array)
     if "qualification" in data:
         update_data["qualification"] = data["qualification"]
     if "qualification2" in data:
         update_data["qualification2"] = data["qualification2"]
+    if "qualifications" in data:
+        update_data["qualifications"] = data["qualifications"]
     
     # Compensation fields
     if "monthly_compensation" in data:
