@@ -205,6 +205,9 @@ export default function QuietanzePage() {
                         <Text style={styles.receiptDate}>{MONTH_NAMES[receipt.month]} {receipt.year}</Text>
                       </View>
                       <Text style={styles.receiptName}>{receipt.user_name}</Text>
+                      {receipt.created_by_name && (
+                        <Text style={styles.createdByText}>Creata da: {receipt.created_by_name}</Text>
+                      )}
                       <View style={styles.receiptAmounts}>
                         <View>
                           <Text style={styles.amountLabel}>Importo custom</Text>
@@ -251,6 +254,9 @@ export default function QuietanzePage() {
                         <Text style={styles.receiptDate}>{MONTH_NAMES[receipt.month]} {receipt.year}</Text>
                       </View>
                       <Text style={styles.receiptName}>{receipt.user_name}</Text>
+                      {receipt.created_by_name && (
+                        <Text style={styles.createdByText}>Creata da: {receipt.created_by_name}</Text>
+                      )}
                       <View style={styles.receiptAmounts}>
                         <View>
                           <Text style={styles.amountLabel}>Importo pagato</Text>
@@ -461,7 +467,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 10,
+    marginBottom: 4,
+  },
+  createdByText: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginBottom: 8,
   },
   receiptAmounts: {
     flexDirection: 'row',

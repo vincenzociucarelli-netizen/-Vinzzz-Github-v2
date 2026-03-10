@@ -9286,11 +9286,26 @@ async def admin_get_all_custom_receipts(
     
     all_receipts = []
     
+    # Cache for admin names to avoid repeated lookups
+    admin_cache = {}
+    
+    async def get_admin_name(admin_id):
+        if not admin_id:
+            return None
+        if admin_id in admin_cache:
+            return admin_cache[admin_id]
+        admin = await db.users.find_one({"id": admin_id})
+        name = admin.get("full_name", "Admin") if admin else None
+        admin_cache[admin_id] = name
+        return name
+    
     # Get coach receipts
     coach_receipts = await db.coach_compensations.find({}).to_list(1000)
     for r in coach_receipts:
         user = await db.users.find_one({"id": r.get("coach_id")})
         if user:
+            created_by_name = await get_admin_name(r.get("created_by"))
+            updated_by_name = await get_admin_name(r.get("updated_by"))
             all_receipts.append({
                 "id": str(r.get("_id")),
                 "user_id": r.get("coach_id"),
@@ -9305,6 +9320,12 @@ async def admin_get_all_custom_receipts(
                 "receipt_signed_date": r.get("receipt_signed_date"),
                 "exceeded_5000": r.get("exceeded_5000", False),
                 "exceeded_15000": r.get("exceeded_15000", False),
+                "created_by": r.get("created_by"),
+                "created_by_name": created_by_name,
+                "created_at": r.get("created_at"),
+                "updated_by": r.get("updated_by"),
+                "updated_by_name": updated_by_name,
+                "updated_at": r.get("updated_at"),
             })
     
     # Get dirigente receipts
@@ -9312,6 +9333,8 @@ async def admin_get_all_custom_receipts(
     for r in dirigente_receipts:
         user = await db.users.find_one({"id": r.get("dirigente_id")})
         if user:
+            created_by_name = await get_admin_name(r.get("created_by"))
+            updated_by_name = await get_admin_name(r.get("updated_by"))
             all_receipts.append({
                 "id": str(r.get("_id")),
                 "user_id": r.get("dirigente_id"),
@@ -9326,6 +9349,12 @@ async def admin_get_all_custom_receipts(
                 "receipt_signed_date": r.get("receipt_signed_date"),
                 "exceeded_5000": r.get("exceeded_5000", False),
                 "exceeded_15000": r.get("exceeded_15000", False),
+                "created_by": r.get("created_by"),
+                "created_by_name": created_by_name,
+                "created_at": r.get("created_at"),
+                "updated_by": r.get("updated_by"),
+                "updated_by_name": updated_by_name,
+                "updated_at": r.get("updated_at"),
             })
     
     # Get collaboratore receipts
@@ -9333,6 +9362,8 @@ async def admin_get_all_custom_receipts(
     for r in collaboratore_receipts:
         user = await db.users.find_one({"id": r.get("collaboratore_id")})
         if user:
+            created_by_name = await get_admin_name(r.get("created_by"))
+            updated_by_name = await get_admin_name(r.get("updated_by"))
             all_receipts.append({
                 "id": str(r.get("_id")),
                 "user_id": r.get("collaboratore_id"),
@@ -9347,6 +9378,12 @@ async def admin_get_all_custom_receipts(
                 "receipt_signed_date": r.get("receipt_signed_date"),
                 "exceeded_5000": r.get("exceeded_5000", False),
                 "exceeded_15000": r.get("exceeded_15000", False),
+                "created_by": r.get("created_by"),
+                "created_by_name": created_by_name,
+                "created_at": r.get("created_at"),
+                "updated_by": r.get("updated_by"),
+                "updated_by_name": updated_by_name,
+                "updated_at": r.get("updated_at"),
             })
     
     # Sort by year desc, month desc
