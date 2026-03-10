@@ -79,30 +79,6 @@ export default function CoachScreen() {
 
   // Animation for team selector
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  
-  useEffect(() => {
-    if (!selectedTeamId && activeTab === 'scanner') {
-      // Start pulsing animation when no team selected
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.03,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      pulse.start();
-      return () => pulse.stop();
-    } else {
-      pulseAnim.setValue(1);
-    }
-  }, [selectedTeamId, activeTab]);
 
   const loadTeams = async () => {
     try {
@@ -169,6 +145,31 @@ export default function CoachScreen() {
   // Team selection for scanner
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [teamSelectModalVisible, setTeamSelectModalVisible] = useState(false);
+
+  // Animation for team selector pulse effect
+  useEffect(() => {
+    if (!selectedTeamId && activeTab === 'scanner') {
+      // Start pulsing animation when no team selected
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.03,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [selectedTeamId, activeTab]);
 
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
