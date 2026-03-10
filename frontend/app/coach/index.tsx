@@ -764,15 +764,15 @@ export default function CoachScreen() {
             }}
           >
             <Ionicons 
-              name={showAllTeams ? "swap-horizontal" : "swap-horizontal-outline"} 
-              size={18} 
-              color={showAllTeams ? "#fff" : "#666"} 
+              name={showAllTeams ? "swap-horizontal" : "people-outline"} 
+              size={20} 
+              color={showAllTeams ? "#fff" : "#1976D2"} 
             />
             <Text style={[
               styles.substitutionToggleText,
               showAllTeams && styles.substitutionToggleTextActive
             ]}>
-              {showAllTeams ? "🔄 Modalità Sostituzione ATTIVA" : "Sostituisco un collega"}
+              {showAllTeams ? "🔄 Modalità Sostituzione ATTIVA" : "👥 Sostituisco un collega"}
             </Text>
           </TouchableOpacity>
           
@@ -2302,22 +2302,29 @@ const styles = StyleSheet.create({
   substitutionToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    backgroundColor: '#E3F2FD',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderRadius: 20,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderWidth: 2,
+    borderColor: '#1976D2',
+    shadowColor: '#1976D2',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   substitutionToggleActive: {
     backgroundColor: '#9C27B0',
     borderColor: '#7B1FA2',
+    shadowColor: '#7B1FA2',
   },
   substitutionToggleText: {
     marginLeft: 8,
     fontSize: 13,
-    color: '#666',
+    color: '#1976D2',
+    fontWeight: '500',
   },
   substitutionToggleTextActive: {
     color: '#fff',
