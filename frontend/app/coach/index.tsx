@@ -47,6 +47,8 @@ export default function CoachScreen() {
   const [scanning, setScanning] = useState(false);
   const [activeTab, setActiveTab] = useState<'teams' | 'scanner' | 'society'>('teams');
   const [teams, setTeams] = useState<Team[]>([]);
+  const [allTeams, setAllTeams] = useState<Team[]>([]); // All society teams for substitution
+  const [showAllTeams, setShowAllTeams] = useState(false); // Toggle for substitution mode
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dirigenti, setDirigenti] = useState<Dirigente[]>([]);
@@ -85,6 +87,14 @@ export default function CoachScreen() {
       // Load teams assigned to this coach
       const response = await api.get('/coach/my-teams');
       setTeams(response.data);
+      
+      // Load all teams for substitution mode
+      try {
+        const allTeamsRes = await api.get('/teams');
+        setAllTeams(allTeamsRes.data || []);
+      } catch (err) {
+        console.log('Could not load all teams');
+      }
     } catch (error) {
       console.error('Error loading teams:', error);
     } finally {
@@ -742,22 +752,47 @@ export default function CoachScreen() {
           <Text style={styles.scannerTitle}>Pronto per scansionare</Text>
           <Text style={styles.scannerSubtitle}>Registra le presenze degli atleti</Text>
           
+          {/* Toggle Modalità Sostituzione */}
+          <TouchableOpacity 
+            style={[
+              styles.substitutionToggle,
+              showAllTeams && styles.substitutionToggleActive
+            ]}
+            onPress={() => {
+              setShowAllTeams(!showAllTeams);
+              setSelectedTeamId(null); // Reset selection when toggling
+            }}
+          >
+            <Ionicons 
+              name={showAllTeams ? "swap-horizontal" : "swap-horizontal-outline"} 
+              size={18} 
+              color={showAllTeams ? "#fff" : "#666"} 
+            />
+            <Text style={[
+              styles.substitutionToggleText,
+              showAllTeams && styles.substitutionToggleTextActive
+            ]}>
+              {showAllTeams ? "🔄 Modalità Sostituzione ATTIVA" : "Sostituisco un collega"}
+            </Text>
+          </TouchableOpacity>
+          
           {/* Team Selection - with animation */}
           <Animated.View style={{ transform: [{ scale: pulseAnim }], width: '100%', maxWidth: 350 }}>
             <TouchableOpacity 
               style={[
                 styles.teamSelector, 
-                selectedTeamId ? styles.teamSelectorActive : styles.teamSelectorHighlight
+                selectedTeamId ? styles.teamSelectorActive : styles.teamSelectorHighlight,
+                showAllTeams && styles.teamSelectorSubstitution
               ]}
               onPress={() => setTeamSelectModalVisible(true)}
             >
-              <Ionicons name="people" size={20} color={selectedTeamId ? "#34C759" : "#FF9500"} />
+              <Ionicons name="people" size={20} color={selectedTeamId ? "#34C759" : showAllTeams ? "#9C27B0" : "#FF9500"} />
               <Text style={[styles.teamSelectorText, selectedTeamId ? styles.teamSelectorTextActive : styles.teamSelectorTextHighlight]}>
                 {selectedTeamId 
-                  ? `📋 ${teams.find(t => t.id === selectedTeamId)?.name || 'Squadra selezionata'}`
-                  : '⚠️ Seleziona una squadra'}
+                  ? `📋 ${(showAllTeams ? allTeams : teams).find(t => t.id === selectedTeamId)?.name || 'Squadra selezionata'}`
+                  : showAllTeams ? '🔄 Seleziona squadra da sostituire' : '⚠️ Seleziona una squadra'}
               </Text>
-              <Ionicons name="chevron-down" size={16} color={selectedTeamId ? "#666" : "#FF9500"} />
+              <Ionicons name="chevron-down" size={16} color={selectedTeamId ? "#666" : showAllTeams ? "#9C27B0" : "#FF9500"} />
             </TouchableOpacity>
           </Animated.View>
           
@@ -1035,18 +1070,31 @@ export default function CoachScreen() {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>📋 Seleziona Squadra</Text>
+              <Text style={styles.modalTitle}>
+                {showAllTeams ? "🔄 Seleziona Squadra (Sostituzione)" : "📋 Seleziona Squadra"}
+              </Text>
               <Text style={styles.modalSubtitle}>
-                Seleziona la squadra per cui vuoi registrare le presenze:
+                {showAllTeams 
+                  ? "Stai sostituendo un collega. Seleziona la squadra di cui vuoi registrare le presenze:"
+                  : "Seleziona la squadra per cui vuoi registrare le presenze:"}
               </Text>
               
+              {showAllTeams && (
+                <View style={{ backgroundColor: '#F3E5F5', padding: 10, borderRadius: 8, marginBottom: 12 }}>
+                  <Text style={{ color: '#7B1FA2', fontSize: 12, textAlign: 'center' }}>
+                    ⚠️ Modalità sostituzione: puoi solo registrare presenze
+                  </Text>
+                </View>
+              )}
+              
               <ScrollView style={{ maxHeight: 300, marginVertical: 16 }}>
-                {teams.map((team) => (
+                {(showAllTeams ? allTeams : teams).map((team) => (
                   <TouchableOpacity
                     key={team.id}
                     style={[
                       styles.teamSelectItem,
-                      selectedTeamId === team.id && styles.teamSelectItemActive
+                      selectedTeamId === team.id && styles.teamSelectItemActive,
+                      showAllTeams && { borderLeftWidth: 3, borderLeftColor: '#9C27B0' }
                     ]}
                     onPress={() => {
                       setSelectedTeamId(team.id);
@@ -1057,7 +1105,7 @@ export default function CoachScreen() {
                       <Ionicons 
                         name={selectedTeamId === team.id ? "checkmark-circle" : "ellipse-outline"} 
                         size={24} 
-                        color={selectedTeamId === team.id ? "#34C759" : "#ccc"} 
+                        color={selectedTeamId === team.id ? "#34C759" : showAllTeams ? "#9C27B0" : "#ccc"} 
                       />
                       <View style={{ marginLeft: 12 }}>
                         <Text style={styles.teamSelectName}>{team.name}</Text>
@@ -2245,6 +2293,34 @@ const styles = StyleSheet.create({
   },
   teamSelectorTextHighlight: {
     color: '#FF9500',
+    fontWeight: '600',
+  },
+  teamSelectorSubstitution: {
+    backgroundColor: '#F3E5F5',
+    borderColor: '#9C27B0',
+  },
+  substitutionToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  substitutionToggleActive: {
+    backgroundColor: '#9C27B0',
+    borderColor: '#7B1FA2',
+  },
+  substitutionToggleText: {
+    marginLeft: 8,
+    fontSize: 13,
+    color: '#666',
+  },
+  substitutionToggleTextActive: {
+    color: '#fff',
     fontWeight: '600',
   },
   // Certificate Override Modal
