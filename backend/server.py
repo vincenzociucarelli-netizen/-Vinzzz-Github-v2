@@ -12880,10 +12880,12 @@ async def sign_dirigente_compensation_receipt(
     prior_compensation = dirigente.get("other_annual_compensation", 0) or 0
     
     # Calculate yearly totals to check thresholds
+    # IMPORTANT: Exclude the current month from calculation to avoid counting it twice
     yearly_records = await db.dirigente_compensations.find({
         "dirigente_id": dirigente_id,
         "year": request.year,
-        "received": True
+        "receipt_signed": True,  # Only count already SIGNED receipts
+        "month": {"$ne": request.month}  # Exclude current month
     }).to_list(12)
     
     yearly_total_from_receipts = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
