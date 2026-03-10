@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/services/api';
@@ -36,6 +36,12 @@ export default function QuietanzePage() {
   const [stats, setStats] = useState({ total: 0, pending: 0, custom_pending: 0, custom_signed: 0 });
   const [filterRole, setFilterRole] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'signed'>('all');
+  
+  // Edit modal state
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'gestione') {
@@ -88,10 +94,36 @@ export default function QuietanzePage() {
   };
 
   const handleEdit = (receipt: any) => {
-    // Navigate to the user's admin page with params to open receipt modal
-    const url = `/admin/${receipt.user_role}/${receipt.user_id}`;
-    console.log('Navigating to:', url);
-    router.push(url as any);
+    setSelectedReceipt(receipt);
+    setEditAmount(String(receipt.amount_gross || ''));
+    setEditModalVisible(true);
+  };
+  
+  const handleSaveEdit = async () => {
+    if (!selectedReceipt || !editAmount) return;
+    
+    const amount = parseFloat(editAmount);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Errore', 'Inserisci un importo valido');
+      return;
+    }
+    
+    try {
+      setSaving(true);
+      // Use the create-receipt endpoint which updates if exists
+      await api.post(`/admin/${selectedReceipt.user_role}/${selectedReceipt.user_id}/compensation/create-receipt`, {
+        month: selectedReceipt.month,
+        year: selectedReceipt.year,
+        amount_gross: amount
+      });
+      Alert.alert('Salvato', 'Quietanza aggiornata con successo');
+      setEditModalVisible(false);
+      loadReceipts();
+    } catch (error: any) {
+      Alert.alert('Errore', error.response?.data?.detail || 'Impossibile salvare');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const filteredReceipts = receipts.filter(r => {
@@ -317,6 +349,66 @@ export default function QuietanzePage() {
           </TouchableOpacity>
         </View>
       )}
+      
+      {/* Edit Modal */}
+      <Modal visible={editModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.editModalContent}>
+            <View style={styles.editModalHeader}>
+              <Text style={styles.editModalTitle}>✏️ Modifica Quietanza</Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            {selectedReceipt && (
+              <>
+                <View style={styles.editModalInfo}>
+                  <Text style={styles.editModalLabel}>Utente</Text>
+                  <Text style={styles.editModalValue}>{selectedReceipt.user_name}</Text>
+                  
+                  <Text style={styles.editModalLabel}>Periodo</Text>
+                  <Text style={styles.editModalValue}>{MONTH_NAMES[selectedReceipt.month]} {selectedReceipt.year}</Text>
+                  
+                  <Text style={styles.editModalLabel}>Importo standard</Text>
+                  <Text style={styles.editModalValue}>{formatCurrency(selectedReceipt.standard_amount)}</Text>
+                </View>
+                
+                <View style={styles.editInputContainer}>
+                  <Text style={styles.editModalLabel}>Nuovo importo (€)</Text>
+                  <TextInput
+                    style={styles.editInput}
+                    value={editAmount}
+                    onChangeText={setEditAmount}
+                    keyboardType="numeric"
+                    placeholder="Es: 5000"
+                  />
+                </View>
+                
+                <View style={styles.editModalActions}>
+                  <TouchableOpacity
+                    style={[styles.editModalBtn, styles.editModalCancelBtn]}
+                    onPress={() => setEditModalVisible(false)}
+                  >
+                    <Text style={styles.editModalCancelText}>Annulla</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.editModalBtn, styles.editModalSaveBtn, saving && { opacity: 0.5 }]}
+                    onPress={handleSaveEdit}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.editModalSaveText}>Salva</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -583,5 +675,85 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 6,
     textAlign: 'center',
+  },
+  // Edit Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  editModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+  },
+  editModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  editModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  editModalInfo: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  editModalLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 8,
+  },
+  editModalValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  editInputContainer: {
+    marginBottom: 20,
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 6,
+  },
+  editModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  editModalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  editModalCancelBtn: {
+    backgroundColor: '#f0f0f0',
+  },
+  editModalSaveBtn: {
+    backgroundColor: '#8E44AD',
+  },
+  editModalCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#666',
+  },
+  editModalSaveText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
