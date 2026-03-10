@@ -809,15 +809,15 @@ export default function AdminDashboard() {
           {/* Report Mensile Quietanze - Per Coach e Collaboratori */}
           <TouchableOpacity
             style={styles.menuCard}
-            onPress={() => router.push('/admin/reports')}
-            data-testid="reports-menu-card"
+            onPress={() => router.push('/admin/quietanze')}
+            data-testid="quietanze-menu-card"
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
-              <Text style={{ fontSize: 26 }}>📊</Text>
+              <Text style={{ fontSize: 26 }}>📋</Text>
             </View>
             <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Report Quietanze</Text>
-              <Text style={styles.menuCardSubtitle}>Riepilogo compensi Coach e Collaboratori</Text>
+              <Text style={styles.menuCardTitle}>Quietanze</Text>
+              <Text style={styles.menuCardSubtitle}>Report e gestione compensi</Text>
             </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>

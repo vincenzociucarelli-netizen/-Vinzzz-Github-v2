@@ -9274,6 +9274,94 @@ async def admin_delete_coach_receipt(
     return {"message": f"Quietanza {month}/{year} eliminata"}
 
 
+
+# Endpoint to get all custom receipts for admin management
+@api_router.get("/admin/quietanze/all")
+async def admin_get_all_custom_receipts(
+    current_user = Depends(get_current_user)
+):
+    """Get all custom receipts across all users for centralized management"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    all_receipts = []
+    
+    # Get coach receipts
+    coach_receipts = await db.coach_compensations.find({}).to_list(1000)
+    for r in coach_receipts:
+        user = await db.users.find_one({"id": r.get("coach_id")})
+        if user:
+            all_receipts.append({
+                "id": str(r.get("_id")),
+                "user_id": r.get("coach_id"),
+                "user_name": user.get("full_name", "N/A"),
+                "user_role": "coach",
+                "month": r.get("month"),
+                "year": r.get("year"),
+                "amount_gross": r.get("amount_gross", r.get("amount", 0)),
+                "standard_amount": user.get("monthly_compensation", 0),
+                "is_custom": r.get("amount_gross", r.get("amount", 0)) != user.get("monthly_compensation", 0),
+                "receipt_signed": r.get("receipt_signed", False),
+                "receipt_signed_date": r.get("receipt_signed_date"),
+                "exceeded_5000": r.get("exceeded_5000", False),
+                "exceeded_15000": r.get("exceeded_15000", False),
+            })
+    
+    # Get dirigente receipts
+    dirigente_receipts = await db.dirigente_compensations.find({}).to_list(1000)
+    for r in dirigente_receipts:
+        user = await db.users.find_one({"id": r.get("dirigente_id")})
+        if user:
+            all_receipts.append({
+                "id": str(r.get("_id")),
+                "user_id": r.get("dirigente_id"),
+                "user_name": user.get("full_name", "N/A"),
+                "user_role": "dirigente",
+                "month": r.get("month"),
+                "year": r.get("year"),
+                "amount_gross": r.get("amount_gross", r.get("amount", 0)),
+                "standard_amount": user.get("monthly_compensation", 0),
+                "is_custom": r.get("amount_gross", r.get("amount", 0)) != user.get("monthly_compensation", 0),
+                "receipt_signed": r.get("receipt_signed", False),
+                "receipt_signed_date": r.get("receipt_signed_date"),
+                "exceeded_5000": r.get("exceeded_5000", False),
+                "exceeded_15000": r.get("exceeded_15000", False),
+            })
+    
+    # Get collaboratore receipts
+    collaboratore_receipts = await db.collaboratore_compensations.find({}).to_list(1000)
+    for r in collaboratore_receipts:
+        user = await db.users.find_one({"id": r.get("collaboratore_id")})
+        if user:
+            all_receipts.append({
+                "id": str(r.get("_id")),
+                "user_id": r.get("collaboratore_id"),
+                "user_name": user.get("full_name", "N/A"),
+                "user_role": "collaboratore",
+                "month": r.get("month"),
+                "year": r.get("year"),
+                "amount_gross": r.get("amount_gross", r.get("amount", 0)),
+                "standard_amount": user.get("monthly_compensation", 0),
+                "is_custom": r.get("amount_gross", r.get("amount", 0)) != user.get("monthly_compensation", 0),
+                "receipt_signed": r.get("receipt_signed", False),
+                "receipt_signed_date": r.get("receipt_signed_date"),
+                "exceeded_5000": r.get("exceeded_5000", False),
+                "exceeded_15000": r.get("exceeded_15000", False),
+            })
+    
+    # Sort by year desc, month desc
+    all_receipts.sort(key=lambda x: (x["year"], x["month"]), reverse=True)
+    
+    return {
+        "receipts": all_receipts,
+        "total": len(all_receipts),
+        "pending": len([r for r in all_receipts if not r["receipt_signed"]]),
+        "custom_pending": len([r for r in all_receipts if r["is_custom"] and not r["receipt_signed"]]),
+        "custom_signed": len([r for r in all_receipts if r["is_custom"] and r["receipt_signed"]])
+    }
+
+
+
 @api_router.post("/admin/dirigente/{dirigente_id}/compensation/create-receipt")
 async def admin_create_dirigente_receipt(
     dirigente_id: str,
