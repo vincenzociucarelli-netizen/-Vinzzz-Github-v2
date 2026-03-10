@@ -403,7 +403,7 @@ export default function CollaboratoreesScreen() {
           {exporting ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Ionicons name="share-outline" size={22} color="#fff" />
+            <Ionicons name="save-outline" size={22} color="#fff" />
           )}
         </TouchableOpacity>
       </View>
