@@ -13041,7 +13041,7 @@ async def sign_dirigente_compensation_receipt(
             )
         
         await db.dirigente_compensations.update_one(
-            {"id": existing["id"]},
+            {"_id": existing["_id"]},
             {"$set": {
                 "amount_gross": request.amount_gross,
                 "amount_net": amount_net,
