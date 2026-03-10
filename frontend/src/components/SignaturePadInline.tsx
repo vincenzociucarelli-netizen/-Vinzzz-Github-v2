@@ -149,21 +149,6 @@ const SignaturePadInline = forwardRef<SignaturePadInlineRef, SignaturePadInlineP
             {isEmpty ? 'Usa il mouse o il dito per firmare' : 'Firma registrata'}
           </Text>
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 8 }}>
-            {/* Manual confirm button for mobile */}
-            <TouchableOpacity 
-              style={[styles.clearBtn, { backgroundColor: isEmpty ? '#ccc' : '#34C759' }]} 
-              onPress={() => {
-                if (webCanvasRef.current && !webCanvasRef.current.isEmpty()) {
-                  setIsEmpty(false);
-                  const dataUrl = webCanvasRef.current.toDataURL('image/png');
-                  console.log('Manual confirm - signature length:', dataUrl?.length);
-                  onSave?.(dataUrl);
-                }
-              }}
-              disabled={isEmpty}
-            >
-              <Text style={[styles.clearBtnText, { color: isEmpty ? '#666' : '#fff' }]}>Conferma firma</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={styles.clearBtn} onPress={handleClear}>
               <Text style={styles.clearBtnText}>Cancella firma</Text>
             </TouchableOpacity>
