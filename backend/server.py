@@ -9737,8 +9737,19 @@ async def get_coach_threshold_status(
             declaration_15000["signed"] = True  # If it exists, it's signed
     
     # Calculate thresholds
+    # Find the NEXT unsigned receipt to get the actual amount (may be custom set by Admin)
+    next_unsigned_record = await db.coach_compensations.find_one({
+        "coach_id": coach_id,
+        "year": year,
+        "receipt_signed": {"$ne": True}
+    })
+    # Use custom amount if exists, otherwise use standard monthly compensation
+    next_amount = monthly_compensation
+    if next_unsigned_record:
+        next_amount = next_unsigned_record.get("amount_gross", next_unsigned_record.get("amount", monthly_compensation)) or monthly_compensation
+    
     # Warning only if the NEXT receipt would cross the threshold
-    next_total = yearly_total + monthly_compensation
+    next_total = yearly_total + next_amount
     
     # Get prior compensation for the first year of contract
     prior_compensation = coach.get("other_annual_compensation", 0) or coach.get("prior_year_compensation", 0) or 0
@@ -13880,8 +13891,19 @@ async def get_collaboratore_threshold_status(
         if declaration_15000:
             declaration_15000["signed"] = True
     
+    # Find the NEXT unsigned receipt to get the actual amount (may be custom set by Admin)
+    next_unsigned_record = await db.collaboratore_compensations.find_one({
+        "collaboratore_id": collaboratore_id,
+        "year": year,
+        "receipt_signed": {"$ne": True}
+    })
+    # Use custom amount if exists, otherwise use standard monthly compensation
+    next_amount = monthly_compensation
+    if next_unsigned_record:
+        next_amount = next_unsigned_record.get("amount_gross", next_unsigned_record.get("amount", monthly_compensation)) or monthly_compensation
+    
     # Calculate thresholds - Warning only if the NEXT receipt would cross the threshold
-    next_total = yearly_total + monthly_compensation
+    next_total = yearly_total + next_amount
     
     # IMPORTANT: If prior compensation already exceeded €5k, that declaration was made to OTHER clubs
     # We only need €5k declaration if the threshold is crossed WITH US (not already exceeded via pregressi)
@@ -14058,9 +14080,20 @@ async def get_collaboratore_threshold_status(
         if declaration_15000:
             declaration_15000["signed"] = True  # If it exists, it's signed
     
+    # Find the NEXT unsigned receipt to get the actual amount (may be custom set by Admin)
+    next_unsigned_record = await db.collaboratore_compensations.find_one({
+        "collaboratore_id": collaboratore_id,
+        "year": year,
+        "receipt_signed": {"$ne": True}
+    })
+    # Use custom amount if exists, otherwise use standard monthly compensation
+    next_amount = monthly_compensation
+    if next_unsigned_record:
+        next_amount = next_unsigned_record.get("amount_gross", next_unsigned_record.get("amount", monthly_compensation)) or monthly_compensation
+    
     # Calculate thresholds
     # Warning only if the NEXT receipt would cross the threshold (go OVER, not reach exactly)
-    next_total = total_with_prior + monthly_compensation
+    next_total = total_with_prior + next_amount
     
     # Special case: if prior_compensation already > 5000, we don't need €5k declaration
     # because we already know they're subject to social security from the start
