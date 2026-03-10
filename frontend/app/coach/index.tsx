@@ -13,6 +13,7 @@ import {
   Linking,
   Image,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -75,6 +76,33 @@ export default function CoachScreen() {
   } | null>(null);
   const [overrideReason, setOverrideReason] = useState('');
   const [overrideLoading, setOverrideLoading] = useState(false);
+
+  // Animation for team selector
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  
+  useEffect(() => {
+    if (!selectedTeamId && activeTab === 'scanner') {
+      // Start pulsing animation when no team selected
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.03,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [selectedTeamId, activeTab]);
 
   const loadTeams = async () => {
     try {
@@ -713,19 +741,24 @@ export default function CoachScreen() {
           <Text style={styles.scannerTitle}>Pronto per scansionare</Text>
           <Text style={styles.scannerSubtitle}>Registra le presenze degli atleti</Text>
           
-          {/* Team Selection */}
-          <TouchableOpacity 
-            style={[styles.teamSelector, selectedTeamId && styles.teamSelectorActive]}
-            onPress={() => setTeamSelectModalVisible(true)}
-          >
-            <Ionicons name="people" size={20} color={selectedTeamId ? "#34C759" : "#999"} />
-            <Text style={[styles.teamSelectorText, selectedTeamId && styles.teamSelectorTextActive]}>
-              {selectedTeamId 
-                ? `📋 ${teams.find(t => t.id === selectedTeamId)?.name || 'Squadra selezionata'}`
-                : '⚠️ Seleziona una squadra'}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color="#666" />
-          </TouchableOpacity>
+          {/* Team Selection - with animation */}
+          <Animated.View style={{ transform: [{ scale: pulseAnim }], width: '100%', maxWidth: 350 }}>
+            <TouchableOpacity 
+              style={[
+                styles.teamSelector, 
+                selectedTeamId ? styles.teamSelectorActive : styles.teamSelectorHighlight
+              ]}
+              onPress={() => setTeamSelectModalVisible(true)}
+            >
+              <Ionicons name="people" size={20} color={selectedTeamId ? "#34C759" : "#FF9500"} />
+              <Text style={[styles.teamSelectorText, selectedTeamId ? styles.teamSelectorTextActive : styles.teamSelectorTextHighlight]}>
+                {selectedTeamId 
+                  ? `📋 ${teams.find(t => t.id === selectedTeamId)?.name || 'Squadra selezionata'}`
+                  : '⚠️ Seleziona una squadra'}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={selectedTeamId ? "#666" : "#FF9500"} />
+            </TouchableOpacity>
+          </Animated.View>
           
           {Platform.OS === 'web' ? (
             <>
@@ -2189,6 +2222,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0fff4',
     borderColor: '#34C759',
   },
+  teamSelectorHighlight: {
+    backgroundColor: '#FFF8E7',
+    borderColor: '#FF9500',
+    borderWidth: 2,
+    shadowColor: '#FF9500',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   teamSelectorText: {
     flex: 1,
     marginLeft: 10,
@@ -2198,6 +2241,10 @@ const styles = StyleSheet.create({
   teamSelectorTextActive: {
     color: '#333',
     fontWeight: '500',
+  },
+  teamSelectorTextHighlight: {
+    color: '#FF9500',
+    fontWeight: '600',
   },
   // Certificate Override Modal
   certificateOverrideModal: {
