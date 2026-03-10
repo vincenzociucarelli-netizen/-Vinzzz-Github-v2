@@ -669,7 +669,6 @@ export default function DirigenteCompensation() {
     
     // Track thresholds PER YEAR (they reset each calendar year)
     const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
-    const monthlyComp = profile?.monthly_compensation || 0;
     
     // Calculate cumulative totals per year to find threshold months
     const cumulativeByYear: { [year: number]: number } = {};
@@ -687,8 +686,9 @@ export default function DirigenteCompensation() {
         cumulativeByYear[r.year] = r.year === contractStartYear ? (priorCompensation || 0) : 0;
       }
       
-      // Add this month's compensation to cumulative
-      cumulativeByYear[r.year] += monthlyComp;
+      // Add this month's ACTUAL compensation (may be custom amount set by Admin)
+      const actualAmount = r.amount_gross || r.amount || profile?.monthly_compensation || 0;
+      cumulativeByYear[r.year] += actualAmount;
       
       // Check if this month crosses €5k threshold
       if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
