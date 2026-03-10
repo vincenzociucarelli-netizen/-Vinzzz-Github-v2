@@ -88,8 +88,10 @@ export default function QuietanzePage() {
   };
 
   const handleEdit = (receipt: any) => {
-    // Navigate to the user's admin page
-    router.push(`/admin/${receipt.user_role}/${receipt.user_id}`);
+    // Navigate to the user's admin page with params to open receipt modal
+    const url = `/admin/${receipt.user_role}/${receipt.user_id}`;
+    console.log('Navigating to:', url);
+    router.push(url as any);
   };
 
   const filteredReceipts = receipts.filter(r => {
