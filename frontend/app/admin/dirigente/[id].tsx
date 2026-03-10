@@ -106,8 +106,10 @@ export default function AdminDirigenteDetail() {
   const [contractStartDate, setContractStartDate] = useState('');
   const [contractEndDate, setContractEndDate] = useState('');
   const [qualification, setQualification] = useState('');
+  const [qualification2, setQualification2] = useState(''); // Seconda carica
   const [availableQualifications, setAvailableQualifications] = useState<string[]>([]);
   const [qualificationModalVisible, setQualificationModalVisible] = useState(false);
+  const [qualification2ModalVisible, setQualification2ModalVisible] = useState(false); // Modal seconda carica
   // Bank details
   const [documentType, setDocumentType] = useState('');
   const [documentFront, setDocumentFront] = useState('');
@@ -191,6 +193,7 @@ export default function AdminDirigenteDetail() {
       }
       
       setQualification(userResponse.data.qualification || '');
+      setQualification2(userResponse.data.qualification2 || '');
       setDocumentType(userResponse.data.document_type || '');
       setDocumentFront(userResponse.data.document_front || '');
       setDocumentBack(userResponse.data.document_back || '');
@@ -711,37 +714,80 @@ export default function AdminDirigenteDetail() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🏅 Carica nella Società</Text>
           {availableQualifications.length > 0 ? (
-            <View style={styles.qualificationContainer}>
-              <TouchableOpacity
-                style={styles.selectBox}
-                onPress={() => setQualificationModalVisible(true)}
-              >
-                <Text style={[
-                  styles.selectBoxText,
-                  !qualification && styles.selectBoxPlaceholder
-                ]}>
-                  {qualification || 'Seleziona carica...'}
-                </Text>
-                <Ionicons name="chevron-down" size={20} color="#666" />
-              </TouchableOpacity>
-              {qualification && (
-                <TouchableOpacity
-                  style={styles.clearQualificationBtn}
-                  onPress={async () => {
-                    setQualification('');
-                    try {
-                      await api.patch(`/users/${id}`, { qualification: '' });
-                      showAlert('Successo', 'Carica rimossa');
-                      loadData();
-                    } catch (error) {
-                      console.error('Error clearing qualification:', error);
-                    }
-                  }}
-                >
-                  <Ionicons name="close-circle" size={18} color="#FF3B30" />
-                  <Text style={styles.clearQualificationText}>Rimuovi</Text>
-                </TouchableOpacity>
-              )}
+            <View style={{ gap: 12 }}>
+              {/* Carica Principale */}
+              <View>
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Carica Principale</Text>
+                <View style={styles.qualificationContainer}>
+                  <TouchableOpacity
+                    style={styles.selectBox}
+                    onPress={() => setQualificationModalVisible(true)}
+                  >
+                    <Text style={[
+                      styles.selectBoxText,
+                      !qualification && styles.selectBoxPlaceholder
+                    ]}>
+                      {qualification || 'Seleziona carica...'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color="#666" />
+                  </TouchableOpacity>
+                  {qualification && (
+                    <TouchableOpacity
+                      style={styles.clearQualificationBtn}
+                      onPress={async () => {
+                        setQualification('');
+                        try {
+                          await api.patch(`/users/${id}`, { qualification: '' });
+                          showAlert('Successo', 'Carica rimossa');
+                          loadData();
+                        } catch (error) {
+                          console.error('Error clearing qualification:', error);
+                        }
+                      }}
+                    >
+                      <Ionicons name="close-circle" size={18} color="#FF3B30" />
+                      <Text style={styles.clearQualificationText}>Rimuovi</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+              
+              {/* Carica Secondaria */}
+              <View>
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Carica Secondaria (opzionale)</Text>
+                <View style={styles.qualificationContainer}>
+                  <TouchableOpacity
+                    style={[styles.selectBox, { borderStyle: 'dashed' }]}
+                    onPress={() => setQualification2ModalVisible(true)}
+                  >
+                    <Text style={[
+                      styles.selectBoxText,
+                      !qualification2 && styles.selectBoxPlaceholder
+                    ]}>
+                      {qualification2 || '+ Aggiungi seconda carica...'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color="#666" />
+                  </TouchableOpacity>
+                  {qualification2 && (
+                    <TouchableOpacity
+                      style={styles.clearQualificationBtn}
+                      onPress={async () => {
+                        setQualification2('');
+                        try {
+                          await api.patch(`/users/${id}`, { qualification2: '' });
+                          showAlert('Successo', 'Carica secondaria rimossa');
+                          loadData();
+                        } catch (error) {
+                          console.error('Error clearing qualification2:', error);
+                        }
+                      }}
+                    >
+                      <Ionicons name="close-circle" size={18} color="#FF3B30" />
+                      <Text style={styles.clearQualificationText}>Rimuovi</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
             </View>
           ) : (
             <View style={styles.noQualificationsBox}>
@@ -986,7 +1032,7 @@ export default function AdminDirigenteDetail() {
             <>
               <View style={styles.compensationDisplay}>
                 <Text style={styles.compensationAmount}>{formatCurrency(dirigente.monthly_compensation || 0)}</Text>
-                <Text style={styles.compensationPeriod}>/mese (questa ASD/SSD)</Text>
+                <Text style={styles.compensationPeriod}> / mese</Text>
               </View>
               {(dirigente as any).other_annual_compensation > 0 && (
                 <View style={{ marginTop: 8, padding: 10, backgroundColor: '#FFF8E1', borderRadius: 8, borderWidth: 1, borderColor: '#F9A825' }}>
@@ -1351,6 +1397,64 @@ export default function AdminDirigenteDetail() {
             <TouchableOpacity
               style={styles.qualificationModalCancelBtn}
               onPress={() => setQualificationModalVisible(false)}
+            >
+              <Text style={styles.qualificationModalCancelText}>Annulla</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Qualification 2 Selection Modal */}
+      <Modal
+        visible={qualification2ModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setQualification2ModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.qualificationModalContent}>
+            <View style={styles.qualificationModalHeader}>
+              <Text style={styles.qualificationModalTitle}>🏅 Seleziona Carica Secondaria</Text>
+              <TouchableOpacity onPress={() => setQualification2ModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.qualificationModalList}>
+              {availableQualifications.filter(q => q !== qualification).map((q) => (
+                <TouchableOpacity
+                  key={q}
+                  style={[
+                    styles.qualificationModalItem,
+                    qualification2 === q && styles.qualificationModalItemSelected
+                  ]}
+                  onPress={async () => {
+                    setQualification2(q);
+                    setQualification2ModalVisible(false);
+                    try {
+                      await api.patch(`/users/${id}`, { qualification2: q });
+                      showAlert('Successo', `Carica secondaria aggiornata a "${q}"`);
+                      loadData();
+                    } catch (error) {
+                      console.error('Error saving qualification2:', error);
+                      showAlert('Errore', 'Impossibile salvare la carica secondaria');
+                    }
+                  }}
+                >
+                  <Ionicons 
+                    name={qualification2 === q ? "checkmark-circle" : "ellipse-outline"} 
+                    size={22} 
+                    color={qualification2 === q ? "#8E44AD" : "#999"} 
+                  />
+                  <Text style={[
+                    styles.qualificationModalItemText,
+                    qualification2 === q && styles.qualificationModalItemTextSelected
+                  ]}>{q}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.qualificationModalCancelBtn}
+              onPress={() => setQualification2ModalVisible(false)}
             >
               <Text style={styles.qualificationModalCancelText}>Annulla</Text>
             </TouchableOpacity>

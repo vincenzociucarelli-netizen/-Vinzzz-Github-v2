@@ -213,7 +213,10 @@ export default function DirigenteCompensation() {
   const handleOpenSignature = (month: number, year?: number) => {
     const targetYear = year || currentYear;
     
-    const monthlyAmount = profile?.monthly_compensation || 0;
+    // Check if there's an existing record with a custom amount set by Admin
+    const existingRecord = records.find(r => matchesMonth(r.month, month) && r.year === targetYear);
+    const amountForThisMonth = existingRecord?.amount_gross || existingRecord?.amount || profile?.monthly_compensation || 0;
+    
     const priorComp = profile?.other_annual_compensation || 0;
     
     let contractStartYearLocal = null;
@@ -227,7 +230,7 @@ export default function DirigenteCompensation() {
       ? yearTotalFromReceipts + priorComp 
       : yearTotalFromReceipts;
     
-    const newTotal = yearTotalBeforeThis + monthlyAmount;
+    const newTotal = yearTotalBeforeThis + amountForThisMonth;
     
     const willExceed5k = newTotal > 5000 && yearTotalBeforeThis <= 5000;
     const willExceed15k = newTotal > 15000 && yearTotalBeforeThis <= 15000;
@@ -253,9 +256,8 @@ export default function DirigenteCompensation() {
       return;
     }
     
-    // Use matchesMonth helper for legacy data support
-    const existingRecord = records.find(r => matchesMonth(r.month, month) && r.year === targetYear && r.receipt_signed);
-    if (existingRecord) {
+    // Check if already signed
+    if (existingRecord?.receipt_signed) {
       Alert.alert('Già firmata', 'La quietanza per questo mese è già stata firmata.');
       return;
     }
@@ -296,10 +298,14 @@ export default function DirigenteCompensation() {
     try {
       setSigningDeclaration(true);
       
+      // Check if there's an existing record with a custom amount set by Admin
+      const existingRecord = records.find(r => r.month === selectedMonth && r.year === selectedYear);
+      const amountToSign = existingRecord?.amount_gross || existingRecord?.amount || profile?.monthly_compensation || 0;
+      
       const response = await api.post(`/dirigente/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
-        amount_gross: profile?.monthly_compensation || 0,
+        amount_gross: amountToSign,
         signature_base64: declarationSignature.replace('data:image/png;base64,', ''),
         exceeded_5000: declarationType === '5000',
         exceeded_15000: declarationType === '15000',
@@ -332,7 +338,10 @@ export default function DirigenteCompensation() {
     try {
       setSigning(true);
       
-      const monthlyAmount = profile.monthly_compensation || 0;
+      // Check if there's an existing record with a custom amount set by Admin
+      const existingRecord = records.find(r => r.month === selectedMonth && r.year === selectedYear);
+      const amountToSign = existingRecord?.amount_gross || existingRecord?.amount || profile.monthly_compensation || 0;
+      
       const priorComp = profile.other_annual_compensation || 0;
       
       const yearRecords = records.filter(r => r.year === selectedYear && r.receipt_signed);
@@ -347,7 +356,7 @@ export default function DirigenteCompensation() {
         ? yearTotalFromReceipts + priorComp 
         : yearTotalFromReceipts;
       
-      const newTotal = yearTotalBeforeThis + monthlyAmount;
+      const newTotal = yearTotalBeforeThis + amountToSign;
       
       const exceeded5000 = newTotal > 5000 && yearTotalBeforeThis <= 5000;
       const exceeded15000 = newTotal > 15000 && yearTotalBeforeThis <= 15000;
@@ -355,7 +364,7 @@ export default function DirigenteCompensation() {
       const response = await api.post(`/dirigente/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
-        amount_gross: profile.monthly_compensation,
+        amount_gross: amountToSign,
         signature_base64: signature.replace('data:image/png;base64,', ''),
         exceeded_5000: exceeded5000,
         exceeded_15000: exceeded15000,
@@ -709,7 +718,8 @@ export default function DirigenteCompensation() {
     const status = getMonthStatus(month, displayYear);
     // Use matchesMonth helper for legacy data support
     const record = records.find(r => matchesMonth(r.month, month) && r.year === displayYear);
-    const monthlyAmount = profile?.monthly_compensation || 0;
+    // Use custom amount from record if exists (set by Admin), otherwise use profile monthly
+    const monthlyAmount = record?.amount_gross || record?.amount || profile?.monthly_compensation || 0;
     
     const thresholdsByYear = getThresholdMonths();
     const isAfter5k = status === 'signed' && isMonthAfterThreshold(month, displayYear, thresholdsByYear, '5k');
@@ -1080,7 +1090,11 @@ export default function DirigenteCompensation() {
               <View style={[styles.receiptPreview, { padding: 12, marginBottom: 12 }]}>
                 <Text style={[styles.receiptTitle, { fontSize: 13, marginBottom: 6 }]}>QUIETANZA COMPENSO SPORTIVO</Text>
                 <Text style={[styles.receiptText, { fontSize: 12, lineHeight: 18 }]}>
-                  {profile?.full_name} • {MONTH_NAMES[selectedMonth || 0]} {selectedYear} • {formatCurrency((profile?.monthly_compensation || 0))}
+                  {profile?.full_name} • {MONTH_NAMES[selectedMonth || 0]} {selectedYear} • {formatCurrency(
+                    (records.find(r => r.month === selectedMonth && r.year === selectedYear)?.amount_gross || 
+                     records.find(r => r.month === selectedMonth && r.year === selectedYear)?.amount || 
+                     profile?.monthly_compensation || 0)
+                  )}
                 </Text>
               </View>
 

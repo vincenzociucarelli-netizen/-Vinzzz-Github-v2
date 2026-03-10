@@ -344,6 +344,7 @@ class User(BaseModel):
     approved_by: Optional[str] = None  # Admin ID who approved
     is_scorekeeper: bool = False  # For dirigenti - segnapunti
     qualification: Optional[str] = None  # For dirigenti - qualifica (es: Presidente, Vice Presidente)
+    qualification2: Optional[str] = None  # For dirigenti - seconda qualifica (es: Segnapunti)
     
     # Coach specific fields - Dati Anagrafici
     first_name: Optional[str] = None
@@ -3262,6 +3263,8 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
     # Qualification for dirigenti
     if "qualification" in data:
         update_data["qualification"] = data["qualification"]
+    if "qualification2" in data:
+        update_data["qualification2"] = data["qualification2"]
     
     # Compensation fields
     if "monthly_compensation" in data:
