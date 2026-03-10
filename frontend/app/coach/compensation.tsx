@@ -325,8 +325,8 @@ export default function CoachCompensation() {
     }
     
     // Check if this month is already signed - use matchesMonth for legacy support
-    const existingRecord = records.find(r => matchesMonth(r.month, month) && r.year === targetYear && r.receipt_signed);
-    if (existingRecord) {
+    const signedRecord = records.find(r => matchesMonth(r.month, month) && r.year === targetYear && r.receipt_signed);
+    if (signedRecord) {
       Alert.alert('Già firmata', 'La quietanza per questo mese è già stata firmata.');
       return;
     }
