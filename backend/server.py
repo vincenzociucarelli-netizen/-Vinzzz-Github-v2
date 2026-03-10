@@ -748,8 +748,9 @@ class Athlete(BaseModel):
     # Dati bancari/economici (per atleti che percepiscono compenso)
     iban: Optional[str] = None  # IBAN per pagamento compensi
     bank_name: Optional[str] = None  # Nome banca
-    iban_holder_first_name: Optional[str] = None  # Nome intestatario conto
-    iban_holder_last_name: Optional[str] = None  # Cognome intestatario conto
+    iban_holder: Optional[str] = None  # Intestatario conto (nome completo)
+    iban_holder_first_name: Optional[str] = None  # Nome intestatario conto (legacy)
+    iban_holder_last_name: Optional[str] = None  # Cognome intestatario conto (legacy)
     # Documenti identità (per atleti maggiorenni con compenso)
     document_type: Optional[str] = None  # Tipo documento (carta_identita, patente, passaporto)
     # Documento identità - RIMOSSO per privacy (solo metadati gestiti in sede)
@@ -3209,6 +3210,7 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "doc_back_image": user.get("doc_back_image"),
         "iban": user.get("iban"),
         "account_holder": user.get("account_holder"),
+        "iban_holder": user.get("iban_holder"),
         "bank_name": user.get("bank_name"),
         # Onboarding fields
         "onboarding_checklist": user.get("onboarding_checklist"),
