@@ -9177,6 +9177,103 @@ async def admin_create_collaboratore_receipt(
         await db.collaboratore_compensations.insert_one(new_receipt)
         return {"message": f"Quietanza creata: {request.month}/{request.year} - €{request.amount_gross}", "created": True, "id": receipt_id}
 
+
+# DELETE endpoints for unsigned receipts
+@api_router.delete("/admin/collaboratore/{collaboratore_id}/compensation/{year}/{month}")
+async def admin_delete_collaboratore_receipt(
+    collaboratore_id: str,
+    year: int,
+    month: int,
+    current_user = Depends(get_current_user)
+):
+    """Delete an unsigned receipt for a collaboratore"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare quietanze")
+    
+    # Check if receipt exists and is not signed
+    receipt = await db.collaboratore_compensations.find_one({
+        "collaboratore_id": collaboratore_id,
+        "year": year,
+        "month": month
+    })
+    
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Quietanza non trovata")
+    
+    if receipt.get("receipt_signed"):
+        raise HTTPException(status_code=400, detail="Non puoi eliminare una quietanza già firmata")
+    
+    await db.collaboratore_compensations.delete_one({
+        "collaboratore_id": collaboratore_id,
+        "year": year,
+        "month": month
+    })
+    
+    return {"message": f"Quietanza {month}/{year} eliminata"}
+
+@api_router.delete("/admin/dirigente/{dirigente_id}/compensation/{year}/{month}")
+async def admin_delete_dirigente_receipt(
+    dirigente_id: str,
+    year: int,
+    month: int,
+    current_user = Depends(get_current_user)
+):
+    """Delete an unsigned receipt for a dirigente"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare quietanze")
+    
+    receipt = await db.dirigente_compensations.find_one({
+        "dirigente_id": dirigente_id,
+        "year": year,
+        "month": month
+    })
+    
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Quietanza non trovata")
+    
+    if receipt.get("receipt_signed"):
+        raise HTTPException(status_code=400, detail="Non puoi eliminare una quietanza già firmata")
+    
+    await db.dirigente_compensations.delete_one({
+        "dirigente_id": dirigente_id,
+        "year": year,
+        "month": month
+    })
+    
+    return {"message": f"Quietanza {month}/{year} eliminata"}
+
+@api_router.delete("/admin/coach/{coach_id}/compensation/{year}/{month}")
+async def admin_delete_coach_receipt(
+    coach_id: str,
+    year: int,
+    month: int,
+    current_user = Depends(get_current_user)
+):
+    """Delete an unsigned receipt for a coach"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare quietanze")
+    
+    receipt = await db.coach_compensations.find_one({
+        "coach_id": coach_id,
+        "year": year,
+        "month": month
+    })
+    
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Quietanza non trovata")
+    
+    if receipt.get("receipt_signed"):
+        raise HTTPException(status_code=400, detail="Non puoi eliminare una quietanza già firmata")
+    
+    await db.coach_compensations.delete_one({
+        "coach_id": coach_id,
+        "year": year,
+        "month": month
+    })
+    
+    return {"message": f"Quietanza {month}/{year} eliminata"}
+
+
 @api_router.post("/admin/dirigente/{dirigente_id}/compensation/create-receipt")
 async def admin_create_dirigente_receipt(
     dirigente_id: str,

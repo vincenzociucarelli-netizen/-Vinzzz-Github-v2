@@ -1754,14 +1754,95 @@ export default function AdminCoachDetail() {
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '85%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
-              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333' }}>📋 Quietanze Firmate</Text>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333' }}>📋 Gestione Quietanze</Text>
               <TouchableOpacity onPress={() => setReceiptsModalVisible(false)}>
                 <Ionicons name="close-circle" size={28} color="#999" />
               </TouchableOpacity>
             </View>
             
             <ScrollView style={{ padding: 12 }}>
-              {/* Totale */}
+              {/* Quietanze in attesa di firma */}
+              {signedReceipts.filter((r: any) => !r.receipt_signed).length > 0 && (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#FF9800', marginBottom: 8 }}>
+                    ⏳ In attesa di firma ({signedReceipts.filter((r: any) => !r.receipt_signed).length})
+                  </Text>
+                  {signedReceipts
+                    .filter((r: any) => !r.receipt_signed)
+                    .sort((a: any, b: any) => {
+                      if (a.year !== b.year) return b.year - a.year;
+                      return b.month - a.month;
+                    })
+                    .map((receipt: any) => {
+                      const MONTH_NAMES_SHORT = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                      return (
+                        <View key={`pending-${receipt.month}-${receipt.year}`} style={{ 
+                          flexDirection: 'row', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          backgroundColor: '#FFF3E0', 
+                          padding: 12, 
+                          borderRadius: 8, 
+                          marginBottom: 8,
+                          borderLeftWidth: 3,
+                          borderLeftColor: '#FF9800'
+                        }}>
+                          <View>
+                            <Text style={{ fontWeight: '600', color: '#E65100' }}>
+                              {MONTH_NAMES_SHORT[receipt.month]} {receipt.year}
+                            </Text>
+                            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#333' }}>
+                              {formatCurrency(receipt.amount_gross || receipt.amount || 0)}
+                            </Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', gap: 8 }}>
+                            <TouchableOpacity
+                              style={{ backgroundColor: '#2196F3', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}
+                              onPress={() => {
+                                setSelectedMonthForReceipt(receipt.month);
+                                setSelectedYearForReceipt(receipt.year);
+                                setCustomReceiptAmount(String(receipt.amount_gross || receipt.amount || ''));
+                                setReceiptsModalVisible(false);
+                                setCreateReceiptModalVisible(true);
+                              }}
+                            >
+                              <Text style={{ color: '#fff', fontWeight: '500', fontSize: 12 }}>Modifica</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={{ backgroundColor: '#F44336', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}
+                              onPress={() => {
+                                Alert.alert(
+                                  'Elimina Quietanza',
+                                  `Eliminare la quietanza di ${MONTH_NAMES_SHORT[receipt.month]} ${receipt.year}?`,
+                                  [
+                                    { text: 'Annulla', style: 'cancel' },
+                                    { 
+                                      text: 'Elimina', 
+                                      style: 'destructive',
+                                      onPress: async () => {
+                                        try {
+                                          await api.delete(`/admin/coach/${id}/compensation/${receipt.year}/${receipt.month}`);
+                                          showAlert('Eliminata', 'Quietanza eliminata');
+                                          loadData();
+                                        } catch (error) {
+                                          showAlert('Errore', 'Impossibile eliminare la quietanza');
+                                        }
+                                      }
+                                    }
+                                  ]
+                                );
+                              }}
+                            >
+                              <Text style={{ color: '#fff', fontWeight: '500', fontSize: 12 }}>Elimina</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      );
+                    })}
+                </View>
+              )}
+              
+              {/* Totale firmato */}
               <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 10, marginBottom: 12 }}>
                 <Text style={{ color: '#2E7D32', fontWeight: '600', fontSize: 13 }}>💰 Totale Percepito</Text>
                 <Text style={{ color: '#2E7D32', fontWeight: 'bold', fontSize: 24, marginTop: 2 }}>
