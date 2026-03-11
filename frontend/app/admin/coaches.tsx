@@ -150,8 +150,6 @@ export default function CoachesScreen() {
       // Save checklist, compensation data
       await api.patch(`/users/${coachToApprove.id}/onboarding`, {
         onboarding_checklist: checklistItems,
-        prior_compensation: parseFloat(priorCompensation) || 0,
-        monthly_compensation: parseFloat(proposedCompensation) || 0,
         onboarding_completed: true,
         onboarding_date: new Date().toISOString(),
       });
@@ -594,42 +592,6 @@ export default function CoachesScreen() {
                 <Text style={{ fontSize: 22 }}>{checklistItems.criminal_record ? '☑️' : '⬜'}</Text>
                 <Text style={styles.checklistText}>Certificato casellario giudiziale (se richiesto)</Text>
               </TouchableOpacity>
-              
-              <View style={styles.compensationSection}>
-                <Text style={styles.compensationLabel}>💰 Compenso Mensile Proposto (€)</Text>
-                <Text style={styles.compensationHint}>
-                  Importo mensile che la società propone al coach
-                </Text>
-                <TextInput
-                  style={styles.compensationInput}
-                  value={proposedCompensation}
-                  onChangeText={setProposedCompensation}
-                  onFocus={() => { if (proposedCompensation === '0') setProposedCompensation(''); }}
-                  placeholder="0"
-                  placeholderTextColor="#999"
-                  keyboardType="decimal-pad"
-                  placeholderTextColor="#999"
-                  selectTextOnFocus={true}
-                />
-              </View>
-              
-              <View style={styles.compensationSection}>
-                <Text style={styles.compensationLabel}>📋 Compensi Pregressi Dichiarati (€)</Text>
-                <Text style={styles.compensationHint}>
-                  Importo dichiarato dal coach dei compensi sportivi già ricevuti nel corrente anno fiscale da altre società
-                </Text>
-                <TextInput
-                  style={styles.compensationInput}
-                  value={priorCompensation}
-                  onChangeText={setPriorCompensation}
-                  onFocus={() => { if (priorCompensation === '0') setPriorCompensation(''); }}
-                  placeholder="0"
-                  placeholderTextColor="#999"
-                  keyboardType="decimal-pad"
-                  placeholderTextColor="#999"
-                  selectTextOnFocus={true}
-                />
-              </View>
               
               <View style={styles.checklistNote}>
                 <Text style={styles.checklistNoteText}>

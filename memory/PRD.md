@@ -80,6 +80,9 @@ Sistema gestionale per società sportiva che include:
 - [x] **Fix Intestatario Conto**: Campo iban_holder correttamente salvato e mostrato
 - [x] **Rimozione Conferma Firma**: Pulsante ridondante rimosso da SignaturePadInline
 
+- [x] **Rimozione campi compenso da checklist approvazione**: Rimossi "Compenso Mensile Proposto" e "Compensi Pregressi Dichiarati" dal modal di approvazione Coach e Collaboratore
+- [x] **Fix bug PATCH atleta (500)**: Rimosso riferimento a `athlete_photo` non più presente nel modello AthleteUpdate
+
 ## P1 - Media Priorità
 - [x] **Squadre Assegnate Coach**: Sezione con link alle pagine delle squadre nella vista coach compensation
 - [ ] Implementazione funzionalità Atleti +18 (somme pagate) - L'utente testerà domani

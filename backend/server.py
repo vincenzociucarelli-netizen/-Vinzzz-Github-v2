@@ -5965,10 +5965,6 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
             else:
                 # Email rimossa, rimuovi anche l'ID
                 update_dict["second_parent_id"] = None
-        if update_data.athlete_photo is not None:
-            update_dict["athlete_photo"] = update_data.athlete_photo
-        if update_data.athlete_photo_artistic is not None:
-            update_dict["athlete_photo_artistic"] = update_data.athlete_photo_artistic
     
     # Campi booleani
     if update_data.privacy_accepted is not None:
