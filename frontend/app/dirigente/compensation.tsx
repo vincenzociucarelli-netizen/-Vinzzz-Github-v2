@@ -600,14 +600,14 @@ export default function DirigenteCompensation() {
     if (thresholdStatus2026 && contractEndYear && contractEndYear > contractStartYear) {
       const year2026 = contractEndYear;
       
-      // Show signed declarations for 2026
+      // Show signed declarations for 2026 - LIGHT BLUE to distinguish from first year
       if (thresholdStatus2026.thresholds['5000'].declaration_signed) {
         warnings.push(
-          <View key="signed-5000-2026" style={[styles.thresholdBanner, { backgroundColor: '#D4EDDA', borderLeftColor: '#28A745', borderLeftWidth: 4 }]}>
-            <Ionicons name="checkmark-circle" size={18} color="#155724" />
+          <View key="signed-5000-2026" style={[styles.thresholdBanner, { backgroundColor: '#E3F2FD', borderLeftColor: '#2196F3', borderLeftWidth: 4 }]}>
+            <Ionicons name="checkmark-circle" size={18} color="#1565C0" />
             <View style={styles.thresholdBannerContent}>
-              <Text style={[styles.thresholdBannerTitle, { color: '#155724' }]}>Anno {year2026}: Dichiarazione €5.000 firmata</Text>
-              <Text style={[styles.thresholdBannerText, { color: '#155724' }]}>Soglia previdenziale comunicata</Text>
+              <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Dichiarazione €5.000 firmata</Text>
+              <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>Soglia previdenziale comunicata</Text>
             </View>
           </View>
         );
@@ -615,11 +615,11 @@ export default function DirigenteCompensation() {
       
       if (thresholdStatus2026.thresholds['15000'].declaration_signed) {
         warnings.push(
-          <View key="signed-15000-2026" style={[styles.thresholdBanner, { backgroundColor: '#D4EDDA', borderLeftColor: '#28A745', borderLeftWidth: 4 }]}>
-            <Ionicons name="checkmark-circle" size={18} color="#155724" />
+          <View key="signed-15000-2026" style={[styles.thresholdBanner, { backgroundColor: '#E3F2FD', borderLeftColor: '#2196F3', borderLeftWidth: 4 }]}>
+            <Ionicons name="checkmark-circle" size={18} color="#1565C0" />
             <View style={styles.thresholdBannerContent}>
-              <Text style={[styles.thresholdBannerTitle, { color: '#155724' }]}>Anno {year2026}: Dichiarazione €15.000 firmata</Text>
-              <Text style={[styles.thresholdBannerText, { color: '#155724' }]}>Soglia fiscale comunicata</Text>
+              <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Dichiarazione €15.000 firmata</Text>
+              <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>Soglia fiscale comunicata</Text>
             </View>
           </View>
         );

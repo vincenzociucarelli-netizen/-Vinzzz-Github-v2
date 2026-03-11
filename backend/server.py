@@ -2644,6 +2644,7 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
             "profile_photo": d.get("profile_photo", ""),
             "profile_photo_artistic": d.get("profile_photo_artistic", ""),
             "qualification": d.get("qualification", ""),
+            "qualifications": d.get("qualifications", []),
             "assigned_teams": assigned_teams,
             "assigned_team_names": assigned_team_names,
             "monthly_compensation": d.get("monthly_compensation", 0),
@@ -3190,6 +3191,7 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "coach_license_number": user.get("coach_license_number"),
         # Qualification (for dirigenti)
         "qualification": user.get("qualification"),
+        "qualifications": user.get("qualifications", []),
         # Photo
         "profile_photo": user.get("profile_photo"),
         "profile_photo_artistic": user.get("profile_photo_artistic"),
@@ -4403,6 +4405,7 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
             "profile_photo": dirigente.get("profile_photo", ""),
             "profile_photo_artistic": dirigente.get("profile_photo_artistic", ""),
             "qualification": dirigente.get("qualification", ""),
+            "qualifications": dirigente.get("qualifications", []),
         })
     
     team_obj = Team(**team)
