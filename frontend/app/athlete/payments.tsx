@@ -393,7 +393,7 @@ export default function AthletePayments() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* Quote Section - Team payment structure */}
-        {paymentInfo && (paymentInfo.total_amount || paymentInfo.installment_1_amount) && (
+        {paymentInfo && (paymentInfo.total_amount || paymentInfo.installment_1_amount || (paymentInfo.installments && paymentInfo.installments.length > 0)) && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionEmoji}>💰</Text>
@@ -408,45 +408,67 @@ export default function AthletePayments() {
                 </View>
               )}
               
-              {paymentInfo.installment_1_amount && paymentInfo.installment_1_amount > 0 && (
-                <View style={styles.feeRow}>
-                  <Text style={styles.feeLabel}>1ª Rata (iscrizione):</Text>
-                  <Text style={styles.feeAmount}>{formatCurrency(paymentInfo.installment_1_amount, true, 0)}</Text>
-                </View>
-              )}
-              
-              {paymentInfo.installment_2_amount && paymentInfo.installment_2_amount > 0 && (
+              {/* Dynamic installments from new format */}
+              {paymentInfo.installments && paymentInfo.installments.length > 0 ? (
+                paymentInfo.installments.map((inst: any, index: number) => {
+                  const amount = parseFloat(inst.amount) || 0;
+                  if (amount <= 0) return null;
+                  const isLast = index === paymentInfo.installments.length - 1;
+                  const displayAmount = isLast && discount > 0 ? amount - discount : amount;
+                  return (
+                    <View key={index}>
+                      <View style={styles.feeRow}>
+                        <Text style={styles.feeLabel}>
+                          {inst.name || (index === 0 ? 'Quota iscrizione' : `Rata ${index}`)}
+                          {isLast && discount > 0 ? ' (con sconto)' : ''}:
+                        </Text>
+                        <Text style={styles.feeAmount}>{formatCurrency(displayAmount, true, 0)}</Text>
+                      </View>
+                      {index > 0 && inst.due_date && (
+                        <View style={styles.feeRow}>
+                          <Text style={[styles.feeLabel, { color: '#888' }]}>Scadenza:</Text>
+                          <Text style={[styles.feeAmount, { color: '#888' }]}>{formatDate(inst.due_date)}</Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })
+              ) : (
+                /* Legacy format fallback */
                 <>
-                  <View style={styles.feeRow}>
-                    <Text style={styles.feeLabel}>2ª Rata:</Text>
-                    <Text style={styles.feeAmount}>{formatCurrency(paymentInfo.installment_2_amount, true, 0)}</Text>
-                  </View>
-                  {paymentInfo.installment_2_due_date && (
+                  {paymentInfo.installment_1_amount > 0 && (
                     <View style={styles.feeRow}>
-                      <Text style={[styles.feeLabel, { color: '#888' }]}>Scadenza 2ª Rata:</Text>
-                      <Text style={[styles.feeAmount, { color: '#888' }]}>{formatDate(paymentInfo.installment_2_due_date)}</Text>
+                      <Text style={styles.feeLabel}>Quota iscrizione:</Text>
+                      <Text style={styles.feeAmount}>{formatCurrency(paymentInfo.installment_1_amount, true, 0)}</Text>
                     </View>
                   )}
-                </>
-              )}
-              
-              {paymentInfo.installment_3_amount && paymentInfo.installment_3_amount > 0 && (
-                <>
-                  <View style={styles.feeRow}>
-                    <Text style={styles.feeLabel}>
-                      3ª Rata{discount > 0 ? ' (con sconto)' : ''}:
-                    </Text>
-                    <Text style={styles.feeAmount}>
-                      {formatCurrency(discount > 0 
-                        ? paymentInfo.installment_3_amount - discount
-                        : paymentInfo.installment_3_amount, true, 0)}
-                    </Text>
-                  </View>
-                  {paymentInfo.installment_3_due_date && (
-                    <View style={styles.feeRow}>
-                      <Text style={[styles.feeLabel, { color: '#888' }]}>Scadenza 3ª Rata:</Text>
-                      <Text style={[styles.feeAmount, { color: '#888' }]}>{formatDate(paymentInfo.installment_3_due_date)}</Text>
-                    </View>
+                  {paymentInfo.installment_2_amount > 0 && (
+                    <>
+                      <View style={styles.feeRow}>
+                        <Text style={styles.feeLabel}>Rata 1:</Text>
+                        <Text style={styles.feeAmount}>{formatCurrency(paymentInfo.installment_2_amount, true, 0)}</Text>
+                      </View>
+                      {paymentInfo.installment_2_due_date && (
+                        <View style={styles.feeRow}>
+                          <Text style={[styles.feeLabel, { color: '#888' }]}>Scadenza:</Text>
+                          <Text style={[styles.feeAmount, { color: '#888' }]}>{formatDate(paymentInfo.installment_2_due_date)}</Text>
+                        </View>
+                      )}
+                    </>
+                  )}
+                  {paymentInfo.installment_3_amount > 0 && (
+                    <>
+                      <View style={styles.feeRow}>
+                        <Text style={styles.feeLabel}>Rata 2{discount > 0 ? ' (con sconto)' : ''}:</Text>
+                        <Text style={styles.feeAmount}>{formatCurrency(discount > 0 ? paymentInfo.installment_3_amount - discount : paymentInfo.installment_3_amount, true, 0)}</Text>
+                      </View>
+                      {paymentInfo.installment_3_due_date && (
+                        <View style={styles.feeRow}>
+                          <Text style={[styles.feeLabel, { color: '#888' }]}>Scadenza:</Text>
+                          <Text style={[styles.feeAmount, { color: '#888' }]}>{formatDate(paymentInfo.installment_3_due_date)}</Text>
+                        </View>
+                      )}
+                    </>
                   )}
                 </>
               )}

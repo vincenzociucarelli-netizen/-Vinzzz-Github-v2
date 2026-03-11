@@ -4593,6 +4593,7 @@ async def get_team_payment_info(team_id: str, current_user = Depends(get_current
     
     return {
         "total_amount": team.get("total_amount", 0),
+        "installments": team.get("installments", []),
         "installment_1_amount": team.get("installment_1_amount", 0),
         "installment_2_amount": team.get("installment_2_amount", 0),
         "installment_2_due_date": team.get("installment_2_due_date"),
