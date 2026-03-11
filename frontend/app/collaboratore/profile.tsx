@@ -28,7 +28,7 @@ import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://codice-fiscale-fix.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://athlete-payments.preview.emergentagent.com';
 
 export default function CollaboratoreProfile() {
   const router = useRouter();

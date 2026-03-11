@@ -1242,34 +1242,57 @@ export default function TeamDetail() {
             {/* Sezione Quote - nascosta per Prima Squadra */}
             {!isPrimaSquadra && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>💰 Quote</Text>
+              <Text style={styles.sectionTitle}>Quote</Text>
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Quota Totale:</Text>
                 <Text style={styles.value}>{formatCurrency(team.total_amount)}</Text>
               </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>1ª Rata (iscrizione):</Text>
-                <Text style={styles.value}>{formatCurrency(team.installment_1_amount)}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>2ª Rata:</Text>
-                <Text style={styles.value}>{formatCurrency(team.installment_2_amount)}</Text>
-              </View>
-              {team.installment_2_due_date && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Scadenza 2ª Rata:</Text>
-                  <Text style={styles.value}>{new Date(team.installment_2_due_date).toLocaleDateString('it-IT')}</Text>
-                </View>
-              )}
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>3ª Rata:</Text>
-                <Text style={styles.value}>{formatCurrency(team.installment_3_amount)}</Text>
-              </View>
-              {team.installment_3_due_date && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Scadenza 3ª Rata:</Text>
-                  <Text style={styles.value}>{new Date(team.installment_3_due_date).toLocaleDateString('it-IT')}</Text>
-                </View>
+              {team.installments && team.installments.length > 0 ? (
+                team.installments.map((inst: any, index: number) => {
+                  const amount = parseFloat(inst.amount) || 0;
+                  if (amount <= 0) return null;
+                  return (
+                    <View key={index}>
+                      <View style={styles.infoRow}>
+                        <Text style={styles.label}>{inst.name || `Rata ${index + 1}`}:</Text>
+                        <Text style={styles.value}>{formatCurrency(amount)}</Text>
+                      </View>
+                      {inst.due_date && (
+                        <View style={styles.infoRow}>
+                          <Text style={[styles.label, { paddingLeft: 12 }]}>Scadenza:</Text>
+                          <Text style={styles.value}>{new Date(inst.due_date).toLocaleDateString('it-IT')}</Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })
+              ) : (
+                <>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>1ª Rata (iscrizione):</Text>
+                    <Text style={styles.value}>{formatCurrency(team.installment_1_amount)}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>2ª Rata:</Text>
+                    <Text style={styles.value}>{formatCurrency(team.installment_2_amount)}</Text>
+                  </View>
+                  {team.installment_2_due_date && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.label}>Scadenza 2ª Rata:</Text>
+                      <Text style={styles.value}>{new Date(team.installment_2_due_date).toLocaleDateString('it-IT')}</Text>
+                    </View>
+                  )}
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>3ª Rata:</Text>
+                    <Text style={styles.value}>{formatCurrency(team.installment_3_amount)}</Text>
+                  </View>
+                  {team.installment_3_due_date && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.label}>Scadenza 3ª Rata:</Text>
+                      <Text style={styles.value}>{new Date(team.installment_3_due_date).toLocaleDateString('it-IT')}</Text>
+                    </View>
+                  )}
+                </>
               )}
             </View>
             )}

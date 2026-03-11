@@ -31,9 +31,16 @@ interface Payment {
   installment_number?: number;
 }
 
+interface Installment {
+  name: string;
+  amount: number;
+  due_date?: string | null;
+}
+
 interface TeamPaymentInfo {
   seasonal_fee?: number;
   total_amount?: number;
+  installments?: Installment[];
   installment_1_amount?: number;
   installment_2_amount?: number;
   installment_2_due_date?: string;
@@ -395,28 +402,58 @@ export default function AthletePayments() {
       >
         {/* Quote Section - Compact with expandable payment plan */}
         {paymentInfo && (paymentInfo.total_amount || (paymentInfo.installments && paymentInfo.installments.length > 0)) && (() => {
-          // Build installment plan with payment status
-          const installments = paymentInfo.installments || [];
-          const planItems = installments
-            .filter((inst: any) => parseFloat(inst.amount) > 0)
-            .map((inst: any, index: number) => {
-              const amount = parseFloat(inst.amount) || 0;
-              const name = inst.name || (index === 0 ? 'Quota iscrizione' : `Rata ${index}`);
-              const dueDate = inst.due_date;
-              // Match with actual payments by installment_number
-              const matchedPayment = payments.find(p => p.installment_number === (index + 1));
-              const paid = matchedPayment ? isPaid(matchedPayment) : false;
-              const paidDate = matchedPayment?.paid_date;
-              return { name, amount, dueDate, paid, paidDate, index };
-            });
+          // Calculate total paid from actual payments (those with paid_date)
+          const actualPayments = payments.filter(p => p.paid_date || p.paid === true || p.status === 'paid');
+          const totalPaidAmount = actualPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
           
-          // Find next unpaid installment
-          const nextDue = planItems.find(item => !item.paid);
+          // Build installment plan with cumulative payment status
+          const installments = (paymentInfo.installments || []).filter((inst: any) => parseFloat(inst.amount) > 0);
+          let remainingPaid = totalPaidAmount;
+          
+          const planItems = installments.map((inst: any, index: number) => {
+            const amount = parseFloat(inst.amount) || 0;
+            const name = inst.name || (index === 0 ? 'Quota iscrizione' : `Rata ${index}`);
+            const dueDate = inst.due_date;
+            
+            let status: 'paid' | 'partial' | 'unpaid';
+            let paidAmount = 0;
+            
+            if (remainingPaid >= amount) {
+              status = 'paid';
+              paidAmount = amount;
+              remainingPaid -= amount;
+            } else if (remainingPaid > 0) {
+              status = 'partial';
+              paidAmount = remainingPaid;
+              remainingPaid = 0;
+            } else {
+              status = 'unpaid';
+              paidAmount = 0;
+            }
+            
+            return { name, amount, dueDate, status, paidAmount, index };
+          });
+          
+          // Find next installment to pay (first not fully paid)
+          const nextDue = planItems.find(item => item.status !== 'paid');
+          const allPaid = planItems.length > 0 && planItems.every(item => item.status === 'paid');
+          
+          const getColor = (status: string) => {
+            if (status === 'paid') return '#2196F3';
+            if (status === 'partial') return '#FF9500';
+            return '#FF3B30';
+          };
+          
+          const getIcon = (status: string) => {
+            if (status === 'paid') return 'checkmark-circle';
+            if (status === 'partial') return 'ellipse'; // half-filled look
+            return 'ellipse-outline';
+          };
           
           return (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionEmoji}>💰</Text>
+                <Ionicons name="cash" size={20} color="#FF9500" style={{ marginRight: 8 }} />
                 <Text style={styles.sectionTitle}>Quote</Text>
               </View>
               
@@ -437,29 +474,33 @@ export default function AthletePayments() {
                   </View>
                 )}
                 
-                {/* Next installment due - compact row */}
+                {/* Next installment due - compact clickable row */}
                 {nextDue && (
                   <TouchableOpacity 
                     style={{ 
                       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-                      backgroundColor: '#FFF3F0', borderRadius: 10, padding: 12, marginBottom: 8,
-                      borderLeftWidth: 4, borderLeftColor: '#FF3B30'
+                      backgroundColor: nextDue.status === 'partial' ? '#FFF8E1' : '#FFF3F0', 
+                      borderRadius: 10, padding: 12, marginBottom: 8,
+                      borderLeftWidth: 4, borderLeftColor: getColor(nextDue.status)
                     }}
                     onPress={() => setPlanExpanded(!planExpanded)}
                     data-testid="next-installment-row"
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>Prossima rata</Text>
-                      <Text style={{ fontSize: 15, fontWeight: '600', color: '#FF3B30' }}>
+                      <Text style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>
+                        {nextDue.status === 'partial' ? 'Rata parzialmente pagata' : 'Prossima rata'}
+                      </Text>
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: getColor(nextDue.status) }}>
                         {nextDue.name}: {formatCurrency(nextDue.amount, true, 0)}
+                        {nextDue.status === 'partial' && ` (pagati ${formatCurrency(nextDue.paidAmount, true, 0)})`}
                         {nextDue.dueDate ? ` - Scad. ${formatDate(nextDue.dueDate)}` : ''}
                       </Text>
                     </View>
-                    <Ionicons name={planExpanded ? "chevron-up" : "chevron-down"} size={20} color="#FF3B30" />
+                    <Ionicons name={planExpanded ? "chevron-up" : "chevron-down"} size={20} color={getColor(nextDue.status)} />
                   </TouchableOpacity>
                 )}
                 
-                {!nextDue && planItems.length > 0 && (
+                {allPaid && (
                   <TouchableOpacity 
                     style={{ 
                       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -485,44 +526,55 @@ export default function AthletePayments() {
                           paddingVertical: 10, paddingHorizontal: 8,
                           borderBottomWidth: idx < planItems.length - 1 ? 1 : 0, 
                           borderBottomColor: '#f0f0f0',
-                          backgroundColor: item.paid ? '#F0F8FF' : 'transparent'
+                          backgroundColor: item.status === 'paid' ? '#F0F8FF' : item.status === 'partial' ? '#FFF8E1' : 'transparent'
                         }}
                       >
                         <View style={{ flex: 1 }}>
                           <Text style={{ 
                             fontSize: 14, fontWeight: '500', 
-                            color: item.paid ? '#2196F3' : '#FF3B30',
-                            textDecorationLine: item.paid ? 'line-through' : 'none'
+                            color: getColor(item.status),
+                            textDecorationLine: item.status === 'paid' ? 'line-through' : 'none'
                           }}>
                             {item.name}
                           </Text>
-                          {item.paid && item.paidDate && (
-                            <Text style={{ fontSize: 11, color: '#2196F3', marginTop: 2 }}>
-                              Pagata il {formatDate(item.paidDate)}
+                          {item.status === 'partial' && (
+                            <Text style={{ fontSize: 11, color: '#FF9500', marginTop: 2 }}>
+                              Pagati {formatCurrency(item.paidAmount, true, 0)} di {formatCurrency(item.amount, true, 0)}
                             </Text>
                           )}
-                          {!item.paid && item.dueDate && (
+                          {item.status === 'unpaid' && item.dueDate && (
                             <Text style={{ fontSize: 11, color: '#FF3B30', marginTop: 2 }}>
                               Scadenza: {formatDate(item.dueDate)}
+                            </Text>
+                          )}
+                          {item.status === 'paid' && (
+                            <Text style={{ fontSize: 11, color: '#2196F3', marginTop: 2 }}>
+                              Pagata
                             </Text>
                           )}
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                           <Text style={{ 
                             fontSize: 15, fontWeight: '600', 
-                            color: item.paid ? '#2196F3' : '#FF3B30',
-                            textDecorationLine: item.paid ? 'line-through' : 'none'
+                            color: getColor(item.status),
+                            textDecorationLine: item.status === 'paid' ? 'line-through' : 'none'
                           }}>
                             {formatCurrency(item.amount, true, 0)}
                           </Text>
                           <Ionicons 
-                            name={item.paid ? "checkmark-circle" : "ellipse-outline"} 
+                            name={getIcon(item.status)} 
                             size={20} 
-                            color={item.paid ? '#2196F3' : '#FF3B30'} 
+                            color={getColor(item.status)} 
                           />
                         </View>
                       </View>
                     ))}
+                    
+                    {/* Summary row */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, marginTop: 6, borderTopWidth: 2, borderTopColor: '#ddd' }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#333' }}>Totale pagato</Text>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#2196F3' }}>{formatCurrency(totalPaidAmount, true, 0)}</Text>
+                    </View>
                   </View>
                 )}
               </View>
@@ -533,7 +585,7 @@ export default function AthletePayments() {
         {/* Pagamenti Ricevuti - Only show paid payments */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionEmoji}>✅</Text>
+            <Ionicons name="checkmark-circle" size={20} color="#4CAF50" style={{ marginRight: 8 }} />
             <Text style={styles.sectionTitle}>Pagamenti Ricevuti</Text>
           </View>
           
@@ -545,10 +597,11 @@ export default function AthletePayments() {
                 <View 
                   key={payment.id} 
                   style={styles.installmentCard}
+                  data-testid={`paid-payment-${index}`}
                 >
                   <View style={styles.installmentInfo}>
                     <Text style={styles.installmentTitle}>
-                      Rata {index + 1}
+                      {payment.description || `Pagamento ${index + 1}`}
                     </Text>
                     <Text style={[styles.installmentAmount, { color: '#4CAF50' }]}>
                       {formatCurrency(payment.amount)}
@@ -559,10 +612,7 @@ export default function AthletePayments() {
                       </Text>
                     )}
                   </View>
-                  <View style={styles.installmentStatus}>
-                    <Text style={styles.statusEmoji}>✅</Text>
-                    <Text style={[styles.statusLabel, { color: '#4CAF50' }]}>Pagata</Text>
-                  </View>
+                  <Ionicons name="checkmark-circle" size={28} color="#4CAF50" />
                 </View>
               ))
             )}
@@ -586,7 +636,7 @@ export default function AthletePayments() {
         {(iban || bankInfoText || paypalEmail) && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEmoji}>💳</Text>
+              <Ionicons name="card" size={20} color="#007AFF" style={{ marginRight: 8 }} />
               <Text style={styles.sectionTitle}>Modalità di pagamento:</Text>
             </View>
             
@@ -594,7 +644,7 @@ export default function AthletePayments() {
               {/* Show bank_info from team if available */}
               {bankInfoText && (
                 <View style={styles.paymentMethod}>
-                  <Text style={styles.paymentMethodIcon}>🏦</Text>
+                  <Ionicons name="business" size={18} color="#666" style={{ marginRight: 8, marginTop: 2 }} />
                   <View style={styles.paymentMethodInfo}>
                     <Text style={styles.paymentMethodTitle}>Bonifico Bancario:</Text>
                     <Text style={[styles.paymentMethodValue, { whiteSpace: 'pre-wrap' }]}>{bankInfoText}</Text>
@@ -605,7 +655,7 @@ export default function AthletePayments() {
               {/* Fallback to society IBAN if no team bank_info */}
               {!bankInfoText && iban && (
                 <View style={styles.paymentMethod}>
-                  <Text style={styles.paymentMethodIcon}>🏦</Text>
+                  <Ionicons name="business" size={18} color="#666" style={{ marginRight: 8, marginTop: 2 }} />
                   <View style={styles.paymentMethodInfo}>
                     <Text style={styles.paymentMethodTitle}>Bonifico Bancario:</Text>
                     <Text style={styles.paymentMethodValue}>{iban}</Text>
@@ -617,7 +667,7 @@ export default function AthletePayments() {
               
               {paypalEmail && (
                 <View style={styles.paymentMethod}>
-                  <Text style={styles.paymentMethodIcon}>🅿️</Text>
+                  <Ionicons name="logo-paypal" size={18} color="#003087" style={{ marginRight: 8, marginTop: 2 }} />
                   <View style={styles.paymentMethodInfo}>
                     <Text style={styles.paymentMethodTitle}>PayPal:</Text>
                     <Text style={styles.paymentMethodValue}>{paypalEmail}</Text>
@@ -628,29 +678,9 @@ export default function AthletePayments() {
           </View>
         )}
 
-        {/* Pagamenti Effettuati */}
-        {totalPaid > 0 && (
-          <View style={[styles.section, { backgroundColor: '#E8F5E9' }]}>
-            <Text style={[styles.sectionTitle, { color: '#4CAF50', textAlign: 'center', marginBottom: 8 }]}>
-              Pagamenti Effettuati:
-            </Text>
-            <View style={styles.paidSummary}>
-              <View>
-                <Text style={styles.paidAmount}>{formatCurrency(totalPaid)}</Text>
-                {payments.filter(p => isPaid(p)).length > 0 && (
-                  <Text style={styles.paidDate}>
-                    {formatDate(payments.filter(p => isPaid(p))[0]?.paid_date || '')}
-                  </Text>
-                )}
-              </View>
-              <Text style={styles.paidCheckmark}>✅</Text>
-            </View>
-          </View>
-        )}
-
         {/* Scarica Ricevuta Button */}
-        <TouchableOpacity style={styles.downloadButton} onPress={downloadReceipt}>
-          <Text style={styles.downloadEmoji}>🧾</Text>
+        <TouchableOpacity style={styles.downloadButton} onPress={downloadReceipt} data-testid="download-receipt-btn">
+          <Ionicons name="receipt" size={22} color="#007AFF" style={{ marginRight: 12 }} />
           <Text style={styles.downloadText}>Scarica Ricevuta Pagamenti</Text>
         </TouchableOpacity>
 

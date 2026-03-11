@@ -1,148 +1,162 @@
 <analysis>**original_problem_statement**:
-The user's initial goal was to fix a recurring issue where ID document fields were still visible on the coach's profile. This evolved into a long list of feature requests focused on UI consistency, data handling, security, and compliance.
+The user's initial goal was to prepare the application for testing by creating and modifying test user accounts. This quickly evolved into a series of UI/UX bug fixes and feature enhancements based on the user's direct feedback from testing.
 
-The current session has focused on a series of critical bug fixes and major feature refactorings driven by user feedback. This included:
-- Cleaning up approval checklists for various roles.
-- Fixing a critical bug () that prevented saving athlete profiles.
-- Overhauling the  generation to be a permanent, lifelong identifier linked to the  and ensuring athlete uniqueness via their .
-- Completely refactoring the medical certificate management flow to remove file uploads and enhance data privacy and tracking.
-- Removing the ID document section entirely from athlete profiles and unifying the save process for personal and fiscal data.
-- Fixing a bug in the  calculation for athletes born abroad.
+**The main goals for this session were:**
+1.  **Fix UI/UX Inconsistencies**: Address multiple issues reported by the user via screenshots, including misleading placeholders, confusing password change forms, inconsistent save actions, and incorrect status icons.
+2.  **Resolve Data Integrity Bugs**: Fix bugs related to data not being saved or displayed correctly, such as the country of birth for foreign-born users and the association of signed documents and coaches with athletes.
+3.  **Enhance Core Features**: Improve the QR code attendance system to prevent incorrect registrations and make the athlete payments view dynamic and user-friendly.
 
 **PRODUCT REQUIREMENTS**:
-- **Unify Athlete Code**: The  must be the permanent 12-character , and it must be unique for each athlete's lifetime. New registrations for an athlete with an existing  should reactivate the old profile, not create a new one. **DONE**.
-- **Refactor Medical Certificate Flow**: Remove all file uploads for medical certificates. Replace with a data-entry form for the issue date. The expiry date should be calculated automatically. Track who enters and verifies the data (metadata). **DONE**.
-- **Remove ID Document Data**: Completely remove the Documento di Identità section from the athlete profile page to reduce privacy risks. **DONE**.
-- **Unify Profile Save**: The personal and fiscal data sections on the athlete profile should be saved with a single action. **DONE**.
-- **Fix Foreign Birth **: The fiscal code calculation must correctly use the country of birth for athletes born abroad. **DONE**.
-- **Prepare for Testing**: Reset athlete Luna Nuova to PROVA status and create a new adult test user for upcoming tests. **PENDING**.
+- **Test User Prep**: Reset athlete Luna Nuova to PROVA status and create a new adult test user for renunciation testing. **DONE**.
+- **Profile UI Fixes**: Unify the personal and fiscal data sections on the athlete profile, and streamline the password change form by removing the current password field and adding a visibility toggle. **DONE**.
+- **Certificate UI Fixes**: Change the date placeholder to  and fix the logic for the status icon to correctly reflect verified vs. valid. **DONE**.
+- **Privacy Doc Fix**: Ensure athletes can view their signed privacy documents. **DONE**.
+- **Coach Display Fix**: Show the correct, full list of coaches assigned to an athlete's team. **DONE**.
+- **Foreign Birth Flow**: For all user types, when a foreign country of birth is selected, the city and province fields must be hidden, and the fiscal code calculation must work correctly. The selected foreign country must be saved and displayed correctly. **DONE**.
+- **QR Scan Logic**: The system must prevent a coach from logging an athlete's attendance for a team they do not belong to, while allowing a forced registration for cases like double training sessions. The user-facing messages must be clear and distinct for each scenario. **DONE**.
+- **Payment Installments V2**: Refactor the athlete's payment page to be fully dynamic based on the number of installments configured by the admin for the team. The UI should be compact, showing the total fee and the next due installment, with an expandable view for the full payment plan. This plan must correctly reflect paid, partially paid, and unpaid statuses. **IN PROGRESS**.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application's athlete management system has been significantly refactored to enhance data privacy, consistency, and long-term usability.
+The application is largely functional, with significant UI/UX and data integrity improvements completed in this session across athlete, coach, and admin profiles. The system now correctly handles foreign-born user data, QR code scanning has robust validation, and many UI inconsistencies have been resolved.
 
-Key changes include:
-1.  **Permanent Athlete Codes**: The  is now permanently tied to the 12-character . The system prevents duplicate athlete creation by checking for an existing  and reactivating the old profile, ensuring the code is for life.
-2.  **Privacy-First Medical Certificates**: The entire medical certificate feature has been overhauled. All file upload/storage functionality has been removed. Users (Admin, Dirigente, Athlete, Parent) now only enter the certificate's issue date. The system automatically calculates the expiry date.
-3.  **Enhanced Auditing & Permissions**: Only Admins can mark a certificate as Verified. The system now tracks full metadata: who inserted the data, who verified it, and when. This information is displayed in the UI.
-4.  **Profile Cleanup**: The Documento di Identità section has been completely removed from the athlete profile (). The remaining Anagrafica and Dati Fiscali sections are now saved with a single button.
-5.  **Bug Fixes**: A critical backend bug () preventing athlete profile updates has been fixed. A bug in the  calculation for foreign-born users has also been resolved across all relevant profiles.
+The admin-side configuration for dynamic payment installments (up to 12) is complete and functional. The backend has been updated to provide this dynamic installment data to the frontend. The athlete's payment page is currently in the middle of a major refactor to display this information according to new UI/UX requirements.
 
 **Last working item**:
-- Last item agent was working: The user requested preparation for testing the privacy signature flow. This involves two actions: resetting an existing athlete's status and creating a new test user.
-- Status: NOT STARTED
+- Last item agent was working: Refactoring the athlete payments page () to implement a new UI and a **cumulative payment logic**. The previous attempt to match payments to installments failed because payments are not explicitly linked to installments in the database. The new, correct approach is to sum all of an athlete's paid amounts and apply that total sequentially against the installment plan to determine the status (paid, partially paid, unpaid) of each installment.
+- Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? The agent should use  with  commands to manipulate the database records for the requested user setup.
+- Which testing method agent to use? frontend testing agent
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-There are no pending technical issues. The current work is a task request from the user.
+-   **Issue 1: Complete the Athlete Payment Page Refactor (P0)**
+    -   **Description**: The implementation of the cumulative payment logic in  is incomplete. The UI needs to be fully implemented to show paid installments (blue/strikethrough), partially paid installments (orange), and unpaid installments (red), and the next upcoming rate must update dynamically.
+    -   **Attempted fixes**: An initial implementation failed because it incorrectly assumed a direct link between a payment record and an installment number. The agent correctly pivoted to a cumulative calculation model but has not finished implementing it.
+    -   **Next debug checklist**:
+        1.  Complete the React code in  to calculate the status of each installment based on the cumulative total paid.
+        2.  Implement the conditional styling (colors, icons, strikethrough) for each status: Paid, Partially Paid, Unpaid.
+        3.  Ensure the Prossima rata (Next installment) logic correctly identifies the first installment that is not fully paid.
+        4.  Test with screenshots and then the frontend testing agent, covering scenarios: no payments, partial payment, full payment, and overpayment.
+    -   **Why fix this issue and what will be achieved with the fix?**: This will complete the user's request for a flexible, clear, and accurate payment tracking system for athletes.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on other issue**: No
+
+-   **Issue 2: Admin/Dirigente Payment View is Outdated (P1)**
+    -   **Description**: As reported by the user in message #651, the payment view in the Admin and Dirigente sections still shows the old, hardcoded 3-rate system. It does not reflect the dynamic installments configured for a team.
+    -   **Attempted fixes**: None.
+    -   **Next debug checklist**:
+        1.  Identify the relevant files (e.g., ).
+        2.  Update the UI to fetch and display the dynamic  array from the team's data, similar to the work being done on the athlete's page.
+    -   **Why fix this issue and what will be achieved with the fix?**: To ensure consistency across the application and allow admins to see the same payment structure they are configuring.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on other issue**: No
 
 **In progress Task List**:
--   **Task 1: Prepare User Accounts for Testing** (P0)
-    -   **Where to resume**: The agent needs to devise and execute backend commands to fulfill the user's request.
-    -   **What will be achieved with this?**: The user will have the necessary test accounts to proceed with their validation of the privacy signature and other flows.
-    -   **Status**: NOT STARTED
-    -   **Should Test frontend/backend/both after fix?**: Backend (verification via API calls).
-    -   **Blocked on something**: No.
+-   **Task 1: Implement Cumulative Payment Logic (P0)**
+    -   **Where to resume**: . The agent had just started rewriting the component with the new cumulative logic.
+    -   **What will be achieved with this?**: A functional and accurate athlete payment page that handles partial payments correctly.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on something**: No
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   (P0) User to test the privacy signature flow with the prepared accounts.
-    -   (P1) User to test the full atleta 18+ flow, followed by minors and parents.
-    -   (P1) User to re-test QR code scanning, payment/match uploads, and automatic match imports.
+    -   (P1) User testing of the complete payments flow for Adult Athlete (18+).
+    -   (P1) Implement the **Minorenni (Minor Athlete)** flow by copying the Adult Athlete flow. The key changes will be making the parent linkage mandatory and having the parent handle all signatures and profile management. (User idea from message #561).
 -   **Future Tasks**:
-    -   (P2) Apply the refined compensation UI to  (contracted athlete) - Postponed by user to June/July.
-    -   (P2) Implement remaining features for **Minorenni** (minor athletes).
-    -   (P2) Revisit the architectural separation of Admin and Dirigente roles (postponed by user).
+    -   (P2) Verify the user deletion flow. The  record currently remains after an athlete is deleted. Clarify with the user if this is the desired behavior for auditing or if it should be fully deleted.
+    -   (P2) Refine the compensation UI for  (contracted athlete).
+    -   (P2) Revisit the architectural separation of Admin and Dirigente roles.
     -   (P3) Refactor the monolithic .
-    -   (P3) Refactor duplicated code in .
     -   (P3) Re-implement Stripe integration.
-    -   (P3) Update  with all completed work.
 
 **Completed work in this session**
--   **Athlete Code & Uniqueness Refactor**:
-    -    is now the permanent .
-    -   Implemented a find or reactivate logic based on  in all athlete creation endpoints ().
-    -   Ran a database migration to align all existing athletes with the new logic.
--   **Medical Certificate V2 Overhaul**:
-    -   Removed all file upload/view/storage code from , , , and .
-    -   Replaced with a simple Issue Date form. Expiry is auto-calculated.
-    -   Implemented robust metadata tracking (, , timestamps) and role-based permissions (only Admin can verify).
-    -   Fixed a bug in the expiry date calculation.
--   **Athlete Profile Cleanup**:
-    -   Completely removed the Documento di Identità section from .
-    -   Unified the save action for personal and fiscal data on the same page.
--   **Critical Bug Fixes**:
-    -   Fixed a 500 error on athlete updates caused by a missing  field in the backend model ().
-    -   Fixed a crash on the athlete page () by removing orphaned code ().
-    -   Corrected the  calculation for foreign-born users across all relevant profile files.
--   **UI Refinements**:
-    -   Removed compensation fields from the approval modals in  and .
-    -   Added an instructional text on the certificate card for emailing the document.
+- **Test Environment Setup**:
+  - Reset athlete Luna Nuova to PROVA status.
+  - Created a new adult test user, Paolo Rinuncia.
+- **Foreign Birth Flow Generalization**:
+  - Fixed and standardized the fiscal code calculation and UI for foreign-born users across all profiles: , , , , and the admin's creation/edit pages.
+  - The  field is now correctly saved to the database and displayed.
+- **UI/UX Fixes**:
+  - Corrected the medical certificate placeholder to  and fixed the status icon logic (Verified vs. Valid) across all relevant pages.
+  - Unified the Anagrafica and Dati Fiscali sections in the athlete profile into a single card to prevent data loss.
+  - Streamlined the password change form for athletes, removing the current password field and adding a visibility toggle.
+  - Made the certificate submission form on the athlete page collapsible to create a more compact UI.
+- **Data Integrity and Bug Fixes**:
+  - **Privacy Document**: Fixed a bug preventing athletes from viewing their signed privacy PDF. This involved correcting backend logic to link the document to the user and performing a data migration for the existing user.
+  - **Coach Display**: Fixed a bug where the athlete page showed an incorrect, single coach instead of the full, correct list of coaches assigned to their team.
+  - **QR Code Scanning**: Overhauled the attendance validation logic. The backend now checks if an athlete belongs to the selected team, and the frontend provides clear, distinct messages and actions for different scenarios (correct team, wrong team, already registered).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Data Model Evolution & Privacy**: Shifted from storing sensitive data (ID documents, certificate files) to storing only essential, non-sensitive data and metadata, reducing compliance risk.
--   **Idempotent Creation**: The find or reactivate pattern for athlete creation based on  makes the registration process idempotent and prevents data duplication.
--   **Role-Based Access Control (RBAC)**: Fine-tuned backend permissions for the certificate feature, allowing different roles different levels of access (e.g., data entry vs. verification).
--   **Conditional UI Rendering**: The frontend now dynamically adapts the UI based on user role and the state of the data (e.g., showing the Verified checkbox only to Admins and only after data has been entered).
--   **Code Cleanup**: Significant removal of obsolete code (modals, functions, JSX sections) related to the old certificate and ID document flows.
+-   **Cumulative State Calculation**: The new, correct approach for determining payment status. Instead of matching individual payments to installments, the system sums all payments and applies the total sequentially across the installment plan. This robustly handles partial payments.
+-   **Conditional UI Rendering**: Used extensively to hide/show fields based on user input (e.g., country of birth) and to create collapsible UI sections.
+-   **Data Model Extension**: The backend models (, , etc.) and database schema were extended to include the  field, which was previously missing.
+-   **State-Driven API Responses**: The  endpoint was enhanced to return specific status codes (, , ) that drive different UI flows on the frontend.
 
 **key DB schema**
--   : The  field now stores the permanent . Fields related to ID documents are now obsolete. New fields for certificate metadata have been added: , , , , , , , .
--   : A new collection for logging all changes to an athlete's certificate data, providing a full audit trail.
+-   :
+    -   Added .
+    -   The record for a deleted user remains in this collection, but their corresponding record in  is removed.
+-   :
+    -   Contains a dynamic  of objects, each with , , and . This is the source of truth for payment plans.
+-   :
+    -   Stores payment records made by users.
+    -   **Crucially, these records do NOT contain a direct link (like ) to the  in the  collection.** This discovery prompted the switch to a cumulative calculation logic.
 
 **All files of reference**
+-    (current focus)
+-    (needs to be updated for payments view)
 -   
 -   
 -   
 -   
--   
--   
--   
--   
--   
--   
--   
+-   All profile files: , , 
+-   All admin athlete files: , 
 
 **Critical Info for New Agent**
 -   **User Language**: Your responses must be in **Italiano**.
--   **Immediate Task**: Your first priority is to fulfill the user's request to prepare for testing. You must:
-    1.  Reset the athlete Luna Nuova to PROVA (trial) status.
-    2.  Create a new adult test user.
--   **Key Context**: The application has undergone major refactoring around athlete identity and data privacy. Athlete codes are now permanent and linked to . All document uploads (ID, medical) have been removed in favor of data entry and metadata tracking. Be mindful of these changes when working on the codebase.
+-   **Immediate Task**: Your first priority is to complete the refactor of . You must implement the **cumulative payment logic** to correctly calculate and display the status of each installment (paid, partial, unpaid). Refer to the  section for the strategy.
+-   **Next Task**: After the athlete payment page is fixed, address the user's report that the admin/dirigente payment view is also outdated and shows a hardcoded 3-rate system. This will require a similar fix.
+-   **Payment Logic is Key**: Do not try to match individual payments to installments. The core logic MUST be: ; then iterate through installments, subtracting from  to determine each one's status.
+
+**documents and test reports created in this job**
+-  (updated at the end of the morning session)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (501):** Asks if the fiscal code calculation works for athletes born abroad.
-2.  **Agent (507):** Confirms the library supports it and it works.
-3.  **User (509):** Expresses relief that manual entry isn't needed.
-4.  **Agent (509):** Asks if a UI hint should be added for clarity.
-5.  **User (510):** Points out there's already a Foreign State of Birth dropdown that should be used.
-6.  **Agent (515):** Discovers and fixes a bug where the foreign state was being ignored in the calculation.
-7.  **User (528):** Approves the fix and asks for two new actions: reset Luna Nuova to PROVA status and create a new adult test user for a renunciation test.
-8.  **Agent (529):** (No response, end of session).
-9.  **User (530):** (No message content).
-10. **(PENDING HUMAN MESSAGE):** The user's request to reset Luna Nuova and create a new test user is the immediate pending task.
+1.  **User (651):** Reports issues with the new payment page: 1) Admin view is wrong (shows 3 rates), 2) Next rata is static, 3) Asks how to handle partial payments, suggesting an orange color.
+2.  **Agent (652-654):** Starts investigating the issues.
+3.  **User (654):** Provides a screenshot showing the previous incorrect state.
+4.  **Agent (655-657):** Investigates the database and has a crucial insight: payments are not linked to installments. Proposes the new **cumulative logic**.
+5.  **User (658):** Approves the new cumulative logic.
+6.  **Agent (659):** Starts rewriting the payment component with the new logic.
+7.  **(PENDING HUMAN MESSAGE):** The agent is in the middle of implementation. The next step is to complete the code and verify it.
 
 **Project Health Check:**
--   **Broken**: No known broken features.
+-   **Broken**: The athlete payment page () and the admin/dirigente payment views are currently broken/mid-refactor. All other features are stable.
 -   **Mocked**: None.
 
 **3rd Party Integrations**
--   : Used for calculating Italian fiscal codes, including support for foreign-born individuals.
--   (Others from previous handoff remain): , , , , etc.
+-   : Used for calculating Italian fiscal codes.
 
 **Testing status**
 -   Testing agent used after significant changes: NO
 -   Troubleshoot agent used after agent stuck in loop: NO
 -   Test files created: []
--   Known regressions: None.
+-   Known regressions: The payment views are temporarily non-functional due to the ongoing refactor.
 
 **Credentials to test flow:**
--   Admin:  / 
--   Test Athlete:  (to be reset to 'PROVA' status).
--   New Test User: Needs to be created.</analysis>
+-   **Admin**:  / 
+-   **Test Athlete**:  /  (Name: Luna Nuova, Team: Serie D)
+
+**What agent forgot to execute**
+-   The agent acknowledged the user's report that the admin/dirigente payment view is also broken but did not add it to the immediate plan. This is now listed as .
+-   The ambiguity about whether a user record should be deleted from the  collection upon account deletion remains unresolved. This has been added to .</analysis>
