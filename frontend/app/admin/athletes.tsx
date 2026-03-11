@@ -162,11 +162,15 @@ export default function AdminAthletes() {
     }
 
     try {
+      // Se nato all'estero, usa il nome dello stato come luogo di nascita
+      const isEstero = adultForm.country_of_birth && adultForm.country_of_birth !== 'Italia' && adultForm.country_of_birth !== 'ITALIA';
+      const luogoNascita = isEstero ? adultForm.country_of_birth : adultForm.place_of_birth;
+      
       const response = await api.post('/utils/calcola-cf', {
         nome: adultForm.first_name,
         cognome: adultForm.last_name,
         data_nascita: adultForm.date_of_birth,
-        luogo_nascita: adultForm.place_of_birth,
+        luogo_nascita: luogoNascita,
         sesso: adultForm.gender,
       });
 

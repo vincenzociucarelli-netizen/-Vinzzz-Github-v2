@@ -370,11 +370,14 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
     }
 
     try {
+      const isEstero = editData.country_of_birth && editData.country_of_birth !== 'Italia' && editData.country_of_birth !== 'ITALIA';
+      const luogoNascita = isEstero ? editData.country_of_birth : editData.place_of_birth;
+      
       const response = await api.post('/utils/calcola-cf', {
         nome: editData.first_name,
         cognome: editData.last_name,
         data_nascita: editData.date_of_birth,
-        luogo_nascita: editData.place_of_birth,
+        luogo_nascita: luogoNascita,
         sesso: editData.gender,
       });
 
