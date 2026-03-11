@@ -1,127 +1,100 @@
 <analysis>**original_problem_statement**:
-The user's initial goal was to fix a recurring issue where ID document fields were still visible on the coach's profile despite previous attempts to remove them. After resolving this, the user provided a long list of new feature requests and bug fixes focused on improving UI consistency, data handling, security, and compliance reporting across the application, particularly for the Admin, Coach, Collaborator, and Dirigente roles.
+The user's initial goal was to fix a recurring issue where ID document fields were still visible on the coach's profile. This evolved into a long list of feature requests focused on UI consistency, data handling, security, and compliance.
 
-The current session has focused on a series of critical bug fixes and UI refinements, primarily driven by the user's detailed feedback on the compensation management system. This included debugging PDF generation, fixing data persistence issues after signing documents with custom amounts, and correcting complex annual compensation calculations for both the Admin and Coach views. A major new feature was also implemented: a centralized page for Admins to manage all custom-amount receipts.
+The current session has focused on a series of critical bug fixes and major feature refactorings driven by user feedback. This included:
+- Cleaning up approval checklists for various roles.
+- Fixing a critical bug () that prevented saving athlete profiles.
+- Overhauling the  generation to be a permanent, lifelong identifier linked to the  and ensuring athlete uniqueness via their .
+- Completely refactoring the medical certificate management flow to remove file uploads and enhance data privacy and tracking.
+- Removing the ID document section entirely from athlete profiles and unifying the save process for personal and fiscal data.
+- Fixing a bug in the  calculation for athletes born abroad.
 
 **PRODUCT REQUIREMENTS**:
-- **Fix Compensation Calculation Bugs**: Ensure that when an Admin sets a custom monthly amount, it is correctly displayed to the user, used in the annual threshold calculations (€5k/€15k), and triggers the correct declarations (e.g.,  PDF) and email notifications. This must work for all roles (Coach, Dirigente, Collaboratore) and reset correctly for new years. **DONE**.
-- **Centralize Receipt Management**: Create a new, centralized page for Admins to see all custom-amount receipts (both pending and signed) across all users, with the ability to filter, modify, and delete pending receipts. Also, track which Admin created each custom receipt. **DONE**.
-- **Refactor Doppio Incarico (Second Role) for Dirigenti**: Change the implementation from two separate fields to a multi-select tag system, allowing a director to have multiple roles. **DONE (UI/Backend), TESTING PENDING**.
-- **Fix Bank Account Holder Bug**: Ensure the Intestatario del conto (bank account holder name) is correctly saved and displayed on the admin page for a director. **DONE**.
-- **UI Consistency**:
-    - Remove the redundant Conferma Firma (Confirm Signature) button from the signature pad. **DONE**.
-    - Standardize the colors of the signed declaration banners: green for the first contract year, blue for the second. **IN PROGRESS**.
+- **Unify Athlete Code**: The  must be the permanent 12-character , and it must be unique for each athlete's lifetime. New registrations for an athlete with an existing  should reactivate the old profile, not create a new one. **DONE**.
+- **Refactor Medical Certificate Flow**: Remove all file uploads for medical certificates. Replace with a data-entry form for the issue date. The expiry date should be calculated automatically. Track who enters and verifies the data (metadata). **DONE**.
+- **Remove ID Document Data**: Completely remove the Documento di Identità section from the athlete profile page to reduce privacy risks. **DONE**.
+- **Unify Profile Save**: The personal and fiscal data sections on the athlete profile should be saved with a single action. **DONE**.
+- **Fix Foreign Birth **: The fiscal code calculation must correctly use the country of birth for athletes born abroad. **DONE**.
+- **Prepare for Testing**: Reset athlete Luna Nuova to PROVA status and create a new adult test user for upcoming tests. **PENDING**.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application's compensation system is now robust and consistent across all roles (Dirigente, Coach, Collaboratore). A series of critical bugs have been fixed, ensuring that custom compensation amounts set by an Admin are correctly displayed to the end-user and are used in all threshold calculations (€5k/€15k). The logic for triggering threshold warnings, generating the correct PDF documents (e.g.,  declaration), and sending email notifications now functions as expected, even when custom amounts alter the timeline for crossing thresholds.
+The application's athlete management system has been significantly refactored to enhance data privacy, consistency, and long-term usability.
 
-A significant new feature, a centralized **Gestione Quietanze** page (), has been implemented. This page allows Admins to view, filter, modify, and delete all custom-amount receipts across the platform, greatly improving administrative workflow. It also logs which admin created or modified a receipt.
-
-The Doppio Incarico feature for Directors has been completely refactored. The backend  model now uses a  array, and the frontend UI at  has been updated to a user-friendly tag-based system for assigning multiple roles.
-
-Multiple UI/UX fixes have been completed, including saving the bank account holder's name and standardizing the colors of compensation banners.
+Key changes include:
+1.  **Permanent Athlete Codes**: The  is now permanently tied to the 12-character . The system prevents duplicate athlete creation by checking for an existing  and reactivating the old profile, ensuring the code is for life.
+2.  **Privacy-First Medical Certificates**: The entire medical certificate feature has been overhauled. All file upload/storage functionality has been removed. Users (Admin, Dirigente, Athlete, Parent) now only enter the certificate's issue date. The system automatically calculates the expiry date.
+3.  **Enhanced Auditing & Permissions**: Only Admins can mark a certificate as Verified. The system now tracks full metadata: who inserted the data, who verified it, and when. This information is displayed in the UI.
+4.  **Profile Cleanup**: The Documento di Identità section has been completely removed from the athlete profile (). The remaining Anagrafica and Dati Fiscali sections are now saved with a single button.
+5.  **Bug Fixes**: A critical backend bug () preventing athlete profile updates has been fixed. A bug in the  calculation for foreign-born users has also been resolved across all relevant profiles.
 
 **Last working item**:
-- Last item agent was working: Applying a user-requested color change to the compensation banners. The goal is to make the signed declaration banners for the second contract year (e.g., 2026) have a blue background for all roles (Dirigente, Coach, Collaboratore), to visually distinguish them from the first year's green banners. The change was successfully applied to the  admin view.
-- Status: IN PROGRESS
+- Last item agent was working: The user requested preparation for testing the privacy signature flow. This involves two actions: resetting an existing athlete's status and creating a new test user.
+- Status: NOT STARTED
 - Agent Testing Done: N
-- Which testing method agent to use? Frontend testing agent to verify the banner colors are correct on the admin views for Coach and Collaboratore. Manual verification via screenshots is also sufficient.
+- Which testing method agent to use? The agent should use  with  commands to manipulate the database records for the requested user setup.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Complete Compensation Banner Color Change** (P0)
--   **Issue 2: Fully Test Doppio Incarico (Multi-Role) Feature** (P1)
--   **Issue 3: Refactor Duplicated Code in Admin Coach View** (P2)
--   **Issue 4: Missing  Breaks UI** (P2)
--   **Issue 5: Admin dashboard intermittent loading failure** (P3)
-
-**Issues Detail**:
--   **Issue 1: Complete Compensation Banner Color Change**
-    -   **Attempted fixes**: The agent successfully changed the banner background color to blue () for the second contract year in .
-    -   **Next debug checklist**:
-        1.  Apply the same  logic to .
-        2.  Apply the same  logic to .
-        3.  Verify the changes for all three roles to ensure consistency.
-    -   **Why fix this issue and what will be achieved with the fix?**: To complete a direct user request for UI consistency and visual distinction between contract years.
-    -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Frontend.
--   **Issue 2: Fully Test Doppio Incarico (Multi-Role) Feature**
-    -   **Attempted fixes**: The backend model was changed to  and the frontend UI was updated to a tag-based system.
-    -   **Next debug checklist**:
-        1.  As an Admin, navigate to a Director's page ().
-        2.  Add multiple qualifications using the new tag system.
-        3.  Ensure the API call sends the  array correctly.
-        4.  Reload the page and verify that all selected qualifications are persisted and displayed correctly as tags.
-        5.  Test removing qualifications.
-    -   **Why fix this issue and what will be achieved with the fix?**: To validate and finalize a key feature requested by the user. While the implementation is done, its end-to-end functionality has not been confirmed.
-    -   **Status**: TESTING PENDING
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Both.
--   **Issue 3: Refactor Duplicated Code in Admin Coach View**
-    -   **Attempted fixes**: None in this session. This is a known issue from a previous handoff. The file  contains duplicated JSX for rendering compensation summary boxes.
-    -   **Next debug checklist**:
-        1.  Identify the duplicated JSX blocks in .
-        2.  Create a single, reusable React component for the compensation summary.
-        3.  Replace the duplicated code with the new component.
-    -   **Why fix this issue and what will be achieved with the fix?**: To reduce technical debt, prevent future bugs where a fix is only applied to one copy of the code, and improve maintainability.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Frontend.
--   **Issue 4 & 5**: Same as previous handoffs, not started. Criticality is lower as they are not blocking current user requests.
+There are no pending technical issues. The current work is a task request from the user.
 
 **In progress Task List**:
--   **Task 1: Finalize UI Color Consistency for Compensation Banners**
-    -   **Where to resume**:  and .
-    -   **What will be achieved with this?**: All roles will have consistent banner colors for signed declarations (green for year 1, blue for year 2).
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Frontend.
+-   **Task 1: Prepare User Accounts for Testing** (P0)
+    -   **Where to resume**: The agent needs to devise and execute backend commands to fulfill the user's request.
+    -   **What will be achieved with this?**: The user will have the necessary test accounts to proceed with their validation of the privacy signature and other flows.
+    -   **Status**: NOT STARTED
+    -   **Should Test frontend/backend/both after fix?**: Backend (verification via API calls).
+    -   **Blocked on something**: No.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   (P1) **Apply Compensation UI to Athletes**: Create the necessary compensation view files for athletes and apply the same linear list layout.
+    -   (P0) User to test the privacy signature flow with the prepared accounts.
+    -   (P1) User to test the full atleta 18+ flow, followed by minors and parents.
+    -   (P1) User to re-test QR code scanning, payment/match uploads, and automatic match imports.
 -   **Future Tasks**:
-    -   (P2) The user raised an architectural question about separating Admin and Dirigente roles further but decided to leave it for now. This may be revisited.
-    -   (P2) Implement features for **Minorenni** (minor athletes).
-    -   (P2) Implement compensation features for **Atleta a contratto** (contracted athlete).
-    -   (P3) Re-implement Stripe integration.
+    -   (P2) Apply the refined compensation UI to  (contracted athlete) - Postponed by user to June/July.
+    -   (P2) Implement remaining features for **Minorenni** (minor athletes).
+    -   (P2) Revisit the architectural separation of Admin and Dirigente roles (postponed by user).
     -   (P3) Refactor the monolithic .
+    -   (P3) Refactor duplicated code in .
+    -   (P3) Re-implement Stripe integration.
     -   (P3) Update  with all completed work.
 
 **Completed work in this session**
--   **Centralized Receipt Management**:
-    -   Created a new page at  for Admins to manage all custom-amount receipts.
-    -   Implemented functionality to view, filter by role, modify (via modal), and delete pending receipts.
-    -   Added tracking to show which Admin created each custom receipt.
-    -   Added corresponding backend endpoint () and  endpoints for each role.
--   **Full-Stack Compensation Bug Fixes (All Roles)**:
-    -   **Frontend**: Fixed UI bugs where custom amounts were not displayed to users, ensuring  is prioritized over the default . This was fixed in , , and  across all  files.
-    -   **Backend**: Fixed a critical calculation bug by excluding the current month's record from the  sum when signing a receipt, preventing double-counting and ensuring the  declaration triggers correctly.
-    -   **Backend**: Fixed logic to correctly predict upcoming threshold breaches () by checking for un-signed custom receipts.
-    -   **Backend**: Fixed a  on signing the €15k declaration by using the correct  field for MongoDB queries.
--   **Doppio Incarico Refactor**:
-    -   Updated the  model in  to use a  array instead of separate  fields.
-    -   Refactored the  UI to use a multi-select tag-based system for assigning roles.
--   **General Bug Fixes & UI Improvements**:
-    -   Fixed a bug where the  (bank account holder) name was not being saved or returned by the API.
-    -   Removed the redundant Conferma firma button from the shared  component.
-    -   Standardized signed declaration banner colors across roles and years.
+-   **Athlete Code & Uniqueness Refactor**:
+    -    is now the permanent .
+    -   Implemented a find or reactivate logic based on  in all athlete creation endpoints ().
+    -   Ran a database migration to align all existing athletes with the new logic.
+-   **Medical Certificate V2 Overhaul**:
+    -   Removed all file upload/view/storage code from , , , and .
+    -   Replaced with a simple Issue Date form. Expiry is auto-calculated.
+    -   Implemented robust metadata tracking (, , timestamps) and role-based permissions (only Admin can verify).
+    -   Fixed a bug in the expiry date calculation.
+-   **Athlete Profile Cleanup**:
+    -   Completely removed the Documento di Identità section from .
+    -   Unified the save action for personal and fiscal data on the same page.
+-   **Critical Bug Fixes**:
+    -   Fixed a 500 error on athlete updates caused by a missing  field in the backend model ().
+    -   Fixed a crash on the athlete page () by removing orphaned code ().
+    -   Corrected the  calculation for foreign-born users across all relevant profile files.
+-   **UI Refinements**:
+    -   Removed compensation fields from the approval modals in  and .
+    -   Added an instructional text on the certificate card for emailing the document.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Full-Stack Debugging**: Traced bugs from frontend UI rendering issues down to backend business logic and database queries, particularly in the complex compensation system.
--   **Centralized State Management**: Shifted from per-user receipt management to a centralized page () with a dedicated backend endpoint, improving admin efficiency and scalability.
--   **Data Model Refactoring**: Evolved the user data model from fixed fields (, ) to a flexible array () to support a user-requested multi-tag system.
--   **Data Integrity Fixes**: Resolved a critical backend bug that caused double-counting in financial calculations by refining the MongoDB query to exclude the currently processing record ().
--   **Component-Based UI**: Implemented a reusable modal for editing receipts directly from the new management page. A fix to the shared  component was propagated to all roles.
+-   **Data Model Evolution & Privacy**: Shifted from storing sensitive data (ID documents, certificate files) to storing only essential, non-sensitive data and metadata, reducing compliance risk.
+-   **Idempotent Creation**: The find or reactivate pattern for athlete creation based on  makes the registration process idempotent and prevents data duplication.
+-   **Role-Based Access Control (RBAC)**: Fine-tuned backend permissions for the certificate feature, allowing different roles different levels of access (e.g., data entry vs. verification).
+-   **Conditional UI Rendering**: The frontend now dynamically adapts the UI based on user role and the state of the data (e.g., showing the Verified checkbox only to Admins and only after data has been entered).
+-   **Code Cleanup**: Significant removal of obsolete code (modals, functions, JSX sections) related to the old certificate and ID document flows.
 
 **key DB schema**
--   : The Pydantic model  was modified to replace  and  with . The model was also updated to correctly handle .
--   , , : Now include  and  fields to track admin actions. Queries were heavily modified to filter by  and exclude the current month () during calculations to prevent double-counting.
+-   : The  field now stores the permanent . Fields related to ID documents are now obsolete. New fields for certificate metadata have been added: , , , , , , , .
+-   : A new collection for logging all changes to an athlete's certificate data, providing a full audit trail.
 
 **All files of reference**
 -   
@@ -133,57 +106,43 @@ Multiple UI/UX fixes have been completed, including saving the bank account hold
 -   
 -   
 -   
+-   
+-   
 
 **Critical Info for New Agent**
--   **User Language**: The user's language is **Italiano**. You must communicate in Italian.
--   **Immediate Task**: Your first task is to complete the UI color change for the 2026 compensation banners (making them blue) in the admin views for  and  to match the  view.
--   **Next Priority**: After the color change, you must thoroughly test the Doppio Incarico (multi-role tag) feature for Directors end-to-end to ensure it saves and displays multiple roles correctly.
--   **User Interaction Model**: The user is highly interactive and provides detailed feedback, often with screenshots. Expect to work in rapid cycles of implementation and user verification. They value centralized management tools (like the new  page) over ad personam (per-user) views.
--   **Recurring Bug Pattern**: A common bug was the frontend UI not reflecting custom data set by the admin (e.g., special payment amounts). The fix consistently involved ensuring the frontend rendering logic, action handlers, and backend API responses all prioritize the record-specific value over the user's default profile value.
--   **Technical Debt**: The duplicated code in  is a known issue that should be addressed to improve maintainability.
+-   **User Language**: Your responses must be in **Italiano**.
+-   **Immediate Task**: Your first priority is to fulfill the user's request to prepare for testing. You must:
+    1.  Reset the athlete Luna Nuova to PROVA (trial) status.
+    2.  Create a new adult test user.
+-   **Key Context**: The application has undergone major refactoring around athlete identity and data privacy. Athlete codes are now permanent and linked to . All document uploads (ID, medical) have been removed in favor of data entry and metadata tracking. Be mindful of these changes when working on the codebase.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (528):** Asks for a centralized place to see all manually modified receipts, instead of having to check each user individually. **(This led to the Gestione Quietanze feature).**
-2.  **User (542):** Requests that the new centralized page should also show which admin created the manual receipt. **(Completed).**
-3.  **User (558):** Reports that the Modify button on the new centralized receipt page does not work. **(Fixed by adding a modal).**
-4.  **User (570):** Expresses preference for an in-page modal for editing receipts (Option 2) if it's not too much work. **(Completed).**
-5.  **User (590):** Confirms the new receipt management page works perfectly and requests a small UI change: make the two signed declaration banners for 2026 blue. **(In Progress).**
-6.  **User (494):** Asks if the feature to see and correct manual receipts is ready. **(This initiated the work on Gestione Quietanze).**
-7.  **User (520):** Asks for advice on restructuring roles, separating Admins from Dirigenti.
-8.  **User (522):** Decides the role restructuring is difficult to explain and asks to leave it for now. **(Task postponed).**
-9.  **User (524):** Asks to postpone the role discussion and wants to proceed with testing the Coach compensation flow. **(Agent provided test steps).**
-10. **User (526):** While testing, asks where the manually created receipts can be seen. **(This confirmed the need for a better solution than the per-user modal).**
+1.  **User (501):** Asks if the fiscal code calculation works for athletes born abroad.
+2.  **Agent (507):** Confirms the library supports it and it works.
+3.  **User (509):** Expresses relief that manual entry isn't needed.
+4.  **Agent (509):** Asks if a UI hint should be added for clarity.
+5.  **User (510):** Points out there's already a Foreign State of Birth dropdown that should be used.
+6.  **Agent (515):** Discovers and fixes a bug where the foreign state was being ignored in the calculation.
+7.  **User (528):** Approves the fix and asks for two new actions: reset Luna Nuova to PROVA status and create a new adult test user for a renunciation test.
+8.  **Agent (529):** (No response, end of session).
+9.  **User (530):** (No message content).
+10. **(PENDING HUMAN MESSAGE):** The user's request to reset Luna Nuova and create a new test user is the immediate pending task.
 
 **Project Health Check:**
--   **Broken**:
-    -   UI is inconsistent: signed 2026 compensation banners are blue for Directors but not yet for Coaches/Collaborators.
+-   **Broken**: No known broken features.
 -   **Mocked**: None.
 
 **3rd Party Integrations**
--   slowapi
--   reportlab
--   react-signature-canvas
--   python-codicefiscale
--   codice-fiscale-js
--   Brevo/Sendinblue
--   @expo/ngrok
--   react-native-qrcode-svg
--   Web Share API
--   python-dateutil
+-   : Used for calculating Italian fiscal codes, including support for foreign-born individuals.
+-   (Others from previous handoff remain): , , , , etc.
 
 **Testing status**
 -   Testing agent used after significant changes: NO
 -   Troubleshoot agent used after agent stuck in loop: NO
 -   Test files created: []
--   Known regressions: None in this session, but the duplicated code in  remains a high risk for future regressions.
+-   Known regressions: None.
 
 **Credentials to test flow:**
 -   Admin:  / 
--   Test Dirigente:  (or use a new one to test compensation flow from scratch)
--   Test Coach: 
--   Test Collaboratore: A test collaborator account is needed.
-
-**What agent forgot to execute**
--   The agent started the user's request to make the 2026 signed declaration banners blue but only completed it for the  role, leaving it unfinished for  and .
--   The agent did not perform end-to-end testing on the new multi-role Doppio Incarico feature after implementing it.
--   The agent did not address the known technical debt of duplicated code in .</analysis>
+-   Test Athlete:  (to be reset to 'PROVA' status).
+-   New Test User: Needs to be created.</analysis>

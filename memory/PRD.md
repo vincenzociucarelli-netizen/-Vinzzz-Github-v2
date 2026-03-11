@@ -79,26 +79,31 @@ Sistema gestionale per società sportiva che include:
 - [x] **Doppio Incarico (Multi-Ruolo)**: Refactoring da campi fissi a array `qualifications` con UI tag-based per Dirigenti. Bug fix: API GET ora restituisce l'array `qualifications`.
 - [x] **Fix Intestatario Conto**: Campo iban_holder correttamente salvato e mostrato
 - [x] **Rimozione Conferma Firma**: Pulsante ridondante rimosso da SignaturePadInline
-
 - [x] **Rimozione campi compenso da checklist approvazione**: Rimossi "Compenso Mensile Proposto" e "Compensi Pregressi Dichiarati" dal modal di approvazione Coach e Collaboratore
 - [x] **Fix bug PATCH atleta (500)**: Rimosso riferimento a `athlete_photo` non più presente nel modello AthleteUpdate
+- [x] **Codice Atleta Permanente**: `athlete_code` = `qr_identifier` (12 char), univoco a vita per codice fiscale
+- [x] **Certificati Medici V2**: Rimossi upload file, solo data emissione con calcolo scadenza automatico, metadata tracciamento
+- [x] **Rimozione Documento Identità**: Rimossa sezione "Documento di Identità" dal profilo atleta
+- [x] **Unificazione salvataggio profilo**: Anagrafica e dati fiscali salvati con unico pulsante
+- [x] **Fix codice fiscale estero**: Calcolo corretto per atleti nati all'estero
+- [x] **Preparazione account test** (11 Mar 2026): Reset "Luna Nuova" a stato PROVA + creazione utente adulto "Paolo Rinuncia"
 
 ## P1 - Media Priorità
 - [x] **Squadre Assegnate Coach**: Sezione con link alle pagine delle squadre nella vista coach compensation
-- [ ] Implementazione funzionalità Atleti +18 (somme pagate) - L'utente testerà domani
-- [ ] Regression check completo su tutti i profili
+- [ ] Test flusso firma privacy con account preparati
+- [ ] Test completo flusso "atleta 18+"
+- [ ] Test scansione QR code, upload pagamenti/partite, import automatico partite
 
 ## P2 - Bassa Priorità
-- [ ] Admin dashboard - problema caricamento intermittente
-- [ ] Controllo globale import @expo/vector-icons
 - [ ] Refactoring codice duplicato in admin/coach/[id].tsx
+- [ ] Admin dashboard - problema caricamento intermittente
 
 ## Future/Backlog
-- Implementazione funzionalità per Minorenni e genitori
 - Funzionalità compensi per Atleta a contratto (giugno/luglio 2026)
-- Re-implementazione Stripe
-- Refactoring server.py in struttura modulare
+- Implementazione funzionalità per Minorenni e genitori
 - Separazione ruoli Admin/Dirigente (utente ha rinviato)
+- Refactoring server.py in struttura modulare
+- Re-implementazione Stripe
 - Ritestare: Scansione QR atleti, carico manuale/template pagamenti e gare, import automatico gare federazioni
 
 ## Technical Notes
@@ -106,6 +111,10 @@ Sistema gestionale per società sportiva che include:
 - **Toggle Function**: toggleSection() per aprire/chiudere sezioni
 - **Edit Button in Header**: Icona edit nella sezione collapsabile che apre la sezione e attiva editing
 - **Styles Required**: collapsibleHeader (flexDirection row, space-between) e collapsibleContent (marginTop 16)
+- **Athlete Code**: `athlete_code` = `qr_identifier`, 12 caratteri alfanumerici. Univoco per `codice_fiscale` (riattivazione se CF esistente)
+- **Certificate Metadata**: `certificate_issue_date`, `certificate_expiry_date`, `certificate_verified`, `certificate_inserted_by_*`, `certificate_verified_by_*`
 
 ## Credentials
 - Admin: pallavoloperugia@gmail.com / password
+- Luna Nuova: luna@18piu.com / password (stato: PROVA)
+- Paolo Rinuncia: test.rinuncia@test.com / password123 (stato: PROVA)
