@@ -758,7 +758,20 @@ class Athlete(BaseModel):
     team_name: Optional[str] = None  # Nome squadra (riempito dinamicamente)
     # Certificato medico - SOLO metadati, niente file
     medical_certificate_expiry: Optional[str] = None  # Scadenza certificato medico
-    medical_certificate_verified: Optional[bool] = None  # Verificato dal dirigente
+    medical_certificate_issue_date: Optional[str] = None  # Data emissione certificato
+    medical_certificate_verified: Optional[bool] = None  # Verificato dall'admin
+    # Tracciabilità certificato
+    medical_certificate_inserted_by: Optional[str] = None  # ID utente che ha inserito
+    medical_certificate_inserted_by_name: Optional[str] = None  # Nome utente che ha inserito
+    medical_certificate_inserted_by_role: Optional[str] = None  # Ruolo (admin/dirigente)
+    medical_certificate_inserted_at: Optional[str] = None  # Data inserimento
+    medical_certificate_verified_by: Optional[str] = None  # ID admin che ha verificato
+    medical_certificate_verified_by_name: Optional[str] = None  # Nome admin che ha verificato
+    medical_certificate_verified_at: Optional[str] = None  # Data verifica
+    medical_certificate_updated_by: Optional[str] = None  # ID ultimo aggiornamento
+    medical_certificate_updated_by_name: Optional[str] = None  # Nome ultimo aggiornamento
+    medical_certificate_updated_by_role: Optional[str] = None  # Ruolo ultimo aggiornamento
+    medical_certificate_updated_at: Optional[str] = None  # Data ultimo aggiornamento
     privacy_signature: Optional[str] = None  # Firma privacy (base64) - DA RIMUOVERE in futuro
     privacy_pdf_url: Optional[str] = None  # URL PDF privacy firmato
 
@@ -6650,7 +6663,8 @@ async def create_certificate_simple(
     data: CertificateSimple,
     current_user = Depends(get_current_user)
 ):
-    """Create/update certificate with just expiry date and verified flag - Admin/Dirigente only"""
+    """Create/update certificate - Admin or Dirigente assigned to athlete's team.
+    Only Admin can mark as verified. Full metadata tracking."""
     if current_user["role"] not in [UserRole.ADMIN, UserRole.DIRIGENTE]:
         raise HTTPException(status_code=403, detail="Solo admin o dirigente può aggiornare certificati")
     
@@ -6659,16 +6673,33 @@ async def create_certificate_simple(
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Get old expiry for audit log
-    old_expiry = athlete.get("medical_certificate_expiry")
+    # If dirigente, verify they are assigned to the athlete's team
+    if current_user["role"] == UserRole.DIRIGENTE:
+        athlete_team_id = athlete.get("team_id")
+        if athlete_team_id:
+            team = await db.teams.find_one({"id": athlete_team_id})
+            dirigente_ids = team.get("dirigente_ids", []) if team else []
+            if current_user["id"] not in dirigente_ids:
+                raise HTTPException(status_code=403, detail="Non sei il dirigente incaricato a questa squadra")
+        else:
+            raise HTTPException(status_code=403, detail="L'atleta non ha una squadra assegnata")
     
-    # Parse expiry date
+    # Only admin can set verified = True
+    verified_value = data.verified if data.verified is not None else False
+    if verified_value and current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo l'admin può verificare il certificato")
+    
+    # Get old data for audit trail
+    old_expiry = athlete.get("medical_certificate_expiry")
+    old_issue = athlete.get("medical_certificate_issue_date")
+    old_verified = athlete.get("medical_certificate_verified", False)
+    
+    # Parse dates
     try:
         expiry_dt = datetime.fromisoformat(data.expiry_date.replace('Z', '+00:00'))
     except:
-        raise HTTPException(status_code=400, detail="Formato data non valido")
+        raise HTTPException(status_code=400, detail="Formato data scadenza non valido")
     
-    # Update athlete with certificate metadata (no file storage)
     issue_dt = None
     if data.issue_date:
         try:
@@ -6676,16 +6707,59 @@ async def create_certificate_simple(
         except:
             pass
     
+    now = datetime.utcnow()
+    
+    # Build metadata update
     update_data = {
         "medical_certificate_expiry": expiry_dt.isoformat(),
         "medical_certificate_issue_date": issue_dt.isoformat() if issue_dt else None,
-        "medical_certificate_verified": data.verified if data.verified is not None else False
+        "medical_certificate_verified": verified_value,
+        "medical_certificate_updated_at": now.isoformat(),
+        "medical_certificate_updated_by": current_user["id"],
+        "medical_certificate_updated_by_name": current_user.get("full_name", current_user.get("email", "")),
+        "medical_certificate_updated_by_role": current_user["role"],
     }
+    
+    # Track who inserted the data originally (only on first insert)
+    if not old_expiry:
+        update_data["medical_certificate_inserted_at"] = now.isoformat()
+        update_data["medical_certificate_inserted_by"] = current_user["id"]
+        update_data["medical_certificate_inserted_by_name"] = current_user.get("full_name", current_user.get("email", ""))
+        update_data["medical_certificate_inserted_by_role"] = current_user["role"]
+    
+    # Track verification separately
+    if verified_value and not old_verified:
+        update_data["medical_certificate_verified_at"] = now.isoformat()
+        update_data["medical_certificate_verified_by"] = current_user["id"]
+        update_data["medical_certificate_verified_by_name"] = current_user.get("full_name", current_user.get("email", ""))
+    elif not verified_value:
+        update_data["medical_certificate_verified_at"] = None
+        update_data["medical_certificate_verified_by"] = None
+        update_data["medical_certificate_verified_by_name"] = None
     
     await db.athletes.update_one(
         {"id": data.athlete_id},
         {"$set": update_data}
     )
+    
+    # Store change history in a dedicated collection
+    history_entry = {
+        "athlete_id": data.athlete_id,
+        "athlete_name": athlete.get("full_name"),
+        "action": "insert" if not old_expiry else "update",
+        "old_issue_date": old_issue,
+        "new_issue_date": issue_dt.isoformat() if issue_dt else None,
+        "old_expiry_date": old_expiry,
+        "new_expiry_date": expiry_dt.isoformat(),
+        "old_verified": old_verified,
+        "new_verified": verified_value,
+        "changed_by": current_user["id"],
+        "changed_by_name": current_user.get("full_name", current_user.get("email", "")),
+        "changed_by_role": current_user["role"],
+        "changed_at": now.isoformat(),
+        "society_id": current_user.get("society_id", ""),
+    }
+    await db.certificate_history.insert_one(history_entry)
     
     # Also update certificates collection for compatibility (no pdf_data stored)
     await db.certificates.delete_many({"athlete_id": data.athlete_id})
@@ -6700,7 +6774,7 @@ async def create_certificate_simple(
     
     await db.certificates.insert_one(certificate.dict())
     
-    # AUDIT LOG: Certificate modified
+    # AUDIT LOG
     await log_audit(
         action=AuditAction.CERTIFICATE_MODIFIED,
         user_id=current_user["id"],
@@ -6711,7 +6785,10 @@ async def create_certificate_simple(
         details={
             "old_expiry": old_expiry,
             "new_expiry": expiry_dt.isoformat(),
-            "verified": data.verified
+            "old_issue_date": old_issue,
+            "new_issue_date": issue_dt.isoformat() if issue_dt else None,
+            "verified": verified_value,
+            "verified_changed": verified_value != old_verified,
         }
     )
     
@@ -6719,7 +6796,8 @@ async def create_certificate_simple(
         "id": certificate.id,
         "athlete_id": certificate.athlete_id,
         "expiry_date": certificate.expiry_date.isoformat(),
-        "verified": data.verified,
+        "verified": verified_value,
+        "updated_by": current_user.get("full_name", ""),
         "message": "Certificato salvato con successo"
     }
 

@@ -28,6 +28,7 @@ import { downloadFiscalReceipt, ReceiptData } from '../../../src/utils/fiscalRec
 import CodiceFiscale from 'codice-fiscale-js';
 import { SportIcon } from '../../../src/components/SportIcon';
 import { Picker } from '@react-native-picker/picker';
+import { useAuthStore } from '../../../src/store/authStore';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
@@ -71,6 +72,8 @@ export default function AdminAthleteDetail() {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<any>({});
   const [saving, setSaving] = useState(false);
+  const { user: currentUser } = useAuthStore();
+  const isAdmin = currentUser?.role === 'admin';
   
   // Withdraw modal
   const [withdrawModalVisible, setWithdrawModalVisible] = useState(false);
@@ -2219,6 +2222,27 @@ export default function AdminAthleteDetail() {
                       {certificate.verified ? 'Verificato dall\'admin' : 'Non ancora verificato dall\'admin'}
                     </Text>
                   </View>
+                  {/* Metadati tracciabilità */}
+                  {athlete?.medical_certificate_updated_by_name && (
+                    <View style={{ marginTop: 8, paddingLeft: 4 }}>
+                      <Text style={{ fontSize: 11, color: '#999' }}>
+                        Inserito da: {athlete.medical_certificate_inserted_by_name || athlete.medical_certificate_updated_by_name}
+                        {athlete.medical_certificate_inserted_at ? ` il ${formatDate(athlete.medical_certificate_inserted_at)}` : ''}
+                      </Text>
+                      {athlete.medical_certificate_verified_by_name && (
+                        <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+                          Verificato da: {athlete.medical_certificate_verified_by_name}
+                          {athlete.medical_certificate_verified_at ? ` il ${formatDate(athlete.medical_certificate_verified_at)}` : ''}
+                        </Text>
+                      )}
+                      {athlete.medical_certificate_updated_by_name !== athlete.medical_certificate_inserted_by_name && (
+                        <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+                          Ultimo aggiornamento: {athlete.medical_certificate_updated_by_name}
+                          {athlete.medical_certificate_updated_at ? ` il ${formatDate(athlete.medical_certificate_updated_at)}` : ''}
+                        </Text>
+                      )}
+                    </View>
+                  )}
                 </View>
               ) : (
                 <View style={styles.warningBox}>
@@ -3114,7 +3138,8 @@ export default function AdminAthleteDetail() {
               </View>
             )}
             
-            {/* Checkbox verifica certificato */}
+            {/* Checkbox verifica certificato - SOLO ADMIN */}
+            {isAdmin && (
             <TouchableOpacity 
               style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, padding: 12, backgroundColor: certVerified ? '#E8F5E9' : '#f5f5f5', borderRadius: 8, borderWidth: 1, borderColor: certVerified ? '#4CAF50' : '#ddd' }}
               onPress={() => setCertVerified(!certVerified)}
@@ -3131,6 +3156,14 @@ export default function AdminAthleteDetail() {
                 </Text>
               </View>
             </TouchableOpacity>
+            )}
+            {!isAdmin && (
+              <View style={{ marginTop: 16, padding: 12, backgroundColor: '#FFF3E0', borderRadius: 8 }}>
+                <Text style={{ fontSize: 12, color: '#E65100' }}>
+                  La verifica del certificato può essere effettuata solo dall'admin
+                </Text>
+              </View>
+            )}
             
             <View style={styles.modalButtons}>
               <TouchableOpacity
