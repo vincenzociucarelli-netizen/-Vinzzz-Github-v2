@@ -419,14 +419,19 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
 
   // Calculate Codice Fiscale
   const handleCalculateCF = async () => {
-    if (!editData.first_name || !editData.last_name || !editData.date_of_birth || !editData.place_of_birth || !editData.gender) {
-      showAlert('Dati mancanti', 'Compila Nome, Cognome, Sesso, Data e Luogo di Nascita per calcolare il CF');
+    const isEstero = editData.country_of_birth && editData.country_of_birth !== 'Italia' && editData.country_of_birth !== 'ITALIA';
+    
+    if (!editData.first_name || !editData.last_name || !editData.date_of_birth || !editData.gender) {
+      showAlert('Dati mancanti', 'Compila Nome, Cognome, Sesso e Data di Nascita per calcolare il CF');
+      return;
+    }
+    
+    if (!isEstero && !editData.place_of_birth) {
+      showAlert('Dati mancanti', 'Compila il Luogo di Nascita per calcolare il CF');
       return;
     }
 
     try {
-      // Se nato all'estero, usa il nome dello stato come luogo di nascita
-      const isEstero = editData.country_of_birth && editData.country_of_birth !== 'Italia' && editData.country_of_birth !== 'ITALIA';
       const luogoNascita = isEstero ? editData.country_of_birth : editData.place_of_birth;
       
       const response = await api.post('/utils/calcola-cf', {
@@ -912,7 +917,14 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   <View style={styles.pickerContainer}>
                     <Picker
                       selectedValue={editData.country_of_birth}
-                      onValueChange={(value) => setEditData({...editData, country_of_birth: value})}
+                      onValueChange={(value) => {
+                        const updates: any = { country_of_birth: value };
+                        if (value !== 'Italia' && value !== 'ITALIA') {
+                          updates.place_of_birth = '';
+                          updates.province_of_birth = '';
+                        }
+                        setEditData({...editData, ...updates});
+                      }}
                       style={styles.picker}
                     >
                       {COUNTRIES.map((country) => (
@@ -925,8 +937,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 )}
               </View>
               
-              {renderField('Luogo di Nascita', profileData.place_of_birth, 'place_of_birth')}
-              {renderField('Provincia di Nascita', profileData.province_of_birth, 'province_of_birth')}
+              {(editing ? editData.country_of_birth : profileData.country_of_birth || DEFAULT_COUNTRY) === DEFAULT_COUNTRY && renderField('Luogo di Nascita', profileData.place_of_birth, 'place_of_birth')}
+              {(editing ? editData.country_of_birth : profileData.country_of_birth || DEFAULT_COUNTRY) === DEFAULT_COUNTRY && renderField('Provincia di Nascita', profileData.province_of_birth, 'province_of_birth')}
               {renderField('Indirizzo', profileData.address, 'address')}
               {renderField('Città', profileData.city, 'city')}
               
@@ -1004,7 +1016,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                     <TouchableOpacity 
                       style={styles.calculateCfBtn}
                       onPress={handleCalculateCF}
-                      disabled={!editData.gender || !editData.date_of_birth || !editData.place_of_birth || !editData.first_name || !editData.last_name}
+                      disabled={!editData.gender || !editData.date_of_birth || !editData.first_name || !editData.last_name || ((!editData.country_of_birth || editData.country_of_birth === 'Italia' || editData.country_of_birth === 'ITALIA') && !editData.place_of_birth)}
                     >
                       <Ionicons name="calculator" size={18} color="#fff" />
                       <Text style={styles.calculateCfBtnText}>Calcola</Text>
