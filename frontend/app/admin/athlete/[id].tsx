@@ -3138,8 +3138,8 @@ export default function AdminAthleteDetail() {
               </View>
             )}
             
-            {/* Checkbox verifica certificato - SOLO ADMIN */}
-            {isAdmin && (
+            {/* Checkbox verifica certificato - SOLO ADMIN e SOLO se certificato già salvato */}
+            {isAdmin && certificate && (
             <TouchableOpacity 
               style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, padding: 12, backgroundColor: certVerified ? '#E8F5E9' : '#f5f5f5', borderRadius: 8, borderWidth: 1, borderColor: certVerified ? '#4CAF50' : '#ddd' }}
               onPress={() => setCertVerified(!certVerified)}

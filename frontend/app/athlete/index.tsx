@@ -90,13 +90,9 @@ export default function AthleteScreen() {
   
   // Certificate and Coach state
   const [coachInfo, setCoachInfo] = useState<any>(null);
-  const [showCertModal, setShowCertModal] = useState(false);
-  const [uploadingCert, setUploadingCert] = useState(false);
-  const [certDateModalVisible, setCertDateModalVisible] = useState(false);
-  const [certDateInput, setCertDateInput] = useState('');
-  const [certValidityMonths, setCertValidityMonths] = useState('12');
-  const [certCalculatedExpiry, setCertCalculatedExpiry] = useState('');
-  const [pendingCertBase64, setPendingCertBase64] = useState<string | null>(null);
+  const [certIssueDateAthlete, setCertIssueDateAthlete] = useState('');
+  const [savingCertAthlete, setSavingCertAthlete] = useState(false);
+  const [societyEmail, setSocietyEmail] = useState('');
   
   // Notifications state
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -531,6 +527,7 @@ export default function AthleteScreen() {
       // Load society settings
       const settingsResponse = await api.get('/settings/society');
       setSocietySettings(settingsResponse.data);
+      setSocietyEmail(settingsResponse.data?.email || '');
       
       // Load expiring notifications
       try {
@@ -844,8 +841,8 @@ export default function AthleteScreen() {
         
         {/* Certificato Medico Card - for quota athletes */}
         <View style={[styles.certificateCard, { marginTop: 16 }]}>
-          <Text style={styles.certificateCardTitle}>📋 Certificato Medico</Text>
-          {(profile as any)?.medical_certificate_url || (profile as any)?.medical_certificate_expiry ? (
+          <Text style={styles.certificateCardTitle}>Certificato Medico</Text>
+          {(profile as any)?.medical_certificate_expiry ? (
             <View>
               <View style={styles.certificateInfo}>
                 <Ionicons
@@ -862,45 +859,113 @@ export default function AthleteScreen() {
                   )}
                 </View>
               </View>
-              <View style={styles.certificateButtonsRow}>
-                <TouchableOpacity
-                  style={[styles.certificateViewButton, { flex: 1 }]}
-                  onPress={handleViewCertificate}
-                >
-                  <Ionicons name="eye" size={18} color="#007AFF" />
-                  <Text style={styles.certificateViewButtonText}>Visualizza</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.certificateUploadButton, { flex: 1, marginLeft: 8 }]}
-                  onPress={handleUploadCertificate}
-                  disabled={uploadingCert}
-                >
-                  <Text style={styles.certificateUploadButtonText}>
-                    {uploadingCert ? '...' : 'Carica'}
-                  </Text>
-                </TouchableOpacity>
+              {/* Stato verifica admin */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
+                <Ionicons
+                  name={(profile as any)?.medical_certificate_verified ? 'shield-checkmark' : 'shield-outline'}
+                  size={18}
+                  color={(profile as any)?.medical_certificate_verified ? '#4CAF50' : '#FF9500'}
+                />
+                <Text style={{ marginLeft: 8, fontSize: 13, color: (profile as any)?.medical_certificate_verified ? '#4CAF50' : '#FF9500', fontWeight: '600' }}>
+                  {(profile as any)?.medical_certificate_verified ? "Verificato dall'admin" : "Non ancora verificato dall'admin"}
+                </Text>
               </View>
-              <Text style={{ fontSize: 11, color: '#888', marginTop: 8, textAlign: 'center' }}>
-                Apri il certificato per stampare o condividere
-              </Text>
             </View>
           ) : (
             <View>
               <View style={styles.warningBox}>
                 <Ionicons name="warning" size={24} color="#FF9500" />
-                <Text style={styles.warningText}>Nessun certificato caricato</Text>
+                <Text style={styles.warningText}>Nessun certificato inserito</Text>
               </View>
-              <TouchableOpacity
-                style={[styles.certificateMainButton, { backgroundColor: '#007AFF' }]}
-                onPress={handleUploadCertificate}
-                disabled={uploadingCert}
-              >
-                <Text style={styles.certificateMainButtonText}>
-                  {uploadingCert ? 'Caricamento...' : '📤 Carica Certificato'}
-                </Text>
-              </TouchableOpacity>
             </View>
           )}
+          
+          {/* Form inserimento data emissione */}
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 }}>Data di Emissione (GG/MM/AAAA)</Text>
+            <TextInput
+              style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' }}
+              value={certIssueDateAthlete}
+              onChangeText={(text) => {
+                let cleaned = text.replace(/\D/g, '');
+                if (cleaned.length >= 2) cleaned = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
+                if (cleaned.length >= 5) cleaned = cleaned.slice(0, 5) + '/' + cleaned.slice(5);
+                if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+                setCertIssueDateAthlete(cleaned);
+              }}
+              placeholder="01/03/2026"
+              placeholderTextColor="#999"
+              keyboardType="number-pad"
+              maxLength={10}
+            />
+            {certIssueDateAthlete.length === 10 && (
+              <View style={{ backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8, marginTop: 8, alignItems: 'center' }}>
+                <Text style={{ fontSize: 11, color: '#666' }}>SCADENZA CERTIFICATO</Text>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2E7D32', marginTop: 2 }}>
+                  {(() => {
+                    const parts = certIssueDateAthlete.split('/');
+                    if (parts.length === 3) {
+                      const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                      d.setFullYear(d.getFullYear() + 1);
+                      d.setDate(d.getDate() - 1);
+                      return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+                    }
+                    return '';
+                  })()}
+                </Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={{ backgroundColor: '#007AFF', padding: 12, borderRadius: 8, marginTop: 10, alignItems: 'center', opacity: certIssueDateAthlete.length === 10 ? 1 : 0.5 }}
+              disabled={certIssueDateAthlete.length !== 10 || savingCertAthlete}
+              onPress={async () => {
+                const parts = certIssueDateAthlete.split('/');
+                if (parts.length !== 3) return;
+                const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                const expiryDate = new Date(issueDate);
+                expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+                expiryDate.setDate(expiryDate.getDate() - 1);
+                setSavingCertAthlete(true);
+                try {
+                  await api.post('/certificates/simple', {
+                    athlete_id: profile?.athlete_record_id || profile?.athlete_id || profile?.id,
+                    issue_date: issueDate.toISOString(),
+                    expiry_date: expiryDate.toISOString(),
+                    verified: false,
+                  });
+                  // Refresh profile
+                  const res = await api.get('/auth/me');
+                  setProfile(res.data);
+                  setCertIssueDateAthlete('');
+                  if (Platform.OS === 'web') {
+                    window.alert('Certificato salvato con successo!');
+                  } else {
+                    Alert.alert('Successo', 'Certificato salvato con successo!');
+                  }
+                } catch (error: any) {
+                  const msg = error.response?.data?.detail || 'Errore nel salvataggio';
+                  if (Platform.OS === 'web') {
+                    window.alert(msg);
+                  } else {
+                    Alert.alert('Errore', msg);
+                  }
+                } finally {
+                  setSavingCertAthlete(false);
+                }
+              }}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                {savingCertAthlete ? 'Salvataggio...' : 'Salva Data Certificato'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Info consegna/spedizione */}
+          <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginTop: 12, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
+            <Text style={{ fontSize: 12, color: '#E65100', lineHeight: 18 }}>
+              Copia del certificato dovrà essere consegnata alla Società e inviata per e-mail al seguente indirizzo: <Text style={{ fontWeight: 'bold' }}>{(profile as any)?.society_email || societyEmail || '-'}</Text> in formato pdf
+            </Text>
+          </View>
         </View>
 
         {/* Dati Iscrizione Card - for quota athletes */}

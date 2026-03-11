@@ -1759,6 +1759,14 @@ async def get_me(current_user = Depends(get_current_user)):
             # Include privacy_accepted from athlete record if not in user
             if user.get("privacy_accepted") is None and athlete.get("privacy_accepted") is not None:
                 user["privacy_accepted"] = athlete["privacy_accepted"]
+            # Include medical certificate metadata
+            for cert_field in ["medical_certificate_expiry", "medical_certificate_issue_date", 
+                             "medical_certificate_verified", "medical_certificate_inserted_by_name",
+                             "medical_certificate_verified_by_name", "medical_certificate_verified_at"]:
+                if athlete.get(cert_field) is not None:
+                    user[cert_field] = athlete[cert_field]
+            # Include athlete's own ID for certificate API calls
+            user["athlete_record_id"] = athlete["id"]
     
     return user
 
