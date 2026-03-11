@@ -73,21 +73,30 @@ Sistema gestionale per società sportiva che include:
 - [x] Colori corretti soglie: Verde ≤€5K, Arancione €5K-€15K, Viola >€15K
 - [x] Logica calcolo soglie dinamico basato su cumulativo (non solo flag DB)
 - [x] **Sincronizzazione UI Admin-Coach**: Layout lineare identico con bullet points e importi in grassetto
+- [x] **Gestione Quietanze Centralizzata**: Pagina /admin/quietanze per gestire tutte le quietanze custom
+- [x] **Fix Compensi Custom**: Importo custom admin correttamente visualizzato e usato nelle soglie
+- [x] **Banner Dichiarazioni 2026 Blu**: Tutti i banner firmati del secondo anno contrattuale (2026) ora blu (#E3F2FD) per distinguerli dal primo anno (verde) - applicato a Dirigente, Coach, Collaboratore
+- [x] **Doppio Incarico (Multi-Ruolo)**: Refactoring da campi fissi a array `qualifications` con UI tag-based per Dirigenti. Bug fix: API GET ora restituisce l'array `qualifications`.
+- [x] **Fix Intestatario Conto**: Campo iban_holder correttamente salvato e mostrato
+- [x] **Rimozione Conferma Firma**: Pulsante ridondante rimosso da SignaturePadInline
 
 ## P1 - Media Priorità
 - [x] **Squadre Assegnate Coach**: Sezione con link alle pagine delle squadre nella vista coach compensation
-- [ ] Implementazione funzionalità Atleti +18 (somme pagate)
+- [ ] Implementazione funzionalità Atleti +18 (somme pagate) - L'utente testerà domani
 - [ ] Regression check completo su tutti i profili
 
 ## P2 - Bassa Priorità
 - [ ] Admin dashboard - problema caricamento intermittente
 - [ ] Controllo globale import @expo/vector-icons
+- [ ] Refactoring codice duplicato in admin/coach/[id].tsx
 
 ## Future/Backlog
-- Implementazione funzionalità per Minorenni
-- Funzionalità compensi per Atleta a contratto
+- Implementazione funzionalità per Minorenni e genitori
+- Funzionalità compensi per Atleta a contratto (giugno/luglio 2026)
 - Re-implementazione Stripe
 - Refactoring server.py in struttura modulare
+- Separazione ruoli Admin/Dirigente (utente ha rinviato)
+- Ritestare: Scansione QR atleti, carico manuale/template pagamenti e gare, import automatico gare federazioni
 
 ## Technical Notes
 - **Collapsible Sections**: Usano useState con oggetto {anagrafici, fiscali, bancari}
