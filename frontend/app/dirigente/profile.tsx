@@ -27,7 +27,7 @@ import * as Sharing from 'expo-sharing';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://signature-fix-5.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://banner-colors-sync.preview.emergentagent.com';
 
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
 
