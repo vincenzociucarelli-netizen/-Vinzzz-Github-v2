@@ -195,17 +195,24 @@ export default function CoachScreen() {
     setForceNote('');
     
     const athleteName = attendanceData?.athlete_name || 'Atleta';
+    const isWrongTeam = attendanceData?.status === 'wrong_team';
     const checkInTime = attendanceData?.check_in_time ? 
       new Date(attendanceData.check_in_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : 
       '';
     const teamName = attendanceData?.team_name || '';
     
+    // Build appropriate message based on context
+    const title = isWrongTeam ? '⚠️ SQUADRA DIVERSA' : '⚠️ PRESENZA GIÀ REGISTRATA';
+    const message = isWrongTeam
+      ? `${attendanceData.block_reason || `${athleteName} non appartiene a questa squadra`}\n\nSe fa allenamento con due squadre diverse, puoi forzare la registrazione.`
+      : `${athleteName} è già stato/a registrato/a oggi alle ${checkInTime}${teamName ? ` per ${teamName}` : ''}.\n\nSe fa allenamento con due squadre diverse, puoi forzare la registrazione.`;
+    
     if (Platform.OS === 'web') {
       setForceModalVisible(true);
     } else {
       Alert.alert(
-        '⚠️ PRESENZA GIÀ REGISTRATA',
-        `${athleteName} è già stato/a registrato/a oggi alle ${checkInTime}${teamName ? ` per ${teamName}` : ''}.\n\nSe fa allenamento con due squadre diverse, puoi forzare la registrazione.`,
+        title,
+        message,
         [
           {
             text: 'Annulla',
@@ -362,14 +369,17 @@ export default function CoachScreen() {
       const attendance = response.data;
       
       if (attendance.status === 'already_registered') {
-        // Already registered today - show force option with details
-        showForceRegistrationDialog(data, attendance);
-      } else if (attendance.status === 'wrong_team') {
-        // Athlete doesn't belong to the selected team
+        // Already registered for THIS team today - simple info message, no force needed
+        const existingTime = attendance.check_in_time 
+          ? new Date(attendance.check_in_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+          : '';
         showAlert(
-          '⚠️ SQUADRA ERRATA',
-          `${attendance.athlete_name || 'Atleta'}\n\n${attendance.block_reason || 'Atleta non appartiene a questa squadra'}`
+          '⚠️ GIÀ REGISTRATA',
+          `${attendance.athlete_name || 'Atleta'} è già stato/a registrato/a oggi alle ${existingTime} per ${attendance.team_name || 'questa squadra'}.`
         );
+      } else if (attendance.status === 'wrong_team') {
+        // Athlete belongs to a different team - show force dialog for cross-team training
+        showForceRegistrationDialog(data, attendance);
       } else if (attendance.status === 'blocked') {
         // Check if blocked due to certificate
         if (attendance.certificate_blocked && attendance.can_override && user?.role === 'admin') {
@@ -924,11 +934,12 @@ export default function CoachScreen() {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>⚠️ PRESENZA GIÀ REGISTRATA</Text>
+              <Text style={styles.modalTitle}>{pendingAttendance?.status === 'wrong_team' ? '⚠️ SQUADRA DIVERSA' : '⚠️ PRESENZA GIÀ REGISTRATA'}</Text>
               <Text style={styles.modalSubtitle}>
-                {pendingAttendance?.athlete_name || 'Atleta'} è già stato/a registrato/a oggi
-                {pendingAttendance?.check_in_time ? ` alle ${new Date(pendingAttendance.check_in_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : ''}
-                {pendingAttendance?.team_name ? ` per ${pendingAttendance.team_name}` : ''}.
+                {pendingAttendance?.status === 'wrong_team' 
+                  ? `${pendingAttendance?.block_reason || `${pendingAttendance?.athlete_name || 'Atleta'} non appartiene a questa squadra`}`
+                  : `${pendingAttendance?.athlete_name || 'Atleta'} è già stato/a registrato/a oggi${pendingAttendance?.check_in_time ? ` alle ${new Date(pendingAttendance.check_in_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : ''}${pendingAttendance?.team_name ? ` per ${pendingAttendance.team_name}` : ''}.`
+                }
                 {'\n\n'}
                 Se fa allenamento con due squadre diverse, puoi forzare la registrazione.
               </Text>
