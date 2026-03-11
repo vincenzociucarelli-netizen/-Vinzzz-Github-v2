@@ -592,7 +592,7 @@ export default function AthletePayments() {
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
               <Ionicons name="checkmark-circle" size={20} color="#4CAF50" style={{ marginRight: 8 }} />
-              <Text style={styles.sectionTitle}>Pagamenti Ricevuti</Text>
+              <Text style={styles.sectionTitle}>Pagamenti Effettuati</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {payments.filter(p => isPaid(p)).length > 0 && (
