@@ -364,6 +364,12 @@ export default function CoachScreen() {
       if (attendance.status === 'already_registered') {
         // Already registered today - show force option with details
         showForceRegistrationDialog(data, attendance);
+      } else if (attendance.status === 'wrong_team') {
+        // Athlete doesn't belong to the selected team
+        showAlert(
+          '⚠️ SQUADRA ERRATA',
+          `${attendance.athlete_name || 'Atleta'}\n\n${attendance.block_reason || 'Atleta non appartiene a questa squadra'}`
+        );
       } else if (attendance.status === 'blocked') {
         // Check if blocked due to certificate
         if (attendance.certificate_blocked && attendance.can_override && user?.role === 'admin') {

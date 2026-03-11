@@ -8282,6 +8282,25 @@ async def check_attendance(attendance_data: AttendanceCreate, current_user = Dep
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     
+    # 3b. Verify athlete belongs to the selected team
+    athlete_team_id = athlete.get("team_id")
+    if athlete_team_id and athlete_team_id != team_id and not attendance_data.force:
+        # Get athlete's actual team name
+        actual_team = await db.teams.find_one({"id": athlete_team_id})
+        actual_team_name = actual_team.get("name", "Altra squadra") if actual_team else "Altra squadra"
+        return {
+            "id": None,
+            "athlete_id": athlete_id,
+            "athlete_name": athlete_name,
+            "team_id": team_id,
+            "team_name": team.get("name"),
+            "status": "wrong_team",
+            "block_reason": f"{athlete_name} non è nella squadra {team.get('name')}. È tesserato/a nella squadra: {actual_team_name}",
+            "actual_team": actual_team_name,
+            "actual_team_id": athlete_team_id,
+            "can_force": True
+        }
+    
     training_slot = get_current_training_slot(team)
     
     # 4. Check medical certificate status
