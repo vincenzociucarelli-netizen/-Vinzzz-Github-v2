@@ -6641,8 +6641,9 @@ async def upload_certificate_base64(
 
 class CertificateSimple(BaseModel):
     athlete_id: str
-    expiry_date: str  # ISO format
-    verified: Optional[bool] = None  # Certificato verificato dal dirigente
+    issue_date: Optional[str] = None  # ISO format - data di emissione
+    expiry_date: str  # ISO format - data di scadenza (calcolata: giorno prima anniversario)
+    verified: Optional[bool] = None  # Certificato verificato dall'admin
 
 @api_router.post("/certificates/simple")
 async def create_certificate_simple(
@@ -6668,8 +6669,16 @@ async def create_certificate_simple(
         raise HTTPException(status_code=400, detail="Formato data non valido")
     
     # Update athlete with certificate metadata (no file storage)
+    issue_dt = None
+    if data.issue_date:
+        try:
+            issue_dt = datetime.fromisoformat(data.issue_date.replace('Z', '+00:00'))
+        except:
+            pass
+    
     update_data = {
         "medical_certificate_expiry": expiry_dt.isoformat(),
+        "medical_certificate_issue_date": issue_dt.isoformat() if issue_dt else None,
         "medical_certificate_verified": data.verified if data.verified is not None else False
     }
     
@@ -6678,13 +6687,13 @@ async def create_certificate_simple(
         {"$set": update_data}
     )
     
-    # Also update certificates collection for compatibility
+    # Also update certificates collection for compatibility (no pdf_data stored)
     await db.certificates.delete_many({"athlete_id": data.athlete_id})
     
     certificate = Certificate(
         athlete_id=data.athlete_id,
-        pdf_data="",  # No file stored
-        issue_date=datetime.utcnow(),
+        pdf_data="",  # No file stored - privacy compliance
+        issue_date=issue_dt or datetime.utcnow(),
         validity_months=12,
         expiry_date=expiry_dt
     )

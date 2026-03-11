@@ -848,11 +848,6 @@ export default function AdminAthleteDetail() {
       return;
     }
     
-    if (!certValidityMonths || parseInt(certValidityMonths) <= 0) {
-      showAlert('Errore', 'Inserisci la validità in mesi');
-      return;
-    }
-    
     // Converti da DD/MM/YYYY a Date
     const parts = certIssueDate.split('/');
     if (parts.length !== 3) {
@@ -866,14 +861,16 @@ export default function AdminAthleteDetail() {
       return;
     }
     
-    // Calcola data di scadenza: data emissione + mesi validità
+    // Calcola data di scadenza: giorno prima dello stesso giorno/mese dell'anno dopo
     const expiryDate = new Date(issueDate);
-    expiryDate.setMonth(expiryDate.getMonth() + parseInt(certValidityMonths));
+    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    expiryDate.setDate(expiryDate.getDate() - 1);
     
     setSavingCert(true);
     try {
       const response = await api.post('/certificates/simple', {
         athlete_id: id,
+        issue_date: issueDate.toISOString(),
         expiry_date: expiryDate.toISOString(),
         verified: certVerified,
       });
@@ -885,7 +882,6 @@ export default function AdminAthleteDetail() {
       });
       setCertModalVisible(false);
       setCertIssueDate('');
-      setCertValidityMonths('12');
       setCertVerified(false);
       showAlert('Successo', 'Certificato medico salvato');
     } catch (error: any) {
@@ -2198,19 +2194,31 @@ export default function AdminAthleteDetail() {
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>📋 Certificato Medico</Text>
+              <Text style={styles.cardTitle}>Certificato Medico</Text>
               {certificate ? (
-                <View style={styles.certRow}>
-                  <Ionicons
-                    name={isCertificateExpired ? 'close-circle' : 'checkmark-circle'}
-                    size={24}
-                    color={getCertificateColor()}
-                  />
-                  <Text style={[styles.certText, { color: getCertificateColor() }]}>
-                    Scadenza: {formatDate(certificate.expiry_date)} 
-                    {isCertificateExpired && ' (SCADUTO)'}
-                    {isCertificateExpiringSoon && ' (IN SCADENZA)'}
-                  </Text>
+                <View>
+                  <View style={styles.certRow}>
+                    <Ionicons
+                      name={isCertificateExpired ? 'close-circle' : 'checkmark-circle'}
+                      size={24}
+                      color={getCertificateColor()}
+                    />
+                    <Text style={[styles.certText, { color: getCertificateColor() }]}>
+                      Scadenza: {formatDate(certificate.expiry_date)} 
+                      {isCertificateExpired && ' (SCADUTO)'}
+                      {isCertificateExpiringSoon && ' (IN SCADENZA)'}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
+                    <Ionicons
+                      name={certificate.verified ? 'shield-checkmark' : 'shield-outline'}
+                      size={18}
+                      color={certificate.verified ? '#4CAF50' : '#FF9500'}
+                    />
+                    <Text style={{ marginLeft: 8, fontSize: 13, color: certificate.verified ? '#4CAF50' : '#FF9500', fontWeight: '600' }}>
+                      {certificate.verified ? 'Verificato dall\'admin' : 'Non ancora verificato dall\'admin'}
+                    </Text>
+                  </View>
                 </View>
               ) : (
                 <View style={styles.warningBox}>
@@ -2224,23 +2232,13 @@ export default function AdminAthleteDetail() {
               >
                 <Ionicons name={certificate ? "create" : "add-circle"} size={18} color="#007AFF" />
                 <Text style={styles.addCertButtonText}>
-                  {certificate ? 'Aggiorna Certificato' : 'Aggiungi Certificato'}
+                  {certificate ? 'Aggiorna Certificato' : 'Inserisci dati Certificato'}
                 </Text>
               </TouchableOpacity>
               
-              {/* View Certificate Button */}
-              {certificate && certificate.pdf_data && (
-                <TouchableOpacity
-                  style={styles.viewCertButton}
-                  onPress={() => setCertViewerVisible(true)}
-                >
-                  <Ionicons name="eye" size={18} color="#34C759" />
-                  <Text style={styles.viewCertButtonText}>Visualizza Certificato</Text>
-                </TouchableOpacity>
-              )}
             </View>
 
-            {/* Privacy Status */}
+      {/* Privacy Status */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>🔒 Privacy GDPR</Text>
               {athlete.privacy_accepted ? (
@@ -3089,18 +3087,7 @@ export default function AdminAthleteDetail() {
               maxLength={10}
             />
             
-            <Text style={styles.inputLabel}>Validità (mesi)</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={certValidityMonths}
-              onChangeText={setCertValidityMonths}
-              placeholder="12"
-              placeholderTextColor="#999"
-              keyboardType="number-pad"
-              maxLength={2}
-            />
-            
-            {certIssueDate.length === 10 && parseInt(certValidityMonths) > 0 && (
+            {certIssueDate.length === 10 && (
               <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginTop: 8, alignItems: 'center' }}>
                 <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>SCADENZA CERTIFICATO</Text>
                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2E7D32' }}>
@@ -3108,14 +3095,16 @@ export default function AdminAthleteDetail() {
                     const parts = certIssueDate.split('/');
                     if (parts.length === 3) {
                       const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                      issueDate.setMonth(issueDate.getMonth() + parseInt(certValidityMonths));
-                      issueDate.setDate(issueDate.getDate() - 1);
-                      return `${issueDate.getDate().toString().padStart(2, '0')}/${(issueDate.getMonth() + 1).toString().padStart(2, '0')}/${issueDate.getFullYear()}`;
+                      // Scadenza: giorno prima dello stesso giorno/mese dell'anno dopo
+                      const expiryDate = new Date(issueDate);
+                      expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+                      expiryDate.setDate(expiryDate.getDate() - 1);
+                      return `${expiryDate.getDate().toString().padStart(2, '0')}/${(expiryDate.getMonth() + 1).toString().padStart(2, '0')}/${expiryDate.getFullYear()}`;
                     }
                     return '';
                   })()}
                 </Text>
-                <Text style={{ fontSize: 10, color: '#666', marginTop: 2 }}>(giorno prima dell'anniversario emissione)</Text>
+                <Text style={{ fontSize: 10, color: '#666', marginTop: 2 }}>(giorno prima dell'anniversario di emissione)</Text>
               </View>
             )}
             
@@ -3129,10 +3118,10 @@ export default function AdminAthleteDetail() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: certVerified ? '#2E7D32' : '#333' }}>
-                  Certificato medico verificato dal dirigente
+                  Certificato medico verificato dall'admin
                 </Text>
                 <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
-                  Confermo di aver verificato il certificato medico originale
+                  Confermo di aver verificato il certificato medico originale dell'atleta
                 </Text>
               </View>
             </TouchableOpacity>
@@ -3157,147 +3146,6 @@ export default function AdminAthleteDetail() {
                 <Text style={styles.saveButtonText}>
                   {savingCert ? 'Salvataggio...' : 'Salva'}
                 </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Certificate Viewer Modal - FULL SCREEN */}
-      <Modal
-        visible={certViewerVisible}
-        animationType="fade"
-        transparent={false}
-        onRequestClose={() => setCertViewerVisible(false)}
-      >
-        <View style={styles.certViewerFullScreen}>
-          {/* Header */}
-          <View style={styles.certViewerHeaderFull}>
-            <TouchableOpacity 
-              style={styles.certViewerBackBtn}
-              onPress={() => setCertViewerVisible(false)}
-            >
-              <View style={{ backgroundColor: "rgba(0,0,0,0.2)", borderRadius: 20, padding: 6 }}><Ionicons name="chevron-back" size={24} color="#333" /></View>
-            </TouchableOpacity>
-            <Text style={styles.certViewerTitleFull}>📋 Certificato Medico</Text>
-            <View style={{ width: 60 }} />
-          </View>
-          
-          {/* Certificate Image - Full Size */}
-          <ScrollView 
-            style={styles.certViewerScrollView}
-            contentContainerStyle={styles.certViewerScrollContent}
-            maximumZoomScale={3}
-            minimumZoomScale={1}
-            showsVerticalScrollIndicator={true}
-          >
-            {certificate?.pdf_data && (
-              <Image 
-                source={{ uri: `data:image/jpeg;base64,${certificate.pdf_data}` }} 
-                style={styles.certViewerImageFull}
-                resizeMode="contain"
-              />
-            )}
-          </ScrollView>
-          
-          {/* Footer Info */}
-          <View style={styles.certViewerFooter}>
-            <View style={styles.certViewerInfoFull}>
-              <Ionicons name="calendar" size={18} color="#666" />
-              <Text style={styles.certViewerInfoTextFull}>
-                Scadenza: {certificate && formatDate(certificate.expiry_date)}
-                {isCertificateExpired && ' (SCADUTO)'}
-                {isCertificateExpiringSoon && ' (IN SCADENZA)'}
-              </Text>
-            </View>
-            <View style={styles.certViewerButtons}>
-              {/* Download for Web */}
-              {Platform.OS === 'web' && certificate?.pdf_data && (
-                <TouchableOpacity 
-                  style={styles.shareBtn}
-                  onPress={() => {
-                    // Download image
-                    const link = document.createElement('a');
-                    link.href = `data:image/jpeg;base64,${certificate.pdf_data}`;
-                    link.download = `certificato_${athlete?.full_name?.replace(/\s+/g, '_')}.jpg`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                >
-                  <Ionicons name="download-outline" size={20} color="#007AFF" />
-                  <Text style={styles.shareBtnText}>Scarica</Text>
-                </TouchableOpacity>
-              )}
-              {/* Share - Works on all platforms */}
-              {certificate?.pdf_data && (
-                <TouchableOpacity 
-                  style={styles.shareBtn}
-                  onPress={async () => {
-                    if (Platform.OS === 'web') {
-                      // Web Share API
-                      try {
-                        // Convert base64 to blob
-                        const byteCharacters = atob(certificate.pdf_data);
-                        const byteNumbers = new Array(byteCharacters.length);
-                        for (let i = 0; i < byteCharacters.length; i++) {
-                          byteNumbers[i] = byteCharacters.charCodeAt(i);
-                        }
-                        const byteArray = new Uint8Array(byteNumbers);
-                        const blob = new Blob([byteArray], { type: 'image/jpeg' });
-                        const file = new File([blob], `certificato_${athlete?.full_name?.replace(/\s+/g, '_')}.jpg`, { type: 'image/jpeg' });
-                        
-                        if (navigator.share && navigator.canShare({ files: [file] })) {
-                          await navigator.share({
-                            title: `Certificato Medico - ${athlete?.full_name}`,
-                            files: [file],
-                          });
-                        } else {
-                          // Fallback: open in new tab
-                          window.open(`data:image/jpeg;base64,${certificate.pdf_data}`, '_blank');
-                        }
-                      } catch (error) {
-                        console.error('Share error:', error);
-                        // Fallback: open in new tab
-                        window.open(`data:image/jpeg;base64,${certificate.pdf_data}`, '_blank');
-                      }
-                    } else {
-                      // Mobile share
-                      try {
-                        const Sharing = require('expo-sharing');
-                        const FileSystem = require('expo-file-system');
-                        
-                        const filename = `certificato_${athlete?.full_name?.replace(/\s+/g, '_')}.jpg`;
-                        const fileUri = FileSystem.documentDirectory + filename;
-                        
-                        await FileSystem.writeAsStringAsync(fileUri, certificate.pdf_data, {
-                          encoding: 'base64' as any,
-                        });
-                        
-                        if (await Sharing.isAvailableAsync()) {
-                          await Sharing.shareAsync(fileUri, {
-                            mimeType: 'image/jpeg',
-                            dialogTitle: `Certificato Medico - ${athlete?.full_name}`,
-                          });
-                        } else {
-                          showAlert('Errore', 'Condivisione non disponibile su questo dispositivo');
-                        }
-                      } catch (error) {
-                        console.error('Share error:', error);
-                        showAlert('Errore', 'Impossibile condividere il certificato');
-                      }
-                    }
-                  }}
-                >
-                  <Ionicons name="share-outline" size={20} color="#007AFF" />
-                  <Text style={styles.shareBtnText}>Condividi</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity 
-                style={styles.closeCertBtn}
-                onPress={() => setCertViewerVisible(false)}
-              >
-                <Text style={styles.closeCertBtnText}>Chiudi</Text>
               </TouchableOpacity>
             </View>
           </View>
