@@ -58,6 +58,7 @@ export default function AthletePayments() {
   const [societySettings, setSocietySettings] = useState<any>(null);
   const [totalDue, setTotalDue] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
+  const [planExpanded, setPlanExpanded] = useState(false);
 
   const loadData = async () => {
     try {
@@ -392,99 +393,142 @@ export default function AthletePayments() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Quote Section - Team payment structure */}
-        {paymentInfo && (paymentInfo.total_amount || paymentInfo.installment_1_amount || (paymentInfo.installments && paymentInfo.installments.length > 0)) && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEmoji}>💰</Text>
-              <Text style={styles.sectionTitle}>Quote</Text>
-            </View>
-            
-            <View style={styles.sectionContent}>
-              {paymentInfo.total_amount && paymentInfo.total_amount > 0 && (
-                <View style={styles.feeRow}>
-                  <Text style={[styles.feeLabel, { fontSize: 16, fontWeight: '700' }]}>Quota Totale:</Text>
-                  <Text style={[styles.feeAmount, { fontSize: 18, fontWeight: '700' }]}>{formatCurrency(paymentInfo.total_amount, true, 0)}</Text>
-                </View>
-              )}
+        {/* Quote Section - Compact with expandable payment plan */}
+        {paymentInfo && (paymentInfo.total_amount || (paymentInfo.installments && paymentInfo.installments.length > 0)) && (() => {
+          // Build installment plan with payment status
+          const installments = paymentInfo.installments || [];
+          const planItems = installments
+            .filter((inst: any) => parseFloat(inst.amount) > 0)
+            .map((inst: any, index: number) => {
+              const amount = parseFloat(inst.amount) || 0;
+              const name = inst.name || (index === 0 ? 'Quota iscrizione' : `Rata ${index}`);
+              const dueDate = inst.due_date;
+              // Match with actual payments by installment_number
+              const matchedPayment = payments.find(p => p.installment_number === (index + 1));
+              const paid = matchedPayment ? isPaid(matchedPayment) : false;
+              const paidDate = matchedPayment?.paid_date;
+              return { name, amount, dueDate, paid, paidDate, index };
+            });
+          
+          // Find next unpaid installment
+          const nextDue = planItems.find(item => !item.paid);
+          
+          return (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionEmoji}>💰</Text>
+                <Text style={styles.sectionTitle}>Quote</Text>
+              </View>
               
-              {/* Dynamic installments from new format */}
-              {paymentInfo.installments && paymentInfo.installments.length > 0 ? (
-                paymentInfo.installments.map((inst: any, index: number) => {
-                  const amount = parseFloat(inst.amount) || 0;
-                  if (amount <= 0) return null;
-                  const isLast = index === paymentInfo.installments.length - 1;
-                  const displayAmount = isLast && discount > 0 ? amount - discount : amount;
-                  return (
-                    <View key={index}>
-                      <View style={styles.feeRow}>
-                        <Text style={styles.feeLabel}>
-                          {inst.name || (index === 0 ? 'Quota iscrizione' : `Rata ${index}`)}
-                          {isLast && discount > 0 ? ' (con sconto)' : ''}:
-                        </Text>
-                        <Text style={styles.feeAmount}>{formatCurrency(displayAmount, true, 0)}</Text>
-                      </View>
-                      {index > 0 && inst.due_date && (
-                        <View style={styles.feeRow}>
-                          <Text style={[styles.feeLabel, { color: '#888' }]}>Scadenza:</Text>
-                          <Text style={[styles.feeAmount, { color: '#888' }]}>{formatDate(inst.due_date)}</Text>
-                        </View>
-                      )}
+              <View style={styles.sectionContent}>
+                {/* Quota Annuale - always visible */}
+                {paymentInfo.total_amount > 0 && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#eee', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#333' }}>Quota Annuale</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: '#333' }}>{formatCurrency(paymentInfo.total_amount, true, 0)}</Text>
+                  </View>
+                )}
+                
+                {/* Sconto */}
+                {discount > 0 && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 8, marginBottom: 8 }}>
+                    <Text style={{ fontSize: 13, color: '#4CAF50' }}>Sconto: {discountReason || '-'}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#4CAF50' }}>- {formatCurrency(discount, true, 0)}</Text>
+                  </View>
+                )}
+                
+                {/* Next installment due - compact row */}
+                {nextDue && (
+                  <TouchableOpacity 
+                    style={{ 
+                      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                      backgroundColor: '#FFF3F0', borderRadius: 10, padding: 12, marginBottom: 8,
+                      borderLeftWidth: 4, borderLeftColor: '#FF3B30'
+                    }}
+                    onPress={() => setPlanExpanded(!planExpanded)}
+                    data-testid="next-installment-row"
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>Prossima rata</Text>
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: '#FF3B30' }}>
+                        {nextDue.name}: {formatCurrency(nextDue.amount, true, 0)}
+                        {nextDue.dueDate ? ` - Scad. ${formatDate(nextDue.dueDate)}` : ''}
+                      </Text>
                     </View>
-                  );
-                })
-              ) : (
-                /* Legacy format fallback */
-                <>
-                  {paymentInfo.installment_1_amount > 0 && (
-                    <View style={styles.feeRow}>
-                      <Text style={styles.feeLabel}>Quota iscrizione:</Text>
-                      <Text style={styles.feeAmount}>{formatCurrency(paymentInfo.installment_1_amount, true, 0)}</Text>
-                    </View>
-                  )}
-                  {paymentInfo.installment_2_amount > 0 && (
-                    <>
-                      <View style={styles.feeRow}>
-                        <Text style={styles.feeLabel}>Rata 1:</Text>
-                        <Text style={styles.feeAmount}>{formatCurrency(paymentInfo.installment_2_amount, true, 0)}</Text>
-                      </View>
-                      {paymentInfo.installment_2_due_date && (
-                        <View style={styles.feeRow}>
-                          <Text style={[styles.feeLabel, { color: '#888' }]}>Scadenza:</Text>
-                          <Text style={[styles.feeAmount, { color: '#888' }]}>{formatDate(paymentInfo.installment_2_due_date)}</Text>
+                    <Ionicons name={planExpanded ? "chevron-up" : "chevron-down"} size={20} color="#FF3B30" />
+                  </TouchableOpacity>
+                )}
+                
+                {!nextDue && planItems.length > 0 && (
+                  <TouchableOpacity 
+                    style={{ 
+                      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                      backgroundColor: '#E8F5E9', borderRadius: 10, padding: 12, marginBottom: 8,
+                      borderLeftWidth: 4, borderLeftColor: '#4CAF50'
+                    }}
+                    onPress={() => setPlanExpanded(!planExpanded)}
+                    data-testid="all-paid-row"
+                  >
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#4CAF50' }}>Tutte le rate pagate!</Text>
+                    <Ionicons name={planExpanded ? "chevron-up" : "chevron-down"} size={20} color="#4CAF50" />
+                  </TouchableOpacity>
+                )}
+                
+                {/* Expandable full payment plan */}
+                {planExpanded && (
+                  <View style={{ marginTop: 4 }}>
+                    {planItems.map((item, idx) => (
+                      <View 
+                        key={idx} 
+                        style={{ 
+                          flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                          paddingVertical: 10, paddingHorizontal: 8,
+                          borderBottomWidth: idx < planItems.length - 1 ? 1 : 0, 
+                          borderBottomColor: '#f0f0f0',
+                          backgroundColor: item.paid ? '#F0F8FF' : 'transparent'
+                        }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ 
+                            fontSize: 14, fontWeight: '500', 
+                            color: item.paid ? '#2196F3' : '#FF3B30',
+                            textDecorationLine: item.paid ? 'line-through' : 'none'
+                          }}>
+                            {item.name}
+                          </Text>
+                          {item.paid && item.paidDate && (
+                            <Text style={{ fontSize: 11, color: '#2196F3', marginTop: 2 }}>
+                              Pagata il {formatDate(item.paidDate)}
+                            </Text>
+                          )}
+                          {!item.paid && item.dueDate && (
+                            <Text style={{ fontSize: 11, color: '#FF3B30', marginTop: 2 }}>
+                              Scadenza: {formatDate(item.dueDate)}
+                            </Text>
+                          )}
                         </View>
-                      )}
-                    </>
-                  )}
-                  {paymentInfo.installment_3_amount > 0 && (
-                    <>
-                      <View style={styles.feeRow}>
-                        <Text style={styles.feeLabel}>Rata 2{discount > 0 ? ' (con sconto)' : ''}:</Text>
-                        <Text style={styles.feeAmount}>{formatCurrency(discount > 0 ? paymentInfo.installment_3_amount - discount : paymentInfo.installment_3_amount, true, 0)}</Text>
-                      </View>
-                      {paymentInfo.installment_3_due_date && (
-                        <View style={styles.feeRow}>
-                          <Text style={[styles.feeLabel, { color: '#888' }]}>Scadenza:</Text>
-                          <Text style={[styles.feeAmount, { color: '#888' }]}>{formatDate(paymentInfo.installment_3_due_date)}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Text style={{ 
+                            fontSize: 15, fontWeight: '600', 
+                            color: item.paid ? '#2196F3' : '#FF3B30',
+                            textDecorationLine: item.paid ? 'line-through' : 'none'
+                          }}>
+                            {formatCurrency(item.amount, true, 0)}
+                          </Text>
+                          <Ionicons 
+                            name={item.paid ? "checkmark-circle" : "ellipse-outline"} 
+                            size={20} 
+                            color={item.paid ? '#2196F3' : '#FF3B30'} 
+                          />
                         </View>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
-              
-              {/* Sconto */}
-              {discount > 0 && (
-                <View style={styles.feeRow}>
-                  <Text style={[styles.feeLabel, { color: '#4CAF50' }]}>
-                    Sconto applicato per: {discountReason || 'Non specificato'}
-                  </Text>
-                  <Text style={[styles.feeAmount, { color: '#4CAF50' }]}>- {formatCurrency(discount, true, 0)}</Text>
-                </View>
-              )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
             </View>
-          </View>
-        )}
+          );
+        })()}
 
         {/* Pagamenti Ricevuti - Only show paid payments */}
         <View style={styles.section}>
