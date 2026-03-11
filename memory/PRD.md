@@ -24,6 +24,29 @@ Sistema gestionale per società sportiva che include:
 
 ## What's Been Implemented
 
+### Session 11 March 2026
+- **Reset account test**: Luna Nuova resettata a stato PROVA, creato utente adulto "Paolo Rinuncia"
+- **Placeholder certificato**: Cambiato da data reale a "gg/mm/aaaa" su tutte le pagine (atleta, admin, genitore)
+- **Unificazione sezioni profilo atleta**: Dati Anagrafici e Dati Fiscali nella stessa card con unico salvataggio
+- **Cambio password atleta semplificato**: Rimosso "Password Attuale", aggiunto toggle mostra/nascondi password
+- **Fix icona certificato medico**: Icona coerente con stato verifica (⏱ arancione = non verificato, ✅ verde = verificato, ❌ rosso = scaduto) su tutti i file
+- **Fix PDF privacy firmato**: Il PDF firmato ora è visualizzabile dall'atleta (corretto `related_entity_id` e `privacy_pdf_url`)
+- **Fix collegamento coach-atleta**: Endpoint `/teams/{team_id}/coach` ora usa `assigned_teams` (non più `coach_ids` obsoleto), mostra TUTTI i coach della squadra
+- **Form certificato collassabile**: Form inserimento certificato nascosto sotto "Nuovo certificato" per pagina più compatta
+- **Fix validazione QR scansione**: Aggiunto controllo squadra nell'endpoint `/attendance/check` - impedisce registrazione in squadra sbagliata, messaggi coerenti (stessa squadra = "GIÀ REGISTRATA", squadra diversa = "FORZA REGISTRAZIONE")
+- **Nascita estero su TUTTI i profili**: Campi "Luogo/Provincia di Nascita" nascosti quando paese estero, calcolo CF corretto, pulizia automatica campi. Applicato a: atleta, coach, dirigente, collaboratore, admin/athlete, admin/athletes
+- **Salvataggio `country_of_birth`**: Campo aggiunto a backend (modelli + endpoint PATCH/GET) con sync tra collections users/athletes
+- **Test rinuncia Paolo**: Flusso di eliminazione atleta testato con successo (record athlete eliminato)
+
+### Session 10 March 2026 (Previous Fork)
+- **Codice Atleta Permanente**: `athlete_code` = `qr_identifier` (12 char), univoco a vita per codice fiscale
+- **Certificati Medici V2**: Rimossi upload file, solo data emissione con calcolo scadenza automatico, metadata tracciamento
+- **Rimozione Documento Identità**: Rimossa sezione dal profilo atleta
+- **Unificazione salvataggio profilo**: Anagrafica e dati fiscali con unico pulsante
+- **Fix codice fiscale estero**: Calcolo corretto per atleti nati all'estero
+- **Rimozione campi compenso da checklist approvazione**: Coach e Collaboratore
+- **Fix bug PATCH atleta (500)**: Rimosso `athlete_photo` dal modello
+
 ### Session 9 March 2026
 - **Standardizzazione UI Compensi per tutti i ruoli**: Layout lineare con bullet points (• Compenso base, • Pregressi, • Totale Anno) e importi in grassetto applicato a:
   - Coach (user e admin view)
