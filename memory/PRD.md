@@ -113,21 +113,25 @@ Sistema gestionale per società sportiva che include:
 - [x] **Placeholder certificato**: Cambiato da data reale a "gg/mm/aaaa" in tutti i file (atleta, admin, genitore)
 - [x] **Unificazione sezioni profilo**: Dati Anagrafici e Dati Fiscali nella stessa card con unico salvataggio
 - [x] **Cambio password atleta**: Rimosso "Password Attuale", aggiunto toggle mostra/nascondi password
+- [x] **Pagamenti Atleta V2** (11 Mar 2026): Logica cumulativa per rate dinamiche - somma pagamenti applicata sequenzialmente alle rate (pagata/parziale/non pagata). UI compatta con piano espandibile, descrizioni reali dal DB, sezione duplicata rimossa
+- [x] **Vista Quote Admin Dinamica** (11 Mar 2026): Sezione Quote nella pagina admin/team/[id] ora mostra tutte le rate dinamiche (fino a 12) con nomi e scadenze, con fallback al vecchio sistema 3 rate
 
 ## P1 - Media Priorità
 - [x] **Squadre Assegnate Coach**: Sezione con link alle pagine delle squadre nella vista coach compensation
+- [ ] Test flusso completo pagamenti per atleta adulto (18+)
+- [ ] Implementazione flusso Minorenni (copia adulto + link genitore obbligatorio)
 - [ ] Test flusso firma privacy con account preparati
-- [ ] Test completo flusso "atleta 18+"
 - [ ] Test scansione QR code, upload pagamenti/partite, import automatico partite
 
 ## P2 - Bassa Priorità
+- [ ] Verifica flusso cancellazione utente (record `users` rimane dopo delete atleta)
+- [ ] UI compensi per atleta a contratto
+- [ ] Separazione ruoli Admin/Dirigente
 - [ ] Refactoring codice duplicato in admin/coach/[id].tsx
 - [ ] Admin dashboard - problema caricamento intermittente
 
 ## Future/Backlog
 - Funzionalità compensi per Atleta a contratto (giugno/luglio 2026)
-- Implementazione funzionalità per Minorenni e genitori
-- Separazione ruoli Admin/Dirigente (utente ha rinviato)
 - Refactoring server.py in struttura modulare
 - Re-implementazione Stripe
 - Ritestare: Scansione QR atleti, carico manuale/template pagamenti e gare, import automatico gare federazioni
