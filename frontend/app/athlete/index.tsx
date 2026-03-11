@@ -562,9 +562,9 @@ export default function AthleteScreen() {
             <View>
               <View style={styles.certificateInfo}>
                 <Ionicons
-                  name={new Date((profile as any)?.medical_certificate_expiry) < new Date() ? 'close-circle' : 'checkmark-circle'}
+                  name={new Date((profile as any)?.medical_certificate_expiry) < new Date() ? 'close-circle' : ((profile as any)?.medical_certificate_verified ? 'checkmark-circle' : 'time-outline')}
                   size={24}
-                  color={new Date((profile as any)?.medical_certificate_expiry) < new Date() ? '#FF3B30' : '#34C759'}
+                  color={new Date((profile as any)?.medical_certificate_expiry) < new Date() ? '#FF3B30' : ((profile as any)?.medical_certificate_verified ? '#34C759' : '#FF9500')}
                 />
                 <View style={styles.certificateDetails}>
                   <Text style={styles.certificateLabel}>

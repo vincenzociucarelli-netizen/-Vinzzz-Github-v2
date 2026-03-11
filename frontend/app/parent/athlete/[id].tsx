@@ -1290,9 +1290,9 @@ export default function AthleteDetail() {
             <View>
               <View style={styles.certInfo}>
                 <Ionicons
-                  name={isCertificateExpired ? 'close-circle' : 'checkmark-circle'}
+                  name={isCertificateExpired ? 'close-circle' : (certificate.verified ? 'checkmark-circle' : 'time-outline')}
                   size={24}
-                  color={isCertificateExpired ? '#FF3B30' : '#34C759'}
+                  color={isCertificateExpired ? '#FF3B30' : (certificate.verified ? '#34C759' : '#FF9500')}
                 />
                 <View style={styles.certDetails}>
                   <Text style={styles.certLabel}>
@@ -2088,9 +2088,9 @@ export default function AthleteDetail() {
             </View>
             <View style={styles.certViewerInfoRow}>
               <Ionicons 
-                name={isCertificateExpired ? "close-circle" : "checkmark-circle"} 
+                name={isCertificateExpired ? "close-circle" : (certificate?.verified ? "checkmark-circle" : "time-outline")} 
                 size={16} 
-                color={isCertificateExpired ? "#FF3B30" : "#34C759"} 
+                color={isCertificateExpired ? "#FF3B30" : (certificate?.verified ? "#34C759" : "#FF9500")} 
               />
               <Text style={[styles.certViewerInfoText, isCertificateExpired && { color: '#FF3B30' }]}>
                 Scadenza: {certificate && format(new Date(certificate.expiry_date), 'dd/MM/yyyy', { locale: it })}

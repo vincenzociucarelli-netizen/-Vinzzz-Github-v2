@@ -937,7 +937,8 @@ export default function AdminAthleteDetail() {
   const getCertificateColor = () => {
     if (isCertificateExpired) return '#FF3B30'; // Red
     if (isCertificateExpiringSoon) return '#FF9500'; // Orange
-    return '#34C759'; // Green
+    if (!certificate?.verified) return '#FF9500'; // Orange - not yet verified
+    return '#34C759'; // Green - valid and verified
   };
 
   // Generate payment statement (attestato di versamento)
@@ -2202,7 +2203,7 @@ export default function AdminAthleteDetail() {
                 <View>
                   <View style={styles.certRow}>
                     <Ionicons
-                      name={isCertificateExpired ? 'close-circle' : 'checkmark-circle'}
+                      name={isCertificateExpired ? 'close-circle' : (certificate.verified ? 'checkmark-circle' : 'time-outline')}
                       size={24}
                       color={getCertificateColor()}
                     />
