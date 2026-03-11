@@ -6663,18 +6663,20 @@ async def create_certificate_simple(
     data: CertificateSimple,
     current_user = Depends(get_current_user)
 ):
-    """Create/update certificate - Admin or Dirigente assigned to athlete's team.
+    """Create/update certificate - Admin, Dirigente (assigned to team), Athlete (own), Parent (own child).
     Only Admin can mark as verified. Full metadata tracking."""
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.DIRIGENTE]:
-        raise HTTPException(status_code=403, detail="Solo admin o dirigente può aggiornare certificati")
+    allowed_roles = [UserRole.ADMIN, UserRole.DIRIGENTE, "athlete", UserRole.PARENT]
+    if current_user["role"] not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Non hai i permessi per aggiornare certificati")
     
     # Check athlete exists
     athlete = await db.athletes.find_one({"id": data.athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # If dirigente, verify they are assigned to the athlete's team
+    # Permission checks by role
     if current_user["role"] == UserRole.DIRIGENTE:
+        # Dirigente must be assigned to the athlete's team
         athlete_team_id = athlete.get("team_id")
         if athlete_team_id:
             team = await db.teams.find_one({"id": athlete_team_id})
@@ -6683,11 +6685,19 @@ async def create_certificate_simple(
                 raise HTTPException(status_code=403, detail="Non sei il dirigente incaricato a questa squadra")
         else:
             raise HTTPException(status_code=403, detail="L'atleta non ha una squadra assegnata")
+    elif current_user["role"] == "athlete":
+        # Athlete can only update their own certificate
+        if current_user.get("athlete_id") != data.athlete_id and current_user["id"] != data.athlete_id:
+            raise HTTPException(status_code=403, detail="Puoi aggiornare solo il tuo certificato")
+    elif current_user["role"] == UserRole.PARENT:
+        # Parent can only update their child's certificate
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Puoi aggiornare solo il certificato del tuo atleta")
     
     # Only admin can set verified = True
     verified_value = data.verified if data.verified is not None else False
     if verified_value and current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo l'admin può verificare il certificato")
+        verified_value = False  # Silently ignore verified flag for non-admin
     
     # Get old data for audit trail
     old_expiry = athlete.get("medical_certificate_expiry")
