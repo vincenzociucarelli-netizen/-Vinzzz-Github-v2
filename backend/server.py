@@ -684,6 +684,8 @@ class Athlete(BaseModel):
     birth_place: Optional[str] = None  # Luogo di nascita
     birth_province: Optional[str] = None  # Provincia di nascita
     place_of_birth: Optional[str] = None  # Alias for birth_place
+    province_of_birth: Optional[str] = None  # Provincia di nascita (alias)
+    country_of_birth: Optional[str] = None  # Stato di nascita (default: Italia)
     gender: Optional[str] = None  # M or F - for Codice Fiscale calculation
     is_minor: bool = False  # Default to adult
     fiscal_code: Optional[str] = None  # Codice fiscale atleta
@@ -812,6 +814,7 @@ class AthleteUpdate(BaseModel):
     date_of_birth: Optional[str] = None
     birth_place: Optional[str] = None
     birth_province: Optional[str] = None
+    country_of_birth: Optional[str] = None
     gender: Optional[str] = None  # M or F - for Codice Fiscale calculation
     fiscal_code: Optional[str] = None
     email: Optional[str] = None
@@ -1756,6 +1759,9 @@ async def get_me(current_user = Depends(get_current_user)):
             if not user.get("date_of_birth") and athlete.get("date_of_birth"):
                 dob = athlete["date_of_birth"]
                 user["date_of_birth"] = dob.isoformat() if hasattr(dob, 'isoformat') else dob
+            # Include country_of_birth from athlete record if not in user
+            if not user.get("country_of_birth") and athlete.get("country_of_birth"):
+                user["country_of_birth"] = athlete["country_of_birth"]
             # Include privacy_accepted from athlete record if not in user
             if user.get("privacy_accepted") is None and athlete.get("privacy_accepted") is not None:
                 user["privacy_accepted"] = athlete["privacy_accepted"]
@@ -1777,6 +1783,7 @@ class UserProfileUpdate(BaseModel):
     date_of_birth: Optional[str] = None
     place_of_birth: Optional[str] = None
     birth_province: Optional[str] = None  # Sigla provincia di nascita
+    country_of_birth: Optional[str] = None  # Stato di nascita
     gender: Optional[str] = None  # M or F - for Codice Fiscale calculation
     fiscal_code: Optional[str] = None
     address: Optional[str] = None
@@ -1821,6 +1828,8 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
         update_dict["place_of_birth"] = data.place_of_birth
     if data.birth_province is not None:
         update_dict["birth_province"] = data.birth_province
+    if data.country_of_birth is not None:
+        update_dict["country_of_birth"] = data.country_of_birth
     if data.gender is not None:
         update_dict["gender"] = data.gender.upper()  # Store as uppercase M/F
     if data.fiscal_code is not None:
@@ -1932,6 +1941,8 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
             if "birth_province" in update_dict:
                 athlete_update["birth_province"] = update_dict["birth_province"]
                 athlete_update["province_of_birth"] = update_dict["birth_province"]  # Both field names
+            if "country_of_birth" in update_dict:
+                athlete_update["country_of_birth"] = update_dict["country_of_birth"]
             if "gender" in update_dict:
                 athlete_update["gender"] = update_dict["gender"]
             if "fiscal_code" in update_dict:
