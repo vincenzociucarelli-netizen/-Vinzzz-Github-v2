@@ -1077,73 +1077,34 @@ def generate_qr_code_from_identifier(qr_identifier: str) -> str:
     return f"data:image/png;base64,{img_str}"
 
 def generate_athlete_code(last_name: str, first_name: str, team_name: str) -> str:
-    """Generate unique athlete code: COGNOME(3)+NOME(3)-SQUADRA
-    Es: ROSMAR-U16, BIAFED-SD"""
+    """DEPRECATED: athlete_code is now the qr_identifier (12-char alphanumeric).
+    This function is kept only as fallback."""
     import re
-    # Clean and get first 3 chars of last name and first name
     ln = re.sub(r'[^A-Za-z]', '', (last_name or '').upper())[:3]
     fn = re.sub(r'[^A-Za-z]', '', (first_name or '').upper())[:3]
-    
-    # Clean team name: keep only alphanumeric, remove spaces
     tn = re.sub(r'[^A-Za-z0-9]', '', (team_name or '').upper())
-    # Shorten common patterns
     tn = tn.replace('MINIVOLLEY', 'MV').replace('STARTER', 'ST').replace('UNDER', 'U').replace('SERIE', 'S')
-    # Max 5 chars for team
     tn = tn[:5] if len(tn) > 5 else tn
-    
     return f"{ln}{fn}-{tn}" if tn else f"{ln}{fn}"
 
 async def generate_unique_athlete_code(last_name: str, first_name: str, team_name: str, society_id: str, exclude_athlete_id: str = None) -> str:
-    """Generate unique athlete code, adding suffix if duplicate exists.
-    Es: ROSMAR-U16, ROSMAR-U16-2, ROSMAR-U16-3"""
-    base_code = generate_athlete_code(last_name, first_name, team_name)
-    
-    # Check if code already exists
-    query = {"athlete_code": base_code, "society_id": society_id}
-    if exclude_athlete_id:
-        query["id"] = {"$ne": exclude_athlete_id}
-    
-    existing = await db.athletes.find_one(query)
-    
-    if not existing:
-        return base_code
-    
-    # Find next available suffix
-    suffix = 2
-    while True:
-        new_code = f"{base_code}-{suffix}"
-        query["athlete_code"] = new_code
-        existing = await db.athletes.find_one(query)
-        if not existing:
-            return new_code
-        suffix += 1
-        if suffix > 99:  # Safety limit
-            break
-    
-    return f"{base_code}-{suffix}"
+    """athlete_code is now the qr_identifier. This returns None - code is set from qr_identifier at creation."""
+    return None
 
 async def update_athlete_code(athlete_id: str):
-    """Update athlete code based on current team"""
+    """Update athlete code to match qr_identifier"""
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         return None
     
-    team = await db.teams.find_one({"id": athlete.get("team_id")})
-    team_name = team.get("name", "") if team else ""
-    
-    code = await generate_unique_athlete_code(
-        athlete.get("last_name", ""),
-        athlete.get("first_name", ""),
-        team_name,
-        athlete.get("society_id", ""),
-        athlete_id  # Exclude current athlete from duplicate check
-    )
-    
-    await db.athletes.update_one(
-        {"id": athlete_id},
-        {"$set": {"athlete_code": code}}
-    )
-    return code
+    qr_id = athlete.get("qr_identifier")
+    if qr_id:
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {"athlete_code": qr_id}}
+        )
+        return qr_id
+    return athlete.get("athlete_code")
 
 async def check_athlete_status(athlete_id: str):
     """Check if athlete can attend (certificate valid, payments up to date, privacy accepted)"""
@@ -1533,12 +1494,8 @@ async def register_adult_athlete(data: AdultAthleteRegister):
             raise HTTPException(status_code=400, detail="Formato data di nascita non valido. Usa YYYY-MM-DD")
     
     # Generate unique athlete code
-    athlete_code = await generate_unique_athlete_code(
-        data.last_name,
-        data.first_name,
-        "ADULTO",  # No team yet
-        society_id
-    )
+    # athlete_code is now the qr_identifier (12-char alphanumeric)
+    # qr_id is generated below, athlete_code will be set to qr_id
     
     # Create athlete record
     athlete_id = str(ObjectId())
@@ -1549,6 +1506,8 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     while await db.athletes.find_one({"qr_identifier": qr_id}):
         qr_id = generate_qr_identifier()
     qr_code = generate_qr_code_from_identifier(qr_id)
+    
+    athlete_code = qr_id  # athlete_code = qr_identifier
     
     full_name = f"{data.first_name} {data.last_name}"
     trial_end = datetime.utcnow() + timedelta(days=7)
@@ -4777,13 +4736,13 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
                 detail=f"Limite di {ATHLETE_LIMIT} atleti raggiunto per questa stagione. Contatta l'amministratore per informazioni sui piani premium."
             )
     
-    # Generate unique athlete code
-    athlete_code = await generate_unique_athlete_code(
-        athlete_data.last_name,
-        athlete_data.first_name,
-        team.get("name", "") if team else "",
-        society_id
-    )
+    # Generate unique athlete code - now uses qr_identifier
+    # Generate 12-char alphanumeric QR identifier
+    qr_id = generate_qr_identifier()
+    while await db.athletes.find_one({"qr_identifier": qr_id}):
+        qr_id = generate_qr_identifier()
+    qr_code = generate_qr_code_from_identifier(qr_id)
+    athlete_code = qr_id  # athlete_code = qr_identifier
     
     athlete = Athlete(
         id=athlete_id,
@@ -4811,6 +4770,7 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
         team_id=athlete_data.team_id,
         team_id_2=athlete_data.team_id_2,
         qr_code=qr_code,
+        qr_identifier=qr_id,
         trial_end_date=datetime.utcnow() + timedelta(days=7) if is_trial else datetime.utcnow(),
         status=AthleteStatus.PENDING,  # ALL athletes start as PENDING
         privacy_accepted=privacy_accepted,
@@ -4865,12 +4825,7 @@ async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(
             pass
     
     # Generate unique athlete code
-    athlete_code = await generate_unique_athlete_code(
-        data.last_name,
-        data.first_name,
-        team.get("name", "") if team else "NOSQUADRA",
-        society_id
-    )
+    # athlete_code is now the qr_identifier (12-char alphanumeric)
     
     # Create athlete
     athlete_id = str(ObjectId())
@@ -4881,6 +4836,8 @@ async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(
     while await db.athletes.find_one({"qr_identifier": qr_id}):
         qr_id = generate_qr_identifier()
     qr_code = generate_qr_code_from_identifier(qr_id)
+    
+    athlete_code = qr_id  # athlete_code = qr_identifier
     
     full_name = f"{data.first_name} {data.last_name}"
     
@@ -5859,17 +5816,7 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
         if team:
             old_team_id = athlete.get("team_id")
             update_dict["team_id"] = update_data.team_id
-            # Auto-update athlete code when team changes
-            athlete = await db.athletes.find_one({"id": athlete_id})
-            if athlete:
-                new_code = await generate_unique_athlete_code(
-                    athlete.get("last_name", ""),
-                    athlete.get("first_name", ""),
-                    team.get("name", ""),
-                    athlete.get("society_id", ""),
-                    athlete_id
-                )
-                update_dict["athlete_code"] = new_code
+            # athlete_code is now qr_identifier (permanent), no need to regenerate on team change
             
             # Create payments when team is assigned (for quota athletes)
             if old_team_id != update_data.team_id and athlete.get("athlete_type") == "quota":
