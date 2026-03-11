@@ -756,6 +756,20 @@ export default function AthleteScreen() {
         
         {/* Notifications Banner - RIMOSSO su richiesta utente */}
         
+        {/* Payments Section - in alto, subito dopo iscrizione */}
+        <TouchableOpacity 
+          style={[styles.menuItem, { backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFA000' }]}
+          onPress={() => router.push(`/athlete/payments`)}
+          data-testid="payments-menu-item"
+        >
+          <Ionicons name="card" size={22} color="#FF8F00" />
+          <View style={styles.menuItemContent}>
+            <Text style={[styles.menuItemTitle, { color: '#E65100' }]}>Pagamenti</Text>
+            <Text style={styles.menuItemSubtitle}>Visualizza le tue rate e pagamenti</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#FFA000" />
+        </TouchableOpacity>
+        
         {/* Menu Items */}
         <TouchableOpacity 
           style={styles.menuItem}
@@ -821,19 +835,6 @@ export default function AthleteScreen() {
             <Ionicons name="chevron-forward" size={20} color="#2196F3" />
           </TouchableOpacity>
         )}
-        
-        {/* Payments Section */}
-        <TouchableOpacity 
-          style={styles.menuItem}
-          onPress={() => router.push(`/athlete/payments`)}
-        >
-          <Ionicons name="card" size={22} color="#007AFF" />
-          <View style={styles.menuItemContent}>
-            <Text style={styles.menuItemTitle}>Pagamenti</Text>
-            <Text style={styles.menuItemSubtitle}>Visualizza le tue rate e pagamenti</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
         
         {/* Orari Allenamenti - Separato dalle presenze */}
         {profile?.team_id && (
