@@ -1106,6 +1106,24 @@ async def update_athlete_code(athlete_id: str):
         return qr_id
     return athlete.get("athlete_code")
 
+
+async def find_existing_athlete_by_fiscal_code(fiscal_code: str, society_id: str = None):
+    """Check if an athlete with this fiscal code already exists.
+    Returns the existing athlete record if found, None otherwise.
+    The qr_identifier is permanent and tied to the person via fiscal code."""
+    if not fiscal_code:
+        return None
+    
+    fc = fiscal_code.strip().upper()
+    if not fc:
+        return None
+    
+    # Search globally first (athlete could come from any society)
+    query = {"fiscal_code": fc}
+    existing = await db.athletes.find_one(query)
+    return existing
+
+
 async def check_athlete_status(athlete_id: str):
     """Check if athlete can attend (certificate valid, payments up to date, privacy accepted)"""
     athlete = await db.athletes.find_one({"id": athlete_id})
@@ -1492,6 +1510,62 @@ async def register_adult_athlete(data: AdultAthleteRegister):
                 raise HTTPException(status_code=400, detail="Devi essere maggiorenne (18+ anni) per registrarti come atleta adulto")
         except ValueError:
             raise HTTPException(status_code=400, detail="Formato data di nascita non valido. Usa YYYY-MM-DD")
+    
+    # Check if athlete already exists by fiscal code (permanent identity)
+    existing_athlete = await find_existing_athlete_by_fiscal_code(data.fiscal_code)
+    if existing_athlete:
+        # Reactivate existing athlete record - keep the same qr_identifier
+        reactivate_data = {
+            "society_id": society_id,
+            "email": data.email.lower(),
+            "phone_athlete": data.phone,
+            "is_withdrawn": False,
+            "withdrawn_date": None,
+            "withdrawn_reason": None,
+            "status": "trial",
+            "trial_end_date": datetime.utcnow() + timedelta(days=7),
+            "parents_detached": True,
+        }
+        if data.first_name:
+            reactivate_data["first_name"] = data.first_name
+            reactivate_data["last_name"] = data.last_name
+            reactivate_data["full_name"] = f"{data.first_name} {data.last_name}"
+        if dob:
+            reactivate_data["date_of_birth"] = dob
+        if data.gender:
+            reactivate_data["gender"] = data.gender
+        
+        await db.athletes.update_one(
+            {"id": existing_athlete["id"]},
+            {"$set": reactivate_data}
+        )
+        
+        # Create user account for the reactivated athlete
+        user_id = str(ObjectId())
+        user = {
+            "id": user_id,
+            "society_id": society_id,
+            "email": data.email.lower(),
+            "password_hash": hash_password(data.password),
+            "role": UserRole.ATHLETE,
+            "full_name": f"{data.first_name} {data.last_name}",
+            "first_name": data.first_name,
+            "last_name": data.last_name,
+            "phone": data.phone,
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "athlete_id": existing_athlete["id"],
+        }
+        await db.users.insert_one(user)
+        
+        # Update athlete with linked user
+        await db.athletes.update_one(
+            {"id": existing_athlete["id"]},
+            {"$set": {"linked_user_id": user_id}}
+        )
+        
+        token = create_token(user_id)
+        return {"token": token, "user": {"id": user_id, "role": UserRole.ATHLETE, "full_name": user["full_name"], "email": user["email"], "society_id": society_id}, "athlete_id": existing_athlete["id"], "reactivated": True}
     
     # Generate unique athlete code
     # athlete_code is now the qr_identifier (12-char alphanumeric)
@@ -4736,6 +4810,42 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
                 detail=f"Limite di {ATHLETE_LIMIT} atleti raggiunto per questa stagione. Contatta l'amministratore per informazioni sui piani premium."
             )
     
+    # Check if athlete already exists by fiscal code (permanent identity)
+    existing_athlete = await find_existing_athlete_by_fiscal_code(athlete_data.fiscal_code)
+    if existing_athlete:
+        # Reactivate existing athlete - keep same qr_identifier/athlete_code
+        reactivate_data = {
+            "parent_id": current_user["id"],
+            "society_id": society_id,
+            "is_withdrawn": False,
+            "withdrawn_date": None,
+            "withdrawn_reason": None,
+            "status": AthleteStatus.PENDING,
+            "trial_end_date": datetime.utcnow() + timedelta(days=7) if is_trial else datetime.utcnow(),
+            "is_minor": is_minor,
+            "team_id": athlete_data.team_id,
+            "privacy_accepted": privacy_accepted,
+            "privacy_accepted_date": datetime.utcnow() if privacy_accepted else None,
+        }
+        if athlete_data.first_name:
+            reactivate_data["first_name"] = athlete_data.first_name
+            reactivate_data["last_name"] = athlete_data.last_name
+            reactivate_data["full_name"] = athlete_data.full_name
+        if athlete_data.email:
+            reactivate_data["email"] = athlete_data.email
+        if athlete_data.phone_athlete:
+            reactivate_data["phone_athlete"] = athlete_data.phone_athlete
+        if data_password_hash:
+            reactivate_data["data_password_hash"] = data_password_hash
+        
+        await db.athletes.update_one(
+            {"id": existing_athlete["id"]},
+            {"$set": reactivate_data}
+        )
+        
+        updated = await db.athletes.find_one({"id": existing_athlete["id"]}, {"_id": 0})
+        return Athlete(**updated)
+    
     # Generate unique athlete code - now uses qr_identifier
     # Generate 12-char alphanumeric QR identifier
     qr_id = generate_qr_identifier()
@@ -4824,7 +4934,43 @@ async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(
         except:
             pass
     
-    # Generate unique athlete code
+    # Check if athlete already exists by fiscal code (permanent identity)
+    existing_athlete = await find_existing_athlete_by_fiscal_code(data.fiscal_code)
+    if existing_athlete:
+        # Reactivate existing athlete - keep same qr_identifier/athlete_code
+        reactivate_data = {
+            "society_id": society_id,
+            "is_withdrawn": False,
+            "withdrawn_date": None,
+            "withdrawn_reason": None,
+            "status": "active",
+            "is_minor": False,
+            "parents_detached": True,
+        }
+        if data.first_name:
+            reactivate_data["first_name"] = data.first_name
+            reactivate_data["last_name"] = data.last_name
+            reactivate_data["full_name"] = f"{data.first_name} {data.last_name}"
+        if data.email:
+            reactivate_data["email"] = data.email.lower()
+        if data.phone:
+            reactivate_data["phone_athlete"] = data.phone
+        if dob:
+            reactivate_data["date_of_birth"] = dob
+        if data.team_id:
+            reactivate_data["team_id"] = data.team_id
+        reactivate_data["athlete_type"] = data.athlete_type
+        
+        await db.athletes.update_one(
+            {"id": existing_athlete["id"]},
+            {"$set": reactivate_data}
+        )
+        
+        updated = await db.athletes.find_one({"id": existing_athlete["id"]}, {"_id": 0})
+        clean_mongo_doc(updated)
+        return {"message": "Atleta riattivato con successo (codice fiscale già presente)", "athlete_id": existing_athlete["id"], "athlete_code": existing_athlete.get("athlete_code"), "reactivated": True}
+    
+    # Generate unique athlete code - new athlete
     # athlete_code is now the qr_identifier (12-char alphanumeric)
     
     # Create athlete
