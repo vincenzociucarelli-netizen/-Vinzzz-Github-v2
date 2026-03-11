@@ -12826,7 +12826,11 @@ async def sign_gdpr_privacy_document(
             )
             
             doc_title = "Informativa Privacy GDPR - Staff"
-            related_entity_id = None
+            # For athletes signing their own privacy, set related_entity_id to their athlete record
+            if current_user.get("role") == "athlete" and current_user.get("athlete_id"):
+                related_entity_id = current_user["athlete_id"]
+            else:
+                related_entity_id = None
             minor_data = {}
             
         elif request.document_type == "gdpr_minor":
@@ -12951,6 +12955,14 @@ async def sign_gdpr_privacy_document(
     }
     
     await db.signed_documents.insert_one(document_record)
+    
+    # Update athlete record with privacy_pdf_url if this is an athlete signing
+    if current_user.get("role") == "athlete" and current_user.get("athlete_id"):
+        privacy_pdf_url = f"/api/documents/signed/{document_id}/pdf"
+        await db.athletes.update_one(
+            {"id": current_user["athlete_id"]},
+            {"$set": {"privacy_pdf_url": privacy_pdf_url}}
+        )
     
     # Send email to signer
     try:

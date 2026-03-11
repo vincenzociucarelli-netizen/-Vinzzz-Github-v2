@@ -63,9 +63,9 @@ export default function AthleteDocumentsScreen() {
                 }
               });
               const privacyDoc = archiveRes.data?.documents?.find(
-                (d: any) => d.document_type === 'privacy_consent'
+                (d: any) => d.document_type === 'privacy_consent' || d.document_type === 'gdpr_adult'
               ) || archiveRes.data?.find?.(
-                (d: any) => d.document_type === 'privacy_consent'
+                (d: any) => d.document_type === 'privacy_consent' || d.document_type === 'gdpr_adult'
               );
               if (privacyDoc) {
                 privacyPdfUrl = `/api/documents/signed/${privacyDoc.id}/pdf`;
