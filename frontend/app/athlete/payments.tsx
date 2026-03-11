@@ -66,6 +66,7 @@ export default function AthletePayments() {
   const [totalDue, setTotalDue] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
   const [planExpanded, setPlanExpanded] = useState(false);
+  const [paymentsExpanded, setPaymentsExpanded] = useState(false);
 
   const loadData = async () => {
     try {
@@ -584,11 +585,26 @@ export default function AthletePayments() {
 
         {/* Pagamenti Ricevuti - Only show paid payments */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="checkmark-circle" size={20} color="#4CAF50" style={{ marginRight: 8 }} />
-            <Text style={styles.sectionTitle}>Pagamenti Ricevuti</Text>
-          </View>
+          <TouchableOpacity 
+            style={styles.sectionHeader}
+            onPress={() => setPaymentsExpanded(!paymentsExpanded)}
+            data-testid="payments-received-toggle"
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <Ionicons name="checkmark-circle" size={20} color="#4CAF50" style={{ marginRight: 8 }} />
+              <Text style={styles.sectionTitle}>Pagamenti Ricevuti</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {payments.filter(p => isPaid(p)).length > 0 && (
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#4CAF50' }}>
+                  {payments.filter(p => isPaid(p)).length} - {formatCurrency(totalPaid)}
+                </Text>
+              )}
+              <Ionicons name={paymentsExpanded ? "chevron-up" : "chevron-down"} size={18} color="#888" />
+            </View>
+          </TouchableOpacity>
           
+          {paymentsExpanded && (
           <View style={styles.sectionContent}>
             {payments.filter(p => isPaid(p)).length === 0 ? (
               <Text style={styles.emptyText}>Nessun pagamento registrato</Text>
@@ -617,6 +633,7 @@ export default function AthletePayments() {
               ))
             )}
           </View>
+          )}
           
           {/* Residuo Dovuto - Calcolo corretto: quota totale - sconto - pagato */}
           {(() => {
