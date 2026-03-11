@@ -18,6 +18,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../src/components/Icon';
+import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 import api from '../../src/services/api';
 import { Athlete, Team } from '../../src/types';
 import { exportToExcel } from '../../src/utils/excelExport';
@@ -45,6 +46,7 @@ export default function AdminAthletes() {
     fiscal_code: '',
     date_of_birth: '',
     place_of_birth: '',
+    country_of_birth: 'Italia',
     gender: '' as '' | 'M' | 'F',
     email: '',
     phone: '',
@@ -156,14 +158,19 @@ export default function AdminAthletes() {
 
   // Calculate Codice Fiscale
   const handleCalculateCF = async () => {
-    if (!adultForm.first_name || !adultForm.last_name || !adultForm.date_of_birth || !adultForm.place_of_birth || !adultForm.gender) {
-      showAlert('Dati mancanti', 'Compila Nome, Cognome, Sesso, Data e Luogo di Nascita per calcolare il CF');
+    const isEstero = adultForm.country_of_birth && adultForm.country_of_birth !== 'Italia' && adultForm.country_of_birth !== 'ITALIA';
+    
+    if (!adultForm.first_name || !adultForm.last_name || !adultForm.date_of_birth || !adultForm.gender) {
+      showAlert('Dati mancanti', 'Compila Nome, Cognome, Sesso e Data di Nascita per calcolare il CF');
+      return;
+    }
+    
+    if (!isEstero && !adultForm.place_of_birth) {
+      showAlert('Dati mancanti', 'Compila il Luogo di Nascita per calcolare il CF');
       return;
     }
 
     try {
-      // Se nato all'estero, usa il nome dello stato come luogo di nascita
-      const isEstero = adultForm.country_of_birth && adultForm.country_of_birth !== 'Italia' && adultForm.country_of_birth !== 'ITALIA';
       const luogoNascita = isEstero ? adultForm.country_of_birth : adultForm.place_of_birth;
       
       const response = await api.post('/utils/calcola-cf', {
@@ -595,6 +602,27 @@ export default function AdminAthletes() {
                 </View>
               </View>
 
+              <Text style={styles.inputLabel}>Stato di Nascita</Text>
+              <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, marginBottom: 12, backgroundColor: '#fff' }}>
+                <Picker
+                  selectedValue={adultForm.country_of_birth}
+                  onValueChange={(value) => {
+                    const updates: any = { country_of_birth: value };
+                    if (value !== 'Italia' && value !== 'ITALIA') {
+                      updates.place_of_birth = '';
+                    }
+                    setAdultForm({...adultForm, ...updates});
+                  }}
+                  style={{ height: 50, color: '#333' }}
+                >
+                  {COUNTRIES.map((country) => (
+                    <Picker.Item key={country} label={country} value={country} />
+                  ))}
+                </Picker>
+              </View>
+
+              {(!adultForm.country_of_birth || adultForm.country_of_birth === 'Italia' || adultForm.country_of_birth === 'ITALIA') && (
+              <>
               <Text style={styles.inputLabel}>Luogo di Nascita (Comune)</Text>
               <TextInput
                 style={styles.input}
@@ -604,6 +632,8 @@ export default function AdminAthletes() {
                 placeholderTextColor="#999"
                 autoCapitalize="words"
               />
+              </>
+              )}
 
               <View style={styles.cfCalculateRow}>
                 <TextInput
@@ -618,7 +648,7 @@ export default function AdminAthletes() {
                 <TouchableOpacity 
                   style={styles.calculateCfBtn}
                   onPress={handleCalculateCF}
-                  disabled={!adultForm.gender || !adultForm.date_of_birth || !adultForm.place_of_birth || !adultForm.first_name || !adultForm.last_name}
+                  disabled={!adultForm.gender || !adultForm.date_of_birth || !adultForm.first_name || !adultForm.last_name || ((!adultForm.country_of_birth || adultForm.country_of_birth === 'Italia' || adultForm.country_of_birth === 'ITALIA') && !adultForm.place_of_birth)}
                 >
                   <Ionicons name="calculator" size={20} color="#fff" />
                   <Text style={styles.calculateCfBtnText}>Calcola</Text>

@@ -1932,7 +1932,16 @@ export default function AdminAthleteDetail() {
                   <View style={styles.pickerContainer}>
                     <Picker
                       selectedValue={editData.country_of_birth || DEFAULT_COUNTRY}
-                      onValueChange={(value) => setEditData({...editData, country_of_birth: value})}
+                      onValueChange={(value) => {
+                        const updates: any = { country_of_birth: value };
+                        if (value !== 'Italia' && value !== 'ITALIA') {
+                          updates.birth_place = '';
+                          updates.place_of_birth = '';
+                          updates.birth_province = '';
+                          updates.province_of_birth = '';
+                        }
+                        setEditData({...editData, ...updates});
+                      }}
                       style={styles.picker}
                     >
                       {COUNTRIES.map((country) => (
@@ -1940,6 +1949,7 @@ export default function AdminAthleteDetail() {
                       ))}
                     </Picker>
                   </View>
+                  {(!editData.country_of_birth || editData.country_of_birth === 'Italia' || editData.country_of_birth === 'ITALIA') && (
                   <View style={styles.row}>
                     <View style={styles.flex2}>
                       <Text style={styles.inputLabel}>Luogo di nascita</Text>
@@ -1963,6 +1973,7 @@ export default function AdminAthleteDetail() {
                       />
                     </View>
                   </View>
+                  )}
                   <Text style={styles.inputLabel}>Codice Fiscale</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <TextInput
@@ -1981,10 +1992,15 @@ export default function AdminAthleteDetail() {
                       }}
                       onPress={() => {
                         try {
-                          // Parse date of birth
                           const dob = editData.date_of_birth;
-                          if (!dob || !editData.last_name || !editData.first_name || !editData.place_of_birth || !editData.gender) {
-                            Alert.alert('Dati Mancanti', 'Per calcolare il CF servono: Cognome, Nome, Data di Nascita, Luogo di Nascita e Sesso');
+                          const isEstero = editData.country_of_birth && editData.country_of_birth !== 'Italia' && editData.country_of_birth !== 'ITALIA';
+                          
+                          if (!dob || !editData.last_name || !editData.first_name || !editData.gender) {
+                            Alert.alert('Dati Mancanti', 'Per calcolare il CF servono: Cognome, Nome, Data di Nascita e Sesso');
+                            return;
+                          }
+                          if (!isEstero && !editData.place_of_birth && !editData.birth_place) {
+                            Alert.alert('Dati Mancanti', 'Compila il Luogo di Nascita per calcolare il CF');
                             return;
                           }
                           
@@ -2007,6 +2023,9 @@ export default function AdminAthleteDetail() {
                             year = d.getFullYear();
                           }
                           
+                          const birthplaceValue = isEstero 
+                            ? editData.country_of_birth.toUpperCase() 
+                            : (editData.birth_place || editData.place_of_birth || '').toUpperCase();
                           const cf = new CodiceFiscale({
                             name: editData.first_name.toUpperCase(),
                             surname: editData.last_name.toUpperCase(),
@@ -2014,8 +2033,8 @@ export default function AdminAthleteDetail() {
                             day: day,
                             month: month,
                             year: year,
-                            birthplace: editData.place_of_birth.toUpperCase(),
-                            birthplaceProvincia: editData.birth_province?.toUpperCase() || editData.province_of_birth?.toUpperCase() || '',
+                            birthplace: birthplaceValue,
+                            birthplaceProvincia: isEstero ? 'EE' : (editData.birth_province?.toUpperCase() || editData.province_of_birth?.toUpperCase() || ''),
                           });
                           
                           setEditData({...editData, fiscal_code: cf.toString()});
