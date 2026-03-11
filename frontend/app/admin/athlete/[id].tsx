@@ -2236,6 +2236,12 @@ export default function AdminAthleteDetail() {
                 </Text>
               </TouchableOpacity>
               
+              <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginTop: 8, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
+                <Text style={{ fontSize: 12, color: '#E65100', lineHeight: 18 }}>
+                  Copia del certificato dovrà essere consegnata alla Società e/o inviata per e-mail al seguente indirizzo: <Text style={{ fontWeight: 'bold' }}>{societyData?.email || '-'}</Text>
+                </Text>
+              </View>
+              
             </View>
 
       {/* Privacy Status */}
