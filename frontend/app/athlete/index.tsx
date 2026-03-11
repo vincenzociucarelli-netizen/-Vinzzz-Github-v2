@@ -197,290 +197,6 @@ export default function AthleteScreen() {
     return formatted;
   };
 
-  // Handle date input change with auto-formatting
-  const handleDateInputChange = (text: string) => {
-    const formatted = formatDateInput(text);
-    setCertDateInput(formatted);
-    recalculateExpiry(formatted, certValidityMonths);
-  };
-  
-  // Calculate expiry date based on emission date and validity months
-  const recalculateExpiry = (emissionDate: string, months: string) => {
-    const parts = emissionDate.split('/');
-    if (parts.length !== 3 || parts[2].length !== 4) {
-      setCertCalculatedExpiry('');
-      return;
-    }
-    
-    const day = parseInt(parts[0]);
-    const month = parseInt(parts[1]) - 1; // JS months are 0-indexed
-    const year = parseInt(parts[2]);
-    const validityMonths = parseInt(months) || 12;
-    
-    if (isNaN(day) || isNaN(month) || isNaN(year)) {
-      setCertCalculatedExpiry('');
-      return;
-    }
-    
-    // Create emission date
-    const emissionDateObj = new Date(year, month, day);
-    
-    // Add validity months
-    const expiryDate = new Date(emissionDateObj);
-    expiryDate.setMonth(expiryDate.getMonth() + validityMonths);
-    
-    // Subtract 1 day (expiry is the day before anniversary)
-    expiryDate.setDate(expiryDate.getDate() - 1);
-    
-    const expiryStr = `${String(expiryDate.getDate()).padStart(2, '0')}/${String(expiryDate.getMonth() + 1).padStart(2, '0')}/${expiryDate.getFullYear()}`;
-    setCertCalculatedExpiry(expiryStr);
-  };
-  
-  const handleValidityChange = (text: string) => {
-    // Only allow numbers
-    const numOnly = text.replace(/[^0-9]/g, '');
-    setCertValidityMonths(numOnly);
-    recalculateExpiry(certDateInput, numOnly);
-  };
-
-  // Confirm certificate upload with date
-  const confirmCertUpload = async () => {
-    if (!pendingCertBase64) return;
-    
-    // Validate emission date
-    const parts = certDateInput.split('/');
-    if (parts.length !== 3 || parts[2].length !== 4) {
-      if (Platform.OS === 'web') {
-        window.alert('Inserisci una data di emissione valida nel formato GG/MM/AAAA');
-      } else {
-        Alert.alert('Errore', 'Inserisci una data di emissione valida nel formato GG/MM/AAAA');
-      }
-      return;
-    }
-    
-    const day = parseInt(parts[0]);
-    const month = parseInt(parts[1]);
-    const year = parseInt(parts[2]);
-    
-    if (day < 1 || day > 31 || month < 1 || month > 12 || year < 2020 || year > 2100) {
-      if (Platform.OS === 'web') {
-        window.alert('Data di emissione non valida. Verifica giorno, mese e anno.');
-      } else {
-        Alert.alert('Errore', 'Data di emissione non valida. Verifica giorno, mese e anno.');
-      }
-      return;
-    }
-    
-    // Validate calculated expiry
-    if (!certCalculatedExpiry) {
-      if (Platform.OS === 'web') {
-        window.alert('Impossibile calcolare la data di scadenza');
-      }
-      return;
-    }
-    
-    // Use calculated expiry date
-    const expiryParts = certCalculatedExpiry.split('/');
-    const expiryIsoDate = `${expiryParts[2]}-${String(expiryParts[1]).padStart(2, '0')}-${String(expiryParts[0]).padStart(2, '0')}`;
-    
-    setUploadingCert(true);
-    try {
-      await api.post('/athletes/upload-medical-certificate', {
-        certificate_base64: pendingCertBase64,
-        expiry_date: expiryIsoDate
-      });
-      
-      setCertDateModalVisible(false);
-      setPendingCertBase64(null);
-      setCertDateInput('');
-      
-      if (Platform.OS === 'web') {
-        window.alert('Certificato medico caricato con successo!');
-      } else {
-        Alert.alert('Successo', 'Certificato medico caricato con successo!');
-      }
-      
-      loadData();
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      if (Platform.OS === 'web') {
-        window.alert(`Errore: ${error.response?.data?.detail || error.message || 'Errore sconosciuto'}`);
-      } else {
-        Alert.alert('Errore', error.response?.data?.detail || 'Errore nel caricamento');
-      }
-    } finally {
-      setUploadingCert(false);
-    }
-  };
-
-  // Handle certificate upload
-  const handleUploadCertificate = async () => {
-    if (Platform.OS === 'web') {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*,.pdf';
-      input.onchange = async (e: any) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          const base64 = event.target?.result as string;
-          
-          // Store the base64 and open date modal
-          setPendingCertBase64(base64);
-          
-          // Set default emission date: today
-          const today = new Date();
-          const defaultDateStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
-          setCertDateInput(defaultDateStr);
-          setCertValidityMonths('12');
-          
-          // Calculate default expiry: today + 12 months - 1 day
-          const expiryDate = new Date(today);
-          expiryDate.setMonth(expiryDate.getMonth() + 12);
-          expiryDate.setDate(expiryDate.getDate() - 1);
-          const expiryStr = `${String(expiryDate.getDate()).padStart(2, '0')}/${String(expiryDate.getMonth() + 1).padStart(2, '0')}/${expiryDate.getFullYear()}`;
-          setCertCalculatedExpiry(expiryStr);
-          
-          setCertDateModalVisible(true);
-        };
-        
-        reader.onerror = () => {
-          console.error('File read error');
-          if (Platform.OS === 'web') {
-            window.alert('Errore nella lettura del file');
-          }
-        };
-        
-        reader.readAsDataURL(file);
-      };
-      input.click();
-    } else {
-      Alert.alert('Info', 'Usa la versione web per caricare il certificato');
-    }
-  };
-
-  // Certificate viewer modal state
-  const [showCertViewer, setShowCertViewer] = useState(false);
-  const [certViewerUrl, setCertViewerUrl] = useState<string | null>(null);
-
-  // View certificate - open in modal with print/share options
-  const handleViewCertificate = () => {
-    if (!profile?.medical_certificate_url) {
-      if (Platform.OS === 'web') {
-        window.alert('Nessun certificato disponibile');
-      } else {
-        Alert.alert('Info', 'Nessun certificato disponibile');
-      }
-      return;
-    }
-    
-    // Open modal with certificate
-    setCertViewerUrl(profile.medical_certificate_url);
-    setShowCertViewer(true);
-  };
-
-  // Print certificate - downloads the file for printing
-  const handlePrintCertificate = () => {
-    if (!profile?.medical_certificate_url) {
-      if (Platform.OS === 'web') {
-        window.alert('Nessun certificato disponibile');
-      }
-      return;
-    }
-    
-    if (Platform.OS === 'web') {
-      try {
-        const [header, base64Data] = profile.medical_certificate_url.split(',');
-        const mimeMatch = header.match(/data:([^;]+)/);
-        const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
-        
-        // Convert base64 to blob
-        const byteCharacters = atob(base64Data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: mimeType });
-        const blobUrl = window.URL.createObjectURL(blob);
-        
-        // Get file extension
-        const ext = mimeType.startsWith('image/') ? (mimeType.split('/')[1] || 'jpg') : 'pdf';
-        const fileName = `certificato_medico_${profile.full_name?.replace(/\s+/g, '_') || 'atleta'}.${ext}`;
-        
-        // Download the file directly (works on all devices including mobile)
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Clean up
-        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
-        
-        window.alert('Certificato scaricato! Apri il file per stamparlo.');
-      } catch (error) {
-        console.error('Error downloading certificate:', error);
-        window.alert('Impossibile scaricare il certificato');
-      }
-    }
-  };
-
-  // Share certificate
-  const handleShareCertificate = async () => {
-    if (!profile?.medical_certificate_url) {
-      if (Platform.OS === 'web') {
-        window.alert('Nessun certificato disponibile');
-      }
-      return;
-    }
-    
-    if (Platform.OS === 'web') {
-      try {
-        const [header, base64Data] = profile.medical_certificate_url.split(',');
-        const mimeMatch = header.match(/data:([^;]+)/);
-        const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
-        
-        const byteCharacters = atob(base64Data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: mimeType });
-        
-        const fileName = `certificato_medico_${profile.full_name?.replace(/\s+/g, '_') || 'atleta'}.${mimeType.split('/')[1] || 'jpg'}`;
-        const file = new File([blob], fileName, { type: mimeType });
-        
-        // Check if Web Share API is available
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: 'Certificato Medico',
-            text: `Certificato medico di ${profile.full_name || 'Atleta'}`,
-            files: [file]
-          });
-        } else {
-          // Fallback: download the file
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-          window.alert('File scaricato! Puoi condividerlo manualmente.');
-        }
-      } catch (error) {
-        console.error('Error sharing certificate:', error);
-        window.alert('Impossibile condividere il certificato');
-      }
-    }
-  };
-
   const loadData = async () => {
     try {
       // Load athlete profile
@@ -1199,173 +915,6 @@ export default function AthleteScreen() {
         }}
       />
       
-      {/* Certificate Viewer Modal */}
-      <Modal
-        visible={showCertViewer}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowCertViewer(false)}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' }}>
-          {/* Header with close button */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingTop: 40 }}>
-            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Certificato Medico</Text>
-            <TouchableOpacity onPress={() => setShowCertViewer(false)}>
-              <Ionicons name="close" size={28} color="#fff" />
-            </TouchableOpacity>
-          </View>
-          
-          {/* Certificate Image */}
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 }}>
-            {certViewerUrl && (
-              <Image
-                source={{ uri: certViewerUrl }}
-                style={{ width: '100%', height: '100%', resizeMode: 'contain' }}
-              />
-            )}
-          </View>
-          
-          {/* Action buttons */}
-          <View style={{ flexDirection: 'row', padding: 16, gap: 12, paddingBottom: 32 }}>
-            <TouchableOpacity
-              style={{ flex: 1, backgroundColor: '#4CAF50', padding: 14, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}
-              onPress={handlePrintCertificate}
-            >
-              <Ionicons name="print" size={20} color="#fff" />
-              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>Stampa</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ flex: 1, backgroundColor: '#FF9800', padding: 14, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}
-              onPress={handleShareCertificate}
-            >
-              <Ionicons name="share-social" size={20} color="#fff" />
-              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>Condividi</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-      
-      {/* Certificate Date Input Modal */}
-      <Modal
-        visible={certDateModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => {
-          setCertDateModalVisible(false);
-          setPendingCertBase64(null);
-          setCertDateInput('');
-        }}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 }}>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 16, textAlign: 'center' }}>
-              📋 Certificato Medico
-            </Text>
-            
-            {/* Data di Emissione */}
-            <Text style={{ fontSize: 14, color: '#333', marginBottom: 6, fontWeight: '600' }}>
-              Data di Emissione (GG/MM/AAAA)
-            </Text>
-            <TextInput
-              style={{
-                borderWidth: 1,
-                borderColor: '#ddd',
-                borderRadius: 8,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                fontSize: 16,
-                textAlign: 'center',
-                backgroundColor: '#f9f9f9',
-                fontWeight: '600',
-                letterSpacing: 1,
-              }}
-              value={certDateInput}
-              onChangeText={handleDateInputChange}
-              placeholder="28/02/2026"
-              placeholderTextColor="#bbb"
-              keyboardType="numeric"
-              maxLength={10}
-            />
-            
-            {/* Validità */}
-            <Text style={{ fontSize: 14, color: '#333', marginTop: 16, marginBottom: 6, fontWeight: '600' }}>
-              Validità (mesi)
-            </Text>
-            <TextInput
-              style={{
-                borderWidth: 1,
-                borderColor: '#ddd',
-                borderRadius: 8,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                fontSize: 16,
-                textAlign: 'center',
-                backgroundColor: '#f9f9f9',
-                fontWeight: '600',
-                width: 100,
-                alignSelf: 'center',
-              }}
-              value={certValidityMonths}
-              onChangeText={handleValidityChange}
-              placeholder="12"
-              placeholderTextColor="#bbb"
-              keyboardType="numeric"
-              maxLength={2}
-            />
-            
-            {/* Scadenza Calcolata */}
-            {certCalculatedExpiry ? (
-              <View style={{ marginTop: 20, backgroundColor: '#E8F5E9', padding: 16, borderRadius: 8, alignItems: 'center' }}>
-                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>SCADENZA CERTIFICATO</Text>
-                <Text style={{ fontSize: 20, fontWeight: '700', color: '#2E7D32' }}>{certCalculatedExpiry}</Text>
-                <Text style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
-                  (giorno prima dell'anniversario emissione)
-                </Text>
-              </View>
-            ) : null}
-            
-            <Text style={{ fontSize: 11, color: '#999', marginTop: 12, textAlign: 'center' }}>
-              Digita solo i numeri, le barre / vengono inserite automaticamente
-            </Text>
-            
-            <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  backgroundColor: '#f0f0f0',
-                  paddingVertical: 14,
-                  borderRadius: 8,
-                  alignItems: 'center',
-                }}
-                onPress={() => {
-                  setCertDateModalVisible(false);
-                  setPendingCertBase64(null);
-                  setCertDateInput('');
-                }}
-              >
-                <Text style={{ color: '#666', fontWeight: '600', fontSize: 15 }}>Annulla</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  backgroundColor: uploadingCert ? '#ccc' : '#34C759',
-                  paddingVertical: 14,
-                  borderRadius: 8,
-                  alignItems: 'center',
-                }}
-                onPress={confirmCertUpload}
-                disabled={uploadingCert || certDateInput.length < 10}
-              >
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
-                  {uploadingCert ? 'Caricamento...' : 'Conferma'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-      
       {/* QR Code Modal */}
       <Modal
         visible={showQRModal}
@@ -1446,7 +995,7 @@ export default function AthleteScreen() {
       {/* Certificato Medico Card */}
       <View style={styles.certificateCard}>
         <Text style={styles.certificateCardTitle}>Certificato Medico</Text>
-        {(profile as any)?.medical_certificate_url || (profile as any)?.medical_certificate_expiry ? (
+        {(profile as any)?.medical_certificate_expiry ? (
           <View>
             <View style={styles.certificateInfo}>
               <Ionicons
@@ -1463,42 +1012,112 @@ export default function AthleteScreen() {
                 )}
               </View>
             </View>
-            <View style={styles.certificateButtonsRow}>
-              <TouchableOpacity
-                style={styles.certificateViewButton}
-                onPress={handleViewCertificate}
-              >
-                <Ionicons name="eye" size={18} color="#007AFF" />
-                <Text style={styles.certificateViewButtonText}>Visualizza</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.certificateUploadButton}
-                onPress={handleUploadCertificate}
-                disabled={uploadingCert}
-              >
-                <Text style={styles.certificateUploadButtonText}>
-                  {uploadingCert ? 'Caricamento...' : 'Carica Nuovo'}
-                </Text>
-              </TouchableOpacity>
+            {/* Stato verifica admin */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
+              <Ionicons
+                name={(profile as any)?.medical_certificate_verified ? 'shield-checkmark' : 'shield-outline'}
+                size={18}
+                color={(profile as any)?.medical_certificate_verified ? '#4CAF50' : '#FF9500'}
+              />
+              <Text style={{ marginLeft: 8, fontSize: 13, color: (profile as any)?.medical_certificate_verified ? '#4CAF50' : '#FF9500', fontWeight: '600' }}>
+                {(profile as any)?.medical_certificate_verified ? "Verificato dall'admin" : "Non ancora verificato dall'admin"}
+              </Text>
             </View>
           </View>
         ) : (
           <View>
             <View style={styles.warningBox}>
               <Ionicons name="warning" size={24} color="#FF9500" />
-              <Text style={styles.warningText}>Nessun certificato caricato</Text>
+              <Text style={styles.warningText}>Nessun certificato inserito</Text>
             </View>
-            <TouchableOpacity
-              style={styles.certificateMainButton}
-              onPress={handleUploadCertificate}
-              disabled={uploadingCert}
-            >
-              <Text style={styles.certificateMainButtonText}>
-                {uploadingCert ? 'Caricamento...' : 'Carica Certificato'}
-              </Text>
-            </TouchableOpacity>
           </View>
         )}
+        
+        {/* Form inserimento data emissione */}
+        <View style={{ marginTop: 12 }}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 }}>Data di Emissione (GG/MM/AAAA)</Text>
+          <TextInput
+            style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' }}
+            value={certIssueDateAthlete}
+            onChangeText={(text) => {
+              let cleaned = text.replace(/\D/g, '');
+              if (cleaned.length >= 2) cleaned = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
+              if (cleaned.length >= 5) cleaned = cleaned.slice(0, 5) + '/' + cleaned.slice(5);
+              if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+              setCertIssueDateAthlete(cleaned);
+            }}
+            placeholder="01/03/2026"
+            placeholderTextColor="#999"
+            keyboardType="number-pad"
+            maxLength={10}
+          />
+          {certIssueDateAthlete.length === 10 && (
+            <View style={{ backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8, marginTop: 8, alignItems: 'center' }}>
+              <Text style={{ fontSize: 11, color: '#666' }}>SCADENZA CERTIFICATO</Text>
+              <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2E7D32', marginTop: 2 }}>
+                {(() => {
+                  const parts = certIssueDateAthlete.split('/');
+                  if (parts.length === 3) {
+                    const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    d.setFullYear(d.getFullYear() + 1);
+                    d.setDate(d.getDate() - 1);
+                    return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+                  }
+                  return '';
+                })()}
+              </Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={{ backgroundColor: '#007AFF', padding: 12, borderRadius: 8, marginTop: 10, alignItems: 'center', opacity: certIssueDateAthlete.length === 10 ? 1 : 0.5 }}
+            disabled={certIssueDateAthlete.length !== 10 || savingCertAthlete}
+            onPress={async () => {
+              const parts = certIssueDateAthlete.split('/');
+              if (parts.length !== 3) return;
+              const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+              const expiryDate = new Date(issueDate);
+              expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+              expiryDate.setDate(expiryDate.getDate() - 1);
+              setSavingCertAthlete(true);
+              try {
+                await api.post('/certificates/simple', {
+                  athlete_id: profile?.athlete_record_id || profile?.athlete_id || profile?.id,
+                  issue_date: issueDate.toISOString(),
+                  expiry_date: expiryDate.toISOString(),
+                  verified: false,
+                });
+                const res = await api.get('/auth/me');
+                setProfile(res.data);
+                setCertIssueDateAthlete('');
+                if (Platform.OS === 'web') {
+                  window.alert('Certificato salvato con successo!');
+                } else {
+                  Alert.alert('Successo', 'Certificato salvato con successo!');
+                }
+              } catch (error: any) {
+                const msg = error.response?.data?.detail || 'Errore nel salvataggio';
+                if (Platform.OS === 'web') {
+                  window.alert(msg);
+                } else {
+                  Alert.alert('Errore', msg);
+                }
+              } finally {
+                setSavingCertAthlete(false);
+              }
+            }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+              {savingCertAthlete ? 'Salvataggio...' : 'Salva Data Certificato'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* Info consegna/spedizione */}
+        <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginTop: 12, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
+          <Text style={{ fontSize: 12, color: '#E65100', lineHeight: 18 }}>
+            Copia del certificato dovrà essere consegnata alla Società e inviata per e-mail al seguente indirizzo: <Text style={{ fontWeight: 'bold' }}>{(profile as any)?.society_email || societyEmail || '-'}</Text> in formato pdf
+          </Text>
+        </View>
       </View>
 
       {/* Dati Iscrizione Card */}
