@@ -92,6 +92,7 @@ export default function AthleteScreen() {
   const [coachInfo, setCoachInfo] = useState<any>(null);
   const [certIssueDateAthlete, setCertIssueDateAthlete] = useState('');
   const [savingCertAthlete, setSavingCertAthlete] = useState(false);
+  const [showCertForm, setShowCertForm] = useState(false);
   const [societyEmail, setSocietyEmail] = useState('');
   
   // Notifications state
@@ -596,8 +597,19 @@ export default function AthleteScreen() {
             </View>
           )}
           
+          {/* Collapsible: Nuovo certificato */}
+          <TouchableOpacity 
+            style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#eee' }}
+            onPress={() => setShowCertForm(!showCertForm)}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#007AFF' }}>Nuovo certificato</Text>
+            <Ionicons name={showCertForm ? "chevron-up" : "chevron-down"} size={20} color="#007AFF" />
+          </TouchableOpacity>
+          
+          {showCertForm && (
+          <View>
           {/* Form inserimento data emissione */}
-          <View style={{ marginTop: 12 }}>
+          <View style={{ marginTop: 8 }}>
             <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 }}>Data di Emissione (GG/MM/AAAA)</Text>
             <TextInput
               style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' }}
@@ -682,6 +694,8 @@ export default function AthleteScreen() {
               Copia del certificato dovrà essere consegnata alla Società e inviata per e-mail al seguente indirizzo: <Text style={{ fontWeight: 'bold' }}>{(profile as any)?.society_email || societyEmail || '-'}</Text> in formato pdf
             </Text>
           </View>
+          </View>
+          )}
         </View>
 
         {/* Dati Iscrizione Card - for quota athletes */}
@@ -1035,8 +1049,19 @@ export default function AthleteScreen() {
           </View>
         )}
         
+        {/* Collapsible: Nuovo certificato */}
+        <TouchableOpacity 
+          style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#eee' }}
+          onPress={() => setShowCertForm(!showCertForm)}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '600', color: '#007AFF' }}>Nuovo certificato</Text>
+          <Ionicons name={showCertForm ? "chevron-up" : "chevron-down"} size={20} color="#007AFF" />
+        </TouchableOpacity>
+        
+        {showCertForm && (
+        <View>
         {/* Form inserimento data emissione */}
-        <View style={{ marginTop: 12 }}>
+        <View style={{ marginTop: 8 }}>
           <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 }}>Data di Emissione (GG/MM/AAAA)</Text>
           <TextInput
             style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' }}
@@ -1120,6 +1145,8 @@ export default function AthleteScreen() {
             Copia del certificato dovrà essere consegnata alla Società e inviata per e-mail al seguente indirizzo: <Text style={{ fontWeight: 'bold' }}>{(profile as any)?.society_email || societyEmail || '-'}</Text> in formato pdf
           </Text>
         </View>
+        </View>
+        )}
       </View>
 
       {/* Dati Iscrizione Card */}
