@@ -4593,28 +4593,35 @@ async def get_team_payment_info(team_id: str, current_user = Depends(get_current
 
 @api_router.get("/teams/{team_id}/coach")
 async def get_team_coach(team_id: str, current_user = Depends(get_current_user)):
-    """Get the primary coach of a team"""
+    """Get the coaches of a team (using assigned_teams)"""
     team = await db.teams.find_one({"id": team_id})
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     
-    coach_ids = team.get("coach_ids", [])
-    if not coach_ids:
+    # Find coaches assigned to this team via assigned_teams field
+    coaches = await db.users.find({
+        "role": "coach",
+        "assigned_teams": team_id
+    }).to_list(10)
+    
+    if not coaches:
         raise HTTPException(status_code=404, detail="Nessun coach assegnato a questa squadra")
     
-    # Get the first coach
-    coach = await db.coaches.find_one({"id": coach_ids[0]})
-    if not coach:
-        raise HTTPException(status_code=404, detail="Coach non trovato")
+    # Return all coaches
+    result = []
+    for coach in coaches:
+        result.append({
+            "id": coach.get("id"),
+            "full_name": coach.get("full_name"),
+            "profile_photo": coach.get("profile_photo"),
+            "profile_photo_artistic": coach.get("profile_photo_artistic"),
+            "phone": coach.get("phone")
+        })
     
-    clean_mongo_doc(coach)
-    
+    # Return first coach for backward compatibility, but include all
     return {
-        "id": coach.get("id"),
-        "full_name": coach.get("full_name"),
-        "profile_photo": coach.get("profile_photo"),
-        "profile_photo_artistic": coach.get("profile_photo_artistic"),
-        "phone": coach.get("phone")
+        **result[0],
+        "all_coaches": result
     }
 
 @api_router.get("/teams/{team_id}/athletes-count")

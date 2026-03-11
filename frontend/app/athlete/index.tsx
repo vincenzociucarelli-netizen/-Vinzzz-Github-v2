@@ -703,37 +703,39 @@ export default function AthleteScreen() {
           {/* Coach Info for quota athletes */}
           {coachInfo && (
             <View style={styles.coachInfoCard}>
-              <Text style={styles.coachInfoTitle}>👨‍🏫 Coach della Squadra</Text>
-              <View style={styles.coachInfoRow}>
-                {coachInfo.profile_photo_artistic || coachInfo.profile_photo ? (
-                  <Image 
-                    source={{ uri: `data:image/jpeg;base64,${coachInfo.profile_photo_artistic || coachInfo.profile_photo}` }}
-                    style={styles.coachPhoto}
-                  />
-                ) : (
-                  <View style={styles.coachPhotoPlaceholder}>
-                    <Ionicons name="person" size={20} color="#999" />
-                  </View>
-                )}
-                <View style={styles.coachInfoDetails}>
-                  <Text style={styles.coachName}>{coachInfo.full_name}</Text>
-                  {coachInfo.phone && (
-                    <TouchableOpacity 
-                      style={styles.whatsappButton}
-                      onPress={() => {
-                        const phoneNumber = coachInfo.phone.replace(/\s+/g, '').replace(/^\+/, '');
-                        const whatsappUrl = `https://wa.me/${phoneNumber}`;
-                        if (Platform.OS === 'web') {
-                          window.open(whatsappUrl, '_blank');
-                        }
-                      }}
-                    >
-                      <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
-                      <Text style={styles.whatsappButtonText}>Contatta su WhatsApp</Text>
-                    </TouchableOpacity>
+              <Text style={styles.coachInfoTitle}>Coach della Squadra</Text>
+              {(coachInfo.all_coaches || [coachInfo]).map((coach: any, idx: number) => (
+                <View key={coach.id || idx} style={[styles.coachInfoRow, idx > 0 && { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' }]}>
+                  {coach.profile_photo_artistic || coach.profile_photo ? (
+                    <Image 
+                      source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
+                      style={styles.coachPhoto}
+                    />
+                  ) : (
+                    <View style={styles.coachPhotoPlaceholder}>
+                      <Ionicons name="person" size={20} color="#999" />
+                    </View>
                   )}
+                  <View style={styles.coachInfoDetails}>
+                    <Text style={styles.coachName}>{coach.full_name}</Text>
+                    {coach.phone && (
+                      <TouchableOpacity 
+                        style={styles.whatsappButton}
+                        onPress={() => {
+                          const phoneNumber = coach.phone.replace(/\s+/g, '').replace(/^\+/, '');
+                          const whatsappUrl = `https://wa.me/${phoneNumber}`;
+                          if (Platform.OS === 'web') {
+                            window.open(whatsappUrl, '_blank');
+                          }
+                        }}
+                      >
+                        <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                        <Text style={styles.whatsappButtonText}>Contatta su WhatsApp</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
-              </View>
+              ))}
             </View>
           )}
         </View>
@@ -1139,37 +1141,39 @@ export default function AthleteScreen() {
         {/* Coach Info */}
         {coachInfo && (
           <View style={styles.coachInfoCard}>
-            <Text style={styles.coachInfoTitle}>👨‍🏫 Coach della Squadra</Text>
-            <View style={styles.coachInfoRow}>
-              {coachInfo.profile_photo_artistic || coachInfo.profile_photo ? (
-                <Image 
-                  source={{ uri: `data:image/jpeg;base64,${coachInfo.profile_photo_artistic || coachInfo.profile_photo}` }}
-                  style={styles.coachPhoto}
-                />
-              ) : (
-                <View style={styles.coachPhotoPlaceholder}>
-                  <Ionicons name="person" size={20} color="#999" />
-                </View>
-              )}
-              <View style={styles.coachInfoDetails}>
-                <Text style={styles.coachName}>{coachInfo.full_name}</Text>
-                {coachInfo.phone && (
-                  <TouchableOpacity 
-                    style={styles.whatsappButton}
-                    onPress={() => {
-                      const phoneNumber = coachInfo.phone.replace(/\s+/g, '').replace(/^\+/, '');
-                      const whatsappUrl = `https://wa.me/${phoneNumber}`;
-                      if (Platform.OS === 'web') {
-                        window.open(whatsappUrl, '_blank');
-                      }
-                    }}
-                  >
-                    <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
-                    <Text style={styles.whatsappButtonText}>Contatta su WhatsApp</Text>
-                  </TouchableOpacity>
+            <Text style={styles.coachInfoTitle}>Coach della Squadra</Text>
+            {(coachInfo.all_coaches || [coachInfo]).map((coach: any, idx: number) => (
+              <View key={coach.id || idx} style={[styles.coachInfoRow, idx > 0 && { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' }]}>
+                {coach.profile_photo_artistic || coach.profile_photo ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
+                    style={styles.coachPhoto}
+                  />
+                ) : (
+                  <View style={styles.coachPhotoPlaceholder}>
+                    <Ionicons name="person" size={20} color="#999" />
+                  </View>
                 )}
+                <View style={styles.coachInfoDetails}>
+                  <Text style={styles.coachName}>{coach.full_name}</Text>
+                  {coach.phone && (
+                    <TouchableOpacity 
+                      style={styles.whatsappButton}
+                      onPress={() => {
+                        const phoneNumber = coach.phone.replace(/\s+/g, '').replace(/^\+/, '');
+                        const whatsappUrl = `https://wa.me/${phoneNumber}`;
+                        if (Platform.OS === 'web') {
+                          window.open(whatsappUrl, '_blank');
+                        }
+                      }}
+                    >
+                      <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                      <Text style={styles.whatsappButtonText}>Contatta su WhatsApp</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            </View>
+            ))}
           </View>
         )}
       </View>
