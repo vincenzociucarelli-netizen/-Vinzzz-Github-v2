@@ -120,6 +120,7 @@ export default function TeamDetail() {
   const [installment3Date, setInstallment3Date] = useState('');
   const [bankInfo, setBankInfo] = useState('');
   const [paypalEmail, setPaypalEmail] = useState('');
+  const [quoteExpanded, setQuoteExpanded] = useState(false);
   
   // Training sessions (2-10)
   const [trainingSessions, setTrainingSessions] = useState<TrainingSession[]>([
@@ -1242,27 +1243,35 @@ export default function TeamDetail() {
             {/* Sezione Quote - nascosta per Prima Squadra */}
             {!isPrimaSquadra && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Quote</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Quota Totale:</Text>
-                <Text style={styles.value}>{formatCurrency(team.total_amount)}</Text>
-              </View>
+              <TouchableOpacity 
+                onPress={() => setQuoteExpanded(!quoteExpanded)}
+                style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                data-testid="quote-section-toggle"
+              >
+                <Text style={styles.sectionTitle}>Quote</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#333' }}>{formatCurrency(team.total_amount)}</Text>
+                  <Text style={{ fontSize: 12, color: '#888' }}>
+                    ({(team.installments && team.installments.length > 0) ? team.installments.filter((i: any) => parseFloat(i.amount) > 0).length : 3} rate)
+                  </Text>
+                  <Ionicons name={quoteExpanded ? "chevron-up" : "chevron-down"} size={18} color="#888" />
+                </View>
+              </TouchableOpacity>
+              {quoteExpanded && (
+                <View style={{ marginTop: 8 }}>
               {team.installments && team.installments.length > 0 ? (
                 team.installments.map((inst: any, index: number) => {
                   const amount = parseFloat(inst.amount) || 0;
                   if (amount <= 0) return null;
                   return (
-                    <View key={index}>
-                      <View style={styles.infoRow}>
-                        <Text style={styles.label}>{inst.name || `Rata ${index + 1}`}:</Text>
-                        <Text style={styles.value}>{formatCurrency(amount)}</Text>
+                    <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: index < team.installments.length - 1 ? 1 : 0, borderBottomColor: '#f0f0f0' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.label}>{inst.name || `Rata ${index + 1}`}</Text>
+                        {inst.due_date && (
+                          <Text style={{ fontSize: 11, color: '#888' }}>Scad. {new Date(inst.due_date).toLocaleDateString('it-IT')}</Text>
+                        )}
                       </View>
-                      {inst.due_date && (
-                        <View style={styles.infoRow}>
-                          <Text style={[styles.label, { paddingLeft: 12 }]}>Scadenza:</Text>
-                          <Text style={styles.value}>{new Date(inst.due_date).toLocaleDateString('it-IT')}</Text>
-                        </View>
-                      )}
+                      <Text style={styles.value}>{formatCurrency(amount)}</Text>
                     </View>
                   );
                 })
@@ -1293,6 +1302,8 @@ export default function TeamDetail() {
                     </View>
                   )}
                 </>
+              )}
+                </View>
               )}
             </View>
             )}
