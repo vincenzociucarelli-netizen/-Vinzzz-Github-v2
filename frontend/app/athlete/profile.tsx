@@ -108,10 +108,11 @@ export default function AthleteProfile() {
   
   // Change Password state
   const [showChangePassword, setShowChangePassword] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // Document images
   const [docFrontImage, setDocFrontImage] = useState(null);
@@ -636,11 +637,6 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
   };
 
   const handleChangePassword = async () => {
-    // Validations
-    if (!currentPassword) {
-      showAlert('Errore', 'Inserisci la password attuale');
-      return;
-    }
     if (!newPassword) {
       showAlert('Errore', 'Inserisci la nuova password');
       return;
@@ -653,23 +649,18 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
       showAlert('Errore', 'Le nuove password non coincidono');
       return;
     }
-    if (currentPassword === newPassword) {
-      showAlert('Errore', 'La nuova password deve essere diversa da quella attuale');
-      return;
-    }
 
     setChangingPassword(true);
     try {
       await api.post('/auth/change-password', {
-        current_password: currentPassword,
         new_password: newPassword,
       });
       showAlert('Successo', 'Password cambiata con successo!');
-      // Reset form
-      setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
       setShowChangePassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
     } catch (error) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il cambio password');
     } finally {
@@ -805,42 +796,49 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             <Text style={styles.cardTitle}>🔐 Cambia Password</Text>
             <View style={styles.changePasswordForm}>
               <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Password Attuale</Text>
-                <TextInput
-                  style={styles.input}
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                  secureTextEntry
-                  placeholder="Inserisci password attuale"
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                />
-              </View>
-              
-              <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>Nuova Password</Text>
-                <TextInput
-                  style={styles.input}
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  secureTextEntry
-                  placeholder="Minimo 6 caratteri"
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                />
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TextInput
+                    style={[styles.input, { flex: 1 }]}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    secureTextEntry={!showNewPassword}
+                    placeholder="Minimo 6 caratteri"
+                    placeholderTextColor="#999"
+                    autoCapitalize="none"
+                    data-testid="new-password-input"
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowNewPassword(!showNewPassword)}
+                    style={{ padding: 10, marginLeft: -40 }}
+                    data-testid="toggle-new-password"
+                  >
+                    <Ionicons name={showNewPassword ? "eye-off" : "eye"} size={22} color="#666" />
+                  </TouchableOpacity>
+                </View>
               </View>
               
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>Conferma Nuova Password</Text>
-                <TextInput
-                  style={styles.input}
-                  value={confirmNewPassword}
-                  onChangeText={setConfirmNewPassword}
-                  secureTextEntry
-                  placeholder="Ripeti la nuova password"
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                />
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TextInput
+                    style={[styles.input, { flex: 1 }]}
+                    value={confirmNewPassword}
+                    onChangeText={setConfirmNewPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    placeholder="Ripeti la nuova password"
+                    placeholderTextColor="#999"
+                    autoCapitalize="none"
+                    data-testid="confirm-password-input"
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{ padding: 10, marginLeft: -40 }}
+                    data-testid="toggle-confirm-password"
+                  >
+                    <Ionicons name={showConfirmPassword ? "eye-off" : "eye"} size={22} color="#666" />
+                  </TouchableOpacity>
+                </View>
               </View>
               
               <View style={styles.changePasswordButtonsRow}>
@@ -848,9 +846,10 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   style={styles.cancelPasswordButton}
                   onPress={() => {
                     setShowChangePassword(false);
-                    setCurrentPassword('');
                     setNewPassword('');
                     setConfirmNewPassword('');
+                    setShowNewPassword(false);
+                    setShowConfirmPassword(false);
                   }}
                 >
                   <Text style={styles.cancelPasswordButtonText}>Annulla</Text>
@@ -859,6 +858,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   style={[styles.changePasswordButton, changingPassword && styles.buttonDisabled]}
                   onPress={handleChangePassword}
                   disabled={changingPassword}
+                  data-testid="change-password-submit"
                 >
                   <Ionicons name="key" size={18} color="#fff" />
                   <Text style={styles.changePasswordButtonText}>
@@ -880,7 +880,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           </View>
         </View>
 
-        {/* Personal Data - Collapsible */}
+        {/* Personal & Fiscal Data - Unified Card */}
         <View style={styles.card}>
           <TouchableOpacity 
             style={styles.collapsibleHeader}
@@ -888,7 +888,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           >
             <Text style={styles.cardTitle}>📋 Dati Anagrafici</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, anagrafici: true})); setEditing(true); }}>
+              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, anagrafici: true, fiscali: true})); setEditing(true); }}>
                 <Ionicons name="create-outline" size={20} color="#007AFF" />
               </TouchableOpacity>
               <Ionicons 
@@ -943,19 +943,17 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               {renderField('Telefono', profileData.phone, 'phone')}
             </View>
           )}
-        </View>
 
-        {/* Fiscal Data - Collapsible */}
-        <View style={styles.card}>
+          {/* Divider between sections */}
+          <View style={{ height: 1, backgroundColor: '#E5E5E5', marginVertical: 8 }} />
+
+          {/* Fiscal Data - Same Card */}
           <TouchableOpacity 
             style={styles.collapsibleHeader}
             onPress={() => toggleSection('fiscali')}
           >
             <Text style={styles.cardTitle}>💼 Dati Fiscali</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, fiscali: true})); setEditing(true); }}>
-                <Ionicons name="create-outline" size={20} color="#007AFF" />
-              </TouchableOpacity>
               <Ionicons 
                 name={sectionsExpanded.fiscali ? "chevron-up" : "chevron-down"} 
                 size={24} 

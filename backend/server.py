@@ -2108,7 +2108,7 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
+    current_password: Optional[str] = None
     new_password: str
 
 @api_router.post("/auth/forgot-password")
@@ -2198,23 +2198,25 @@ async def reset_password(data: ResetPasswordRequest):
 
 @api_router.post("/auth/change-password")
 async def change_password(data: ChangePasswordRequest, current_user = Depends(get_current_user)):
-    """Change password for logged-in user"""
+    """Change password for logged-in user. Athletes don't need current password."""
     # Get full user data
     user = await db.users.find_one({"id": current_user["id"]})
     
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
     
-    # Verify current password
-    if not verify_password(data.current_password, user["password_hash"]):
-        raise HTTPException(status_code=400, detail="Password attuale non corretta")
+    # For non-athlete roles, verify current password if provided
+    if current_user["role"] != "athlete":
+        if not data.current_password:
+            raise HTTPException(status_code=400, detail="Password attuale richiesta")
+        if not verify_password(data.current_password, user["password_hash"]):
+            raise HTTPException(status_code=400, detail="Password attuale non corretta")
+        if data.current_password == data.new_password:
+            raise HTTPException(status_code=400, detail="La nuova password deve essere diversa da quella attuale")
     
     # Validate new password
     if len(data.new_password) < 6:
         raise HTTPException(status_code=400, detail="La nuova password deve avere almeno 6 caratteri")
-    
-    if data.current_password == data.new_password:
-        raise HTTPException(status_code=400, detail="La nuova password deve essere diversa da quella attuale")
     
     # Update password
     new_password_hash = hash_password(data.new_password)

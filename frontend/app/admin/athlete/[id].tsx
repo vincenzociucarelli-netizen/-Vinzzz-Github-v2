@@ -3111,7 +3111,7 @@ export default function AdminAthleteDetail() {
                 if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
                 setCertIssueDate(cleaned);
               }}
-              placeholder="01/03/2025"
+              placeholder="gg/mm/aaaa"
               placeholderTextColor="#999"
               keyboardType="number-pad"
               maxLength={10}

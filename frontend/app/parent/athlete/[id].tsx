@@ -1337,7 +1337,7 @@ export default function AthleteDetail() {
                 if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
                 setCertIssueDateParent(cleaned);
               }}
-              placeholder="01/03/2026"
+              placeholder="gg/mm/aaaa"
               placeholderTextColor="#999"
               keyboardType="number-pad"
               maxLength={10}

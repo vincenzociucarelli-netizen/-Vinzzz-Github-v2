@@ -87,6 +87,9 @@ Sistema gestionale per società sportiva che include:
 - [x] **Unificazione salvataggio profilo**: Anagrafica e dati fiscali salvati con unico pulsante
 - [x] **Fix codice fiscale estero**: Calcolo corretto per atleti nati all'estero
 - [x] **Preparazione account test** (11 Mar 2026): Reset "Luna Nuova" a stato PROVA + creazione utente adulto "Paolo Rinuncia"
+- [x] **Placeholder certificato**: Cambiato da data reale a "gg/mm/aaaa" in tutti i file (atleta, admin, genitore)
+- [x] **Unificazione sezioni profilo**: Dati Anagrafici e Dati Fiscali nella stessa card con unico salvataggio
+- [x] **Cambio password atleta**: Rimosso "Password Attuale", aggiunto toggle mostra/nascondi password
 
 ## P1 - Media Priorità
 - [x] **Squadre Assegnate Coach**: Sezione con link alle pagine delle squadre nella vista coach compensation

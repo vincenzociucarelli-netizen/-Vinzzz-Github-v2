@@ -609,7 +609,7 @@ export default function AthleteScreen() {
                 if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
                 setCertIssueDateAthlete(cleaned);
               }}
-              placeholder="01/03/2026"
+              placeholder="gg/mm/aaaa"
               placeholderTextColor="#999"
               keyboardType="number-pad"
               maxLength={10}
@@ -1046,7 +1046,7 @@ export default function AthleteScreen() {
               if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
               setCertIssueDateAthlete(cleaned);
             }}
-            placeholder="01/03/2026"
+            placeholder="gg/mm/aaaa"
             placeholderTextColor="#999"
             keyboardType="number-pad"
             maxLength={10}
