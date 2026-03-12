@@ -150,9 +150,11 @@ export default function TeamAthletes() {
 
     setSavingCert(true);
     try {
-      await api.patch(`/athletes/${athleteId}`, {
-        medical_certificate_date: issueDate.toISOString(),
-        medical_certificate_expiry: expiryDate.toISOString(),
+      await api.post('/certificates/simple', {
+        athlete_id: athleteId,
+        issue_date: issueDate.toISOString(),
+        expiry_date: expiryDate.toISOString(),
+        verified: false,
       });
       const msg = `Certificato salvato! Scadenza: ${String(expiryDate.getDate()).padStart(2,'0')}/${String(expiryDate.getMonth()+1).padStart(2,'0')}/${expiryDate.getFullYear()}`;
       Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Successo', msg);
