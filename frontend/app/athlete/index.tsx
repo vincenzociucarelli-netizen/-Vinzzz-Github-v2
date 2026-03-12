@@ -387,6 +387,12 @@ export default function AthleteScreen() {
               <Text style={{ fontSize: 14, color: '#666', marginTop: 2 }}>
                 Squadra: <Text style={{ fontWeight: '600', color: '#E53935' }}>{profile?.team_name || 'Non assegnata'}</Text>
               </Text>
+              {profile?.email && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                  <Ionicons name="mail" size={14} color="#999" />
+                  <Text style={{ marginLeft: 4, color: '#999', fontSize: 12 }}>{profile.email}</Text>
+                </View>
+              )}
             </View>
             <View style={{ 
               backgroundColor: profile?.status === 'trial' ? '#FFF3E0' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#E3F2FD' : '#E8F5E9', 
@@ -502,20 +508,6 @@ export default function AthleteScreen() {
             <Text style={styles.menuItemSubtitle}>Visualizza le tue rate e pagamenti</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#FFA000" />
-        </TouchableOpacity>
-        
-        {/* Dati Personali */}
-        <TouchableOpacity 
-          style={styles.menuItem}
-          onPress={() => router.push('/athlete/profile')}
-          data-testid="personal-data-menu-item"
-        >
-          <Ionicons name="person" size={22} color="#007AFF" />
-          <View style={styles.menuItemContent}>
-            <Text style={styles.menuItemTitle}>Dati Personali</Text>
-            <Text style={styles.menuItemSubtitle}>Visualizza e modifica i tuoi dati</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
         
         {/* Coach della Squadra - senza wrapper "Dati Iscrizione" */}
@@ -715,6 +707,20 @@ export default function AthleteScreen() {
           )}
         </View>
 
+        {/* Dati Personali - sotto certificato medico */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push('/athlete/profile')}
+          data-testid="personal-data-menu-item"
+        >
+          <Ionicons name="person" size={22} color="#007AFF" />
+          <View style={styles.menuItemContent}>
+            <Text style={styles.menuItemTitle}>Dati Personali</Text>
+            <Text style={styles.menuItemSubtitle}>Visualizza e modifica i tuoi dati</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+
         {/* Documenti */}
         <TouchableOpacity 
           style={styles.menuItem}
@@ -748,24 +754,6 @@ export default function AthleteScreen() {
             <Ionicons name="chevron-forward" size={20} color="#FF9800" />
           )}
         </View>
-        
-        {/* Contact Info */}
-        {(profile?.email || profile?.phone_athlete) && (
-          <View style={[styles.menuItem, { flexDirection: 'row', justifyContent: 'space-between' }]}>
-            {profile?.email && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                <Ionicons name="mail" size={18} color="#666" />
-                <Text style={{ marginLeft: 6, color: '#666', fontSize: 13 }}>{profile.email}</Text>
-              </View>
-            )}
-            {profile?.phone_athlete && (
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="call" size={18} color="#666" />
-                <Text style={{ marginLeft: 6, color: '#666', fontSize: 13 }}>{profile.phone_athlete}</Text>
-              </View>
-            )}
-          </View>
-        )}
         
         {/* Spacer per permettere scroll completo */}
         <View style={{ height: 100 }} />
