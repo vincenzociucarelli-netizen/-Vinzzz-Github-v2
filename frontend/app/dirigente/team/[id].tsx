@@ -3,10 +3,13 @@ import {
   View,
   Text,
   TouchableOpacity,
+  TextInput,
   StyleSheet,
   ScrollView,
   RefreshControl,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
@@ -20,6 +23,7 @@ interface Athlete {
   team_id: string;
   status: string;
   medical_certificate_expiry?: string;
+  medical_certificate_date?: string;
   is_withdrawn?: boolean;
 }
 
@@ -35,6 +39,10 @@ export default function TeamAthletes() {
   const [athletes, setAthletes] = useState<AthleteWithCert[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedAthleteId, setExpandedAthleteId] = useState<string | null>(null);
+  const [certDate, setCertDate] = useState('');
+  const [certMonths, setCertMonths] = useState('12');
+  const [savingCert, setSavingCert] = useState(false);
 
   const loadAthletes = async () => {
     try {
@@ -58,7 +66,6 @@ export default function TeamAthletes() {
         };
       });
       
-      // Sort: active first, then withdrawn
       processedAthletes.sort((a: AthleteWithCert, b: AthleteWithCert) => {
         if (a.is_withdrawn && !b.is_withdrawn) return 1;
         if (!a.is_withdrawn && b.is_withdrawn) return -1;
@@ -94,6 +101,75 @@ export default function TeamAthletes() {
       return { color: '#FF9500', text: `Scade tra ${athlete.days_to_expiry}g`, icon: 'warning' };
     }
     return { color: '#34C759', text: 'Valido', icon: 'checkmark-circle' };
+  };
+
+  const formatDateInput = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return digits.slice(0,2) + '/' + digits.slice(2);
+    return digits.slice(0,2) + '/' + digits.slice(2,4) + '/' + digits.slice(4,8);
+  };
+
+  const handleExpandAthlete = (athlete: AthleteWithCert) => {
+    if (expandedAthleteId === athlete.id) {
+      setExpandedAthleteId(null);
+      return;
+    }
+    setExpandedAthleteId(athlete.id);
+    // Pre-fill certificate date if existing
+    if (athlete.medical_certificate_date) {
+      try {
+        const d = new Date(athlete.medical_certificate_date);
+        setCertDate(`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`);
+      } catch { setCertDate(''); }
+    } else {
+      setCertDate('');
+    }
+    setCertMonths('12');
+  };
+
+  const handleSaveCert = async (athleteId: string) => {
+    if (!certDate || certDate.length < 10) {
+      const msg = 'Inserisci la data del certificato (GG/MM/AAAA)';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Errore', msg);
+      return;
+    }
+    const parts = certDate.split('/');
+    if (parts.length !== 3) return;
+    const [dd, mm, yyyy] = parts;
+    const issueDate = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd));
+    if (isNaN(issueDate.getTime())) {
+      const msg = 'Data non valida';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Errore', msg);
+      return;
+    }
+    const months = parseInt(certMonths) || 12;
+    const expiryDate = new Date(issueDate);
+    expiryDate.setMonth(expiryDate.getMonth() + months);
+
+    setSavingCert(true);
+    try {
+      await api.patch(`/athletes/${athleteId}`, {
+        medical_certificate_date: issueDate.toISOString(),
+        medical_certificate_expiry: expiryDate.toISOString(),
+      });
+      const msg = `Certificato salvato! Scadenza: ${String(expiryDate.getDate()).padStart(2,'0')}/${String(expiryDate.getMonth()+1).padStart(2,'0')}/${expiryDate.getFullYear()}`;
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Successo', msg);
+      setExpandedAthleteId(null);
+      await loadAthletes();
+    } catch (error: any) {
+      const msg = error.response?.data?.detail || 'Errore nel salvataggio';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Errore', msg);
+    } finally {
+      setSavingCert(false);
+    }
+  };
+
+  const formatExpiryDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    try {
+      return format(new Date(dateStr), 'dd/MM/yyyy', { locale: it });
+    } catch { return dateStr; }
   };
 
   const activeAthletes = athletes.filter(a => !a.is_withdrawn);
@@ -157,24 +233,83 @@ export default function TeamAthletes() {
                 <Text style={styles.sectionTitle}>Atleti Attivi ({activeAthletes.length})</Text>
                 {activeAthletes.map((athlete) => {
                   const certStatus = getCertificateStatus(athlete);
+                  const isExpanded = expandedAthleteId === athlete.id;
                   return (
-                    <View key={athlete.id} style={styles.athleteCard}>
-                      <View style={styles.athleteInfo}>
-                        <Text style={styles.athleteName}>{athlete.full_name}</Text>
-                        <View style={styles.athleteMeta}>
-                          <View style={[styles.statusBadge, { backgroundColor: athlete.status === 'trial' ? '#FF9500' : '#34C759' }]}>
-                            <Text style={styles.statusBadgeText}>
-                              {athlete.status === 'trial' ? 'IN PROVA' : 'ATTIVO'}
-                            </Text>
+                    <View key={athlete.id} style={{ marginBottom: 8 }}>
+                      <TouchableOpacity 
+                        style={styles.athleteCard}
+                        onPress={() => handleExpandAthlete(athlete)}
+                        data-testid={`athlete-card-${athlete.id}`}
+                      >
+                        <View style={styles.athleteInfo}>
+                          <Text style={styles.athleteName}>{athlete.full_name}</Text>
+                          <View style={styles.athleteMeta}>
+                            <View style={[styles.statusBadge, { backgroundColor: athlete.status === 'trial' ? '#FF9500' : '#34C759' }]}>
+                              <Text style={styles.statusBadgeText}>
+                                {athlete.status === 'trial' ? 'IN PROVA' : 'ATTIVO'}
+                              </Text>
+                            </View>
+                            {athlete.certificate_expiry && (
+                              <Text style={{ fontSize: 11, color: '#999' }}>
+                                Scad: {formatExpiryDate(athlete.certificate_expiry)}
+                              </Text>
+                            )}
                           </View>
                         </View>
-                      </View>
-                      <View style={styles.certContainer}>
-                        <Ionicons name={certStatus.icon as any} size={18} color={certStatus.color} />
-                        <Text style={[styles.certText, { color: certStatus.color }]}>
-                          {certStatus.text}
-                        </Text>
-                      </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <View style={styles.certContainer}>
+                            <Ionicons name={certStatus.icon as any} size={18} color={certStatus.color} />
+                            <Text style={[styles.certText, { color: certStatus.color }]}>
+                              {certStatus.text}
+                            </Text>
+                          </View>
+                          <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={18} color="#999" />
+                        </View>
+                      </TouchableOpacity>
+                      {isExpanded && (
+                        <View style={styles.certForm} data-testid={`cert-form-${athlete.id}`}>
+                          <Text style={styles.certFormTitle}>Certificato Medico</Text>
+                          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-end' }}>
+                            <View style={{ flex: 2 }}>
+                              <Text style={styles.certFormLabel}>Data emissione</Text>
+                              <TextInput
+                                style={styles.certFormInput}
+                                value={certDate}
+                                onChangeText={(v) => setCertDate(formatDateInput(v))}
+                                placeholder="GG/MM/AAAA"
+                                placeholderTextColor="#999"
+                                maxLength={10}
+                                keyboardType="numeric"
+                                data-testid={`cert-date-${athlete.id}`}
+                              />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.certFormLabel}>Validità (mesi)</Text>
+                              <TextInput
+                                style={styles.certFormInput}
+                                value={certMonths}
+                                onChangeText={setCertMonths}
+                                placeholder="12"
+                                placeholderTextColor="#999"
+                                keyboardType="numeric"
+                                data-testid={`cert-months-${athlete.id}`}
+                              />
+                            </View>
+                            <TouchableOpacity
+                              style={[styles.certFormBtn, savingCert && { opacity: 0.6 }]}
+                              onPress={() => handleSaveCert(athlete.id)}
+                              disabled={savingCert}
+                              data-testid={`cert-save-${athlete.id}`}
+                            >
+                              {savingCert ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                              ) : (
+                                <Ionicons name="checkmark" size={20} color="#fff" />
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
                     </View>
                   );
                 })}
@@ -363,5 +498,50 @@ const styles = StyleSheet.create({
   certText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  certForm: {
+    backgroundColor: '#fff',
+    borderRadius: 0,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    padding: 14,
+    marginTop: -4,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  certFormTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 10,
+  },
+  certFormLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 4,
+  },
+  certFormInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 14,
+    backgroundColor: '#f9f9f9',
+    color: '#333',
+  },
+  certFormBtn: {
+    backgroundColor: '#34C759',
+    borderRadius: 8,
+    padding: 10,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    width: 44,
+    height: 44,
   },
 });

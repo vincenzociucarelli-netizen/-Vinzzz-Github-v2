@@ -850,6 +850,9 @@ class AthleteUpdate(BaseModel):
     athlete_characteristics: Optional[List[str]] = None
     second_parent_email: Optional[str] = None  # Email del secondo genitore
     athlete_code: Optional[str] = None  # Codice atleta per import pagamenti
+    # Certificato medico
+    medical_certificate_date: Optional[str] = None
+    medical_certificate_expiry: Optional[str] = None
 
 class Certificate(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
@@ -6351,6 +6354,25 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
             update_dict["withdrawn_date"] = datetime.utcnow()
             if update_data.withdrawn_reason:
                 update_dict["withdrawn_reason"] = update_data.withdrawn_reason
+    
+    # Certificato medico (admin, viewer/dirigente, athlete)
+    if update_data.medical_certificate_date is not None:
+        try:
+            dt = datetime.fromisoformat(update_data.medical_certificate_date.replace('Z', '+00:00'))
+            update_dict["medical_certificate_date"] = dt.isoformat()
+        except:
+            update_dict["medical_certificate_date"] = update_data.medical_certificate_date
+        now = datetime.utcnow()
+        update_dict["medical_certificate_updated_by"] = current_user["id"]
+        update_dict["medical_certificate_updated_by_name"] = current_user.get("full_name", "")
+        update_dict["medical_certificate_updated_by_role"] = current_user.get("role", "")
+        update_dict["medical_certificate_updated_at"] = now.isoformat()
+    if update_data.medical_certificate_expiry is not None:
+        try:
+            dt = datetime.fromisoformat(update_data.medical_certificate_expiry.replace('Z', '+00:00'))
+            update_dict["medical_certificate_expiry"] = dt.isoformat()
+        except:
+            update_dict["medical_certificate_expiry"] = update_data.medical_certificate_expiry
     
     if update_dict:
         await db.athletes.update_one({"id": athlete_id}, {"$set": update_dict})
