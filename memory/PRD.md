@@ -24,6 +24,16 @@ Sistema gestionale per società sportiva che include:
 
 ## What's Been Implemented
 
+### Session 12 March 2026
+- **Flusso Atleta Minorenne Completo**: Implementato ciclo di vita completo per atleti minorenni:
+  - Backend: `POST /api/athletes/minor` crea atleta con `is_minor=True` e link al genitore (crea account genitore se non esiste)
+  - Backend: `POST /api/athletes/{id}/detach-parents` richiede email e password per creare account indipendente (solo 18+)
+  - Admin UI: Pulsante "Minorenne" nella lista atleti apre modal con campi: Nome, Cognome, Data nascita, Sesso, Squadra, Telefono, Email genitore, Password dati
+  - Admin UI: Pulsante "Sgancia Genitori" nella pagina dettaglio atleta ora apre modal con campi Email e Password (prima era semplice conferma)
+  - Atleta UI: Modalità sola lettura per minorenni - badge "Minorenne", banner "Account in sola lettura", form certificato nascosto, sezione privacy nascosta, azioni trial nascoste
+- **Fix bug teams.map()**: Corretto `teams.map()` → `Object.values(teams).map()` nel modal minorenne (teams è oggetto, non array)
+- **Privacy Policy V2** (sessione precedente): Aggiornati testi privacy Staff e Minori con documenti forniti dall'utente
+
 ### Session 11 March 2026
 - **Reset account test**: Luna Nuova resettata a stato PROVA, creato utente adulto "Paolo Rinuncia"
 - **Placeholder certificato**: Cambiato da data reale a "gg/mm/aaaa" su tutte le pagine (atleta, admin, genitore)
@@ -122,12 +132,14 @@ Sistema gestionale per società sportiva che include:
 
 ## P1 - Media Priorità
 - [x] **Squadre Assegnate Coach**: Sezione con link alle pagine delle squadre nella vista coach compensation
+- [x] **Flusso Atleta Minorenne**: Creazione minorenne da admin, link genitore, sgancio genitori, vista read-only
 - [ ] Test flusso completo pagamenti per atleta adulto (18+)
-- [ ] Implementazione flusso Minorenni (copia adulto + link genitore obbligatorio)
 - [ ] Test flusso firma privacy con account preparati
 - [ ] Test scansione QR code, upload pagamenti/partite, import automatico partite
+- [ ] Regression test: impostazioni squadra, importazione calendario, template partite/pagamenti
 
 ## P2 - Bassa Priorità
+- [ ] Notifiche push per scadenze pagamenti/certificati (rinviate a settembre)
 - [ ] Verifica flusso cancellazione utente (record `users` rimane dopo delete atleta)
 - [ ] UI compensi per atleta a contratto
 - [ ] Separazione ruoli Admin/Dirigente
@@ -152,3 +164,5 @@ Sistema gestionale per società sportiva che include:
 - Admin: pallavoloperugia@gmail.com / password
 - Luna Nuova: luna@18piu.com / password (stato: PROVA)
 - Paolo Rinuncia: test.rinuncia@test.com / password123 (stato: PROVA)
+- Genitore test: genitore.test@example.com / genitore.test2026 (genitore di MARCO VERDI)
+- Atleta minorenne test: MARCO VERDI (id: 69b26bc51b2bbcb74f0e3c4f, is_minor: true)
