@@ -11460,9 +11460,9 @@ def generate_gdpr_adult_privacy_pdf(
     # ==================== PAGE 1 ====================
     # Header
     c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(width/2, height - 2*cm, "INFORMATIVA PRIVACY STAFF")
+    c.drawCentredString(width/2, height - 2*cm, "INFORMATIVA PRIVACY PER STAFF")
     c.setFont("Helvetica", 10)
-    c.drawCentredString(width/2, height - 2.6*cm, "ai sensi del Regolamento UE 2016/679 (GDPR)")
+    c.drawCentredString(width/2, height - 2.6*cm, "(ai sensi del Regolamento UE 2016/679 - GDPR)")
     
     y = height - 3.5*cm
     max_w = width - 4*cm
@@ -11477,14 +11477,17 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2.3*cm, y - 0.6*cm, f"Società: {nome_legale}")
     c.setFont("Helvetica", 9)
     c.drawString(2.3*cm, y - 1.15*cm, f"Sede: {society_address}")
-    c.drawString(2.3*cm, y - 1.65*cm, f"C.F.: {society_cf_piva}  |  Email: {society_email}")
+    c.drawString(2.3*cm, y - 1.65*cm, f"C.F./P.IVA: {society_cf_piva}  |  Email: {society_email}")
     
     y -= 3.2*cm
     
     # Intro
     c.setFont("Helvetica", 10)
-    intro_text = f"Gentile membro dello Staff, La presente informativa descrive le modalità di trattamento dei dati personali da parte di {nome_legale}."
+    intro_text = f"Gentile Collaboratore / Membro dello Staff, la presente informativa descrive le modalità di trattamento dei dati personali da parte della società sportiva {nome_legale}."
     y = draw_wrapped_text(c, intro_text, 2*cm, y, max_w)
+    y -= 0.3*cm
+    titolare_intro = "Il Titolare del trattamento dei dati personali è la società sportiva sopra indicata nella persona del proprio legale rappresentante pro tempore."
+    y = draw_wrapped_text(c, titolare_intro, 2*cm, y, max_w)
     
     y -= 0.5*cm
     
@@ -11493,7 +11496,7 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2*cm, y, "1. TITOLARE DEL TRATTAMENTO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    titolare_text = f"Il Titolare del trattamento è {nome_legale}, con sede in {society_address} – email: {society_email}."
+    titolare_text = f"Il Titolare del trattamento dei dati personali è {nome_legale}, con sede in {society_address}. Per qualsiasi richiesta relativa al trattamento dei dati è possibile contattare la Società tramite i recapiti indicati."
     y = draw_wrapped_text(c, titolare_text, 2*cm, y, max_w)
     
     y -= 0.3*cm
@@ -11503,21 +11506,8 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2*cm, y, "2. FINALITÀ E BASE GIURIDICA DEL TRATTAMENTO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    c.drawString(2*cm, y, "I dati personali saranno trattati per le seguenti finalità:")
-    y -= 0.45*cm
-    finalita = [
-        "a) Gestione del rapporto associativo/collaborativo con la Società;",
-        "b) Adempimento degli obblighi di legge, fiscali e contabili;",
-        "c) Comunicazione con gli enti sportivi di riferimento (es. Federazioni, EPS, RAS);",
-        "d) Gestione delle attività sportive, organizzative e amministrative della Società."
-    ]
-    for f in finalita:
-        c.drawString(2.3*cm, y, f)
-        y -= 0.45*cm
-    
-    y -= 0.2*cm
-    base_giuridica = "La base giuridica del trattamento è l'esecuzione del rapporto collaborativo e l'adempimento di obblighi di legge."
-    y = draw_wrapped_text(c, base_giuridica, 2*cm, y, max_w)
+    finalita_text = "I dati personali saranno trattati per le seguenti finalità: gestione dei rapporti sportivi, associativi o collaborativi con la Società; adempimenti degli obblighi di legge, fiscali e contabili; comunicazioni con enti sportivi di riferimento (Federazioni, EPS, RAS); gestione delle attività sportive, organizzative e amministrative della Società; gestione dei compensi sportivi dilettantistici, ove previsti. La base giuridica del trattamento è l'esecuzione del rapporto associativo o collaborativo e l'adempimento degli obblighi previsti dalla normativa vigente."
+    y = draw_wrapped_text(c, finalita_text, 2*cm, y, max_w)
     
     y -= 0.3*cm
     
@@ -11526,17 +11516,8 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2*cm, y, "3. TIPOLOGIA DI DATI TRATTATI")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    c.drawString(2*cm, y, "La Società può trattare le seguenti categorie di dati personali:")
-    y -= 0.45*cm
-    dati = [
-        "- dati anagrafici (nome, cognome, data e luogo di nascita, codice fiscale);",
-        "- dati di contatto (telefono, email, indirizzo);",
-        "- dati relativi all'attività sportiva svolta;",
-        "- eventuali dati amministrativi e fiscali connessi ai compensi sportivi dilettantistici."
-    ]
-    for d in dati:
-        c.drawString(2.3*cm, y, d)
-        y -= 0.45*cm
+    dati_text = "La Società potrà trattare le seguenti categorie di dati personali: dati anagrafici (nome, cognome, data e luogo di nascita, codice fiscale); dati di contatto (telefono, email, indirizzo); dati relativi alle attività svolte per la Società; dati amministrativi e fiscali connessi alla gestione dei compensi sportivi dilettantistici."
+    y = draw_wrapped_text(c, dati_text, 2*cm, y, max_w)
     
     y -= 0.3*cm
     
@@ -11545,7 +11526,7 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2*cm, y, "4. MODALITÀ DI TRATTAMENTO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    modalita_text = "Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei, con logiche organizzative strettamente correlate alle finalità indicate e nel rispetto delle misure di sicurezza previste dal GDPR. I dati sono accessibili esclusivamente a soggetti autorizzati dalla Società."
+    modalita_text = "Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei con modalità idonee a garantire la sicurezza e la riservatezza dei dati personali. La Società può utilizzare applicativi gestionali informatici per l'organizzazione delle attività sportive e amministrative. L'accesso ai dati è consentito esclusivamente ai soggetti autorizzati dalla Società."
     y = draw_wrapped_text(c, modalita_text, 2*cm, y, max_w)
     
     y -= 0.3*cm
@@ -11555,7 +11536,7 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2*cm, y, "5. PERIODO DI CONSERVAZIONE")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    conservazione_text = "I dati personali saranno conservati per tutta la durata del rapporto collaborativo con la Società e successivamente per il periodo previsto dalle normative fiscali, amministrative e sportive applicabili."
+    conservazione_text = "I dati personali saranno conservati per tutta la durata del rapporto con la Società e successivamente per il periodo necessario all'adempimento degli obblighi previsti dalla normativa fiscale, amministrativa e sportiva vigente."
     y = draw_wrapped_text(c, conservazione_text, 2*cm, y, max_w)
     
     y -= 0.3*cm
@@ -11565,22 +11546,8 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2*cm, y, "6. DIRITTI DELL'INTERESSATO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    c.drawString(2*cm, y, "L'interessato può esercitare i diritti previsti dagli artt. 15-22 del GDPR:")
-    y -= 0.45*cm
-    diritti = [
-        "- accesso ai dati personali;",
-        "- rettifica o cancellazione degli stessi;",
-        "- limitazione del trattamento;",
-        "- opposizione al trattamento;",
-        "- portabilità dei dati."
-    ]
-    for d in diritti:
-        c.drawString(2.3*cm, y, d)
-        y -= 0.4*cm
-    
-    y -= 0.2*cm
-    contatto_text = f"Per esercitare tali diritti è possibile contattare il Titolare del trattamento all'indirizzo: {society_email}."
-    y = draw_wrapped_text(c, contatto_text, 2*cm, y, max_w)
+    diritti_text = "L'interessato può esercitare i diritti previsti dagli articoli 15-22 del GDPR, tra cui: accesso ai dati personali; rettifica o aggiornamento dei dati; cancellazione dei dati nei casi previsti dalla legge; limitazione o opposizione al trattamento; portabilità dei dati. Le richieste possono essere rivolte al Titolare del trattamento tramite i recapiti indicati dalla Società."
+    y = draw_wrapped_text(c, diritti_text, 2*cm, y, max_w)
     
     # Footer page 1
     c.setFont("Helvetica", 8)
@@ -11591,13 +11558,23 @@ def generate_gdpr_adult_privacy_pdf(
     # ==================== PAGE 2 ====================
     y = height - 2*cm
     
-    # Section 7 - Consenso
+    # Section 7 - Firma Digitale
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "7. CONSENSO E SOTTOSCRIZIONE DIGITALE")
+    c.drawString(2*cm, y, "7. FIRMA DIGITALE DEL DOCUMENTO")
     y -= 0.6*cm
     c.setFont("Helvetica", 10)
-    consenso_text = "Con la sottoscrizione digitale del presente documento tramite l'App, il Collaboratore dichiara di aver letto e compreso la presente informativa e prende atto del trattamento dei dati personali per le finalità sopra indicate."
-    y = draw_wrapped_text(c, consenso_text, 2*cm, y, max_w)
+    firma_text = "La sottoscrizione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla Società. Il sistema può registrare metadati tecnici della firma digitale, tra cui: data e ora della sottoscrizione; identificativo dell'utente; dispositivo utilizzato per la firma. Tali informazioni sono raccolte esclusivamente ai fini della tracciabilità e della sicurezza del sistema."
+    y = draw_wrapped_text(c, firma_text, 2*cm, y, max_w)
+    
+    y -= 0.5*cm
+    
+    # DICHIARAZIONE
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "DICHIARAZIONE")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    dichiarazione_text = "Il sottoscritto dichiara di aver letto e compreso la presente informativa e prende atto del trattamento dei dati personali per le finalità indicate."
+    y = draw_wrapped_text(c, dichiarazione_text, 2*cm, y, max_w)
     
     y -= 1*cm
     
@@ -11758,7 +11735,7 @@ def generate_gdpr_minor_privacy_pdf(
     c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(width/2, height - 2*cm, "INFORMATIVA PRIVACY PER MINORI")
     c.setFont("Helvetica", 10)
-    c.drawCentredString(width/2, height - 2.6*cm, "ai sensi del Regolamento UE 2016/679 (GDPR)")
+    c.drawCentredString(width/2, height - 2.6*cm, "(Regolamento UE 2016/679 - GDPR)")
     
     y = height - 3.5*cm
     max_w = width - 4*cm
@@ -11773,70 +11750,107 @@ def generate_gdpr_minor_privacy_pdf(
     c.drawString(2.3*cm, y - 0.6*cm, f"Società: {nome_legale}")
     c.setFont("Helvetica", 9)
     c.drawString(2.3*cm, y - 1.15*cm, f"Sede: {society_address}")
-    c.drawString(2.3*cm, y - 1.65*cm, f"C.F.: {society_cf_piva}  |  Email: {society_email}")
+    c.drawString(2.3*cm, y - 1.65*cm, f"C.F./P.IVA: {society_cf_piva}  |  Email: {society_email}")
     
     y -= 3.2*cm
     
     # Intro
     c.setFont("Helvetica", 10)
-    intro_text = f"Gentile Genitore/Tutore, La presente informativa descrive le modalità di trattamento dei dati personali del minore da parte di {nome_legale}."
+    intro_text = f"Gentile Genitore/Tutore, la presente informativa descrive le modalità di trattamento dei dati personali del minore da parte della società sportiva {nome_legale}."
     y = draw_wrapped_text(c, intro_text, 2*cm, y, max_w)
-    
-    y -= 0.5*cm
-    
-    # Section 1 - Titolare
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "1. TITOLARE DEL TRATTAMENTO")
-    y -= 0.5*cm
-    c.setFont("Helvetica", 10)
-    titolare_text = f"Il Titolare del trattamento è {nome_legale}, con sede in {society_address} – email: {society_email}."
-    y = draw_wrapped_text(c, titolare_text, 2*cm, y, max_w)
-    
     y -= 0.3*cm
+    titolare_intro = "Il Titolare del trattamento dei dati personali è la società sportiva sopra indicata nella persona del proprio legale rappresentante pro tempore."
+    y = draw_wrapped_text(c, titolare_intro, 2*cm, y, max_w)
     
-    # Section 2 - Finalità
+    y -= 0.5*cm
+    
+    # Section 1 - Finalità
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "2. FINALITÀ DEL TRATTAMENTO")
+    c.drawString(2*cm, y, "1. FINALITÀ DEL TRATTAMENTO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    c.drawString(2*cm, y, "I dati personali del minore saranno trattati per le seguenti finalità:")
+    c.drawString(2*cm, y, "I dati personali del minore e del genitore/tutore saranno trattati per:")
     y -= 0.45*cm
     finalita = [
-        "a) gestione dell'iscrizione e partecipazione alle attività sportive della Società;",
-        "b) adempimento degli obblighi previsti dalle normative sportive, assicurative e amministrative;",
-        "c) comunicazione con gli enti sportivi di riferimento (Federazioni, EPS, RAS);",
-        "d) organizzazione delle attività sportive e delle comunicazioni con le famiglie."
+        "- gestione dell'iscrizione e partecipazione alle attività sportive;",
+        "- adempimento degli obblighi previsti dalle normative sportive e assicurative;",
+        "- comunicazioni con federazioni sportive, enti di promozione sportiva e organismi sportivi;",
+        "- gestione delle presenze ad allenamenti e attività sportive;",
+        "- comunicazioni organizzative con le famiglie;",
+        "- gestione amministrativa e fiscale delle attività sportive."
     ]
     for f in finalita:
         y = draw_wrapped_text(c, f, 2.3*cm, y, max_w - 0.3*cm)
     
     y -= 0.3*cm
     
-    # Section 3 - Tipologia dati
+    # Section 2 - Tipologia dati
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "3. TIPOLOGIA DI DATI TRATTATI")
+    c.drawString(2*cm, y, "2. TIPOLOGIA DI DATI TRATTATI")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    c.drawString(2*cm, y, "La Società può trattare le seguenti categorie di dati:")
-    y -= 0.45*cm
-    dati = [
-        "- dati anagrafici del minore (nome, cognome, data e luogo di nascita);",
-        "- dati di contatto del genitore/tutore (telefono, email, indirizzo);",
-        "- dati relativi all'attività sportiva svolta dal minore;",
-        "- eventuali dati amministrativi connessi alla gestione dell'attività sportiva."
+    c.drawString(2*cm, y, "La società potrà trattare le seguenti categorie di dati:")
+    y -= 0.5*cm
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2*cm, y, "Dati del minore:")
+    y -= 0.4*cm
+    c.setFont("Helvetica", 10)
+    dati_minore = [
+        "- nome e cognome",
+        "- data di nascita",
+        "- codice fiscale",
+        "- recapito telefonico (se presente)",
+        "- dati relativi alla partecipazione alle attività sportive"
     ]
-    for d in dati:
+    for d in dati_minore:
         c.drawString(2.3*cm, y, d)
-        y -= 0.45*cm
+        y -= 0.4*cm
+    
+    y -= 0.2*cm
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2*cm, y, "Dati del genitore/tutore:")
+    y -= 0.4*cm
+    c.setFont("Helvetica", 10)
+    dati_genitore = [
+        "- nome e cognome",
+        "- codice fiscale",
+        "- telefono",
+        "- email",
+        "- indirizzo"
+    ]
+    for d in dati_genitore:
+        c.drawString(2.3*cm, y, d)
+        y -= 0.4*cm
+    
+    y -= 0.2*cm
+    cf_nota = "Il codice fiscale del genitore/tutore può essere utilizzato anche ai fini della detrazione fiscale delle spese sportive prevista dalla normativa vigente."
+    y = draw_wrapped_text(c, cf_nota, 2*cm, y, max_w)
     
     y -= 0.3*cm
+    
+    # Section 3 - Certificato medico
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "3. CERTIFICATO MEDICO SPORTIVO")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    cert_text = "La società acquisisce e conserva presso la propria sede la documentazione relativa al certificato medico sportivo del minore. Ai fini della gestione organizzativa delle attività sportive può essere registrata nel sistema gestionale esclusivamente la data di emissione e la data di scadenza del certificato medico. L'applicativo gestionale utilizzato dalla società non consente il caricamento o la conservazione di certificati medici o altri documenti sanitari."
+    y = draw_wrapped_text(c, cert_text, 2*cm, y, max_w)
+    
+    # Footer page 1
+    c.setFont("Helvetica", 8)
+    c.drawCentredString(width/2, 1.5*cm, "Pagina 1 di 3")
+    
+    c.showPage()
+    
+    # ==================== PAGE 2 ====================
+    y = height - 2*cm
     
     # Section 4 - Modalità
     c.setFont("Helvetica-Bold", 11)
     c.drawString(2*cm, y, "4. MODALITÀ DI TRATTAMENTO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    modalita_text = "Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei, con modalità idonee a garantire la sicurezza e la riservatezza dei dati personali. L'accesso ai dati è limitato ai soggetti autorizzati dalla Società."
+    modalita_text = "Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei con modalità idonee a garantire la sicurezza e la riservatezza dei dati personali. La società può utilizzare applicativi gestionali informatici per l'organizzazione delle attività sportive e amministrative. L'accesso ai dati è consentito esclusivamente ai soggetti autorizzati dalla società."
     y = draw_wrapped_text(c, modalita_text, 2*cm, y, max_w)
     
     y -= 0.3*cm
@@ -11846,7 +11860,7 @@ def generate_gdpr_minor_privacy_pdf(
     c.drawString(2*cm, y, "5. PERIODO DI CONSERVAZIONE")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    conservazione_text = "I dati saranno conservati per tutta la durata del rapporto sportivo con la Società e successivamente per il periodo necessario all'adempimento degli obblighi legali, amministrativi e sportivi previsti dalla normativa vigente."
+    conservazione_text = "I dati saranno conservati per tutta la durata del rapporto sportivo con la società e successivamente per il periodo necessario all'adempimento degli obblighi legali, amministrativi e sportivi previsti dalla normativa vigente."
     y = draw_wrapped_text(c, conservazione_text, 2*cm, y, max_w)
     
     y -= 0.3*cm
@@ -11856,29 +11870,58 @@ def generate_gdpr_minor_privacy_pdf(
     c.drawString(2*cm, y, "6. DIRITTI DELL'INTERESSATO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    diritti_text = f"Il genitore/tutore può esercitare i diritti previsti dagli artt. 15-22 del GDPR, tra cui accesso ai dati, rettifica, cancellazione, limitazione del trattamento, opposizione e portabilità dei dati. Per l'esercizio dei diritti è possibile contattare il Titolare del trattamento all'indirizzo: {society_email}."
-    y = draw_wrapped_text(c, diritti_text, 2*cm, y, max_w)
+    c.drawString(2*cm, y, "Il genitore/tutore può esercitare i diritti previsti dagli articoli 15-22 del GDPR, tra cui:")
+    y -= 0.45*cm
+    diritti = [
+        "- accesso ai dati",
+        "- rettifica",
+        "- cancellazione",
+        "- limitazione del trattamento",
+        "- opposizione",
+        "- portabilità dei dati."
+    ]
+    for d in diritti:
+        c.drawString(2.3*cm, y, d)
+        y -= 0.4*cm
     
-    # Footer page 1
+    y -= 0.3*cm
+    
+    # Section 7 - Immagini e Video
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "7. UTILIZZO DI IMMAGINI E VIDEO")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    immagini_text = "Durante le attività sportive potranno essere realizzate fotografie o riprese video degli atleti per finalità documentative, informative e promozionali della società sportiva."
+    y = draw_wrapped_text(c, immagini_text, 2*cm, y, max_w)
+    
+    y -= 0.3*cm
+    
+    # Section 8 - Firma digitale
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "8. FIRMA DIGITALE DEL DOCUMENTO")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    firma_text = "La sottoscrizione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla società. Il sistema può registrare metadati tecnici della firma, tra cui data, ora e identificativo dell'utente, ai fini della tracciabilità e della sicurezza del sistema."
+    y = draw_wrapped_text(c, firma_text, 2*cm, y, max_w)
+    
+    y -= 0.5*cm
+    
+    # DICHIARAZIONE
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "DICHIARAZIONE")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 10)
+    dichiarazione_text = "Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente informativa e autorizza il trattamento dei dati personali del minore per le finalità indicate."
+    y = draw_wrapped_text(c, dichiarazione_text, 2*cm, y, max_w)
+    
+    # Footer page 2
     c.setFont("Helvetica", 8)
-    c.drawCentredString(width/2, 1.5*cm, "Pagina 1 di 2")
+    c.drawCentredString(width/2, 1.5*cm, "Pagina 2 di 3")
     
     c.showPage()
     
-    # ==================== PAGE 2 ====================
+    # ==================== PAGE 3 ====================
     y = height - 2*cm
-    
-    # Section 7 - Dichiarazione genitore
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "7. DICHIARAZIONE DEL GENITORE/TUTORE")
-    y -= 0.6*cm
-    c.setFont("Helvetica", 10)
-    dichiarazione_text = "Con la sottoscrizione digitale del presente documento il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente informativa e autorizza il trattamento dei dati personali del minore per le finalità sopra indicate."
-    y = draw_wrapped_text(c, dichiarazione_text, 2*cm, y, max_w)
-    
-    y -= 1*cm
-    
-    # Parent data box
     c.setStrokeColor(colors.HexColor("#27AE60"))
     c.setFillColor(colors.HexColor("#E8F8F5"))
     c.roundRect(2*cm, y - 2*cm, width - 4*cm, 2.5*cm, 5, fill=1, stroke=1)
@@ -11979,10 +12022,10 @@ def generate_gdpr_minor_privacy_pdf(
     y_meta -= 0.35*cm
     c.drawString(2.3*cm, y_meta, f"ip_address: {ip_address}")
     
-    # Footer page 2
+    # Footer page 3
     c.setFont("Helvetica", 8)
     c.setFillColor(colors.black)
-    c.drawCentredString(width/2, 1.5*cm, "Pagina 2 di 2")
+    c.drawCentredString(width/2, 1.5*cm, "Pagina 3 di 3")
     
     c.save()
     return buffer.getvalue()
