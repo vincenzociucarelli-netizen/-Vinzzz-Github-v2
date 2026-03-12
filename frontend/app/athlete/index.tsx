@@ -513,7 +513,7 @@ export default function AthleteScreen() {
         {/* Coach della Squadra - senza wrapper "Dati Iscrizione" */}
         {coachInfo && (
           <View style={{ backgroundColor: '#fff', borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0' }}>
-            <Text style={{ fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 8 }}>Coach della Squadra</Text>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 8 }}>Coach {profile?.team_name || 'della Squadra'}</Text>
             {(coachInfo.all_coaches || [coachInfo]).map((coach: any, idx: number) => (
               <View key={coach.id || idx} style={[styles.coachInfoRow, idx > 0 && { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' }]}>
                 {coach.profile_photo_artistic || coach.profile_photo ? (
