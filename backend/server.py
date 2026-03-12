@@ -6945,7 +6945,7 @@ async def create_certificate_simple(
 ):
     """Create/update certificate - Admin, Dirigente (assigned to team), Athlete (own), Parent (own child).
     Only Admin can mark as verified. Full metadata tracking."""
-    allowed_roles = [UserRole.ADMIN, UserRole.DIRIGENTE, "athlete", UserRole.PARENT]
+    allowed_roles = [UserRole.ADMIN, UserRole.DIRIGENTE, UserRole.VIEWER, "athlete", UserRole.PARENT]
     if current_user["role"] not in allowed_roles:
         raise HTTPException(status_code=403, detail="Non hai i permessi per aggiornare certificati")
     
@@ -6955,7 +6955,7 @@ async def create_certificate_simple(
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
     # Permission checks by role
-    if current_user["role"] == UserRole.DIRIGENTE:
+    if current_user["role"] in [UserRole.DIRIGENTE, UserRole.VIEWER]:
         # Dirigente must be assigned to the athlete's team
         athlete_team_id = athlete.get("team_id")
         if athlete_team_id:
