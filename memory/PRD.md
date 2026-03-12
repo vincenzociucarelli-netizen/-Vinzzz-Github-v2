@@ -115,6 +115,9 @@ Sistema gestionale per società sportiva che include:
 - [x] **Cambio password atleta**: Rimosso "Password Attuale", aggiunto toggle mostra/nascondi password
 - [x] **Pagamenti Atleta V2** (11 Mar 2026): Logica cumulativa per rate dinamiche - somma pagamenti applicata sequenzialmente alle rate (pagata/parziale/non pagata). UI compatta con piano espandibile, descrizioni reali dal DB, sezione duplicata rimossa
 - [x] **Vista Quote Admin Dinamica** (11 Mar 2026): Sezione Quote nella pagina admin/team/[id] ora mostra tutte le rate dinamiche (fino a 12) con nomi e scadenze, con fallback al vecchio sistema 3 rate
+- [x] **Ristrutturazione Homepage Atleta** (11 Mar 2026): Layout compatto - header con nome/squadra/email/badge stato. Ordine sezioni: QR → Pagamenti → Coach → Orari → Presenze → Certificato → Dati Personali → Documenti → Privacy
+- [x] **Quote Admin Collassabili** (11 Mar 2026): Sezione Quote nelle pagine admin/team è collassabile - mostra totale e numero rate
+- [x] **Pagamenti Genitore V2** (11 Mar 2026): Vista pagamenti in parent/athlete/[id] aggiornata con rate dinamiche, logica cumulativa, tutti i coach, pagamenti effettuati collassabili
 
 ## P1 - Media Priorità
 - [x] **Squadre Assegnate Coach**: Sezione con link alle pagine delle squadre nella vista coach compensation
