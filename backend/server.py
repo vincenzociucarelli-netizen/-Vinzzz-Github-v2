@@ -7084,6 +7084,32 @@ async def create_certificate_simple(
         }
     )
     
+    # Notifica admin quando un non-admin modifica il certificato
+    if current_user["role"] != UserRole.ADMIN:
+        role_labels = {"viewer": "Dirigente", "coach": "Coach", "athlete": "Atleta", "parent": "Genitore"}
+        role_label = role_labels.get(current_user["role"], current_user["role"])
+        expiry_str = expiry_dt.strftime("%d/%m/%Y") if expiry_dt else "N/D"
+        issue_str = issue_dt.strftime("%d/%m/%Y") if issue_dt else "N/D"
+        
+        admin_notification = {
+            "id": str(uuid.uuid4()),
+            "type": "certificate_update",
+            "title": f"Certificato medico aggiornato",
+            "message": f"{current_user.get('full_name', '')} ({role_label}) ha aggiornato il certificato medico di {athlete.get('full_name', '')} - Emissione: {issue_str}, Scadenza: {expiry_str}",
+            "data": {
+                "athlete_id": data.athlete_id,
+                "athlete_name": athlete.get("full_name", ""),
+                "changed_by": current_user.get("full_name", ""),
+                "changed_by_role": role_label,
+                "issue_date": issue_str,
+                "expiry_date": expiry_str,
+            },
+            "read": False,
+            "created_at": datetime.now(timezone.utc),
+            "society_id": current_user.get("society_id", ""),
+        }
+        await db.admin_notifications.insert_one(admin_notification)
+    
     return {
         "id": certificate.id,
         "athlete_id": certificate.athlete_id,
