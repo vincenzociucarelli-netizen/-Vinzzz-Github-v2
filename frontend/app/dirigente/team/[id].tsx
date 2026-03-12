@@ -137,7 +137,7 @@ export default function TeamAthletes() {
     const parts = certDate.split('/');
     if (parts.length !== 3) return;
     const [dd, mm, yyyy] = parts;
-    const issueDate = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd));
+    const issueDate = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd), 12, 0, 0);
     if (isNaN(issueDate.getTime())) {
       const msg = 'Data non valida';
       Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Errore', msg);
@@ -315,7 +315,7 @@ export default function TeamAthletes() {
                             const parts = certDate.split('/');
                             if (parts.length === 3) {
                               const [dd, mm, yyyy] = parts;
-                              const d = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd));
+                              const d = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd), 12, 0, 0);
                               if (!isNaN(d.getTime())) {
                                 const months = parseInt(certMonths) || 12;
                                 const exp = new Date(d);

@@ -486,7 +486,7 @@ export default function AdminAthleteDetail() {
       if (editData.date_of_birth) {
         const parts = editData.date_of_birth.split('/');
         if (parts.length === 3) {
-          const date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+          const date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), 12, 0, 0);
           if (!isNaN(date.getTime())) {
             dateOfBirthISO = date.toISOString();
           }
@@ -860,7 +860,7 @@ export default function AdminAthleteDetail() {
       return;
     }
     
-    const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), 12, 0, 0);
     if (isNaN(issueDate.getTime())) {
       showAlert('Errore', 'Data non valida');
       return;
@@ -3165,7 +3165,7 @@ export default function AdminAthleteDetail() {
                   {(() => {
                     const parts = certIssueDate.split('/');
                     if (parts.length === 3) {
-                      const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                      const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), 12, 0, 0);
                       const expiryDate = new Date(issueDate);
                       const months = parseInt(certValidityMonths) || 12;
                       expiryDate.setMonth(expiryDate.getMonth() + months);

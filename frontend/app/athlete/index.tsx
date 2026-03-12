@@ -677,7 +677,7 @@ export default function AthleteScreen() {
                   {(() => {
                     const parts = certIssueDateAthlete.split('/');
                     if (parts.length === 3) {
-                      const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                      const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), 12, 0, 0);
                       const months = parseInt(certValidityMonthsAthlete) || 12;
                       d.setMonth(d.getMonth() + months);
                       d.setDate(d.getDate() - 1);
@@ -695,7 +695,7 @@ export default function AthleteScreen() {
               onPress={async () => {
                 const parts = certIssueDateAthlete.split('/');
                 if (parts.length !== 3) return;
-                const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), 12, 0, 0);
                 const expiryDate = new Date(issueDate);
                 const months = parseInt(certValidityMonthsAthlete) || 12;
                 expiryDate.setMonth(expiryDate.getMonth() + months);
@@ -1026,7 +1026,7 @@ export default function AthleteScreen() {
                 {(() => {
                   const parts = certIssueDateAthlete.split('/');
                   if (parts.length === 3) {
-                    const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), 12, 0, 0);
                     const months = parseInt(certValidityMonthsAthlete) || 12;
                     d.setMonth(d.getMonth() + months);
                     d.setDate(d.getDate() - 1);
