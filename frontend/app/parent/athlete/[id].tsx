@@ -36,7 +36,7 @@ export default function AthleteDetail() {
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
+  const [paymentSettings, setPaymentSettings] = useState<any>(null);
   const [teamSchedule, setTeamSchedule] = useState<{
     training_sessions: any[];
     match_day: any;
@@ -86,12 +86,7 @@ export default function AthleteDetail() {
   const [teams, setTeams] = useState<Team[]>([]);
   
   // Coach info for team
-  const [coachInfo, setCoachInfo] = useState<{
-    full_name: string;
-    phone: string;
-    profile_photo?: string;
-    profile_photo_artistic?: string;
-  } | null>(null);
+  const [coachInfo, setCoachInfo] = useState<any>(null);
   const [coachPhotoModalVisible, setCoachPhotoModalVisible] = useState(false);
   
   // Certificate viewing modal
@@ -102,6 +97,7 @@ export default function AthleteDetail() {
   
   // Fiscal receipt state
   const [generatingReceipt, setGeneratingReceipt] = useState(false);
+  const [paymentsListExpanded, setPaymentsListExpanded] = useState(false);
   const [athletePhotoArtistic, setAthletePhotoArtistic] = useState<string | null>(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
   
@@ -133,12 +129,12 @@ export default function AthleteDetail() {
       setAthletePhoto(athleteRes.data.athlete_photo || null);
       setAthletePhotoArtistic(athleteRes.data.athlete_photo_artistic || null);
 
-      // Load coach info for the athlete's team
+      // Load coach info for the athlete's team - get ALL coaches
       if (athleteRes.data.team_id) {
         try {
-          const teamRes = await api.get(`/teams/${athleteRes.data.team_id}`);
-          if (teamRes.data.coach_info && teamRes.data.coach_info.length > 0) {
-            setCoachInfo(teamRes.data.coach_info[0]);
+          const coachRes = await api.get(`/teams/${athleteRes.data.team_id}/coach`);
+          if (coachRes.data) {
+            setCoachInfo(coachRes.data);
           }
         } catch (e) {
           console.log('Could not load coach info');
@@ -174,20 +170,10 @@ export default function AthleteDetail() {
         console.log('Could not load society email');
       }
 
-      // Load payment info from team instead of global settings
+      // Load payment info from team - store full response with dynamic installments
       try {
         const paymentInfoRes = await api.get(`/teams/${athleteRes.data.team_id}/payment-info`);
-        setPaymentSettings({
-          id: '',
-          season: '',
-          installment_1_amount: paymentInfoRes.data.installment_1_amount,
-          installment_2_amount: paymentInfoRes.data.installment_2_amount,
-          installment_2_due_date: paymentInfoRes.data.installment_2_due_date,
-          installment_3_amount: paymentInfoRes.data.installment_3_amount,
-          installment_3_due_date: paymentInfoRes.data.installment_3_due_date,
-          bank_info: paymentInfoRes.data.bank_info,
-          paypal_email: paymentInfoRes.data.paypal_email,
-        });
+        setPaymentSettings(paymentInfoRes.data);
       } catch (error) {
         setPaymentSettings(null);
       }
@@ -1445,21 +1431,15 @@ export default function AthleteDetail() {
             </View>
           </View>
           
-          {/* Coach Info */}
+          {/* Coach Info - All coaches */}
           {coachInfo && (
             <View style={styles.coachInfoCard}>
-              <Text style={styles.coachInfoTitle}>👨‍🏫 Coach della Squadra</Text>
-              <View style={styles.coachInfoRow}>
-                <TouchableOpacity 
-                  onPress={() => {
-                    if (coachInfo.profile_photo_artistic || coachInfo.profile_photo) {
-                      setCoachPhotoModalVisible(true);
-                    }
-                  }}
-                >
-                  {coachInfo.profile_photo_artistic || coachInfo.profile_photo ? (
+              <Text style={styles.coachInfoTitle}>Coach {getTeamName(athlete.team_id)}</Text>
+              {(coachInfo.all_coaches || [coachInfo]).map((coach: any, idx: number) => (
+                <View key={coach.id || idx} style={[styles.coachInfoRow, idx > 0 && { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' }]}>
+                  {coach.profile_photo_artistic || coach.profile_photo ? (
                     <Image 
-                      source={{ uri: `data:image/jpeg;base64,${coachInfo.profile_photo_artistic || coachInfo.profile_photo}` }}
+                      source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
                       style={styles.coachPhotoSmall}
                     />
                   ) : (
@@ -1467,13 +1447,12 @@ export default function AthleteDetail() {
                       <Ionicons name="person" size={20} color="#999" />
                     </View>
                   )}
-                </TouchableOpacity>
-                <View style={styles.coachInfoDetails}>
-                  <Text style={styles.coachName}>{coachInfo.full_name}</Text>
-                  {/* WhatsApp button hidden for parents - only visible to staff */}
-                  <Text style={styles.coachContactHint}>Per contattare il coach, rivolgersi alla segreteria</Text>
+                  <View style={styles.coachInfoDetails}>
+                    <Text style={styles.coachName}>{coach.full_name}</Text>
+                    <Text style={styles.coachContactHint}>Per contattare il coach, rivolgersi alla segreteria</Text>
+                  </View>
                 </View>
-              </View>
+              ))}
             </View>
           )}
           
@@ -1610,17 +1589,17 @@ export default function AthleteDetail() {
           </View>
         )}
 
-        {/* Payments Card */}
+        {/* Payments Card - Dynamic Installments with Cumulative Logic */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>💰 Pagamenti</Text>
+          <Text style={styles.cardTitle}>Pagamenti</Text>
           
           {/* Riepilogo Quota */}
           {paymentSettings && (
             <View style={styles.paymentSummary}>
               <View style={styles.paymentSummaryRow}>
-                <Text style={styles.paymentSummaryLabel}>Quota Stagionale:</Text>
+                <Text style={styles.paymentSummaryLabel}>Quota Annuale:</Text>
                 <Text style={styles.paymentSummaryValue}>
-                  {formatCurrency((
+                  {formatCurrency(paymentSettings.total_amount || (
                     (paymentSettings.installment_1_amount || 0) + 
                     (paymentSettings.installment_2_amount || 0) + 
                     (paymentSettings.installment_3_amount || 0)
@@ -1630,7 +1609,7 @@ export default function AthleteDetail() {
               {athlete && athlete.discount_amount && athlete.discount_amount > 0 ? (
                 <View style={styles.paymentSummaryRow}>
                   <Text style={[styles.paymentSummaryLabel, { color: '#34C759', flex: 1 }]}>
-                    Sconto applicato per: {athlete.discount_reason || 'Non specificato'}
+                    Sconto: {athlete.discount_reason || 'Non specificato'}
                   </Text>
                   <Text style={[styles.paymentSummaryValue, { color: '#34C759' }]}>
                     - {formatCurrency(athlete.discount_amount)}
@@ -1640,210 +1619,174 @@ export default function AthleteDetail() {
             </View>
           )}
           
-          {/* Rate Dettagliate */}
-          <Text style={styles.sectionSubtitle}>📅 Dettaglio Rate</Text>
-          {(() => {
-            // Crea un array di tutte le rate (dal database + dalla configurazione)
-            const rateConfig = [
-              { installment_number: 1, name: 'Pagamento Rata Iscrizione', amount: paymentSettings?.installment_1_amount || 0, due_date: null },
-              { installment_number: 2, name: 'Pagamento 1ª Rata', amount: paymentSettings?.installment_2_amount || 0, due_date: paymentSettings?.installment_2_due_date },
-              { installment_number: 3, name: 'Pagamento 2ª Rata', amount: paymentSettings?.installment_3_amount || 0, due_date: paymentSettings?.installment_3_due_date },
-            ].filter(r => r.amount > 0);
+          {/* Dynamic Installments with Cumulative Logic */}
+          {paymentSettings && (() => {
+            // Build installments array: prefer dynamic, fallback to legacy
+            const installments = (paymentSettings.installments && paymentSettings.installments.length > 0) 
+              ? paymentSettings.installments.filter((i: any) => parseFloat(i.amount) > 0).map((i: any) => ({
+                  name: i.name,
+                  amount: parseFloat(i.amount),
+                  due_date: i.due_date,
+                }))
+              : [
+                  { name: 'Quota iscrizione', amount: paymentSettings.installment_1_amount || 0, due_date: null },
+                  { name: 'Rata 1', amount: paymentSettings.installment_2_amount || 0, due_date: paymentSettings.installment_2_due_date },
+                  { name: 'Rata 2', amount: paymentSettings.installment_3_amount || 0, due_date: paymentSettings.installment_3_due_date },
+                ].filter(i => i.amount > 0);
             
-            // Mappa i pagamenti dal database per installment_number
-            const paymentsMap: { [key: number]: any } = {};
-            payments.forEach(p => {
-              const num = p.installment_number || 0;
-              if (num > 0) paymentsMap[num] = p;
+            // Cumulative: sum all paid payments
+            const totalPaid = payments.filter(p => p.paid || p.paid_date).reduce((sum, p) => sum + (p.amount || 0), 0);
+            let remaining = totalPaid;
+            
+            // Apply cumulative logic
+            const rateWithStatus = installments.map((inst: any) => {
+              if (remaining >= inst.amount) {
+                remaining -= inst.amount;
+                return { ...inst, status: 'paid', paidAmount: inst.amount };
+              } else if (remaining > 0) {
+                const partial = remaining;
+                remaining = 0;
+                return { ...inst, status: 'partial', paidAmount: partial };
+              } else {
+                return { ...inst, status: 'unpaid', paidAmount: 0 };
+              }
             });
             
-            // Calcola il totale già pagato (pagamenti manuali senza installment_number)
-            const totalPaid = payments
-              .filter(p => p.paid)
-              .reduce((sum, p) => sum + (p.amount || 0), 0);
-            
-            // Calcola il totale dovuto per tutte le rate
-            const totalDue = rateConfig.reduce((sum, r) => sum + (r.amount || 0), 0);
-            
-            // Se il totale pagato >= totale dovuto, considera tutto pagato
-            const allPaid = totalPaid >= totalDue;
-            
-            // Se non abbiamo rate dalla configurazione e nemmeno pagamenti, mostra messaggio
-            if (rateConfig.length === 0 && payments.length === 0) {
-              return <Text style={styles.noDataText}>Nessun pagamento disponibile</Text>;
-            }
-            
-            // Calcola quale rate sono coperte dai pagamenti (ordine crescente)
-            let remainingPaid = totalPaid;
-            
-            // Unisce le rate: usa i dati dal database se disponibili, altrimenti dalla configurazione
-            const allRates = rateConfig.map(config => {
-              const dbPayment = paymentsMap[config.installment_number];
-              if (dbPayment) {
-                return {
-                  ...dbPayment,
-                  name: config.name,
-                  fromDb: true
-                };
-              }
-              
-              // Se non c'è un pagamento specifico per questa rata, 
-              // verifica se è coperta dal totale pagato
-              const isPaidByTotal = remainingPaid >= config.amount;
-              if (isPaidByTotal) {
-                remainingPaid -= config.amount;
-              }
-              
-              return {
-                id: `config-${config.installment_number}`,
-                installment_number: config.installment_number,
-                name: config.name,
-                amount: config.amount,
-                due_date: config.due_date,
-                paid: isPaidByTotal || allPaid,
-                fromDb: false
-              };
-            });
+            // Find next due installment
+            const nextDue = rateWithStatus.find((r: any) => r.status !== 'paid');
+            const totalAmount = paymentSettings.total_amount || installments.reduce((s: number, i: any) => s + i.amount, 0);
+            const residuo = totalAmount - (athlete?.discount_amount || 0) - totalPaid;
             
             return (
-              <>
-                {allRates.map((rate) => {
-                  const dueDate = rate.due_date ? new Date(rate.due_date) : null;
-                  const isValidDate = dueDate && dueDate.getFullYear() > 1971;
-                  // Rata iscrizione (1): scaduta se non pagata (doveva essere pagata all'iscrizione)
-                  // Altre rate: scadute se la data è passata
-                  const isOverdue = !rate.paid && (
-                    rate.installment_number === 1 || 
-                    (dueDate && isValidDate && dueDate < new Date())
-                  );
-                  
-                  return (
-                    <View key={rate.id} style={[
-                      styles.paymentRow,
-                      isOverdue && styles.paymentOverdue
-                    ]}>
-                      <View style={styles.paymentInfo}>
-                        <Text style={styles.paymentTitle}>{rate.name}</Text>
-                        <Text style={styles.paymentAmount}>{formatCurrency(rate.amount)}</Text>
-                        <Text style={[
-                          styles.paymentDue,
-                          isOverdue && { color: '#FF3B30', fontWeight: '600' }
-                        ]}>
-                          {rate.installment_number === 1 
-                            ? `Scadenza: All'iscrizione${isOverdue ? ' ⚠️ SCADUTA' : ''}`
-                            : isValidDate 
-                              ? `Scadenza: ${format(dueDate!, 'dd/MM/yyyy', { locale: it })}${isOverdue ? ' ⚠️ SCADUTA' : ''}`
-                              : 'Scadenza: Da definire'
-                          }
-                        </Text>
-                      </View>
-                      <View style={styles.paymentStatusContainer}>
-                        <Ionicons
-                          name={rate.paid ? 'checkmark-circle' : 'time-outline'}
-                          size={28}
-                          color={rate.paid ? '#34C759' : isOverdue ? '#FF3B30' : '#FF9500'}
-                        />
-                        <Text style={[
-                          styles.paymentStatusText,
-                          { color: rate.paid ? '#34C759' : isOverdue ? '#FF3B30' : '#FF9500' }
-                        ]}>
-                          {rate.paid ? 'Pagata' : isOverdue ? 'Scaduta' : 'Da pagare'}
-                        </Text>
-                      </View>
+              <View>
+                {/* Next Due Installment */}
+                {nextDue && (
+                  <View style={{ backgroundColor: nextDue.status === 'partial' ? '#FFF3E0' : '#FFF8E1', padding: 12, borderRadius: 8, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: nextDue.status === 'partial' ? '#FF9800' : '#FFA000' }}>
+                    <Text style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>Prossima rata:</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>{nextDue.name}</Text>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: nextDue.status === 'partial' ? '#FF9800' : '#E65100' }}>
+                        {formatCurrency(nextDue.amount)}
+                        {nextDue.status === 'partial' && (
+                          <Text style={{ fontSize: 12, fontWeight: '400' }}> (pagati {formatCurrency(nextDue.paidAmount)})</Text>
+                        )}
+                      </Text>
                     </View>
-                  );
-                })}
+                    {nextDue.due_date && (
+                      <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
+                        Scad. {new Date(nextDue.due_date).toLocaleDateString('it-IT')}
+                      </Text>
+                    )}
+                  </View>
+                )}
+                
+                {/* All Installments */}
+                <Text style={styles.sectionSubtitle}>Dettaglio Rate</Text>
+                {rateWithStatus.map((rate: any, index: number) => (
+                  <View key={index} style={[
+                    styles.paymentRow,
+                    rate.status === 'unpaid' && { borderLeftColor: '#FF3B30', borderLeftWidth: 3 }
+                  ]}>
+                    <View style={styles.paymentInfo}>
+                      <Text style={[
+                        styles.paymentTitle,
+                        rate.status === 'paid' && { textDecorationLine: 'line-through', color: '#999' }
+                      ]}>{rate.name}</Text>
+                      <Text style={styles.paymentAmount}>
+                        {formatCurrency(rate.amount)}
+                        {rate.status === 'partial' && (
+                          <Text style={{ color: '#FF9800', fontSize: 12 }}> (pagati {formatCurrency(rate.paidAmount)})</Text>
+                        )}
+                      </Text>
+                      {rate.due_date && (
+                        <Text style={styles.paymentDue}>
+                          Scad. {new Date(rate.due_date).toLocaleDateString('it-IT')}
+                        </Text>
+                      )}
+                    </View>
+                    <Ionicons
+                      name={rate.status === 'paid' ? 'checkmark-circle' : rate.status === 'partial' ? 'ellipse-outline' : 'time-outline'}
+                      size={28}
+                      color={rate.status === 'paid' ? '#34C759' : rate.status === 'partial' ? '#FF9800' : '#FF3B30'}
+                    />
+                  </View>
+                ))}
                 
                 {/* Residuo Dovuto */}
-                <View style={[styles.paymentRow, styles.residuoRow]}>
-                  <View style={styles.paymentInfo}>
-                    <Text style={[styles.paymentTitle, { fontWeight: '700', fontSize: 16 }]}>
-                      Residuo Dovuto
-                    </Text>
+                {residuo > 0 && (
+                  <View style={[styles.paymentRow, styles.residuoRow]}>
+                    <Text style={{ fontWeight: '700', fontSize: 15 }}>Residuo Dovuto</Text>
+                    <Text style={{ fontWeight: '700', fontSize: 16, color: '#FF3B30' }}>{formatCurrency(residuo)}</Text>
                   </View>
-                  <Text style={[
-                    styles.residuoAmount,
-                    { color: allRates.filter(r => !r.paid).reduce((sum, r) => sum + r.amount, 0) > 0 ? '#FF3B30' : '#34C759' }
-                  ]}>
-                    {formatCurrency(allRates.filter(r => !r.paid).reduce((sum, r) => sum + r.amount, 0))}
-                  </Text>
-                </View>
-              </>
+                )}
+              </View>
             );
           })()}
           
-          {paymentSettings && (
+          {/* Modalità di pagamento */}
+          {paymentSettings && (paymentSettings.bank_info || paymentSettings.paypal_email) && (
             <View style={styles.paymentInstructions}>
-              <Text style={styles.instructionsTitle}>💳 Modalità di pagamento:</Text>
+              <Text style={styles.instructionsTitle}>Modalità di pagamento:</Text>
               {paymentSettings.bank_info && (
-                <Text style={styles.instructionsText}>
-                  <Text style={styles.bold}>🏦 Bonifico Bancario:</Text>
-                  {'\n'}{paymentSettings.bank_info}
-                </Text>
+                <View style={{ flexDirection: 'row', marginTop: 4 }}>
+                  <Ionicons name="business" size={16} color="#666" style={{ marginRight: 6, marginTop: 2 }} />
+                  <Text style={[styles.instructionsText, { flex: 1 }]}>
+                    <Text style={styles.bold}>Bonifico Bancario:</Text>
+                    {'\n'}{paymentSettings.bank_info}
+                  </Text>
+                </View>
               )}
               {paymentSettings.paypal_email && (
-                <Text style={styles.instructionsText}>
-                  <Text style={styles.bold}>📧 PayPal:</Text>
-                  {'\n'}{paymentSettings.paypal_email}
-                </Text>
+                <View style={{ flexDirection: 'row', marginTop: 4 }}>
+                  <Ionicons name="logo-paypal" size={16} color="#003087" style={{ marginRight: 6, marginTop: 2 }} />
+                  <Text style={[styles.instructionsText, { flex: 1 }]}>
+                    <Text style={styles.bold}>PayPal:</Text>
+                    {'\n'}{paymentSettings.paypal_email}
+                  </Text>
+                </View>
               )}
             </View>
           )}
           
-          {/* Download Fiscal Receipt Button */}
-          {payments.length > 0 && (
-            <>
-              {/* Show all manual payments */}
-              <View style={styles.manualPaymentsSection}>
-                <Text style={styles.manualPaymentsTitle}>Pagamenti Effettuati:</Text>
-                {payments.map((p, idx) => (
+          {/* Pagamenti Effettuati (collapsable) */}
+          {payments.filter(p => p.paid || p.paid_date).length > 0 && (
+            <View style={{ marginTop: 12 }}>
+              <TouchableOpacity 
+                style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#eee' }}
+                onPress={() => setPaymentsListExpanded(!paymentsListExpanded)}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="checkmark-circle" size={18} color="#34C759" style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Pagamenti Effettuati</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#34C759' }}>
+                    {payments.filter(p => p.paid || p.paid_date).length} - {formatCurrency(payments.filter(p => p.paid || p.paid_date).reduce((s, p) => s + (p.amount || 0), 0))}
+                  </Text>
+                  <Ionicons name={paymentsListExpanded ? "chevron-up" : "chevron-down"} size={18} color="#888" />
+                </View>
+              </TouchableOpacity>
+              {paymentsListExpanded && (
+              <View>
+                {payments.filter(p => p.paid || p.paid_date).map((p, idx) => (
                   <View key={p.id || idx} style={styles.manualPaymentRow}>
                     <View style={styles.manualPaymentInfo}>
+                      <Text style={{ fontSize: 13, fontWeight: '500', color: '#333' }}>{p.description || `Pagamento ${idx + 1}`}</Text>
                       <Text style={styles.manualPaymentAmount}>{formatCurrency(p.amount)}</Text>
                       <Text style={styles.manualPaymentDate}>
-                        {p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : 'Data non specificata'}
+                        {p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : ''}
                       </Text>
                     </View>
-                    <Ionicons name="checkmark-circle" size={24} color="#34C759" />
+                    <Ionicons name="checkmark-circle" size={22} color="#34C759" />
                   </View>
                 ))}
               </View>
-              
-              <TouchableOpacity
-                style={[styles.downloadReceiptBtn, generatingReceipt && { opacity: 0.6 }]}
-                onPress={handleDownloadFiscalReceipt}
-                disabled={generatingReceipt}
-              >
-                {generatingReceipt ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={{ fontSize: 20 }}>🧾</Text>
-                )}
-                <Text style={styles.downloadReceiptBtnText}>
-                  {generatingReceipt ? 'Generazione...' : 'Scarica Ricevuta Fiscale'}
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-
-        {/* Show payments even without payment settings */}
-        {!paymentSettings && payments.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>💰 Pagamenti Effettuati</Text>
-            <View style={styles.manualPaymentsSection}>
-              {payments.map((p, idx) => (
-                <View key={p.id || idx} style={styles.manualPaymentRow}>
-                  <View style={styles.manualPaymentInfo}>
-                    <Text style={styles.manualPaymentAmount}>{formatCurrency(p.amount)}</Text>
-                    <Text style={styles.manualPaymentDate}>
-                      {p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : 'Data non specificata'}
-                    </Text>
-                  </View>
-                  <Ionicons name="checkmark-circle" size={24} color="#34C759" />
-                </View>
-              ))}
+              )}
             </View>
+          )}
+          
+          {/* Download Fiscal Receipt */}
+          {payments.length > 0 && (
             <TouchableOpacity
               style={[styles.downloadReceiptBtn, generatingReceipt && { opacity: 0.6 }]}
               onPress={handleDownloadFiscalReceipt}
@@ -1852,12 +1795,33 @@ export default function AthleteDetail() {
               {generatingReceipt ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={{ fontSize: 20 }}>🧾</Text>
+                <Ionicons name="receipt" size={20} color="#fff" />
               )}
               <Text style={styles.downloadReceiptBtnText}>
                 {generatingReceipt ? 'Generazione...' : 'Scarica Ricevuta Fiscale'}
               </Text>
             </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Show payments even without payment settings */}
+        {!paymentSettings && payments.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Pagamenti Effettuati</Text>
+            <View style={styles.manualPaymentsSection}>
+              {payments.filter(p => p.paid || p.paid_date).map((p, idx) => (
+                <View key={p.id || idx} style={styles.manualPaymentRow}>
+                  <View style={styles.manualPaymentInfo}>
+                    <Text style={{ fontSize: 13, fontWeight: '500' }}>{p.description || `Pagamento ${idx + 1}`}</Text>
+                    <Text style={styles.manualPaymentAmount}>{formatCurrency(p.amount)}</Text>
+                    <Text style={styles.manualPaymentDate}>
+                      {p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : ''}
+                    </Text>
+                  </View>
+                  <Ionicons name="checkmark-circle" size={24} color="#34C759" />
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
