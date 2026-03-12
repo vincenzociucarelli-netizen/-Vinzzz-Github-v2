@@ -766,7 +766,15 @@ export default function AthleteScreen() {
         
         {/* Privacy - hidden for minors (parent manages privacy) */}
         {!isMinor && (
-        <View style={[styles.menuItem, { backgroundColor: profile?.privacy_accepted ? '#E8F5E9' : '#FFF3E0' }]} data-testid="privacy-status">
+        <TouchableOpacity 
+          style={[styles.menuItem, { backgroundColor: profile?.privacy_accepted ? '#E8F5E9' : '#FFF3E0' }]} 
+          data-testid="privacy-status"
+          onPress={() => {
+            if (!profile?.privacy_accepted) {
+              handleStayAndSignPrivacy();
+            }
+          }}
+        >
           <Ionicons 
             name={profile?.privacy_accepted ? "checkmark-circle" : "alert-circle"} 
             size={22} 
@@ -777,13 +785,13 @@ export default function AthleteScreen() {
             <Text style={styles.menuItemSubtitle}>
               {profile?.privacy_accepted 
                 ? `Accettata il ${formatDateIT(profile.privacy_accepted_date)}` 
-                : 'Da accettare'}
+                : 'Da accettare - Clicca per firmare'}
             </Text>
           </View>
           {!profile?.privacy_accepted && (
             <Ionicons name="chevron-forward" size={20} color="#FF9800" />
           )}
-        </View>
+        </TouchableOpacity>
         )}
         
         {/* Spacer per permettere scroll completo */}
