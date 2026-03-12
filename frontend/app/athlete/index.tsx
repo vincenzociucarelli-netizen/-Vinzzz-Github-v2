@@ -379,155 +379,89 @@ export default function AthleteScreen() {
           </TouchableOpacity>
         </View>
         
-        {/* Profile Card for quota athletes */}
-        <View style={[styles.profileCard, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e0e0e0' }]}>
-          {profile?.profile_photo ? (
-            <Image 
-              source={{ uri: `data:image/jpeg;base64,${profile.profile_photo}` }}
-              style={[styles.profileAvatar, { backgroundColor: 'transparent' }]}
-            />
-          ) : (
-            <View style={[styles.profileAvatar, { backgroundColor: '#007AFF' }]}>
-              <Text style={styles.profileInitial}>
-                {profile?.first_name?.charAt(0) || profile?.full_name?.charAt(0) || 'A'}
+        {/* Compact Profile Header */}
+        <View style={{ backgroundColor: '#fff', borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#333' }} data-testid="athlete-name">{profile?.full_name || 'Atleta'}</Text>
+              <Text style={{ fontSize: 14, color: '#666', marginTop: 2 }}>
+                Squadra: <Text style={{ fontWeight: '600', color: '#E53935' }}>{profile?.team_name || 'Non assegnata'}</Text>
               </Text>
             </View>
-          )}
-          <Text style={[styles.profileName, { color: '#333' }]}>{profile?.full_name || 'Atleta'}</Text>
-          
-          {/* Status Badge */}
-          <View style={{ 
-            backgroundColor: profile?.status === 'trial' ? '#FFF3E0' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#E3F2FD' : '#E8F5E9', 
-            paddingHorizontal: 12, 
-            paddingVertical: 6, 
-            borderRadius: 16,
-            marginTop: 8
-          }}>
-            <Text style={{ 
-              color: profile?.status === 'trial' ? '#FF9800' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#1976D2' : '#4CAF50',
-              fontWeight: '600',
-              fontSize: 13
+            <View style={{ 
+              backgroundColor: profile?.status === 'trial' ? '#FFF3E0' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#E3F2FD' : '#E8F5E9', 
+              paddingHorizontal: 10, 
+              paddingVertical: 5, 
+              borderRadius: 12
             }}>
-              {profile?.status === 'trial' ? '⏳ Periodo di Prova' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '📝 Firma Privacy Richiesta' : '✓ Attivo'}
-            </Text>
+              <Text style={{ 
+                color: profile?.status === 'trial' ? '#FF9800' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#1976D2' : '#4CAF50',
+                fontWeight: '600',
+                fontSize: 12
+              }} data-testid="athlete-status">
+                {profile?.status === 'trial' ? 'Periodo di Prova' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? 'Firma Privacy' : 'Attivo'}
+              </Text>
+            </View>
           </View>
           
-          {/* Pending Privacy Banner - only show if NOT privacy_accepted */}
+          {/* Pending Privacy Banner */}
           {profile?.status === 'pending_privacy' && !profile?.privacy_accepted && (
             <TouchableOpacity 
-              style={{ 
-                backgroundColor: '#E3F2FD', 
-                padding: 12, 
-                borderRadius: 8, 
-                marginTop: 12,
-                borderWidth: 1,
-                borderColor: '#1976D2'
-              }}
+              style={{ backgroundColor: '#E3F2FD', padding: 10, borderRadius: 8, marginTop: 10, borderWidth: 1, borderColor: '#1976D2' }}
               onPress={handleStayAndSignPrivacy}
             >
-              <Text style={{ color: '#1976D2', fontWeight: '600', fontSize: 14, textAlign: 'center' }}>
-                ✍️ Devi accettare la Privacy per continuare
-              </Text>
-              <Text style={{ color: '#666', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
-                Clicca qui per firmare
+              <Text style={{ color: '#1976D2', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>
+                Devi accettare la Privacy per continuare - Clicca qui
               </Text>
             </TouchableOpacity>
           )}
           
-          {/* Trial end date */}
-          {profile?.status === 'trial' && profile?.trial_end_date && (
-            <Text style={{ color: '#666', fontSize: 12, marginTop: 6 }}>
-              Fine prova: {formatDateIT(profile.trial_end_date)}
-            </Text>
-          )}
-          
-          {/* Team - sempre visibile */}
-          <Text style={{ color: '#666', fontSize: 14, marginTop: 8 }}>
-            Squadra: {profile?.team_name || (profile?.team_id ? 'Caricamento...' : 'Non assegnata')}
-          </Text>
-          
-          {/* Recesso dalla prova - Due opzioni */}
+          {/* Trial info + actions */}
           {profile?.status === 'trial' && (
-            <View style={{ marginTop: 16 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 10, textAlign: 'center' }}>
+            <View style={{ marginTop: 10 }}>
+              {profile?.trial_end_date && (
+                <Text style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>
+                  Fine prova: {formatDateIT(profile.trial_end_date)}
+                </Text>
+              )}
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 8, textAlign: 'center' }}>
                 Vuoi terminare il periodo di prova?
               </Text>
-              
               <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
-                {/* Opzione 1: Rimani e firma privacy */}
                 <TouchableOpacity 
-                  style={{ 
-                    flex: 1,
-                    maxWidth: 220,
-                    backgroundColor: '#E3F2FD', 
-                    paddingHorizontal: 12, 
-                    paddingVertical: 10, 
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: '#2196F3'
-                  }}
+                  style={{ flex: 1, maxWidth: 200, backgroundColor: '#E3F2FD', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#2196F3' }}
                   onPress={handleStayAndSignPrivacy}
                 >
-                  <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>
-                    ✅ Rimani e Firma Privacy
-                  </Text>
-                  <Text style={{ color: '#666', fontSize: 10, textAlign: 'center', marginTop: 2 }}>
-                    Continua come atleta
-                  </Text>
+                  <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>Rimani e Firma Privacy</Text>
                 </TouchableOpacity>
-                
-                {/* Opzione 2: Non rimanere e cancella dati */}
                 <TouchableOpacity 
-                  style={{ 
-                    flex: 1,
-                    maxWidth: 220,
-                    backgroundColor: '#FFEBEE', 
-                    paddingHorizontal: 12, 
-                    paddingVertical: 10, 
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: '#F44336'
-                  }}
+                  style={{ flex: 1, maxWidth: 200, backgroundColor: '#FFEBEE', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#F44336' }}
                   onPress={async () => {
                     const confirm = Platform.OS === 'web' 
                       ? window.confirm('ATTENZIONE: Questa azione cancellerà definitivamente tutti i tuoi dati (profilo, pagamenti, presenze). Sei sicuro?')
                       : await new Promise<boolean>((resolve) => {
                           Alert.alert(
-                            '⚠️ Cancella Account',
-                            'ATTENZIONE: Questa azione cancellerà definitivamente tutti i tuoi dati (profilo, pagamenti, presenze).\n\nSei sicuro di voler procedere?',
+                            'Cancella Account',
+                            'ATTENZIONE: Questa azione cancellerà definitivamente tutti i tuoi dati.\n\nSei sicuro?',
                             [
                               { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
                               { text: 'Cancella Tutto', style: 'destructive', onPress: () => resolve(true) }
                             ]
                           );
                         });
-                    
                     if (confirm) {
                       try {
                         await api.post('/athletes/withdraw-trial-leave');
-                        if (Platform.OS === 'web') {
-                          window.alert('Account eliminato. Tutti i tuoi dati sono stati cancellati.');
-                        } else {
-                          Alert.alert('Account Eliminato', 'Tutti i tuoi dati sono stati cancellati.');
-                        }
+                        if (Platform.OS === 'web') { window.alert('Account eliminato.'); } else { Alert.alert('Account Eliminato'); }
                         handleLogout();
                       } catch (error: any) {
-                        const msg = error.response?.data?.detail || 'Errore durante l\'eliminazione';
-                        if (Platform.OS === 'web') {
-                          window.alert(msg);
-                        } else {
-                          Alert.alert('Errore', msg);
-                        }
+                        const msg = error.response?.data?.detail || 'Errore';
+                        if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Errore', msg); }
                       }
                     }
                   }}
                 >
-                  <Text style={{ color: '#C62828', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>
-                    ❌ Non Rimanere
-                  </Text>
-                  <Text style={{ color: '#666', fontSize: 10, textAlign: 'center', marginTop: 2 }}>
-                    Cancella tutti i dati
-                  </Text>
+                  <Text style={{ color: '#C62828', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>Non Rimanere</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -537,27 +471,124 @@ export default function AthleteScreen() {
         {/* QR Code Section */}
         {profile?.qr_code && (
           <TouchableOpacity 
-            style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginHorizontal: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+            style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginHorizontal: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
             onPress={() => setShowQRModal(true)}
+            data-testid="qr-code-section"
           >
             <Image 
               source={{ uri: profile.qr_code }}
-              style={{ width: 60, height: 60, borderRadius: 4 }}
+              style={{ width: 50, height: 50, borderRadius: 4 }}
               resizeMode="contain"
             />
             <View style={{ marginLeft: 12, flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Il Tuo QR Code</Text>
-              <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Tocca per ingrandire</Text>
               {profile?.athlete_code && (
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#007AFF', marginTop: 4, letterSpacing: 1 }}>{profile.athlete_code}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#007AFF', marginTop: 2, letterSpacing: 1 }}>{profile.athlete_code}</Text>
               )}
             </View>
-            <Ionicons name="expand" size={24} color="#007AFF" />
+            <Ionicons name="expand" size={22} color="#007AFF" />
           </TouchableOpacity>
         )}
         
-        {/* Certificato Medico Card - for quota athletes */}
-        <View style={[styles.certificateCard, { marginTop: 16 }]}>
+        {/* Pagamenti - in evidenza */}
+        <TouchableOpacity 
+          style={[styles.menuItem, { backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFA000' }]}
+          onPress={() => router.push(`/athlete/payments`)}
+          data-testid="payments-menu-item"
+        >
+          <Ionicons name="card" size={22} color="#FF8F00" />
+          <View style={styles.menuItemContent}>
+            <Text style={[styles.menuItemTitle, { color: '#E65100' }]}>Pagamenti</Text>
+            <Text style={styles.menuItemSubtitle}>Visualizza le tue rate e pagamenti</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#FFA000" />
+        </TouchableOpacity>
+        
+        {/* Dati Personali */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push('/athlete/profile')}
+          data-testid="personal-data-menu-item"
+        >
+          <Ionicons name="person" size={22} color="#007AFF" />
+          <View style={styles.menuItemContent}>
+            <Text style={styles.menuItemTitle}>Dati Personali</Text>
+            <Text style={styles.menuItemSubtitle}>Visualizza e modifica i tuoi dati</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+        
+        {/* Coach della Squadra - senza wrapper "Dati Iscrizione" */}
+        {coachInfo && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0' }}>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 8 }}>Coach della Squadra</Text>
+            {(coachInfo.all_coaches || [coachInfo]).map((coach: any, idx: number) => (
+              <View key={coach.id || idx} style={[styles.coachInfoRow, idx > 0 && { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' }]}>
+                {coach.profile_photo_artistic || coach.profile_photo ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
+                    style={styles.coachPhoto}
+                  />
+                ) : (
+                  <View style={styles.coachPhotoPlaceholder}>
+                    <Ionicons name="person" size={20} color="#999" />
+                  </View>
+                )}
+                <View style={styles.coachInfoDetails}>
+                  <Text style={styles.coachName}>{coach.full_name}</Text>
+                  {coach.phone && (
+                    <TouchableOpacity 
+                      style={styles.whatsappButton}
+                      onPress={() => {
+                        const phoneNumber = coach.phone.replace(/\s+/g, '').replace(/^\+/, '');
+                        const whatsappUrl = `https://wa.me/${phoneNumber}`;
+                        if (Platform.OS === 'web') { window.open(whatsappUrl, '_blank'); }
+                      }}
+                    >
+                      <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                      <Text style={styles.whatsappButtonText}>Contatta su WhatsApp</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+        
+        {/* Orari Allenamenti */}
+        {profile?.team_id && (
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => router.push(`/athlete/schedule?tab=orari`)}
+            data-testid="schedule-menu-item"
+          >
+            <Ionicons name="calendar" size={22} color="#007AFF" />
+            <View style={styles.menuItemContent}>
+              <Text style={styles.menuItemTitle}>Orari Allenamenti</Text>
+              <Text style={styles.menuItemSubtitle}>Calendario settimanale</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+        )}
+        
+        {/* Presenze/Statistiche */}
+        {profile?.team_id && (
+          <TouchableOpacity 
+            style={[styles.menuItem, { backgroundColor: '#E3F2FD', borderWidth: 1, borderColor: '#2196F3' }]}
+            onPress={() => router.push(`/athlete/presenze`)}
+            data-testid="attendance-menu-item"
+          >
+            <Ionicons name="stats-chart" size={22} color="#2196F3" />
+            <View style={styles.menuItemContent}>
+              <Text style={[styles.menuItemTitle, { color: '#1976D2' }]}>Presenze e Statistiche</Text>
+              <Text style={styles.menuItemSubtitle}>Visualizza le tue presenze e statistiche</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#2196F3" />
+          </TouchableOpacity>
+        )}
+        
+        {/* Certificato Medico */}
+        <View style={[styles.certificateCard, { marginTop: 0 }]}>
           <Text style={styles.certificateCardTitle}>Certificato Medico</Text>
           {(profile as any)?.medical_certificate_expiry ? (
             <View>
@@ -576,7 +607,6 @@ export default function AthleteScreen() {
                   )}
                 </View>
               </View>
-              {/* Stato verifica admin */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
                 <Ionicons
                   name={(profile as any)?.medical_certificate_verified ? 'shield-checkmark' : 'shield-outline'}
@@ -589,11 +619,9 @@ export default function AthleteScreen() {
               </View>
             </View>
           ) : (
-            <View>
-              <View style={styles.warningBox}>
-                <Ionicons name="warning" size={24} color="#FF9500" />
-                <Text style={styles.warningText}>Nessun certificato inserito</Text>
-              </View>
+            <View style={styles.warningBox}>
+              <Ionicons name="warning" size={24} color="#FF9500" />
+              <Text style={styles.warningText}>Nessun certificato inserito</Text>
             </View>
           )}
           
@@ -608,7 +636,6 @@ export default function AthleteScreen() {
           
           {showCertForm && (
           <View>
-          {/* Form inserimento data emissione */}
           <View style={{ marginTop: 8 }}>
             <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 }}>Data di Emissione (GG/MM/AAAA)</Text>
             <TextInput
@@ -661,22 +688,13 @@ export default function AthleteScreen() {
                     expiry_date: expiryDate.toISOString(),
                     verified: false,
                   });
-                  // Refresh profile
                   const res = await api.get('/auth/me');
                   setProfile(res.data);
                   setCertIssueDateAthlete('');
-                  if (Platform.OS === 'web') {
-                    window.alert('Certificato salvato con successo!');
-                  } else {
-                    Alert.alert('Successo', 'Certificato salvato con successo!');
-                  }
+                  if (Platform.OS === 'web') { window.alert('Certificato salvato con successo!'); } else { Alert.alert('Successo', 'Certificato salvato!'); }
                 } catch (error: any) {
                   const msg = error.response?.data?.detail || 'Errore nel salvataggio';
-                  if (Platform.OS === 'web') {
-                    window.alert(msg);
-                  } else {
-                    Alert.alert('Errore', msg);
-                  }
+                  if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Errore', msg); }
                 } finally {
                   setSavingCertAthlete(false);
                 }
@@ -688,7 +706,6 @@ export default function AthleteScreen() {
             </TouchableOpacity>
           </View>
           
-          {/* Info consegna/spedizione */}
           <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginTop: 12, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
             <Text style={{ fontSize: 12, color: '#E65100', lineHeight: 18 }}>
               Copia del certificato dovrà essere consegnata alla Società e inviata per e-mail al seguente indirizzo: <Text style={{ fontWeight: 'bold' }}>{(profile as any)?.society_email || societyEmail || '-'}</Text> in formato pdf
@@ -698,93 +715,22 @@ export default function AthleteScreen() {
           )}
         </View>
 
-        {/* Dati Iscrizione Card - for quota athletes */}
-        <View style={[styles.iscrizioneCard, { marginTop: 16 }]}>
-          <Text style={styles.iscrizioneCardTitle}>📝 Dati Iscrizione</Text>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Squadra</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ marginRight: 6 }}>
-                <SportIcon size={24} />
-              </View>
-              <Text style={[styles.dataValue, { color: '#E53935', fontWeight: '700' }]}>
-                {profile?.team_name || 'Non assegnata'}
-              </Text>
-            </View>
-          </View>
-          
-          {/* Coach Info for quota athletes */}
-          {coachInfo && (
-            <View style={styles.coachInfoCard}>
-              <Text style={styles.coachInfoTitle}>Coach della Squadra</Text>
-              {(coachInfo.all_coaches || [coachInfo]).map((coach: any, idx: number) => (
-                <View key={coach.id || idx} style={[styles.coachInfoRow, idx > 0 && { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' }]}>
-                  {coach.profile_photo_artistic || coach.profile_photo ? (
-                    <Image 
-                      source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
-                      style={styles.coachPhoto}
-                    />
-                  ) : (
-                    <View style={styles.coachPhotoPlaceholder}>
-                      <Ionicons name="person" size={20} color="#999" />
-                    </View>
-                  )}
-                  <View style={styles.coachInfoDetails}>
-                    <Text style={styles.coachName}>{coach.full_name}</Text>
-                    {coach.phone && (
-                      <TouchableOpacity 
-                        style={styles.whatsappButton}
-                        onPress={() => {
-                          const phoneNumber = coach.phone.replace(/\s+/g, '').replace(/^\+/, '');
-                          const whatsappUrl = `https://wa.me/${phoneNumber}`;
-                          if (Platform.OS === 'web') {
-                            window.open(whatsappUrl, '_blank');
-                          }
-                        }}
-                      >
-                        <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
-                        <Text style={styles.whatsappButtonText}>Contatta su WhatsApp</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-        
-        {/* Notifications Banner - RIMOSSO su richiesta utente */}
-        
-        {/* Payments Section - in alto, subito dopo iscrizione */}
-        <TouchableOpacity 
-          style={[styles.menuItem, { backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFA000' }]}
-          onPress={() => router.push(`/athlete/payments`)}
-          data-testid="payments-menu-item"
-        >
-          <Ionicons name="card" size={22} color="#FF8F00" />
-          <View style={styles.menuItemContent}>
-            <Text style={[styles.menuItemTitle, { color: '#E65100' }]}>Pagamenti</Text>
-            <Text style={styles.menuItemSubtitle}>Visualizza le tue rate e pagamenti</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#FFA000" />
-        </TouchableOpacity>
-        
-        {/* Menu Items */}
+        {/* Documenti */}
         <TouchableOpacity 
           style={styles.menuItem}
-          onPress={() => router.push('/athlete/profile')}
+          onPress={() => router.push(`/athlete/documents`)}
+          data-testid="documents-menu-item"
         >
-          <Ionicons name="person" size={22} color="#007AFF" />
+          <Ionicons name="document-text" size={22} color="#007AFF" />
           <View style={styles.menuItemContent}>
-            <Text style={styles.menuItemTitle}>Dati Personali</Text>
-            <Text style={styles.menuItemSubtitle}>Visualizza e modifica i tuoi dati</Text>
+            <Text style={styles.menuItemTitle}>Documenti</Text>
+            <Text style={styles.menuItemSubtitle}>Privacy, certificati e altro</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
         
-        {/* Privacy Status */}
-        <View style={[styles.menuItem, { backgroundColor: profile?.privacy_accepted ? '#E8F5E9' : '#FFF3E0' }]}>
+        {/* Privacy */}
+        <View style={[styles.menuItem, { backgroundColor: profile?.privacy_accepted ? '#E8F5E9' : '#FFF3E0' }]} data-testid="privacy-status">
           <Ionicons 
             name={profile?.privacy_accepted ? "checkmark-circle" : "alert-circle"} 
             size={22} 
@@ -803,7 +749,7 @@ export default function AthleteScreen() {
           )}
         </View>
         
-        {/* Contact Info - Email and Phone on same row */}
+        {/* Contact Info */}
         {(profile?.email || profile?.phone_athlete) && (
           <View style={[styles.menuItem, { flexDirection: 'row', justifyContent: 'space-between' }]}>
             {profile?.email && (
@@ -820,49 +766,6 @@ export default function AthleteScreen() {
             )}
           </View>
         )}
-        
-        {/* Presenze/Statistiche - PRIMA dei pagamenti, più visibile */}
-        {profile?.team_id && (
-          <TouchableOpacity 
-            style={[styles.menuItem, { backgroundColor: '#E3F2FD', borderWidth: 1, borderColor: '#2196F3' }]}
-            onPress={() => router.push(`/athlete/presenze`)}
-          >
-            <Ionicons name="stats-chart" size={22} color="#2196F3" />
-            <View style={styles.menuItemContent}>
-              <Text style={[styles.menuItemTitle, { color: '#1976D2' }]}>Presenze e Statistiche</Text>
-              <Text style={styles.menuItemSubtitle}>Visualizza le tue presenze e statistiche</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#2196F3" />
-          </TouchableOpacity>
-        )}
-        
-        {/* Orari Allenamenti - Separato dalle presenze */}
-        {profile?.team_id && (
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => router.push(`/athlete/schedule?tab=orari`)}
-          >
-            <Ionicons name="calendar" size={22} color="#007AFF" />
-            <View style={styles.menuItemContent}>
-              <Text style={styles.menuItemTitle}>Orari Allenamenti</Text>
-              <Text style={styles.menuItemSubtitle}>Calendario settimanale</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-        )}
-        
-        {/* Documenti Section */}
-        <TouchableOpacity 
-          style={styles.menuItem}
-          onPress={() => router.push(`/athlete/documents`)}
-        >
-          <Ionicons name="document-text" size={22} color="#007AFF" />
-          <View style={styles.menuItemContent}>
-            <Text style={styles.menuItemTitle}>Documenti</Text>
-            <Text style={styles.menuItemSubtitle}>Privacy, certificati e altro</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
         
         {/* Spacer per permettere scroll completo */}
         <View style={{ height: 100 }} />
