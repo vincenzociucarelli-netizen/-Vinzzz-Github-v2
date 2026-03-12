@@ -6959,9 +6959,11 @@ async def create_certificate_simple(
         # Dirigente must be assigned to the athlete's team
         athlete_team_id = athlete.get("team_id")
         if athlete_team_id:
+            # Check both: dirigente_ids on team AND assigned_teams on user
             team = await db.teams.find_one({"id": athlete_team_id})
             dirigente_ids = team.get("dirigente_ids", []) if team else []
-            if current_user["id"] not in dirigente_ids:
+            user_assigned_teams = current_user.get("assigned_teams", [])
+            if current_user["id"] not in dirigente_ids and athlete_team_id not in user_assigned_teams:
                 raise HTTPException(status_code=403, detail="Non sei il dirigente incaricato a questa squadra")
         else:
             raise HTTPException(status_code=403, detail="L'atleta non ha una squadra assegnata")
