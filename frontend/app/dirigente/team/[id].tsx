@@ -146,6 +146,7 @@ export default function TeamAthletes() {
     const months = parseInt(certMonths) || 12;
     const expiryDate = new Date(issueDate);
     expiryDate.setMonth(expiryDate.getMonth() + months);
+    expiryDate.setDate(expiryDate.getDate() - 1); // -1 giorno come standard
 
     setSavingCert(true);
     try {
@@ -308,6 +309,28 @@ export default function TeamAthletes() {
                               )}
                             </TouchableOpacity>
                           </View>
+                          {certDate.length === 10 && (() => {
+                            const parts = certDate.split('/');
+                            if (parts.length === 3) {
+                              const [dd, mm, yyyy] = parts;
+                              const d = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd));
+                              if (!isNaN(d.getTime())) {
+                                const months = parseInt(certMonths) || 12;
+                                const exp = new Date(d);
+                                exp.setMonth(exp.getMonth() + months);
+                                exp.setDate(exp.getDate() - 1);
+                                const expStr = `${String(exp.getDate()).padStart(2,'0')}/${String(exp.getMonth()+1).padStart(2,'0')}/${exp.getFullYear()}`;
+                                return (
+                                  <View style={{ backgroundColor: '#E8F5E9', borderRadius: 8, padding: 10, marginTop: 10, alignItems: 'center' as const }}>
+                                    <Text style={{ fontSize: 11, color: '#666', fontWeight: '600' }}>SCADENZA CERTIFICATO</Text>
+                                    <Text style={{ fontSize: 16, color: '#2E7D32', fontWeight: '700' }}>{expStr}</Text>
+                                    <Text style={{ fontSize: 10, color: '#999' }}>(data emissione + {months} mesi - 1 giorno)</Text>
+                                  </View>
+                                );
+                              }
+                            }
+                            return null;
+                          })()}
                         </View>
                       )}
                     </View>
