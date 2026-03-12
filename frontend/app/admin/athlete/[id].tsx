@@ -2235,6 +2235,14 @@ export default function AdminAthleteDetail() {
                       {isCertificateExpiringSoon && ' (IN SCADENZA)'}
                     </Text>
                   </View>
+                  {athlete?.medical_certificate_date && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, paddingLeft: 4 }}>
+                      <Ionicons name="document-text-outline" size={18} color="#666" />
+                      <Text style={{ marginLeft: 8, fontSize: 13, color: '#333' }}>
+                        Data emissione: <Text style={{ fontWeight: '600' }}>{formatDate(athlete.medical_certificate_date)}</Text>
+                      </Text>
+                    </View>
+                  )}
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
                     <Ionicons
                       name={certificate.verified ? 'shield-checkmark' : 'shield-outline'}
