@@ -263,17 +263,41 @@ export default function CoachProfile() {
     try {
       // Generate privacy document with signature using /documents/sign endpoint
       const privacyText = `
-INFORMATIVA SULLA PRIVACY E CONSENSO AL TRATTAMENTO DEI DATI PERSONALI
+INFORMATIVA PRIVACY PER STAFF
+(ai sensi del Regolamento UE 2016/679 - GDPR)
 
-Il/La sottoscritto/a ${profileData.full_name || `${editData.last_name} ${editData.first_name}`}, nato/a a ${profileData.place_of_birth || editData.place_of_birth || ''} il ${formatDate(profileData.date_of_birth || editData.date_of_birth)}, residente in ${profileData.address || editData.address || ''}, ${profileData.city || editData.city || ''} (${profileData.province || editData.province || ''}), C.F. ${profileData.fiscal_code || editData.fiscal_code || ''},
+Gentile Collaboratore / Membro dello Staff,
+la presente informativa descrive le modalità di trattamento dei dati personali da parte della società sportiva:
+${societyName}
 
-DICHIARA
+Il Titolare del trattamento dei dati personali è la società sportiva sopra indicata nella persona del proprio legale rappresentante pro tempore.
 
-di aver letto e compreso l'informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) relativa al trattamento dei propri dati personali da parte di ${societyName} e
+1. TITOLARE DEL TRATTAMENTO
+Il Titolare del trattamento dei dati personali è ${societyName}. Per qualsiasi richiesta relativa al trattamento dei dati è possibile contattare la Società tramite i recapiti indicati.
 
-ACCONSENTE
+2. FINALITÀ E BASE GIURIDICA DEL TRATTAMENTO
+I dati personali saranno trattati per le seguenti finalità: gestione dei rapporti sportivi, associativi o collaborativi con la Società; adempimenti degli obblighi di legge, fiscali e contabili; comunicazioni con enti sportivi di riferimento (Federazioni, EPS, RAS); gestione delle attività sportive, organizzative e amministrative della Società; gestione dei compensi sportivi dilettantistici, ove previsti.
 
-al trattamento dei propri dati personali per le finalità connesse alla propria attività di Allenatore/Coach presso la società sportiva, inclusa la comunicazione a terzi per finalità strettamente connesse all'attività sportiva e al trattamento dei dati relativi ai compensi sportivi dilettantistici.
+3. TIPOLOGIA DI DATI TRATTATI
+La Società potrà trattare le seguenti categorie di dati personali: dati anagrafici (nome, cognome, data e luogo di nascita, codice fiscale); dati di contatto (telefono, email, indirizzo); dati relativi alle attività svolte per la Società; dati amministrativi e fiscali connessi alla gestione dei compensi sportivi dilettantistici.
+
+4. MODALITÀ DI TRATTAMENTO
+Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei con modalità idonee a garantire la sicurezza e la riservatezza dei dati personali.
+
+5. PERIODO DI CONSERVAZIONE
+I dati personali saranno conservati per tutta la durata del rapporto con la Società e successivamente per il periodo necessario all'adempimento degli obblighi previsti dalla normativa vigente.
+
+6. DIRITTI DELL'INTERESSATO
+L'interessato può esercitare i diritti previsti dagli articoli 15–22 del GDPR.
+
+7. FIRMA DIGITALE DEL DOCUMENTO
+La sottoscrizione del presente documento avviene in forma digitale tramite l'applicativo gestionale utilizzato dalla Società.
+
+DICHIARAZIONE
+Il sottoscritto dichiara di aver letto e compreso la presente informativa e prende atto del trattamento dei dati personali per le finalità indicate.
+
+Staff: ${profileData.full_name || `${editData.last_name} ${editData.first_name}`}
+Società sportiva: ${societyName}
       `.trim();
 
       await api.post('/documents/sign', {

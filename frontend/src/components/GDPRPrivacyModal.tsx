@@ -234,88 +234,114 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
   const isMinor = documentType === 'gdpr_minor';
   
   const privacyTextAdult = `
-INFORMATIVA PRIVACY PER COLLABORATORI
-ai sensi del Regolamento UE 2016/679 (GDPR)
+INFORMATIVA PRIVACY PER STAFF
+(ai sensi del Regolamento UE 2016/679 - GDPR)
 
-Gentile Collaboratore,
+Gentile Collaboratore / Membro dello Staff,
+la presente informativa descrive le modalità di trattamento dei dati personali da parte della società sportiva:
+${societyName}
+Sede: ${societyAddress}
+C.F./P.IVA: ${societyCfPiva}
+Email: ${societyEmail}
 
-La presente informativa descrive le modalità di trattamento dei dati personali da parte di ${societyName}, con sede in ${societyAddress}, C.F. ${societyCfPiva}, email ${societyEmail}.
+Il Titolare del trattamento dei dati personali è la società sportiva sopra indicata nella persona del proprio legale rappresentante pro tempore.
 
 1. TITOLARE DEL TRATTAMENTO
-Il Titolare del trattamento è ${societyName}, con sede in ${societyAddress} – email: ${societyEmail}.
+Il Titolare del trattamento dei dati personali è ${societyName}, con sede in ${societyAddress}. Per qualsiasi richiesta relativa al trattamento dei dati è possibile contattare la Società tramite i recapiti indicati.
 
 2. FINALITÀ E BASE GIURIDICA DEL TRATTAMENTO
-I dati personali saranno trattati per le seguenti finalità:
-a) Gestione del rapporto associativo/collaborativo con la Società;
-b) Adempimento degli obblighi di legge, fiscali e contabili;
-c) Comunicazione con gli enti sportivi di riferimento (es. Federazioni, EPS, RAS);
-d) Gestione delle attività sportive, organizzative e amministrative della Società.
-
-La base giuridica del trattamento è l'esecuzione del rapporto collaborativo e l'adempimento di obblighi di legge.
+I dati personali saranno trattati per le seguenti finalità: gestione dei rapporti sportivi, associativi o collaborativi con la Società; adempimenti degli obblighi di legge, fiscali e contabili; comunicazioni con enti sportivi di riferimento (Federazioni, EPS, RAS); gestione delle attività sportive, organizzative e amministrative della Società; gestione dei compensi sportivi dilettantistici, ove previsti. La base giuridica del trattamento è l'esecuzione del rapporto associativo o collaborativo e l'adempimento degli obblighi previsti dalla normativa vigente.
 
 3. TIPOLOGIA DI DATI TRATTATI
-La Società può trattare le seguenti categorie di dati personali:
-- dati anagrafici (nome, cognome, data e luogo di nascita, codice fiscale);
-- dati di contatto (telefono, email, indirizzo);
-- dati relativi all'attività sportiva svolta;
-- eventuali dati amministrativi e fiscali connessi ai compensi sportivi dilettantistici.
+La Società potrà trattare le seguenti categorie di dati personali: dati anagrafici (nome, cognome, data e luogo di nascita, codice fiscale); dati di contatto (telefono, email, indirizzo); dati relativi alle attività svolte per la Società; dati amministrativi e fiscali connessi alla gestione dei compensi sportivi dilettantistici.
 
 4. MODALITÀ DI TRATTAMENTO
-Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei, con logiche organizzative strettamente correlate alle finalità indicate e nel rispetto delle misure di sicurezza previste dal GDPR. I dati sono accessibili esclusivamente a soggetti autorizzati dalla Società.
+Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei con modalità idonee a garantire la sicurezza e la riservatezza dei dati personali. La Società può utilizzare applicativi gestionali informatici per l'organizzazione delle attività sportive e amministrative. L'accesso ai dati è consentito esclusivamente ai soggetti autorizzati dalla Società.
 
 5. PERIODO DI CONSERVAZIONE
-I dati personali saranno conservati per tutta la durata del rapporto collaborativo con la Società e successivamente per il periodo previsto dalle normative fiscali, amministrative e sportive applicabili.
+I dati personali saranno conservati per tutta la durata del rapporto con la Società e successivamente per il periodo necessario all'adempimento degli obblighi previsti dalla normativa fiscale, amministrativa e sportiva vigente.
 
 6. DIRITTI DELL'INTERESSATO
-L'interessato può esercitare i diritti previsti dagli artt. 15-22 del GDPR:
-- accesso ai dati personali;
-- rettifica o cancellazione degli stessi;
-- limitazione del trattamento;
-- opposizione al trattamento;
-- portabilità dei dati.
+L'interessato può esercitare i diritti previsti dagli articoli 15–22 del GDPR, tra cui: accesso ai dati personali; rettifica o aggiornamento dei dati; cancellazione dei dati nei casi previsti dalla legge; limitazione o opposizione al trattamento; portabilità dei dati. Le richieste possono essere rivolte al Titolare del trattamento tramite i recapiti indicati dalla Società.
 
-Per esercitare tali diritti è possibile contattare il Titolare del trattamento all'indirizzo: ${societyEmail}.
+7. FIRMA DIGITALE DEL DOCUMENTO
+La sottoscrizione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla Società. Il sistema può registrare metadati tecnici della firma digitale, tra cui: data e ora della sottoscrizione; identificativo dell'utente; dispositivo utilizzato per la firma. Tali informazioni sono raccolte esclusivamente ai fini della tracciabilità e della sicurezza del sistema.
 
-7. CONSENSO E SOTTOSCRIZIONE DIGITALE
-Con la sottoscrizione digitale del presente documento tramite l'App, il Collaboratore dichiara di aver letto e compreso la presente informativa e prende atto del trattamento dei dati personali per le finalità sopra indicate.
+DICHIARAZIONE
+Il sottoscritto dichiara di aver letto e compreso la presente informativa e prende atto del trattamento dei dati personali per le finalità indicate.
 `.trim();
 
   const privacyTextMinor = `
 INFORMATIVA PRIVACY PER MINORI
-ai sensi del Regolamento UE 2016/679 (GDPR)
+(Regolamento UE 2016/679 - GDPR)
 
 Gentile Genitore/Tutore,
+la presente informativa descrive le modalità di trattamento dei dati personali del minore da parte della società sportiva:
+${societyName}
+Sede: ${societyAddress}
+C.F./P.IVA: ${societyCfPiva}
+Email: ${societyEmail}
 
-La presente informativa descrive le modalità di trattamento dei dati personali del minore da parte di ${societyName}, con sede in ${societyAddress}, C.F. ${societyCfPiva}, email ${societyEmail}.
+Il Titolare del trattamento dei dati personali è la società sportiva sopra indicata nella persona del proprio legale rappresentante pro tempore.
 
-1. TITOLARE DEL TRATTAMENTO
-Il Titolare del trattamento è ${societyName}, con sede in ${societyAddress} – email: ${societyEmail}.
+1. FINALITÀ DEL TRATTAMENTO
+I dati personali del minore e del genitore/tutore saranno trattati per:
+- gestione dell'iscrizione e partecipazione alle attività sportive;
+- adempimento degli obblighi previsti dalle normative sportive e assicurative;
+- comunicazioni con federazioni sportive, enti di promozione sportiva e organismi sportivi;
+- gestione delle presenze ad allenamenti e attività sportive;
+- comunicazioni organizzative con le famiglie;
+- gestione amministrativa e fiscale delle attività sportive.
 
-2. FINALITÀ DEL TRATTAMENTO
-I dati personali del minore saranno trattati per le seguenti finalità:
-a) gestione dell'iscrizione e partecipazione alle attività sportive della Società;
-b) adempimento degli obblighi previsti dalle normative sportive, assicurative e amministrative;
-c) comunicazione con gli enti sportivi di riferimento (Federazioni, EPS, RAS);
-d) organizzazione delle attività sportive e delle comunicazioni con le famiglie.
+2. TIPOLOGIA DI DATI TRATTATI
+La società potrà trattare le seguenti categorie di dati:
 
-3. TIPOLOGIA DI DATI TRATTATI
-La Società può trattare le seguenti categorie di dati:
-- dati anagrafici del minore (nome, cognome, data e luogo di nascita);
-- dati di contatto del genitore/tutore (telefono, email, indirizzo);
-- dati relativi all'attività sportiva svolta dal minore;
-- eventuali dati amministrativi connessi alla gestione dell'attività sportiva.
+Dati del minore:
+- nome e cognome
+- data di nascita
+- codice fiscale
+- recapito telefonico (se presente)
+- dati relativi alla partecipazione alle attività sportive
+
+Dati del genitore/tutore:
+- nome e cognome
+- codice fiscale
+- telefono
+- email
+- indirizzo
+
+Il codice fiscale del genitore/tutore può essere utilizzato anche ai fini della detrazione fiscale delle spese sportive prevista dalla normativa vigente.
+
+3. CERTIFICATO MEDICO SPORTIVO
+La società acquisisce e conserva presso la propria sede la documentazione relativa al certificato medico sportivo del minore.
+Ai fini della gestione organizzativa delle attività sportive può essere registrata nel sistema gestionale esclusivamente la data di emissione e la data di scadenza del certificato medico.
+L'applicativo gestionale utilizzato dalla società non consente il caricamento o la conservazione di certificati medici o altri documenti sanitari.
 
 4. MODALITÀ DI TRATTAMENTO
-Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei, con modalità idonee a garantire la sicurezza e la riservatezza dei dati personali. L'accesso ai dati è limitato ai soggetti autorizzati dalla Società.
+Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei con modalità idonee a garantire la sicurezza e la riservatezza dei dati personali.
+La società può utilizzare applicativi gestionali informatici per l'organizzazione delle attività sportive e amministrative. L'accesso ai dati è consentito esclusivamente ai soggetti autorizzati dalla società.
 
 5. PERIODO DI CONSERVAZIONE
-I dati saranno conservati per tutta la durata del rapporto sportivo con la Società e successivamente per il periodo necessario all'adempimento degli obblighi legali, amministrativi e sportivi previsti dalla normativa vigente.
+I dati saranno conservati per tutta la durata del rapporto sportivo con la società e successivamente per il periodo necessario all'adempimento degli obblighi legali, amministrativi e sportivi previsti dalla normativa vigente.
 
 6. DIRITTI DELL'INTERESSATO
-Il genitore/tutore può esercitare i diritti previsti dagli artt. 15-22 del GDPR, tra cui accesso ai dati, rettifica, cancellazione, limitazione del trattamento, opposizione e portabilità dei dati. Per l'esercizio dei diritti è possibile contattare il Titolare del trattamento all'indirizzo: ${societyEmail}.
+Il genitore/tutore può esercitare i diritti previsti dagli articoli 15–22 del GDPR, tra cui:
+- accesso ai dati
+- rettifica
+- cancellazione
+- limitazione del trattamento
+- opposizione
+- portabilità dei dati.
 
-7. DICHIARAZIONE DEL GENITORE/TUTORE
-Con la sottoscrizione digitale del presente documento il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente informativa e autorizza il trattamento dei dati personali del minore per le finalità sopra indicate.
+7. UTILIZZO DI IMMAGINI E VIDEO
+Durante le attività sportive potranno essere realizzate fotografie o riprese video degli atleti per finalità documentative, informative e promozionali della società sportiva.
+
+8. FIRMA DIGITALE DEL DOCUMENTO
+La sottoscrizione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla società.
+Il sistema può registrare metadati tecnici della firma, tra cui data, ora e identificativo dell'utente, ai fini della tracciabilità e della sicurezza del sistema.
+
+DICHIARAZIONE
+Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente informativa e autorizza il trattamento dei dati personali del minore per le finalità indicate.
 `.trim();
 
   const privacyText = isMinor ? privacyTextMinor : privacyTextAdult;

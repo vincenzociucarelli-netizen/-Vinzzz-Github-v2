@@ -234,19 +234,46 @@ export default function ParentDashboard() {
     setProcessingTrial(true);
     try {
       // First, sign the document digitally
-      const privacyText = `Il/La sottoscritto/a ${user.full_name}, in qualità di genitore/tutore dell'atleta minorenne ${athleteName}, dichiara di aver letto e compreso l'informativa sulla privacy ai sensi del Regolamento UE 2016/679 (GDPR) e del D.Lgs. 196/2003 e successive modificazioni.
+      const privacyText = `INFORMATIVA PRIVACY PER MINORI
+(Regolamento UE 2016/679 - GDPR)
 
-PRESTA IL PROPRIO CONSENSO:
+Gentile Genitore/Tutore,
+la presente informativa descrive le modalità di trattamento dei dati personali del minore da parte della società sportiva.
 
-✓ Al trattamento dei dati personali propri e del minore per le finalità strettamente connesse e necessarie all'attività sportiva dilettantistica (gestione amministrativa, comunicazioni relative all'attività sportiva);
+1. FINALITÀ DEL TRATTAMENTO
+I dati personali del minore e del genitore/tutore saranno trattati per:
+- gestione dell'iscrizione e partecipazione alle attività sportive;
+- adempimento degli obblighi previsti dalle normative sportive e assicurative;
+- comunicazioni con federazioni sportive, enti di promozione sportiva e organismi sportivi;
+- gestione delle presenze ad allenamenti e attività sportive;
+- comunicazioni organizzative con le famiglie;
+- gestione amministrativa e fiscale delle attività sportive.
 
-✓ Alla comunicazione dei dati personali del minore alla Federazione Sportiva di appartenenza (FIPAV o altra federazione) o ad Enti di Promozione Sportiva (EPS) ai fini del tesseramento e della partecipazione alle attività federali;
+2. TIPOLOGIA DI DATI TRATTATI
+Dati del minore: nome e cognome, data di nascita, codice fiscale, recapito telefonico (se presente), dati relativi alla partecipazione alle attività sportive.
+Dati del genitore/tutore: nome e cognome, codice fiscale, telefono, email, indirizzo.
+Il codice fiscale del genitore/tutore può essere utilizzato anche ai fini della detrazione fiscale delle spese sportive prevista dalla normativa vigente.
 
-✓ All'utilizzo delle immagini fotografiche e/o video del minore per finalità promozionali e comunicative della società sui canali social (Facebook, Instagram, TikTok, YouTube e altri), sul sito web e su materiale promozionale cartaceo e digitale;
+3. CERTIFICATO MEDICO SPORTIVO
+La società acquisisce e conserva presso la propria sede la documentazione relativa al certificato medico sportivo del minore. Nel sistema gestionale vengono registrate esclusivamente la data di emissione e la data di scadenza del certificato medico.
 
-✓ Alla comunicazione dei dati ad assicurazioni, enti sanitari e altri soggetti necessari per lo svolgimento dell'attività sportiva e la tutela della salute del minore.
+4. MODALITÀ DI TRATTAMENTO
+Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei con modalità idonee a garantire la sicurezza e la riservatezza dei dati personali.
 
-L'autorizzazione è valida per tutta la durata dell'attività sportiva presso la società ed è revocabile in qualsiasi momento mediante comunicazione scritta.`;
+5. PERIODO DI CONSERVAZIONE
+I dati saranno conservati per tutta la durata del rapporto sportivo con la società e successivamente per il periodo necessario all'adempimento degli obblighi legali.
+
+6. DIRITTI DELL'INTERESSATO
+Il genitore/tutore può esercitare i diritti previsti dagli articoli 15–22 del GDPR.
+
+7. UTILIZZO DI IMMAGINI E VIDEO
+Durante le attività sportive potranno essere realizzate fotografie o riprese video degli atleti per finalità documentative, informative e promozionali della società sportiva.
+
+8. FIRMA DIGITALE DEL DOCUMENTO
+La sottoscrizione del presente documento avviene in forma digitale tramite l'applicativo gestionale utilizzato dalla società.
+
+DICHIARAZIONE
+Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compreso la presente informativa e autorizza il trattamento dei dati personali del minore ${athleteName} per le finalità indicate.`;
 
       await api.post('/documents/sign', {
         document_type: 'privacy_consent',
