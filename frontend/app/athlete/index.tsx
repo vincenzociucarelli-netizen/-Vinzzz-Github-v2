@@ -91,6 +91,7 @@ export default function AthleteScreen() {
   // Certificate and Coach state
   const [coachInfo, setCoachInfo] = useState<any>(null);
   const [certIssueDateAthlete, setCertIssueDateAthlete] = useState('');
+  const [certValidityMonthsAthlete, setCertValidityMonthsAthlete] = useState('12');
   const [savingCertAthlete, setSavingCertAthlete] = useState(false);
   const [showCertForm, setShowCertForm] = useState(false);
   const [societyEmail, setSocietyEmail] = useState('');
@@ -645,7 +646,17 @@ export default function AthleteScreen() {
               keyboardType="number-pad"
               maxLength={10}
             />
-            {certIssueDateAthlete.length === 10 && (
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6, marginTop: 12 }}>Validità (mesi)</Text>
+            <TextInput
+              style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' }}
+              value={certValidityMonthsAthlete}
+              onChangeText={setCertValidityMonthsAthlete}
+              placeholder="12"
+              placeholderTextColor="#999"
+              keyboardType="number-pad"
+              maxLength={2}
+            />
+            {certIssueDateAthlete.length === 10 && parseInt(certValidityMonthsAthlete) > 0 && (
               <View style={{ backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8, marginTop: 8, alignItems: 'center' }}>
                 <Text style={{ fontSize: 11, color: '#666' }}>SCADENZA CERTIFICATO</Text>
                 <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2E7D32', marginTop: 2 }}>
@@ -653,24 +664,27 @@ export default function AthleteScreen() {
                     const parts = certIssueDateAthlete.split('/');
                     if (parts.length === 3) {
                       const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                      d.setFullYear(d.getFullYear() + 1);
+                      const months = parseInt(certValidityMonthsAthlete) || 12;
+                      d.setMonth(d.getMonth() + months);
                       d.setDate(d.getDate() - 1);
                       return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
                     }
                     return '';
                   })()}
                 </Text>
+                <Text style={{ fontSize: 10, color: '#666', marginTop: 2 }}>(data emissione + {certValidityMonthsAthlete || '12'} mesi - 1 giorno)</Text>
               </View>
             )}
             <TouchableOpacity
-              style={{ backgroundColor: '#007AFF', padding: 12, borderRadius: 8, marginTop: 10, alignItems: 'center', opacity: certIssueDateAthlete.length === 10 ? 1 : 0.5 }}
-              disabled={certIssueDateAthlete.length !== 10 || savingCertAthlete}
+              style={{ backgroundColor: '#007AFF', padding: 12, borderRadius: 8, marginTop: 10, alignItems: 'center', opacity: certIssueDateAthlete.length === 10 && parseInt(certValidityMonthsAthlete) > 0 ? 1 : 0.5 }}
+              disabled={certIssueDateAthlete.length !== 10 || !(parseInt(certValidityMonthsAthlete) > 0) || savingCertAthlete}
               onPress={async () => {
                 const parts = certIssueDateAthlete.split('/');
                 if (parts.length !== 3) return;
                 const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
                 const expiryDate = new Date(issueDate);
-                expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+                const months = parseInt(certValidityMonthsAthlete) || 12;
+                expiryDate.setMonth(expiryDate.getMonth() + months);
                 expiryDate.setDate(expiryDate.getDate() - 1);
                 setSavingCertAthlete(true);
                 try {
@@ -683,6 +697,7 @@ export default function AthleteScreen() {
                   const res = await api.get('/auth/me');
                   setProfile(res.data);
                   setCertIssueDateAthlete('');
+                  setCertValidityMonthsAthlete('12');
                   if (Platform.OS === 'web') { window.alert('Certificato salvato con successo!'); } else { Alert.alert('Successo', 'Certificato salvato!'); }
                 } catch (error: any) {
                   const msg = error.response?.data?.detail || 'Errore nel salvataggio';
@@ -970,7 +985,17 @@ export default function AthleteScreen() {
             keyboardType="number-pad"
             maxLength={10}
           />
-          {certIssueDateAthlete.length === 10 && (
+          <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6, marginTop: 12 }}>Validità (mesi)</Text>
+          <TextInput
+            style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' }}
+            value={certValidityMonthsAthlete}
+            onChangeText={setCertValidityMonthsAthlete}
+            placeholder="12"
+            placeholderTextColor="#999"
+            keyboardType="number-pad"
+            maxLength={2}
+          />
+          {certIssueDateAthlete.length === 10 && parseInt(certValidityMonthsAthlete) > 0 && (
             <View style={{ backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8, marginTop: 8, alignItems: 'center' }}>
               <Text style={{ fontSize: 11, color: '#666' }}>SCADENZA CERTIFICATO</Text>
               <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2E7D32', marginTop: 2 }}>
@@ -978,24 +1003,27 @@ export default function AthleteScreen() {
                   const parts = certIssueDateAthlete.split('/');
                   if (parts.length === 3) {
                     const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                    d.setFullYear(d.getFullYear() + 1);
+                    const months = parseInt(certValidityMonthsAthlete) || 12;
+                    d.setMonth(d.getMonth() + months);
                     d.setDate(d.getDate() - 1);
                     return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
                   }
                   return '';
                 })()}
               </Text>
+              <Text style={{ fontSize: 10, color: '#666', marginTop: 2 }}>(data emissione + {certValidityMonthsAthlete || '12'} mesi - 1 giorno)</Text>
             </View>
           )}
           <TouchableOpacity
-            style={{ backgroundColor: '#007AFF', padding: 12, borderRadius: 8, marginTop: 10, alignItems: 'center', opacity: certIssueDateAthlete.length === 10 ? 1 : 0.5 }}
-            disabled={certIssueDateAthlete.length !== 10 || savingCertAthlete}
+            style={{ backgroundColor: '#007AFF', padding: 12, borderRadius: 8, marginTop: 10, alignItems: 'center', opacity: certIssueDateAthlete.length === 10 && parseInt(certValidityMonthsAthlete) > 0 ? 1 : 0.5 }}
+            disabled={certIssueDateAthlete.length !== 10 || !(parseInt(certValidityMonthsAthlete) > 0) || savingCertAthlete}
             onPress={async () => {
               const parts = certIssueDateAthlete.split('/');
               if (parts.length !== 3) return;
               const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
               const expiryDate = new Date(issueDate);
-              expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+              const months = parseInt(certValidityMonthsAthlete) || 12;
+              expiryDate.setMonth(expiryDate.getMonth() + months);
               expiryDate.setDate(expiryDate.getDate() - 1);
               setSavingCertAthlete(true);
               try {
@@ -1008,18 +1036,11 @@ export default function AthleteScreen() {
                 const res = await api.get('/auth/me');
                 setProfile(res.data);
                 setCertIssueDateAthlete('');
-                if (Platform.OS === 'web') {
-                  window.alert('Certificato salvato con successo!');
-                } else {
-                  Alert.alert('Successo', 'Certificato salvato con successo!');
-                }
+                setCertValidityMonthsAthlete('12');
+                if (Platform.OS === 'web') { window.alert('Certificato salvato con successo!'); } else { Alert.alert('Successo', 'Certificato salvato!'); }
               } catch (error: any) {
                 const msg = error.response?.data?.detail || 'Errore nel salvataggio';
-                if (Platform.OS === 'web') {
-                  window.alert(msg);
-                } else {
-                  Alert.alert('Errore', msg);
-                }
+                if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Errore', msg); }
               } finally {
                 setSavingCertAthlete(false);
               }

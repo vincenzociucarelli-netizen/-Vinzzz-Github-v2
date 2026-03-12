@@ -118,6 +118,7 @@ Sistema gestionale per società sportiva che include:
 - [x] **Ristrutturazione Homepage Atleta** (11 Mar 2026): Layout compatto - header con nome/squadra/email/badge stato. Ordine sezioni: QR → Pagamenti → Coach → Orari → Presenze → Certificato → Dati Personali → Documenti → Privacy
 - [x] **Quote Admin Collassabili** (11 Mar 2026): Sezione Quote nelle pagine admin/team è collassabile - mostra totale e numero rate
 - [x] **Pagamenti Genitore V2** (11 Mar 2026): Vista pagamenti in parent/athlete/[id] aggiornata con rate dinamiche, logica cumulativa, tutti i coach, pagamenti effettuati collassabili
+- [x] **Certificato Medico: Validità Variabile** (12 Mar 2026): Aggiunto campo "Validità (mesi)" al form certificato medico in tutti i punti dell'app (atleta, admin, genitore). Scadenza calcolata: data emissione + N mesi - 1 giorno. Default 12 mesi.
 
 ## P1 - Media Priorità
 - [x] **Squadre Assegnate Coach**: Sezione con link alle pagine delle squadre nella vista coach compensation

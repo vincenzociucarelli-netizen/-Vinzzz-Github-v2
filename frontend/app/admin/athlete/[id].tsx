@@ -864,9 +864,10 @@ export default function AdminAthleteDetail() {
       return;
     }
     
-    // Calcola data di scadenza: giorno prima dello stesso giorno/mese dell'anno dopo
+    // Calcola data di scadenza usando i mesi di validità
+    const validityMonths = parseInt(certValidityMonths) || 12;
     const expiryDate = new Date(issueDate);
-    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    expiryDate.setMonth(expiryDate.getMonth() + validityMonths);
     expiryDate.setDate(expiryDate.getDate() - 1);
     
     setSavingCert(true);
@@ -3124,7 +3125,6 @@ export default function AdminAthleteDetail() {
               style={styles.modalInput}
               value={certIssueDate}
               onChangeText={(text) => {
-                // Auto-format date input
                 let cleaned = text.replace(/\D/g, '');
                 if (cleaned.length >= 2) cleaned = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
                 if (cleaned.length >= 5) cleaned = cleaned.slice(0, 5) + '/' + cleaned.slice(5);
@@ -3137,7 +3137,18 @@ export default function AdminAthleteDetail() {
               maxLength={10}
             />
             
-            {certIssueDate.length === 10 && (
+            <Text style={[styles.inputLabel, { marginTop: 12 }]}>Validità (mesi)</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={certValidityMonths}
+              onChangeText={setCertValidityMonths}
+              placeholder="12"
+              placeholderTextColor="#999"
+              keyboardType="number-pad"
+              maxLength={2}
+            />
+            
+            {certIssueDate.length === 10 && parseInt(certValidityMonths) > 0 && (
               <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginTop: 8, alignItems: 'center' }}>
                 <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>SCADENZA CERTIFICATO</Text>
                 <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2E7D32' }}>
@@ -3145,16 +3156,16 @@ export default function AdminAthleteDetail() {
                     const parts = certIssueDate.split('/');
                     if (parts.length === 3) {
                       const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                      // Scadenza: giorno prima dello stesso giorno/mese dell'anno dopo
                       const expiryDate = new Date(issueDate);
-                      expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+                      const months = parseInt(certValidityMonths) || 12;
+                      expiryDate.setMonth(expiryDate.getMonth() + months);
                       expiryDate.setDate(expiryDate.getDate() - 1);
                       return `${expiryDate.getDate().toString().padStart(2, '0')}/${(expiryDate.getMonth() + 1).toString().padStart(2, '0')}/${expiryDate.getFullYear()}`;
                     }
                     return '';
                   })()}
                 </Text>
-                <Text style={{ fontSize: 10, color: '#666', marginTop: 2 }}>(giorno prima dell'anniversario di emissione)</Text>
+                <Text style={{ fontSize: 10, color: '#666', marginTop: 2 }}>(data emissione + {certValidityMonths || '12'} mesi - 1 giorno)</Text>
               </View>
             )}
             
