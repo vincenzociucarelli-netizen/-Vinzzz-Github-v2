@@ -1,162 +1,156 @@
 <analysis>**original_problem_statement**:
-The user's initial goal was to prepare the application for testing by creating and modifying test user accounts. This quickly evolved into a series of UI/UX bug fixes and feature enhancements based on the user's direct feedback from testing.
+The user's primary goal is to finalize the application for publication in app stores. This involves completing core features, fixing bugs, and refining the user experience based on direct feedback.
 
-**The main goals for this session were:**
-1.  **Fix UI/UX Inconsistencies**: Address multiple issues reported by the user via screenshots, including misleading placeholders, confusing password change forms, inconsistent save actions, and incorrect status icons.
-2.  **Resolve Data Integrity Bugs**: Fix bugs related to data not being saved or displayed correctly, such as the country of birth for foreign-born users and the association of signed documents and coaches with athletes.
-3.  **Enhance Core Features**: Improve the QR code attendance system to prevent incorrect registrations and make the athlete payments view dynamic and user-friendly.
+The main goals for this session were:
+1.  **Complete the Dynamic Payments Feature**: Refactor the athlete, admin, and parent payment views to use a dynamic installment plan configured by the admin, with a robust cumulative logic for calculating payment status. **DONE**.
+2.  **Enhance Athlete Page UX**: Completely restructure the athlete's main page to be more compact and prioritize frequently used information (payments, schedules) for better mobile usability. **DONE**.
+3.  **Fix Medical Certificate Logic**: Change the hardcoded 12-month validity of medical certificates to a dynamic, user-configurable duration in months. **DONE**.
+4.  **Update Privacy Policies**: Replace the existing privacy policy text with new, user-provided documents for Staff and Minors. **DONE**.
+5.  **Implement Minor Athlete Flow**: Create the complete workflow for managing athletes under 18, including creation by an admin, mandatory parent linkage, a read-only view for the minor, and the ability for an admin to unlink the parent when the athlete turns 18. **IN PROGRESS**.
 
 **PRODUCT REQUIREMENTS**:
-- **Test User Prep**: Reset athlete Luna Nuova to PROVA status and create a new adult test user for renunciation testing. **DONE**.
-- **Profile UI Fixes**: Unify the personal and fiscal data sections on the athlete profile, and streamline the password change form by removing the current password field and adding a visibility toggle. **DONE**.
-- **Certificate UI Fixes**: Change the date placeholder to  and fix the logic for the status icon to correctly reflect verified vs. valid. **DONE**.
-- **Privacy Doc Fix**: Ensure athletes can view their signed privacy documents. **DONE**.
-- **Coach Display Fix**: Show the correct, full list of coaches assigned to an athlete's team. **DONE**.
-- **Foreign Birth Flow**: For all user types, when a foreign country of birth is selected, the city and province fields must be hidden, and the fiscal code calculation must work correctly. The selected foreign country must be saved and displayed correctly. **DONE**.
-- **QR Scan Logic**: The system must prevent a coach from logging an athlete's attendance for a team they do not belong to, while allowing a forced registration for cases like double training sessions. The user-facing messages must be clear and distinct for each scenario. **DONE**.
-- **Payment Installments V2**: Refactor the athlete's payment page to be fully dynamic based on the number of installments configured by the admin for the team. The UI should be compact, showing the total fee and the next due installment, with an expandable view for the full payment plan. This plan must correctly reflect paid, partially paid, and unpaid statuses. **IN PROGRESS**.
+-   The payment system must dynamically reflect the number of installments set by the admin for a team. **DONE**.
+-   The athlete page layout must be optimized for mobile, showing daily-use sections first. **DONE**.
+-   Medical certificate expiration must be calculated based on a validity in months input, not a fixed 12-month period. **DONE**.
+-   Privacy documents must be updated with the latest user-provided versions. **DONE**.
+-   The system must support a full lifecycle for minor athletes, from creation with a linked parent to the parent being unlinked. The minor's own account must have restricted (read-only) permissions. **IN PROGRESS**.
+-   Push notifications for payment and certificate expiry have been requested but explicitly **postponed** by the user until a future update (September).
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application is largely functional, with significant UI/UX and data integrity improvements completed in this session across athlete, coach, and admin profiles. The system now correctly handles foreign-born user data, QR code scanning has robust validation, and many UI inconsistencies have been resolved.
+The application is in a stable state with several major features and fixes completed. The dynamic payment system is fully functional across athlete, admin, and parent views. The athlete's dashboard has been significantly redesigned for better usability. The medical certificate logic now correctly handles variable validity periods. All privacy policy texts have been updated as per the user's latest documents.
 
-The admin-side configuration for dynamic payment installments (up to 12) is complete and functional. The backend has been updated to provide this dynamic installment data to the frontend. The athlete's payment page is currently in the middle of a major refactor to display this information according to new UI/UX requirements.
+The implementation of the **Minor Athlete Flow** has begun. The necessary backend endpoints ( for creation and  for detachment) have been created, tested, and are functional. On the frontend, the admin's athlete management page () now includes a new button and modal to add a minor athlete, but this UI has not yet been tested end-to-end.
 
 **Last working item**:
-- Last item agent was working: Refactoring the athlete payments page () to implement a new UI and a **cumulative payment logic**. The previous attempt to match payments to installments failed because payments are not explicitly linked to installments in the database. The new, correct approach is to sum all of an athlete's paid amounts and apply that total sequentially against the installment plan to determine the status (paid, partially paid, unpaid) of each installment.
-- Status: IN PROGRESS
-- Agent Testing Done: N
-- Which testing method agent to use? frontend testing agent
-- User Testing Done: N
+-   Last item agent was working: Implementing the frontend UI for an administrator to create a new minor athlete. The agent added a new button (Aggiungi Atleta Minorenne) and a corresponding modal form to . This form is designed to capture the minor's details, the parent's email, and call the new backend endpoint.
+-   Status: IN PROGRESS
+-   Agent Testing Done: N (Backend was tested via , but the frontend modal flow has not been tested).
+-   Which testing method agent to use? screenshot tool
+-   User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Complete the Athlete Payment Page Refactor (P0)**
-    -   **Description**: The implementation of the cumulative payment logic in  is incomplete. The UI needs to be fully implemented to show paid installments (blue/strikethrough), partially paid installments (orange), and unpaid installments (red), and the next upcoming rate must update dynamically.
-    -   **Attempted fixes**: An initial implementation failed because it incorrectly assumed a direct link between a payment record and an installment number. The agent correctly pivoted to a cumulative calculation model but has not finished implementing it.
+-   **Issue 1: Test and Verify Add Minor Athlete Admin UI (P0)**
+    -   **Description**: The new modal for adding a minor athlete in  has been coded but is untested. The functionality needs to be verified to ensure it correctly calls the backend, handles responses, and provides feedback to the admin.
+    -   **Attempted fixes**: N/A.
     -   **Next debug checklist**:
-        1.  Complete the React code in  to calculate the status of each installment based on the cumulative total paid.
-        2.  Implement the conditional styling (colors, icons, strikethrough) for each status: Paid, Partially Paid, Unpaid.
-        3.  Ensure the Prossima rata (Next installment) logic correctly identifies the first installment that is not fully paid.
-        4.  Test with screenshots and then the frontend testing agent, covering scenarios: no payments, partial payment, full payment, and overpayment.
-    -   **Why fix this issue and what will be achieved with the fix?**: This will complete the user's request for a flexible, clear, and accurate payment tracking system for athletes.
+        1.  Start the application and navigate to the admin's Atleti page.
+        2.  Take a screenshot to confirm the Aggiungi Atleta Minorenne button is visible.
+        3.  Click the button to open the modal. Fill in the form with test data for a new minor and their parent.
+        4.  Submit the form and check the browser's developer tools (network tab) and backend logs to confirm the API call to  is successful.
+        5.  Verify that the new athlete appears in the athlete list and that the parent is correctly linked in the database.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is the critical first step to completing the entire minor athlete workflow, a major requirement before the app can be published.
     -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: No
-
--   **Issue 2: Admin/Dirigente Payment View is Outdated (P1)**
-    -   **Description**: As reported by the user in message #651, the payment view in the Admin and Dirigente sections still shows the old, hardcoded 3-rate system. It does not reflect the dynamic installments configured for a team.
-    -   **Attempted fixes**: None.
-    -   **Next debug checklist**:
-        1.  Identify the relevant files (e.g., ).
-        2.  Update the UI to fetch and display the dynamic  array from the team's data, similar to the work being done on the athlete's page.
-    -   **Why fix this issue and what will be achieved with the fix?**: To ensure consistency across the application and allow admins to see the same payment structure they are configuring.
-    -   **Status**: NOT STARTED
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Frontend
     -   **Blocked on other issue**: No
 
 **In progress Task List**:
--   **Task 1: Implement Cumulative Payment Logic (P0)**
-    -   **Where to resume**: . The agent had just started rewriting the component with the new cumulative logic.
-    -   **What will be achieved with this?**: A functional and accurate athlete payment page that handles partial payments correctly.
+-   **Task 1: Complete the Minor Athlete Flow (P0)**
+    -   **Where to resume**: The immediate next step is to test the Add Minor Athlete modal as described in **Issue 1**. After that, the following parts need to be implemented:
+        1.  **Admin UI (Unlink Parent)**: Add a button to the admin's athlete detail page () to call the  endpoint.
+        2.  **Athlete UI (Read-Only Mode)**: Implement logic in the athlete's view ( and related pages) to detect if the logged-in user is a minor (e.g., based on age or a flag) and disable all editing capabilities, making the interface read-only.
+    -   **What will be achieved with this?**: This will complete a core business logic requirement for the app, allowing it to manage both adult and minor athletes securely.
     -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Should Test frontend/backend/both after fix?**: Both
     -   **Blocked on something**: No
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   (P1) User testing of the complete payments flow for Adult Athlete (18+).
-    -   (P1) Implement the **Minorenni (Minor Athlete)** flow by copying the Adult Athlete flow. The key changes will be making the parent linkage mandatory and having the parent handle all signatures and profile management. (User idea from message #561).
+    -   (P1) User testing of the dynamic medical certificate validity.
+    -   (P1) User testing of the updated privacy policy text in the UI.
+    -   (P1) Regression testing of older features as requested by the user: team settings, calendar imports, and template uploads for matches and payments.
 -   **Future Tasks**:
-    -   (P2) Verify the user deletion flow. The  record currently remains after an athlete is deleted. Clarify with the user if this is the desired behavior for auditing or if it should be fully deleted.
-    -   (P2) Refine the compensation UI for  (contracted athlete).
-    -   (P2) Revisit the architectural separation of Admin and Dirigente roles.
+    -   (P2) Implement push notifications for payment/certificate expirations (postponed to September).
+    -   (P2) Clarify and resolve the user deletion flow (whether the  record should be fully deleted).
+    -   (P2) Refine UI for contracted athletes ().
     -   (P3) Refactor the monolithic .
     -   (P3) Re-implement Stripe integration.
 
 **Completed work in this session**
-- **Test Environment Setup**:
-  - Reset athlete Luna Nuova to PROVA status.
-  - Created a new adult test user, Paolo Rinuncia.
-- **Foreign Birth Flow Generalization**:
-  - Fixed and standardized the fiscal code calculation and UI for foreign-born users across all profiles: , , , , and the admin's creation/edit pages.
-  - The  field is now correctly saved to the database and displayed.
-- **UI/UX Fixes**:
-  - Corrected the medical certificate placeholder to  and fixed the status icon logic (Verified vs. Valid) across all relevant pages.
-  - Unified the Anagrafica and Dati Fiscali sections in the athlete profile into a single card to prevent data loss.
-  - Streamlined the password change form for athletes, removing the current password field and adding a visibility toggle.
-  - Made the certificate submission form on the athlete page collapsible to create a more compact UI.
-- **Data Integrity and Bug Fixes**:
-  - **Privacy Document**: Fixed a bug preventing athletes from viewing their signed privacy PDF. This involved correcting backend logic to link the document to the user and performing a data migration for the existing user.
-  - **Coach Display**: Fixed a bug where the athlete page showed an incorrect, single coach instead of the full, correct list of coaches assigned to their team.
-  - **QR Code Scanning**: Overhauled the attendance validation logic. The backend now checks if an athlete belongs to the selected team, and the frontend provides clear, distinct messages and actions for different scenarios (correct team, wrong team, already registered).
+-   **Athlete Page UI/UX Overhaul**: Completely redesigned  for a compact, mobile-first layout, reordering all sections based on user priorities.
+-   **Dynamic Payments V2**: Fully implemented and tested the dynamic installment system with cumulative payment logic on the athlete (), admin (), and parent () pages.
+-   **Collapsible UI Elements**: Made payment and installment sections collapsible on athlete and admin pages to improve usability.
+-   **Dynamic Medical Certificate Validity**: Refactored all certificate forms (, , ) to allow certificate validity to be set in months, with the expiration date calculated automatically.
+-   **Privacy Policy Update**: Integrated new, user-provided text for Staff and Minor privacy policies across all relevant UI components and signature forms.
+-   **Minor Athlete Backend Foundation**: Created and tested two new backend endpoints in  to handle the creation of minor athletes with parent links and the subsequent unlinking of parents.
+
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1: Ambiguous User Deletion**
+    -   **Debug checklist**: When an athlete is deleted, check if the corresponding document in the  collection is also deleted.
+    -   **Why to solve this issue and what will be achieved with this?**: To clarify with the user if this is desired for auditing purposes or if it's a bug. A fix would ensure data consistency according to the user's requirements.
+    -   **Should Test frontend/backend/both after fix**: Backend
+    -   **Is recurring issue?**: Y
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Cumulative State Calculation**: The new, correct approach for determining payment status. Instead of matching individual payments to installments, the system sums all payments and applies the total sequentially across the installment plan. This robustly handles partial payments.
--   **Conditional UI Rendering**: Used extensively to hide/show fields based on user input (e.g., country of birth) and to create collapsible UI sections.
--   **Data Model Extension**: The backend models (, , etc.) and database schema were extended to include the  field, which was previously missing.
--   **State-Driven API Responses**: The  endpoint was enhanced to return specific status codes (, , ) that drive different UI flows on the frontend.
+-   **Backend API Extension**: Added new endpoints (, ) to  to handle specific, transactional business logic.
+-   **Conditional UI Rendering & State Management**: Extensively used React  to manage new modals and collapsible sections for a more dynamic and clean user interface.
+-   **Component Restructuring**: Performed a significant refactor of the athlete dashboard (), re-ordering and recomposing child components to match user-defined priorities for a better mobile experience.
+-   **Dynamic Form Logic**: Evolved static forms (like the medical certificate) into dynamic ones by adding new state and input fields (e.g., validity in months) to drive backend calculations.
 
 **key DB schema**
--   :
-    -   Added .
-    -   The record for a deleted user remains in this collection, but their corresponding record in  is removed.
--   :
-    -   Contains a dynamic  of objects, each with , , and . This is the source of truth for payment plans.
--   :
-    -   Stores payment records made by users.
-    -   **Crucially, these records do NOT contain a direct link (like ) to the  in the  collection.** This discovery prompted the switch to a cumulative calculation logic.
+-   : No schema changes. The logic for the minor athlete flow relies on the existing  field to establish the parent-child link.
+-   : No schema changes. The  array is the source of truth for the now fully-dynamic payment views.
+-   : No schema changes. The logic correctly treats this collection as a simple ledger, with the status being calculated cumulatively on the frontend.
 
 **All files of reference**
+-   
 -    (current focus)
--    (needs to be updated for payments view)
 -   
 -   
 -   
 -   
--   All profile files: , , 
--   All admin athlete files: , 
+-   
+-   
+-   
+-   
+-   
+-   
 
 **Critical Info for New Agent**
 -   **User Language**: Your responses must be in **Italiano**.
--   **Immediate Task**: Your first priority is to complete the refactor of . You must implement the **cumulative payment logic** to correctly calculate and display the status of each installment (paid, partial, unpaid). Refer to the  section for the strategy.
--   **Next Task**: After the athlete payment page is fixed, address the user's report that the admin/dirigente payment view is also outdated and shows a hardcoded 3-rate system. This will require a similar fix.
--   **Payment Logic is Key**: Do not try to match individual payments to installments. The core logic MUST be: ; then iterate through installments, subtracting from  to determine each one's status.
+-   **Immediate Task**: The user has gone to bed and expects the minor athlete flow to be implemented by morning. Your first task is to **test the Add Minor Athlete modal** on the  page to ensure it functions correctly.
+-   **Next Steps for Minor Flow**: After testing the admin creation UI, you must implement the rest of the flow: the Unlink Parent functionality for admins and the read-only mode for the minor athlete's account.
+-   **Postponed Task**: Do NOT work on push notifications. The user has explicitly delayed this feature until September.
+-   **Upcoming User Verification**: The user plans to test the medical certificate and privacy policy changes. They also requested a regression test of older features like calendar/template imports. Be prepared for feedback on these items.
 
 **documents and test reports created in this job**
--  (updated at the end of the morning session)
+-    (updated with latest completed tasks)
+-   Multiple test reports from the testing agent, with the last one being  which confirmed fixes for the parent view.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (651):** Reports issues with the new payment page: 1) Admin view is wrong (shows 3 rates), 2) Next rata is static, 3) Asks how to handle partial payments, suggesting an orange color.
-2.  **Agent (652-654):** Starts investigating the issues.
-3.  **User (654):** Provides a screenshot showing the previous incorrect state.
-4.  **Agent (655-657):** Investigates the database and has a crucial insight: payments are not linked to installments. Proposes the new **cumulative logic**.
-5.  **User (658):** Approves the new cumulative logic.
-6.  **Agent (659):** Starts rewriting the payment component with the new logic.
-7.  **(PENDING HUMAN MESSAGE):** The agent is in the middle of implementation. The next step is to complete the code and verify it.
+1.  **User (325):** Confirms backend is working and asks to proceed with the frontend.
+2.  **User (323):** Agent retries curl after fixing the password hash function name.
+3.  **User (319):** Agent identifies a bug in the backend code:  should be .
+4.  **User (311):** Agent runs a curl command to test the new  endpoint.
+5.  **User (293):** Agent outlines the implementation plan for the minor athlete flow, starting with the backend.
+6.  **User (280):** Says goodnight and asks the agent to proceed with implementing the minor athlete flow, promising to review a report in the morning.
+7.  **User (262):** Provides two new PDF documents for privacy policies (Minors and Staff) and asks the agent to replace the current ones.
+8.  **User (258):** Agent confirms the dynamic medical certificate form works as expected.
+9.  **User (207):** Reports a critical bug: medical certificate validity is not always 12 months and must be configurable.
+10. **User (205):** Asks the agent to ignore a previously uploaded privacy document as they have a more complete version.
 
 **Project Health Check:**
--   **Broken**: The athlete payment page () and the admin/dirigente payment views are currently broken/mid-refactor. All other features are stable.
+-   **Broken**: The Add Minor Athlete feature is mid-implementation. The frontend modal exists but is untested.
 -   **Mocked**: None.
 
 **3rd Party Integrations**
 -   : Used for calculating Italian fiscal codes.
 
 **Testing status**
--   Testing agent used after significant changes: NO
+-   Testing agent used after significant changes: YES. Successfully used to verify payment system fixes and parent view updates.
 -   Troubleshoot agent used after agent stuck in loop: NO
 -   Test files created: []
--   Known regressions: The payment views are temporarily non-functional due to the ongoing refactor.
+-   Known regressions: None, but the user has requested regression testing on calendar and template uploads.
 
 **Credentials to test flow:**
 -   **Admin**:  / 
--   **Test Athlete**:  /  (Name: Luna Nuova, Team: Serie D)
+-   **Test Athlete**:  / 
+-   **Parent**: The user has previously used parent accounts; check the database for an existing one or create one as needed for testing the minor flow.
 
 **What agent forgot to execute**
--   The agent acknowledged the user's report that the admin/dirigente payment view is also broken but did not add it to the immediate plan. This is now listed as .
--   The ambiguity about whether a user record should be deleted from the  collection upon account deletion remains unresolved. This has been added to .</analysis>
+-   The agent has correctly followed user requests. The main pending task, implementing the minor athlete flow, was explicitly assigned by the user as an overnight task and is currently in progress as expected.</analysis>

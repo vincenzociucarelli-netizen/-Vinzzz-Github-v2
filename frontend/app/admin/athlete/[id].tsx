@@ -158,6 +158,9 @@ export default function AdminAthleteDetail() {
   
   // Detach parents
   const [detachingParents, setDetachingParents] = useState(false);
+  const [showDetachModal, setShowDetachModal] = useState(false);
+  const [detachEmail, setDetachEmail] = useState('');
+  const [detachPassword, setDetachPassword] = useState('');
   
   // Delete athlete
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -781,27 +784,26 @@ export default function AdminAthleteDetail() {
     }
   };
 
-  // Detach parents from adult athlete
-  const handleDetachParents = async () => {
-    const confirm = Platform.OS === 'web'
-      ? window.confirm('Confermi di voler sganciare i genitori da questo atleta maggiorenne?\n\nI dati dei genitori rimarranno salvati ma non saranno più visibili.')
-      : await new Promise(resolve => {
-          Alert.alert(
-            'Sgancia Genitori',
-            'Confermi di voler sganciare i genitori da questo atleta maggiorenne?\n\nI dati dei genitori rimarranno salvati ma non saranno più visibili.',
-            [
-              { text: 'Annulla', onPress: () => resolve(false) },
-              { text: 'Conferma', style: 'destructive', onPress: () => resolve(true) },
-            ]
-          );
-        });
-    
-    if (!confirm) return;
-    
+  // Detach parents from adult athlete - opens modal to collect email/password
+  const handleDetachParents = () => {
+    setDetachEmail('');
+    setDetachPassword('');
+    setShowDetachModal(true);
+  };
+
+  const handleConfirmDetach = async () => {
+    if (!detachEmail.trim() || !detachPassword.trim()) {
+      showAlert('Errore', 'Email e password sono obbligatorie per creare l\'account indipendente dell\'atleta.');
+      return;
+    }
     setDetachingParents(true);
     try {
-      await api.post(`/athletes/${id}/detach-parents`);
-      showAlert('Successo', 'Genitori sganciati con successo');
+      await api.post(`/athletes/${id}/detach-parents`, {
+        athlete_email: detachEmail.trim().toLowerCase(),
+        athlete_password: detachPassword.trim(),
+      });
+      showAlert('Successo', `Genitori sganciati. Account indipendente creato con email: ${detachEmail.trim().toLowerCase()}`);
+      setShowDetachModal(false);
       await loadData();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante lo sgancio genitori');
@@ -3293,6 +3295,65 @@ export default function AdminAthleteDetail() {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <Text style={styles.modalConfirmBtnTextPassword}>Conferma</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Sgancio Genitori */}
+      <Modal
+        visible={showDetachModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowDetachModal(false)}
+      >
+        <View style={styles.modalOverlayPassword}>
+          <View style={styles.modalContentPassword}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 8 }}>Sgancia Genitori</Text>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 18 }}>
+              Per sganciare i genitori, devi creare un account indipendente per l'atleta.
+              L'atleta potrà accedere con le credenziali qui sotto.
+            </Text>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 4 }}>Email Atleta *</Text>
+            <TextInput
+              style={styles.inputPassword}
+              value={detachEmail}
+              onChangeText={setDetachEmail}
+              placeholder="email@atleta.com"
+              placeholderTextColor="#999"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              data-testid="detach-email-input"
+            />
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 4, marginTop: 12 }}>Password *</Text>
+            <TextInput
+              style={styles.inputPassword}
+              value={detachPassword}
+              onChangeText={setDetachPassword}
+              placeholder="Password per il nuovo account"
+              placeholderTextColor="#999"
+              secureTextEntry
+              data-testid="detach-password-input"
+            />
+            <View style={{ flexDirection: 'row', marginTop: 20, gap: 12 }}>
+              <TouchableOpacity
+                style={[styles.modalCancelBtnPassword, { flex: 1 }]}
+                onPress={() => setShowDetachModal(false)}
+              >
+                <Text style={styles.modalCancelBtnTextPassword}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalConfirmBtnPassword, { flex: 1, backgroundColor: '#FF9500' }, detachingParents && styles.disabledBtnPassword]}
+                onPress={handleConfirmDetach}
+                disabled={detachingParents}
+                data-testid="confirm-detach-btn"
+              >
+                {detachingParents ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalConfirmBtnTextPassword}>Sgancia</Text>
                 )}
               </TouchableOpacity>
             </View>

@@ -366,6 +366,9 @@ export default function AthleteScreen() {
   }
 
   if (!profile || profile.athlete_type !== 'compensated') {
+    // Check if the athlete is a minor (read-only mode)
+    const isMinor = !!(profile as any)?.is_minor;
+
     // Vista per atleti "quota" (non compensati)
     return (
       <>
@@ -396,23 +399,32 @@ export default function AthleteScreen() {
               )}
             </View>
             <View style={{ 
-              backgroundColor: profile?.status === 'trial' ? '#FFF3E0' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#E3F2FD' : '#E8F5E9', 
+              backgroundColor: isMinor ? '#FFF3E0' : profile?.status === 'trial' ? '#FFF3E0' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#E3F2FD' : '#E8F5E9', 
               paddingHorizontal: 10, 
               paddingVertical: 5, 
               borderRadius: 12
             }}>
               <Text style={{ 
-                color: profile?.status === 'trial' ? '#FF9800' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#1976D2' : '#4CAF50',
+                color: isMinor ? '#FF9800' : profile?.status === 'trial' ? '#FF9800' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#1976D2' : '#4CAF50',
                 fontWeight: '600',
                 fontSize: 12
               }} data-testid="athlete-status">
-                {profile?.status === 'trial' ? 'Periodo di Prova' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? 'Firma Privacy' : 'Attivo'}
+                {isMinor ? 'Minorenne' : profile?.status === 'trial' ? 'Periodo di Prova' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? 'Firma Privacy' : 'Attivo'}
               </Text>
             </View>
           </View>
+
+          {/* Minor Read-Only Banner */}
+          {isMinor && (
+            <View style={{ backgroundColor: '#FFF3E0', padding: 10, borderRadius: 8, marginTop: 10, borderWidth: 1, borderColor: '#FFB74D' }} data-testid="minor-readonly-banner">
+              <Text style={{ color: '#E65100', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>
+                Account in sola lettura - I tuoi dati sono gestiti dal genitore/tutore
+              </Text>
+            </View>
+          )}
           
           {/* Pending Privacy Banner */}
-          {profile?.status === 'pending_privacy' && !profile?.privacy_accepted && (
+          {!isMinor && profile?.status === 'pending_privacy' && !profile?.privacy_accepted && (
             <TouchableOpacity 
               style={{ backgroundColor: '#E3F2FD', padding: 10, borderRadius: 8, marginTop: 10, borderWidth: 1, borderColor: '#1976D2' }}
               onPress={handleStayAndSignPrivacy}
@@ -424,7 +436,7 @@ export default function AthleteScreen() {
           )}
           
           {/* Trial info + actions */}
-          {profile?.status === 'trial' && (
+          {!isMinor && profile?.status === 'trial' && (
             <View style={{ marginTop: 10 }}>
               {profile?.trial_end_date && (
                 <Text style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>
@@ -618,7 +630,8 @@ export default function AthleteScreen() {
             </View>
           )}
           
-          {/* Collapsible: Nuovo certificato */}
+          {/* Collapsible: Nuovo certificato - only for adults */}
+          {!isMinor && (
           <TouchableOpacity 
             style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#eee' }}
             onPress={() => setShowCertForm(!showCertForm)}
@@ -626,6 +639,7 @@ export default function AthleteScreen() {
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#007AFF' }}>Nuovo certificato</Text>
             <Ionicons name={showCertForm ? "chevron-up" : "chevron-down"} size={20} color="#007AFF" />
           </TouchableOpacity>
+          )}
           
           {showCertForm && (
           <View>
@@ -731,7 +745,7 @@ export default function AthleteScreen() {
           <Ionicons name="person" size={22} color="#007AFF" />
           <View style={styles.menuItemContent}>
             <Text style={styles.menuItemTitle}>Dati Personali</Text>
-            <Text style={styles.menuItemSubtitle}>Visualizza e modifica i tuoi dati</Text>
+            <Text style={styles.menuItemSubtitle}>{isMinor ? 'Visualizza i tuoi dati (sola lettura)' : 'Visualizza e modifica i tuoi dati'}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
@@ -750,7 +764,8 @@ export default function AthleteScreen() {
           <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
         
-        {/* Privacy */}
+        {/* Privacy - hidden for minors (parent manages privacy) */}
+        {!isMinor && (
         <View style={[styles.menuItem, { backgroundColor: profile?.privacy_accepted ? '#E8F5E9' : '#FFF3E0' }]} data-testid="privacy-status">
           <Ionicons 
             name={profile?.privacy_accepted ? "checkmark-circle" : "alert-circle"} 
@@ -769,6 +784,7 @@ export default function AthleteScreen() {
             <Ionicons name="chevron-forward" size={20} color="#FF9800" />
           )}
         </View>
+        )}
         
         {/* Spacer per permettere scroll completo */}
         <View style={{ height: 100 }} />

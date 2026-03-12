@@ -39,6 +39,7 @@ export default function AdminAthletes() {
   
   // Modal per aggiungere atleta maggiorenne
   const [showAddAdultModal, setShowAddAdultModal] = useState(false);
+  const [showAddMinorModal, setShowAddMinorModal] = useState(false);
   const [addingAthlete, setAddingAthlete] = useState(false);
   const [adultForm, setAdultForm] = useState({
     first_name: '',
@@ -59,6 +60,64 @@ export default function AdminAthletes() {
       window.alert(`${title}\n\n${message}`);
     } else {
       Alert.alert(title, message);
+    }
+  };
+
+  // Minor form state
+  const [minorForm, setMinorForm] = useState({
+    first_name: '',
+    last_name: '',
+    date_of_birth: '',
+    gender: '' as '' | 'M' | 'F',
+    phone: '',
+    team_id: '',
+    parent_email: '',
+    data_password: '',
+  });
+
+  const resetMinorForm = () => {
+    setMinorForm({
+      first_name: '', last_name: '', date_of_birth: '', gender: '',
+      phone: '', team_id: '', parent_email: '', data_password: '',
+    });
+  };
+
+  const handleAddMinorAthlete = async () => {
+    if (!minorForm.first_name || !minorForm.last_name || !minorForm.date_of_birth || !minorForm.parent_email || !minorForm.data_password) {
+      showAlert('Errore', 'Compila tutti i campi obbligatori: Nome, Cognome, Data di nascita, Email genitore e Password dati');
+      return;
+    }
+    // Parse date DD/MM/YYYY to YYYY-MM-DD
+    const parts = minorForm.date_of_birth.split('/');
+    if (parts.length !== 3 || parts[0].length !== 2 || parts[1].length !== 2 || parts[2].length !== 4) {
+      showAlert('Errore', 'Data di nascita non valida (formato: gg/mm/aaaa)');
+      return;
+    }
+    const isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    
+    setAddingAthlete(true);
+    try {
+      const res = await api.post('/athletes/minor', {
+        first_name: minorForm.first_name.toUpperCase(),
+        last_name: minorForm.last_name.toUpperCase(),
+        date_of_birth: isoDate,
+        gender: minorForm.gender || undefined,
+        phone: minorForm.phone || undefined,
+        team_id: minorForm.team_id || undefined,
+        parent_email: minorForm.parent_email,
+        data_password: minorForm.data_password,
+      });
+      const msg = res.data.parent_existed 
+        ? `Atleta minorenne registrato e collegato al genitore esistente.`
+        : `Atleta minorenne registrato. Account genitore creato per ${minorForm.parent_email}`;
+      showAlert('Successo', msg);
+      setShowAddMinorModal(false);
+      resetMinorForm();
+      loadAthletes();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore nella registrazione');
+    } finally {
+      setAddingAthlete(false);
     }
   };
 
@@ -414,6 +473,26 @@ export default function AdminAthletes() {
         </View>
       </View>
 
+      {/* Add Athlete Buttons */}
+      <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginBottom: 8, gap: 8 }}>
+        <TouchableOpacity 
+          style={{ flex: 1, backgroundColor: '#007AFF', paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          onPress={() => setShowAddAdultModal(true)}
+          data-testid="add-adult-athlete-btn"
+        >
+          <Ionicons name="person-add" size={18} color="#fff" />
+          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Maggiorenne</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={{ flex: 1, backgroundColor: '#FF9800', paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          onPress={() => setShowAddMinorModal(true)}
+          data-testid="add-minor-athlete-btn"
+        >
+          <Ionicons name="person-add" size={18} color="#fff" />
+          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Minorenne</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.contentContainer}>
         {/* Athletes List */}
         <SectionList
@@ -709,6 +788,87 @@ export default function AdminAthletes() {
                 onPress={handleAddAdultAthlete}
                 disabled={addingAthlete}
               >
+                {addingAthlete ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={20} color="#fff" />
+                    <Text style={styles.saveBtnText}>Registra</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Aggiungi Atleta Minorenne */}
+      <Modal
+        visible={showAddMinorModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => { setShowAddMinorModal(false); resetMinorForm(); }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>Registra Atleta Minorenne</Text>
+              <Text style={{ color: '#666', fontSize: 12, marginBottom: 16, textAlign: 'center' }}>
+                L'atleta sarà collegato al genitore tramite email
+              </Text>
+              
+              <Text style={styles.inputLabel}>Nome *</Text>
+              <TextInput style={styles.modalInput} value={minorForm.first_name} onChangeText={v => setMinorForm({...minorForm, first_name: v})} placeholder="Nome" autoCapitalize="characters" />
+              
+              <Text style={styles.inputLabel}>Cognome *</Text>
+              <TextInput style={styles.modalInput} value={minorForm.last_name} onChangeText={v => setMinorForm({...minorForm, last_name: v})} placeholder="Cognome" autoCapitalize="characters" />
+              
+              <Text style={styles.inputLabel}>Data di Nascita * (gg/mm/aaaa)</Text>
+              <TextInput style={styles.modalInput} value={minorForm.date_of_birth} onChangeText={v => setMinorForm({...minorForm, date_of_birth: formatDateInput(v)})} placeholder="gg/mm/aaaa" keyboardType="number-pad" maxLength={10} />
+              
+              <Text style={styles.inputLabel}>Sesso</Text>
+              <View style={styles.genderRow}>
+                <TouchableOpacity style={[styles.genderBtn, minorForm.gender === 'M' && styles.genderBtnActive]} onPress={() => setMinorForm({...minorForm, gender: 'M'})}>
+                  <Text style={[styles.genderBtnText, minorForm.gender === 'M' && styles.genderBtnTextActive]}>M</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.genderBtn, minorForm.gender === 'F' && styles.genderBtnActive]} onPress={() => setMinorForm({...minorForm, gender: 'F'})}>
+                  <Text style={[styles.genderBtnText, minorForm.gender === 'F' && styles.genderBtnTextActive]}>F</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={styles.inputLabel}>Squadra</Text>
+              <View style={styles.pickerContainer}>
+                <Picker selectedValue={minorForm.team_id} onValueChange={v => setMinorForm({...minorForm, team_id: v})} style={styles.picker}>
+                  <Picker.Item label="-- Seleziona squadra --" value="" />
+                  {Object.values(teams).map((t: any) => <Picker.Item key={t.id} label={t.name} value={t.id} />)}
+                </Picker>
+              </View>
+              
+              <Text style={styles.inputLabel}>Telefono</Text>
+              <TextInput style={styles.modalInput} value={minorForm.phone} onChangeText={v => setMinorForm({...minorForm, phone: v})} placeholder="Telefono" keyboardType="phone-pad" />
+              
+              <View style={{ backgroundColor: '#E3F2FD', padding: 12, borderRadius: 8, marginTop: 8, marginBottom: 8 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#1565C0', marginBottom: 8 }}>Dati Genitore/Tutore</Text>
+                
+                <Text style={styles.inputLabel}>Email Genitore *</Text>
+                <TextInput style={styles.modalInput} value={minorForm.parent_email} onChangeText={v => setMinorForm({...minorForm, parent_email: v})} placeholder="email@genitore.com" keyboardType="email-address" autoCapitalize="none" />
+                <Text style={{ color: '#888', fontSize: 11, marginTop: -4, marginBottom: 8 }}>Se il genitore non ha ancora un account, verrà creato automaticamente</Text>
+              </View>
+              
+              <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginTop: 4, marginBottom: 8 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#E65100', marginBottom: 8 }}>Protezione Dati</Text>
+                
+                <Text style={styles.inputLabel}>Password Dati *</Text>
+                <TextInput style={styles.modalInput} value={minorForm.data_password} onChangeText={v => setMinorForm({...minorForm, data_password: v})} placeholder="Password per proteggere i dati" secureTextEntry />
+                <Text style={{ color: '#888', fontSize: 11, marginTop: -4 }}>Il genitore dovrà inserirla per modificare i dati del minore</Text>
+              </View>
+            </ScrollView>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowAddMinorModal(false); resetMinorForm(); }}>
+                <Text style={styles.cancelBtnText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleAddMinorAthlete} disabled={addingAthlete}>
                 {addingAthlete ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (

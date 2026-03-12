@@ -4948,6 +4948,22 @@ class AdultAthleteCreate(BaseModel):
     team_id: Optional[str] = None  # Can assign team later
     athlete_type: str = "quota"  # "quota" o "compensated"
 
+
+class MinorAthleteCreate(BaseModel):
+    first_name: str
+    last_name: str
+    date_of_birth: str  # YYYY-MM-DD, required for minors
+    fiscal_code: Optional[str] = None
+    phone: Optional[str] = None
+    team_id: Optional[str] = None
+    parent_email: str  # Email genitore (obbligatorio per minori)
+    data_password: str  # Password protezione dati (obbligatoria per minori)
+    gender: Optional[str] = None  # M or F
+
+class DetachParentsRequest(BaseModel):
+    athlete_email: str  # Email per il nuovo account indipendente dell'atleta
+    athlete_password: str  # Password per il nuovo account
+
 @api_router.post("/athletes/adult")
 async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(get_current_user)):
     """Registra un atleta maggiorenne direttamente dall'admin - form semplificato"""
@@ -5079,6 +5095,219 @@ async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(
     
     clean_mongo_doc(athlete_dict)
     return {"message": "Atleta registrato con successo", "athlete_id": athlete_id, "athlete_code": athlete_code}
+
+@api_router.post("/athletes/minor")
+async def create_minor_athlete(data: MinorAthleteCreate, current_user = Depends(get_current_user)):
+    """Admin creates a minor athlete linked to a parent account"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin possono registrare atleti minorenni")
+    
+    admin_user = await db.users.find_one({"id": current_user["id"]})
+    society_id = admin_user.get("society_id") if admin_user else None
+    
+    # Validate DOB - must be under 18
+    try:
+        dob = datetime.fromisoformat(data.date_of_birth)
+        age = (datetime.utcnow() - dob).days // 365
+        if age >= 18:
+            raise HTTPException(status_code=400, detail="L'atleta ha 18+ anni. Usa il form per atleti maggiorenni.")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Data di nascita non valida")
+    
+    # Validate team
+    team = None
+    if data.team_id:
+        team = await db.teams.find_one({"id": data.team_id})
+        if not team:
+            raise HTTPException(status_code=404, detail="Squadra non trovata")
+    
+    # Find or create parent account
+    parent_email = data.parent_email.lower().strip()
+    parent_user = await db.users.find_one({"email": parent_email})
+    parent_id = None
+    
+    if parent_user:
+        # Parent exists - link
+        parent_id = parent_user["id"]
+        # If parent doesn't have parent role, update it
+        if parent_user.get("role") != UserRole.PARENT:
+            # Don't change admin role
+            if parent_user.get("role") not in [UserRole.ADMIN]:
+                await db.users.update_one({"id": parent_id}, {"$set": {"role": UserRole.PARENT}})
+    else:
+        # Create a new parent user account with temporary password
+        parent_id = str(ObjectId())
+        temp_password = parent_email.split("@")[0] + "2026"
+        parent_user_dict = {
+            "id": parent_id,
+            "email": parent_email,
+            "password_hash": hash_password(temp_password),
+            "role": UserRole.PARENT,
+            "full_name": f"Genitore di {data.first_name} {data.last_name}",
+            "first_name": "",
+            "last_name": "",
+            "society_id": society_id,
+            "status": "approved",
+            "created_at": datetime.utcnow(),
+        }
+        await db.users.insert_one(parent_user_dict)
+    
+    # Check for existing athlete by fiscal code
+    if data.fiscal_code:
+        existing_athlete = await find_existing_athlete_by_fiscal_code(data.fiscal_code)
+        if existing_athlete:
+            # Reactivate with minor settings
+            reactivate_data = {
+                "society_id": society_id,
+                "is_withdrawn": False,
+                "withdrawn_date": None,
+                "withdrawn_reason": None,
+                "status": "active",
+                "is_minor": True,
+                "parent_id": parent_id,
+                "parents_detached": False,
+                "first_name": data.first_name,
+                "last_name": data.last_name,
+                "full_name": f"{data.first_name} {data.last_name}",
+                "date_of_birth": dob,
+            }
+            if data.data_password:
+                reactivate_data["data_password_hash"] = hash_password(data.data_password)
+            if data.team_id:
+                reactivate_data["team_id"] = data.team_id
+            if data.phone:
+                reactivate_data["phone_athlete"] = data.phone
+            
+            await db.athletes.update_one({"id": existing_athlete["id"]}, {"$set": reactivate_data})
+            return {"message": "Atleta minorenne riattivato", "athlete_id": existing_athlete["id"], "parent_id": parent_id, "reactivated": True}
+    
+    # Create new minor athlete
+    athlete_id = str(ObjectId())
+    qr_id = generate_qr_identifier()
+    while await db.athletes.find_one({"qr_identifier": qr_id}):
+        qr_id = generate_qr_identifier()
+    qr_code = generate_qr_code_from_identifier(qr_id)
+    
+    athlete_dict = {
+        "id": athlete_id,
+        "parent_id": parent_id,
+        "society_id": society_id,
+        "athlete_code": qr_id,
+        "full_name": f"{data.first_name} {data.last_name}",
+        "first_name": data.first_name,
+        "last_name": data.last_name,
+        "date_of_birth": dob,
+        "is_minor": True,
+        "fiscal_code": data.fiscal_code,
+        "email": None,
+        "phone_athlete": data.phone,
+        "gender": data.gender,
+        "team_id": data.team_id,
+        "qr_code": qr_code,
+        "qr_identifier": qr_id,
+        "status": "active",
+        "athlete_type": "quota",
+        "parents_detached": False,
+        "data_password_hash": hash_password(data.data_password),
+        "created_at": datetime.utcnow(),
+        "privacy_accepted": False,
+        "is_trial": False,
+    }
+    
+    await db.athletes.insert_one(athlete_dict)
+    
+    # Create payment records if team has installments
+    if team and team.get("total_amount", 0) > 0:
+        installments = team.get("installments", [])
+        if installments:
+            for i, inst in enumerate(installments):
+                payment = {
+                    "id": str(ObjectId()),
+                    "athlete_id": athlete_id,
+                    "society_id": society_id,
+                    "installment_number": i + 1,
+                    "installment_name": inst.get("name", f"Rata {i + 1}"),
+                    "amount": inst.get("amount", 0),
+                    "due_date": inst.get("due_date"),
+                    "paid": False,
+                    "paid_date": None,
+                    "created_at": datetime.utcnow(),
+                }
+                await db.payments.insert_one(payment)
+    
+    clean_mongo_doc(athlete_dict)
+    return {
+        "message": "Atleta minorenne registrato con successo",
+        "athlete_id": athlete_id,
+        "athlete_code": qr_id,
+        "parent_id": parent_id,
+        "parent_existed": parent_user is not None if parent_user else False,
+    }
+
+@api_router.post("/athletes/{athlete_id}/detach-parents")
+async def detach_parents(athlete_id: str, data: DetachParentsRequest, current_user = Depends(get_current_user)):
+    """Detach parents from athlete who turned 18 - creates independent account"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin possono sganciare i genitori")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Check age
+    if athlete.get("date_of_birth"):
+        age = (datetime.utcnow() - athlete["date_of_birth"]).days // 365
+        if age < 18:
+            raise HTTPException(status_code=400, detail=f"L'atleta ha {age} anni. Deve avere almeno 18 anni per lo sgancio genitori.")
+    
+    # Check if already detached
+    if athlete.get("parents_detached"):
+        raise HTTPException(status_code=400, detail="Genitori già sganciati per questo atleta")
+    
+    # Create independent user account for the athlete
+    athlete_email = data.athlete_email.lower().strip()
+    existing_user = await db.users.find_one({"email": athlete_email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email già in uso da un altro account")
+    
+    admin_user = await db.users.find_one({"id": current_user["id"]})
+    society_id = admin_user.get("society_id") if admin_user else None
+    
+    user_id = str(ObjectId())
+    user_dict = {
+        "id": user_id,
+        "email": athlete_email,
+        "password_hash": hash_password(data.athlete_password),
+        "role": "athlete",
+        "full_name": athlete.get("full_name", ""),
+        "first_name": athlete.get("first_name", ""),
+        "last_name": athlete.get("last_name", ""),
+        "society_id": society_id,
+        "status": "approved",
+        "athlete_id": athlete_id,
+        "athlete_status": "active",
+        "created_at": datetime.utcnow(),
+    }
+    await db.users.insert_one(user_dict)
+    
+    # Update athlete - detach parents, set email, mark as adult
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "parents_detached": True,
+            "parents_detached_date": datetime.utcnow().isoformat(),
+            "is_minor": False,
+            "email": athlete_email,
+            "user_id": user_id,
+        }}
+    )
+    
+    return {
+        "message": f"Genitori sganciati. Account indipendente creato per {athlete.get('full_name')}",
+        "user_id": user_id,
+        "email": athlete_email,
+    }
+
 
 @api_router.get("/athletes/my", response_model=List[Athlete])
 async def get_my_athletes(current_user = Depends(get_current_user)):
