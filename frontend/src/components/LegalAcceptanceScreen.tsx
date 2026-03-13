@@ -7,9 +7,9 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
-  Linking,
   Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from './Icon';
 import api from '../services/api';
 
@@ -18,11 +18,8 @@ interface LegalAcceptanceScreenProps {
   userName?: string;
 }
 
-// URLs configurabili - da aggiornare con i link reali
-const TERMS_URL = 'https://www.iubenda.com/termini-e-condizioni/esempio';
-const PRIVACY_URL = 'https://www.iubenda.com/privacy-policy/esempio';
-
 export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ onAccepted, userName }) => {
+  const router = useRouter();
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -34,12 +31,8 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
     }
   };
 
-  const openLink = (url: string) => {
-    if (Platform.OS === 'web') {
-      window.open(url, '_blank');
-    } else {
-      Linking.openURL(url);
-    }
+  const openLink = (path: string) => {
+    router.push(path as any);
   };
 
   const handleAccept = async () => {
@@ -77,11 +70,11 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
 
           <Text style={styles.description}>
             Utilizzando l'app accetti i{' '}
-            <Text style={styles.link} onPress={() => openLink(TERMS_URL)}>
+            <Text style={styles.link} onPress={() => openLink('/terms-of-use')}>
               Termini di utilizzo
             </Text>
             {' '}e confermi di aver preso visione della{' '}
-            <Text style={styles.link} onPress={() => openLink(PRIVACY_URL)}>
+            <Text style={styles.link} onPress={() => openLink('/privacy-policy')}>
               Privacy Policy
             </Text>.
           </Text>
@@ -95,7 +88,7 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
         <View style={styles.linksContainer}>
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => openLink(TERMS_URL)}
+            onPress={() => openLink('/terms-of-use')}
             data-testid="terms-link"
           >
             <Ionicons name="document-text-outline" size={20} color="#1565C0" />
@@ -105,7 +98,7 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
 
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => openLink(PRIVACY_URL)}
+            onPress={() => openLink('/privacy-policy')}
             data-testid="privacy-link"
           >
             <Ionicons name="lock-closed-outline" size={20} color="#1565C0" />
