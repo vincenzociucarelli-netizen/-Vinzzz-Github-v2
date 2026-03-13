@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Stack, useRouter, usePathname } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -19,17 +19,31 @@ export default function AdminLayout() {
     checkAuth();
   }, []);
 
+  const fetchTermsStatus = useCallback(async () => {
+    try {
+      const res = await api.get('/societies/terms-status');
+      setTermsAccepted(res.data.terms_accepted || false);
+    } catch {
+      setTermsAccepted(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isChecking && !isLoading) {
       if (!user || user.role !== 'admin') {
         router.replace('/login');
       } else {
-        api.get('/societies/terms-status')
-          .then(res => setTermsAccepted(res.data.terms_accepted || false))
-          .catch(() => setTermsAccepted(false));
+        fetchTermsStatus();
       }
     }
   }, [user, isLoading, isChecking]);
+
+  // Re-check terms when navigating back from terms-acceptance page
+  useEffect(() => {
+    if (user && user.role === 'admin' && !pathname.includes('terms-acceptance')) {
+      fetchTermsStatus();
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (termsAccepted === false && !pathname.includes('terms-acceptance')) {
