@@ -2,15 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useLegalCheck } from '../../src/hooks/useLegalCheck';
+import { LegalAcceptanceScreen } from '../../src/components/LegalAcceptanceScreen';
 
 export default function CoachLayout() {
   const router = useRouter();
   const { user, isLoading, loadAuth } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
+  const isAuthenticated = !isChecking && !isLoading && !!user && user.role === 'coach';
+  const { legalAccepted, legalChecking, markLegalAccepted } = useLegalCheck(isAuthenticated);
 
   useEffect(() => {
     const checkAuth = async () => {
-      // Always try to load auth on mount
       await loadAuth();
       setIsChecking(false);
     };
@@ -25,7 +28,7 @@ export default function CoachLayout() {
     }
   }, [user, isLoading, isChecking]);
 
-  if (isChecking || isLoading) {
+  if (isChecking || isLoading || legalChecking) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -39,6 +42,10 @@ export default function CoachLayout() {
         <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
+  }
+
+  if (legalAccepted === false) {
+    return <LegalAcceptanceScreen onAccepted={markLegalAccepted} userName={user.full_name} />;
   }
 
   return (

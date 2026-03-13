@@ -1,7 +1,53 @@
-import { Stack } from 'expo-router';
-import { View, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Stack, useRouter } from 'expo-router';
+import { useAuthStore } from '../../src/store/authStore';
+import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { useLegalCheck } from '../../src/hooks/useLegalCheck';
+import { LegalAcceptanceScreen } from '../../src/components/LegalAcceptanceScreen';
 
 export default function CollaboratoreLayout() {
+  const router = useRouter();
+  const { user, isLoading, loadAuth } = useAuthStore();
+  const [isChecking, setIsChecking] = useState(true);
+  const isAuthenticated = !isChecking && !isLoading && !!user && user.role === 'collaboratore';
+  const { legalAccepted, legalChecking, markLegalAccepted } = useLegalCheck(isAuthenticated);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      await loadAuth();
+      setIsChecking(false);
+    };
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!isChecking && !isLoading) {
+      if (!user || user.role !== 'collaboratore') {
+        router.replace('/login');
+      }
+    }
+  }, [user, isLoading, isChecking]);
+
+  if (isChecking || isLoading || legalChecking) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    );
+  }
+
+  if (!user || user.role !== 'collaboratore') {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    );
+  }
+
+  if (legalAccepted === false) {
+    return <LegalAcceptanceScreen onAccepted={markLegalAccepted} userName={user.full_name} />;
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
       <Stack
@@ -18,3 +64,12 @@ export default function CollaboratoreLayout() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+});

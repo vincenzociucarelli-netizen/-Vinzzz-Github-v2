@@ -4,6 +4,8 @@ import { useAuthStore } from '../../src/store/authStore';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet, Platform, Alert } from 'react-native';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
+import { useLegalCheck } from '../../src/hooks/useLegalCheck';
+import { LegalAcceptanceScreen } from '../../src/components/LegalAcceptanceScreen';
 
 const TERMS_TEXT = `TERMINI DI UTILIZZO DELLA PIATTAFORMA
 REGISTRATEAM
@@ -98,6 +100,8 @@ export default function AdminLayout() {
   const { user, isLoading, loadAuth } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
   const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
+  const isAuthenticated = !isChecking && !isLoading && !!user && user.role === 'admin';
+  const { legalAccepted, legalChecking, markLegalAccepted } = useLegalCheck(isAuthenticated);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -119,7 +123,7 @@ export default function AdminLayout() {
     }
   }, [user, isLoading, isChecking]);
 
-  if (isChecking || isLoading || termsAccepted === null) {
+  if (isChecking || isLoading || termsAccepted === null || legalChecking) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -135,6 +139,12 @@ export default function AdminLayout() {
     );
   }
 
+  // First: Legal acceptance (Apple requirement) - for all users
+  if (legalAccepted === false) {
+    return <LegalAcceptanceScreen onAccepted={markLegalAccepted} userName={user.full_name} />;
+  }
+
+  // Second: Society terms acceptance - admin only
   if (termsAccepted === false) {
     return <TermsAcceptanceInline onAccepted={() => setTermsAccepted(true)} />;
   }

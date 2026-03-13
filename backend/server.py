@@ -2366,6 +2366,18 @@ async def get_me(current_user = Depends(get_current_user)):
     
     return user
 
+@api_router.post("/auth/accept-legal")
+async def accept_legal(current_user = Depends(get_current_user)):
+    """Accept legal terms (Terms of Use + Privacy Policy) for any user"""
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {
+            "legal_accepted_at": datetime.now(timezone.utc).isoformat(),
+            "legal_accepted_version": "1.0",
+        }}
+    )
+    return {"message": "Termini e privacy accettati", "legal_accepted": True}
+
 class UserProfileUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
