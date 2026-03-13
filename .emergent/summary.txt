@@ -1,111 +1,113 @@
 <analysis>**original_problem_statement**:
 The user's primary goal is to finalize the application for publication in app stores. This involves completing core features, fixing bugs, and refining the user experience based on direct feedback.
 
-The main goals for this session were:
-1.  **Complete the Dynamic Payments Feature**: Refactor the athlete, admin, and parent payment views to use a dynamic installment plan configured by the admin, with a robust cumulative logic for calculating payment status. **DONE**.
-2.  **Enhance Athlete Page UX**: Completely restructure the athlete's main page to be more compact and prioritize frequently used information (payments, schedules) for better mobile usability. **DONE**.
-3.  **Fix Medical Certificate Logic**: Change the hardcoded 12-month validity of medical certificates to a dynamic, user-configurable duration in months. **DONE**.
-4.  **Update Privacy Policies**: Replace the existing privacy policy text with new, user-provided documents for Staff and Minors. **DONE**.
-5.  **Implement Minor Athlete Flow**: Create the complete workflow for managing athletes under 18, including creation by an admin, mandatory parent linkage, a read-only view for the minor, and the ability for an admin to unlink the parent when the athlete turns 18. **IN PROGRESS**.
+The initial goals were to complete the minor athlete flow, fix medical certificate logic, and update privacy policies. During the session, new requirements were added:
+1.  **Fix Privacy PDF Generation**: Ensure the backend-generated PDF for privacy policies matches the updated text shown in the frontend preview. **DONE**.
+2.  **Enable Dirigente Certificate Management**: Allow users with the Dirigente (viewer) role to add and edit medical certificates for athletes in their assigned teams. **DONE**.
+3.  **Implement Admin Notifications**: Create a notification for the admin whenever a user (athlete, parent, dirigente) updates a medical certificate. **DONE**.
+4.  **Implement Terms of Service**: Add a mandatory Terms of Service acceptance screen that the admin of a society must accept upon first login. **IN PROGRESS**.
+5.  **Athlete Self-Registration**: Implement a flow where athletes (including minors) can self-register via an email invitation, instead of being created directly by an admin. **NOT STARTED**.
 
 **PRODUCT REQUIREMENTS**:
--   The payment system must dynamically reflect the number of installments set by the admin for a team. **DONE**.
--   The athlete page layout must be optimized for mobile, showing daily-use sections first. **DONE**.
--   Medical certificate expiration must be calculated based on a validity in months input, not a fixed 12-month period. **DONE**.
--   Privacy documents must be updated with the latest user-provided versions. **DONE**.
--   The system must support a full lifecycle for minor athletes, from creation with a linked parent to the parent being unlinked. The minor's own account must have restricted (read-only) permissions. **IN PROGRESS**.
--   Push notifications for payment and certificate expiry have been requested but explicitly **postponed** by the user until a future update (September).
+-   The system must support a full lifecycle for minor athletes. **DONE**.
+-   The backend-generated privacy PDF must contain the exact same text as the frontend preview. **DONE**.
+-   Dirigenti must be able to manage medical certificates for their teams. **DONE**.
+-   The admin must be notified of all medical certificate updates. **DONE**.
+-   A society's admin must accept the Terms of Use before accessing the application. The terms text includes a specific clause about the free tier limits. **IN PROGRESS**.
+-   A new athlete registration flow via email invitation needs to be created. **NOT STARTED**.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application is in a stable state with several major features and fixes completed. The dynamic payment system is fully functional across athlete, admin, and parent views. The athlete's dashboard has been significantly redesigned for better usability. The medical certificate logic now correctly handles variable validity periods. All privacy policy texts have been updated as per the user's latest documents.
+The application has several major features completed and tested, including the full Minor Athlete workflow (creation, read-only view, parent unlinking). A significant bug was fixed where the backend was generating outdated privacy policy PDFs; the text is now synchronized. The Dirigente (viewer) role now has the functionality to manage medical certificates, and a notification system alerts the admin of these changes.
 
-The implementation of the **Minor Athlete Flow** has begun. The necessary backend endpoints ( for creation and  for detachment) have been created, tested, and are functional. On the frontend, the admin's athlete management page () now includes a new button and modal to add a minor athlete, but this UI has not yet been tested end-to-end.
+A new mandatory Terms of Service acceptance flow for society admins has been implemented. It includes a backend endpoint to track acceptance and a frontend screen to display the terms. However, this new feature has a critical bug causing the acceptance screen to appear twice.
 
 **Last working item**:
--   Last item agent was working: Implementing the frontend UI for an administrator to create a new minor athlete. The agent added a new button (Aggiungi Atleta Minorenne) and a corresponding modal form to . This form is designed to capture the minor's details, the parent's email, and call the new backend endpoint.
+-   Last item agent was working: Fixing a bug where the Terms of Service acceptance screen is shown to the admin twice. After the admin accepts the terms, they are redirected to the admin dashboard, but the layout component re-evaluates, finds the state not yet updated, and redirects back to the terms screen a second time. The agent's last action was to propose a fix: instead of using a separate route for the terms, render the acceptance component directly within the admin layout to avoid the faulty redirection loop.
 -   Status: IN PROGRESS
--   Agent Testing Done: N (Backend was tested via , but the frontend modal flow has not been tested).
+-   Agent Testing Done: N
 -   Which testing method agent to use? screenshot tool
--   User Testing Done: N
+-   User Testing Done: Y (User confirmed the bug occurs).
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Test and Verify Add Minor Athlete Admin UI (P0)**
-    -   **Description**: The new modal for adding a minor athlete in  has been coded but is untested. The functionality needs to be verified to ensure it correctly calls the backend, handles responses, and provides feedback to the admin.
-    -   **Attempted fixes**: N/A.
+-   **Issue 1: Terms of Service screen appears twice (P0)**
+    -   **Description**: Upon first login, the admin is correctly shown the terms acceptance screen. After clicking Accept, they are shown the same screen again before finally reaching the dashboard.
+    -   **Attempted fixes**: An initial fix using  with  failed. The current proposed fix is to stop using a separate route () and instead render the terms component conditionally inside .
     -   **Next debug checklist**:
-        1.  Start the application and navigate to the admin's Atleti page.
-        2.  Take a screenshot to confirm the Aggiungi Atleta Minorenne button is visible.
-        3.  Click the button to open the modal. Fill in the form with test data for a new minor and their parent.
-        4.  Submit the form and check the browser's developer tools (network tab) and backend logs to confirm the API call to  is successful.
-        5.  Verify that the new athlete appears in the athlete list and that the parent is correctly linked in the database.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is the critical first step to completing the entire minor athlete workflow, a major requirement before the app can be published.
+        1.  Implement the proposed fix in  to conditionally render the  directly, removing the  logic.
+        2.  Remove the now-unused  file and its route from the navigation stack.
+        3.  Reset the  flag for the test society in the database.
+        4.  Log in as the admin () and verify the terms screen appears only once.
+    -   **Why fix this issue and what will be achieved with the fix?**: This bug creates a confusing and unprofessional user experience for the first and most critical interaction an admin has with the app. Fixing it is essential for the feature to be considered complete.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Frontend
     -   **Blocked on other issue**: No
 
 **In progress Task List**:
--   **Task 1: Complete the Minor Athlete Flow (P0)**
-    -   **Where to resume**: The immediate next step is to test the Add Minor Athlete modal as described in **Issue 1**. After that, the following parts need to be implemented:
-        1.  **Admin UI (Unlink Parent)**: Add a button to the admin's athlete detail page () to call the  endpoint.
-        2.  **Athlete UI (Read-Only Mode)**: Implement logic in the athlete's view ( and related pages) to detect if the logged-in user is a minor (e.g., based on age or a flag) and disable all editing capabilities, making the interface read-only.
-    -   **What will be achieved with this?**: This will complete a core business logic requirement for the app, allowing it to manage both adult and minor athletes securely.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Both
-    -   **Blocked on something**: No
+-   **Task 1: Complete Terms of Service Feature (P0)**
+    -   **Where to resume**: Resolve **Issue 1** (Terms of Service screen appears twice).
+    -   **What will be achieved with this?**: A seamless and correct onboarding experience for new society admins, fulfilling a legal/business requirement.
+    -   **Status**: BLOCKED
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on something**: Issue 1
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   (P1) User testing of the dynamic medical certificate validity.
-    -   (P1) User testing of the updated privacy policy text in the UI.
-    -   (P1) Regression testing of older features as requested by the user: team settings, calendar imports, and template uploads for matches and payments.
+    -   (P0) **Athlete Self-Registration via Email**: Implement the user's request for an athlete self-activation flow. An invitation email should allow an athlete (or their parent) to create their own account, which will then be linked to the society with a 7-day trial. This will replace the current admin-led creation for athletes.
+    -   (P1) **User Testing of Minor Athlete Flow**: The user has postponed testing this completed feature.
+    -   (P1) **Add Checkbox for Admin Designation**: Implement the suggestion from the ChatGPT document to add a checkbox in the admin creation form where the society president confirms they have formally appointed the user as a Data Processor.
 -   **Future Tasks**:
-    -   (P2) Implement push notifications for payment/certificate expirations (postponed to September).
     -   (P2) Clarify and resolve the user deletion flow (whether the  record should be fully deleted).
     -   (P2) Refine UI for contracted athletes ().
     -   (P3) Refactor the monolithic .
     -   (P3) Re-implement Stripe integration.
+    -   (P3) Clean up role confusion in the database by migrating  to  to match the frontend label.
 
 **Completed work in this session**
--   **Athlete Page UI/UX Overhaul**: Completely redesigned  for a compact, mobile-first layout, reordering all sections based on user priorities.
--   **Dynamic Payments V2**: Fully implemented and tested the dynamic installment system with cumulative payment logic on the athlete (), admin (), and parent () pages.
--   **Collapsible UI Elements**: Made payment and installment sections collapsible on athlete and admin pages to improve usability.
--   **Dynamic Medical Certificate Validity**: Refactored all certificate forms (, , ) to allow certificate validity to be set in months, with the expiration date calculated automatically.
--   **Privacy Policy Update**: Integrated new, user-provided text for Staff and Minor privacy policies across all relevant UI components and signature forms.
--   **Minor Athlete Backend Foundation**: Created and tested two new backend endpoints in  to handle the creation of minor athletes with parent links and the subsequent unlinking of parents.
+-   **Full Minor Athlete Flow**: Implemented and tested the complete workflow: creation by admin with parent link, read-only view for the minor, and an admin-triggered function to unlink the parent.
+-   **Privacy PDF Generation Fix**: Corrected the backend functions (, ) in  to use the updated privacy policy text, ensuring consistency between the UI preview and the final PDF.
+-   **Privacy Acceptance Flow Fix**: Made the Privacy item clickable in the athlete's profile menu, allowing users stuck in a  state to open the signature modal.
+-   **Dirigente Certificate Management**: Enabled the Dirigente (viewer role) to add and edit medical certificates for athletes in their assigned teams by creating a new UI in  and updating backend permissions.
+-   **Medical Certificate Flow Bug Fixes**:
+    -   **Timezone Bug**: Corrected date calculations across all certificate forms (athlete, admin, dirigente) by setting the time to noon () to prevent UTC conversion from shifting the date back by one day.
+    -   **Data Sync Bug**: Modified the Dirigente's form to use the  endpoint, ensuring certificate data is saved to the  collection (read by admin) and not just the  collection.
+    -   **Permissions Bug**: Fixed multiple 403 Forbidden errors by adding the  role to the list of authorized roles for certificate endpoints and correcting the team assignment check logic in .
+-   **Admin Notifications for Certificate Updates**: Implemented a backend feature in  to create a notification for the admin whenever a non-admin user updates a medical certificate.
+-   **Terms of Service Implementation (Initial)**: Created a backend endpoint and a frontend screen to manage the mandatory acceptance of Terms of Use for society admins.
+-   **React Hooks Rule Violation Fix**: Corrected a fatal Rendered more hooks than during the previous render error in  by moving all  and  calls before any conditional return statements.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Ambiguous User Deletion**
     -   **Debug checklist**: When an athlete is deleted, check if the corresponding document in the  collection is also deleted.
     -   **Why to solve this issue and what will be achieved with this?**: To clarify with the user if this is desired for auditing purposes or if it's a bug. A fix would ensure data consistency according to the user's requirements.
-    -   **Should Test frontend/backend/both after fix**: Backend
+    -   **Should Test frontend/backend/both after fix?**: Backend
     -   **Is recurring issue?**: Y
+
+**Known issue recurrence from previous fork**
+-   **Issue recurrence in previous fork**: Ambiguous User Deletion
+-   **Recurrence count**: 2
+-   **Status**: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend API Extension**: Added new endpoints (, ) to  to handle specific, transactional business logic.
--   **Conditional UI Rendering & State Management**: Extensively used React  to manage new modals and collapsible sections for a more dynamic and clean user interface.
--   **Component Restructuring**: Performed a significant refactor of the athlete dashboard (), re-ordering and recomposing child components to match user-defined priorities for a better mobile experience.
--   **Dynamic Form Logic**: Evolved static forms (like the medical certificate) into dynamic ones by adding new state and input fields (e.g., validity in months) to drive backend calculations.
+-   **Backend Role-Based Access Control**: Extensive debugging of permission checks in FastAPI, particularly the discrepancy between the frontend label Dirigente and the backend role name viewer.
+-   **Data Synchronization**: Resolved a critical bug where two different data sources ( collection fields vs.  collection documents) were used for the same feature, causing UI inconsistencies. The fix involved consolidating writes to a single, authoritative endpoint.
+-   **Timezone Handling in JavaScript**: Fixed a recurring off-by-one-day bug in date calculations by setting the time component of dates to midday before converting to ISO strings, preventing UTC conversion from shifting the date to the previous day.
+-   **React Hooks Rules**: Debugged and fixed a fatal runtime error caused by violating the rules of hooks (calling hooks after a conditional return).
+-   **Conditional Rendering for Onboarding**: Implemented a flow to block access to the main app and force a user to an intermediary screen (Terms of Service) based on a flag in their profile.
 
 **key DB schema**
--   : No schema changes. The logic for the minor athlete flow relies on the existing  field to establish the parent-child link.
--   : No schema changes. The  array is the source of truth for the now fully-dynamic payment views.
--   : No schema changes. The logic correctly treats this collection as a simple ledger, with the status being calculated cumulatively on the frontend.
+-   :
+    -   : {, }: New field added to track when the society's admin accepted the Terms of Use.
 
 **All files of reference**
 -   
 -    (current focus)
--   
--   
--   
--   
--   
--   
+-    (current focus)
 -   
 -   
 -   
@@ -113,44 +115,43 @@ The implementation of the **Minor Athlete Flow** has begun. The necessary backen
 
 **Critical Info for New Agent**
 -   **User Language**: Your responses must be in **Italiano**.
--   **Immediate Task**: The user has gone to bed and expects the minor athlete flow to be implemented by morning. Your first task is to **test the Add Minor Athlete modal** on the  page to ensure it functions correctly.
--   **Next Steps for Minor Flow**: After testing the admin creation UI, you must implement the rest of the flow: the Unlink Parent functionality for admins and the read-only mode for the minor athlete's account.
--   **Postponed Task**: Do NOT work on push notifications. The user has explicitly delayed this feature until September.
--   **Upcoming User Verification**: The user plans to test the medical certificate and privacy policy changes. They also requested a regression test of older features like calendar/template imports. Be prepared for feedback on these items.
+-   **Immediate Task**: Your first priority is to fix the bug where the Terms of Service screen appears twice for the admin. The previous agent proposed rendering the component conditionally within  instead of using a separate route. Implement and test this fix.
+-   **Next Major Feature**: After fixing the terms screen, begin work on the Athlete Self-Registration via Email feature as requested by the user.
+-   **Role Name Discrepancy**: Be aware that the Dirigente role in the UI corresponds to the  role name in the backend database and code. This has caused multiple permission bugs. Double-check this logic when working on role-related features.
+-   **Timezone Bug Pattern**: A common bug in this codebase is off-by-one-day errors in dates. This is caused by  converting a midnight date to the previous day in UTC. The standard fix is to set the date's time to noon () before conversion. Be vigilant for this pattern.
 
 **documents and test reports created in this job**
--    (updated with latest completed tasks)
--   Multiple test reports from the testing agent, with the last one being  which confirmed fixes for the parent view.
+-    (Testing Agent report for minor athlete flow)
+-    (Testing Agent report for Terms of Service flow)
+-    (updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (325):** Confirms backend is working and asks to proceed with the frontend.
-2.  **User (323):** Agent retries curl after fixing the password hash function name.
-3.  **User (319):** Agent identifies a bug in the backend code:  should be .
-4.  **User (311):** Agent runs a curl command to test the new  endpoint.
-5.  **User (293):** Agent outlines the implementation plan for the minor athlete flow, starting with the backend.
-6.  **User (280):** Says goodnight and asks the agent to proceed with implementing the minor athlete flow, promising to review a report in the morning.
-7.  **User (262):** Provides two new PDF documents for privacy policies (Minors and Staff) and asks the agent to replace the current ones.
-8.  **User (258):** Agent confirms the dynamic medical certificate form works as expected.
-9.  **User (207):** Reports a critical bug: medical certificate validity is not always 12 months and must be configurable.
-10. **User (205):** Asks the agent to ignore a previously uploaded privacy document as they have a more complete version.
+1.  **User**: Reports that the Terms of Service screen appears twice.
+2.  **Agent**: Acknowledges the issue and explains the likely cause (state update lag) and proposes a fix.
+3.  **User**: Si..vai (Yes..go ahead), asking the agent to reset the state for another test.
+4.  **Agent**: Confirms the state has been reset.
+5.  **User**: Confirms the screen appeared twice.
+6.  **Agent**: Apologizes and explains a more robust fix: rendering the component directly in the layout instead of using a separate route.
+7.  **User**: Su risolto ms non mi appare la schermata Attivazione Registra TEAM (Yes, [the hook error is] solved but the Activation screen doesn't appear).
+8.  **Agent**: Explains the terms were likely already accepted during testing and resets them.
+9.  **User**: Reports that the admin login page shows a React hooks error.
+10. **Agent**: Acknowledges the error, identifies the cause (hooks called after a conditional return), and fixes it.
 
 **Project Health Check:**
--   **Broken**: The Add Minor Athlete feature is mid-implementation. The frontend modal exists but is untested.
--   **Mocked**: None.
+-   **Broken**: The admin onboarding flow is broken due to the Terms of Service screen appearing twice.
 
 **3rd Party Integrations**
 -   : Used for calculating Italian fiscal codes.
 
 **Testing status**
--   Testing agent used after significant changes: YES. Successfully used to verify payment system fixes and parent view updates.
+-   Testing agent used after significant changes: YES. Last run identified a frontend navigation issue, which was fixed, but a new bug (T&C screen appearing twice) was subsequently introduced.
 -   Troubleshoot agent used after agent stuck in loop: NO
 -   Test files created: []
--   Known regressions: None, but the user has requested regression testing on calendar and template uploads.
+-   Known regressions: The fix for the React hooks error led to a behavioral bug where the Terms of Service screen appears twice.
 
 **Credentials to test flow:**
 -   **Admin**:  / 
--   **Test Athlete**:  / 
--   **Parent**: The user has previously used parent accounts; check the database for an existing one or create one as needed for testing the minor flow.
 
 **What agent forgot to execute**
--   The agent has correctly followed user requests. The main pending task, implementing the minor athlete flow, was explicitly assigned by the user as an overnight task and is currently in progress as expected.</analysis>
+-   The agent was in the middle of fixing the Terms of Service appears twice bug. The proposed solution has been identified but not implemented.
+-   The user requested two new features based on a document: implementing athlete self-registration and adding a checkbox to the admin creation form. These have not been started.</analysis>
