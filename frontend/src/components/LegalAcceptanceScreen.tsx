@@ -75,7 +75,7 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
             </Text>
             {' '}e confermi di aver preso visione della{' '}
             <Text style={styles.link} onPress={() => openLink('/privacy-policy')}>
-              Privacy Policy
+              Informativa sulla Privacy
             </Text>.
           </Text>
 
@@ -102,7 +102,7 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
             data-testid="privacy-link"
           >
             <Ionicons name="lock-closed-outline" size={20} color="#1565C0" />
-            <Text style={styles.linkButtonText}>Privacy Policy</Text>
+            <Text style={styles.linkButtonText}>Informativa sulla Privacy</Text>
             <Ionicons name="open-outline" size={16} color="#999" />
           </TouchableOpacity>
         </View>
@@ -126,7 +126,7 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
             {accepted && <Ionicons name="checkmark" size={16} color="#fff" />}
           </View>
           <Text style={styles.checkboxLabel}>
-            Ho letto e accetto i Termini di utilizzo e la Privacy Policy
+            Ho letto e accetto i Termini di utilizzo e l'Informativa sulla Privacy
           </Text>
         </TouchableOpacity>
 
