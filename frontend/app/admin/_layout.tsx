@@ -56,9 +56,15 @@ export default function AdminLayout() {
     );
   }
 
-  // Redirect to terms acceptance if not accepted (except if already on terms page)
-  if (!termsAccepted && !pathname.includes('terms-acceptance')) {
-    router.replace('/admin/terms-acceptance');
+  // Redirect to terms acceptance if not accepted
+  useEffect(() => {
+    if (termsAccepted === false && !pathname.includes('terms-acceptance')) {
+      router.replace('/admin/terms-acceptance');
+    }
+  }, [termsAccepted, pathname]);
+
+  // Show loading while terms not yet loaded or redirecting to terms
+  if (termsAccepted === false && !pathname.includes('terms-acceptance')) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />

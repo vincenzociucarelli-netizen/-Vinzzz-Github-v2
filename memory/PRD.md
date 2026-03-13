@@ -33,6 +33,17 @@ Sistema gestionale per società sportiva che include:
   - Atleta UI: Modalità sola lettura per minorenni - badge "Minorenne", banner "Account in sola lettura", form certificato nascosto, sezione privacy nascosta, azioni trial nascoste
 - **Fix bug teams.map()**: Corretto `teams.map()` → `Object.values(teams).map()` nel modal minorenne (teams è oggetto, non array)
 - **Privacy Policy V2** (sessione precedente): Aggiornati testi privacy Staff e Minori con documenti forniti dall'utente
+- **Fix PDF Privacy**: Allineato il testo PDF generato al testo dell'anteprima frontend (Art. 7: "FIRMA DIGITALE DEL DOCUMENTO"). Aggiornati sia PDF Staff che PDF Minori
+- **Certificato Medico Dirigente**: Aggiunto form espandibile nella vista squadra del dirigente per inserire/modificare certificati medici
+- **Fix Timezone Certificati**: Tutte le date certificato ora usano ore 12:00 per evitare shift di 1 giorno con conversione UTC
+- **Fix Permessi Dirigente**: Aggiunto ruolo "viewer" tra i permessi per `POST /certificates/simple`. Check assegnazione squadra tramite `assigned_teams` su utente
+- **Notifica Admin per Certificati**: Quando un non-admin aggiorna un certificato, viene creata una notifica admin con dettagli (chi, atleta, emissione, scadenza)
+- **Privacy cliccabile per atleta**: La sezione "Privacy" nella pagina atleta è ora `TouchableOpacity` con `onPress` che apre il modale firma
+- **Termini di Utilizzo**: Implementata schermata obbligatoria di accettazione T&C per admin:
+  - Backend: `GET/POST /api/societies/terms-status` e `/accept-terms`
+  - Frontend: Schermata con testo completo 9 articoli, checkbox dichiarazione, pulsante "Accetta e Continua"
+  - Admin layout blocca accesso al dashboard finché i termini non sono accettati
+  - Versione termini: 1.0 con Art. 7 aggiornato (150 utenti fino 30/06/2026, poi 30)
 
 ### Session 11 March 2026
 - **Reset account test**: Luna Nuova resettata a stato PROVA, creato utente adulto "Paolo Rinuncia"
