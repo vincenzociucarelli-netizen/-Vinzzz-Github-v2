@@ -24,22 +24,19 @@ export default function AdminLayout() {
       if (!user || user.role !== 'admin') {
         router.replace('/login');
       } else {
-        // Check terms status
-        checkTerms();
+        api.get('/societies/terms-status')
+          .then(res => setTermsAccepted(res.data.terms_accepted || false))
+          .catch(() => setTermsAccepted(false));
       }
     }
   }, [user, isLoading, isChecking]);
 
-  const checkTerms = async () => {
-    try {
-      const res = await api.get('/societies/terms-status');
-      setTermsAccepted(res.data.terms_accepted || false);
-    } catch {
-      setTermsAccepted(false);
+  useEffect(() => {
+    if (termsAccepted === false && !pathname.includes('terms-acceptance')) {
+      router.replace('/admin/terms-acceptance');
     }
-  };
+  }, [termsAccepted, pathname]);
 
-  // Show loading while checking auth or terms
   if (isChecking || isLoading || termsAccepted === null) {
     return (
       <View style={styles.loadingContainer}>
@@ -56,14 +53,6 @@ export default function AdminLayout() {
     );
   }
 
-  // Redirect to terms acceptance if not accepted
-  useEffect(() => {
-    if (termsAccepted === false && !pathname.includes('terms-acceptance')) {
-      router.replace('/admin/terms-acceptance');
-    }
-  }, [termsAccepted, pathname]);
-
-  // Show loading while terms not yet loaded or redirecting to terms
   if (termsAccepted === false && !pathname.includes('terms-acceptance')) {
     return (
       <View style={styles.loadingContainer}>
