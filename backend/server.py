@@ -1542,7 +1542,7 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     """
     Self-registration for adult athletes (18+).
     Creates both a user account and an athlete record.
-    The athlete starts in 'trial' status for 7 days.
+    Account requires email verification before activation.
     """
     # Check if email already exists
     existing_user = await db.users.find_one({"email": data.email.lower()})
@@ -1583,8 +1583,7 @@ async def register_adult_athlete(data: AdultAthleteRegister):
             "is_withdrawn": False,
             "withdrawn_date": None,
             "withdrawn_reason": None,
-            "status": "trial",
-            "trial_end_date": datetime.utcnow() + timedelta(days=7),
+            "status": "pending_email",
             "parents_detached": True,
         }
         if data.first_name:
@@ -1603,6 +1602,7 @@ async def register_adult_athlete(data: AdultAthleteRegister):
         
         # Create user account for the reactivated athlete
         user_id = str(ObjectId())
+        email_verification_token = secrets.token_urlsafe(32)
         user = {
             "id": user_id,
             "society_id": society_id,
@@ -1614,8 +1614,11 @@ async def register_adult_athlete(data: AdultAthleteRegister):
             "last_name": data.last_name,
             "phone": data.phone,
             "is_active": True,
+            "status": "pending_email",
             "created_at": datetime.utcnow(),
             "athlete_id": existing_athlete["id"],
+            "email_verification_token": email_verification_token,
+            "email_verified": False,
         }
         await db.users.insert_one(user)
         
@@ -1625,31 +1628,30 @@ async def register_adult_athlete(data: AdultAthleteRegister):
             {"$set": {"linked_user_id": user_id}}
         )
         
-        token = create_token(user_id, UserRole.ATHLETE)
-        return {"token": token, "user": {"id": user_id, "role": UserRole.ATHLETE, "full_name": user["full_name"], "email": user["email"], "society_id": society_id}, "athlete_id": existing_athlete["id"], "reactivated": True}
+        # Send verification email
+        await _send_verification_email(data.email.lower(), email_verification_token, f"{data.first_name} {data.last_name}", society.get("name", ""))
+        
+        return {
+            "message": "Registrazione completata! Controlla la tua email per attivare l'account.",
+            "status": "pending_email",
+            "requires_email_verification": True,
+        }
     
     # Generate unique athlete code
-    # athlete_code is now the qr_identifier (12-char alphanumeric)
-    # qr_id is generated below, athlete_code will be set to qr_id
-    
-    # Create athlete record
     athlete_id = str(ObjectId())
     
-    # Generate new 12-char alphanumeric QR identifier for adult athletes
     qr_id = generate_qr_identifier()
-    # Ensure uniqueness
     while await db.athletes.find_one({"qr_identifier": qr_id}):
         qr_id = generate_qr_identifier()
     qr_code = generate_qr_code_from_identifier(qr_id)
     
-    athlete_code = qr_id  # athlete_code = qr_identifier
+    athlete_code = qr_id
     
     full_name = f"{data.first_name} {data.last_name}"
-    trial_end = datetime.utcnow() + timedelta(days=7)
     
     athlete_dict = {
         "id": athlete_id,
-        "parent_id": None,  # No parent for adult athletes
+        "parent_id": None,
         "society_id": society_id,
         "athlete_code": athlete_code,
         "full_name": full_name,
@@ -1661,26 +1663,27 @@ async def register_adult_athlete(data: AdultAthleteRegister):
         "gender": data.gender,
         "email": data.email.lower(),
         "phone_athlete": data.phone,
-        "team_id": None,  # Will be assigned by admin
+        "team_id": None,
         "qr_code": qr_code,
         "qr_identifier": qr_id,
-        "status": "pending",  # Adult athletes need admin approval first
-        "athlete_type": "quota",  # Default to quota-paying athlete
-        "parents_detached": True,  # No parents for adult athletes
+        "status": "pending_email",
+        "athlete_type": "quota",
+        "parents_detached": True,
         "created_at": datetime.utcnow(),
         "registration_date": datetime.utcnow(),
-        "privacy_accepted": False,  # Will accept privacy after approval
+        "privacy_accepted": False,
     }
     
     await db.athletes.insert_one(athlete_dict)
     
-    # Create user account
+    # Create user account with email verification token
+    email_verification_token = secrets.token_urlsafe(32)
     user = User(
         email=data.email.lower(),
         password_hash=hash_password(data.password),
-        role="athlete",  # Adult athletes have 'athlete' role
+        role="athlete",
         full_name=full_name,
-        status=UserStatus.PENDING,  # Needs admin approval
+        status="pending_email",
         society_id=society_id,
         first_name=data.first_name,
         last_name=data.last_name,
@@ -1688,21 +1691,130 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     )
     
     user_dict = user.dict()
-    user_dict["athlete_id"] = athlete_id  # Link user to athlete record
+    user_dict["athlete_id"] = athlete_id
+    user_dict["email_verification_token"] = email_verification_token
+    user_dict["email_verified"] = False
     
     await db.users.insert_one(user_dict)
     
-    # Return success but user cannot login until approved
+    # Send verification email
+    await _send_verification_email(data.email.lower(), email_verification_token, full_name, society.get("name", ""))
+    
     return {
-        "message": "Registrazione completata! In attesa di approvazione dall'amministratore.",
-        "status": "pending",
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "role": "athlete",
-            "full_name": user.full_name,
-            "status": "pending"
-        }
+        "message": "Registrazione completata! Controlla la tua email per attivare l'account.",
+        "status": "pending_email",
+        "requires_email_verification": True,
+    }
+
+
+async def _send_verification_email(to_email: str, token: str, user_name: str, society_name: str):
+    """Send email verification link"""
+    base_url = os.environ.get("FRONTEND_URL", os.environ.get("EXPO_PUBLIC_BACKEND_URL", ""))
+    verify_link = f"{base_url}/verify-email?token={token}"
+    
+    subject = f"Conferma la tua email - {society_name}"
+    html_content = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #1565C0; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px;">RegistraTEAM</h1>
+            <p style="margin: 8px 0 0; opacity: 0.9;">{society_name}</p>
+        </div>
+        <div style="background-color: #f5f7fa; padding: 24px; border: 1px solid #e0e0e0;">
+            <p>Ciao <strong>{user_name}</strong>,</p>
+            <p>Grazie per esserti registrato su RegistraTEAM! Per attivare il tuo account e iniziare il periodo di prova gratuito di 7 giorni, clicca sul pulsante qui sotto:</p>
+            <div style="text-align: center; margin: 24px 0;">
+                <a href="{verify_link}" style="background-color: #4CAF50; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+                    Attiva il mio Account
+                </a>
+            </div>
+            <p style="color: #666; font-size: 13px;">Se non riesci a cliccare il pulsante, copia e incolla questo link nel browser:</p>
+            <p style="color: #1565C0; font-size: 12px; word-break: break-all;">{verify_link}</p>
+            <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+            <p style="color: #999; font-size: 12px;">Se non hai effettuato questa registrazione, ignora questa email.</p>
+        </div>
+    </div>
+    """
+    
+    try:
+        from email_service import send_transactional_email
+        await send_transactional_email(
+            to_email=to_email,
+            subject=subject,
+            html_content=html_content,
+            to_name=user_name
+        )
+    except Exception as e:
+        logging.error(f"Failed to send verification email: {e}")
+
+
+@api_router.get("/auth/verify-email/{token}")
+async def verify_email(token: str):
+    """Verify email and activate account"""
+    user = await db.users.find_one({"email_verification_token": token})
+    if not user:
+        raise HTTPException(status_code=404, detail="Token di verifica non valido")
+    
+    if user.get("email_verified"):
+        return {"message": "Email già verificata. Puoi accedere con le tue credenziali.", "already_verified": True}
+    
+    # Activate user
+    trial_end = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "email_verified": True,
+            "status": "approved",
+            "email_verification_token": None,
+            "verified_at": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
+    
+    # Also activate the athlete record
+    athlete_id = user.get("athlete_id")
+    if athlete_id:
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {
+                "status": "trial",
+                "trial_end_date": trial_end,
+            }}
+        )
+    
+    # If this is a parent, also activate the minor athlete
+    if user.get("role") == "parent":
+        athlete = await db.athletes.find_one({"parent_id": user["id"], "status": "pending_email"})
+        if athlete:
+            await db.athletes.update_one(
+                {"id": athlete["id"]},
+                {"$set": {
+                    "status": "trial",
+                    "trial_end_date": trial_end,
+                }}
+            )
+    
+    # Notify admin
+    society_id = user.get("society_id")
+    if society_id:
+        admin_user = await db.users.find_one({"society_id": society_id, "role": "admin"})
+        if admin_user:
+            role_label = "genitore" if user.get("role") == "parent" else "atleta"
+            await db.admin_notifications.insert_one({
+                "id": str(ObjectId()),
+                "society_id": society_id,
+                "admin_id": admin_user["id"],
+                "type": "athlete_self_registered",
+                "title": "Nuova auto-registrazione",
+                "message": f"{user.get('full_name', '')} si è registrato come {role_label} e ha verificato la sua email.",
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "entity_type": "user",
+                "entity_id": user["id"],
+            })
+    
+    return {
+        "message": "Email verificata con successo! Il tuo account è ora attivo. Puoi accedere con le tue credenziali.",
+        "verified": True,
+        "society_name": (await db.societies.find_one({"id": society_id}) or {}).get("name", ""),
     }
 
 # ==================== ATHLETE INVITATION VIA EMAIL ====================
@@ -2130,6 +2242,8 @@ async def login(request: Request, credentials: UserLogin):
     
     # Check if user is approved (except parents who are auto-approved)
     user_status = user.get("status", UserStatus.APPROVED)  # Default for old users
+    if user_status == "pending_email":
+        raise HTTPException(status_code=403, detail="Devi prima verificare la tua email. Controlla la tua casella di posta e clicca sul link di attivazione.")
     if user_status == UserStatus.PENDING:
         raise HTTPException(status_code=403, detail="Account in attesa di approvazione dall'amministratore")
     if user_status == UserStatus.REJECTED:

@@ -137,10 +137,10 @@ export default function Register() {
           invite_code: inviteCode.trim().toUpperCase(),
         });
         
-        // Adult athlete needs approval - show message and redirect to login
+        // Athlete needs email verification
         showAlert(
-          '✅ Registrazione completata!',
-          'Il tuo account è stato creato.\n\n⏳ IMPORTANTE: La tua registrazione deve essere approvata da un Amministratore.\n\nTi contatteremo telefonicamente per accordarci. Una volta approvato, potrai accedere con le tue credenziali.',
+          'Registrazione completata!',
+          'Ti abbiamo inviato un\'email di verifica.\n\nControlla la tua casella di posta e clicca sul link per attivare il tuo account.\n\nSe non la trovi, controlla anche nello spam.',
           () => router.replace('/login')
         );
         return;
