@@ -1707,10 +1707,37 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     }
 
 
+def _get_email_store_footer():
+    """Generate HTML footer with App Store, Play Store badges and web link"""
+    app_store_url = os.environ.get("APP_STORE_URL", "#")
+    play_store_url = os.environ.get("PLAY_STORE_URL", "#")
+    web_app_url = os.environ.get("WEB_APP_URL", os.environ.get("FRONTEND_URL", "#"))
+    
+    return f"""
+        <div style="text-align: center; padding: 24px 16px; background-color: #f0f2f5; border-radius: 0 0 8px 8px;">
+            <p style="color: #555; font-size: 14px; margin: 0 0 16px; font-weight: 600;">Scarica l'app RegistraTEAM</p>
+            <div style="margin-bottom: 12px;">
+                <a href="{app_store_url}" style="display: inline-block; margin: 0 6px;" target="_blank">
+                    <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on App Store" style="height: 40px;" />
+                </a>
+                <a href="{play_store_url}" style="display: inline-block; margin: 0 6px;" target="_blank">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Get it on Google Play" style="height: 40px;" />
+                </a>
+            </div>
+            <p style="margin: 0;">
+                <a href="{web_app_url}" style="color: #1565C0; font-size: 13px; text-decoration: none;">
+                    Oppure accedi dal browser: <strong>{web_app_url.replace('https://', '')}</strong>
+                </a>
+            </p>
+        </div>
+    """
+
+
 async def _send_verification_email(to_email: str, token: str, user_name: str, society_name: str):
     """Send email verification link"""
     base_url = os.environ.get("FRONTEND_URL", os.environ.get("EXPO_PUBLIC_BACKEND_URL", ""))
     verify_link = f"{base_url}/verify-email?token={token}"
+    store_footer = _get_email_store_footer()
     
     subject = f"Conferma la tua email - {society_name}"
     html_content = f"""
@@ -1732,6 +1759,7 @@ async def _send_verification_email(to_email: str, token: str, user_name: str, so
             <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
             <p style="color: #999; font-size: 12px;">Se non hai effettuato questa registrazione, ignora questa email.</p>
         </div>
+        {store_footer}
     </div>
     """
     
@@ -1888,6 +1916,7 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
         athlete_name = f" per {data.first_name} {data.last_name}"
     
     subject = f"Invito a RegistraTEAM - {society.get('name', '')}"
+    store_footer = _get_email_store_footer()
     html_content = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background-color: #1565C0; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
@@ -1906,9 +1935,7 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
             <p style="color: #666; font-size: 13px;">Questo invito è valido per 7 giorni. Se non riesci a cliccare il pulsante, copia e incolla questo link nel browser:</p>
             <p style="color: #1565C0; font-size: 12px; word-break: break-all;">{register_link}</p>
         </div>
-        <div style="text-align: center; padding: 16px; color: #999; font-size: 12px;">
-            <p>Questa email è stata inviata da {society.get('name', '')} tramite RegistraTEAM.</p>
-        </div>
+        {store_footer}
     </div>
     """
     
