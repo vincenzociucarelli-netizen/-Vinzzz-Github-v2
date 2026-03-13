@@ -1363,6 +1363,48 @@ async def update_my_society(update_data: dict, current_user = Depends(get_curren
     
     return {"message": "Società aggiornata"}
 
+@api_router.post("/societies/accept-terms")
+async def accept_terms(current_user = Depends(get_current_user)):
+    """Accept Terms of Use - admin who activated the society"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può accettare i termini")
+    
+    if not current_user.get("society_id"):
+        raise HTTPException(status_code=404, detail="Non sei associato a nessuna società")
+    
+    now = datetime.now(timezone.utc)
+    terms_data = {
+        "terms_accepted": True,
+        "terms_version": "1.0",
+        "terms_accepted_at": now.isoformat(),
+        "terms_accepted_by": current_user["id"],
+        "terms_accepted_by_name": current_user.get("full_name", ""),
+    }
+    
+    await db.societies.update_one(
+        {"id": current_user["society_id"]},
+        {"$set": terms_data}
+    )
+    
+    return {"message": "Termini accettati con successo", **terms_data}
+
+@api_router.get("/societies/terms-status")
+async def get_terms_status(current_user = Depends(get_current_user)):
+    """Check if society has accepted terms"""
+    if not current_user.get("society_id"):
+        return {"terms_accepted": False}
+    
+    society = await db.societies.find_one({"id": current_user["society_id"]})
+    if not society:
+        return {"terms_accepted": False}
+    
+    return {
+        "terms_accepted": society.get("terms_accepted", False),
+        "terms_version": society.get("terms_version"),
+        "terms_accepted_at": society.get("terms_accepted_at"),
+    }
+
+
 # ==================== AUTH ENDPOINTS ====================
 
 @api_router.post("/auth/register", response_model=TokenResponse)

@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, usePathname } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import api from '../../src/services/api';
 
 export default function AdminLayout() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isLoading, loadAuth } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
+  const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
-      // Always try to load auth on mount
       await loadAuth();
       setIsChecking(false);
     };
@@ -19,15 +21,26 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (!isChecking && !isLoading) {
-      // Redirect to login if not authenticated or not admin
       if (!user || user.role !== 'admin') {
         router.replace('/login');
+      } else {
+        // Check terms status
+        checkTerms();
       }
     }
   }, [user, isLoading, isChecking]);
 
-  // Show loading while checking auth
-  if (isChecking || isLoading) {
+  const checkTerms = async () => {
+    try {
+      const res = await api.get('/societies/terms-status');
+      setTermsAccepted(res.data.terms_accepted || false);
+    } catch {
+      setTermsAccepted(false);
+    }
+  };
+
+  // Show loading while checking auth or terms
+  if (isChecking || isLoading || termsAccepted === null) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -35,8 +48,17 @@ export default function AdminLayout() {
     );
   }
 
-  // Don't render children if not authenticated
   if (!user || user.role !== 'admin') {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  // Redirect to terms acceptance if not accepted (except if already on terms page)
+  if (!termsAccepted && !pathname.includes('terms-acceptance')) {
+    router.replace('/admin/terms-acceptance');
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -46,6 +68,7 @@ export default function AdminLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="terms-acceptance" />
       <Stack.Screen name="index" />
       <Stack.Screen name="teams" />
       <Stack.Screen name="team/[id]" />
