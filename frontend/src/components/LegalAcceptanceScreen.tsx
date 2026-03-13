@@ -102,7 +102,7 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
             data-testid="privacy-link"
           >
             <Ionicons name="lock-closed-outline" size={20} color="#1565C0" />
-            <Text style={styles.linkButtonText}>Informativa sulla Privacy</Text>
+            <Text style={styles.linkButtonText}>Informativa sulla Privacy (Privacy Policy)</Text>
             <Ionicons name="open-outline" size={16} color="#999" />
           </TouchableOpacity>
         </View>
@@ -111,7 +111,7 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
         <View style={styles.gdprNote}>
           <Ionicons name="information-circle-outline" size={16} color="#666" />
           <Text style={styles.gdprNoteText}>
-            I dati degli atleti sono gestiti dall'associazione sportiva di appartenenza.
+            I dati degli atleti sono gestiti dall'associazione sportiva di appartenenza. Gli account sono creati dall'associazione sportiva o tramite invito dell'amministratore.
           </Text>
         </View>
 
