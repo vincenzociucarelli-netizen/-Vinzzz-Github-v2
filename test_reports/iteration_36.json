@@ -1,0 +1,80 @@
+{
+  "summary": "Athlete Self-Registration via Email Invite feature tested - CRITICAL BUG FIXED: create_token() was missing required 'role' argument causing 500 errors on registration. After fix, all 15 backend tests pass and frontend UI works correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [],
+    "fixed": [
+      {
+        "endpoint": "POST /api/athletes/invite-register",
+        "issue": "create_token() called with only user_id, missing required 'role' argument",
+        "fix": "Added role argument: create_token(user_id, 'athlete') and create_token(parent_id, 'parent')",
+        "lines_fixed": [1996, 2075, 1628],
+        "file": "/app/backend/server.py"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_invite_flow.py",
+    "/app/test_reports/pytest/invite_flow_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "FIXED: Lines 1996, 2075, 1628 in server.py - create_token() was missing the 'role' parameter causing TypeError and 500 errors",
+    "All invite endpoints now work correctly: POST /api/athletes/invite, GET /api/athletes/invite-info/{token}, POST /api/athletes/invite-register, GET /api/athletes/invitations, DELETE /api/athletes/invitations/{id}",
+    "Admin notifications are correctly created when athlete registers via invite (type: 'athlete_registered')",
+    "Frontend 'Invita via Email' button is visible and functional on /admin/athletes page",
+    "Public /invite-register page correctly loads invitation data and shows registration form"
+  ],
+  "updated_files": [
+    "/app/backend/server.py",
+    "/app/backend/tests/test_invite_flow.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100% (all UI elements work correctly)"
+  },
+  "test_credentials": {
+    "admin": {"email": "pallavoloperugia@gmail.com", "password": "password"},
+    "existing_invite_token": "SxAIFFwDdE234bRD8-h-LLTp-d5djxXfPd1nOsK_YSM",
+    "invite_email": "test.invite3@example.com"
+  },
+  "seed_data_creation": "Multiple test invitations created during testing (cleaned up automatically by status change)",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Athlete invitation flow is now fully working. Bug was in create_token() missing role argument. All endpoints: POST /api/athletes/invite (admin only), GET /api/athletes/invite-info/{token} (public), POST /api/athletes/invite-register (public), GET /api/athletes/invitations (admin), DELETE /api/athletes/invitations/{id} (admin) are working. Frontend shows green 'Invita via Email' button on /admin/athletes page that opens modal. Public /invite-register?token=xxx page pre-fills data from invitation.",
+  "tests_executed": [
+    {"feature": "POST /api/athletes/invite - auth required", "status": "PASSED"},
+    {"feature": "POST /api/athletes/invite - success", "status": "PASSED"},
+    {"feature": "POST /api/athletes/invite - duplicate email rejected", "status": "PASSED"},
+    {"feature": "GET /api/athletes/invite-info/{token} - existing token", "status": "PASSED"},
+    {"feature": "GET /api/athletes/invite-info/{token} - new token", "status": "PASSED"},
+    {"feature": "GET /api/athletes/invite-info/{token} - invalid token 404", "status": "PASSED"},
+    {"feature": "POST /api/athletes/invite-register - adult athlete", "status": "PASSED (after fix)"},
+    {"feature": "POST /api/athletes/invite-register - invalid token 404", "status": "PASSED"},
+    {"feature": "POST /api/athletes/invite-register - token reuse prevention", "status": "PASSED"},
+    {"feature": "GET /api/athletes/invitations - auth required", "status": "PASSED"},
+    {"feature": "GET /api/athletes/invitations - success", "status": "PASSED"},
+    {"feature": "DELETE /api/athletes/invitations/{id} - auth required", "status": "PASSED"},
+    {"feature": "DELETE /api/athletes/invitations/{id} - success", "status": "PASSED"},
+    {"feature": "DELETE /api/athletes/invitations/{id} - invalid 404", "status": "PASSED"},
+    {"feature": "Admin notification on registration", "status": "PASSED"},
+    {"feature": "Frontend - 'Invita via Email' button", "status": "PASSED"},
+    {"feature": "Frontend - Invite modal form", "status": "PASSED"},
+    {"feature": "Frontend - /invite-register page", "status": "PASSED"}
+  ],
+  "rca_of_the_issue": {
+    "root_cause": "The create_token() function requires 2 arguments (user_id, role) but was called with only 1 argument in 3 places: lines 1628, 1996, 2075 in server.py",
+    "reproduction_steps": [
+      "1. Admin sends invite via POST /api/athletes/invite",
+      "2. User clicks registration link and fills form",
+      "3. POST /api/athletes/invite-register called",
+      "4. Server crashes with TypeError: create_token() missing 1 required positional argument: 'role'"
+    ],
+    "mitigation": "Added the missing 'role' argument to all create_token() calls: 'athlete' for adult athletes, 'parent' for minor athlete parents"
+  }
+}

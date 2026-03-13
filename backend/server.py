@@ -1625,7 +1625,7 @@ async def register_adult_athlete(data: AdultAthleteRegister):
             {"$set": {"linked_user_id": user_id}}
         )
         
-        token = create_token(user_id)
+        token = create_token(user_id, UserRole.ATHLETE)
         return {"token": token, "user": {"id": user_id, "role": UserRole.ATHLETE, "full_name": user["full_name"], "email": user["email"], "society_id": society_id}, "athlete_id": existing_athlete["id"], "reactivated": True}
     
     # Generate unique athlete code
@@ -1704,6 +1704,410 @@ async def register_adult_athlete(data: AdultAthleteRegister):
             "status": "pending"
         }
     }
+
+# ==================== ATHLETE INVITATION VIA EMAIL ====================
+
+class AthleteInviteRequest(BaseModel):
+    email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    is_minor: bool = False
+    team_id: Optional[str] = None
+
+@api_router.post("/athletes/invite")
+async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_current_user)):
+    """Admin sends an email invitation to an athlete (or parent of a minor)"""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin può invitare atleti")
+    
+    society_id = current_user.get("society_id")
+    if not society_id:
+        raise HTTPException(status_code=400, detail="Società non trovata")
+    
+    society = await db.societies.find_one({"id": society_id})
+    if not society:
+        raise HTTPException(status_code=404, detail="Società non trovata")
+    
+    # Check if email already registered
+    existing_user = await db.users.find_one({"email": data.email.lower(), "society_id": society_id})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Questa email è già registrata nella società")
+    
+    # Check for pending invitation
+    existing_invite = await db.athlete_invitations.find_one({
+        "email": data.email.lower(),
+        "society_id": society_id,
+        "status": "pending",
+        "expires_at": {"$gt": datetime.now(timezone.utc).isoformat()}
+    })
+    if existing_invite:
+        raise HTTPException(status_code=400, detail="Esiste già un invito pendente per questa email")
+    
+    # Generate unique token
+    token = secrets.token_urlsafe(32)
+    
+    invitation = {
+        "id": str(ObjectId()),
+        "token": token,
+        "email": data.email.lower(),
+        "first_name": data.first_name,
+        "last_name": data.last_name,
+        "is_minor": data.is_minor,
+        "team_id": data.team_id,
+        "society_id": society_id,
+        "society_name": society.get("name", ""),
+        "invited_by": current_user["id"],
+        "invited_by_name": current_user.get("full_name", ""),
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+    }
+    
+    await db.athlete_invitations.insert_one(invitation)
+    
+    # Build registration link
+    base_url = os.environ.get("EXPO_PUBLIC_BACKEND_URL", os.environ.get("FRONTEND_URL", ""))
+    register_link = f"{base_url}/invite-register?token={token}"
+    
+    # Send invitation email
+    recipient_label = "Genitore" if data.is_minor else "Atleta"
+    athlete_name = ""
+    if data.first_name and data.last_name:
+        athlete_name = f" per {data.first_name} {data.last_name}"
+    
+    subject = f"Invito a RegistraTEAM - {society.get('name', '')}"
+    html_content = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #1565C0; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px;">RegistraTEAM</h1>
+            <p style="margin: 8px 0 0; opacity: 0.9;">Invito alla piattaforma</p>
+        </div>
+        <div style="background-color: #f5f7fa; padding: 24px; border: 1px solid #e0e0e0;">
+            <p>Gentile {recipient_label},</p>
+            <p>Sei stato invitato a unirti a <strong>{society.get('name', '')}</strong> su RegistraTEAM{athlete_name}.</p>
+            <p>RegistraTEAM è la piattaforma gestionale della società sportiva. Attraverso di essa potrai gestire il tuo profilo, certificati medici, pagamenti e molto altro.</p>
+            <div style="text-align: center; margin: 24px 0;">
+                <a href="{register_link}" style="background-color: #1565C0; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+                    Completa la Registrazione
+                </a>
+            </div>
+            <p style="color: #666; font-size: 13px;">Questo invito è valido per 7 giorni. Se non riesci a cliccare il pulsante, copia e incolla questo link nel browser:</p>
+            <p style="color: #1565C0; font-size: 12px; word-break: break-all;">{register_link}</p>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #999; font-size: 12px;">
+            <p>Questa email è stata inviata da {society.get('name', '')} tramite RegistraTEAM.</p>
+        </div>
+    </div>
+    """
+    
+    try:
+        from email_service import send_transactional_email
+        await send_transactional_email(
+            to_email=data.email.lower(),
+            subject=subject,
+            html_content=html_content,
+            to_name=f"{data.first_name or ''} {data.last_name or ''}".strip() or None
+        )
+    except Exception as e:
+        logging.error(f"Failed to send invitation email: {e}")
+        # Don't fail the invitation even if email fails
+    
+    # Log audit
+    await log_audit(
+        action="athlete_invited",
+        user_id=current_user["id"],
+        user_email=current_user.get("email", ""),
+        society_id=society_id,
+        details={"invitation_id": invitation["id"], "email": data.email, "is_minor": data.is_minor}
+    )
+    
+    return {
+        "message": f"Invito inviato a {data.email}",
+        "invitation_id": invitation["id"],
+        "token": token,
+        "register_link": register_link
+    }
+
+@api_router.get("/athletes/invite-info/{token}")
+async def get_invite_info(token: str):
+    """Public endpoint - get invitation info by token"""
+    invitation = await db.athlete_invitations.find_one({"token": token})
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Invito non trovato")
+    
+    if invitation.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Questo invito è già stato utilizzato")
+    
+    expires_at = invitation.get("expires_at", "")
+    if expires_at and expires_at < datetime.now(timezone.utc).isoformat():
+        raise HTTPException(status_code=400, detail="Questo invito è scaduto")
+    
+    return {
+        "email": invitation["email"],
+        "first_name": invitation.get("first_name"),
+        "last_name": invitation.get("last_name"),
+        "is_minor": invitation.get("is_minor", False),
+        "society_name": invitation.get("society_name", ""),
+        "team_id": invitation.get("team_id"),
+    }
+
+class InviteRegisterRequest(BaseModel):
+    token: str
+    email: str
+    password: str
+    first_name: str
+    last_name: str
+    phone: str
+    date_of_birth: Optional[str] = None
+    gender: Optional[str] = None
+    fiscal_code: Optional[str] = None
+    # Minor-specific fields
+    parent_first_name: Optional[str] = None
+    parent_last_name: Optional[str] = None
+    parent_email: Optional[str] = None
+    parent_phone: Optional[str] = None
+
+@api_router.post("/athletes/invite-register")
+async def register_via_invite(data: InviteRegisterRequest):
+    """Public endpoint - complete registration via invitation link"""
+    invitation = await db.athlete_invitations.find_one({"token": data.token})
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Invito non trovato")
+    
+    if invitation.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Questo invito è già stato utilizzato")
+    
+    expires_at = invitation.get("expires_at", "")
+    if expires_at and expires_at < datetime.now(timezone.utc).isoformat():
+        raise HTTPException(status_code=400, detail="Questo invito è scaduto")
+    
+    society_id = invitation["society_id"]
+    is_minor = invitation.get("is_minor", False)
+    team_id = invitation.get("team_id")
+    
+    # Check if email already registered
+    existing_user = await db.users.find_one({"email": data.email.lower()})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Questa email è già registrata")
+    
+    # Validate age for adults
+    dob = None
+    if data.date_of_birth:
+        try:
+            dob = datetime.fromisoformat(data.date_of_birth)
+            age = (datetime.now(timezone.utc) - dob.replace(tzinfo=timezone.utc)).days // 365
+            if not is_minor and age < 18:
+                raise HTTPException(status_code=400, detail="Devi essere maggiorenne (18+) per registrarti come atleta adulto")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato data di nascita non valido")
+    
+    # Generate QR and athlete code
+    qr_id = generate_qr_identifier()
+    while await db.athletes.find_one({"qr_identifier": qr_id}):
+        qr_id = generate_qr_identifier()
+    qr_code = generate_qr_code_from_identifier(qr_id)
+    
+    athlete_id = str(ObjectId())
+    full_name = f"{data.first_name} {data.last_name}"
+    trial_end = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    
+    if is_minor:
+        # MINOR ATHLETE FLOW
+        # Create parent user first
+        parent_email = (data.parent_email or data.email).lower()
+        parent_name = f"{data.parent_first_name or ''} {data.parent_last_name or ''}".strip() or f"Genitore di {full_name}"
+        
+        # Check if parent email already exists
+        existing_parent = await db.users.find_one({"email": parent_email})
+        parent_id = None
+        if existing_parent:
+            parent_id = existing_parent["id"]
+        else:
+            parent_id = str(ObjectId())
+            parent_user = {
+                "id": parent_id,
+                "society_id": society_id,
+                "email": parent_email,
+                "password_hash": hash_password(data.password),
+                "role": "parent",
+                "full_name": parent_name,
+                "first_name": data.parent_first_name or "",
+                "last_name": data.parent_last_name or "",
+                "phone": data.parent_phone or data.phone,
+                "is_active": True,
+                "status": "approved",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            await db.users.insert_one(parent_user)
+        
+        # Create minor athlete
+        athlete_dict = {
+            "id": athlete_id,
+            "parent_id": parent_id,
+            "society_id": society_id,
+            "athlete_code": qr_id,
+            "full_name": full_name,
+            "first_name": data.first_name,
+            "last_name": data.last_name,
+            "date_of_birth": dob.isoformat() if dob else None,
+            "is_minor": True,
+            "fiscal_code": data.fiscal_code,
+            "gender": data.gender,
+            "email": parent_email,
+            "phone_athlete": data.phone,
+            "team_id": team_id,
+            "qr_code": qr_code,
+            "qr_identifier": qr_id,
+            "status": "trial",
+            "trial_end_date": trial_end,
+            "athlete_type": "quota",
+            "parents_detached": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "registration_date": datetime.now(timezone.utc).isoformat(),
+            "privacy_accepted": False,
+            "linked_user_id": parent_id,
+            "registered_via": "invitation",
+        }
+        await db.athletes.insert_one(athlete_dict)
+        
+        # Mark invitation as used
+        await db.athlete_invitations.update_one(
+            {"token": data.token},
+            {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat(), "athlete_id": athlete_id}}
+        )
+        
+        # Create notification for admin
+        admin_user = await db.users.find_one({"society_id": society_id, "role": "admin"})
+        if admin_user:
+            await db.admin_notifications.insert_one({
+                "id": str(ObjectId()),
+                "society_id": society_id,
+                "admin_id": admin_user["id"],
+                "type": "athlete_registered",
+                "title": "Nuovo atleta registrato",
+                "message": f"{full_name} (minorenne) si è registrato tramite invito email. Genitore: {parent_name}",
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "entity_type": "athlete",
+                "entity_id": athlete_id,
+            })
+        
+        # Generate token for parent login
+        token = create_token(parent_id, "parent")
+        return {
+            "message": "Registrazione completata! Puoi accedere con le credenziali scelte.",
+            "token": token,
+            "user": {"id": parent_id, "role": "parent", "full_name": parent_name, "email": parent_email, "society_id": society_id},
+            "athlete_id": athlete_id,
+        }
+    else:
+        # ADULT ATHLETE FLOW
+        user_id = str(ObjectId())
+        
+        athlete_dict = {
+            "id": athlete_id,
+            "parent_id": None,
+            "society_id": society_id,
+            "athlete_code": qr_id,
+            "full_name": full_name,
+            "first_name": data.first_name,
+            "last_name": data.last_name,
+            "date_of_birth": dob.isoformat() if dob else None,
+            "is_minor": False,
+            "fiscal_code": data.fiscal_code,
+            "gender": data.gender,
+            "email": data.email.lower(),
+            "phone_athlete": data.phone,
+            "team_id": team_id,
+            "qr_code": qr_code,
+            "qr_identifier": qr_id,
+            "status": "trial",
+            "trial_end_date": trial_end,
+            "athlete_type": "quota",
+            "parents_detached": True,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "registration_date": datetime.now(timezone.utc).isoformat(),
+            "privacy_accepted": False,
+            "linked_user_id": user_id,
+            "registered_via": "invitation",
+        }
+        await db.athletes.insert_one(athlete_dict)
+        
+        user_dict = {
+            "id": user_id,
+            "society_id": society_id,
+            "email": data.email.lower(),
+            "password_hash": hash_password(data.password),
+            "role": "athlete",
+            "full_name": full_name,
+            "first_name": data.first_name,
+            "last_name": data.last_name,
+            "phone": data.phone,
+            "is_active": True,
+            "status": "approved",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "athlete_id": athlete_id,
+        }
+        await db.users.insert_one(user_dict)
+        
+        # Mark invitation as used
+        await db.athlete_invitations.update_one(
+            {"token": data.token},
+            {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat(), "athlete_id": athlete_id}}
+        )
+        
+        # Create notification for admin
+        admin_user = await db.users.find_one({"society_id": society_id, "role": "admin"})
+        if admin_user:
+            await db.admin_notifications.insert_one({
+                "id": str(ObjectId()),
+                "society_id": society_id,
+                "admin_id": admin_user["id"],
+                "type": "athlete_registered",
+                "title": "Nuovo atleta registrato",
+                "message": f"{full_name} si è registrato tramite invito email.",
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "entity_type": "athlete",
+                "entity_id": athlete_id,
+            })
+        
+        token = create_token(user_id, "athlete")
+        return {
+            "message": "Registrazione completata! Puoi accedere con le credenziali scelte.",
+            "token": token,
+            "user": {"id": user_id, "role": "athlete", "full_name": full_name, "email": data.email.lower(), "society_id": society_id},
+            "athlete_id": athlete_id,
+        }
+
+@api_router.get("/athletes/invitations")
+async def list_invitations(current_user = Depends(get_current_user)):
+    """List all athlete invitations for the society"""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    society_id = current_user.get("society_id")
+    invitations = await db.athlete_invitations.find(
+        {"society_id": society_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    return invitations
+
+@api_router.delete("/athletes/invitations/{invitation_id}")
+async def cancel_invitation(invitation_id: str, current_user = Depends(get_current_user)):
+    """Cancel a pending invitation"""
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    result = await db.athlete_invitations.update_one(
+        {"id": invitation_id, "society_id": current_user.get("society_id"), "status": "pending"},
+        {"$set": {"status": "cancelled", "cancelled_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Invito non trovato o già utilizzato")
+    
+    return {"message": "Invito annullato"}
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(request: Request, credentials: UserLogin):

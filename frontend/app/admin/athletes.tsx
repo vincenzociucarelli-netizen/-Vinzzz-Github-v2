@@ -40,7 +40,16 @@ export default function AdminAthletes() {
   // Modal per aggiungere atleta maggiorenne
   const [showAddAdultModal, setShowAddAdultModal] = useState(false);
   const [showAddMinorModal, setShowAddMinorModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [addingAthlete, setAddingAthlete] = useState(false);
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    email: '',
+    first_name: '',
+    last_name: '',
+    is_minor: false,
+    team_id: '',
+  });
   const [adultForm, setAdultForm] = useState({
     first_name: '',
     last_name: '',
@@ -80,6 +89,34 @@ export default function AdminAthletes() {
       first_name: '', last_name: '', date_of_birth: '', gender: '',
       phone: '', team_id: '', parent_email: '', data_password: '',
     });
+  };
+
+  const resetInviteForm = () => {
+    setInviteForm({ email: '', first_name: '', last_name: '', is_minor: false, team_id: '' });
+  };
+
+  const handleInviteAthlete = async () => {
+    if (!inviteForm.email) {
+      showAlert('Errore', 'Inserisci l\'email dell\'atleta');
+      return;
+    }
+    setSendingInvite(true);
+    try {
+      await api.post('/athletes/invite', {
+        email: inviteForm.email,
+        first_name: inviteForm.first_name || undefined,
+        last_name: inviteForm.last_name || undefined,
+        is_minor: inviteForm.is_minor,
+        team_id: inviteForm.team_id || undefined,
+      });
+      showAlert('Successo', `Invito inviato a ${inviteForm.email}. L'atleta riceverà un'email con il link per completare la registrazione.`);
+      setShowInviteModal(false);
+      resetInviteForm();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore nell\'invio dell\'invito');
+    } finally {
+      setSendingInvite(false);
+    }
   };
 
   const handleAddMinorAthlete = async () => {
@@ -474,7 +511,7 @@ export default function AdminAthletes() {
       </View>
 
       {/* Add Athlete Buttons */}
-      <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginBottom: 8, gap: 8 }}>
+      <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginBottom: 4, gap: 8 }}>
         <TouchableOpacity 
           style={{ flex: 1, backgroundColor: '#007AFF', paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
           onPress={() => setShowAddAdultModal(true)}
@@ -490,6 +527,16 @@ export default function AdminAthletes() {
         >
           <Ionicons name="person-add" size={18} color="#fff" />
           <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Minorenne</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
+        <TouchableOpacity 
+          style={{ backgroundColor: '#4CAF50', paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          onPress={() => setShowInviteModal(true)}
+          data-testid="invite-athlete-btn"
+        >
+          <Ionicons name="mail" size={18} color="#fff" />
+          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Invita via Email</Text>
         </TouchableOpacity>
       </View>
 
@@ -879,6 +926,101 @@ export default function AdminAthletes() {
                 )}
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Invita Atleta via Email */}
+      <Modal
+        visible={showInviteModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => { setShowInviteModal(false); resetInviteForm(); }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+            <ScrollView>
+              <Text style={styles.modalTitle}>Invita Atleta via Email</Text>
+              <Text style={{ color: '#666', fontSize: 13, marginBottom: 16, lineHeight: 19 }}>
+                L'atleta riceverà un'email con un link per completare la registrazione autonomamente.
+              </Text>
+
+              <Text style={styles.inputLabel}>Email *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Email dell'atleta (o genitore)"
+                value={inviteForm.email}
+                onChangeText={(v) => setInviteForm({...inviteForm, email: v})}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                data-testid="invite-email-input"
+              />
+
+              <Text style={styles.inputLabel}>Nome (opzionale)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Nome"
+                value={inviteForm.first_name}
+                onChangeText={(v) => setInviteForm({...inviteForm, first_name: v})}
+                autoCapitalize="characters"
+              />
+
+              <Text style={styles.inputLabel}>Cognome (opzionale)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Cognome"
+                value={inviteForm.last_name}
+                onChangeText={(v) => setInviteForm({...inviteForm, last_name: v})}
+                autoCapitalize="characters"
+              />
+
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 }}
+                onPress={() => setInviteForm({...inviteForm, is_minor: !inviteForm.is_minor})}
+                data-testid="invite-minor-toggle"
+              >
+                <View style={[{ width: 22, height: 22, borderRadius: 4, borderWidth: 2, borderColor: '#FF9800', alignItems: 'center', justifyContent: 'center' }, inviteForm.is_minor && { backgroundColor: '#FF9800' }]}>
+                  {inviteForm.is_minor && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </View>
+                <Text style={{ fontSize: 14, color: '#333' }}>Atleta minorenne (l'email verrà inviata al genitore)</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.inputLabel}>Squadra (opzionale)</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={inviteForm.team_id}
+                  onValueChange={(v) => setInviteForm({...inviteForm, team_id: v})}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="-- Nessuna squadra --" value="" />
+                  {Object.values(teams).map((t: any) => (
+                    <Picker.Item key={t.id} label={t.name} value={t.id} />
+                  ))}
+                </Picker>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: '#4CAF50', marginTop: 8 }, sendingInvite && { opacity: 0.5 }]}
+                onPress={handleInviteAthlete}
+                disabled={sendingInvite}
+                data-testid="send-invite-btn"
+              >
+                {sendingInvite ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="mail" size={18} color="#fff" />
+                    <Text style={styles.modalBtnText}>Invia Invito</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: '#999', marginTop: 8 }]}
+                onPress={() => { setShowInviteModal(false); resetInviteForm(); }}
+              >
+                <Text style={styles.modalBtnText}>Annulla</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
