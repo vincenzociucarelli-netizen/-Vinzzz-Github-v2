@@ -1,60 +1,65 @@
-# PRD - Pallavolo Perugia SSD - Sistema Gestionale
+# RegistraTEAM - Product Requirements Document
 
 ## Original Problem Statement
-Sistema gestionale per società sportiva (ASD/SSD) con gestione ruoli multipli, compensi sportivi, firma digitale, privacy GDPR, profili utente.
+Sports team management application for Italian amateur sports clubs. Must comply with Apple/iOS App Store and Google Play Store requirements, GDPR, and Italian privacy laws. Used by admins, coaches, athletes, parents, and staff.
 
-## What's Been Implemented
+## Core Architecture
+- **Frontend**: React Native Expo (Web + Mobile)
+- **Backend**: FastAPI (Python) with MongoDB
+- **Email**: Brevo (Sendinblue) for transactional emails
+- **CF Library**: python-codicefiscale
 
-### Session 13 March 2026
-- **Fix Terms of Service Bug**: Schermata T&C admin non appare più due volte
-- **Self-Registration Atleti via Email**: Invito admin + auto-registrazione con verifica email
-- **Badge Store nelle Email**: Icone App Store/Play Store/link web configurabili via .env
-- **Schermata Legale Apple (NUOVA)**: Schermata "Benvenuto in RegistraTEAM" mostrata a TUTTI gli utenti al primo accesso con:
-  - Descrizione app, link Termini di utilizzo e Privacy Policy
-  - Nota GDPR, checkbox obbligatoria, pulsante CONTINUA
-  - Integrata in tutti i 6 layout ruoli (admin, athlete, coach, collaboratore, dirigente, parent)
-  - Backend: `POST /api/auth/accept-legal` + campo `legal_accepted_at` in users
-  - Per admin: ordine Legal → Termini società → Dashboard
+## Completed Features
 
-### Previous Sessions
-- Flusso Atleta Minorenne, Fix PDF Privacy, Certificato Medico Dirigente
-- Notifiche Admin, Termini di Utilizzo, Compensi, QR Code, Export/Import
+### Legal & Compliance
+- [x] Admin "Terms of Service" acceptance on first login
+- [x] Universal legal acceptance screen (Apple-compliant) for all users on first login
+- [x] Privacy Policy and Terms of Use dedicated pages
+- [x] Legal checkbox requires opening BOTH documents before enabling (2026-03-14)
 
-## Architecture
-```
-/app
-├── backend/server.py, email_service.py
-└── frontend/
-    ├── app/{admin,athlete,coach,collaboratore,dirigente,parent}/_layout.tsx
-    ├── app/invite-register.tsx, verify-email.tsx, register.tsx
-    └── src/
-        ├── components/LegalAcceptanceScreen.tsx  # NEW
-        └── hooks/useLegalCheck.ts                # NEW
-```
+### User Registration
+- [x] Admin-led email invitation for athletes
+- [x] Public self-registration with email verification
+- [x] Minor athlete registration (parent flow)
 
-## P0 - Completato
-- [x] Schermata legale Apple per tutti gli utenti
-- [x] Self-Registration con verifica email
-- [x] Badge store nelle email
+### Minor Athlete Form (Parent)
+- [x] Sesso (M/F) gender field with toggle buttons (2026-03-14)
+- [x] Codice Fiscale auto-calculation via API (2026-03-14)
+- [x] Pre-fill Tel. Padre from parent's profile phone (2026-03-14)
+- [x] Renamed "Fatturazione" to "Attestato di Versamento" (2026-03-14)
+- [x] Password reset note (admin-only via WA/email) (2026-03-14)
+- [x] Teams section removed from parent form (admin assigns) (2026-03-14)
+- [x] Codice Fiscale field for minor athletes
+- [x] Second parent email field
 
-## P1 - Media Priorità
-- [ ] Checkbox "Responsabile del trattamento" in form admin
-- [ ] Aggiornare link Termini e Privacy con URL reali (attualmente placeholder iubenda)
-- [ ] Test flusso completo minorenne con genitore
+### Data Security
+- [ ] Separate data passwords for each parent (IN PROGRESS)
+  - [x] Backend model updated (second_parent_data_password_hash)
+  - [x] Admin UI for managing parent data passwords
+  - [ ] Parent registration form: data password field
+  - [ ] Parent password reset flow after admin reset
 
-## P2 - Bassa Priorità
-- [ ] Verifica flusso cancellazione utente
-- [ ] UI compensi atleta a contratto
+### Email & Notifications
+- [x] App Store/Play Store links in transactional emails
+- [x] Compact notification cards UI
 
-## Future/Backlog
-- Registrazione dominio + pubblicazione store
-- Refactoring server.py
-- Re-implementazione Stripe
+## In Progress (P0)
+- Complete separate data passwords for parents
+  - Add "Password Dati" field to parent registration form (register.tsx)
+  - Frontend logic for password reset after admin reset
 
-## Config (.env backend)
-- APP_STORE_URL, PLAY_STORE_URL, WEB_APP_URL → Link store e portale web
-- FRONTEND_URL → URL frontend per link nelle email
+## Upcoming Tasks (P1)
+- User-guided testing: Minors, Teams, Excel Templates
+- Add "Data Processor" checkbox in admin creation form
 
-## Credentials
+## Future Tasks (P2-P3)
+- User deletion flow (clarify business logic)
+- UI for contracted athletes
+- Backend refactoring (modular routes/models)
+- Stripe integration
+- Database cleanup (viewer → dirigente)
+- Domain & App Store publication
+
+## Key Credentials
 - Admin: pallavoloperugia@gmail.com / password
-- Society Invite Code: BUZHB0WT
+- Test Parent: testparent@test.com / Test1234!
