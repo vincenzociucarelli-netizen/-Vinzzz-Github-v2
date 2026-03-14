@@ -6,13 +6,21 @@ import { Ionicons } from '../src/components/Icon';
 export default function PrivacyPolicy() {
   const router = useRouter();
 
+  const goBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/login');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={goBack} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#1565C0" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Privacy Policy</Text>
+        <Text style={styles.headerTitle}>Informativa sulla Privacy</Text>
         <View style={{ width: 32 }} />
       </View>
       <ScrollView style={styles.content} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>

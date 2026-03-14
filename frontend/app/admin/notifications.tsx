@@ -170,17 +170,17 @@ export default function AdminNotifications() {
                 onPress={() => markAsRead(notification.id)}
               >
                 <View style={styles.notificationIcon}>
-                  <Ionicons name={icon.name as any} size={28} color={icon.color} />
+                  <Ionicons name={icon.name as any} size={20} color={icon.color} />
                 </View>
                 <View style={styles.notificationContent}>
                   <View style={styles.notificationHeader}>
-                    <Text style={styles.notificationTitle}>{notification.title}</Text>
+                    <Text style={styles.notificationTitle} numberOfLines={1}>{notification.title}</Text>
                     {!notification.read && <View style={styles.unreadDot} />}
                   </View>
-                  <Text style={styles.notificationMessage}>{notification.message}</Text>
+                  <Text style={styles.notificationMessage} numberOfLines={2}>{notification.message}</Text>
                   {notification.related_user_name && (
-                    <Text style={styles.relatedUser}>
-                      👤 {notification.related_user_name}
+                    <Text style={styles.relatedUser} numberOfLines={1}>
+                      {notification.related_user_name}
                     </Text>
                   )}
                   <Text style={styles.notificationDate}>
@@ -191,7 +191,7 @@ export default function AdminNotifications() {
                   style={styles.deleteBtn}
                   onPress={() => deleteNotification(notification.id)}
                 >
-                  <Text style={{ fontSize: 18 }}>🗑️</Text>
+                  <Ionicons name="trash-outline" size={16} color="#999" />
                 </TouchableOpacity>
               </TouchableOpacity>
             );
@@ -264,30 +264,30 @@ const styles = StyleSheet.create({
   },
   notificationCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 1,
   },
   unreadCard: {
     backgroundColor: '#E8F4FD',
-    borderLeftWidth: 4,
+    borderLeftWidth: 3,
     borderLeftColor: '#007AFF',
   },
   notificationIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   notificationContent: {
     flex: 1,
@@ -295,38 +295,38 @@ const styles = StyleSheet.create({
   notificationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   notificationTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
     flex: 1,
   },
   unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#007AFF',
-    marginLeft: 8,
+    marginLeft: 6,
   },
   notificationMessage: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
-    lineHeight: 20,
-    marginBottom: 8,
+    lineHeight: 17,
+    marginBottom: 3,
   },
   relatedUser: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#007AFF',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   notificationDate: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#999',
   },
   deleteBtn: {
-    padding: 8,
-    marginLeft: 8,
+    padding: 6,
+    marginLeft: 4,
   },
 });
