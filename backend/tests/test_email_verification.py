@@ -16,7 +16,7 @@ import os
 import uuid
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cert-management-3.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://secure-family-access.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"

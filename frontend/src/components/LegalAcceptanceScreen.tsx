@@ -22,6 +22,10 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
   const router = useRouter();
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [termsOpened, setTermsOpened] = useState(false);
+  const [privacyOpened, setPrivacyOpened] = useState(false);
+
+  const bothOpened = termsOpened && privacyOpened;
 
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
@@ -32,6 +36,8 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
   };
 
   const openLink = (path: string) => {
+    if (path === '/terms-of-use') setTermsOpened(true);
+    if (path === '/privacy-policy') setPrivacyOpened(true);
     router.push(path as any);
   };
 
@@ -93,7 +99,11 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
           >
             <Ionicons name="document-text-outline" size={20} color="#1565C0" />
             <Text style={styles.linkButtonText}>Termini di utilizzo</Text>
-            <Ionicons name="open-outline" size={16} color="#999" />
+            {termsOpened ? (
+              <Ionicons name="checkmark-circle" size={18} color="#34C759" />
+            ) : (
+              <Ionicons name="open-outline" size={16} color="#999" />
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -103,7 +113,11 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
           >
             <Ionicons name="lock-closed-outline" size={20} color="#1565C0" />
             <Text style={styles.linkButtonText}>Informativa sulla Privacy (Privacy Policy)</Text>
-            <Ionicons name="open-outline" size={16} color="#999" />
+            {privacyOpened ? (
+              <Ionicons name="checkmark-circle" size={18} color="#34C759" />
+            ) : (
+              <Ionicons name="open-outline" size={16} color="#999" />
+            )}
           </TouchableOpacity>
         </View>
 
@@ -115,17 +129,27 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
           </Text>
         </View>
 
+        {/* Hint: must open both documents */}
+        {!bothOpened && (
+          <View style={styles.openDocsHint}>
+            <Ionicons name="alert-circle-outline" size={16} color="#E65100" />
+            <Text style={styles.openDocsHintText}>
+              Per continuare, devi prima aprire e leggere entrambi i documenti sopra.
+            </Text>
+          </View>
+        )}
+
         {/* Checkbox */}
         <TouchableOpacity
-          style={styles.checkboxRow}
-          onPress={() => setAccepted(!accepted)}
-          activeOpacity={0.7}
+          style={[styles.checkboxRow, !bothOpened && styles.checkboxRowDisabled]}
+          onPress={() => { if (bothOpened) setAccepted(!accepted); }}
+          activeOpacity={bothOpened ? 0.7 : 1}
           data-testid="legal-checkbox"
         >
-          <View style={[styles.checkbox, accepted && styles.checkboxChecked]}>
+          <View style={[styles.checkbox, accepted && styles.checkboxChecked, !bothOpened && styles.checkboxDisabled]}>
             {accepted && <Ionicons name="checkmark" size={16} color="#fff" />}
           </View>
-          <Text style={styles.checkboxLabel}>
+          <Text style={[styles.checkboxLabel, !bothOpened && styles.checkboxLabelDisabled]}>
             Ho letto e accetto i Termini di utilizzo e l'Informativa sulla Privacy
           </Text>
         </TouchableOpacity>
@@ -254,6 +278,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     lineHeight: 20,
+  },
+  checkboxLabelDisabled: {
+    color: '#aaa',
+  },
+  checkboxRowDisabled: {
+    opacity: 0.6,
+  },
+  checkboxDisabled: {
+    borderColor: '#ddd',
+    backgroundColor: '#f0f0f0',
+  },
+  openDocsHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    padding: 10,
+    borderRadius: 8,
+    gap: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FFB74D',
+  },
+  openDocsHintText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#E65100',
+    lineHeight: 18,
   },
   continueBtn: {
     backgroundColor: '#1565C0',

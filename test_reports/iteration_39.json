@@ -1,0 +1,68 @@
+{
+  "summary": "Tested Legal Acceptance Screen, CF Calculation, Register-Athlete Form features - Backend: 8/9 tests PASSED (89%), All 6 requested UI features verified in code",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/athletes (admin auth)",
+        "issue": "Admin auth token returns 403 when creating athlete directly - may need specific admin-athlete-create permission, but parent role works correctly"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Playwright session login",
+        "issue": "React Native Web Zustand auth state not accessible via localStorage - cannot automate authenticated pages",
+        "affected_selectors": ["AsyncStorage based auth"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_legal_cf_features.py",
+    "/app/test_reports/pytest/legal_cf_features_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "features_verified": {
+    "legal_acceptance_screen": {
+      "checkbox_disabled_until_both_opened": "VERIFIED - Line 145-146: bothOpened check before setAccepted",
+      "orange_warning_message": "VERIFIED - Lines 134-139: openDocsHint with #E65100 orange color, #FFF3E0 background",
+      "green_checkmarks_after_open": "VERIFIED - Lines 103, 117: checkmark-circle icon with #34C759 green color",
+      "data_testid_present": "VERIFIED - terms-link, privacy-link, legal-checkbox, legal-continue-btn"
+    },
+    "register_athlete_form": {
+      "sesso_field_M_F": "VERIFIED - Lines 344-360: Gender buttons with M/F toggle, data-testid=gender-m-btn/gender-f-btn",
+      "calcola_cf_button": "VERIFIED - Lines 373-388: Calculate CF button calls /api/utils/calcola-cf, data-testid=calculate-cf-btn",
+      "tel_padre_prefill": "VERIFIED - Lines 63-70: loadParentProfile() fetches /auth/me and sets setPhoneFather(user.phone)",
+      "attestato_di_versamento": "VERIFIED - Line 481: Section renamed to 'Attestato di Versamento' (no 'Fatturazione' references)",
+      "no_squadre_section": "VERIFIED - No team picker UI, team_id hardcoded to null (lines 244-245)",
+      "password_reset_note": "VERIFIED - Lines 524-529: Blue info note mentioning WhatsApp and e-mail"
+    },
+    "backend_api": {
+      "calcola_cf_endpoint": "PASSED - POST /api/utils/calcola-cf returns calculated CF from nome/cognome/data_nascita/luogo_nascita/sesso",
+      "athletes_accepts_null_team": "PASSED - AthleteCreate model has team_id: Optional[str] = None",
+      "athletes_accepts_gender": "PASSED - AthleteCreate model has gender: Optional[str] = None",
+      "accept_legal_endpoint": "PASSED - POST /api/auth/accept-legal works correctly"
+    }
+  },
+  "updated_files": [
+    "/app/backend/tests/test_legal_cf_features.py"
+  ],
+  "success_rate": {
+    "backend": "89% (8/9 passed)",
+    "frontend": "Code verified - 6/6 features present"
+  },
+  "test_credentials": {
+    "admin_email": "pallavoloperugia@gmail.com",
+    "admin_password": "password",
+    "parent_email": "testparent@test.com",
+    "parent_password": "Test1234!"
+  },
+  "seed_data_creation": "TEST_NOTEAM ATLETA, TEST_GENDER FEMALE athletes may exist in DB from tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All 6 requested features implemented correctly. Backend CF calculation API working. Legal acceptance screen has proper checkbox disabled state, orange warning, green checkmarks. Register-athlete form has Sesso M/F buttons, Calcola CF button, Tel. Padre pre-fill, renamed section 'Attestato di Versamento', removed Squadre section, and password reset note with WhatsApp mention. Frontend E2E testing limited due to React Native Web AsyncStorage auth."
+}

@@ -10,21 +10,19 @@ import {
   Platform,
   Alert,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Picker } from '@react-native-picker/picker';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
-import { Team } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
-import { SportIcon } from '../../src/components/SportIcon';
 
 export default function RegisterAthlete() {
   const router = useRouter();
   const { logout } = useAuthStore();
-  const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
+  const [calculatingCF, setCalculatingCF] = useState(false);
   
   // Dati Anagrafici
   const [firstName, setFirstName] = useState('');
@@ -32,6 +30,7 @@ export default function RegisterAthlete() {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [birthPlace, setBirthPlace] = useState('');
   const [birthProvince, setBirthProvince] = useState('');
+  const [gender, setGender] = useState<'' | 'M' | 'F'>('');
   const [fiscalCode, setFiscalCode] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
@@ -44,14 +43,10 @@ export default function RegisterAthlete() {
   const [phoneMother, setPhoneMother] = useState('');
   const [email, setEmail] = useState('');
   
-  // Dati Fiscali
+  // Dati Attestato di Versamento
   const [taxPayerLastName, setTaxPayerLastName] = useState('');
   const [taxPayerFirstName, setTaxPayerFirstName] = useState('');
   const [taxPayerFiscalCode, setTaxPayerFiscalCode] = useState('');
-  
-  // Squadre
-  const [teamId, setTeamId] = useState('');
-  const [teamId2, setTeamId2] = useState('');  // Seconda squadra (opzionale)
   
   // Periodo di prova
   const [isTrialPeriod, setIsTrialPeriod] = useState(true);  // Default: periodo di prova
@@ -62,18 +57,51 @@ export default function RegisterAthlete() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    loadTeams();
+    loadParentProfile();
   }, []);
 
-  const loadTeams = async () => {
+  const loadParentProfile = async () => {
     try {
-      const response = await api.get('/teams');
-      setTeams(response.data);
-      if (response.data.length > 0) {
-        setTeamId(response.data[0].id);
+      const response = await api.get('/auth/me');
+      const user = response.data;
+      if (user.phone) {
+        setPhoneFather(user.phone);
       }
     } catch (error) {
-      console.error('Error loading teams:', error);
+      console.error('Error loading parent profile:', error);
+    }
+  };
+
+  const handleCalculateCF = async () => {
+    if (!firstName || !lastName || !dateOfBirth || !gender) {
+      showAlert('Dati mancanti', 'Compila Nome, Cognome, Sesso e Data di Nascita per calcolare il CF');
+      return;
+    }
+    if (!birthPlace) {
+      showAlert('Dati mancanti', 'Compila il Luogo di Nascita per calcolare il CF');
+      return;
+    }
+
+    setCalculatingCF(true);
+    try {
+      const response = await api.post('/utils/calcola-cf', {
+        nome: firstName,
+        cognome: lastName,
+        data_nascita: dateOfBirth,
+        luogo_nascita: birthPlace,
+        sesso: gender,
+      });
+
+      if (response.data.success && response.data.codice_fiscale) {
+        setFiscalCode(response.data.codice_fiscale);
+        showAlert('Successo', `Codice Fiscale calcolato: ${response.data.codice_fiscale}`);
+      } else {
+        showAlert('Errore', response.data.error || 'Impossibile calcolare il CF. Verifica il luogo di nascita.');
+      }
+    } catch (error: any) {
+      showAlert('Errore', 'Errore nel calcolo del Codice Fiscale');
+    } finally {
+      setCalculatingCF(false);
     }
   };
 
@@ -157,8 +185,6 @@ export default function RegisterAthlete() {
       showAlert('Errore', 'Inserisci il codice fiscale');
       return;
     }
-    
-    // Team is OPTIONAL - parent may not know the team yet
 
     // Valida formato data GG/MM/AAAA
     const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
@@ -202,6 +228,7 @@ export default function RegisterAthlete() {
         date_of_birth: isoDate,
         birth_place: birthPlace || null,
         birth_province: birthProvince || null,
+        gender: gender || null,
         fiscal_code: fiscalCode,
         address: address || null,
         city: city || null,
@@ -214,8 +241,8 @@ export default function RegisterAthlete() {
         tax_payer_last_name: taxPayerLastName || null,
         tax_payer_first_name: taxPayerFirstName || null,
         tax_payer_fiscal_code: taxPayerFiscalCode || null,
-        team_id: teamId,
-        team_id_2: teamId2 || null,
+        team_id: null,
+        team_id_2: null,
         is_trial: isTrialPeriod,
         privacy_accepted: !isTrialPeriod,  // Se non è prova, accetta privacy
         data_password: dataPassword || null,
@@ -314,16 +341,51 @@ export default function RegisterAthlete() {
             </View>
           </View>
 
+          <Text style={styles.label}>Sesso *</Text>
+          <View style={styles.genderRow}>
+            <TouchableOpacity 
+              style={[styles.genderBtn, gender === 'M' && styles.genderBtnActive]}
+              onPress={() => setGender('M')}
+              data-testid="gender-m-btn"
+            >
+              <Text style={[styles.genderBtnText, gender === 'M' && styles.genderBtnTextActive]}>M</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.genderBtn, gender === 'F' && styles.genderBtnActive]}
+              onPress={() => setGender('F')}
+              data-testid="gender-f-btn"
+            >
+              <Text style={[styles.genderBtnText, gender === 'F' && styles.genderBtnTextActive]}>F</Text>
+            </TouchableOpacity>
+          </View>
+
           <Text style={styles.label}>Codice Fiscale *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="es: RSSMRA10E15H501Z"
-            placeholderTextColor="#aaa"
-            value={fiscalCode}
-            onChangeText={(text) => setFiscalCode(text.toUpperCase())}
-            autoCapitalize="characters"
-            maxLength={16}
-          />
+          <View style={styles.cfCalculateRow}>
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              placeholder="es: RSSMRA10E15H501Z"
+              placeholderTextColor="#aaa"
+              value={fiscalCode}
+              onChangeText={(text) => setFiscalCode(text.toUpperCase())}
+              autoCapitalize="characters"
+              maxLength={16}
+            />
+            <TouchableOpacity 
+              style={[styles.calculateCfBtn, (!gender || !dateOfBirth || !firstName || !lastName || !birthPlace) && { opacity: 0.5 }]}
+              onPress={handleCalculateCF}
+              disabled={calculatingCF || !gender || !dateOfBirth || !firstName || !lastName || !birthPlace}
+              data-testid="calculate-cf-btn"
+            >
+              {calculatingCF ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="calculator" size={20} color="#fff" />
+                  <Text style={styles.calculateCfBtnText}>Calcola</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.label}>Indirizzo</Text>
           <TextInput
@@ -416,7 +478,7 @@ export default function RegisterAthlete() {
             autoCapitalize="none"
           />
 
-          <Text style={styles.sectionTitle}>💳 Dati per Fatturazione</Text>
+          <Text style={styles.sectionTitle}>Attestato di Versamento</Text>
 
           <Text style={styles.label}>Cognome Genitore</Text>
           <TextInput
@@ -452,53 +514,19 @@ export default function RegisterAthlete() {
             returnKeyType="next"
           />
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
-            <SportIcon size={20} />
-            <Text style={[styles.sectionTitle, { marginLeft: 6, marginTop: 0 }]}>Squadre</Text>
-          </View>
-
-          <Text style={styles.label}>Squadra Principale (opzionale)</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={teamId}
-              onValueChange={(value) => setTeamId(value)}
-              style={styles.picker}
-            >
-              <Picker.Item label="-- Non assegnata --" value="" />
-              {teams.map((team) => (
-                <Picker.Item key={team.id} label={team.name} value={team.id} />
-              ))}
-            </Picker>
-          </View>
-          
-          <Text style={styles.infoBox}>
-            💡 Se non conosci la squadra, lascia "Non assegnata". L'admin la assegnerà in seguito.
-          </Text>
-
-          <Text style={styles.label}>Seconda Squadra (opzionale)</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={teamId2}
-              onValueChange={(value) => setTeamId2(value)}
-              style={styles.picker}
-            >
-              <Picker.Item label="-- Nessuna --" value="" />
-              {teams.filter(t => t.id !== teamId).map((team) => (
-                <Picker.Item key={team.id} label={team.name} value={team.id} />
-              ))}
-            </Picker>
-          </View>
-          
-          <Text style={styles.hint}>
-            💡 I dati economici (pagamenti) sono relativi solo alla squadra principale
-          </Text>
-
-          <Text style={styles.sectionTitle}>🔐 Protezione Dati Sensibili</Text>
+          <Text style={styles.sectionTitle}>Protezione Dati Sensibili</Text>
           
           <Text style={styles.protectionNote}>
             Per proteggere i dati anagrafici e il certificato medico dell'atleta minorenne, 
             imposta una password. Solo tu potrai visualizzare e modificare questi dati.
           </Text>
+
+          <View style={styles.passwordResetNote}>
+            <Ionicons name="information-circle" size={18} color="#1565C0" />
+            <Text style={styles.passwordResetNoteText}>
+              In caso di smarrimento di questa password, potrà essere resettata su richiesta del SOLO genitore da un Admin, tramite messaggio WhatsApp o e-mail.
+            </Text>
+          </View>
 
           <Text style={styles.label}>Password protezione dati *</Text>
           <View style={styles.passwordContainer}>
@@ -706,33 +734,69 @@ const styles = StyleSheet.create({
   flex2: {
     flex: 2,
   },
-  pickerContainer: {
-    backgroundColor: '#fff',
+  genderRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  genderBtn: {
+    width: 56,
+    height: 48,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#e0e0e0',
-    marginTop: 8,
-    minHeight: 56,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  picker: {
-    height: 56,
-    width: '100%',
+  genderBtnActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
   },
-  hint: {
-    fontSize: 13,
-    color: '#999',
-    fontStyle: 'italic',
-    marginTop: 12,
-    textAlign: 'center',
+  genderBtnText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#666',
   },
-  infoBox: {
-    fontSize: 12,
-    color: '#007AFF',
-    backgroundColor: '#E3F2FD',
-    padding: 10,
+  genderBtnTextActive: {
+    color: '#fff',
+  },
+  cfCalculateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  calculateCfBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#34C759',
+    paddingHorizontal: 16,
+    height: 48,
     borderRadius: 8,
-    marginTop: 8,
-    marginBottom: 8,
+    gap: 6,
+  },
+  calculateCfBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  passwordResetNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#E3F2FD',
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#90CAF9',
+  },
+  passwordResetNoteText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#1565C0',
+    lineHeight: 18,
   },
   protectionNote: {
     fontSize: 13,

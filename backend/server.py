@@ -785,6 +785,7 @@ class AthleteCreate(BaseModel):
     date_of_birth: str
     birth_place: Optional[str] = None
     birth_province: Optional[str] = None
+    gender: Optional[str] = None
     fiscal_code: str
     email: Optional[str] = None
     phone_athlete: Optional[str] = None
@@ -798,7 +799,7 @@ class AthleteCreate(BaseModel):
     tax_payer_last_name: Optional[str] = None
     tax_payer_first_name: Optional[str] = None
     tax_payer_fiscal_code: Optional[str] = None
-    team_id: str
+    team_id: Optional[str] = None
     team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
     is_trial: bool = True  # Default: periodo di prova
     privacy_accepted: bool = False
@@ -5419,10 +5420,11 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
     if current_user["role"] != UserRole.PARENT:
         raise HTTPException(status_code=403, detail="Solo genitori possono registrare atleti")
     
-    # Check if team exists
-    team = await db.teams.find_one({"id": athlete_data.team_id})
-    if not team:
-        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    # Check if team exists (only if team_id provided)
+    if athlete_data.team_id:
+        team = await db.teams.find_one({"id": athlete_data.team_id})
+        if not team:
+            raise HTTPException(status_code=404, detail="Squadra non trovata")
     
     # Calculate if minor
     dob = datetime.fromisoformat(athlete_data.date_of_birth)
@@ -5512,6 +5514,9 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
         first_name=athlete_data.first_name,
         last_name=athlete_data.last_name,
         date_of_birth=dob,
+        birth_place=athlete_data.birth_place,
+        birth_province=athlete_data.birth_province,
+        gender=athlete_data.gender,
         is_minor=is_minor,
         fiscal_code=athlete_data.fiscal_code,
         email=athlete_data.email,
