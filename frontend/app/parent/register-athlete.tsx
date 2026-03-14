@@ -38,6 +38,8 @@ export default function RegisterAthlete() {
   const [province, setProvince] = useState('');
   
   // Contatti
+  const [parentType, setParentType] = useState<'' | 'padre' | 'madre'>('');
+  const [parentPhone, setParentPhone] = useState('');
   const [phoneAthlete, setPhoneAthlete] = useState('');
   const [phoneFather, setPhoneFather] = useState('');
   const [phoneMother, setPhoneMother] = useState('');
@@ -65,10 +67,21 @@ export default function RegisterAthlete() {
       const response = await api.get('/auth/me');
       const user = response.data;
       if (user.phone) {
-        setPhoneFather(user.phone);
+        setParentPhone(user.phone);
       }
     } catch (error) {
       console.error('Error loading parent profile:', error);
+    }
+  };
+
+  const handleParentTypeChange = (type: 'padre' | 'madre') => {
+    setParentType(type);
+    if (type === 'padre') {
+      setPhoneFather(parentPhone);
+      setPhoneMother('');
+    } else {
+      setPhoneMother(parentPhone);
+      setPhoneFather('');
     }
   };
 
@@ -435,7 +448,27 @@ export default function RegisterAthlete() {
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>📞 Contatti</Text>
+          <Text style={styles.sectionTitle}>Contatti</Text>
+
+          <Text style={styles.label}>Sei il padre o la madre? *</Text>
+          <View style={styles.genderRow}>
+            <TouchableOpacity 
+              style={[styles.parentTypeBtn, parentType === 'padre' && styles.parentTypeBtnActive]}
+              onPress={() => handleParentTypeChange('padre')}
+              data-testid="parent-type-padre"
+            >
+              <Ionicons name="man" size={18} color={parentType === 'padre' ? '#fff' : '#666'} />
+              <Text style={[styles.parentTypeBtnText, parentType === 'padre' && styles.parentTypeBtnTextActive]}>Padre</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.parentTypeBtn, parentType === 'madre' && styles.parentTypeBtnActive]}
+              onPress={() => handleParentTypeChange('madre')}
+              data-testid="parent-type-madre"
+            >
+              <Ionicons name="woman" size={18} color={parentType === 'madre' ? '#fff' : '#666'} />
+              <Text style={[styles.parentTypeBtnText, parentType === 'madre' && styles.parentTypeBtnTextActive]}>Madre</Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.label}>Tel. Atleta</Text>
           <TextInput
@@ -759,6 +792,29 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   genderBtnTextActive: {
+    color: '#fff',
+  },
+  parentTypeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    backgroundColor: '#fff',
+    gap: 8,
+  },
+  parentTypeBtnActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  parentTypeBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  parentTypeBtnTextActive: {
     color: '#fff',
   },
   cfCalculateRow: {
