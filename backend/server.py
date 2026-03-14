@@ -531,6 +531,7 @@ class UserCreate(BaseModel):
     province: Optional[str] = None
     phone: Optional[str] = None
     coach_license_number: Optional[str] = None
+    data_password: Optional[str] = None  # Password protezione dati per genitori
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -1504,10 +1505,14 @@ async def register(user_data: UserCreate):
         }).to_list(100)
         
         # Per ogni atleta trovato, aggiungi l'ID del nuovo genitore come second_parent_id
+        # e imposta la password dati se fornita
         for athlete in athletes_to_link:
+            update_data = {"second_parent_id": user.id}
+            if user_data.data_password:
+                update_data["second_parent_data_password_hash"] = hash_password(user_data.data_password)
             await db.athletes.update_one(
                 {"id": athlete["id"]},
-                {"$set": {"second_parent_id": user.id}}
+                {"$set": update_data}
             )
     
     token = create_token(user.id, final_role)
@@ -6992,72 +6997,142 @@ class ChangeDataPassword(BaseModel):
 
 @api_router.post("/athletes/{athlete_id}/verify-password")
 async def verify_data_password(athlete_id: str, data: VerifyDataPassword, current_user = Depends(get_current_user)):
-    """Verify data password for an athlete - returns True if correct"""
+    """Verify data password for an athlete - each parent has their own password"""
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Check permissions (parent or admin can verify) - allow primary and second parent
+    # Determine which parent is requesting
+    is_primary = athlete.get("parent_id") == current_user["id"]
+    is_second = athlete.get("second_parent_id") == current_user["id"]
+    
     if current_user["role"] == UserRole.PARENT:
-        is_primary = athlete.get("parent_id") == current_user["id"]
-        is_second = athlete.get("second_parent_id") == current_user["id"]
         if not is_primary and not is_second:
             raise HTTPException(status_code=403, detail="Accesso negato")
     
-    # If no password is set, return special response
-    if not athlete.get("data_password_hash"):
-        return {"verified": True, "has_password": False}
+    # Select the correct password hash based on which parent
+    if is_second:
+        pw_hash = athlete.get("second_parent_data_password_hash")
+    else:
+        pw_hash = athlete.get("data_password_hash")
     
-    # Verify password
-    is_valid = verify_password(data.password, athlete["data_password_hash"])
-    return {"verified": is_valid, "has_password": True}
+    # If no password is set for this parent, they need to set one
+    if not pw_hash:
+        return {"verified": False, "has_password": False, "needs_setup": True}
+    
+    is_valid = verify_password(data.password, pw_hash)
+    return {"verified": is_valid, "has_password": True, "needs_setup": False}
 
 @api_router.post("/athletes/{athlete_id}/change-password")
 async def change_data_password(athlete_id: str, data: ChangeDataPassword, current_user = Depends(get_current_user)):
-    """Change or set data password for an athlete (parent only)"""
+    """Change or set data password for an athlete - each parent has their own"""
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Only parent can change password - allow primary and second parent
-    if current_user["role"] != UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Solo il genitore può modificare la password")
     is_primary = athlete.get("parent_id") == current_user["id"]
     is_second = athlete.get("second_parent_id") == current_user["id"]
+    
+    if current_user["role"] != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo il genitore può modificare la password")
     if not is_primary and not is_second:
         raise HTTPException(status_code=403, detail="Solo il genitore può modificare la password")
     
+    # Determine which password field to use
+    pw_field = "second_parent_data_password_hash" if is_second else "data_password_hash"
+    current_hash = athlete.get(pw_field)
+    
     # If password exists, verify old password
-    if athlete.get("data_password_hash"):
+    if current_hash:
         if not data.old_password:
             raise HTTPException(status_code=400, detail="Inserisci la password attuale")
-        if not verify_password(data.old_password, athlete["data_password_hash"]):
+        if not verify_password(data.old_password, current_hash):
             raise HTTPException(status_code=401, detail="Password attuale non corretta")
     
     # Hash and set new password
     new_hash = hash_password(data.new_password)
     await db.athletes.update_one(
         {"id": athlete_id},
-        {"$set": {"data_password_hash": new_hash}}
+        {"$set": {pw_field: new_hash}}
     )
     
     return {"message": "Password dati aggiornata con successo"}
 
 @api_router.get("/athletes/{athlete_id}/has-password")
 async def check_has_password(athlete_id: str, current_user = Depends(get_current_user)):
-    """Check if athlete has a data password set"""
+    """Check if athlete has a data password set for the current parent"""
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    return {"has_password": bool(athlete.get("data_password_hash"))}
+    is_second = athlete.get("second_parent_id") == current_user["id"]
+    
+    if is_second:
+        has_pw = bool(athlete.get("second_parent_data_password_hash"))
+    else:
+        has_pw = bool(athlete.get("data_password_hash"))
+    
+    return {"has_password": has_pw}
+
+@api_router.get("/athletes/{athlete_id}/parents-info")
+async def get_parents_info(athlete_id: str, current_user = Depends(get_current_user)):
+    """Admin gets info about both parents of a minor athlete, including data password status"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    parents = []
+    
+    # Primary parent
+    parent_id = athlete.get("parent_id")
+    if parent_id:
+        parent_user = await db.users.find_one({"id": parent_id}, {"_id": 0, "id": 1, "full_name": 1, "email": 1, "phone": 1})
+        if parent_user:
+            parents.append({
+                "type": "primary",
+                "id": parent_user["id"],
+                "full_name": parent_user.get("full_name", ""),
+                "email": parent_user.get("email", ""),
+                "phone": parent_user.get("phone", ""),
+                "has_data_password": bool(athlete.get("data_password_hash")),
+            })
+    
+    # Second parent
+    second_parent_id = athlete.get("second_parent_id")
+    if second_parent_id:
+        second_parent_user = await db.users.find_one({"id": second_parent_id}, {"_id": 0, "id": 1, "full_name": 1, "email": 1, "phone": 1})
+        if second_parent_user:
+            parents.append({
+                "type": "second",
+                "id": second_parent_user["id"],
+                "full_name": second_parent_user.get("full_name", ""),
+                "email": second_parent_user.get("email", ""),
+                "phone": second_parent_user.get("phone", ""),
+                "has_data_password": bool(athlete.get("second_parent_data_password_hash")),
+            })
+    elif athlete.get("second_parent_email"):
+        # Second parent email set but not yet registered
+        parents.append({
+            "type": "second",
+            "id": None,
+            "full_name": "(non ancora registrato)",
+            "email": athlete.get("second_parent_email", ""),
+            "phone": "",
+            "has_data_password": False,
+            "not_registered": True,
+        })
+    
+    return parents
 
 class AdminResetDataPassword(BaseModel):
-    new_password: str
+    parent_type: str  # "primary" or "second" - which parent's password to reset
 
 @api_router.patch("/athletes/{athlete_id}/reset-data-password")
 async def admin_reset_data_password(athlete_id: str, data: AdminResetDataPassword, current_user = Depends(get_current_user)):
-    """Admin can reset an athlete's data password (used to protect minor's data)"""
+    """Admin resets (deletes) a specific parent's data password. The parent will set a new one at next access."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può resettare la password dati")
     
@@ -7065,15 +7140,27 @@ async def admin_reset_data_password(athlete_id: str, data: AdminResetDataPasswor
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Hash the new password
-    password_hash = hash_password(data.new_password)
+    if data.parent_type == "second":
+        pw_field = "second_parent_data_password_hash"
+        parent_id = athlete.get("second_parent_id")
+    else:
+        pw_field = "data_password_hash"
+        parent_id = athlete.get("parent_id")
     
+    # Get parent name for the response
+    parent_name = "Genitore"
+    if parent_id:
+        parent_user = await db.users.find_one({"id": parent_id})
+        if parent_user:
+            parent_name = parent_user.get("full_name", "Genitore")
+    
+    # Delete the password (set to None) - parent will be prompted to create a new one
     await db.athletes.update_one(
         {"id": athlete_id},
-        {"$set": {"data_password_hash": password_hash}}
+        {"$unset": {pw_field: ""}}
     )
     
-    return {"message": f"Password dati resettata per {athlete.get('first_name', '')} {athlete.get('last_name', '')}"}
+    return {"message": f"Password dati cancellata per {parent_name}. Al prossimo accesso dovrà impostarne una nuova."}
 
 
 class CreateAthleteAccountRequest(BaseModel):

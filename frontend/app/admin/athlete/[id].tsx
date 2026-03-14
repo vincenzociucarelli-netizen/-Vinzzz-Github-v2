@@ -32,6 +32,82 @@ import { useAuthStore } from '../../../src/store/authStore';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
+
+// Sub-component: Shows parents with their data password status and reset buttons
+function ParentsPasswordSection({ athleteId, token }: { athleteId: string; token: any }) {
+  const [parents, setParents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [resetting, setResetting] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadParents();
+  }, [athleteId]);
+
+  const loadParents = async () => {
+    try {
+      const res = await api.get(`/athletes/${athleteId}/parents-info`);
+      setParents(res.data);
+    } catch (e) {
+      console.error('Failed to load parents info', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async (parentType: string, parentName: string) => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm(`Cancellare la password dati di ${parentName}?\n\nAl prossimo accesso dovrà impostarne una nuova.`)) return;
+    }
+    setResetting(parentType);
+    try {
+      await api.patch(`/athletes/${athleteId}/reset-data-password`, { parent_type: parentType });
+      if (Platform.OS === 'web') window.alert(`Password dati cancellata per ${parentName}.`);
+      loadParents();
+    } catch (e: any) {
+      if (Platform.OS === 'web') window.alert(e.response?.data?.detail || 'Errore');
+    } finally {
+      setResetting(null);
+    }
+  };
+
+  if (loading) return <ActivityIndicator size="small" color="#1565C0" />;
+  if (parents.length === 0) return <Text style={{ color: '#999', fontSize: 13 }}>Nessun genitore collegato</Text>;
+
+  return (
+    <View style={{ gap: 8, marginTop: 8 }}>
+      {parents.map((p) => (
+        <View key={p.type} style={{ backgroundColor: '#f5f7fa', borderRadius: 8, padding: 12 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#333' }}>{p.full_name}</Text>
+              <Text style={{ fontSize: 12, color: '#666' }}>{p.email}</Text>
+            </View>
+            <View style={{
+              paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10,
+              backgroundColor: p.has_data_password ? '#E8F5E9' : '#FFF3E0',
+            }}>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: p.has_data_password ? '#2E7D32' : '#E65100' }}>
+                {p.has_data_password ? 'PW attiva' : p.not_registered ? 'Non registrato' : 'PW non impostata'}
+              </Text>
+            </View>
+          </View>
+          {p.has_data_password && !p.not_registered && (
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 4 }}
+              onPress={() => handleReset(p.type, p.full_name)}
+              disabled={resetting === p.type}
+            >
+              <Ionicons name="key-outline" size={14} color="#f44336" />
+              <Text style={{ fontSize: 12, color: '#f44336', fontWeight: '600' }}>
+                {resetting === p.type ? 'Cancellazione...' : 'Cancella password dati'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ))}
+    </View>
+  );
+}
 interface PaymentSummary {
   total_due: number;
   discount: number;
@@ -2317,20 +2393,14 @@ export default function AdminAthleteDetail() {
               )}
             </View>
 
-            {/* Password Modifiche (for minors) */}
-            {hasDataPassword && (
+            {/* Password Dati Genitori (for minors) */}
+            {athlete.is_minor && (
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>🔐 Password Modifiche</Text>
+                <Text style={styles.cardTitle}>Password Protezione Dati</Text>
                 <Text style={styles.cardSubtitle}>
-                  Questo atleta ha una password per proteggere i dati sensibili (minorenne)
+                  Ogni genitore ha una password personale per accedere e modificare i dati del figlio
                 </Text>
-                <TouchableOpacity
-                  style={styles.resetDataPasswordBtn}
-                  onPress={() => setResetDataPasswordVisible(true)}
-                >
-                  <Ionicons name="key-outline" size={20} color="#fff" />
-                  <Text style={styles.resetDataPasswordBtnText}>Reset Password Modifiche</Text>
-                </TouchableOpacity>
+                <ParentsPasswordSection athleteId={athlete.id} token={null} />
               </View>
             )}
 
