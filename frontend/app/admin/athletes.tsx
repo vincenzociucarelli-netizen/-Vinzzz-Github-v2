@@ -80,14 +80,16 @@ export default function AdminAthletes() {
     gender: '' as '' | 'M' | 'F',
     phone: '',
     team_id: '',
+    fiscal_code: '',
     parent_email: '',
+    second_parent_email: '',
     data_password: '',
   });
 
   const resetMinorForm = () => {
     setMinorForm({
       first_name: '', last_name: '', date_of_birth: '', gender: '',
-      phone: '', team_id: '', parent_email: '', data_password: '',
+      phone: '', team_id: '', fiscal_code: '', parent_email: '', second_parent_email: '', data_password: '',
     });
   };
 
@@ -141,7 +143,9 @@ export default function AdminAthletes() {
         gender: minorForm.gender || undefined,
         phone: minorForm.phone || undefined,
         team_id: minorForm.team_id || undefined,
+        fiscal_code: minorForm.fiscal_code || undefined,
         parent_email: minorForm.parent_email,
+        second_parent_email: minorForm.second_parent_email || undefined,
         data_password: minorForm.data_password,
       });
       const msg = res.data.parent_existed 
@@ -894,12 +898,19 @@ export default function AdminAthletes() {
               <Text style={styles.inputLabel}>Telefono</Text>
               <TextInput style={styles.modalInput} value={minorForm.phone} onChangeText={v => setMinorForm({...minorForm, phone: v})} placeholder="Telefono" keyboardType="phone-pad" />
               
+              <Text style={styles.inputLabel}>Codice Fiscale</Text>
+              <TextInput style={styles.modalInput} value={minorForm.fiscal_code} onChangeText={v => setMinorForm({...minorForm, fiscal_code: v.toUpperCase()})} placeholder="Codice Fiscale" autoCapitalize="characters" maxLength={16} />
+              
               <View style={{ backgroundColor: '#E3F2FD', padding: 12, borderRadius: 8, marginTop: 8, marginBottom: 8 }}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#1565C0', marginBottom: 8 }}>Dati Genitore/Tutore</Text>
                 
                 <Text style={styles.inputLabel}>Email Genitore *</Text>
                 <TextInput style={styles.modalInput} value={minorForm.parent_email} onChangeText={v => setMinorForm({...minorForm, parent_email: v})} placeholder="email@genitore.com" keyboardType="email-address" autoCapitalize="none" />
                 <Text style={{ color: '#888', fontSize: 11, marginTop: -4, marginBottom: 8 }}>Se il genitore non ha ancora un account, verrà creato automaticamente</Text>
+                
+                <Text style={styles.inputLabel}>Email Secondo Genitore</Text>
+                <TextInput style={styles.modalInput} value={minorForm.second_parent_email} onChangeText={v => setMinorForm({...minorForm, second_parent_email: v})} placeholder="email@secondogenitore.com" keyboardType="email-address" autoCapitalize="none" />
+                <Text style={{ color: '#888', fontSize: 11, marginTop: -4 }}>Se il secondo genitore si registra con questa email, vedrà automaticamente questo atleta</Text>
               </View>
               
               <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginTop: 4, marginBottom: 8 }}>

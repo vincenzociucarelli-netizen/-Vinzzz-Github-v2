@@ -5559,6 +5559,7 @@ class MinorAthleteCreate(BaseModel):
     phone: Optional[str] = None
     team_id: Optional[str] = None
     parent_email: str  # Email genitore (obbligatorio per minori)
+    second_parent_email: Optional[str] = None  # Email secondo genitore
     data_password: str  # Password protezione dati (obbligatoria per minori)
     gender: Optional[str] = None  # M or F
 
@@ -5811,6 +5812,7 @@ async def create_minor_athlete(data: MinorAthleteCreate, current_user = Depends(
         "athlete_type": "quota",
         "parents_detached": False,
         "data_password_hash": hash_password(data.data_password),
+        "second_parent_email": data.second_parent_email.lower().strip() if data.second_parent_email else None,
         "created_at": datetime.utcnow(),
         "privacy_accepted": False,
         "is_trial": False,
