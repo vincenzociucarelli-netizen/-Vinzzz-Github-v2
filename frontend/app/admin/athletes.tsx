@@ -78,6 +78,8 @@ export default function AdminAthletes() {
     last_name: '',
     date_of_birth: '',
     gender: '' as '' | 'M' | 'F',
+    birth_place: '',
+    birth_province: '',
     phone: '',
     team_id: '',
     fiscal_code: '',
@@ -85,12 +87,40 @@ export default function AdminAthletes() {
     second_parent_email: '',
     data_password: '',
   });
+  const [calculatingMinorCF, setCalculatingMinorCF] = useState(false);
 
   const resetMinorForm = () => {
     setMinorForm({
       first_name: '', last_name: '', date_of_birth: '', gender: '',
+      birth_place: '', birth_province: '',
       phone: '', team_id: '', fiscal_code: '', parent_email: '', second_parent_email: '', data_password: '',
     });
+  };
+
+  const handleCalculateMinorCF = async () => {
+    if (!minorForm.first_name || !minorForm.last_name || !minorForm.date_of_birth || !minorForm.gender || !minorForm.birth_place) {
+      showAlert('Dati mancanti', 'Compila Nome, Cognome, Data di Nascita, Sesso e Luogo di Nascita');
+      return;
+    }
+    setCalculatingMinorCF(true);
+    try {
+      const res = await api.post('/utils/calcola-cf', {
+        nome: minorForm.first_name,
+        cognome: minorForm.last_name,
+        data_nascita: minorForm.date_of_birth,
+        luogo_nascita: minorForm.birth_place,
+        sesso: minorForm.gender,
+      });
+      if (res.data.success && res.data.codice_fiscale) {
+        setMinorForm({ ...minorForm, fiscal_code: res.data.codice_fiscale });
+      } else {
+        showAlert('Errore', res.data.error || 'Impossibile calcolare il CF');
+      }
+    } catch (e: any) {
+      showAlert('Errore', 'Errore nel calcolo del CF');
+    } finally {
+      setCalculatingMinorCF(false);
+    }
   };
 
   const resetInviteForm = () => {
@@ -141,6 +171,8 @@ export default function AdminAthletes() {
         last_name: minorForm.last_name.toUpperCase(),
         date_of_birth: isoDate,
         gender: minorForm.gender || undefined,
+        birth_place: minorForm.birth_place || undefined,
+        birth_province: minorForm.birth_province || undefined,
         phone: minorForm.phone || undefined,
         team_id: minorForm.team_id || undefined,
         fiscal_code: minorForm.fiscal_code || undefined,
@@ -877,13 +909,42 @@ export default function AdminAthletes() {
               <Text style={styles.inputLabel}>Data di Nascita * (gg/mm/aaaa)</Text>
               <TextInput style={styles.modalInput} value={minorForm.date_of_birth} onChangeText={v => setMinorForm({...minorForm, date_of_birth: formatDateInput(v)})} placeholder="gg/mm/aaaa" keyboardType="number-pad" maxLength={10} />
               
-              <Text style={styles.inputLabel}>Sesso</Text>
+              <Text style={styles.inputLabel}>Sesso *</Text>
               <View style={styles.genderRow}>
                 <TouchableOpacity style={[styles.genderBtn, minorForm.gender === 'M' && styles.genderBtnActive]} onPress={() => setMinorForm({...minorForm, gender: 'M'})}>
                   <Text style={[styles.genderBtnText, minorForm.gender === 'M' && styles.genderBtnTextActive]}>M</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.genderBtn, minorForm.gender === 'F' && styles.genderBtnActive]} onPress={() => setMinorForm({...minorForm, gender: 'F'})}>
                   <Text style={[styles.genderBtnText, minorForm.gender === 'F' && styles.genderBtnTextActive]}>F</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={styles.inputLabel}>Luogo di Nascita</Text>
+              <TextInput style={styles.modalInput} value={minorForm.birth_place} onChangeText={v => setMinorForm({...minorForm, birth_place: v.toUpperCase()})} placeholder="es: PERUGIA" autoCapitalize="characters" />
+              
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>Prov.</Text>
+                  <TextInput style={styles.modalInput} value={minorForm.birth_province} onChangeText={v => setMinorForm({...minorForm, birth_province: v.toUpperCase()})} placeholder="PG" autoCapitalize="characters" maxLength={2} />
+                </View>
+              </View>
+              
+              <Text style={styles.inputLabel}>Codice Fiscale</Text>
+              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                <TextInput style={[styles.modalInput, { flex: 1 }]} value={minorForm.fiscal_code} onChangeText={v => setMinorForm({...minorForm, fiscal_code: v.toUpperCase()})} placeholder="Codice Fiscale" autoCapitalize="characters" maxLength={16} />
+                <TouchableOpacity
+                  style={{ backgroundColor: '#34C759', paddingHorizontal: 14, height: 48, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, opacity: (!minorForm.gender || !minorForm.date_of_birth || !minorForm.first_name || !minorForm.last_name || !minorForm.birth_place) ? 0.5 : 1 }}
+                  onPress={handleCalculateMinorCF}
+                  disabled={calculatingMinorCF || !minorForm.gender || !minorForm.date_of_birth || !minorForm.first_name || !minorForm.last_name || !minorForm.birth_place}
+                >
+                  {calculatingMinorCF ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="calculator" size={18} color="#fff" />
+                      <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>Calcola</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
               
@@ -897,9 +958,6 @@ export default function AdminAthletes() {
               
               <Text style={styles.inputLabel}>Telefono</Text>
               <TextInput style={styles.modalInput} value={minorForm.phone} onChangeText={v => setMinorForm({...minorForm, phone: v})} placeholder="Telefono" keyboardType="phone-pad" />
-              
-              <Text style={styles.inputLabel}>Codice Fiscale</Text>
-              <TextInput style={styles.modalInput} value={minorForm.fiscal_code} onChangeText={v => setMinorForm({...minorForm, fiscal_code: v.toUpperCase()})} placeholder="Codice Fiscale" autoCapitalize="characters" maxLength={16} />
               
               <View style={{ backgroundColor: '#E3F2FD', padding: 12, borderRadius: 8, marginTop: 8, marginBottom: 8 }}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#1565C0', marginBottom: 8 }}>Dati Genitore/Tutore</Text>

@@ -5566,6 +5566,8 @@ class MinorAthleteCreate(BaseModel):
     last_name: str
     date_of_birth: str  # YYYY-MM-DD, required for minors
     fiscal_code: Optional[str] = None
+    birth_place: Optional[str] = None
+    birth_province: Optional[str] = None
     phone: Optional[str] = None
     team_id: Optional[str] = None
     parent_email: str  # Email genitore (obbligatorio per minori)
@@ -5812,6 +5814,8 @@ async def create_minor_athlete(data: MinorAthleteCreate, current_user = Depends(
         "date_of_birth": dob,
         "is_minor": True,
         "fiscal_code": data.fiscal_code,
+        "birth_place": data.birth_place,
+        "birth_province": data.birth_province,
         "email": None,
         "phone_athlete": data.phone,
         "gender": data.gender,

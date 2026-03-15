@@ -1320,89 +1320,6 @@ export default function AthleteDetail() {
             </View>
           )}
           
-          {/* Form inserimento data emissione */}
-          <View style={{ marginTop: 12 }}>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 }}>Data di Emissione (GG/MM/AAAA)</Text>
-            <TextInput
-              style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' }}
-              value={certIssueDateParent}
-              onChangeText={(text) => {
-                let cleaned = text.replace(/\D/g, '');
-                if (cleaned.length >= 2) cleaned = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
-                if (cleaned.length >= 5) cleaned = cleaned.slice(0, 5) + '/' + cleaned.slice(5);
-                if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
-                setCertIssueDateParent(cleaned);
-              }}
-              placeholder="gg/mm/aaaa"
-              placeholderTextColor="#999"
-              keyboardType="number-pad"
-              maxLength={10}
-            />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6, marginTop: 12 }}>Validità (mesi)</Text>
-            <TextInput
-              style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' }}
-              value={certValidityMonthsParent}
-              onChangeText={setCertValidityMonthsParent}
-              placeholder="12"
-              placeholderTextColor="#999"
-              keyboardType="number-pad"
-              maxLength={2}
-            />
-            {certIssueDateParent.length === 10 && parseInt(certValidityMonthsParent) > 0 && (
-              <View style={{ backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8, marginTop: 8, alignItems: 'center' }}>
-                <Text style={{ fontSize: 11, color: '#666' }}>SCADENZA CERTIFICATO</Text>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2E7D32', marginTop: 2 }}>
-                  {(() => {
-                    const parts = certIssueDateParent.split('/');
-                    if (parts.length === 3) {
-                      const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                      const months = parseInt(certValidityMonthsParent) || 12;
-                      d.setMonth(d.getMonth() + months);
-                      d.setDate(d.getDate() - 1);
-                      return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
-                    }
-                    return '';
-                  })()}
-                </Text>
-                <Text style={{ fontSize: 10, color: '#666', marginTop: 2 }}>(data emissione + {certValidityMonthsParent || '12'} mesi - 1 giorno)</Text>
-              </View>
-            )}
-            <TouchableOpacity
-              style={{ backgroundColor: '#007AFF', padding: 12, borderRadius: 8, marginTop: 10, alignItems: 'center', opacity: certIssueDateParent.length === 10 && parseInt(certValidityMonthsParent) > 0 ? 1 : 0.5 }}
-              disabled={certIssueDateParent.length !== 10 || !(parseInt(certValidityMonthsParent) > 0) || savingCertParent}
-              onPress={async () => {
-                const parts = certIssueDateParent.split('/');
-                if (parts.length !== 3) return;
-                const issueDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                const expiryDate = new Date(issueDate);
-                const months = parseInt(certValidityMonthsParent) || 12;
-                expiryDate.setMonth(expiryDate.getMonth() + months);
-                expiryDate.setDate(expiryDate.getDate() - 1);
-                setSavingCertParent(true);
-                try {
-                  await api.post('/certificates/simple', {
-                    athlete_id: id as string,
-                    issue_date: issueDate.toISOString(),
-                    expiry_date: expiryDate.toISOString(),
-                    verified: false,
-                  });
-                  await loadData();
-                  setCertIssueDateParent('');
-                  setCertValidityMonthsParent('12');
-                  showAlert('Successo', 'Certificato salvato con successo!');
-                } catch (error: any) {
-                  showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
-                } finally {
-                  setSavingCertParent(false);
-                }
-              }}
-            >
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
-                {savingCertParent ? 'Salvataggio...' : 'Salva Data Certificato'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          
           {/* Info consegna/spedizione */}
           <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginTop: 12, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
             <Text style={{ fontSize: 12, color: '#E65100', lineHeight: 18 }}>
@@ -2211,19 +2128,7 @@ export default function AthleteDetail() {
             <Text style={styles.modalTitle}>Modifica Dati</Text>
             
             <ScrollView style={styles.editScroll} showsVerticalScrollIndicator={false}>
-              {/* Squadra - sola lettura per genitori */}
-              <Text style={styles.inputLabel}>Squadra</Text>
-              <View style={[styles.pickerContainer, { backgroundColor: '#FFF5F5', borderColor: '#E53935', borderWidth: 1 }]}>
-                <View style={{ padding: 15, flexDirection: 'row', alignItems: 'center' }}>
-                  <SportIcon size={18} />
-                  <Text style={{ color: '#E53935', fontSize: 16, fontWeight: '700', marginLeft: 6 }}>
-                    {getTeamName(editData.team_id)}
-                  </Text>
-                </View>
-              </View>
-              <Text style={{ fontSize: 12, color: '#666', marginBottom: 16, marginTop: 4 }}>
-                Per cambiare squadra contattare la segreteria
-              </Text>
+              {/* Squadra - sola lettura per genitori - RIMOSSA: La squadra è gestita solo dall'admin */}
 
               <Text style={styles.inputLabel}>Cognome</Text>
               <TextInput
