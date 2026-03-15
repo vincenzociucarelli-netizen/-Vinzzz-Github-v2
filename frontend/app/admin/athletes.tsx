@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '../../src/components/Icon';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 import api from '../../src/services/api';
@@ -138,7 +139,7 @@ export default function AdminAthletes() {
     }
     setSendingInvite(true);
     try {
-      await api.post('/athletes/invite', {
+      const response = await api.post('/athletes/invite', {
         email: inviteForm.email,
         first_name: inviteForm.first_name || undefined,
         last_name: inviteForm.last_name || undefined,
@@ -362,12 +363,20 @@ export default function AdminAthletes() {
 
   const handleCopyLink = async () => {
     try {
-      if (Platform.OS === 'web') {
-        await navigator.clipboard.writeText(getShareMessage());
-        showAlert('Copiato!', 'Link e messaggio copiati negli appunti');
-      }
+      await Clipboard.setStringAsync(getShareMessage());
+      showAlert('Copiato!', 'Link e messaggio copiati negli appunti');
     } catch (e) {
-      showAlert('Errore', 'Impossibile copiare');
+      // Fallback for web
+      try {
+        if (Platform.OS === 'web' && navigator.clipboard) {
+          await navigator.clipboard.writeText(getShareMessage());
+          showAlert('Copiato!', 'Link e messaggio copiati negli appunti');
+        } else {
+          showAlert('Errore', 'Impossibile copiare. Copia il link manualmente.');
+        }
+      } catch {
+        showAlert('Errore', 'Impossibile copiare. Copia il link manualmente.');
+      }
     }
   };
 
