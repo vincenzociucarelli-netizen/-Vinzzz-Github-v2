@@ -1393,6 +1393,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  genderRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
   genderBtn: {
     width: 48,
     height: 44,

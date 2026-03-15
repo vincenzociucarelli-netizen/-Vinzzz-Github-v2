@@ -1124,19 +1124,23 @@ export default function AthleteDetail() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* QR Code Card */}
+        {/* QR Code - Compact */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>QR Code Personale</Text>
           <TouchableOpacity
-            style={styles.qrButton}
+            style={styles.qrButtonCompact}
             onPress={() => setQrModalVisible(true)}
           >
-            <Ionicons name="qr-code" size={100} color="#007AFF" />
-            <Text style={styles.qrButtonText}>Tocca per visualizzare</Text>
+            <Ionicons name="qr-code" size={40} color="#007AFF" />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.cardTitle}>QR Code Personale</Text>
+              <Text style={styles.qrButtonText}>Tocca per visualizzare</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
         </View>
 
-        {/* Athlete Photo Card */}
+        {/* Athlete Photo Card - Only for adults */}
+        {!athlete.is_minor && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📸 Foto Atleta</Text>
           <View style={styles.photoContainer}>
@@ -1222,6 +1226,7 @@ export default function AthleteDetail() {
             </Text>
           </View>
         </View>
+        )}
 
         {/* Status Card */}
         <View style={styles.card}>
@@ -2416,8 +2421,10 @@ export default function AthleteDetail() {
               placeholderTextColor="#999"
               value={enteredPassword}
               onChangeText={setEnteredPassword}
-              secureTextEntry
               autoCapitalize="none"
+              autoComplete="off"
+              autoCorrect={false}
+              textContentType="none"
               autoFocus
             />
             
@@ -2499,10 +2506,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
   },
+  qrButtonCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
   qrButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#007AFF',
-    marginTop: 8,
+    marginTop: 2,
   },
   statusBox: {
     flexDirection: 'row',
