@@ -1073,7 +1073,7 @@ export default function AdminAthleteDetail() {
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Ricevuta Pagamenti - ${(athlete as any).last_name || ''} ${(athlete as any).first_name || ''}</title>
+            <title>Attestato di Versamento - ${(athlete as any).last_name || ''} ${(athlete as any).first_name || ''}</title>
             <style>
               @page {
                 size: A4;
@@ -1273,7 +1273,7 @@ export default function AdminAthleteDetail() {
           </html>
         `;
 
-        const filename = `Ricevuta_${(athlete as any).last_name || 'Atleta'}_${(athlete as any).first_name || ''}.html`;
+        const filename = `Attestato_Versamento_${(athlete as any).last_name || 'Atleta'}_${(athlete as any).first_name || ''}.html`;
 
         if (action === 'print') {
           if (Platform.OS === 'web') {
@@ -1296,8 +1296,8 @@ export default function AdminAthleteDetail() {
                 const blob = new Blob([simpleReceiptHtml], { type: 'text/html' });
                 const file = new File([blob], filename, { type: 'text/html' });
                 await navigator.share({
-                  title: `Ricevuta ${(athlete as any).last_name} ${(athlete as any).first_name}`,
-                  text: `Ricevuta pagamenti per ${(athlete as any).last_name} ${(athlete as any).first_name}`,
+                  title: `Attestato di Versamento ${(athlete as any).last_name} ${(athlete as any).first_name}`,
+                  text: `Attestato di Versamento per ${(athlete as any).last_name} ${(athlete as any).first_name}`,
                   files: [file]
                 });
               } catch (shareError: any) {
