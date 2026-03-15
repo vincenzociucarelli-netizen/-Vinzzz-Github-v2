@@ -135,13 +135,6 @@ export const PARENT_STEPS: TutorialStep[] = [
     title: 'Certificato Medico',
     description: 'Puoi verificare la scadenza del certificato medico del tuo atleta. Riceverai un avviso quando sta per scadere.',
   },
-  {
-    icon: 'card',
-    iconColor: '#2196F3',
-    iconBg: '#E3F2FD',
-    title: 'Pagamenti',
-    description: 'Consulta lo stato dei pagamenti e le rate. Se la società lo desidera, potrà essere integrato il pagamento online con Stripe.',
-  },
 ];
 
 export const ATHLETE_STEPS: TutorialStep[] = [
@@ -158,13 +151,6 @@ export const ATHLETE_STEPS: TutorialStep[] = [
     iconBg: '#E8F5E9',
     title: 'Certificato Medico',
     description: 'Controlla la scadenza del certificato medico. Riceverai un avviso 30 e 15 giorni prima della scadenza.',
-  },
-  {
-    icon: 'card',
-    iconColor: '#2196F3',
-    iconBg: '#E3F2FD',
-    title: 'Pagamenti',
-    description: 'Consulta lo stato dei pagamenti e le rate. Se la società lo desidera, potrà essere integrato il pagamento online con Stripe.',
   },
 ];
 
