@@ -1,65 +1,62 @@
 # RegistraTEAM - Product Requirements Document
 
-## Original Problem Statement
-Sports team management application for Italian amateur sports clubs. Must comply with Apple/iOS App Store and Google Play Store requirements, GDPR, and Italian privacy laws. Used by admins, coaches, athletes, parents, and staff.
+## Problem Statement
+Sports team management application for Italian sports societies, targeting iOS App Store and Google Play Store publication. Features role-based access (admin, coach, parent, athlete), athlete registration, legal compliance (GDPR), payment management, and team scheduling.
 
-## Core Architecture
-- **Frontend**: React Native Expo (Web + Mobile)
-- **Backend**: FastAPI (Python) with MongoDB
+## Architecture
+- **Frontend**: React Native Web (Expo Router) on port 3000
+- **Backend**: FastAPI + MongoDB on port 8001
+- **Database**: MongoDB (test_database)
 - **Email**: Brevo (Sendinblue) for transactional emails
-- **CF Library**: python-codicefiscale
+- **External**: python-codicefiscale for Italian fiscal codes
 
-## Completed Features
+## Core Requirements
+1. Society admin accepts Terms of Use before use - DONE
+2. All users accept legal disclaimer (Privacy + Terms) on first login - DONE
+3. Dedicated Privacy Policy and Terms of Use pages - DONE
+4. Public self-registration for athletes/parents with email verification - DONE
+5. Share Registration Link feature for admin invitations - DONE
+6. Minor athlete forms with Codice Fiscale + second parent email - DONE
+7. Separate "Password Dati" for each parent of minor athletes - IN PROGRESS (frontend form done, needs full lifecycle test)
+8. Consistent profile layout between adult and minor athletes - DONE
 
-### Legal & Compliance
-- [x] Admin "Terms of Service" acceptance on first login
-- [x] Universal legal acceptance screen (Apple-compliant) for all users on first login
-- [x] Privacy Policy and Terms of Use dedicated pages
-- [x] Legal checkbox requires opening BOTH documents before enabling (2026-03-14)
+## What's Been Implemented (Latest Session - March 2026)
+- **P0: Minor Athlete Profile Restructure** - Reordered components in `parent/athlete/[id].tsx` to match adult profile: Account > QR > Dati Anagrafici (collapsible) > Dati Fiscali Genitore (collapsible) > Coach > Status > Certificate > Schedule > Payments
+- **P1: Legal Pages Back Button Fix** - Enlarged back button with "Indietro" label, added BackHandler for hardware back press, increased touch target to 44px minimum
+- **P0: Password Dati in Parent Registration** - Added Password Dati + Confirm Password Dati fields to register.tsx for parent role, with validation and API integration
 
-### User Registration
-- [x] Admin-led email invitation for athletes
-- [x] Public self-registration with email verification
-- [x] Minor athlete registration (parent flow)
+## Prioritized Backlog
 
-### Minor Athlete Form (Parent)
-- [x] Sesso (M/F) gender field with toggle buttons (2026-03-14)
-- [x] Codice Fiscale auto-calculation via API (2026-03-14)
-- [x] Pre-fill Tel. Padre from parent's profile phone (2026-03-14)
-- [x] Renamed "Fatturazione" to "Attestato di Versamento" (2026-03-14)
-- [x] Password reset note (admin-only via WA/email) (2026-03-14)
-- [x] Teams section removed from parent form (admin assigns) (2026-03-14)
-- [x] Codice Fiscale field for minor athletes
-- [x] Second parent email field
+### P0 (Critical)
+- User-guided testing: full lifecycle for Minors, Teams, Excel Templates
+- Complete Password Dati lifecycle: prompt to create after admin reset
 
-### Data Security
-- [ ] Separate data passwords for each parent (IN PROGRESS)
-  - [x] Backend model updated (second_parent_data_password_hash)
-  - [x] Admin UI for managing parent data passwords
-  - [ ] Parent registration form: data password field
-  - [ ] Parent password reset flow after admin reset
+### P1 (Important)
+- Simplified "Invite Person" modal (admin: Name, Surname, Email only)
+- "Data Processor" checkbox in admin creation form (GDPR)
 
-### Email & Notifications
-- [x] App Store/Play Store links in transactional emails
-- [x] Compact notification cards UI
+### P2 (Nice to have)
+- User Deletion Flow: clarify business logic
+- UI improvements for contracted athletes (atleta a contratto)
 
-## In Progress (P0)
-- Complete separate data passwords for parents
-  - Add "Password Dati" field to parent registration form (register.tsx)
-  - Frontend logic for password reset after admin reset
+### P3 (Future)
+- Backend refactoring: decompose server.py into modular routes
+- Stripe integration for payments
+- Database cleanup: migrate "viewer" role to "dirigente"
+- Domain & App Store publication assistance
 
-## Upcoming Tasks (P1)
-- User-guided testing: Minors, Teams, Excel Templates
-- Add "Data Processor" checkbox in admin creation form
-
-## Future Tasks (P2-P3)
-- User deletion flow (clarify business logic)
-- UI for contracted athletes
-- Backend refactoring (modular routes/models)
-- Stripe integration
-- Database cleanup (viewer → dirigente)
-- Domain & App Store publication
-
-## Key Credentials
+## Test Credentials
 - Admin: pallavoloperugia@gmail.com / password
-- Test Parent: testparent@test.com / Test1234!
+- Parent: testparent@test.com / Test1234!
+- Adult Athlete: luna@18piu.com / Luna2024!
+- Minor Athlete ID (linked to test parent): 69b5e0beefab8e9f13304720
+
+## Key Files
+- backend/server.py
+- frontend/app/admin/athletes.tsx
+- frontend/app/parent/athlete/[id].tsx (restructured)
+- frontend/app/athlete/profile.tsx (reference template)
+- frontend/app/privacy-policy.tsx (back button fixed)
+- frontend/app/terms-of-use.tsx (back button fixed)
+- frontend/app/register.tsx (Password Dati added)
+- frontend/src/components/admin/ParentsPasswordSection.tsx
