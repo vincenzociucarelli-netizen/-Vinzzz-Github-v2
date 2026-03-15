@@ -73,7 +73,11 @@ export default function AthleteDetail() {
     first_name: '',
     last_name: '',
     date_of_birth: '',
+    gender: '',
     fiscal_code: '',
+    birth_place: '',
+    birth_province: '',
+    country_of_birth: 'Italia',
     address: '',
     city: '',
     postal_code: '',
@@ -82,6 +86,7 @@ export default function AthleteDetail() {
     phone_father: '',
     phone_mother: '',
     email: '',
+    second_parent_email: '',
     tax_payer_last_name: '',
     tax_payer_first_name: '',
     tax_payer_fiscal_code: '',
@@ -1023,6 +1028,7 @@ export default function AthleteDetail() {
       first_name: athlete.first_name || '',
       last_name: athlete.last_name || '',
       date_of_birth: formatDateForDisplay(athlete.date_of_birth),
+      gender: athlete.gender || '',
       fiscal_code: athlete.fiscal_code || '',
       birth_place: athlete.birth_place || '',
       birth_province: athlete.birth_province || '',
@@ -1055,6 +1061,7 @@ export default function AthleteDetail() {
         last_name: editData.last_name,
         full_name: `${editData.last_name} ${editData.first_name}`,
         date_of_birth: isoDate,
+        gender: editData.gender || null,
         fiscal_code: editData.fiscal_code,
         birth_place: editData.birth_place || null,
         birth_province: editData.birth_province || null,
@@ -1352,11 +1359,11 @@ export default function AthleteDetail() {
               
               <View style={styles.dataRow}>
                 <Text style={styles.dataLabel}>Codice Fiscale</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                   <Text style={styles.dataValue}>{maskData(athlete.fiscal_code)}</Text>
                   {dataUnlocked && (
                     <TouchableOpacity
-                      style={{ backgroundColor: '#007AFF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
+                      style={{ backgroundColor: '#007AFF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}
                       data-testid="calc-cf-readonly-btn"
                       onPress={() => {
                         try {
@@ -1415,7 +1422,7 @@ export default function AthleteDetail() {
                         }
                       }}
                     >
-                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>Calcola CF</Text>
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Calcola CF</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -2322,6 +2329,32 @@ export default function AthleteDetail() {
                 returnKeyType="next"
               />
 
+              <Text style={styles.inputLabel}>Sesso</Text>
+              <View style={{ flexDirection: 'row', marginBottom: 12, gap: 10 }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1, padding: 12, borderRadius: 8, borderWidth: 2,
+                    borderColor: editData.gender === 'M' ? '#007AFF' : '#ddd',
+                    backgroundColor: editData.gender === 'M' ? '#E3F2FD' : '#fff',
+                    alignItems: 'center',
+                  }}
+                  onPress={() => setEditData({...editData, gender: 'M'})}
+                >
+                  <Text style={{ fontWeight: '600', color: editData.gender === 'M' ? '#007AFF' : '#666' }}>M</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1, padding: 12, borderRadius: 8, borderWidth: 2,
+                    borderColor: editData.gender === 'F' ? '#E91E63' : '#ddd',
+                    backgroundColor: editData.gender === 'F' ? '#FCE4EC' : '#fff',
+                    alignItems: 'center',
+                  }}
+                  onPress={() => setEditData({...editData, gender: 'F'})}
+                >
+                  <Text style={{ fontWeight: '600', color: editData.gender === 'F' ? '#E91E63' : '#666' }}>F</Text>
+                </TouchableOpacity>
+              </View>
+
               <Text style={styles.inputLabel}>Stato di Nascita</Text>
               <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, marginBottom: 12, overflow: 'hidden' }}>
                 <Picker
@@ -2444,7 +2477,7 @@ export default function AthleteDetail() {
                     }
                   }}
                 >
-                  <Ionicons name="calculator" size={18} color="#fff" />
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>Calcola CF</Text>
                 </TouchableOpacity>
               </View>
 
