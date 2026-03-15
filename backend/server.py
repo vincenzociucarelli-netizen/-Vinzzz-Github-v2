@@ -1874,11 +1874,6 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
     if not society:
         raise HTTPException(status_code=404, detail="Società non trovata")
     
-    # Check if email already registered
-    existing_user = await db.users.find_one({"email": data.email.lower(), "society_id": society_id})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Questa email è già registrata nella società")
-    
     # Cancel any previous pending invitations for this email
     await db.athlete_invitations.update_many(
         {"email": data.email.lower(), "society_id": society_id, "status": "pending"},
@@ -2028,10 +2023,8 @@ async def register_via_invite(data: InviteRegisterRequest):
     is_minor = invitation.get("is_minor", False)
     team_id = invitation.get("team_id")
     
-    # Check if email already registered
+    # Check if email already registered - allow if existing user can be linked
     existing_user = await db.users.find_one({"email": data.email.lower()})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Questa email è già registrata")
     
     # Validate age for adults
     dob = None
@@ -2145,7 +2138,13 @@ async def register_via_invite(data: InviteRegisterRequest):
         }
     else:
         # ADULT ATHLETE FLOW
-        user_id = str(ObjectId())
+        if existing_user:
+            user_id = existing_user["id"]
+            # Update society_id if needed
+            if not existing_user.get("society_id"):
+                await db.users.update_one({"id": user_id}, {"$set": {"society_id": society_id}})
+        else:
+            user_id = str(ObjectId())
         
         athlete_dict = {
             "id": athlete_id,
@@ -2176,22 +2175,29 @@ async def register_via_invite(data: InviteRegisterRequest):
         }
         await db.athletes.insert_one(athlete_dict)
         
-        user_dict = {
-            "id": user_id,
-            "society_id": society_id,
-            "email": data.email.lower(),
-            "password_hash": hash_password(data.password),
-            "role": "athlete",
-            "full_name": full_name,
-            "first_name": data.first_name,
-            "last_name": data.last_name,
-            "phone": data.phone,
-            "is_active": True,
-            "status": "approved",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "athlete_id": athlete_id,
-        }
-        await db.users.insert_one(user_dict)
+        if not existing_user:
+            user_dict = {
+                "id": user_id,
+                "society_id": society_id,
+                "email": data.email.lower(),
+                "password_hash": hash_password(data.password),
+                "role": "athlete",
+                "full_name": full_name,
+                "first_name": data.first_name,
+                "last_name": data.last_name,
+                "phone": data.phone,
+                "is_active": True,
+                "status": "approved",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "athlete_id": athlete_id,
+            }
+            await db.users.insert_one(user_dict)
+        else:
+            # Link existing user to the new athlete
+            await db.users.update_one(
+                {"id": user_id},
+                {"$set": {"athlete_id": athlete_id, "society_id": society_id}}
+            )
         
         # Mark invitation as used
         await db.athlete_invitations.update_one(
@@ -3542,6 +3548,7 @@ async def admin_reset_password(user_id: str, data: AdminResetPassword, current_u
 
 class AdminResetAthletePasswordRequest(BaseModel):
     send_email: bool = True  # If true, send reset link via email
+    new_password: Optional[str] = None  # If provided, set this password directly
 
 @api_router.post("/admin/athletes/{athlete_id}/reset-password")
 async def admin_reset_athlete_password(athlete_id: str, data: AdminResetAthletePasswordRequest, current_user = Depends(get_current_user)):
@@ -3577,7 +3584,24 @@ async def admin_reset_athlete_password(athlete_id: str, data: AdminResetAthleteP
         }
         await db.users.insert_one(user)
     
-    # Generate reset token
+    # Direct password reset (no email)
+    if data.new_password:
+        if len(data.new_password) < 6:
+            raise HTTPException(status_code=400, detail="La password deve avere almeno 6 caratteri")
+        new_hash = hash_password(data.new_password)
+        await db.users.update_one(
+            {"id": user["id"]},
+            {"$set": {"password_hash": new_hash, "athlete_id": athlete_id}}
+        )
+        athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}".strip() or athlete.get("full_name", "Atleta")
+        return {
+            "success": True,
+            "message": f"Password reimpostata per {athlete_name}",
+            "athlete_name": athlete_name,
+            "email": athlete_email,
+        }
+
+    # Generate reset token for email flow
     reset_token = generate_reset_token()
     reset_expires = datetime.utcnow() + timedelta(hours=24)  # 24 hours for admin-initiated reset
     

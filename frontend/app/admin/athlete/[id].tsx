@@ -256,6 +256,9 @@ export default function AdminAthleteDetail() {
   // Reset account password (for athlete login)
   const [resetAccountPasswordVisible, setResetAccountPasswordVisible] = useState(false);
   const [resettingAccountPassword, setResettingAccountPassword] = useState(false);
+  const [directResetPassword, setDirectResetPassword] = useState('');
+  const [directResetVisible, setDirectResetVisible] = useState(false);
+  const [resettingDirectPassword, setResettingDirectPassword] = useState(false);
   
   // Detach parents
   const [detachingParents, setDetachingParents] = useState(false);
@@ -539,6 +542,28 @@ export default function AdminAthleteDetail() {
       showAlert('Errore', error.response?.data?.detail || 'Impossibile inviare l\'email di reset password');
     } finally {
       setResettingAccountPassword(false);
+    }
+  };
+
+  // Direct password reset (admin sets new password)
+  const handleDirectResetPassword = async () => {
+    if (!directResetPassword || directResetPassword.length < 6) {
+      showAlert('Errore', 'La password deve avere almeno 6 caratteri');
+      return;
+    }
+    setResettingDirectPassword(true);
+    try {
+      const response = await api.post(`/admin/athletes/${id}/reset-password`, {
+        send_email: false,
+        new_password: directResetPassword
+      });
+      showAlert('Password Reimpostata', response.data.message || 'Password aggiornata con successo');
+      setDirectResetVisible(false);
+      setDirectResetPassword('');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Impossibile reimpostare la password');
+    } finally {
+      setResettingDirectPassword(false);
     }
   };
 
@@ -2447,9 +2472,9 @@ export default function AdminAthleteDetail() {
             {/* Reset Account Password Button - For athletes with email */}
             {(athlete as any).email && (
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>🔑 Password Accesso App</Text>
+                <Text style={styles.cardTitle}>Password Accesso App</Text>
                 <Text style={styles.cardSubtitle}>
-                  Invia un'email all'atleta con un link per reimpostare la password di accesso all'app
+                  Gestisci la password di accesso dell'atleta
                 </Text>
                 <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
                   Email: {(athlete as any).email}
@@ -2461,6 +2486,14 @@ export default function AdminAthleteDetail() {
                 >
                   <Ionicons name="mail-outline" size={20} color="#fff" />
                   <Text style={styles.resetDataPasswordBtnText}>Invia Email Reset Password</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.resetDataPasswordBtn, { backgroundColor: '#34C759', marginTop: 10 }]}
+                  onPress={() => setDirectResetVisible(true)}
+                  data-testid="direct-reset-password-btn"
+                >
+                  <Ionicons name="key-outline" size={20} color="#fff" />
+                  <Text style={styles.resetDataPasswordBtnText}>Reimposta Password Manualmente</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -3142,6 +3175,51 @@ export default function AdminAthleteDetail() {
               >
                 <Text style={{ color: '#fff', fontWeight: '600' }}>
                   {resettingAccountPassword ? 'Invio...' : 'Invia Email'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Direct Reset Password Modal */}
+      <Modal
+        visible={directResetVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setDirectResetVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="key" size={40} color="#34C759" />
+              <Text style={styles.modalTitle}>Reimposta Password Manualmente</Text>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              Inserisci la nuova password per l'atleta (min. 6 caratteri)
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nuova password"
+              value={directResetPassword}
+              onChangeText={setDirectResetPassword}
+              secureTextEntry={false}
+              data-testid="direct-reset-password-input"
+            />
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => { setDirectResetVisible(false); setDirectResetPassword(''); }}
+              >
+                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#34C759' }]}
+                onPress={handleDirectResetPassword}
+                disabled={resettingDirectPassword || directResetPassword.length < 6}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>
+                  {resettingDirectPassword ? 'Salvataggio...' : 'Salva Password'}
                 </Text>
               </TouchableOpacity>
             </View>

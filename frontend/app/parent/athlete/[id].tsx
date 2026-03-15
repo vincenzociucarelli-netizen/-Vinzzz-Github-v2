@@ -27,6 +27,8 @@ import { format, differenceInDays, addMonths, subDays } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuthStore } from '../../../src/store/authStore';
 import { SportIcon } from '../../../src/components/SportIcon';
+import CodiceFiscale from 'codice-fiscale-js';
+import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
 export default function AthleteDetail() {
@@ -2232,16 +2234,26 @@ export default function AthleteDetail() {
               />
 
               <Text style={styles.inputLabel}>Stato di Nascita</Text>
-              <TextInput
-                style={styles.textInput}
-                value={editData.country_of_birth}
-                onChangeText={(text) => setEditData({...editData, country_of_birth: text.toUpperCase()})}
-                autoCapitalize="characters"
-                placeholder="es: ITALIA"
-                placeholderTextColor="#aaa"
-                returnKeyType="next"
-              />
+              <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, marginBottom: 12, overflow: 'hidden' }}>
+                <Picker
+                  selectedValue={editData.country_of_birth || DEFAULT_COUNTRY}
+                  onValueChange={(value) => {
+                    const updates: any = { country_of_birth: value };
+                    if (value !== 'Italia' && value !== 'ITALIA') {
+                      updates.birth_place = '';
+                      updates.birth_province = '';
+                    }
+                    setEditData({...editData, ...updates});
+                  }}
+                  style={{ height: 50 }}
+                >
+                  {COUNTRIES.map((country: string) => (
+                    <Picker.Item key={country} label={country} value={country} />
+                  ))}
+                </Picker>
+              </View>
 
+              {(!editData.country_of_birth || editData.country_of_birth === 'Italia' || editData.country_of_birth === 'ITALIA') && (
               <View style={styles.rowInputs}>
                 <View style={styles.halfInputContainer}>
                   <Text style={styles.inputLabel}>Luogo di Nascita</Text>
@@ -2269,16 +2281,83 @@ export default function AthleteDetail() {
                   />
                 </View>
               </View>
+              )}
 
               <Text style={styles.inputLabel}>Codice Fiscale</Text>
-              <TextInput
-                style={styles.textInput}
-                value={editData.fiscal_code}
-                onChangeText={(text) => setEditData({...editData, fiscal_code: text.toUpperCase()})}
-                autoCapitalize="characters"
-                maxLength={16}
-                returnKeyType="next"
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <TextInput
+                  style={[styles.textInput, { flex: 1, marginRight: 8, marginBottom: 0 }]}
+                  value={editData.fiscal_code}
+                  onChangeText={(text) => setEditData({...editData, fiscal_code: text.toUpperCase()})}
+                  autoCapitalize="characters"
+                  maxLength={16}
+                  returnKeyType="next"
+                />
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#007AFF',
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    borderRadius: 8,
+                  }}
+                  data-testid="calculate-cf-btn"
+                  onPress={() => {
+                    try {
+                      const dob = editData.date_of_birth;
+                      const isEstero = editData.country_of_birth && editData.country_of_birth !== 'Italia' && editData.country_of_birth !== 'ITALIA';
+                      
+                      if (!dob || !editData.last_name || !editData.first_name || !editData.gender) {
+                        Alert.alert('Dati Mancanti', 'Per calcolare il CF servono: Cognome, Nome, Data di Nascita e Sesso');
+                        return;
+                      }
+                      if (!isEstero && !editData.birth_place) {
+                        Alert.alert('Dati Mancanti', 'Compila il Luogo di Nascita per calcolare il CF');
+                        return;
+                      }
+                      
+                      let day, month, year;
+                      if (dob.includes('/')) {
+                        const parts = dob.split('/');
+                        day = parseInt(parts[0]);
+                        month = parseInt(parts[1]);
+                        year = parseInt(parts[2]);
+                      } else if (dob.includes('-')) {
+                        const parts = dob.split('-');
+                        year = parseInt(parts[0]);
+                        month = parseInt(parts[1]);
+                        day = parseInt(parts[2]);
+                      } else {
+                        const d = new Date(dob);
+                        day = d.getDate();
+                        month = d.getMonth() + 1;
+                        year = d.getFullYear();
+                      }
+                      
+                      const birthplaceValue = isEstero 
+                        ? editData.country_of_birth.toUpperCase() 
+                        : (editData.birth_place || '').toUpperCase();
+                      const cf = new CodiceFiscale({
+                        name: editData.first_name.toUpperCase(),
+                        surname: editData.last_name.toUpperCase(),
+                        gender: editData.gender as 'M' | 'F',
+                        day: day,
+                        month: month,
+                        year: year,
+                        birthplace: birthplaceValue,
+                        birthplaceProvincia: isEstero ? 'EE' : (editData.birth_province?.toUpperCase() || ''),
+                      });
+                      
+                      setEditData({...editData, fiscal_code: cf.toString()});
+                      Alert.alert('Successo', 'Codice Fiscale calcolato!');
+                    } catch (error: any) {
+                      console.error('CF calculation error:', error);
+                      Alert.alert('Errore', 'Impossibile calcolare il CF. Verifica i dati inseriti (es. comune di nascita deve essere valido).');
+                    }
+                  }}
+                >
+                  <Ionicons name="calculator" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
 
               <Text style={styles.inputLabel}>Indirizzo</Text>
               <TextInput
