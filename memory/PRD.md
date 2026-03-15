@@ -24,7 +24,10 @@ Sports team management application for Italian sports societies, targeting iOS A
 - **P0: Minor Athlete Profile Restructure** - Reordered components in `parent/athlete/[id].tsx` to match adult profile: Account > QR > Dati Anagrafici (collapsible) > Dati Fiscali Genitore (collapsible) > Coach > Status > Certificate > Schedule > Payments
 - **P1: Legal Pages Back Button Fix** - Enlarged back button with "Indietro" label, added BackHandler for hardware back press, increased touch target to 44px minimum
 - **P0: Password Dati in Parent Registration** - Added Password Dati + Confirm Password Dati fields to register.tsx for parent role, with validation and API integration
-- **Enhancement: Onboarding Tutorial per tutti i ruoli** - Tutorial 3 step per ogni ruolo (Genitore, Atleta 18+, Coach, Collaboratore, Dirigente) con contenuti personalizzati. Si mostra le prime 3 volte con "Non mostrare più". Componente riutilizzabile `OnboardingTutorial`.
+- **Enhancement: Onboarding Tutorial per tutti i ruoli** - Tutorial 2-3 step per ogni ruolo (Genitore, Atleta 18+, Coach, Collaboratore, Dirigente) con contenuti personalizzati. Si mostra le prime 3 volte con "Non mostrare più". Componente riutilizzabile `OnboardingTutorial`.
+- **Stato di Nascita + Campi Nascita** - Aggiunto campo "Stato di Nascita" (country_of_birth) in tutte le viste: admin read-only, admin form creazione minore, vista genitore atleta, form registrazione atleta. Luogo/Provincia nascita visibili solo per nati in Italia. Calcolo CF aggiornato per gestire nascita all'estero.
+- **Email 2° Genitore** - Aggiunto campo nella vista genitore dell'atleta (Dati Anagrafici + modale modifica)
+- **Fix dati DB Lucia/Sauro** - Corretto parent_id di PESSI LUCIA per puntare a PESSI SAURO
 
 ## Prioritized Backlog
 
