@@ -46,6 +46,21 @@ export default function InviteRegister() {
   });
   const [showPassword, setShowPassword] = useState(false);
 
+  // Auto-format date as dd/mm/yyyy
+  const formatDateInput = (text: string) => {
+    // Remove non-digits
+    const digits = text.replace(/\D/g, '');
+    let formatted = '';
+    if (digits.length <= 2) {
+      formatted = digits;
+    } else if (digits.length <= 4) {
+      formatted = digits.slice(0, 2) + '/' + digits.slice(2);
+    } else {
+      formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4, 8);
+    }
+    return formatted;
+  };
+
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
       window.alert(`${title}\n\n${message}`);
@@ -240,12 +255,12 @@ export default function InviteRegister() {
           data-testid="register-first-name"
         />
 
-        <Text style={styles.label}>Data di Nascita</Text>
+        <Text style={styles.label}>Data di Nascita (GG/MM/AAAA)</Text>
         <TextInput
           style={styles.input}
-          placeholder="gg/mm/aaaa"
+          placeholder="GG/MM/AAAA"
           value={form.date_of_birth}
-          onChangeText={(v) => setForm({...form, date_of_birth: v})}
+          onChangeText={(v) => setForm({...form, date_of_birth: formatDateInput(v)})}
           keyboardType="numeric"
           maxLength={10}
           data-testid="register-dob"
@@ -302,16 +317,6 @@ export default function InviteRegister() {
               data-testid="register-parent-first-name"
             />
 
-            <Text style={styles.label}>Email Genitore</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Email genitore (opzionale, usa email invito se vuoto)"
-              value={form.parent_email}
-              onChangeText={(v) => setForm({...form, parent_email: v})}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-
             <Text style={styles.label}>Telefono Genitore</Text>
             <TextInput
               style={styles.input}
@@ -326,7 +331,7 @@ export default function InviteRegister() {
         {/* Account credentials */}
         <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Credenziali di Accesso</Text>
 
-        <Text style={styles.label}>Email *</Text>
+        <Text style={styles.label}>Email (anche username di accesso) *</Text>
         <TextInput
           style={styles.input}
           placeholder="Email"
