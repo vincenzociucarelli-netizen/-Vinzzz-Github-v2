@@ -14,6 +14,7 @@ import {
   Platform,
   Image,
   Dimensions,
+  Linking,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
@@ -34,7 +35,7 @@ import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
 
 // Sub-component: Shows parents with their data password status and reset buttons
-function ParentsPasswordSection({ athleteId, token }: { athleteId: string; token: any }) {
+function ParentsPasswordSection({ athleteId, athleteName, token }: { athleteId: string; athleteName: string; token: any }) {
   const [parents, setParents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState<string | null>(null);
@@ -70,6 +71,20 @@ function ParentsPasswordSection({ athleteId, token }: { athleteId: string; token
     }
   };
 
+  const openWhatsApp = (phone: string, parentName: string) => {
+    const cleanPhone = phone.replace(/\s+/g, '').replace(/^0+/, '');
+    const intlPhone = cleanPhone.startsWith('+') ? cleanPhone.replace('+', '') : `39${cleanPhone}`;
+    const msg = encodeURIComponent(
+      `Gentile ${parentName}, la PW protezione dati di ${athleteName} è stata rimossa come da Lei richiesto. Le verrà richiesto di inserirne una nuova al prossimo accesso del profilo di ${athleteName}.`
+    );
+    const url = `https://wa.me/${intlPhone}?text=${msg}`;
+    if (Platform.OS === 'web') {
+      window.open(url, '_blank');
+    } else {
+      Linking.openURL(url);
+    }
+  };
+
   if (loading) return <ActivityIndicator size="small" color="#1565C0" />;
   if (parents.length === 0) return <Text style={{ color: '#999', fontSize: 13 }}>Nessun genitore collegato</Text>;
 
@@ -101,6 +116,16 @@ function ParentsPasswordSection({ athleteId, token }: { athleteId: string; token
               <Text style={{ fontSize: 12, color: '#f44336', fontWeight: '600' }}>
                 {resetting === p.type ? 'Cancellazione...' : 'Cancella password dati'}
               </Text>
+            </TouchableOpacity>
+          )}
+          {!p.has_data_password && !p.not_registered && p.phone && (
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 6, backgroundColor: '#25D366', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, alignSelf: 'flex-start' }}
+              onPress={() => openWhatsApp(p.phone, p.full_name)}
+              data-testid={`wa-notify-${p.type}`}
+            >
+              <Ionicons name="logo-whatsapp" size={16} color="#fff" />
+              <Text style={{ fontSize: 12, color: '#fff', fontWeight: '600' }}>Notifica via WhatsApp</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -2400,7 +2425,7 @@ export default function AdminAthleteDetail() {
                 <Text style={styles.cardSubtitle}>
                   Ogni genitore ha una password personale per accedere e modificare i dati del figlio
                 </Text>
-                <ParentsPasswordSection athleteId={athlete.id} token={null} />
+                <ParentsPasswordSection athleteId={athlete.id} athleteName={athlete.full_name} token={null} />
               </View>
             )}
 
