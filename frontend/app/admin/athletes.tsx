@@ -51,8 +51,6 @@ export default function AdminAthletes() {
     email: '',
     first_name: '',
     last_name: '',
-    is_minor: false,
-    team_id: '',
   });
   const [adultForm, setAdultForm] = useState({
     first_name: '',
@@ -584,7 +582,7 @@ export default function AdminAthletes() {
       </View>
 
       {/* Share Registration Link Button */}
-      <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
+      <View style={{ paddingHorizontal: 16, marginBottom: 4 }}>
         <TouchableOpacity 
           style={{ backgroundColor: '#25D366', paddingVertical: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
           onPress={() => setShowShareLink(!showShareLink)}
@@ -625,6 +623,18 @@ export default function AdminAthletes() {
             </View>
           </View>
         )}
+      </View>
+      
+      {/* Invite Single Person Button */}
+      <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
+        <TouchableOpacity 
+          style={{ backgroundColor: '#007AFF', paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          onPress={() => setShowInviteModal(true)}
+          data-testid="invite-person-btn"
+        >
+          <Ionicons name="person-add" size={18} color="#fff" />
+          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Invita Persona</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.contentContainer}>

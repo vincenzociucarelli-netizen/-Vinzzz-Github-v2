@@ -1,157 +1,184 @@
 <analysis>**original_problem_statement**:
-The user's primary goal is to finalize the application for publication in app stores. This involves completing core features, fixing bugs, and refining the user experience based on direct feedback.
-
-The initial goals were to complete the minor athlete flow, fix medical certificate logic, and update privacy policies. During the session, new requirements were added:
-1.  **Fix Privacy PDF Generation**: Ensure the backend-generated PDF for privacy policies matches the updated text shown in the frontend preview. **DONE**.
-2.  **Enable Dirigente Certificate Management**: Allow users with the Dirigente (viewer) role to add and edit medical certificates for athletes in their assigned teams. **DONE**.
-3.  **Implement Admin Notifications**: Create a notification for the admin whenever a user (athlete, parent, dirigente) updates a medical certificate. **DONE**.
-4.  **Implement Terms of Service**: Add a mandatory Terms of Service acceptance screen that the admin of a society must accept upon first login. **IN PROGRESS**.
-5.  **Athlete Self-Registration**: Implement a flow where athletes (including minors) can self-register via an email invitation, instead of being created directly by an admin. **NOT STARTED**.
+The user's primary goal is to finalize a sports team management application for publication in the iOS App Store and Google Play Store. This involves implementing the final core features, fixing bugs, and ensuring the application meets legal and platform-specific requirements (particularly Apple's).
 
 **PRODUCT REQUIREMENTS**:
--   The system must support a full lifecycle for minor athletes. **DONE**.
--   The backend-generated privacy PDF must contain the exact same text as the frontend preview. **DONE**.
--   Dirigenti must be able to manage medical certificates for their teams. **DONE**.
--   The admin must be notified of all medical certificate updates. **DONE**.
--   A society's admin must accept the Terms of Use before accessing the application. The terms text includes a specific clause about the free tier limits. **IN PROGRESS**.
--   A new athlete registration flow via email invitation needs to be created. **NOT STARTED**.
+*   A society's admin must accept Terms of Use before using the app. **DONE**.
+*   All users must accept a legal disclaimer (Privacy Policy and Terms) on their first login to comply with Apple's guidelines. **DONE**.
+*   The application must have dedicated, accessible pages for the Privacy Policy and Terms of Use. **DONE**.
+*   A new athlete registration flow via admin email invitation needs to be created. **REPLACED** with a more flexible Share Registration Link feature.
+*   A public self-registration flow for athletes/parents must be available, including email verification to prevent fake accounts. **DONE**.
+*   Transactional emails should include links to the App Store and Play Store. **DONE**.
+*   The form for creating minor athletes must include fields for Codice Fiscale and a second parent's email. **DONE**.
+*   Each parent of a minor athlete must have their own separate, unique password (password dati) to access the minor's sensitive data, and the admin must be able to reset these passwords individually for each parent. **IN PROGRESS**.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application has several major features completed and tested, including the full Minor Athlete workflow (creation, read-only view, parent unlinking). A significant bug was fixed where the backend was generating outdated privacy policy PDFs; the text is now synchronized. The Dirigente (viewer) role now has the functionality to manage medical certificates, and a notification system alerts the admin of these changes.
+The application is a sports team management tool with role-based access. Core legal and registration flows are implemented. Based on extensive user feedback this session, numerous UI/UX improvements have been made across the application, especially in the admin and parent-facing forms for athlete registration.
 
-A new mandatory Terms of Service acceptance flow for society admins has been implemented. It includes a backend endpoint to track acceptance and a frontend screen to display the terms. However, this new feature has a critical bug causing the acceptance screen to appear twice.
+Key changes include:
+*   **Simplified Invitation Flow**: The admin's athlete invitation process was completely refactored from three separate buttons (Major, Minor, Invite by Email) to a single, user-friendly Share Registration Link feature that generates a universal registration link to be shared via WhatsApp or other means.
+*   **Enhanced Forms**: The athlete registration forms now include automatic fiscal code calculation, gender selection, and better layouts. The parent registration form correctly pre-fills the phone number based on whether the user identifies as the father or mother.
+*   **UI/UX Fixes**: Multiple crashes related to missing state variables on the parent's athlete detail page have been resolved. The layout of various components (QR codes, admin modals, password fields) has been adjusted per the user's visual feedback.
+*   **Backend Updates**: The backend models and API endpoints were updated to support new fields like , , and  for athletes.
 
 **Last working item**:
--   Last item agent was working: Fixing a bug where the Terms of Service acceptance screen is shown to the admin twice. After the admin accepts the terms, they are redirected to the admin dashboard, but the layout component re-evaluates, finds the state not yet updated, and redirects back to the terms screen a second time. The agent's last action was to propose a fix: instead of using a separate route for the terms, render the acceptance component directly within the admin layout to avoid the faulty redirection loop.
--   Status: IN PROGRESS
--   Agent Testing Done: N
--   Which testing method agent to use? screenshot tool
--   User Testing Done: Y (User confirmed the bug occurs).
+*   **Last item agent was working**: The user requested to overhaul the minor athlete's profile page as seen by a parent (). The goal is to make its structure, component order, and styling identical to the adult athlete's profile page (), which the user considers the correct template. They also reported a usability issue with the back button on legal document pages.
+*   **Status**: NOT STARTED
+*   **Agent Testing Done**: N
+*   **Which testing method agent to use?**: Frontend testing agent
+*   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Terms of Service screen appears twice (P0)**
-    -   **Description**: Upon first login, the admin is correctly shown the terms acceptance screen. After clicking Accept, they are shown the same screen again before finally reaching the dashboard.
-    -   **Attempted fixes**: An initial fix using  with  failed. The current proposed fix is to stop using a separate route () and instead render the terms component conditionally inside .
-    -   **Next debug checklist**:
-        1.  Implement the proposed fix in  to conditionally render the  directly, removing the  logic.
-        2.  Remove the now-unused  file and its route from the navigation stack.
-        3.  Reset the  flag for the test society in the database.
-        4.  Log in as the admin () and verify the terms screen appears only once.
-    -   **Why fix this issue and what will be achieved with the fix?**: This bug creates a confusing and unprofessional user experience for the first and most critical interaction an admin has with the app. Fixing it is essential for the feature to be considered complete.
-    -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: No
+*   **Issue 1: Inconsistent Minor Athlete Profile Layout (P0)**
+    *   **Description**: The profile page for a minor athlete, when viewed by a parent (), has a different component order and layout than the adult athlete's profile page (). The user wants the minor's profile to exactly match the adult's.
+    *   **Attempted fixes**: None.
+    *   **Next debug checklist**:
+        1.  Analyze  to document the correct component order (Header, QR, Payments, Coach, Schedule, etc.).
+        2.  Analyze .
+        3.  Reorder the components inside  to match the structure of .
+        4.  Ensure the styling of shared components is consistent between the two pages.
+    *   **Why fix this issue and what will be achieved with the fix?**: To create a consistent and predictable user experience across all athlete profiles.
+    *   **Status**: NOT STARTED
+    *   **Should Test frontend/backend/both after fix?**: Frontend
+
+*   **Issue 2: Poor Back-Button Usability on Legal Pages (P1)**
+    *   **Description**: On the pages that display the Privacy Policy and Terms of Use, the top-left back button is too small. Furthermore, using the phone's native back button exits the application entirely instead of navigating to the previous screen.
+    *   **Attempted fixes**: None.
+    *   **Next debug checklist**:
+        1.  Locate the back button component in  and .
+        2.  Increase the button's size and touch-target area for better usability.
+        3.  Investigate the navigation handling. The native back button should trigger the router's  function, not exit the app. This may require adding an event listener for the  event in React Native.
+    *   **Why fix this issue and what will be achieved with the fix?**: To improve navigation and prevent users from accidentally closing the app.
+    *   **Status**: NOT STARTED
+    *   **Should Test frontend/backend/both after fix?**: Frontend
 
 **In progress Task List**:
--   **Task 1: Complete Terms of Service Feature (P0)**
-    -   **Where to resume**: Resolve **Issue 1** (Terms of Service screen appears twice).
-    -   **What will be achieved with this?**: A seamless and correct onboarding experience for new society admins, fulfilling a legal/business requirement.
-    -   **Status**: BLOCKED
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on something**: Issue 1
+*   **Task 1: Complete Separate Data Passwords for Parents (P0)**
+    *   **Description**: This was the original high-priority task from the previous session but was deferred to address the user's immediate UI feedback. The backend is ready, but the frontend is incomplete.
+    *   **Where to resume**:
+        1.  Modify the parent registration form in  to add a Password Dati (Data Password) input.
+        2.  Update the  function to send this password to the backend.
+        3.  Implement the flow where a parent is prompted to create a new data password after an admin has reset it.
+    *   **What will be achieved with this?**: Completes a critical security feature, ensuring each parent has a unique password for their child's sensitive data.
+    *   **Status**: IN PROGRESS
+    *   **Should Test frontend/backend/both after fix?**: Both
+
+*   **Task 2: Implement Simplified Invite Person Modal (P1)**
+    *   **Description**: The user requested a simple way for an admin to send a direct invitation, in addition to the Share Link feature. The plan is to create a modal with only Name, Surname, and Email fields.
+    *   **Where to resume**:
+        1.  In , add a new button Invita Persona.
+        2.  Wire this button to open the .
+        3.  The agent already simplified the 's state () to only include name and email, but this needs to be connected to the UI.
+    *   **What will be achieved with this?**: Provides admins with two clear options: a mass-sharing link for public registration and a direct, targeted invitation.
+    *   **Status**: IN PROGRESS
+    *   **Should Test frontend/backend/both after fix?**: Frontend
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks**:
-    -   (P0) **Athlete Self-Registration via Email**: Implement the user's request for an athlete self-activation flow. An invitation email should allow an athlete (or their parent) to create their own account, which will then be linked to the society with a 7-day trial. This will replace the current admin-led creation for athletes.
-    -   (P1) **User Testing of Minor Athlete Flow**: The user has postponed testing this completed feature.
-    -   (P1) **Add Checkbox for Admin Designation**: Implement the suggestion from the ChatGPT document to add a checkbox in the admin creation form where the society president confirms they have formally appointed the user as a Data Processor.
--   **Future Tasks**:
-    -   (P2) Clarify and resolve the user deletion flow (whether the  record should be fully deleted).
-    -   (P2) Refine UI for contracted athletes ().
-    -   (P3) Refactor the monolithic .
-    -   (P3) Re-implement Stripe integration.
-    -   (P3) Clean up role confusion in the database by migrating  to  to match the frontend label.
+*   **Upcoming Tasks**:
+    *   (P0) **User-Guided Testing**: User wants to test the full lifecycle for Minors, Teams, and Excel Templates.
+    *   (P1) **Add Data Processor Checkbox**: Add a mandatory checkbox in the admin creation form confirming the user's appointment as a Data Processor under GDPR.
+*   **Future Tasks**:
+    *   (P2) **User Deletion Flow**: Clarify and implement the business logic for user deletion.
+    *   (P2) **Refine UI for Contracted Athletes**: Improve the UI/UX for athletes marked as .
+    *   (P3) **Backend Refactoring**: Decompose  into a modular structure.
+    *   (P3) **Stripe Integration**: Re-implement Stripe for payments.
+    *   (P3) **Database Cleanup**: Migrate the role  to .
+    *   (P3) **Domain & App Store Publication**: Assist with final publication steps.
 
 **Completed work in this session**
--   **Full Minor Athlete Flow**: Implemented and tested the complete workflow: creation by admin with parent link, read-only view for the minor, and an admin-triggered function to unlink the parent.
--   **Privacy PDF Generation Fix**: Corrected the backend functions (, ) in  to use the updated privacy policy text, ensuring consistency between the UI preview and the final PDF.
--   **Privacy Acceptance Flow Fix**: Made the Privacy item clickable in the athlete's profile menu, allowing users stuck in a  state to open the signature modal.
--   **Dirigente Certificate Management**: Enabled the Dirigente (viewer role) to add and edit medical certificates for athletes in their assigned teams by creating a new UI in  and updating backend permissions.
--   **Medical Certificate Flow Bug Fixes**:
-    -   **Timezone Bug**: Corrected date calculations across all certificate forms (athlete, admin, dirigente) by setting the time to noon () to prevent UTC conversion from shifting the date back by one day.
-    -   **Data Sync Bug**: Modified the Dirigente's form to use the  endpoint, ensuring certificate data is saved to the  collection (read by admin) and not just the  collection.
-    -   **Permissions Bug**: Fixed multiple 403 Forbidden errors by adding the  role to the list of authorized roles for certificate endpoints and correcting the team assignment check logic in .
--   **Admin Notifications for Certificate Updates**: Implemented a backend feature in  to create a notification for the admin whenever a non-admin user updates a medical certificate.
--   **Terms of Service Implementation (Initial)**: Created a backend endpoint and a frontend screen to manage the mandatory acceptance of Terms of Use for society admins.
--   **React Hooks Rule Violation Fix**: Corrected a fatal Rendered more hooks than during the previous render error in  by moving all  and  calls before any conditional return statements.
+-   **Refactored Athlete Invitation**: Replaced the admin's multi-button invite system with a single Share Registration Link button that generates a universal link for WhatsApp/copy-paste.
+-   **Fixed Parent Registration Logic**: Added a Sei il padre o la madre? selector in the minor athlete registration form to correctly pre-fill the registering parent's phone number.
+-   **Resolved Critical Frontend Crashes**: Fixed multiple crashes on the parent's athlete detail page () by declaring missing state variables (, , ).
+-   **Implemented Numerous UI/UX Fixes**:
+    *   **Legal Screen**: Checkbox is now disabled until both legal documents have been opened.
+    *   **Athlete Registration Forms**: Added a Gender field, an automatic Calculate Fiscal Code button, renamed Fatturazione to Attestato di Versamento, and removed the Team selection section for parents.
+    *   **Admin Modals**: Fixed broken layouts (e.g., vertical gender buttons) and added missing fields (Birth Place/Province) to the minor athlete creation modal.
+    *   **Admin Athlete View**: Added a WhatsApp notification button for admins to inform a parent after resetting their data password.
+    *   **Data Password Field**: Made the data password input visible (not masked) and disabled autocomplete to prevent browsers from saving it.
+-   **Corrected PDF Document Naming**: Changed Ricevuta (Receipt) to Attestato di Versamento (Payment Certificate) in the generated PDF for adult athletes' payments.
+-   **User Support**: Assisted the user in finding the correct credentials for a test account (Luna Nuova) after an initial database connection issue.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Ambiguous User Deletion**
-    -   **Debug checklist**: When an athlete is deleted, check if the corresponding document in the  collection is also deleted.
-    -   **Why to solve this issue and what will be achieved with this?**: To clarify with the user if this is desired for auditing purposes or if it's a bug. A fix would ensure data consistency according to the user's requirements.
-    -   **Should Test frontend/backend/both after fix?**: Backend
-    -   **Is recurring issue?**: Y
+*   **Issue 1: Ambiguous User Deletion**
+    *   **Debug checklist**: Determine the desired behavior with the user: when an athlete profile is deleted, should the associated login account in the  collection also be deleted or retained for auditing?
+    *   **Why to solve this issue and what will be achieved with this?**: To ensure data management practices are consistent and align with the user's business and legal requirements.
+    *   **Should Test frontend/backend/both after fix?**: Backend
+    *   **Is recurring issue?**: Y
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Ambiguous User Deletion
--   **Recurrence count**: 2
--   **Status**: NOT STARTED
+*   **Issue recurrence in previous fork**: Ambiguous User Deletion
+*   **Recurrence count**: 3
+*   **Status**: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend Role-Based Access Control**: Extensive debugging of permission checks in FastAPI, particularly the discrepancy between the frontend label Dirigente and the backend role name viewer.
--   **Data Synchronization**: Resolved a critical bug where two different data sources ( collection fields vs.  collection documents) were used for the same feature, causing UI inconsistencies. The fix involved consolidating writes to a single, authoritative endpoint.
--   **Timezone Handling in JavaScript**: Fixed a recurring off-by-one-day bug in date calculations by setting the time component of dates to midday before converting to ISO strings, preventing UTC conversion from shifting the date to the previous day.
--   **React Hooks Rules**: Debugged and fixed a fatal runtime error caused by violating the rules of hooks (calling hooks after a conditional return).
--   **Conditional Rendering for Onboarding**: Implemented a flow to block access to the main app and force a user to an intermediary screen (Terms of Service) based on a flag in their profile.
+*   **Dynamic UI Rendering**: Extensive use of conditional rendering based on user roles (admin, parent), data state (athlete is minor/major), and UI state (modal visibility).
+*   **Complex State Management**: Heavy reliance on the  hook in React to manage complex forms with interdependent fields, validation, and API data.
+*   **Client-Side API Integration**: Widespread use of  with  to communicate with the backend for tasks like calculating fiscal codes, registering users, and fetching society settings.
+*   **External App Linking**: Use of React Native Web's  API to open WhatsApp with a pre-populated message, facilitating the sharing of registration links.
 
 **key DB schema**
--   :
-    -   : {, }: New field added to track when the society's admin accepted the Terms of Use.
+*   **athletes**:
+    *    (, Optional): Added to store the athlete's gender.
+    *    (, Optional): Added to store the athlete's place of birth.
+    *    (, Optional): Added to store the athlete's province of birth.
 
 **All files of reference**
--   
--    (current focus)
--    (current focus)
--   
--   
--   
--   
+*   
+*    (Major UI/UX changes)
+*    (Major form logic changes)
+*    (Crash fixes, upcoming layout overhaul)
+*    (Reference file for correct profile layout)
+*    (Needs back button fix)
+*    (Needs back button fix)
+*   
+*   
 
 **Critical Info for New Agent**
--   **User Language**: Your responses must be in **Italiano**.
--   **Immediate Task**: Your first priority is to fix the bug where the Terms of Service screen appears twice for the admin. The previous agent proposed rendering the component conditionally within  instead of using a separate route. Implement and test this fix.
--   **Next Major Feature**: After fixing the terms screen, begin work on the Athlete Self-Registration via Email feature as requested by the user.
--   **Role Name Discrepancy**: Be aware that the Dirigente role in the UI corresponds to the  role name in the backend database and code. This has caused multiple permission bugs. Double-check this logic when working on role-related features.
--   **Timezone Bug Pattern**: A common bug in this codebase is off-by-one-day errors in dates. This is caused by  converting a midnight date to the previous day in UTC. The standard fix is to set the date's time to noon () before conversion. Be vigilant for this pattern.
+*   **User Language**: You must respond in **Italiano**.
+*   **Highest Priority (P0)**: Address the user's latest request to make the minor athlete's profile page () identical in layout and component order to the adult athlete's profile ().
+*   **Follow-up Priority (P1)**: Fix the usability of the back button on the legal document pages (, ).
+*   **Unfinished Core Feature**: The original P0 task to add the Password Dati field to the parent registration form () is still pending and must be completed. The user has been patient while many other UI fixes were prioritized, so this should be tackled soon.
+*   **Iterative, Visual Feedback**: The user provides frequent, specific, and image-based feedback. Be prepared to work iteratively on UI/UX details and use screenshots to verify changes.
 
 **documents and test reports created in this job**
--    (Testing Agent report for minor athlete flow)
--    (Testing Agent report for Terms of Service flow)
--    (updated)
+*   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Reports that the Terms of Service screen appears twice.
-2.  **Agent**: Acknowledges the issue and explains the likely cause (state update lag) and proposes a fix.
-3.  **User**: Si..vai (Yes..go ahead), asking the agent to reset the state for another test.
-4.  **Agent**: Confirms the state has been reset.
-5.  **User**: Confirms the screen appeared twice.
-6.  **Agent**: Apologizes and explains a more robust fix: rendering the component directly in the layout instead of using a separate route.
-7.  **User**: Su risolto ms non mi appare la schermata Attivazione Registra TEAM (Yes, [the hook error is] solved but the Activation screen doesn't appear).
-8.  **Agent**: Explains the terms were likely already accepted during testing and resets them.
-9.  **User**: Reports that the admin login page shows a React hooks error.
-10. **Agent**: Acknowledges the error, identifies the cause (hooks called after a conditional return), and fixes it.
+10. **User**: The invitation flow is too much work for the admin at the start of the season. Can we have a simpler link to share on WhatsApp?
+9.  **Agent**: Proposes a single Share Registration Link button that provides a universal link.
+8.  **User**: Agrees, but wants the WhatsApp share to work even if the number isn't in the admin's contacts.
+7.  **Agent**: Confirms this is possible and outlines the new implementation.
+6.  **User**: But the modals [for creating users manually] are not set up well... just one modal with name, surname, email.
+5.  **Agent**: Agrees to simplify the manual invite modal.
+4.  **User**: Reports issues with the minor athlete's profile (Lucia), requesting it be structured exactly like the adult athlete's profile (Luna), providing reference photos for layout, payments, and pointing out a bug with the back button on the legal pages. **(PENDING)**
+3.  **Agent**: Acknowledges the request and begins analyzing the files.
+2.  **User**: Provides the reference photos.
+1.  **Agent**: Confirms understanding of the required changes based on the photos and identifies the relevant files ( and ) to begin the work.
 
 **Project Health Check:**
--   **Broken**: The admin onboarding flow is broken due to the Terms of Service screen appearing twice.
+*   **Broken**:
+    *   The layout of the minor athlete's profile page is inconsistent with the rest of the app, leading to a confusing user experience.
+    *   The back-button navigation on legal document pages is broken, trapping the user or forcing them to exit the app.
+*   **Mocked**: None.
 
 **3rd Party Integrations**
--   : Used for calculating Italian fiscal codes.
+*   : Used for calculating Italian fiscal codes.
+*   : Used for sending transactional emails.
 
 **Testing status**
--   Testing agent used after significant changes: YES. Last run identified a frontend navigation issue, which was fixed, but a new bug (T&C screen appearing twice) was subsequently introduced.
--   Troubleshoot agent used after agent stuck in loop: NO
--   Test files created: []
--   Known regressions: The fix for the React hooks error led to a behavioral bug where the Terms of Service screen appears twice.
+*   **Testing agent used after significant changes**: YES
+*   **Troubleshoot agent used after agent stuck in loop**: NO
+*   **Test files created**: []
+*   **Known regressions**: None
 
 **Credentials to test flow:**
--   **Admin**:  / 
+*   **Admin**:  / 
+*   **Test Parent**:  / 
+*   **Test Adult Athlete**:  / 
 
 **What agent forgot to execute**
--   The agent was in the middle of fixing the Terms of Service appears twice bug. The proposed solution has been identified but not implemented.
--   The user requested two new features based on a document: implementing athlete self-registration and adding a checkbox to the admin creation form. These have not been started.</analysis>
+*   The agent did not complete the original P0 task from the previous handoff: modifying  to include the Password Dati field for a second parent registering. This crucial security feature was deprioritized in favor of numerous UI fixes requested by the user and remains unfinished.</analysis>
