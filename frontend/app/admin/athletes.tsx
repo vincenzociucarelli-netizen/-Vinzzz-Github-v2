@@ -145,7 +145,7 @@ export default function AdminAthletes() {
         is_minor: inviteForm.is_minor,
         team_id: inviteForm.team_id || undefined,
       });
-      showAlert('Successo', `Invito inviato a ${inviteForm.email}. L'atleta riceverà un'email con il link per completare la registrazione.`);
+      showAlert('Successo', response.data.message || `Invito inviato a ${inviteForm.email}`);
       setShowInviteModal(false);
       resetInviteForm();
     } catch (error: any) {
@@ -1066,49 +1066,53 @@ export default function AdminAthletes() {
         </View>
       </Modal>
 
-      {/* Modal Invita Atleta via Email */}
+      {/* Modal Invita Persona via Email */}
       <Modal
         visible={showInviteModal}
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         onRequestClose={() => { setShowInviteModal(false); resetInviteForm(); }}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
-            <ScrollView>
-              <Text style={styles.modalTitle}>Invita Atleta via Email</Text>
-              <Text style={{ color: '#666', fontSize: 13, marginBottom: 16, lineHeight: 19 }}>
-                L'atleta riceverà un'email con un link per completare la registrazione autonomamente.
+          <View style={[styles.modalContent, { maxWidth: 400, padding: 20 }]}>
+              <Text style={[styles.modalTitle, { fontSize: 18, marginBottom: 4 }]}>Invita Persona</Text>
+              <Text style={{ color: '#666', fontSize: 13, marginBottom: 20, lineHeight: 18 }}>
+                Riceverà un'email con il link per registrarsi.
               </Text>
 
               <Text style={styles.inputLabel}>Email *</Text>
               <TextInput
-                style={styles.input}
-                placeholder="Email dell'atleta (o genitore)"
+                style={styles.modalInput}
+                placeholder="Email"
                 value={inviteForm.email}
-                onChangeText={(v) => setInviteForm({...inviteForm, email: v})}
+                onChangeText={(v) => setInviteForm({...inviteForm, email: v.toLowerCase()})}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 data-testid="invite-email-input"
               />
 
-              <Text style={styles.inputLabel}>Nome (opzionale)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Nome"
-                value={inviteForm.first_name}
-                onChangeText={(v) => setInviteForm({...inviteForm, first_name: v})}
-                autoCapitalize="characters"
-              />
-
-              <Text style={styles.inputLabel}>Cognome (opzionale)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Cognome"
-                value={inviteForm.last_name}
-                onChangeText={(v) => setInviteForm({...inviteForm, last_name: v})}
-                autoCapitalize="characters"
-              />
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>Nome</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Opzionale"
+                    value={inviteForm.first_name}
+                    onChangeText={(v) => setInviteForm({...inviteForm, first_name: v})}
+                    autoCapitalize="words"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>Cognome</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Opzionale"
+                    value={inviteForm.last_name}
+                    onChangeText={(v) => setInviteForm({...inviteForm, last_name: v})}
+                    autoCapitalize="words"
+                  />
+                </View>
+              </View>
 
               <TouchableOpacity
                 style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 }}
@@ -1118,25 +1122,11 @@ export default function AdminAthletes() {
                 <View style={[{ width: 22, height: 22, borderRadius: 4, borderWidth: 2, borderColor: '#FF9800', alignItems: 'center', justifyContent: 'center' }, inviteForm.is_minor && { backgroundColor: '#FF9800' }]}>
                   {inviteForm.is_minor && <Ionicons name="checkmark" size={14} color="#fff" />}
                 </View>
-                <Text style={{ fontSize: 14, color: '#333' }}>Atleta minorenne (l'email verrà inviata al genitore)</Text>
+                <Text style={{ fontSize: 13, color: '#555' }}>Minorenne (email inviata al genitore)</Text>
               </TouchableOpacity>
 
-              <Text style={styles.inputLabel}>Squadra (opzionale)</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={inviteForm.team_id}
-                  onValueChange={(v) => setInviteForm({...inviteForm, team_id: v})}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="-- Nessuna squadra --" value="" />
-                  {Object.values(teams).map((t: any) => (
-                    <Picker.Item key={t.id} label={t.name} value={t.id} />
-                  ))}
-                </Picker>
-              </View>
-
               <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#4CAF50', marginTop: 8 }, sendingInvite && { opacity: 0.5 }]}
+                style={[styles.modalBtn, { backgroundColor: '#4CAF50' }, sendingInvite && { opacity: 0.5 }]}
                 onPress={handleInviteAthlete}
                 disabled={sendingInvite}
                 data-testid="send-invite-btn"
@@ -1156,7 +1146,6 @@ export default function AdminAthletes() {
               >
                 <Text style={styles.modalBtnText}>Annulla</Text>
               </TouchableOpacity>
-            </ScrollView>
           </View>
         </View>
       </Modal>

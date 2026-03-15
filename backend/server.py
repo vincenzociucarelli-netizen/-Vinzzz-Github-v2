@@ -1879,15 +1879,11 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
     if existing_user:
         raise HTTPException(status_code=400, detail="Questa email è già registrata nella società")
     
-    # Check for pending invitation
-    existing_invite = await db.athlete_invitations.find_one({
-        "email": data.email.lower(),
-        "society_id": society_id,
-        "status": "pending",
-        "expires_at": {"$gt": datetime.now(timezone.utc).isoformat()}
-    })
-    if existing_invite:
-        raise HTTPException(status_code=400, detail="Esiste già un invito pendente per questa email")
+    # Cancel any previous pending invitations for this email
+    await db.athlete_invitations.update_many(
+        {"email": data.email.lower(), "society_id": society_id, "status": "pending"},
+        {"$set": {"status": "cancelled"}}
+    )
     
     # Generate unique token
     token = secrets.token_urlsafe(32)
@@ -1945,6 +1941,7 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
     </div>
     """
     
+    email_sent = False
     try:
         from email_service import send_transactional_email
         await send_transactional_email(
@@ -1953,9 +1950,9 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
             html_content=html_content,
             to_name=f"{data.first_name or ''} {data.last_name or ''}".strip() or None
         )
+        email_sent = True
     except Exception as e:
         logging.error(f"Failed to send invitation email: {e}")
-        # Don't fail the invitation even if email fails
     
     # Log audit
     await log_audit(
@@ -1963,14 +1960,15 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
         user_id=current_user["id"],
         user_email=current_user.get("email", ""),
         society_id=society_id,
-        details={"invitation_id": invitation["id"], "email": data.email, "is_minor": data.is_minor}
+        details={"invitation_id": invitation["id"], "email": data.email, "is_minor": data.is_minor, "email_sent": email_sent}
     )
     
     return {
-        "message": f"Invito inviato a {data.email}",
+        "message": f"Invito inviato a {data.email}" if email_sent else f"Invito creato per {data.email} ma l'email non è stata inviata. Verifica la configurazione email.",
         "invitation_id": invitation["id"],
         "token": token,
-        "register_link": register_link
+        "register_link": register_link,
+        "email_sent": email_sent
     }
 
 @api_router.get("/athletes/invite-info/{token}")

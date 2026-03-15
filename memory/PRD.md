@@ -27,7 +27,7 @@ Sports team management application for Italian sports societies, targeting iOS A
 - **Enhancement: Onboarding Tutorial per tutti i ruoli** - Tutorial 2-3 step per ogni ruolo (Genitore, Atleta 18+, Coach, Collaboratore, Dirigente) con contenuti personalizzati. Si mostra le prime 3 volte con "Non mostrare più". Componente riutilizzabile `OnboardingTutorial`.
 - **Stato di Nascita + Campi Nascita** - Aggiunto campo "Stato di Nascita" (country_of_birth) in tutte le viste: admin read-only, admin form creazione minore, vista genitore atleta, form registrazione atleta. Luogo/Provincia nascita visibili solo per nati in Italia. Calcolo CF aggiornato per gestire nascita all'estero.
 - **Email 2° Genitore** - Aggiunto campo nella vista genitore dell'atleta (Dati Anagrafici + modale modifica)
-- **Fix dati DB Lucia/Sauro** - Corretto parent_id di PESSI LUCIA per puntare a PESSI SAURO
+- **Fix Modale "Invita Persona"** - Riformattata modale (compatta, Nome/Cognome in riga, rimossa squadra), rimosso blocco "invito pendente" (ora sovrascrive), feedback email_sent nel response
 
 ## Prioritized Backlog
 
