@@ -52,6 +52,8 @@ export default function AthleteDetail() {
   const [certValidityMonthsParent, setCertValidityMonthsParent] = useState('12');
   const [savingCertParent, setSavingCertParent] = useState(false);
   const [societyEmail, setSocietyEmail] = useState('');
+  const [certModalVisible, setCertModalVisible] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<any>(null);
   
   // Data protection password states
   const [dataUnlocked, setDataUnlocked] = useState(false);
