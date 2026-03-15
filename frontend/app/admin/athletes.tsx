@@ -82,6 +82,7 @@ export default function AdminAthletes() {
     gender: '' as '' | 'M' | 'F',
     birth_place: '',
     birth_province: '',
+    country_of_birth: 'Italia',
     phone: '',
     team_id: '',
     fiscal_code: '',
@@ -94,13 +95,13 @@ export default function AdminAthletes() {
   const resetMinorForm = () => {
     setMinorForm({
       first_name: '', last_name: '', date_of_birth: '', gender: '',
-      birth_place: '', birth_province: '',
+      birth_place: '', birth_province: '', country_of_birth: 'Italia',
       phone: '', team_id: '', fiscal_code: '', parent_email: '', second_parent_email: '', data_password: '',
     });
   };
 
   const handleCalculateMinorCF = async () => {
-    if (!minorForm.first_name || !minorForm.last_name || !minorForm.date_of_birth || !minorForm.gender || !minorForm.birth_place) {
+    if (!minorForm.first_name || !minorForm.last_name || !minorForm.date_of_birth || !minorForm.gender || (!minorForm.birth_place && (!minorForm.country_of_birth || minorForm.country_of_birth.toUpperCase() === 'ITALIA'))) {
       showAlert('Dati mancanti', 'Compila Nome, Cognome, Data di Nascita, Sesso e Luogo di Nascita');
       return;
     }
@@ -110,8 +111,9 @@ export default function AdminAthletes() {
         nome: minorForm.first_name,
         cognome: minorForm.last_name,
         data_nascita: minorForm.date_of_birth,
-        luogo_nascita: minorForm.birth_place,
+        luogo_nascita: minorForm.birth_place || minorForm.country_of_birth,
         sesso: minorForm.gender,
+        stato_nascita: minorForm.country_of_birth,
       });
       if (res.data.success && res.data.codice_fiscale) {
         setMinorForm({ ...minorForm, fiscal_code: res.data.codice_fiscale });
@@ -175,6 +177,7 @@ export default function AdminAthletes() {
         gender: minorForm.gender || undefined,
         birth_place: minorForm.birth_place || undefined,
         birth_province: minorForm.birth_province || undefined,
+        country_of_birth: minorForm.country_of_birth || 'Italia',
         phone: minorForm.phone || undefined,
         team_id: minorForm.team_id || undefined,
         fiscal_code: minorForm.fiscal_code || undefined,
@@ -976,6 +979,11 @@ export default function AdminAthletes() {
                 </TouchableOpacity>
               </View>
               
+              <Text style={styles.inputLabel}>Stato di Nascita</Text>
+              <TextInput style={styles.modalInput} value={minorForm.country_of_birth} onChangeText={v => setMinorForm({...minorForm, country_of_birth: v.toUpperCase()})} placeholder="es: ITALIA" autoCapitalize="characters" />
+              
+              {(!minorForm.country_of_birth || minorForm.country_of_birth.toUpperCase() === 'ITALIA') && (
+              <>
               <Text style={styles.inputLabel}>Luogo di Nascita</Text>
               <TextInput style={styles.modalInput} value={minorForm.birth_place} onChangeText={v => setMinorForm({...minorForm, birth_place: v.toUpperCase()})} placeholder="es: PERUGIA" autoCapitalize="characters" />
               
@@ -985,14 +993,16 @@ export default function AdminAthletes() {
                   <TextInput style={styles.modalInput} value={minorForm.birth_province} onChangeText={v => setMinorForm({...minorForm, birth_province: v.toUpperCase()})} placeholder="PG" autoCapitalize="characters" maxLength={2} />
                 </View>
               </View>
+              </>
+              )}
               
               <Text style={styles.inputLabel}>Codice Fiscale</Text>
               <View style={styles.cfCalculateRow}>
                 <TextInput style={[styles.modalInput, { flex: 1, marginBottom: 0 }]} value={minorForm.fiscal_code} onChangeText={v => setMinorForm({...minorForm, fiscal_code: v.toUpperCase()})} placeholder="Codice Fiscale" autoCapitalize="characters" maxLength={16} />
                 <TouchableOpacity
-                  style={[styles.calculateCfBtn, { opacity: (!minorForm.gender || !minorForm.date_of_birth || !minorForm.first_name || !minorForm.last_name || !minorForm.birth_place) ? 0.5 : 1 }]}
+                  style={[styles.calculateCfBtn, { opacity: (!minorForm.gender || !minorForm.date_of_birth || !minorForm.first_name || !minorForm.last_name || (!minorForm.birth_place && (!minorForm.country_of_birth || minorForm.country_of_birth.toUpperCase() === 'ITALIA'))) ? 0.5 : 1 }]}
                   onPress={handleCalculateMinorCF}
-                  disabled={calculatingMinorCF || !minorForm.gender || !minorForm.date_of_birth || !minorForm.first_name || !minorForm.last_name || !minorForm.birth_place}
+                  disabled={calculatingMinorCF || !minorForm.gender || !minorForm.date_of_birth || !minorForm.first_name || !minorForm.last_name || (!minorForm.birth_place && (!minorForm.country_of_birth || minorForm.country_of_birth.toUpperCase() === 'ITALIA'))}
                 >
                   {calculatingMinorCF ? (
                     <ActivityIndicator size="small" color="#fff" />

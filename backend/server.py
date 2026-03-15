@@ -16666,8 +16666,9 @@ class CalcolaCodiceFiscaleRequest(BaseModel):
     nome: str
     cognome: str
     data_nascita: str  # formato GG/MM/AAAA o YYYY-MM-DD
-    luogo_nascita: str  # nome del comune
+    luogo_nascita: str  # nome del comune o stato estero
     sesso: str  # M o F
+    stato_nascita: Optional[str] = "Italia"  # Stato di nascita (default: Italia)
 
 @api_router.post("/utils/calcola-cf")
 async def calcola_codice_fiscale(data: CalcolaCodiceFiscaleRequest):
@@ -16684,13 +16685,17 @@ async def calcola_codice_fiscale(data: CalcolaCodiceFiscaleRequest):
             if len(parts) == 3:
                 data_nascita = f"{parts[2]}/{parts[1]}/{parts[0]}"
         
+        # Se nato all'estero, usa lo stato come birthplace per il CF
+        is_estero = data.stato_nascita and data.stato_nascita.upper() not in ('ITALIA', 'IT', '')
+        birthplace = data.stato_nascita.upper() if is_estero else data.luogo_nascita
+        
         # Calcola il CF
         result = codicefiscale.encode(
             lastname=data.cognome.upper(),
             firstname=data.nome.upper(),
             gender=data.sesso.upper(),
             birthdate=data_nascita,
-            birthplace=data.luogo_nascita
+            birthplace=birthplace
         )
         
         if result:

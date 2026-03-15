@@ -2259,6 +2259,10 @@ export default function AdminAthleteDetail() {
                     <Text style={styles.value}>{athlete.birth_province || '-'}</Text>
                   </View>
                   <View style={styles.infoRow}>
+                    <Text style={styles.label}>Stato di nascita</Text>
+                    <Text style={styles.value}>{athlete.country_of_birth || 'Italia'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
                     <Text style={styles.label}>Cod. Fiscale</Text>
                     <Text style={[styles.value, styles.valueSmall]}>{athlete.fiscal_code || '-'}</Text>
                   </View>

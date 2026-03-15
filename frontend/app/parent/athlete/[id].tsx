@@ -1005,6 +1005,9 @@ export default function AthleteDetail() {
       last_name: athlete.last_name || '',
       date_of_birth: formatDateForDisplay(athlete.date_of_birth),
       fiscal_code: athlete.fiscal_code || '',
+      birth_place: athlete.birth_place || '',
+      birth_province: athlete.birth_province || '',
+      country_of_birth: athlete.country_of_birth || 'Italia',
       address: athlete.address || '',
       city: athlete.city || '',
       postal_code: athlete.postal_code || '',
@@ -1013,6 +1016,7 @@ export default function AthleteDetail() {
       phone_father: athlete.phone_father || '',
       phone_mother: athlete.phone_mother || '',
       email: athlete.email || '',
+      second_parent_email: athlete.second_parent_email || '',
       tax_payer_last_name: athlete.tax_payer_last_name || '',
       tax_payer_first_name: athlete.tax_payer_first_name || '',
       tax_payer_fiscal_code: athlete.tax_payer_fiscal_code || '',
@@ -1033,6 +1037,9 @@ export default function AthleteDetail() {
         full_name: `${editData.last_name} ${editData.first_name}`,
         date_of_birth: isoDate,
         fiscal_code: editData.fiscal_code,
+        birth_place: editData.birth_place || null,
+        birth_province: editData.birth_province || null,
+        country_of_birth: editData.country_of_birth || 'Italia',
         address: editData.address || null,
         city: editData.city || null,
         postal_code: editData.postal_code || null,
@@ -1041,6 +1048,7 @@ export default function AthleteDetail() {
         phone_father: editData.phone_father || null,
         phone_mother: editData.phone_mother || null,
         email: editData.email || null,
+        second_parent_email: editData.second_parent_email || null,
         tax_payer_last_name: editData.tax_payer_last_name || null,
         tax_payer_first_name: editData.tax_payer_first_name || null,
         tax_payer_fiscal_code: editData.tax_payer_fiscal_code || null,
@@ -1308,6 +1316,21 @@ export default function AthleteDetail() {
               </View>
               
               <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Luogo di Nascita</Text>
+                <Text style={styles.dataValue}>{maskData(athlete.birth_place)}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Prov. Nascita</Text>
+                <Text style={styles.dataValue}>{maskData(athlete.birth_province)}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Stato di Nascita</Text>
+                <Text style={styles.dataValue}>{athlete.country_of_birth || 'Italia'}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
                 <Text style={styles.dataLabel}>Codice Fiscale</Text>
                 <Text style={styles.dataValue}>{maskData(athlete.fiscal_code)}</Text>
               </View>
@@ -1342,6 +1365,11 @@ export default function AthleteDetail() {
               <View style={styles.dataRow}>
                 <Text style={styles.dataLabel}>Email</Text>
                 <Text style={styles.dataValue}>{maskData(athlete.email)}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Email 2° Genitore</Text>
+                <Text style={styles.dataValue}>{maskData(athlete.second_parent_email)}</Text>
               </View>
             </View>
           )}
@@ -2203,6 +2231,45 @@ export default function AthleteDetail() {
                 returnKeyType="next"
               />
 
+              <Text style={styles.inputLabel}>Stato di Nascita</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.country_of_birth}
+                onChangeText={(text) => setEditData({...editData, country_of_birth: text.toUpperCase()})}
+                autoCapitalize="characters"
+                placeholder="es: ITALIA"
+                placeholderTextColor="#aaa"
+                returnKeyType="next"
+              />
+
+              <View style={styles.rowInputs}>
+                <View style={styles.halfInputContainer}>
+                  <Text style={styles.inputLabel}>Luogo di Nascita</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editData.birth_place}
+                    onChangeText={(text) => setEditData({...editData, birth_place: text.toUpperCase()})}
+                    autoCapitalize="characters"
+                    placeholder="es: PERUGIA"
+                    placeholderTextColor="#aaa"
+                    returnKeyType="next"
+                  />
+                </View>
+                <View style={styles.halfInputContainer}>
+                  <Text style={styles.inputLabel}>Prov. Nascita</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editData.birth_province}
+                    onChangeText={(text) => setEditData({...editData, birth_province: text.toUpperCase()})}
+                    autoCapitalize="characters"
+                    maxLength={2}
+                    placeholder="es: PG"
+                    placeholderTextColor="#aaa"
+                    returnKeyType="next"
+                  />
+                </View>
+              </View>
+
               <Text style={styles.inputLabel}>Codice Fiscale</Text>
               <TextInput
                 style={styles.textInput}
@@ -2288,6 +2355,18 @@ export default function AthleteDetail() {
                 onChangeText={(text) => setEditData({...editData, email: text.toLowerCase()})}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                returnKeyType="next"
+              />
+
+              <Text style={styles.inputLabel}>Email 2° Genitore</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editData.second_parent_email}
+                onChangeText={(text) => setEditData({...editData, second_parent_email: text.toLowerCase()})}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholder="es: madre@email.com"
+                placeholderTextColor="#aaa"
                 returnKeyType="next"
               />
 

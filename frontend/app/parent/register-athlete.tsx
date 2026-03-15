@@ -30,6 +30,7 @@ export default function RegisterAthlete() {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [birthPlace, setBirthPlace] = useState('');
   const [birthProvince, setBirthProvince] = useState('');
+  const [countryOfBirth, setCountryOfBirth] = useState('Italia');
   const [gender, setGender] = useState<'' | 'M' | 'F'>('');
   const [fiscalCode, setFiscalCode] = useState('');
   const [address, setAddress] = useState('');
@@ -90,7 +91,7 @@ export default function RegisterAthlete() {
       showAlert('Dati mancanti', 'Compila Nome, Cognome, Sesso e Data di Nascita per calcolare il CF');
       return;
     }
-    if (!birthPlace) {
+    if (!birthPlace && countryOfBirth.toUpperCase() === 'ITALIA') {
       showAlert('Dati mancanti', 'Compila il Luogo di Nascita per calcolare il CF');
       return;
     }
@@ -101,8 +102,9 @@ export default function RegisterAthlete() {
         nome: firstName,
         cognome: lastName,
         data_nascita: dateOfBirth,
-        luogo_nascita: birthPlace,
+        luogo_nascita: birthPlace || countryOfBirth,
         sesso: gender,
+        stato_nascita: countryOfBirth,
       });
 
       if (response.data.success && response.data.codice_fiscale) {
@@ -241,6 +243,7 @@ export default function RegisterAthlete() {
         date_of_birth: isoDate,
         birth_place: birthPlace || null,
         birth_province: birthProvince || null,
+        country_of_birth: countryOfBirth || 'Italia',
         gender: gender || null,
         fiscal_code: fiscalCode,
         address: address || null,
@@ -328,6 +331,18 @@ export default function RegisterAthlete() {
             maxLength={10}
           />
 
+          <Text style={styles.label}>Stato di Nascita</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="es: ITALIA"
+            placeholderTextColor="#aaa"
+            value={countryOfBirth}
+            onChangeText={(text) => setCountryOfBirth(text.toUpperCase())}
+            autoCapitalize="characters"
+            data-testid="country-of-birth-input"
+          />
+
+          {countryOfBirth.toUpperCase() === 'ITALIA' && (
           <View style={styles.row}>
             <View style={styles.flex2}>
               <Text style={styles.label}>Luogo di Nascita *</Text>
@@ -353,6 +368,7 @@ export default function RegisterAthlete() {
               />
             </View>
           </View>
+          )}
 
           <Text style={styles.label}>Sesso *</Text>
           <View style={styles.genderRow}>
@@ -384,9 +400,9 @@ export default function RegisterAthlete() {
               maxLength={16}
             />
             <TouchableOpacity 
-              style={[styles.calculateCfBtn, (!gender || !dateOfBirth || !firstName || !lastName || !birthPlace) && { opacity: 0.5 }]}
+              style={[styles.calculateCfBtn, (!gender || !dateOfBirth || !firstName || !lastName || (!birthPlace && countryOfBirth.toUpperCase() === 'ITALIA')) && { opacity: 0.5 }]}
               onPress={handleCalculateCF}
-              disabled={calculatingCF || !gender || !dateOfBirth || !firstName || !lastName || !birthPlace}
+              disabled={calculatingCF || !gender || !dateOfBirth || !firstName || !lastName || (!birthPlace && countryOfBirth.toUpperCase() === 'ITALIA')}
               data-testid="calculate-cf-btn"
             >
               {calculatingCF ? (
