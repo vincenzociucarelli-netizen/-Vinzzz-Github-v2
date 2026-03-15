@@ -489,45 +489,6 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           </Text>
         </View>
 
-        {/* Notifications Banner */}
-        {notifications.length > 0 && showNotifications && (
-          <View style={styles.notificationBanner}>
-            <View style={styles.notificationHeader}>
-              <View style={styles.notificationTitleRow}>
-                <Ionicons name="notifications" size={20} color="#FF9800" />
-                <Text style={styles.notificationTitle}>Scadenze in arrivo</Text>
-              </View>
-              <TouchableOpacity onPress={() => setShowNotifications(false)}>
-                <Ionicons name="close" size={20} color="#666" />
-              </TouchableOpacity>
-            </View>
-            {notifications.map((notif, index) => (
-              <View key={index} style={[
-                styles.notificationItem,
-                notif.status === 'expired' && styles.notificationExpired,
-                notif.status === 'urgent' && styles.notificationUrgent
-              ]}>
-                <Ionicons 
-                  name={notif.type === 'certificate' ? 'document-text' : 'card'} 
-                  size={18} 
-                  color={notif.status === 'expired' ? '#D32F2F' : (notif.status === 'urgent' ? '#F57C00' : '#FF9800')} 
-                />
-                <View style={styles.notificationContent}>
-                  <Text style={[
-                    styles.notificationMessage,
-                    notif.status === 'expired' && { color: '#D32F2F' }
-                  ]}>
-                    {notif.athlete_name}: {notif.message}
-                  </Text>
-                  <Text style={styles.notificationDate}>
-                    {notif.type === 'certificate' ? `Scadenza: ${notif.expiry_date}` : `Scadenza: ${notif.due_date}`}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
         {/* IMPEGNI Section */}
         <View style={styles.commitmentsSection}>
           <Text style={styles.commitmentsSectionTitle}>📅 Impegni</Text>
@@ -781,45 +742,6 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
               </TouchableOpacity>
               );
             })}
-          </View>
-        )}
-
-        {/* Pagamenti per figlio */}
-        {athletes.filter(a => a.status !== 'pending').length > 0 && (
-          <View style={{ marginBottom: 16 }}>
-            {athletes.filter(a => a.status !== 'pending').map((athlete) => (
-              <TouchableOpacity
-                key={`pay-${athlete.id}`}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: '#fff',
-                  borderRadius: 12,
-                  padding: 16,
-                  marginBottom: 10,
-                  borderWidth: 1.5,
-                  borderColor: '#FF9800',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 2,
-                  elevation: 1,
-                }}
-                onPress={() => router.push(`/parent/athlete/${athlete.id}?tab=payments`)}
-                data-testid={`payment-btn-${athlete.id}`}
-              >
-                <Ionicons name="card-outline" size={24} color="#FF9800" />
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#333' }}>
-                    Pagamenti {athlete.first_name || athlete.full_name?.split(' ')[0] || ''}
-                  </Text>
-                  <Text style={{ fontSize: 13, color: '#888', marginTop: 2 }}>
-                    Visualizza rate e pagamenti
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={22} color="#FF9800" />
-              </TouchableOpacity>
-            ))}
           </View>
         )}
 

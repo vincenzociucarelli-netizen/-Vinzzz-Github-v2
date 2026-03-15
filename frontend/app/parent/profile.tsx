@@ -57,6 +57,9 @@ export default function ParentProfile() {
   const [profilePhotoArtistic, setProfilePhotoArtistic] = useState<string | null>(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
 
+  // Children data for second parent email
+  const [children, setChildren] = useState<any[]>([]);
+
   const loadProfile = async () => {
     try {
       const response = await api.get('/auth/me');
@@ -87,6 +90,14 @@ export default function ParentProfile() {
       });
       setProfilePhoto(data.profile_photo || null);
       setProfilePhotoArtistic(data.profile_photo_artistic || null);
+      
+      // Load children data
+      try {
+        const childrenRes = await api.get('/athletes/my');
+        setChildren(childrenRes.data || []);
+      } catch (e) {
+        console.error('Error loading children:', e);
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
@@ -127,6 +138,17 @@ export default function ParentProfile() {
         province: editData.province,
         fiscal_code: editData.fiscal_code,
       });
+      
+      // Save children's second_parent_email
+      for (const child of children) {
+        if (child._editEmail !== undefined) {
+          try {
+            await api.patch(`/athletes/${child.id}`, { second_parent_email: child._editEmail });
+          } catch (e) {
+            console.error(`Error saving second parent email for ${child.first_name}:`, e);
+          }
+        }
+      }
       
       showAlert('Successo', 'Profilo aggiornato con successo');
       setEditing(false);
@@ -421,8 +443,40 @@ export default function ParentProfile() {
             {renderField('Cognome', profileData.last_name, 'last_name')}
             {renderField('Nome', profileData.first_name, 'first_name')}
             {renderField('Telefono', profileData.phone, 'phone')}
-            <Text style={styles.phoneHint}>📱 Il telefono è necessario per comunicazioni urgenti dalla società</Text>
+            <Text style={styles.phoneHint}>Il telefono è necessario per comunicazioni urgenti dalla società</Text>
           </View>
+
+          {/* Children - Email 2° Genitore */}
+          {children.filter(c => c.is_minor).length > 0 && (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>I Miei Figli</Text>
+              {children.filter(c => c.is_minor).map((child) => (
+                <View key={child.id} style={{ marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 8 }}>
+                    {child.first_name} {child.last_name}
+                  </Text>
+                  <Text style={styles.fieldLabel}>Email 2° Genitore</Text>
+                  {editing ? (
+                    <TextInput
+                      style={styles.input}
+                      value={child._editEmail ?? child.second_parent_email ?? ''}
+                      onChangeText={(text) => {
+                        setChildren(prev => prev.map(c => 
+                          c.id === child.id ? {...c, _editEmail: text.toLowerCase()} : c
+                        ));
+                      }}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      placeholder="es: madre@email.com"
+                      placeholderTextColor="#999"
+                    />
+                  ) : (
+                    <Text style={styles.fieldValue}>{child.second_parent_email || '-'}</Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
 
           <View style={{ height: 40 }} />
         </ScrollView>
