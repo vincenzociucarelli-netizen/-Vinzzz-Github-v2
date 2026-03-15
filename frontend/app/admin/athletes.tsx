@@ -666,7 +666,7 @@ export default function AdminAthletes() {
                   >
                     <Ionicons 
                       name="card" 
-                      size={24} 
+                      size={16} 
                       color={adultForm.athlete_type === 'quota' ? '#fff' : '#007AFF'} 
                     />
                     <Text style={[
@@ -684,7 +684,7 @@ export default function AdminAthletes() {
                   >
                     <Ionicons 
                       name="trophy" 
-                      size={24} 
+                      size={16} 
                       color={adultForm.athlete_type === 'compensated' ? '#fff' : '#B8860B'} 
                     />
                     <Text style={[
@@ -732,37 +732,32 @@ export default function AdminAthletes() {
               {/* Sezione Codice Fiscale */}
               <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Codice Fiscale (opzionale)</Text>
               
-              <View style={styles.cfRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>Sesso</Text>
-                  <View style={styles.genderButtons}>
-                    <TouchableOpacity 
-                      style={[styles.genderBtn, adultForm.gender === 'M' && styles.genderBtnActive]}
-                      onPress={() => setAdultForm({...adultForm, gender: 'M'})}
-                    >
-                      <Text style={[styles.genderBtnText, adultForm.gender === 'M' && styles.genderBtnTextActive]}>M</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.genderBtn, adultForm.gender === 'F' && styles.genderBtnActive]}
-                      onPress={() => setAdultForm({...adultForm, gender: 'F'})}
-                    >
-                      <Text style={[styles.genderBtnText, adultForm.gender === 'F' && styles.genderBtnTextActive]}>F</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={{ flex: 2, marginLeft: 12 }}>
-                  <Text style={styles.inputLabel}>Data di Nascita</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={adultForm.date_of_birth}
-                    onChangeText={(v) => setAdultForm({...adultForm, date_of_birth: formatDateInput(v)})}
-                    placeholder="GG/MM/AAAA"
-                    placeholderTextColor="#999"
-                    maxLength={10}
-                    keyboardType="numeric"
-                  />
-                </View>
+              <Text style={styles.inputLabel}>Sesso</Text>
+              <View style={styles.genderButtons}>
+                <TouchableOpacity 
+                  style={[styles.genderBtn, adultForm.gender === 'M' && styles.genderBtnActive]}
+                  onPress={() => setAdultForm({...adultForm, gender: 'M'})}
+                >
+                  <Text style={[styles.genderBtnText, adultForm.gender === 'M' && styles.genderBtnTextActive]}>M</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.genderBtn, adultForm.gender === 'F' && styles.genderBtnActive]}
+                  onPress={() => setAdultForm({...adultForm, gender: 'F'})}
+                >
+                  <Text style={[styles.genderBtnText, adultForm.gender === 'F' && styles.genderBtnTextActive]}>F</Text>
+                </TouchableOpacity>
               </View>
+
+              <Text style={styles.inputLabel}>Data di Nascita</Text>
+              <TextInput
+                style={styles.input}
+                value={adultForm.date_of_birth}
+                onChangeText={(v) => setAdultForm({...adultForm, date_of_birth: formatDateInput(v)})}
+                placeholder="GG/MM/AAAA"
+                placeholderTextColor="#999"
+                maxLength={10}
+                keyboardType="numeric"
+              />
 
               <Text style={styles.inputLabel}>Stato di Nascita</Text>
               <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, marginBottom: 12, backgroundColor: '#fff' }}>
@@ -797,9 +792,10 @@ export default function AdminAthletes() {
               </>
               )}
 
+              <Text style={styles.inputLabel}>Codice Fiscale</Text>
               <View style={styles.cfCalculateRow}>
                 <TextInput
-                  style={[styles.input, { flex: 1 }]}
+                  style={[styles.input, { flex: 1, marginBottom: 0 }]}
                   value={adultForm.fiscal_code}
                   onChangeText={(v) => setAdultForm({...adultForm, fiscal_code: v.toUpperCase()})}
                   placeholder="CODICE FISCALE"
@@ -808,12 +804,12 @@ export default function AdminAthletes() {
                   maxLength={16}
                 />
                 <TouchableOpacity 
-                  style={styles.calculateCfBtn}
+                  style={[styles.calculateCfBtn, { opacity: (!adultForm.gender || !adultForm.date_of_birth || !adultForm.first_name || !adultForm.last_name || ((!adultForm.country_of_birth || adultForm.country_of_birth === 'Italia' || adultForm.country_of_birth === 'ITALIA') && !adultForm.place_of_birth)) ? 0.5 : 1 }]}
                   onPress={handleCalculateCF}
                   disabled={!adultForm.gender || !adultForm.date_of_birth || !adultForm.first_name || !adultForm.last_name || ((!adultForm.country_of_birth || adultForm.country_of_birth === 'Italia' || adultForm.country_of_birth === 'ITALIA') && !adultForm.place_of_birth)}
                 >
-                  <Ionicons name="calculator" size={20} color="#fff" />
-                  <Text style={styles.calculateCfBtnText}>Calcola</Text>
+                  <Ionicons name="calculator" size={18} color="#fff" />
+                  <Text style={styles.calculateCfBtnText}>CF</Text>
                 </TouchableOpacity>
               </View>
 
@@ -930,10 +926,10 @@ export default function AdminAthletes() {
               </View>
               
               <Text style={styles.inputLabel}>Codice Fiscale</Text>
-              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                <TextInput style={[styles.modalInput, { flex: 1 }]} value={minorForm.fiscal_code} onChangeText={v => setMinorForm({...minorForm, fiscal_code: v.toUpperCase()})} placeholder="Codice Fiscale" autoCapitalize="characters" maxLength={16} />
+              <View style={styles.cfCalculateRow}>
+                <TextInput style={[styles.modalInput, { flex: 1, marginBottom: 0 }]} value={minorForm.fiscal_code} onChangeText={v => setMinorForm({...minorForm, fiscal_code: v.toUpperCase()})} placeholder="Codice Fiscale" autoCapitalize="characters" maxLength={16} />
                 <TouchableOpacity
-                  style={{ backgroundColor: '#34C759', paddingHorizontal: 14, height: 48, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, opacity: (!minorForm.gender || !minorForm.date_of_birth || !minorForm.first_name || !minorForm.last_name || !minorForm.birth_place) ? 0.5 : 1 }}
+                  style={[styles.calculateCfBtn, { opacity: (!minorForm.gender || !minorForm.date_of_birth || !minorForm.first_name || !minorForm.last_name || !minorForm.birth_place) ? 0.5 : 1 }]}
                   onPress={handleCalculateMinorCF}
                   disabled={calculatingMinorCF || !minorForm.gender || !minorForm.date_of_birth || !minorForm.first_name || !minorForm.last_name || !minorForm.birth_place}
                 >
@@ -942,7 +938,7 @@ export default function AdminAthletes() {
                   ) : (
                     <>
                       <Ionicons name="calculator" size={18} color="#fff" />
-                      <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>Calcola</Text>
+                      <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>CF</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -1391,13 +1387,13 @@ const styles = StyleSheet.create({
   },
   athleteTypeBtn: {
     flex: 1,
-    padding: 16,
+    padding: 10,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#E0E0E0',
     backgroundColor: '#F9F9F9',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   athleteTypeBtnActive: {
     backgroundColor: '#007AFF',
