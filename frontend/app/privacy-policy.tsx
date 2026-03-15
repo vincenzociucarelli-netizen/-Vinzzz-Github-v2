@@ -1,24 +1,33 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, BackHandler } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../src/components/Icon';
 
 export default function PrivacyPolicy() {
   const router = useRouter();
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
     if (router.canGoBack()) {
       router.back();
     } else {
       router.replace('/login');
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      goBack();
+      return true;
+    });
+    return () => backHandler.remove();
+  }, [goBack]);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#1565C0" />
+        <TouchableOpacity onPress={goBack} style={styles.backBtn} data-testid="back-button">
+          <Ionicons name="arrow-back" size={28} color="#1565C0" />
+          <Text style={{ color: '#1565C0', fontSize: 16, marginLeft: 4, fontWeight: '600' }}>Indietro</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Informativa sulla Privacy</Text>
         <View style={{ width: 32 }} />
@@ -126,7 +135,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e0e0',
     backgroundColor: '#fff',
   },
-  backBtn: { padding: 4 },
+  backBtn: { padding: 12, flexDirection: 'row', alignItems: 'center', minHeight: 44, minWidth: 44 },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#333' },
   content: { flex: 1 },
   title: { fontSize: 20, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },

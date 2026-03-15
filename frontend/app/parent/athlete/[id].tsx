@@ -106,6 +106,15 @@ export default function AthleteDetail() {
   const [athletePhotoArtistic, setAthletePhotoArtistic] = useState<string | null>(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
   
+  // Collapsible sections state (matching adult profile structure)
+  const [sectionsExpanded, setSectionsExpanded] = useState({
+    anagrafici: false,
+    fiscali: false,
+  });
+  const toggleSection = (section: 'anagrafici' | 'fiscali') => {
+    setSectionsExpanded(prev => ({...prev, [section]: !prev[section]}));
+  };
+  
   // QR Code ref for sharing
   const qrCodeRef = useRef<View>(null);
 
@@ -1124,6 +1133,14 @@ export default function AthleteDetail() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        {/* Account Card - Compact */}
+        <View style={[styles.card, { paddingVertical: 12 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Account</Text>
+            <Text style={{ fontSize: 14, color: '#666' }}>{athlete.email || user?.email || '-'}</Text>
+          </View>
+        </View>
+
         {/* QR Code - Compact */}
         <View style={styles.card}>
           <TouchableOpacity
@@ -1228,6 +1245,171 @@ export default function AthleteDetail() {
         </View>
         )}
 
+        {/* Dati Anagrafici + Fiscali - Collapsible Card (matching adult profile) */}
+        <View style={styles.card}>
+          <TouchableOpacity 
+            style={styles.collapsibleHeader}
+            onPress={() => toggleSection('anagrafici')}
+          >
+            <Text style={styles.cardTitle}>Dati Anagrafici</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              {dataUnlocked && (
+                <TouchableOpacity onPress={openEditModal}>
+                  <Ionicons name="create-outline" size={20} color="#007AFF" />
+                </TouchableOpacity>
+              )}
+              {hasPassword && !dataUnlocked && (
+                <TouchableOpacity onPress={() => setPasswordModalVisible(true)}>
+                  <Ionicons name="lock-closed" size={20} color="#FF9500" />
+                </TouchableOpacity>
+              )}
+              <Ionicons 
+                name={sectionsExpanded.anagrafici ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color="#666" 
+              />
+            </View>
+          </TouchableOpacity>
+          
+          {sectionsExpanded.anagrafici && (
+            <View style={styles.collapsibleContent}>
+              {hasPassword && !dataUnlocked && (
+                <TouchableOpacity onPress={() => setPasswordModalVisible(true)} style={styles.lockedBanner}>
+                  <Ionicons name="shield-checkmark" size={20} color="#FF9500" />
+                  <Text style={styles.lockedBannerText}>
+                    Dati protetti da password. Tocca per sbloccare.
+                  </Text>
+                </TouchableOpacity>
+              )}
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Squadra</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <SportIcon size={18} />
+                  <Text style={[styles.dataValue, { color: '#E53935', fontWeight: '700', marginLeft: 4 }]}>
+                    {getTeamName(athlete.team_id)}
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Cognome</Text>
+                <Text style={styles.dataValue}>{athlete.last_name || '-'}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Nome</Text>
+                <Text style={styles.dataValue}>{athlete.first_name || '-'}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Data di Nascita</Text>
+                <Text style={styles.dataValue}>{formatDateForDisplay(athlete.date_of_birth)}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Codice Fiscale</Text>
+                <Text style={styles.dataValue}>{maskData(athlete.fiscal_code)}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Indirizzo</Text>
+                <Text style={styles.dataValue}>{maskData(athlete.address)}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Città</Text>
+                <Text style={styles.dataValue}>
+                  {[athlete.city, athlete.province, athlete.postal_code].filter(Boolean).join(' - ') || '-'}
+                </Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Tel. Atleta</Text>
+                <Text style={styles.dataValue}>{maskData(athlete.phone_athlete)}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Tel. Padre</Text>
+                <Text style={styles.dataValue}>{maskData(athlete.phone_father)}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Tel. Madre</Text>
+                <Text style={styles.dataValue}>{maskData(athlete.phone_mother)}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Email</Text>
+                <Text style={styles.dataValue}>{maskData(athlete.email)}</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Divider between sections */}
+          <View style={{ height: 1, backgroundColor: '#E5E5E5', marginVertical: 8 }} />
+
+          {/* Dati Fiscali Genitore */}
+          <TouchableOpacity 
+            style={styles.collapsibleHeader}
+            onPress={() => toggleSection('fiscali')}
+          >
+            <Text style={styles.cardTitle}>Dati Fiscali Genitore</Text>
+            <Ionicons 
+              name={sectionsExpanded.fiscali ? "chevron-up" : "chevron-down"} 
+              size={24} 
+              color="#666" 
+            />
+          </TouchableOpacity>
+          
+          {sectionsExpanded.fiscali && (
+            <View style={styles.collapsibleContent}>
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Cognome</Text>
+                <Text style={styles.dataValue}>{maskData(athlete.tax_payer_last_name)}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Nome</Text>
+                <Text style={styles.dataValue}>{maskData(athlete.tax_payer_first_name)}</Text>
+              </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Codice Fiscale</Text>
+                <Text style={styles.dataValue}>{maskData(athlete.tax_payer_fiscal_code)}</Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Coach Info */}
+        {coachInfo && (
+          <View style={styles.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <SportIcon size={20} />
+              <Text style={[styles.cardTitle, { marginLeft: 6 }]}>Coach {getTeamName(athlete.team_id)}</Text>
+            </View>
+            {(coachInfo.all_coaches || [coachInfo]).map((coach: any, idx: number) => (
+              <View key={coach.id || idx} style={[styles.coachInfoRow, idx > 0 && { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' }]}>
+                {coach.profile_photo_artistic || coach.profile_photo ? (
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
+                    style={styles.coachPhotoSmall}
+                  />
+                ) : (
+                  <View style={styles.coachPhotoPlaceholder}>
+                    <Ionicons name="person" size={20} color="#999" />
+                  </View>
+                )}
+                <View style={styles.coachInfoDetails}>
+                  <Text style={styles.coachName}>{coach.full_name}</Text>
+                  <Text style={styles.coachContactHint}>Per contattare il coach, rivolgersi alla segreteria</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Status Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Stato</Text>
@@ -1325,143 +1507,6 @@ export default function AthleteDetail() {
             <Text style={{ fontSize: 12, color: '#E65100', lineHeight: 18 }}>
               Copia del certificato dovrà essere consegnata alla Società e inviata per e-mail al seguente indirizzo: <Text style={{ fontWeight: 'bold' }}>{societyEmail || '-'}</Text> in formato pdf
             </Text>
-          </View>
-        </View>
-
-        {/* Dati Iscrizione Card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Dati Iscrizione</Text>
-            {hasPassword && !dataUnlocked ? (
-              <TouchableOpacity 
-                onPress={() => setPasswordModalVisible(true)} 
-                style={styles.lockButton}
-              >
-                <Ionicons name="lock-closed" size={20} color="#FF9500" />
-                <Text style={styles.lockButtonText}>Sblocca</Text>
-              </TouchableOpacity>
-            ) : hasPassword && dataUnlocked && user?.role === 'parent' ? (
-              <TouchableOpacity onPress={openEditModal} style={styles.editButton}>
-                <Ionicons name="pencil" size={20} color="#007AFF" />
-                <Text style={styles.editButtonText}>Modifica</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity onPress={openEditModal} style={styles.editButton}>
-                <Ionicons name="pencil" size={20} color="#007AFF" />
-                <Text style={styles.editButtonText}>Modifica</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          
-          {hasPassword && !dataUnlocked && (
-            <View style={styles.lockedBanner}>
-              <Ionicons name="shield-checkmark" size={20} color="#FF9500" />
-              <Text style={styles.lockedBannerText}>
-                Dati protetti da password. Tocca "Sblocca" per visualizzare.
-              </Text>
-            </View>
-          )}
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Squadra</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <SportIcon size={18} />
-              <Text style={[styles.dataValue, { color: '#E53935', fontWeight: '700', marginLeft: 4 }]}>
-                {getTeamName(athlete.team_id)}
-              </Text>
-            </View>
-          </View>
-          
-          {/* Coach Info - All coaches */}
-          {coachInfo && (
-            <View style={styles.coachInfoCard}>
-              <Text style={styles.coachInfoTitle}>Coach {getTeamName(athlete.team_id)}</Text>
-              {(coachInfo.all_coaches || [coachInfo]).map((coach: any, idx: number) => (
-                <View key={coach.id || idx} style={[styles.coachInfoRow, idx > 0 && { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' }]}>
-                  {coach.profile_photo_artistic || coach.profile_photo ? (
-                    <Image 
-                      source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
-                      style={styles.coachPhotoSmall}
-                    />
-                  ) : (
-                    <View style={styles.coachPhotoPlaceholder}>
-                      <Ionicons name="person" size={20} color="#999" />
-                    </View>
-                  )}
-                  <View style={styles.coachInfoDetails}>
-                    <Text style={styles.coachName}>{coach.full_name}</Text>
-                    <Text style={styles.coachContactHint}>Per contattare il coach, rivolgersi alla segreteria</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Cognome</Text>
-            <Text style={styles.dataValue}>{athlete.last_name || '-'}</Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Nome</Text>
-            <Text style={styles.dataValue}>{athlete.first_name || '-'}</Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Data di Nascita</Text>
-            <Text style={styles.dataValue}>{formatDateForDisplay(athlete.date_of_birth)}</Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Codice Fiscale</Text>
-            <Text style={styles.dataValue}>{maskData(athlete.fiscal_code)}</Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Indirizzo</Text>
-            <Text style={styles.dataValue}>{maskData(athlete.address)}</Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Città</Text>
-            <Text style={styles.dataValue}>
-              {[athlete.city, athlete.province, athlete.postal_code].filter(Boolean).join(' - ') || '-'}
-            </Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Tel. Atleta</Text>
-            <Text style={styles.dataValue}>{maskData(athlete.phone_athlete)}</Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Tel. Padre</Text>
-            <Text style={styles.dataValue}>{maskData(athlete.phone_father)}</Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Tel. Madre</Text>
-            <Text style={styles.dataValue}>{maskData(athlete.phone_mother)}</Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Email</Text>
-            <Text style={styles.dataValue}>{maskData(athlete.email)}</Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Cognome Genitore</Text>
-            <Text style={styles.dataValue}>{maskData(athlete.tax_payer_last_name)}</Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Nome Genitore</Text>
-            <Text style={styles.dataValue}>{maskData(athlete.tax_payer_first_name)}</Text>
-          </View>
-          
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>CF Genitore</Text>
-            <Text style={styles.dataValue}>{maskData(athlete.tax_payer_fiscal_code)}</Text>
           </View>
         </View>
 
@@ -2402,10 +2447,18 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 16,
+  },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  collapsibleContent: {
+    marginTop: 16,
   },
   qrButton: {
     alignItems: 'center',

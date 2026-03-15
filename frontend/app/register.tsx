@@ -30,6 +30,8 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [dataPassword, setDataPassword] = useState('');
+  const [confirmDataPassword, setConfirmDataPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [role, setRole] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,6 +45,8 @@ export default function Register() {
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
+  const dataPasswordRef = useRef<TextInput>(null);
+  const confirmDataPasswordRef = useRef<TextInput>(null);
 
   const showAlert = (title: string, message: string, onOk?: () => void) => {
     if (Platform.OS === 'web') {
@@ -116,6 +120,22 @@ export default function Register() {
       return;
     }
 
+    // Data password validation for parents
+    if (role === 'parent') {
+      if (!dataPassword) {
+        showAlert('Errore', 'Inserisci la Password Dati per proteggere i dati sensibili del minore');
+        return;
+      }
+      if (dataPassword.length < 6) {
+        showAlert('Errore', 'La Password Dati deve essere di almeno 6 caratteri');
+        return;
+      }
+      if (dataPassword !== confirmDataPassword) {
+        showAlert('Errore', 'Le Password Dati non coincidono');
+        return;
+      }
+    }
+
     // Invite code required for coach, viewer, and athlete
     if (!inviteCode && (role !== 'parent')) {
       showAlert('Errore', 'Inserisci il codice invito');
@@ -155,6 +175,7 @@ export default function Register() {
           phone: phone.trim(),
           role: role,
           invite_code: inviteCode.trim().toUpperCase(),
+          ...(role === 'parent' && dataPassword ? { data_password: dataPassword } : {}),
         });
       }
 
@@ -455,9 +476,53 @@ export default function Register() {
         value={confirmPassword}
         onChangeText={setConfirmPassword}
         secureTextEntry={!showPasswords}
-        returnKeyType="done"
-        onSubmitEditing={handleRegister}
+        returnKeyType={role === 'parent' ? 'next' : 'done'}
+        onSubmitEditing={() => role === 'parent' ? dataPasswordRef.current?.focus() : handleRegister()}
       />
+
+      {/* Data Password for Parents */}
+      {role === 'parent' && (
+        <>
+          <View style={[styles.dataPasswordSection, { marginTop: 20 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Ionicons name="shield-checkmark" size={20} color="#FF9500" />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#333' }}>Password Dati (protezione dati sensibili)</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: '#666', lineHeight: 18, marginBottom: 12 }}>
+              Questa password separata protegge i dati personali del minore (codice fiscale, indirizzo, ecc.). 
+              Ogni genitore avrà la propria password dati. L'admin potrà resettarla se necessario.
+            </Text>
+
+            <Text style={styles.inputLabel}>Password Dati *</Text>
+            <TextInput
+              ref={dataPasswordRef}
+              style={styles.input}
+              placeholder="Minimo 6 caratteri"
+              placeholderTextColor="#aaa"
+              value={dataPassword}
+              onChangeText={setDataPassword}
+              secureTextEntry={!showPasswords}
+              returnKeyType="next"
+              onSubmitEditing={() => confirmDataPasswordRef.current?.focus()}
+              data-testid="data-password-input"
+            />
+
+            <Text style={styles.inputLabel}>Conferma Password Dati *</Text>
+            <TextInput
+              ref={confirmDataPasswordRef}
+              style={styles.input}
+              placeholder="Ripeti la password dati"
+              placeholderTextColor="#aaa"
+              value={confirmDataPassword}
+              onChangeText={setConfirmDataPassword}
+              secureTextEntry={!showPasswords}
+              returnKeyType="done"
+              onSubmitEditing={handleRegister}
+              data-testid="confirm-data-password-input"
+            />
+          </View>
+        </>
+      )}
 
       {/* Warning for Coach/Dirigente */}
       {(role === 'coach' || role === 'viewer') && (
@@ -739,6 +804,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 20,
     gap: 10,
+  },
+  dataPasswordSection: {
+    backgroundColor: '#FFF8E1',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FF9500',
   },
   infoText: {
     flex: 1,
