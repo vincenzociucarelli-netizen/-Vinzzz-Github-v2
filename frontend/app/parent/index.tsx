@@ -784,6 +784,45 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           </View>
         )}
 
+        {/* Pagamenti per figlio */}
+        {athletes.filter(a => a.status !== 'pending').length > 0 && (
+          <View style={{ marginBottom: 16 }}>
+            {athletes.filter(a => a.status !== 'pending').map((athlete) => (
+              <TouchableOpacity
+                key={`pay-${athlete.id}`}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#fff',
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 10,
+                  borderWidth: 1.5,
+                  borderColor: '#FF9800',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 2,
+                  elevation: 1,
+                }}
+                onPress={() => router.push(`/parent/athlete/${athlete.id}?tab=payments`)}
+                data-testid={`payment-btn-${athlete.id}`}
+              >
+                <Ionicons name="card-outline" size={24} color="#FF9800" />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#333' }}>
+                    Pagamenti {athlete.first_name || athlete.full_name?.split(' ')[0] || ''}
+                  </Text>
+                  <Text style={{ fontSize: 13, color: '#888', marginTop: 2 }}>
+                    Visualizza rate e pagamenti
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color="#FF9800" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => router.push('/parent/register-athlete')}

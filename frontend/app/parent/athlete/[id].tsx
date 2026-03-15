@@ -33,7 +33,7 @@ import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
 export default function AthleteDetail() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, tab } = useLocalSearchParams();
   const { user, logout } = useAuthStore();
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
@@ -105,6 +105,8 @@ export default function AthleteDetail() {
   // Fiscal receipt state
   const [generatingReceipt, setGeneratingReceipt] = useState(false);
   const [paymentsListExpanded, setPaymentsListExpanded] = useState(false);
+  const paymentsRef = useRef<View>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
   const [athletePhotoArtistic, setAthletePhotoArtistic] = useState<string | null>(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
   
@@ -215,6 +217,21 @@ export default function AthleteDetail() {
   useEffect(() => {
     loadData();
   }, [id]);
+
+  // Auto-scroll to payments section when tab=payments
+  useEffect(() => {
+    if (tab === 'payments' && athlete && paymentsRef.current && scrollViewRef.current) {
+      setTimeout(() => {
+        (paymentsRef.current as any)?.measureLayout?.(
+          (scrollViewRef.current as any)?.getInnerViewNode?.(),
+          (_x: number, y: number) => {
+            (scrollViewRef.current as any)?.scrollTo?.({ y, animated: true });
+          },
+          () => {}
+        );
+      }, 500);
+    }
+  }, [tab, athlete]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -1138,6 +1155,7 @@ export default function AthleteDetail() {
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -1606,8 +1624,8 @@ export default function AthleteDetail() {
         )}
 
         {/* Payments Card - Dynamic Installments with Cumulative Logic */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Pagamenti</Text>
+        <View style={styles.card} ref={paymentsRef}>
+          <Text style={styles.cardTitle}>Pagamenti {athlete.first_name || ''}</Text>
           
           {/* Riepilogo Quota */}
           {paymentSettings && (
@@ -1678,16 +1696,15 @@ export default function AthleteDetail() {
                 {/* Next Due Installment */}
                 {nextDue && (
                   <View style={{ backgroundColor: nextDue.status === 'partial' ? '#FFF3E0' : '#FFF8E1', padding: 12, borderRadius: 8, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: nextDue.status === 'partial' ? '#FF9800' : '#FFA000' }}>
-                    <Text style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>Prossima rata:</Text>
+                    <Text style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>
+                      {nextDue.status === 'partial' ? 'Rata parzialmente pagata' : 'Prossima rata:'}
+                    </Text>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>{nextDue.name}</Text>
-                      <Text style={{ fontSize: 15, fontWeight: '700', color: nextDue.status === 'partial' ? '#FF9800' : '#E65100' }}>
-                        {formatCurrency(nextDue.amount)}
-                        {nextDue.status === 'partial' && (
-                          <Text style={{ fontSize: 12, fontWeight: '400' }}> (pagati {formatCurrency(nextDue.paidAmount)})</Text>
-                        )}
-                      </Text>
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>{nextDue.name}: {formatCurrency(nextDue.amount)}</Text>
                     </View>
+                    {nextDue.status === 'partial' && (
+                      <Text style={{ fontSize: 13, color: '#FF9800', marginTop: 2 }}>(pagati {formatCurrency(nextDue.paidAmount)})</Text>
+                    )}
                     {nextDue.due_date && (
                       <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
                         Scad. {new Date(nextDue.due_date).toLocaleDateString('it-IT')}
@@ -1695,38 +1712,42 @@ export default function AthleteDetail() {
                     )}
                   </View>
                 )}
-                
-                {/* All Installments */}
-                <Text style={styles.sectionSubtitle}>Dettaglio Rate</Text>
-                {rateWithStatus.map((rate: any, index: number) => (
-                  <View key={index} style={[
-                    styles.paymentRow,
-                    rate.status === 'unpaid' && { borderLeftColor: '#FF3B30', borderLeftWidth: 3 }
-                  ]}>
-                    <View style={styles.paymentInfo}>
-                      <Text style={[
-                        styles.paymentTitle,
-                        rate.status === 'paid' && { textDecorationLine: 'line-through', color: '#999' }
-                      ]}>{rate.name}</Text>
-                      <Text style={styles.paymentAmount}>
-                        {formatCurrency(rate.amount)}
-                        {rate.status === 'partial' && (
-                          <Text style={{ color: '#FF9800', fontSize: 12 }}> (pagati {formatCurrency(rate.paidAmount)})</Text>
-                        )}
-                      </Text>
-                      {rate.due_date && (
-                        <Text style={styles.paymentDue}>
-                          Scad. {new Date(rate.due_date).toLocaleDateString('it-IT')}
-                        </Text>
-                      )}
+
+                {/* Pagamenti Effettuati - Collapsible Summary */}
+                {totalPaid > 0 && (
+                  <TouchableOpacity 
+                    style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, marginBottom: 8, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                    onPress={() => setPaymentsListExpanded(!paymentsListExpanded)}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Ionicons name="checkmark-circle" size={18} color="#34C759" style={{ marginRight: 6 }} />
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Pagamenti Effettuati</Text>
                     </View>
-                    <Ionicons
-                      name={rate.status === 'paid' ? 'checkmark-circle' : rate.status === 'partial' ? 'ellipse-outline' : 'time-outline'}
-                      size={28}
-                      color={rate.status === 'paid' ? '#34C759' : rate.status === 'partial' ? '#FF9800' : '#FF3B30'}
-                    />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#34C759' }}>
+                        {rateWithStatus.filter((r: any) => r.status === 'paid').length + (rateWithStatus.some((r: any) => r.status === 'partial') ? 1 : 0)} - {formatCurrency(totalPaid)}
+                      </Text>
+                      <Ionicons name={paymentsListExpanded ? "chevron-up" : "chevron-down"} size={18} color="#888" />
+                    </View>
+                  </TouchableOpacity>
+                )}
+
+                {paymentsListExpanded && payments.filter(p => p.paid || p.paid_date).length > 0 && (
+                  <View style={{ marginBottom: 8 }}>
+                    {payments.filter(p => p.paid || p.paid_date).map((p, idx) => (
+                      <View key={p.id || idx} style={styles.manualPaymentRow}>
+                        <View style={styles.manualPaymentInfo}>
+                          <Text style={{ fontSize: 13, fontWeight: '500', color: '#333' }}>{p.description || `Pagamento ${idx + 1}`}</Text>
+                          <Text style={styles.manualPaymentAmount}>{formatCurrency(p.amount)}</Text>
+                          <Text style={styles.manualPaymentDate}>
+                            {p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : ''}
+                          </Text>
+                        </View>
+                        <Ionicons name="checkmark-circle" size={22} color="#34C759" />
+                      </View>
+                    ))}
                   </View>
-                ))}
+                )}
                 
                 {/* Residuo Dovuto */}
                 {residuo > 0 && (
@@ -1735,6 +1756,45 @@ export default function AthleteDetail() {
                     <Text style={{ fontWeight: '700', fontSize: 16, color: '#FF3B30' }}>{formatCurrency(residuo)}</Text>
                   </View>
                 )}
+
+                {/* Dettaglio Rate - Expandable */}
+                <Text style={[styles.sectionSubtitle, { marginTop: 12 }]}>Dettaglio Rate</Text>
+                {rateWithStatus.map((rate: any, index: number) => (
+                  <View key={index} style={[
+                    styles.paymentRow,
+                    rate.status === 'paid' && { borderLeftColor: '#34C759', borderLeftWidth: 3 },
+                    rate.status === 'partial' && { borderLeftColor: '#FF9800', borderLeftWidth: 3 },
+                    rate.status === 'unpaid' && { borderLeftColor: '#FF3B30', borderLeftWidth: 3 }
+                  ]}>
+                    <View style={styles.paymentInfo}>
+                      <Text style={[
+                        styles.paymentTitle,
+                        rate.status === 'paid' && { color: '#999' }
+                      ]}>{rate.name}</Text>
+                      {rate.status === 'paid' && (
+                        <Text style={{ fontSize: 12, color: '#34C759', fontWeight: '500' }}>Pagata</Text>
+                      )}
+                      {rate.status === 'partial' && (
+                        <Text style={{ fontSize: 12, color: '#FF9800' }}>Pagati {formatCurrency(rate.paidAmount)} di {formatCurrency(rate.amount)}</Text>
+                      )}
+                      {rate.due_date && rate.status !== 'paid' && (
+                        <Text style={styles.paymentDue}>
+                          Scad. {new Date(rate.due_date).toLocaleDateString('it-IT')}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={[styles.paymentAmount, rate.status === 'paid' && { color: '#999' }]}>
+                        {formatCurrency(rate.amount)}
+                      </Text>
+                      <Ionicons
+                        name={rate.status === 'paid' ? 'checkmark-circle' : rate.status === 'partial' ? 'ellipse-outline' : 'ellipse'}
+                        size={22}
+                        color={rate.status === 'paid' ? '#34C759' : rate.status === 'partial' ? '#FF9800' : '#FF3B30'}
+                      />
+                    </View>
+                  </View>
+                ))}
               </View>
             );
           })()}
@@ -1760,43 +1820,6 @@ export default function AthleteDetail() {
                     {'\n'}{paymentSettings.paypal_email}
                   </Text>
                 </View>
-              )}
-            </View>
-          )}
-          
-          {/* Pagamenti Effettuati (collapsable) */}
-          {payments.filter(p => p.paid || p.paid_date).length > 0 && (
-            <View style={{ marginTop: 12 }}>
-              <TouchableOpacity 
-                style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#eee' }}
-                onPress={() => setPaymentsListExpanded(!paymentsListExpanded)}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="checkmark-circle" size={18} color="#34C759" style={{ marginRight: 6 }} />
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Pagamenti Effettuati</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#34C759' }}>
-                    {payments.filter(p => p.paid || p.paid_date).length} - {formatCurrency(payments.filter(p => p.paid || p.paid_date).reduce((s, p) => s + (p.amount || 0), 0))}
-                  </Text>
-                  <Ionicons name={paymentsListExpanded ? "chevron-up" : "chevron-down"} size={18} color="#888" />
-                </View>
-              </TouchableOpacity>
-              {paymentsListExpanded && (
-              <View>
-                {payments.filter(p => p.paid || p.paid_date).map((p, idx) => (
-                  <View key={p.id || idx} style={styles.manualPaymentRow}>
-                    <View style={styles.manualPaymentInfo}>
-                      <Text style={{ fontSize: 13, fontWeight: '500', color: '#333' }}>{p.description || `Pagamento ${idx + 1}`}</Text>
-                      <Text style={styles.manualPaymentAmount}>{formatCurrency(p.amount)}</Text>
-                      <Text style={styles.manualPaymentDate}>
-                        {p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : ''}
-                      </Text>
-                    </View>
-                    <Ionicons name="checkmark-circle" size={22} color="#34C759" />
-                  </View>
-                ))}
-              </View>
               )}
             </View>
           )}
