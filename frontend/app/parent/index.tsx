@@ -18,7 +18,7 @@ import { Ionicons } from '../../src/components/Icon';
 import { Athlete } from '../../src/types';
 import SignaturePad from '../../src/components/SignaturePad';
 import { SportIcon } from '../../src/components/SportIcon';
-import { ParentOnboardingTutorial } from '../../src/components/ParentOnboardingTutorial';
+import { OnboardingTutorial, PARENT_STEPS } from '../../src/components/OnboardingTutorial';
 
 // Colori vivaci per distinguere i figli
 const ATHLETE_COLORS = [
@@ -462,7 +462,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
 
   return (
     <View style={styles.container}>
-      <ParentOnboardingTutorial />
+      <OnboardingTutorial role="parent" steps={PARENT_STEPS} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>I Miei Figli</Text>
         <TouchableOpacity onPress={handleLogout}>

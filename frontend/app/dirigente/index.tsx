@@ -17,6 +17,7 @@ import { Ionicons } from '../../src/components/Icon';
 import { format, differenceInDays } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { SportIcon } from '../../src/components/SportIcon';
+import { OnboardingTutorial, DIRIGENTE_STEPS } from '../../src/components/OnboardingTutorial';
 
 interface Team {
   id: string;
@@ -196,6 +197,7 @@ export default function DirigenteIndex() {
 
   return (
     <View style={styles.container}>
+      <OnboardingTutorial role="dirigente" steps={DIRIGENTE_STEPS} />
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Dashboard Dirigente</Text>

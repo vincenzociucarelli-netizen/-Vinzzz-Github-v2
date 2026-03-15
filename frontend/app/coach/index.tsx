@@ -24,6 +24,7 @@ import { Team } from '../../src/types';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { SportIcon } from '../../src/components/SportIcon';
+import { OnboardingTutorial, COACH_STEPS } from '../../src/components/OnboardingTutorial';
 
 // Web QR Scanner
 let Html5QrcodeScanner: any = null;
@@ -1149,6 +1150,7 @@ export default function CoachScreen() {
   // Teams & Athletes Mode
   return (
     <View style={styles.container}>
+      <OnboardingTutorial role="coach" steps={COACH_STEPS} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Le Mie Squadre</Text>
         <TouchableOpacity onPress={handleLogout}>

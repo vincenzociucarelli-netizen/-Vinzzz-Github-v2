@@ -25,6 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import PhotoViewer from '../../src/components/PhotoViewer';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
+import { OnboardingTutorial, COLLABORATORE_STEPS } from '../../src/components/OnboardingTutorial';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
@@ -770,6 +771,7 @@ Società sportiva: ${societyName}
 
   return (
     <View style={styles.container}>
+      <OnboardingTutorial role="collaboratore" steps={COLLABORATORE_STEPS} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}>

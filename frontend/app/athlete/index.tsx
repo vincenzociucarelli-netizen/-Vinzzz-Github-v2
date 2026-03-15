@@ -19,6 +19,7 @@ import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { SportIcon } from '../../src/components/SportIcon';
+import { OnboardingTutorial, ATHLETE_STEPS } from '../../src/components/OnboardingTutorial';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 const MONTH_NAMES = [
@@ -372,6 +373,7 @@ export default function AthleteScreen() {
     // Vista per atleti "quota" (non compensati)
     return (
       <>
+      <OnboardingTutorial role="athlete" steps={ATHLETE_STEPS} />
       <ScrollView 
         style={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />}
@@ -905,6 +907,8 @@ export default function AthleteScreen() {
   }
 
   return (
+    <View style={{ flex: 1 }}>
+    <OnboardingTutorial role="athlete" steps={ATHLETE_STEPS} />
     <ScrollView 
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#B8860B']} />}
@@ -1351,6 +1355,7 @@ export default function AthleteScreen() {
 
       <View style={{ height: 40 }} />
     </ScrollView>
+    </View>
   );
 }
 
