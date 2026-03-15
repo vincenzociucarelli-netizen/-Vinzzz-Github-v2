@@ -24,6 +24,7 @@ Sports team management application for Italian sports societies, targeting iOS A
 - **P0: Minor Athlete Profile Restructure** - Reordered components in `parent/athlete/[id].tsx` to match adult profile: Account > QR > Dati Anagrafici (collapsible) > Dati Fiscali Genitore (collapsible) > Coach > Status > Certificate > Schedule > Payments
 - **P1: Legal Pages Back Button Fix** - Enlarged back button with "Indietro" label, added BackHandler for hardware back press, increased touch target to 44px minimum
 - **P0: Password Dati in Parent Registration** - Added Password Dati + Confirm Password Dati fields to register.tsx for parent role, with validation and API integration
+- **Enhancement: Parent Onboarding Tutorial** - 3-step tutorial overlay (Protezione Dati, Certificato Medico, Pagamenti) shown on first 3 logins, with "Non mostrare più" option. Uses AsyncStorage for persistence.
 
 ## Prioritized Backlog
 
@@ -59,4 +60,5 @@ Sports team management application for Italian sports societies, targeting iOS A
 - frontend/app/privacy-policy.tsx (back button fixed)
 - frontend/app/terms-of-use.tsx (back button fixed)
 - frontend/app/register.tsx (Password Dati added)
-- frontend/src/components/admin/ParentsPasswordSection.tsx
+- frontend/src/components/ParentOnboardingTutorial.tsx (NEW)
+- frontend/app/parent/index.tsx (tutorial integrated)
