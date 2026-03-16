@@ -216,7 +216,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
       </div>
 
       <div class="amount-section">
-        <span class="amount-label">la somma di:</span>
+        <span class="amount-label">per la somma di:</span>
         <span class="amount-value">${formatCurrency(totalPaid)}</span>
       </div>
 
