@@ -220,7 +220,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
         <span class="amount-value">${formatCurrency(totalPaid)}</span>
       </div>
 
-      <p style="margin-bottom: 6px; font-size: 10px;">per l'attività di ${(data.society.sport_type || 'SPORT').toUpperCase()} nella stagione sportiva ${data.season} svolta da:</p>
+      <p style="margin-bottom: 6px; font-size: 10px;">relativa all'attività sportiva dilettantistica nella stagione ${data.season} ai fini delle detrazioni fiscali previste dalla normativa vigente per il minore:</p>
 
       <div class="box">
         <div class="box-row">
