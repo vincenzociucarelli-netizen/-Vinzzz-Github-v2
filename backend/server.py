@@ -11999,7 +11999,7 @@ async def check_pending_trials(current_user = Depends(get_current_user)):
             if isinstance(trial_end_date, str):
                 trial_end_date = datetime.fromisoformat(trial_end_date.replace('Z', '+00:00'))
             
-            trial_ended = datetime.utcnow() > trial_end_date
+            trial_ended = datetime.now(timezone.utc) > trial_end_date.replace(tzinfo=timezone.utc) if trial_end_date.tzinfo is None else datetime.now(timezone.utc) > trial_end_date
             
             if trial_ended and not privacy_accepted:
                 athletes_requiring_action.append({

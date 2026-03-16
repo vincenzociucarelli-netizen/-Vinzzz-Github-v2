@@ -2406,24 +2406,24 @@ export default function AthleteDetail() {
               )}
 
               <Text style={styles.inputLabel}>Codice Fiscale</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <TextInput
-                  style={[styles.textInput, { flex: 1, marginRight: 8, marginBottom: 0 }]}
-                  value={editData.fiscal_code}
-                  onChangeText={(text) => setEditData({...editData, fiscal_code: text.toUpperCase()})}
-                  autoCapitalize="characters"
-                  maxLength={16}
-                  returnKeyType="next"
-                />
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: '#007AFF',
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    borderRadius: 8,
-                  }}
-                  data-testid="calculate-cf-btn"
-                  onPress={() => {
+              <TextInput
+                style={[styles.textInput, { marginBottom: 4 }]}
+                value={editData.fiscal_code}
+                onChangeText={(text) => setEditData({...editData, fiscal_code: text.toUpperCase()})}
+                autoCapitalize="characters"
+                maxLength={16}
+                returnKeyType="next"
+              />
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#007AFF',
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                  marginBottom: 12,
+                }}
+                data-testid="calculate-cf-btn"
+                onPress={() => {
                     try {
                       const dob = editData.date_of_birth;
                       const isEstero = editData.country_of_birth && editData.country_of_birth !== 'Italia' && editData.country_of_birth !== 'ITALIA';
@@ -2479,7 +2479,6 @@ export default function AthleteDetail() {
                 >
                   <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>Calcola CF</Text>
                 </TouchableOpacity>
-              </View>
 
               <Text style={styles.inputLabel}>Indirizzo</Text>
               <TextInput

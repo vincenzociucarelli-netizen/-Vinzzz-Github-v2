@@ -22,58 +22,79 @@ Sports team management application for Italian sports societies, targeting iOS A
 9. Foreign birth support (country of birth + fiscal code calculation) - DONE
 10. Onboarding tutorials per role - DONE
 11. Direct password reset by admin (without email) - DONE
-12. Payment dashboard buttons per child for parent - DONE
-13. Payment section reordered (summary first, details last) - DONE
+12. Invite-register allows already registered emails - DONE
+13. Second parent linking (manual, per-child) - DONE
+14. Payment section reordered (summary first, details last) - DONE
+15. Gender field in edit form for minor athletes - DONE
+16. Auto-format date of birth (dd/mm/yyyy) in invite-register - DONE
+17. Unified email field in invite-register (email = username) - DONE
 
-## What's Been Implemented (Latest Session - March 15, 2026)
-- **Password Reset Luna Nuova** - Reset to Test1234 for both luna@18piu.com and luna2@test.com
-- **Direct Password Reset (Admin)** - New "Reimposta Password Manualmente" button in admin athlete profile with modal, backend endpoint updated to accept `new_password` param
-- **Unblocked invite-register for existing emails** - Removed the block in `/athletes/invite-register` endpoint; existing users are now linked automatically
-- **Minor Athlete Profile - Calcola CF + Country Picker** - Added calculator button and Picker-based country selector (matching admin profile) in parent/athlete/[id].tsx
-- **Payment Section Reordered** - New order: Quota Annuale → Highlighted rata → Pagamenti Effettuati (collapsible) → Residuo Dovuto → Modalita Pagamento → Dettaglio Rate with colored status icons
-- **Payment Buttons on Parent Dashboard** - Orange "Pagamenti NOME_FIGLIO" card per child, navigates to athlete profile with scroll to payments section
+## Session 3 Completions (March 15-16, 2026)
+- Password reset Luna Nuova to Test1234
+- Direct Password Reset button in admin athlete profile (no email needed)
+- Unblocked invite-register for existing emails
+- Calcola CF button in minor athlete profile (read-only + edit form, full-width)
+- Country Picker for Stato di Nascita in parent athlete edit
+- Gender (M/F) selector in parent athlete edit form
+- All edit fields (gender, birth_place, birth_province, country_of_birth, second_parent_email) properly saved
+- Backend fix: second_parent_email savable by parent role (was admin-only)
+- Removed "Scadenze in arrivo" from parent dashboard
+- Removed redundant "Pagamenti" button from parent dashboard
+- Email 2° Genitore in parent's own profile page with save
+- Second parent linking: manual per-child (no auto-linking at registration)
+- Both parents see both children when properly linked
+- Auto-format date input in invite-register form
+- Unified email fields in invite-register (single email = username)
 
 ## Previous Session Completions
-- P0: Minor Athlete Profile Restructure
-- P1: Legal Pages Back Button Fix
-- P0: Password Dati in Parent Registration
-- Enhancement: Onboarding Tutorial per tutti i ruoli
-- Stato di Nascita + Campi Nascita + CF calculation for foreign birth
-- Email 2 Genitore field
-- Fix Modale "Invita Persona"
+- Legal pages, Terms of Use, Privacy Policy
+- Self-registration with email verification
+- Onboarding Tutorial per role
+- Password Dati in Parent Registration
+- Foreign birth + CF calculation
+- Email 2° Genitore field
+- Fix Invita Persona modal
 - Copy link fix (expo-clipboard)
-- Data integrity fix (Lucia Pessi association)
+- Data integrity fix (Lucia-Sauro association)
 
 ## Prioritized Backlog
 
 ### P0 (Critical)
 - User-guided testing: full lifecycle for Minors, Teams, Excel Templates
-- Complete Password Dati lifecycle testing
 
 ### P1 (Important)
 - "Data Processor" checkbox in admin creation form (GDPR)
 
 ### P2 (Nice to have)
-- User Deletion Flow: clarify business logic (recurring issue)
-- UI improvements for contracted athletes (atleta a contratto)
+- User Deletion Flow: clarify business logic
+- UI improvements for contracted athletes
 
 ### P3 (Future)
 - Backend refactoring: decompose server.py into modular routes
 - Stripe integration for payments
 - Database cleanup: migrate "viewer" role to "dirigente"
-- Domain and App Store publication assistance
+- Domain and App Store publication
 
 ## Credentials
 - Admin: pallavoloperugia@gmail.com / password
-- Test Parent: sauro@test.com / password
-- Test Adult Athlete: luna@18piu.com / Test1234 (also luna2@test.com / Test1234)
+- Parent (Sauro): sauro@test.com / Test1234
+- Parent (Mara): mara2@test.com / Test1234
+- Adult Athlete (Luna): luna@18piu.com / Test1234 (also luna2@test.com)
 
 ## Key Files
-- backend/server.py (17k+ lines)
+- backend/server.py
 - frontend/app/parent/athlete/[id].tsx - Minor athlete profile (parent view)
 - frontend/app/admin/athlete/[id].tsx - Athlete profile (admin view)
 - frontend/app/parent/index.tsx - Parent dashboard
+- frontend/app/parent/profile.tsx - Parent's own profile
 - frontend/app/admin/athletes.tsx - Athletes list + invite modal
-- frontend/app/register.tsx - Registration form
-- frontend/src/components/OnboardingTutorial.tsx - Reusable tutorial
-- frontend/src/constants/countries.ts - Country list for birth place
+- frontend/app/invite-register.tsx - Invite registration form
+- frontend/src/components/OnboardingTutorial.tsx
+- frontend/src/constants/countries.ts
+
+## Data Model: Second Parent Linking
+- Each athlete has `second_parent_email` and `second_parent_id`
+- Linking is MANUAL: parent must enter the 2nd parent's email in each child's profile
+- Backend auto-resolves email→user_id when saving
+- `/athletes/my` returns athletes where user is `parent_id` OR `second_parent_id`
+- No automatic linking at registration (ex-spouse scenario)
