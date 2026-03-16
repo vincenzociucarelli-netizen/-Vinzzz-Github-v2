@@ -44,10 +44,13 @@ L'attivazione della piattaforma implica la piena accettazione dei presenti Termi
 
 function TermsAcceptanceInline({ onAccepted }: { onAccepted: () => void }) {
   const [checked, setChecked] = useState(false);
+  const [dataProcessorChecked, setDataProcessorChecked] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const allChecked = checked && dataProcessorChecked;
+
   const handleAccept = async () => {
-    if (!checked) return;
+    if (!allChecked) return;
     setLoading(true);
     try {
       await api.post('/societies/accept-terms');
@@ -82,10 +85,18 @@ function TermsAcceptanceInline({ onAccepted }: { onAccepted: () => void }) {
             Dichiaro di essere autorizzato dalla Società ad attivare e utilizzare RegistraTEAM e accetto i Termini di utilizzo della piattaforma.
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity style={ts.checkboxRow} onPress={() => setDataProcessorChecked(!dataProcessorChecked)} data-testid="data-processor-checkbox">
+          <View style={[ts.checkbox, dataProcessorChecked && ts.checkboxChecked]}>
+            {dataProcessorChecked && <Ionicons name="checkmark" size={16} color="#fff" />}
+          </View>
+          <Text style={ts.checkboxLabel}>
+            Dichiaro di essere stato nominato Responsabile del Trattamento dei dati personali ai sensi dell'art. 28 del Regolamento UE 2016/679 (GDPR) e di impegnarmi a trattare i dati degli utenti in conformità alla normativa vigente.
+          </Text>
+        </TouchableOpacity>
         <TouchableOpacity
-          style={[ts.acceptBtn, (!checked || loading) && ts.acceptBtnDisabled]}
+          style={[ts.acceptBtn, (!allChecked || loading) && ts.acceptBtnDisabled]}
           onPress={handleAccept}
-          disabled={!checked || loading}
+          disabled={!allChecked || loading}
           data-testid="accept-terms-btn"
         >
           {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={ts.acceptBtnText}>Accetta e Continua</Text>}

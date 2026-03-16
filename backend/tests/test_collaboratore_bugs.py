@@ -9,7 +9,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://athlete-profile-mgr-1.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://team-manager-app-20.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 COLLABORATORE_EMAIL = "lara@test.com"

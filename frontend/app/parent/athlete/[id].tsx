@@ -1172,7 +1172,7 @@ export default function AthleteDetail() {
         <View style={[styles.card, { paddingVertical: 12 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Account</Text>
-            <Text style={{ fontSize: 14, color: '#666' }}>{athlete.email || user?.email || '-'}</Text>
+            <Text style={{ fontSize: 14, color: '#666' }}>{athlete.email || '-'}</Text>
           </View>
         </View>
 
@@ -1359,73 +1359,7 @@ export default function AthleteDetail() {
               
               <View style={styles.dataRow}>
                 <Text style={styles.dataLabel}>Codice Fiscale</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                  <Text style={styles.dataValue}>{maskData(athlete.fiscal_code)}</Text>
-                  {dataUnlocked && (
-                    <TouchableOpacity
-                      style={{ backgroundColor: '#007AFF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                      data-testid="calc-cf-readonly-btn"
-                      onPress={() => {
-                        try {
-                          const dob = athlete.date_of_birth;
-                          const isEstero = athlete.country_of_birth && athlete.country_of_birth !== 'Italia' && athlete.country_of_birth !== 'ITALIA';
-                          
-                          if (!dob || !athlete.last_name || !athlete.first_name || !athlete.gender) {
-                            Alert.alert('Dati Mancanti', 'Per calcolare il CF servono: Cognome, Nome, Data di Nascita e Sesso');
-                            return;
-                          }
-                          if (!isEstero && !athlete.birth_place) {
-                            Alert.alert('Dati Mancanti', 'Compila il Luogo di Nascita per calcolare il CF');
-                            return;
-                          }
-                          
-                          let day, month, year;
-                          if (dob.includes('/')) {
-                            const parts = dob.split('/');
-                            day = parseInt(parts[0]);
-                            month = parseInt(parts[1]);
-                            year = parseInt(parts[2]);
-                          } else if (dob.includes('-')) {
-                            const parts = dob.split('-');
-                            year = parseInt(parts[0]);
-                            month = parseInt(parts[1]);
-                            day = parseInt(parts[2]);
-                          } else {
-                            const d = new Date(dob);
-                            day = d.getDate();
-                            month = d.getMonth() + 1;
-                            year = d.getFullYear();
-                          }
-                          
-                          const birthplaceValue = isEstero 
-                            ? athlete.country_of_birth.toUpperCase() 
-                            : (athlete.birth_place || '').toUpperCase();
-                          const cf = new CodiceFiscale({
-                            name: athlete.first_name.toUpperCase(),
-                            surname: athlete.last_name.toUpperCase(),
-                            gender: athlete.gender as 'M' | 'F',
-                            day, month, year,
-                            birthplace: birthplaceValue,
-                            birthplaceProvincia: isEstero ? 'EE' : (athlete.birth_province?.toUpperCase() || ''),
-                          });
-                          
-                          const newCF = cf.toString();
-                          // Save to backend
-                          api.patch(`/athletes/${id}`, { fiscal_code: newCF }).then(() => {
-                            setAthlete({...athlete, fiscal_code: newCF});
-                            Alert.alert('Codice Fiscale Calcolato', newCF);
-                          }).catch(() => {
-                            Alert.alert('Codice Fiscale Calcolato', `${newCF}\n\n(Non salvato, usa Modifica per salvare)`);
-                          });
-                        } catch (error: any) {
-                          Alert.alert('Errore', 'Impossibile calcolare il CF. Verifica i dati (comune valido, ecc.).');
-                        }
-                      }}
-                    >
-                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Calcola CF</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+                <Text style={styles.dataValue}>{maskData(athlete.fiscal_code)}</Text>
               </View>
               
               <View style={styles.dataRow}>
@@ -1458,11 +1392,6 @@ export default function AthleteDetail() {
               <View style={styles.dataRow}>
                 <Text style={styles.dataLabel}>Email</Text>
                 <Text style={styles.dataValue}>{maskData(athlete.email)}</Text>
-              </View>
-              
-              <View style={styles.dataRow}>
-                <Text style={styles.dataLabel}>Email 2° Genitore</Text>
-                <Text style={styles.dataValue}>{maskData(athlete.second_parent_email)}</Text>
               </View>
             </View>
           )}
