@@ -2106,19 +2106,6 @@ async def register_via_invite(data: InviteRegisterRequest):
         }
         await db.athletes.insert_one(athlete_dict)
         
-        # Auto-link: check if this parent's email is the second_parent_email of other athletes
-        other_athletes = await db.athletes.find({
-            "second_parent_email": parent_email,
-            "id": {"$ne": athlete_id}
-        }).to_list(100)
-        for other_athlete in other_athletes:
-            if not other_athlete.get("second_parent_id"):
-                await db.athletes.update_one(
-                    {"id": other_athlete["id"]},
-                    {"$set": {"second_parent_id": parent_id}}
-                )
-                logging.info(f"Auto-linked parent {parent_email} as second parent of athlete {other_athlete['id']}")
-        
         # Mark invitation as used
         await db.athlete_invitations.update_one(
             {"token": data.token},
