@@ -256,7 +256,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
           <tbody>
             ${paymentRows}
             <tr class="total-row">
-              <td colspan="2"><b>TOTALE VERSATO:</b></td>
+              <td colspan="2"><b>TOTALE VERSATO alla data del: ${dateStr}</b></td>
               <td colspan="3" style="text-align: right;"><b>${formatCurrency(totalPaid)}</b></td>
             </tr>
           </tbody>
@@ -268,8 +268,8 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
           Soggetta a bollo<br/>vigente
         </div>
         <div class="note">
-          * Somme non soggette ad IVA ai sensi del 4° comma del DPR 633/72<br/>
-          e successive modifiche ed integrazioni
+          Corrispettivo specifico per attività sportiva dilettantistica<br/>
+          ai sensi dell'art. 148 TUIR e art. 4 DPR 633/72
         </div>
         <div class="signature">
           <p>${data.society.name || ''}</p>
@@ -279,6 +279,11 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
             : `<div class="signature-line">${data.society.president_name || ''}</div>`
           }
         </div>
+      </div>
+
+      <div style="margin-top: 12px; text-align: center; font-size: 8px; color: #999; border-top: 1px solid #ddd; padding-top: 6px;">
+        Documento generato dal sistema gestionale RegistraTEAM<br/>
+        Data generazione documento: ${dateStr}
       </div>
     </body>
     </html>
