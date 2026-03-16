@@ -46,6 +46,12 @@ Sports team management application for Italian sports societies, targeting iOS A
 - Auto-format date input in invite-register form
 - Unified email fields in invite-register (single email = username)
 
+## Session 4 Completions (March 16, 2026)
+- P0: Account card email now shows only athlete's email (removed parent email fallback)
+- P0: Removed "Email 2° Genitore" from read-only view of minor athlete profile (kept in edit modal only)
+- P0: Confirmed "Calcola CF" button is only in edit modal (not in read-only view)
+- P1: Added mandatory "Responsabile del Trattamento Dati" (GDPR Data Processor) checkbox in admin terms acceptance form
+
 ## Previous Session Completions
 - Legal pages, Terms of Use, Privacy Policy
 - Self-registration with email verification
@@ -63,7 +69,7 @@ Sports team management application for Italian sports societies, targeting iOS A
 - User-guided testing: full lifecycle for Minors, Teams, Excel Templates
 
 ### P1 (Important)
-- "Data Processor" checkbox in admin creation form (GDPR)
+- "Data Processor" checkbox in admin creation form (GDPR) - DONE
 
 ### P2 (Nice to have)
 - User Deletion Flow: clarify business logic
