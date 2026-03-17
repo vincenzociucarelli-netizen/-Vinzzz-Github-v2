@@ -7198,6 +7198,122 @@ async def admin_reset_data_password(athlete_id: str, data: AdminResetDataPasswor
     return {"message": f"Password dati cancellata per {parent_name}. Al prossimo accesso dovrà impostarne una nuova."}
 
 
+# --- Self-service data password reset (parent) ---
+class RequestDataPasswordResetRequest(BaseModel):
+    athlete_id: str  # The minor athlete whose data password to reset
+
+@api_router.post("/auth/request-data-password-reset")
+async def request_data_password_reset(data: RequestDataPasswordResetRequest, current_user = Depends(get_current_user)):
+    """Parent requests a verification code to reset their own data password for a minor."""
+    if current_user["role"] != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo genitori possono resettare la propria password dati")
+    
+    athlete = await db.athletes.find_one({"id": data.athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Verify parent is linked to this athlete
+    is_primary = athlete.get("parent_id") == current_user["id"]
+    is_second = athlete.get("second_parent_id") == current_user["id"]
+    if not is_primary and not is_second:
+        raise HTTPException(status_code=403, detail="Non sei un genitore di questo atleta")
+    
+    # Generate verification code (6 digits)
+    import random
+    verification_code = str(random.randint(100000, 999999))
+    code_expires = datetime.utcnow() + timedelta(minutes=15)
+    
+    # Store code in user record
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {
+            "data_pw_reset_code": verification_code,
+            "data_pw_reset_expires": code_expires,
+            "data_pw_reset_athlete_id": data.athlete_id
+        }}
+    )
+    
+    # Send email with code
+    try:
+        from email_service import send_transactional_email
+        athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}".strip()
+        await send_transactional_email(
+            to_email=current_user["email"],
+            to_name=current_user.get("full_name", "Genitore"),
+            subject=f"Codice reset password dati - {athlete_name}",
+            html_content=f"""
+            <p>Ciao {current_user.get('full_name', 'Genitore')},</p>
+            <p>Hai richiesto il reset della password dati per <strong>{athlete_name}</strong>.</p>
+            <p>Il tuo codice di verifica è:</p>
+            <h2 style="text-align:center; color:#7B1FA2; font-size:32px; letter-spacing:8px;">{verification_code}</h2>
+            <p>Il codice scade tra 15 minuti.</p>
+            <p>Se non hai richiesto tu questo reset, ignora questa email.</p>
+            """
+        )
+    except Exception as e:
+        logging.error(f"Failed to send data pw reset email: {str(e)}")
+        raise HTTPException(status_code=500, detail="Errore nell'invio dell'email")
+    
+    return {"message": f"Codice di verifica inviato a {current_user['email']}"}
+
+
+class ConfirmDataPasswordResetRequest(BaseModel):
+    athlete_id: str
+    verification_code: str
+    new_password: str
+
+@api_router.post("/auth/confirm-data-password-reset")
+async def confirm_data_password_reset(data: ConfirmDataPasswordResetRequest, current_user = Depends(get_current_user)):
+    """Verify code and set new data password."""
+    if current_user["role"] != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo genitori")
+    
+    user = await db.users.find_one({"id": current_user["id"]})
+    stored_code = user.get("data_pw_reset_code")
+    code_expires = user.get("data_pw_reset_expires")
+    stored_athlete_id = user.get("data_pw_reset_athlete_id")
+    
+    if not stored_code or not code_expires:
+        raise HTTPException(status_code=400, detail="Nessuna richiesta di reset trovata. Richiedi un nuovo codice.")
+    
+    if datetime.utcnow() > code_expires:
+        await db.users.update_one({"id": current_user["id"]}, {"$unset": {"data_pw_reset_code": "", "data_pw_reset_expires": "", "data_pw_reset_athlete_id": ""}})
+        raise HTTPException(status_code=400, detail="Codice scaduto. Richiedi un nuovo codice.")
+    
+    if data.verification_code.strip() != stored_code:
+        raise HTTPException(status_code=400, detail="Codice non valido")
+    
+    if stored_athlete_id != data.athlete_id:
+        raise HTTPException(status_code=400, detail="Richiesta non valida")
+    
+    if len(data.new_password) < 4:
+        raise HTTPException(status_code=400, detail="La password deve avere almeno 4 caratteri")
+    
+    # Determine which field to update
+    athlete = await db.athletes.find_one({"id": data.athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    is_primary = athlete.get("parent_id") == current_user["id"]
+    pw_field = "data_password_hash" if is_primary else "second_parent_data_password_hash"
+    
+    # Update the password
+    new_hash = hash_password(data.new_password)
+    await db.athletes.update_one(
+        {"id": data.athlete_id},
+        {"$set": {pw_field: new_hash}}
+    )
+    
+    # Clear reset code
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$unset": {"data_pw_reset_code": "", "data_pw_reset_expires": "", "data_pw_reset_athlete_id": ""}}
+    )
+    
+    return {"message": "Password dati aggiornata con successo"}
+
+
+
 class CreateAthleteAccountRequest(BaseModel):
     password: str
 

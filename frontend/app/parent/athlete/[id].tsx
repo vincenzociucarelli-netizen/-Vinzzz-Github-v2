@@ -224,6 +224,11 @@ export default function AthleteDetail() {
   const [enteredPassword, setEnteredPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [checkingPassword, setCheckingPassword] = useState(false);
+  // Data password reset via email
+  const [dataPwResetStep, setDataPwResetStep] = useState<'idle' | 'code_sent' | 'sending'>('idle');
+  const [dataPwResetCode, setDataPwResetCode] = useState('');
+  const [dataPwResetNewPw, setDataPwResetNewPw] = useState('');
+  const [dataPwResetError, setDataPwResetError] = useState('');
   
   // Parent profile data for GDPR signing
   const [parentProfile, setParentProfile] = useState<any>(null);
@@ -441,6 +446,45 @@ export default function AthleteDetail() {
       setCheckingPassword(false);
     }
   };
+
+  // Request data password reset via email
+  const handleRequestDataPwReset = async () => {
+    if (!id) return;
+    setDataPwResetStep('sending');
+    setDataPwResetError('');
+    try {
+      await api.post('/auth/request-data-password-reset', { athlete_id: id });
+      setDataPwResetStep('code_sent');
+      setPasswordModalVisible(false);
+      setEnteredPassword('');
+      setPasswordError('');
+    } catch (error: any) {
+      setDataPwResetError(error.response?.data?.detail || 'Errore invio codice');
+      setDataPwResetStep('idle');
+    }
+  };
+
+  // Confirm data password reset with code
+  const handleConfirmDataPwReset = async () => {
+    if (!dataPwResetCode || !dataPwResetNewPw || !id) return;
+    try {
+      await api.post('/auth/confirm-data-password-reset', {
+        athlete_id: id,
+        verification_code: dataPwResetCode,
+        new_password: dataPwResetNewPw,
+      });
+      const msg = 'Password dati aggiornata con successo!';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Successo', msg);
+      setDataPwResetStep('idle');
+      setDataPwResetCode('');
+      setDataPwResetNewPw('');
+      setDataPwResetError('');
+    } catch (error: any) {
+      setDataPwResetError(error.response?.data?.detail || 'Errore verifica codice');
+    }
+  };
+
 
   // Download Fiscal Receipt
   const handleDownloadFiscalReceipt = async () => {
@@ -2724,6 +2768,17 @@ export default function AthleteDetail() {
               <Text style={styles.passwordError}>{passwordError}</Text>
             ) : null}
             
+            {/* Link reset password dati via email */}
+            <TouchableOpacity
+              style={{ alignSelf: 'center', marginTop: 8, marginBottom: 4, padding: 6 }}
+              onPress={handleRequestDataPwReset}
+              data-testid="forgot-data-password-btn"
+            >
+              <Text style={{ color: '#7B1FA2', fontSize: 13, textDecorationLine: 'underline' }}>
+                Password dimenticata?
+              </Text>
+            </TouchableOpacity>
+            
             <View style={styles.passwordModalButtons}>
               <TouchableOpacity
                 style={[styles.passwordModalBtn, styles.passwordModalBtnCancel]}
@@ -2751,9 +2806,68 @@ export default function AthleteDetail() {
           </View>
         </View>
       </Modal>
+      
+      {/* Data Password Reset Modal (code verification) */}
+      <Modal
+        visible={dataPwResetStep === 'code_sent'}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => { setDataPwResetStep('idle'); setDataPwResetError(''); }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.passwordModal}>
+            <View style={styles.passwordModalHeader}>
+              <Ionicons name="mail-open" size={32} color="#7B1FA2" />
+              <Text style={styles.passwordModalTitle}>Reset Password Dati</Text>
+              <Text style={styles.passwordModalSubtitle}>
+                Abbiamo inviato un codice di verifica alla tua email. Inseriscilo qui sotto con la nuova password.
+              </Text>
+            </View>
+            
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Codice di verifica (6 cifre)"
+              placeholderTextColor="#999"
+              value={dataPwResetCode}
+              onChangeText={setDataPwResetCode}
+              keyboardType="numeric"
+              maxLength={6}
+              autoFocus
+            />
+            
+            <TextInput
+              style={[styles.passwordInput, { marginTop: 8 }]}
+              placeholder="Nuova password dati"
+              placeholderTextColor="#999"
+              value={dataPwResetNewPw}
+              onChangeText={setDataPwResetNewPw}
+              autoCapitalize="none"
+            />
+            
+            {dataPwResetError ? (
+              <Text style={styles.passwordError}>{dataPwResetError}</Text>
+            ) : null}
+            
+            <View style={styles.passwordModalButtons}>
+              <TouchableOpacity
+                style={[styles.passwordModalBtn, styles.passwordModalBtnCancel]}
+                onPress={() => { setDataPwResetStep('idle'); setDataPwResetCode(''); setDataPwResetNewPw(''); setDataPwResetError(''); }}
+              >
+                <Text style={styles.passwordModalBtnCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.passwordModalBtn, { backgroundColor: '#7B1FA2', opacity: dataPwResetCode.length === 6 && dataPwResetNewPw.length >= 4 ? 1 : 0.5 }]}
+                onPress={handleConfirmDataPwReset}
+                disabled={dataPwResetCode.length !== 6 || dataPwResetNewPw.length < 4}
+              >
+                <Text style={styles.passwordModalBtnConfirmText}>Conferma</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
