@@ -1181,10 +1181,32 @@ async def check_athlete_status(athlete_id: str):
         return {"allowed": False, "reason": "⛔ ATLETA RITIRATO - Non più iscritto alla squadra", "warning": None}
     
     # Check if trial period ended and privacy not accepted
-    if datetime.utcnow() > athlete["trial_end_date"] and not athlete.get("privacy_accepted"):
-        return {"allowed": False, "reason": "Privacy non accettata - periodo di prova terminato", "warning": None}
+    is_trial = athlete.get("is_trial", False)
+    trial_start = athlete.get("trial_start_date")
+    trial_end = athlete.get("trial_end_date")
+    trial_active = False
+    
+    if is_trial:
+        if trial_start and trial_end:
+            try:
+                end_dt = datetime.fromisoformat(str(trial_end)) if isinstance(trial_end, str) else trial_end
+                trial_active = datetime.utcnow() <= end_dt
+            except:
+                trial_active = False
+        elif not trial_start:
+            # Not yet started (waiting first attendance)
+            trial_active = True
+    
+    # If trial expired, check normal rules
+    if is_trial and trial_start and not trial_active and not athlete.get("privacy_accepted"):
+        return {"allowed": False, "reason": "Periodo di prova terminato - iscrizione richiesta", "warning": None}
     
     # BLOCCO AUTOMATICO SEMPRE ATTIVO - nessun check impostazioni
+    
+    # Check certificate (skip for active trial athletes)
+    if trial_active:
+        # Trial athletes can train without certificate
+        return {"allowed": True, "reason": None, "warning": "Atleta in periodo di prova - Certificato medico richiesto al termine della prova"}
     
     # Check certificate
     certificate = await db.certificates.find_one({"athlete_id": athlete_id})
@@ -9682,6 +9704,18 @@ async def check_attendance(attendance_data: AttendanceCreate, current_user = Dep
     # 9. Save attendance
     await db.attendances.insert_one(attendance_dict)
     
+    # 9b. Trial period: if first attendance, set trial start date
+    if athlete.get("is_trial") and not athlete.get("trial_start_date"):
+        trial_start = datetime.now()
+        trial_end = trial_start + timedelta(days=7)
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {
+                "trial_start_date": trial_start.isoformat(),
+                "trial_end_date": trial_end.isoformat(),
+            }}
+        )
+    
     # 10. Return response with athlete name for display (ensure all values are JSON serializable)
     response = {
         "id": str(attendance_dict["id"]),
@@ -17353,6 +17387,255 @@ async def delete_my_data(current_user = Depends(get_current_user)):
             status_code=500, 
             detail="Si è verificato un errore durante l'eliminazione dei dati. Contatta l'amministratore."
         )
+
+# ==================== TRIAL PERIOD ENDPOINTS ====================
+
+@api_router.get("/athletes/{athlete_id}/trial-document")
+async def generate_trial_document(athlete_id: str, current_user = Depends(get_current_user)):
+    """Genera il PDF della dichiarazione per il periodo di prova"""
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if not athlete.get("is_minor"):
+        raise HTTPException(status_code=400, detail="Il documento di prova e disponibile solo per atleti minorenni")
+    
+    # Verify parent ownership
+    if current_user["role"] == UserRole.PARENT:
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    
+    # Get parent info
+    parent = await db.users.find_one({"id": athlete.get("parent_id")})
+    
+    # Get society info
+    society = await db.societies.find_one({"id": athlete.get("society_id")})
+    society_name = society.get("name", "Societa Sportiva") if society else "Societa Sportiva"
+    
+    # Generate PDF
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm, mm
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.lib.colors import HexColor, black, grey
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=2.5*cm, rightMargin=2.5*cm, topMargin=2*cm, bottomMargin=2*cm)
+    
+    # Styles
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Title'], fontSize=16, spaceAfter=6, textColor=HexColor('#1a1a2e'), fontName='Helvetica-Bold')
+    subtitle_style = ParagraphStyle('SubtitleStyle', parent=styles['Normal'], fontSize=11, alignment=TA_CENTER, spaceAfter=20, textColor=HexColor('#555555'), fontName='Helvetica')
+    heading_style = ParagraphStyle('HeadingStyle', parent=styles['Heading2'], fontSize=12, spaceBefore=16, spaceAfter=8, textColor=HexColor('#2c3e50'), fontName='Helvetica-Bold')
+    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=10, leading=14, spaceAfter=4, fontName='Helvetica')
+    body_justify = ParagraphStyle('BodyJustify', parent=styles['Normal'], fontSize=10, leading=15, alignment=TA_JUSTIFY, spaceAfter=6, fontName='Helvetica')
+    bullet_style = ParagraphStyle('BulletStyle', parent=styles['Normal'], fontSize=10, leading=15, alignment=TA_JUSTIFY, leftIndent=20, spaceAfter=4, fontName='Helvetica')
+    field_label = ParagraphStyle('FieldLabel', parent=styles['Normal'], fontSize=9, textColor=HexColor('#666666'), fontName='Helvetica')
+    field_value = ParagraphStyle('FieldValue', parent=styles['Normal'], fontSize=11, fontName='Helvetica-Bold', spaceBefore=2, spaceAfter=8)
+    sign_style = ParagraphStyle('SignStyle', parent=styles['Normal'], fontSize=10, spaceBefore=30, fontName='Helvetica')
+    
+    elements = []
+    
+    # Header
+    elements.append(Paragraph(society_name.upper(), title_style))
+    elements.append(Spacer(1, 4))
+    elements.append(HRFlowable(width="100%", thickness=2, color=HexColor('#1a1a2e')))
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph("DICHIARAZIONE PER PERIODO DI PROVA ATLETA MINORE", subtitle_style))
+    elements.append(Spacer(1, 8))
+    
+    # Parent/Guardian Info
+    elements.append(Paragraph("DATI DEL GENITORE/TUTORE", heading_style))
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#cccccc')))
+    elements.append(Spacer(1, 6))
+    
+    parent_name = parent.get("full_name", "") if parent else ""
+    parent_cf = parent.get("fiscal_code", "") if parent else ""
+    parent_phone = parent.get("phone", "") if parent else ""
+    
+    parent_data = [
+        ["Nome e Cognome:", parent_name or "______________________________"],
+        ["Codice Fiscale:", parent_cf or "______________________________"],
+        ["Telefono:", parent_phone or "______________________________"],
+    ]
+    t = Table(parent_data, colWidths=[4*cm, 12*cm])
+    t.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('TEXTCOLOR', (0, 0), (0, -1), HexColor('#666666')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 8))
+    
+    # Minor Info
+    elements.append(Paragraph("DATI DELL'ATLETA MINORE", heading_style))
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#cccccc')))
+    elements.append(Spacer(1, 6))
+    
+    athlete_name = athlete.get("full_name", "")
+    athlete_dob = athlete.get("date_of_birth", "")
+    athlete_cf = athlete.get("codice_fiscale", "") or athlete.get("fiscal_code", "")
+    
+    minor_data = [
+        ["Nome e Cognome:", athlete_name or "______________________________"],
+        ["Data di Nascita:", athlete_dob or "______________________________"],
+        ["Codice Fiscale:", athlete_cf or "______________________________"],
+    ]
+    t2 = Table(minor_data, colWidths=[4*cm, 12*cm])
+    t2.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('TEXTCOLOR', (0, 0), (0, -1), HexColor('#666666')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(t2)
+    elements.append(Spacer(1, 12))
+    
+    # Request
+    elements.append(Paragraph("RICHIESTA", heading_style))
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#cccccc')))
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(
+        f"CHIEDE che il minore sopra indicato possa partecipare ad un periodo di prova "
+        f"dell'attivita sportiva organizzata dalla societa sportiva <b>{society_name}</b>.",
+        body_justify
+    ))
+    elements.append(Spacer(1, 8))
+    
+    # Declarations
+    elements.append(Paragraph("DICHIARA", heading_style))
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#cccccc')))
+    elements.append(Spacer(1, 6))
+    
+    declarations = [
+        "di essere consapevole che la pratica dell'attivita sportiva richiede idonea certificazione medica;",
+        "che il minore, per quanto a propria conoscenza, non presenta condizioni ostative alla pratica sportiva;",
+        "di impegnarsi a consegnare il certificato medico entro il periodo di prova stabilito dalla societa;",
+        "di essere informato/a che, in assenza del certificato medico entro i termini previsti, il minore non potra proseguire l'attivita sportiva;",
+    ]
+    for decl in declarations:
+        elements.append(Paragraph(f"\u2022  {decl}", bullet_style))
+    
+    elements.append(Spacer(1, 12))
+    
+    # Trial period duration
+    elements.append(Paragraph("DURATA DEL PERIODO DI PROVA", heading_style))
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#cccccc')))
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(
+        "Il periodo di prova ha durata di <b>7 (sette) giorni</b> a partire dalla data del primo allenamento. "
+        "La data di inizio decorre automaticamente dalla prima presenza registrata tramite scansione QR.",
+        body_justify
+    ))
+    elements.append(Spacer(1, 20))
+    
+    # Signature area
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#cccccc')))
+    elements.append(Spacer(1, 16))
+    
+    sign_data = [
+        ["Luogo e Data: ____________________________", "Firma del genitore/tutore:"],
+        ["", ""],
+        ["", "____________________________"],
+    ]
+    t3 = Table(sign_data, colWidths=[8*cm, 8*cm])
+    t3.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+    ]))
+    elements.append(t3)
+    
+    elements.append(Spacer(1, 24))
+    elements.append(Paragraph(
+        f"<i>Documento generato dal sistema {society_name} - Da stampare, compilare con data e firma il giorno del primo allenamento.</i>",
+        ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=HexColor('#999999'), alignment=TA_CENTER)
+    ))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    # Mark trial document as generated
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {"trial_document_generated": True, "is_trial": True}}
+    )
+    
+    filename = f"Dichiarazione_Prova_{athlete.get('last_name', '')}_{athlete.get('first_name', '')}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+@api_router.post("/athletes/{athlete_id}/start-trial")
+async def start_trial_period(athlete_id: str, current_user = Depends(get_current_user)):
+    """Attiva il periodo di prova per un atleta"""
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if current_user["role"] == UserRole.PARENT:
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {"is_trial": True, "trial_document_generated": False, "trial_start_date": None, "trial_end_date": None}}
+    )
+    
+    return {"message": "Periodo di prova attivato. Scarica il documento da stampare e far firmare il giorno del primo allenamento."}
+
+@api_router.get("/athletes/{athlete_id}/trial-status")
+async def get_trial_status(athlete_id: str, current_user = Depends(get_current_user)):
+    """Ottieni lo stato del periodo di prova"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    is_trial = athlete.get("is_trial", False)
+    trial_start = athlete.get("trial_start_date")
+    trial_end = athlete.get("trial_end_date")
+    
+    days_remaining = None
+    trial_expired = False
+    if trial_end:
+        try:
+            end_dt = datetime.fromisoformat(str(trial_end)) if isinstance(trial_end, str) else trial_end
+            remaining = (end_dt - datetime.now()).days
+            days_remaining = max(0, remaining)
+            trial_expired = remaining < 0
+        except:
+            pass
+    
+    return {
+        "is_trial": is_trial,
+        "trial_start_date": trial_start,
+        "trial_end_date": trial_end,
+        "trial_document_generated": athlete.get("trial_document_generated", False),
+        "days_remaining": days_remaining,
+        "trial_expired": trial_expired,
+        "trial_active": is_trial and not trial_expired and trial_start is not None,
+        "waiting_first_attendance": is_trial and trial_start is None,
+    }
 
 # ==================== MINOR DASHBOARD ENDPOINTS ====================
 

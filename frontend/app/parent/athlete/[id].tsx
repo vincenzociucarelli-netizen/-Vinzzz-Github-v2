@@ -302,6 +302,10 @@ export default function AthleteDetail() {
   const [minorConfirmPin, setMinorConfirmPin] = useState('');
   const [savingMinorPin, setSavingMinorPin] = useState(false);
 
+  // Trial period states
+  const [trialStatus, setTrialStatus] = useState<any>(null);
+  const [downloadingTrialDoc, setDownloadingTrialDoc] = useState(false);
+
   // Helper function for alerts
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
@@ -405,6 +409,14 @@ export default function AthleteDetail() {
         setMinorAthleteCode(minorStatusRes.data.athlete_code || '');
       } catch (error) {
         console.log('Could not load minor access status');
+      }
+
+      // Load trial status
+      try {
+        const trialRes = await api.get(`/athletes/${id}/trial-status`);
+        setTrialStatus(trialRes.data);
+      } catch (error) {
+        console.log('Could not load trial status');
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -2106,6 +2118,109 @@ export default function AthleteDetail() {
                 </View>
               ))}
             </View>
+          </View>
+        )}
+
+        {/* Trial Period Section */}
+        {trialStatus && (
+          <View style={[styles.card, { marginTop: 12 }]} data-testid="trial-period-section">
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Ionicons name="timer" size={20} color="#FF9500" />
+              <Text style={[styles.cardTitle, { marginBottom: 0, marginLeft: 8 }]}>Periodo di Prova</Text>
+            </View>
+
+            {trialStatus.is_trial ? (
+              <>
+                {/* Trial active states */}
+                {trialStatus.waiting_first_attendance && (
+                  <View style={{ backgroundColor: '#FFF8E1', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FFB300', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#F57F17', marginBottom: 4 }}>In attesa del primo allenamento</Text>
+                    <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18 }}>
+                      Il periodo di prova di 7 giorni iniziera automaticamente quando {athlete?.first_name || 'l\'atleta'} registrera la prima presenza tramite scansione QR.
+                    </Text>
+                  </View>
+                )}
+
+                {trialStatus.trial_active && (
+                  <View style={{ backgroundColor: '#E8F5E9', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#4CAF50', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#2E7D32', marginBottom: 4 }}>Prova in Corso</Text>
+                    <Text style={{ fontSize: 12, color: '#555', lineHeight: 18 }}>
+                      {trialStatus.days_remaining !== null ? `${trialStatus.days_remaining} giorni rimanenti` : ''}
+                      {trialStatus.trial_start_date ? ` (iniziata il ${new Date(trialStatus.trial_start_date).toLocaleDateString('it-IT')})` : ''}
+                    </Text>
+                  </View>
+                )}
+
+                {trialStatus.trial_expired && (
+                  <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#F44336', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#C62828', marginBottom: 4 }}>Periodo di Prova Terminato</Text>
+                    <Text style={{ fontSize: 12, color: '#555', lineHeight: 18 }}>
+                      Il periodo di prova e terminato. E' necessario procedere con l'iscrizione completa e il certificato medico.
+                    </Text>
+                  </View>
+                )}
+
+                {/* Download trial document */}
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: '#E3F2FD', paddingVertical: 12, borderRadius: 10, gap: 8,
+                    opacity: downloadingTrialDoc ? 0.6 : 1,
+                  }}
+                  disabled={downloadingTrialDoc}
+                  onPress={async () => {
+                    setDownloadingTrialDoc(true);
+                    try {
+                      const res = await api.get(`/athletes/${id}/trial-document`, { responseType: 'blob' });
+                      const blob = new Blob([res.data], { type: 'application/pdf' });
+                      const url = URL.createObjectURL(blob);
+                      window.open(url, '_blank');
+                    } catch (e: any) {
+                      showAlert('Errore', e.response?.data?.detail || 'Errore nel download del documento');
+                    } finally {
+                      setDownloadingTrialDoc(false);
+                    }
+                  }}
+                  data-testid="trial-download-document-button"
+                >
+                  <Ionicons name="document-text" size={18} color="#1565C0" />
+                  <Text style={{ fontWeight: '600', color: '#1565C0', fontSize: 14 }}>
+                    {downloadingTrialDoc ? 'Download...' : (trialStatus.trial_document_generated ? 'Riscarica Dichiarazione di Prova' : 'Scarica Dichiarazione di Prova')}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={{ fontSize: 11, color: '#888', marginTop: 6, textAlign: 'center', fontStyle: 'italic' }}>
+                  Stampa, compila con data e firma il giorno del primo allenamento
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={{ fontSize: 13, color: '#666', marginBottom: 14, lineHeight: 18 }}>
+                  Puoi attivare un periodo di prova di 7 giorni per {athlete?.first_name || 'tuo figlio/a'}. 
+                  Durante la prova non e richiesto il certificato medico. Il periodo inizia automaticamente 
+                  dalla prima presenza registrata (scansione QR).
+                </Text>
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: '#FFF3E0', paddingVertical: 12, borderRadius: 10, gap: 8,
+                  }}
+                  onPress={async () => {
+                    try {
+                      await api.post(`/athletes/${id}/start-trial`);
+                      const trialRes = await api.get(`/athletes/${id}/trial-status`);
+                      setTrialStatus(trialRes.data);
+                      showAlert('Successo', 'Periodo di prova attivato. Scarica ora il documento da stampare.');
+                    } catch (e: any) {
+                      showAlert('Errore', e.response?.data?.detail || 'Errore');
+                    }
+                  }}
+                  data-testid="trial-start-button"
+                >
+                  <Ionicons name="play-circle" size={18} color="#E65100" />
+                  <Text style={{ fontWeight: '600', color: '#E65100', fontSize: 14 }}>Attiva Periodo di Prova</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
 
