@@ -106,10 +106,19 @@ export default function ParentDocuments() {
 
   const openDocument = async (docId: string) => {
     try {
-      const url = `${api.defaults.baseURL}/documents/signed/${docId}/pdf`;
       if (Platform.OS === 'web') {
-        window.open(url, '_blank');
+        // Fetch PDF with auth token, then open blob URL
+        const token = localStorage.getItem('token') || '';
+        const baseUrl = api.defaults.baseURL || '';
+        const response = await fetch(`${baseUrl}/documents/signed/${docId}/pdf`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error('Download failed');
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
       } else {
+        const url = `${api.defaults.baseURL}/documents/signed/${docId}/pdf`;
         await Linking.openURL(url);
       }
     } catch (error) {

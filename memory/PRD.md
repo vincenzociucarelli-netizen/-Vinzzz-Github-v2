@@ -52,7 +52,7 @@ Sports team management application for Italian sports societies, targeting iOS A
 - Fix Prima Nota Cassa CSV: rimossa colonna "Codice Fiscale"
 - Fix Prima Nota Cassa CSV: corretto bug "Squadra" vuota (il lookup usava _id MongoDB invece del campo custom id dei team)
 - Pulizia variabili inutilizzate in other.tsx (seasonStartMonth, seasonStartDay, blockExpiredCertificates rimossi)
-- Aggiornata descrizione export Prima Nota Cassa in export-data.tsx
+- Fix bug "Not authenticated" apertura PDF documenti firmati GDPR da parent/documents.tsx (window.open senza token → fetch con token + blob URL)
 
 ## Session 4 Completions (March 16, 2026)
 - P0: Account card email now shows only athlete's email (removed parent email fallback)
