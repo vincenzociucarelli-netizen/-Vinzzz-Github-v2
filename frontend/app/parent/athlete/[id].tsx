@@ -36,19 +36,28 @@ import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency'
 // --- Certificate Date Form Component ---
 function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: string, certificate: any, onSaved: () => void }) {
   const [issueDate, setIssueDate] = useState(certificate?.issue_date ? format(new Date(certificate.issue_date), 'dd/MM/yyyy') : '');
-  const [validityMonths, setValidityMonths] = useState(certificate?.validity_months?.toString() || '12');
+  const [validityMonths, setValidityMonths] = useState(certificate?.validity_months?.toString() || '');
   const [calculatedExpiry, setCalculatedExpiry] = useState('');
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
+  const formatDateInput = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    let formatted = '';
+    if (digits.length > 0) formatted = digits.substring(0, 2);
+    if (digits.length > 2) formatted += '/' + digits.substring(2, 4);
+    if (digits.length > 4) formatted += '/' + digits.substring(4, 8);
+    return formatted;
+  };
+
   useEffect(() => {
-    // Auto-calculate expiry when issue date or months change
     if (issueDate && validityMonths) {
       const parts = issueDate.split('/');
       if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
         const dt = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-        if (!isNaN(dt.getTime())) {
-          const expiry = subDays(addMonths(dt, parseInt(validityMonths) || 0), 1);
+        const months = parseInt(validityMonths) || 0;
+        if (!isNaN(dt.getTime()) && months > 0) {
+          const expiry = subDays(addMonths(dt, months), 1);
           setCalculatedExpiry(format(expiry, 'dd/MM/yyyy'));
           return;
         }
@@ -106,11 +115,12 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
       {/* Data Emissione */}
       <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 4 }}>Data Emissione</Text>
       <TextInput
-        style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15, backgroundColor: '#fff', marginBottom: 12 }}
-        placeholder="GG/MM/AAAA"
+        style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15, backgroundColor: '#fff', marginBottom: 12, color: issueDate ? '#000' : '#aaa' }}
+        placeholder="gg/mm/aaaa"
+        placeholderTextColor="#ccc"
         value={issueDate}
-        onChangeText={setIssueDate}
-        keyboardType="default"
+        onChangeText={(text) => setIssueDate(formatDateInput(text))}
+        keyboardType="numeric"
         maxLength={10}
         data-testid="cert-issue-date-input"
       />
@@ -118,8 +128,9 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
       {/* Mesi di validità */}
       <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 4 }}>Mesi di Validità</Text>
       <TextInput
-        style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15, backgroundColor: '#fff', marginBottom: 12 }}
-        placeholder="12"
+        style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15, backgroundColor: '#fff', marginBottom: 12, color: validityMonths ? '#000' : '#aaa' }}
+        placeholder="0"
+        placeholderTextColor="#ccc"
         value={validityMonths}
         onChangeText={setValidityMonths}
         keyboardType="numeric"
@@ -127,15 +138,13 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
         data-testid="cert-validity-months-input"
       />
       
-      {/* Scadenza calcolata */}
-      {calculatedExpiry && (
-        <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Ionicons name="calendar" size={18} color="#2E7D32" />
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#2E7D32' }}>
-            Scadenza: {calculatedExpiry}
-          </Text>
-        </View>
-      )}
+      {/* Scadenza calcolata - sempre visibile */}
+      <View style={{ backgroundColor: calculatedExpiry ? '#E8F5E9' : '#F5F5F5', padding: 12, borderRadius: 8, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Ionicons name="calendar" size={18} color={calculatedExpiry ? '#2E7D32' : '#bbb'} />
+        <Text style={{ fontSize: 14, fontWeight: '600', color: calculatedExpiry ? '#2E7D32' : '#bbb' }}>
+          Scadenza: {calculatedExpiry || 'gg/mm/aaaa'}
+        </Text>
+      </View>
       
       {/* Bottoni */}
       <View style={{ flexDirection: 'row', gap: 10 }}>
