@@ -51,6 +51,14 @@ Sports team management application for Italian sports societies, targeting iOS A
 - P0: Removed "Email 2° Genitore" from read-only view of minor athlete profile (kept in edit modal only)
 - P0: Confirmed "Calcola CF" button is only in edit modal (not in read-only view)
 - P1: Added mandatory "Responsabile del Trattamento Dati" (GDPR Data Processor) checkbox in admin terms acceptance form
+- Attestato di Versamento: "Abbiamo ricevuto da:" → "Il presente documento attesta i versamenti effettuati da:"
+- Attestato di Versamento: "la somma di:" → "per la somma di:"
+- Attestato di Versamento: Nota legale aggiornata con art. 148 TUIR e art. 4 DPR 633/72
+- Attestato di Versamento: "TOTALE VERSATO alla data del: GG/MM/AAAA" nella riga totale
+- Attestato di Versamento: Footer "Documento generato dal sistema gestionale RegistraTEAM" con data
+- Attestato di Versamento: Frase per il minore con riferimento a detrazioni fiscali
+- Privacy Minorenne GDPR: Sostituito modal semplice con GDPRPrivacyModal completo (testo GDPR, anteprima PDF, firma digitale, metadati)
+- Privacy di Lucia resettata per consentire il test del nuovo flusso
 
 ## Previous Session Completions
 - Legal pages, Terms of Use, Privacy Policy
