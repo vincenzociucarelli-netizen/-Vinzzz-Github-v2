@@ -8553,6 +8553,9 @@ async def create_manual_payment(payment_data: PaymentCreate, current_user = Depe
     if not payment_method:
         payment_method = "Contanti" if payment_data.is_cash else "Bonifico"
     
+    # Generate receipt number (Prima Nota Cassa)
+    receipt_number = await get_next_receipt_number(current_user.get("society_id", ""))
+    
     payment = Payment(
         athlete_id=payment_data.athlete_id,
         amount=payment_data.amount,
@@ -8562,6 +8565,8 @@ async def create_manual_payment(payment_data: PaymentCreate, current_user = Depe
         payment_method=payment_method,
         notes=payment_data.notes,
         description=payment_data.description or f"Pagamento del {payment_data.paid_date}",
+        receipt_number=receipt_number,
+        registration_date=datetime.utcnow(),
         created_by=current_user["id"]
     )
     
@@ -8876,6 +8881,7 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
                 "amount": p.get("amount", 0),
                 "description": p.get("description", ""),
                 "payment_method": p.get("payment_method", ""),
+                "registration_date": p.get("registration_date").isoformat() if p.get("registration_date") else "",
             }
             for p in payments
         ],

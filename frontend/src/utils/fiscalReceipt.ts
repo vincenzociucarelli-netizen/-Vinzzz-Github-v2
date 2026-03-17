@@ -7,6 +7,7 @@ interface PaymentData {
   amount: number;
   description?: string;
   payment_method?: string;
+  registration_date?: string;
 }
 
 interface AthleteData {
@@ -88,16 +89,16 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
   const paymentRows = data.payments.map((payment, index) => {
     const bgColor = index % 2 === 0 ? '#fff' : '#f5f5f5';
     const payDate = formatDateIT(payment.date);
+    const regDate = formatDateIT(payment.registration_date || '');
     const method = payment.payment_method || '-';
-    const desc = (payment.description || '').substring(0, 25);
     
     return `
       <tr style="background-color: ${bgColor};">
-        <td style="padding: 8px; border: 1px solid #ddd;">${payDate}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${payment.receipt_number || '-'}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${formatCurrency(payment.amount || 0)}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${method}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${desc}</td>
+        <td style="padding: 6px; border: 1px solid #ddd; text-align: center;">${payment.receipt_number || '-'}</td>
+        <td style="padding: 6px; border: 1px solid #ddd; text-align: center;">${payDate}</td>
+        <td style="padding: 6px; border: 1px solid #ddd; text-align: center;">${regDate || payDate}</td>
+        <td style="padding: 6px; border: 1px solid #ddd; text-align: center;">${method}</td>
+        <td style="padding: 6px; border: 1px solid #ddd; text-align: right;">${formatCurrency(payment.amount || 0)}</td>
       </tr>
     `;
   }).join('');
@@ -246,18 +247,18 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
         <table>
           <thead>
             <tr>
-              <th>Data vers.</th>
-              <th>Ricevuta</th>
-              <th>Importo</th>
+              <th>N. Prog.</th>
+              <th>Data Pagamento</th>
+              <th>Data Registraz.</th>
               <th>Metodo</th>
-              <th>Descrizione</th>
+              <th style="text-align: right;">Importo</th>
             </tr>
           </thead>
           <tbody>
             ${paymentRows}
             <tr class="total-row">
-              <td colspan="2"><b>TOTALE VERSATO alla data del: ${dateStr}</b></td>
-              <td colspan="3" style="text-align: right;"><b>${formatCurrency(totalPaid)}</b></td>
+              <td colspan="4"><b>TOTALE VERSATO alla data del: ${dateStr}</b></td>
+              <td style="text-align: right;"><b>${formatCurrency(totalPaid)}</b></td>
             </tr>
           </tbody>
         </table>
