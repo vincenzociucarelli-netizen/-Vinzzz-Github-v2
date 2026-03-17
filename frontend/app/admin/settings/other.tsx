@@ -9,11 +9,13 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../../src/components/Icon';
 import api from '../../../src/services/api';
 import { SportIcon } from '../../../src/components/SportIcon';
+import * as ImagePicker from 'expo-image-picker';
 
 const showAlert = (title: string, message: string) => {
   if (Platform.OS === 'web') {
@@ -47,8 +49,8 @@ export default function OtherSettings() {
   const [newVenueAddress, setNewVenueAddress] = useState('');
   const [newVenueCity, setNewVenueCity] = useState('');
 
-  // Stagione sportiva
-  const [seasonStartMonth, setSeasonStartMonth] = useState(7);
+  // Immagine Sport
+  const [sportImage, setSportImage] = useState<string | null>(null);
 
   useEffect(() => {
     checkAccessAndLoad();
@@ -69,11 +71,6 @@ export default function OtherSettings() {
       router.replace('/');
     }
   };
-  const [seasonStartDay, setSeasonStartDay] = useState(1);
-
-  // Blocco certificati medici scaduti
-  const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(true); // Default ATTIVO
-
   const loadSettings = async () => {
     try {
       const response = await api.get('/settings/society');
@@ -81,8 +78,7 @@ export default function OtherSettings() {
       setAthleteCharacteristics(response.data.athlete_characteristics || []);
       setDirigenteQualifications(response.data.dirigente_qualifications || []);
       setVenues(response.data.venues || []);
-      // Default to true if not set
-      setBlockExpiredCertificates(response.data.block_expired_certificates !== false);
+      setSportImage(response.data.sport_image || null);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -98,13 +94,30 @@ export default function OtherSettings() {
         athlete_characteristics: athleteCharacteristics,
         dirigente_qualifications: dirigenteQualifications,
         venues: venues,
-        block_expired_certificates: blockExpiredCertificates,
+        sport_image: sportImage,
       });
       showAlert('Successo', 'Impostazioni salvate con successo');
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSelectSportImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+      if (!result.canceled && result.assets[0].base64) {
+        setSportImage(result.assets[0].base64);
+      }
+    } catch (error) {
+      showAlert('Errore', 'Impossibile selezionare l\'immagine');
     }
   };
 
@@ -185,56 +198,47 @@ export default function OtherSettings() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Certificato Medico - PRIMO perché più importante */}
+        {/* Immagine Sport */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏥 Certificato Medico</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <SportIcon size={20} />
+            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Immagine Sport</Text>
+          </View>
           <Text style={styles.sectionDesc}>
-            Gestione scadenza certificati medici atleti
+            Carica un'immagine che rappresenta il tuo sport
           </Text>
           
-          <TouchableOpacity 
-            style={[
-              styles.toggleContainer, 
-              blockExpiredCertificates && styles.toggleContainerActive
-            ]}
-            onPress={() => setBlockExpiredCertificates(!blockExpiredCertificates)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.toggleInfo}>
-              <Text style={[
-                styles.toggleTitle,
-                blockExpiredCertificates && styles.toggleTitleActive
-              ]}>
-                {blockExpiredCertificates ? '🔒 Blocco automatico ATTIVO' : '🔓 Blocco automatico DISATTIVO'}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8 }}>
+            {sportImage ? (
+              <View style={{ position: 'relative' }}>
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
+                  style={{ width: 100, height: 100, borderRadius: 8 }}
+                  resizeMode="contain"
+                />
+                <TouchableOpacity 
+                  style={{ position: 'absolute', top: -8, right: -8 }}
+                  onPress={() => setSportImage(null)}
+                >
+                  <Ionicons name="close-circle" size={28} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ width: 100, height: 100, borderRadius: 8, backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#ddd', borderStyle: 'dashed' }}>
+                <Ionicons name="football-outline" size={48} color="#ccc" />
+              </View>
+            )}
+            
+            <TouchableOpacity 
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f0f0f0', padding: 10, borderRadius: 8 }}
+              onPress={handleSelectSportImage}
+            >
+              <Ionicons name="cloud-upload" size={20} color="#007AFF" />
+              <Text style={{ color: '#007AFF', fontWeight: '600' }}>
+                {sportImage ? 'Cambia' : 'Seleziona'}
               </Text>
-              <Text style={styles.toggleDesc}>
-                {blockExpiredCertificates 
-                  ? 'La scansione QR blocca la registrazione agli allenamenti per atleti con certificato scaduto o mancante'
-                  : 'La scansione QR permette la registrazione agli allenamenti anche con certificato scaduto'}
-              </Text>
-            </View>
-            <View style={[
-              styles.toggleSwitch, 
-              blockExpiredCertificates && styles.toggleSwitchOn
-            ]}>
-              <View style={[
-                styles.toggleKnob, 
-                blockExpiredCertificates && styles.toggleKnobOn
-              ]} />
-            </View>
-          </TouchableOpacity>
-          
-          {blockExpiredCertificates && (
-            <View style={styles.toggleNote}>
-              <Text style={styles.toggleNoteText}>
-                📌 Regole quando attivo:{'\n'}
-                • QR non consente registrazione presenze con certificato scaduto{'\n'}
-                • Solo Admin può fare override (valido per singola sessione){'\n'}
-                • Motivo override obbligatorio{'\n'}
-                • Ogni override viene tracciato con log
-              </Text>
-            </View>
-          )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Ruoli Atleti */}

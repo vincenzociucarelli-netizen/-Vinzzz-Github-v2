@@ -12,7 +12,7 @@ import os
 import json
 from datetime import datetime, timedelta
 
-BASE_URL = "https://team-manager-app-20.preview.emergentagent.com"
+BASE_URL = "https://roster-system-prod.preview.emergentagent.com"
 
 # Test credentials
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"

@@ -58,7 +58,7 @@ const EXPORT_OPTIONS: ExportOption[] = [
   {
     key: 'prima-nota',
     title: 'Prima Nota Cassa',
-    description: 'N. progressivo, data pagamento, data registrazione, atleta, metodo, importo',
+    description: 'Data registrazione, progressivo, data pagamento, atleta, squadra, metodo, importo',
     icon: 'receipt',
     color: '#FF2D55',
     endpoint: '/export-csv/prima-nota',

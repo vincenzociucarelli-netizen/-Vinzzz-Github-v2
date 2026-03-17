@@ -17396,21 +17396,20 @@ async def export_prima_nota_csv(current_user = Depends(get_current_user)):
         {"athlete_id": {"$in": athlete_ids}, "receipt_number": {"$exists": True, "$nin": [None, ""]}}
     ).sort("receipt_number", 1).to_list(50000)
     
-    # Get teams for team name lookup
-    teams_cursor = db.teams.find({"society_id": society_id}, {"_id": 1, "name": 1})
+    # Get teams for team name lookup - use custom 'id' field, not '_id'
+    teams_cursor = db.teams.find({"society_id": society_id}, {"_id": 0, "id": 1, "name": 1})
     teams_list = await teams_cursor.to_list(100)
-    team_map = {str(t["_id"]): t.get("name", "") for t in teams_list}
+    team_map = {t.get("id", ""): t.get("name", "") for t in teams_list}
     
     output = io.StringIO()
     writer = csv.writer(output, delimiter=';')
     
     # Header
     writer.writerow([
+        'Data Registrazione',
         'N. Progressivo',
         'Data Pagamento',
-        'Data Registrazione',
         'Atleta',
-        'Codice Fiscale',
         'Squadra',
         'Metodo Pagamento',
         'Descrizione',
@@ -17434,11 +17433,10 @@ async def export_prima_nota_csv(current_user = Depends(get_current_user)):
         amount_str = f"{amount:.2f}".replace('.', ',')
         
         writer.writerow([
+            reg_date,
             p.get("receipt_number", ""),
             paid_date,
-            reg_date,
             athlete_name,
-            athlete.get("fiscal_code", ""),
             team_name,
             p.get("payment_method", ""),
             p.get("description", ""),

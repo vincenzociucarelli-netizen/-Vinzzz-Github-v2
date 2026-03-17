@@ -46,6 +46,14 @@ Sports team management application for Italian sports societies, targeting iOS A
 - Auto-format date input in invite-register form
 - Unified email fields in invite-register (single email = username)
 
+## Session 5 Completions (March 17, 2026)
+- Riorganizzazione pagina "Dati Società": Certificato Medico spostato in cima, Logo Società spostato in fondo
+- Fix Prima Nota Cassa CSV: corretto ordine colonne (Data Registrazione, Progressivo, Data Pagamento, Atleta, Squadra, Metodo, Descrizione, Importo)
+- Fix Prima Nota Cassa CSV: rimossa colonna "Codice Fiscale"
+- Fix Prima Nota Cassa CSV: corretto bug "Squadra" vuota (il lookup usava _id MongoDB invece del campo custom id dei team)
+- Pulizia variabili inutilizzate in other.tsx (seasonStartMonth, seasonStartDay, blockExpiredCertificates rimossi)
+- Aggiornata descrizione export Prima Nota Cassa in export-data.tsx
+
 ## Session 4 Completions (March 16, 2026)
 - P0: Account card email now shows only athlete's email (removed parent email fallback)
 - P0: Removed "Email 2° Genitore" from read-only view of minor athlete profile (kept in edit modal only)

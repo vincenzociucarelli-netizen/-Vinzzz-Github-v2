@@ -54,6 +54,12 @@ export default function SocietySettings() {
   const [societyPec, setSocietyPec] = useState('');
   const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(false);
 
+  // Stagione sportiva
+  const [seasonStartMonth, setSeasonStartMonth] = useState(7);
+  const [seasonStartDay, setSeasonStartDay] = useState(1);
+  const [seasonEndMonth, setSeasonEndMonth] = useState(6);
+  const [seasonEndDay, setSeasonEndDay] = useState(30);
+
   useEffect(() => {
     checkAccessAndLoad();
   }, []);
@@ -95,6 +101,10 @@ export default function SocietySettings() {
       setSocietyEmail(response.data.email || '');
       setSocietyPec(response.data.pec || '');
       setBlockExpiredCertificates(response.data.block_expired_certificates || false);
+      setSeasonStartMonth(response.data.season_start_month || 7);
+      setSeasonStartDay(response.data.season_start_day || 1);
+      setSeasonEndMonth(response.data.season_end_month || 6);
+      setSeasonEndDay(response.data.season_end_day || 30);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -124,6 +134,10 @@ export default function SocietySettings() {
         email: societyEmail,
         pec: societyPec,
         block_expired_certificates: blockExpiredCertificates,
+        season_start_month: seasonStartMonth,
+        season_start_day: seasonStartDay,
+        season_end_month: seasonEndMonth,
+        season_end_day: seasonEndDay,
       });
       // Clear the sport icon cache so all components reload the new image
       clearSportIconCache();
@@ -211,99 +225,61 @@ export default function SocietySettings() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Logo Società */}
+        {/* Certificato Medico */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏢 Logo Società</Text>
-          <View style={styles.logoContainer}>
-            {logo ? (
-              <View style={styles.logoPreview}>
-                <Image
-                  source={{ uri: `data:image/jpeg;base64,${logo}` }}
-                  style={[styles.logoImage, { width: logoSize, height: logoSize }]}
-                  resizeMode="contain"
-                />
-                <TouchableOpacity 
-                  style={styles.removeLogoBtn}
-                  onPress={() => setLogo(null)}
-                >
-                  <Ionicons name="close-circle" size={28} color="#FF3B30" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.logoPlaceholder}>
-                <Ionicons name="image-outline" size={48} color="#ccc" />
-                <Text style={styles.logoPlaceholderText}>Nessun logo</Text>
-              </View>
-            )}
-            
-            <TouchableOpacity style={styles.selectLogoBtn} onPress={handleSelectLogo}>
-              <Ionicons name="cloud-upload" size={20} color="#007AFF" />
-              <Text style={styles.selectLogoBtnText}>
-                {logo ? 'Cambia Logo' : 'Seleziona Logo'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          
-          {logo && (
-            <View style={styles.sizeControl}>
-              <Text style={styles.sizeLabel}>Dimensione Logo nell'header: {logoSize}px</Text>
-              <View style={styles.sliderRow}>
-                <Text style={styles.sliderLabel}>Piccolo</Text>
-                <Slider
-                  style={styles.slider}
-                  minimumValue={30}
-                  maximumValue={80}
-                  step={5}
-                  value={logoSize}
-                  onValueChange={setLogoSize}
-                  minimumTrackTintColor="#1565C0"
-                  maximumTrackTintColor="#ddd"
-                  thumbTintColor="#1565C0"
-                />
-                <Text style={styles.sliderLabel}>Grande</Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Immagine Sport */}
-        <View style={styles.section}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <SportIcon size={20} />
-            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Immagine Sport</Text>
-          </View>
+          <Text style={styles.sectionTitle}>🏥 Certificato Medico</Text>
           <Text style={styles.sectionDesc}>
-            Carica un'immagine che rappresenta il tuo sport
+            Gestione scadenza certificati medici atleti
           </Text>
           
-          <View style={styles.logoContainer}>
-            {sportImage ? (
-              <View style={styles.logoPreview}>
-                <Image
-                  source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
-                  style={{ width: 100, height: 100 }}
-                  resizeMode="contain"
-                />
-                <TouchableOpacity 
-                  style={styles.removeLogoBtn}
-                  onPress={() => setSportImage(null)}
-                >
-                  <Ionicons name="close-circle" size={28} color="#FF3B30" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={[styles.logoPlaceholder, { width: 100, height: 100 }]}>
-                <Ionicons name="football-outline" size={48} color="#ccc" />
-              </View>
-            )}
-            
-            <TouchableOpacity style={styles.selectLogoBtn} onPress={handleSelectSportImage}>
-              <Ionicons name="cloud-upload" size={20} color="#007AFF" />
-              <Text style={styles.selectLogoBtnText}>
-                {sportImage ? 'Cambia' : 'Seleziona'}
+          <TouchableOpacity 
+            style={[{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: 14,
+              borderRadius: 10,
+              backgroundColor: blockExpiredCertificates ? '#E8F5E9' : '#FFF3E0',
+              borderWidth: 1,
+              borderColor: blockExpiredCertificates ? '#66BB6A' : '#FFB74D',
+            }]}
+            onPress={() => setBlockExpiredCertificates(!blockExpiredCertificates)}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: blockExpiredCertificates ? '#2E7D32' : '#E65100', marginBottom: 4 }}>
+                {blockExpiredCertificates ? '🔒 Blocco automatico ATTIVO' : '🔓 Blocco automatico DISATTIVO'}
               </Text>
-            </TouchableOpacity>
-          </View>
+              <Text style={{ fontSize: 12, color: '#666' }}>
+                {blockExpiredCertificates 
+                  ? 'La scansione QR blocca la registrazione agli allenamenti per atleti con certificato scaduto o mancante'
+                  : 'La scansione QR permette la registrazione agli allenamenti anche con certificato scaduto'}
+              </Text>
+            </View>
+            <View style={[{
+              width: 50, height: 28, borderRadius: 14, padding: 2,
+              backgroundColor: blockExpiredCertificates ? '#66BB6A' : '#ccc',
+              justifyContent: 'center',
+            }]}>
+              <View style={[{
+                width: 24, height: 24, borderRadius: 12,
+                backgroundColor: '#fff',
+                alignSelf: blockExpiredCertificates ? 'flex-end' : 'flex-start',
+              }]} />
+            </View>
+          </TouchableOpacity>
+          
+          {blockExpiredCertificates && (
+            <View style={{ backgroundColor: '#FFF8E1', padding: 10, borderRadius: 8, marginTop: 10 }}>
+              <Text style={{ fontSize: 11, color: '#F57F17' }}>
+                📌 Regole quando attivo:{'\n'}
+                • QR non consente registrazione presenze con certificato scaduto{'\n'}
+                • Solo Admin può fare override (valido per singola sessione){'\n'}
+                • Motivo override obbligatorio{'\n'}
+                • Ogni override viene tracciato con log
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Nome Società */}
@@ -492,6 +468,125 @@ export default function SocietySettings() {
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Stagione Sportiva */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📅 Stagione Sportiva</Text>
+          <Text style={styles.sectionDesc}>
+            Definisci le date di inizio e fine della stagione sportiva
+          </Text>
+          
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>Giorno Inizio</Text>
+              <TextInput
+                style={styles.input}
+                value={String(seasonStartDay)}
+                onChangeText={(v) => setSeasonStartDay(parseInt(v) || 1)}
+                keyboardType="numeric"
+                placeholder="1"
+                placeholderTextColor="#999"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>Mese Inizio</Text>
+              <TextInput
+                style={styles.input}
+                value={String(seasonStartMonth)}
+                onChangeText={(v) => setSeasonStartMonth(parseInt(v) || 7)}
+                keyboardType="numeric"
+                placeholder="7"
+                placeholderTextColor="#999"
+              />
+            </View>
+          </View>
+          
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>Giorno Fine</Text>
+              <TextInput
+                style={styles.input}
+                value={String(seasonEndDay)}
+                onChangeText={(v) => setSeasonEndDay(parseInt(v) || 30)}
+                keyboardType="numeric"
+                placeholder="30"
+                placeholderTextColor="#999"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>Mese Fine</Text>
+              <TextInput
+                style={styles.input}
+                value={String(seasonEndMonth)}
+                onChangeText={(v) => setSeasonEndMonth(parseInt(v) || 6)}
+                keyboardType="numeric"
+                placeholder="6"
+                placeholderTextColor="#999"
+              />
+            </View>
+          </View>
+          
+          <View style={{ backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8, marginTop: 10 }}>
+            <Text style={{ fontSize: 12, color: '#2E7D32' }}>
+              Stagione corrente: dal {String(seasonStartDay).padStart(2, '0')}/{String(seasonStartMonth).padStart(2, '0')} al {String(seasonEndDay).padStart(2, '0')}/{String(seasonEndMonth).padStart(2, '0')} dell'anno successivo
+            </Text>
+          </View>
+        </View>
+
+        {/* Logo Società */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏢 Logo Società</Text>
+          <View style={styles.logoContainer}>
+            {logo ? (
+              <View style={styles.logoPreview}>
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${logo}` }}
+                  style={[styles.logoImage, { width: logoSize, height: logoSize }]}
+                  resizeMode="contain"
+                />
+                <TouchableOpacity 
+                  style={styles.removeLogoBtn}
+                  onPress={() => setLogo(null)}
+                >
+                  <Ionicons name="close-circle" size={28} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="image-outline" size={48} color="#ccc" />
+                <Text style={styles.logoPlaceholderText}>Nessun logo</Text>
+              </View>
+            )}
+            
+            <TouchableOpacity style={styles.selectLogoBtn} onPress={handleSelectLogo}>
+              <Ionicons name="cloud-upload" size={20} color="#007AFF" />
+              <Text style={styles.selectLogoBtnText}>
+                {logo ? 'Cambia Logo' : 'Seleziona Logo'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          {logo && (
+            <View style={styles.sizeControl}>
+              <Text style={styles.sizeLabel}>Dimensione Logo nell'header: {logoSize}px</Text>
+              <View style={styles.sliderRow}>
+                <Text style={styles.sliderLabel}>Piccolo</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={30}
+                  maximumValue={80}
+                  step={5}
+                  value={logoSize}
+                  onValueChange={setLogoSize}
+                  minimumTrackTintColor="#1565C0"
+                  maximumTrackTintColor="#ddd"
+                  thumbTintColor="#1565C0"
+                />
+                <Text style={styles.sliderLabel}>Grande</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Spacer */}
