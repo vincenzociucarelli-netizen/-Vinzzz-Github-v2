@@ -1,120 +1,98 @@
 # RegistraTEAM - Product Requirements Document
 
-## Problem Statement
-Sports team management application for Italian sports societies, targeting iOS App Store and Google Play Store publication. Features role-based access (admin, coach, parent, athlete), athlete registration, legal compliance (GDPR), payment management, and team scheduling.
+## Original Problem Statement
+App di gestione societa sportiva per pubblicazione su iOS App Store e Google Play Store. Include gestione atleti, genitori, coach, pagamenti, certificati medici, privacy GDPR, e comunicazioni.
 
-## Architecture
-- **Frontend**: React Native Web (Expo Router) on port 3000
-- **Backend**: FastAPI + MongoDB on port 8001
-- **Database**: MongoDB (test_database)
-- **Email**: Brevo (Sendinblue) for transactional emails
-- **External**: python-codicefiscale for Italian fiscal codes
+## Core Architecture
+- **Frontend**: Expo/React Native (Web + Mobile)
+- **Backend**: FastAPI + MongoDB
+- **Email**: Brevo (Sendinblue)
+- **PDF**: ReportLab
+- **Fiscal Code**: python-codicefiscale
 
-## Core Requirements
-1. Society admin accepts Terms of Use before use - DONE
-2. All users accept legal disclaimer (Privacy + Terms) on first login - DONE
-3. Dedicated Privacy Policy and Terms of Use pages - DONE
-4. Public self-registration for athletes/parents with email verification - DONE
-5. Share Registration Link feature for admin invitations - DONE
-6. Minor athlete forms with Codice Fiscale + second parent email - DONE
-7. Separate "Password Dati" for each parent of minor athletes - DONE
-8. Consistent profile layout between adult and minor athletes - DONE
-9. Foreign birth support (country of birth + fiscal code calculation) - DONE
-10. Onboarding tutorials per role - DONE
-11. Direct password reset by admin (without email) - DONE
-12. Invite-register allows already registered emails - DONE
-13. Second parent linking (manual, per-child) - DONE
-14. Payment section reordered (summary first, details last) - DONE
-15. Gender field in edit form for minor athletes - DONE
-16. Auto-format date of birth (dd/mm/yyyy) in invite-register - DONE
-17. Unified email field in invite-register (email = username) - DONE
-18. GDPR Privacy flow for minors (signature pad) - DONE
-19. Payment certificate overhaul - DONE
-20. Sequential receipt numbering per season - DONE
-21. Prima Nota Cassa CSV export - DONE
-22. Season start/end date config - DONE
-23. Admin reset password for parents - DONE
-24. Certificate date form for parents (no file upload) - DONE
-25. Certificate color coding (green/orange/red) - DONE
+## User Roles
+- **Admin**: Gestione completa societa
+- **Coach**: Gestione allenamenti e presenze
+- **Parent**: Gestione figli minorenni
+- **Athlete**: Atleta adulto
+- **Minor**: Dashboard read-only per minorenni (codice+PIN)
+- **Dirigente/Viewer**: Visualizzazione dati
 
-## Session 5 Completions (March 17, 2026)
-- Riorganizzazione pagina "Dati Società": Certificato Medico in cima, Logo in fondo
-- Fix Prima Nota Cassa CSV: ordine colonne corretto, rimosso Codice Fiscale, fix Squadra vuota
-- Fix "Not authenticated" apertura PDF documenti firmati GDPR (parent/documents.tsx)
-- Cross-linking figli Pessi + second_parent_id in API /api/athletes
-- Reset Password per genitori dal pannello admin
-- Fix documenti firmati visibili a entrambi i genitori (query minor_id per children)
-- Fix accesso PDF documenti per genitori non firmatari (is_parent_of_minor check)
-- Auto-mark notifiche come lette all'apertura pagina admin
-- Certificato Medico: form date (emissione + mesi validità + scadenza auto-calcolata)
-- Certificato Medico: colori scadenza (verde/arancio 30gg/rosso)
-- Banner viola "Inserisci dati certificato" SOLO se no certificato
-- Fix critico: fallback in GET /certificates/{athlete_id} per atleti con dati solo nel doc atleta
+## Implemented Features (Complete)
+- Registrazione self-service atleti/genitori con verifica email
+- Accettazione Terms of Use e Privacy Policy
+- Gestione atleti minorenni con codice fiscale e secondo genitore
+- Password dati separata per genitori (accesso dati sensibili)
+- Reset password login e dati (admin + self-service)
+- Flusso privacy GDPR con firma per minorenni
+- Sistema pagamenti con ricevute sequenziali per stagione
+- Esportazione Prima Nota Cassa CSV
+- Configurazione date stagione
+- Onboarding tutorial per ruoli
+- Calcolo codice fiscale (incluso nati all'estero)
+- Visualizzazione sicura documenti PDF (fetch+Blob)
+- Certificato medico con codifica colore scadenza
+- Cross-linking automatico genitori (P0 - Completato 2026-03-17)
+- Lite Dashboard per Minorenni (P0 - Completato 2026-03-17)
+- Gestione Periodo di Prova 7 giorni (Completato 2026-03-17)
 
-## Session 4 Completions (March 16, 2026)
-- Account card email shows only athlete's email
-- Removed "Email 2° Genitore" from read-only view
-- GDPR Data Processor checkbox in admin terms
-- Attestato di Versamento: multiple text/layout changes
-- Privacy Minorenne GDPR: full GDPRPrivacyModal with signature
+## Latest Features (2026-03-17)
 
-## Session 3 Completions (March 15-16, 2026)
-- Direct Password Reset, unblock invite-register for existing emails
-- Calcola CF, Country Picker, Gender selector
-- Second parent linking, auto-format dates, unified email
+### Cross-linking Automatico Genitori
+- Quando un atleta viene creato con `second_parent_email`, il sistema cerca automaticamente l'utente e popola `second_parent_id`
+- Funziona sia nella creazione che nell'aggiornamento e riattivazione atleta
+- Alla registrazione di un nuovo genitore, verifica se ci sono atleti con la sua email come secondo genitore
 
-## Previous Session Completions
-- Legal pages, Terms of Use, Privacy Policy
-- Self-registration with email verification
-- Onboarding Tutorial per role, Password Dati
-- Foreign birth + CF, Email 2° Genitore, Copy link fix
+### Lite Dashboard per Minorenni
+- Login tramite codice atleta + PIN (4-6 cifre)
+- Dashboard read-only: QR code, orari, presenze, partite, stato prova
+- Nessun dato sensibile esposto
+- Genitore gestisce PIN e attivazione/disattivazione accesso
+- Sezione "Accesso Atleta dal Telefono" nella vista genitore
 
-## Prioritized Backlog
+### Gestione Periodo di Prova
+- Attivazione prova da parte del genitore
+- Data inizio NON inserita manualmente - coincide con prima presenza (QR scan)
+- 7 giorni di prova dalla prima presenza
+- Certificato medico NON richiesto durante la prova
+- Generazione PDF "Dichiarazione Periodo di Prova" con reportlab
+- Stato prova visibile nella dashboard minorenne e vista genitore
+- 3 stati: in attesa primo allenamento, prova attiva, prova terminata
 
-### P0 (Critical - Prossimi task)
-- **Lite Dashboard per Atleti Minori**: Accesso telefono + PIN, dashboard solo lettura (dati organizzativi, QR, calendario, statistiche), QR con dati non personali, disattivazione da genitore
-- **Test guidati**: ciclo completo Minori, Squadre, Template Excel
+## Pending Issues
+- **P2**: Logica cancellazione utente ambigua (cosa succede quando un atleta viene cancellato?)
 
-### P1 (Da testare / Verificare)
-- Certificato medico: verificare che admin veda tutti i certificati (fix fallback applicato)
-- Verifica cross-linking genitori (Sauro/Mara vedono entrambi i figli)
-- Reset password genitori dall'admin
-- Notifiche admin auto-read
-- Form date certificato per genitore (auto-format, scadenza calcolata)
+## Upcoming Tasks
+- **P1**: Testing guidato dall'utente (ciclo completo Minorenni, Squadre, Template Excel)
+- **P2**: Migliorare UI per atleti "a contratto"
+- **P3**: Refactoring backend (decomporre server.py)
+- **P3**: Integrazione Stripe per pagamenti
+- **P3**: Pulizia database (migrare ruolo "viewer" a "dirigente")
+- **P3**: Dominio e pubblicazione App Store
 
-### P2 (Nice to have)
-- User Deletion Flow: chiarire logica business
-- UI improvements per atleti a contratto
-- Ambiguous User Deletion Logic (ricorrente, 6 volte)
+## Key API Endpoints (New)
+- `POST /api/auth/minor-login` - Login minorenne (codice+PIN)
+- `GET /api/minor/dashboard` - Dashboard minorenne
+- `POST /api/athletes/{id}/set-minor-pin` - Imposta PIN
+- `POST /api/athletes/{id}/toggle-minor-access` - Attiva/disattiva accesso
+- `GET /api/athletes/{id}/minor-access-status` - Stato accesso
+- `POST /api/athletes/{id}/start-trial` - Attiva periodo prova
+- `GET /api/athletes/{id}/trial-status` - Stato prova
+- `GET /api/athletes/{id}/trial-document` - PDF dichiarazione prova
 
-### P3 (Futuro)
-- Backend refactoring: decomposizione server.py
-- Stripe integration per pagamenti
-- Database cleanup: migrare ruolo "viewer" → "dirigente"
-- Domain e pubblicazione App Store / Play Store
-
-### Bug noti non critici
-- TypeError: can't compare offset-naive and offset-aware datetimes (in get_team_attendance_stats, riga ~8298 server.py)
-
-## Credentials
+## Test Credentials
 - Admin: pallavoloperugia@gmail.com / password
-- Parent (Sauro): sauro@test.com / Test1234
-- Parent (Mara): mara2@test.com / Test1234
-- Adult Athlete (Luna): luna@18piu.com / Test1234
+- Parent Sauro: sauro@test.com / Test1234
+- Parent Mara: mara2@test.com / password
+- Athlete Luna: luna@18piu.com / Test1234
+- Minor Lucia: code KWP9R9PJWJXJ / pin 1234
 
-## Key Files
-- backend/server.py
-- frontend/app/parent/athlete/[id].tsx - Minor athlete profile (parent view)
-- frontend/app/admin/athlete/[id].tsx - Athlete profile (admin view)
-- frontend/app/athlete/index.tsx - Athlete own profile
-- frontend/app/admin/parents.tsx - Parents management (admin)
-- frontend/app/admin/settings/society.tsx - Society settings
-- frontend/app/admin/settings/export-data.tsx - CSV exports
-- frontend/app/parent/documents.tsx - Parent documents view
-- frontend/app/admin/notifications.tsx - Admin notifications
-
-## Data Model Notes
-- Athletes: `second_parent_email`, `second_parent_id` for cross-linking
-- Certificates: collection `certificates` + fallback to athlete fields `medical_certificate_expiry/date`
-- Teams: custom `id` field ≠ `_id` (importante per lookup!)
-- Payments: `receipt_number` (per season), `registration_date`
+## Key DB Schema (Athletes)
+- `is_trial`: Boolean - Atleta in periodo di prova
+- `trial_start_date`: String/null - Data inizio prova (dalla prima presenza)
+- `trial_end_date`: String/null - Data fine prova (7 giorni dopo)
+- `trial_document_generated`: Boolean - Documento PDF generato
+- `minor_pin_hash`: String - PIN hashato per accesso minorenne
+- `minor_access_enabled`: Boolean - Accesso minorenne attivo
+- `second_parent_id`: String - ID secondo genitore (auto-popolato)
+- `second_parent_email`: String - Email secondo genitore
