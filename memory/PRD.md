@@ -28,98 +28,93 @@ Sports team management application for Italian sports societies, targeting iOS A
 15. Gender field in edit form for minor athletes - DONE
 16. Auto-format date of birth (dd/mm/yyyy) in invite-register - DONE
 17. Unified email field in invite-register (email = username) - DONE
-
-## Session 3 Completions (March 15-16, 2026)
-- Password reset Luna Nuova to Test1234
-- Direct Password Reset button in admin athlete profile (no email needed)
-- Unblocked invite-register for existing emails
-- Calcola CF button in minor athlete profile (read-only + edit form, full-width)
-- Country Picker for Stato di Nascita in parent athlete edit
-- Gender (M/F) selector in parent athlete edit form
-- All edit fields (gender, birth_place, birth_province, country_of_birth, second_parent_email) properly saved
-- Backend fix: second_parent_email savable by parent role (was admin-only)
-- Removed "Scadenze in arrivo" from parent dashboard
-- Removed redundant "Pagamenti" button from parent dashboard
-- Email 2° Genitore in parent's own profile page with save
-- Second parent linking: manual per-child (no auto-linking at registration)
-- Both parents see both children when properly linked
-- Auto-format date input in invite-register form
-- Unified email fields in invite-register (single email = username)
+18. GDPR Privacy flow for minors (signature pad) - DONE
+19. Payment certificate overhaul - DONE
+20. Sequential receipt numbering per season - DONE
+21. Prima Nota Cassa CSV export - DONE
+22. Season start/end date config - DONE
+23. Admin reset password for parents - DONE
+24. Certificate date form for parents (no file upload) - DONE
+25. Certificate color coding (green/orange/red) - DONE
 
 ## Session 5 Completions (March 17, 2026)
-- Riorganizzazione pagina "Dati Società": Certificato Medico spostato in cima, Logo Società spostato in fondo
-- Fix Prima Nota Cassa CSV: corretto ordine colonne (Data Registrazione, Progressivo, Data Pagamento, Atleta, Squadra, Metodo, Descrizione, Importo)
-- Fix Prima Nota Cassa CSV: rimossa colonna "Codice Fiscale"
-- Fix Prima Nota Cassa CSV: corretto bug "Squadra" vuota (il lookup usava _id MongoDB invece del campo custom id dei team)
-- Pulizia variabili inutilizzate in other.tsx (seasonStartMonth, seasonStartDay, blockExpiredCertificates rimossi)
-- Fix bug "Not authenticated" apertura PDF documenti firmati GDPR da parent/documents.tsx (window.open senza token → fetch con token + blob URL)
-- Cross-linking figli Pessi: impostato second_parent_email/id + aggiunto second_parent_id alla risposta API /api/athletes
-- Aggiunto bottone "Carica Certificato Medico" nella vista genitore del profilo minore
-- Aggiunto "Reset Password" per genitori dal pannello admin (bottone + modale in parents.tsx)
+- Riorganizzazione pagina "Dati Società": Certificato Medico in cima, Logo in fondo
+- Fix Prima Nota Cassa CSV: ordine colonne corretto, rimosso Codice Fiscale, fix Squadra vuota
+- Fix "Not authenticated" apertura PDF documenti firmati GDPR (parent/documents.tsx)
+- Cross-linking figli Pessi + second_parent_id in API /api/athletes
+- Reset Password per genitori dal pannello admin
+- Fix documenti firmati visibili a entrambi i genitori (query minor_id per children)
+- Fix accesso PDF documenti per genitori non firmatari (is_parent_of_minor check)
+- Auto-mark notifiche come lette all'apertura pagina admin
+- Certificato Medico: form date (emissione + mesi validità + scadenza auto-calcolata)
+- Certificato Medico: colori scadenza (verde/arancio 30gg/rosso)
+- Banner viola "Inserisci dati certificato" SOLO se no certificato
+- Fix critico: fallback in GET /certificates/{athlete_id} per atleti con dati solo nel doc atleta
 
 ## Session 4 Completions (March 16, 2026)
-- P0: Account card email now shows only athlete's email (removed parent email fallback)
-- P0: Removed "Email 2° Genitore" from read-only view of minor athlete profile (kept in edit modal only)
-- P0: Confirmed "Calcola CF" button is only in edit modal (not in read-only view)
-- P1: Added mandatory "Responsabile del Trattamento Dati" (GDPR Data Processor) checkbox in admin terms acceptance form
-- Attestato di Versamento: "Abbiamo ricevuto da:" → "Il presente documento attesta i versamenti effettuati da:"
-- Attestato di Versamento: "la somma di:" → "per la somma di:"
-- Attestato di Versamento: Nota legale aggiornata con art. 148 TUIR e art. 4 DPR 633/72
-- Attestato di Versamento: "TOTALE VERSATO alla data del: GG/MM/AAAA" nella riga totale
-- Attestato di Versamento: Footer "Documento generato dal sistema gestionale RegistraTEAM" con data
-- Attestato di Versamento: Frase per il minore con riferimento a detrazioni fiscali
-- Privacy Minorenne GDPR: Sostituito modal semplice con GDPRPrivacyModal completo (testo GDPR, anteprima PDF, firma digitale, metadati)
-- Privacy di Lucia resettata per consentire il test del nuovo flusso
+- Account card email shows only athlete's email
+- Removed "Email 2° Genitore" from read-only view
+- GDPR Data Processor checkbox in admin terms
+- Attestato di Versamento: multiple text/layout changes
+- Privacy Minorenne GDPR: full GDPRPrivacyModal with signature
+
+## Session 3 Completions (March 15-16, 2026)
+- Direct Password Reset, unblock invite-register for existing emails
+- Calcola CF, Country Picker, Gender selector
+- Second parent linking, auto-format dates, unified email
 
 ## Previous Session Completions
 - Legal pages, Terms of Use, Privacy Policy
 - Self-registration with email verification
-- Onboarding Tutorial per role
-- Password Dati in Parent Registration
-- Foreign birth + CF calculation
-- Email 2° Genitore field
-- Fix Invita Persona modal
-- Copy link fix (expo-clipboard)
-- Data integrity fix (Lucia-Sauro association)
+- Onboarding Tutorial per role, Password Dati
+- Foreign birth + CF, Email 2° Genitore, Copy link fix
 
 ## Prioritized Backlog
 
-### P0 (Critical)
-- User-guided testing: full lifecycle for Minors, Teams, Excel Templates
+### P0 (Critical - Prossimi task)
+- **Lite Dashboard per Atleti Minori**: Accesso telefono + PIN, dashboard solo lettura (dati organizzativi, QR, calendario, statistiche), QR con dati non personali, disattivazione da genitore
+- **Test guidati**: ciclo completo Minori, Squadre, Template Excel
 
-### P1 (Important)
-- "Data Processor" checkbox in admin creation form (GDPR) - DONE
+### P1 (Da testare / Verificare)
+- Certificato medico: verificare che admin veda tutti i certificati (fix fallback applicato)
+- Verifica cross-linking genitori (Sauro/Mara vedono entrambi i figli)
+- Reset password genitori dall'admin
+- Notifiche admin auto-read
+- Form date certificato per genitore (auto-format, scadenza calcolata)
 
 ### P2 (Nice to have)
-- User Deletion Flow: clarify business logic
-- UI improvements for contracted athletes
+- User Deletion Flow: chiarire logica business
+- UI improvements per atleti a contratto
+- Ambiguous User Deletion Logic (ricorrente, 6 volte)
 
-### P3 (Future)
-- Backend refactoring: decompose server.py into modular routes
-- Stripe integration for payments
-- Database cleanup: migrate "viewer" role to "dirigente"
-- Domain and App Store publication
+### P3 (Futuro)
+- Backend refactoring: decomposizione server.py
+- Stripe integration per pagamenti
+- Database cleanup: migrare ruolo "viewer" → "dirigente"
+- Domain e pubblicazione App Store / Play Store
+
+### Bug noti non critici
+- TypeError: can't compare offset-naive and offset-aware datetimes (in get_team_attendance_stats, riga ~8298 server.py)
 
 ## Credentials
 - Admin: pallavoloperugia@gmail.com / password
 - Parent (Sauro): sauro@test.com / Test1234
 - Parent (Mara): mara2@test.com / Test1234
-- Adult Athlete (Luna): luna@18piu.com / Test1234 (also luna2@test.com)
+- Adult Athlete (Luna): luna@18piu.com / Test1234
 
 ## Key Files
 - backend/server.py
 - frontend/app/parent/athlete/[id].tsx - Minor athlete profile (parent view)
 - frontend/app/admin/athlete/[id].tsx - Athlete profile (admin view)
-- frontend/app/parent/index.tsx - Parent dashboard
-- frontend/app/parent/profile.tsx - Parent's own profile
-- frontend/app/admin/athletes.tsx - Athletes list + invite modal
-- frontend/app/invite-register.tsx - Invite registration form
-- frontend/src/components/OnboardingTutorial.tsx
-- frontend/src/constants/countries.ts
+- frontend/app/athlete/index.tsx - Athlete own profile
+- frontend/app/admin/parents.tsx - Parents management (admin)
+- frontend/app/admin/settings/society.tsx - Society settings
+- frontend/app/admin/settings/export-data.tsx - CSV exports
+- frontend/app/parent/documents.tsx - Parent documents view
+- frontend/app/admin/notifications.tsx - Admin notifications
 
-## Data Model: Second Parent Linking
-- Each athlete has `second_parent_email` and `second_parent_id`
-- Linking is MANUAL: parent must enter the 2nd parent's email in each child's profile
-- Backend auto-resolves email→user_id when saving
-- `/athletes/my` returns athletes where user is `parent_id` OR `second_parent_id`
-- No automatic linking at registration (ex-spouse scenario)
+## Data Model Notes
+- Athletes: `second_parent_email`, `second_parent_id` for cross-linking
+- Certificates: collection `certificates` + fallback to athlete fields `medical_certificate_expiry/date`
+- Teams: custom `id` field ≠ `_id` (importante per lookup!)
+- Payments: `receipt_number` (per season), `registration_date`
