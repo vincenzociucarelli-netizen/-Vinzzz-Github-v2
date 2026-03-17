@@ -1698,7 +1698,7 @@ export default function AthleteDetail() {
           )}
           
           {/* Form inserimento date certificato */}
-          <CertificateDateForm athleteId={athlete?.id} certificate={certificate} onSaved={loadAthlete} />
+          <CertificateDateForm athleteId={athlete?.id} certificate={certificate} onSaved={loadData} />
         </View>
 
         {/* Team Schedule Card - Allenamenti e Gare Interne */}
