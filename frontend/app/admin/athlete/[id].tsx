@@ -973,6 +973,23 @@ export default function AdminAthleteDetail() {
     return '#FF3B30';
   };
 
+  const handleVerifyCertificate = async () => {
+    if (!certificate) return;
+    const newVerified = !certificate.verified;
+    try {
+      await api.post('/certificates/simple', {
+        athlete_id: id,
+        issue_date: certificate.issue_date || athlete?.medical_certificate_date,
+        expiry_date: certificate.expiry_date,
+        verified: newVerified,
+      });
+      setCertificate({ ...certificate, verified: newVerified });
+      showAlert('Successo', newVerified ? 'Certificato verificato' : 'Verifica rimossa');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la verifica');
+    }
+  };
+
   const handleSaveCertificate = async () => {
     if (!certIssueDate) {
       showAlert('Errore', 'Inserisci la data di emissione');
@@ -2422,7 +2439,7 @@ export default function AdminAthleteDetail() {
                   <Text style={styles.warningText}>Nessun certificato</Text>
                 </View>
               )}
-              {!certificate && (
+              {/* Admin: sempre visibile - Modifica date + Verifica */}
               <TouchableOpacity
                 style={{ 
                   backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
@@ -2431,11 +2448,26 @@ export default function AdminAthleteDetail() {
                 }}
                 onPress={() => setCertModalVisible(true)}
               >
-                <Ionicons name="calendar-outline" size={18} color="#7B1FA2" />
+                <Ionicons name={certificate ? "create-outline" : "calendar-outline"} size={18} color="#7B1FA2" />
                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
-                  Inserisci dati certificato
+                  {certificate ? 'Modifica date certificato' : 'Inserisci dati certificato'}
                 </Text>
               </TouchableOpacity>
+              {certificate && (
+                <TouchableOpacity
+                  style={{ 
+                    backgroundColor: certificate.verified ? '#E8F5E9' : '#FFF8E1', 
+                    borderRadius: 10, padding: 12, marginTop: 8, 
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    borderWidth: 1, borderColor: certificate.verified ? '#66BB6A' : '#FFB74D',
+                  }}
+                  onPress={handleVerifyCertificate}
+                >
+                  <Ionicons name={certificate.verified ? "shield-checkmark" : "shield-outline"} size={18} color={certificate.verified ? '#2E7D32' : '#E65100'} />
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: certificate.verified ? '#2E7D32' : '#E65100' }}>
+                    {certificate.verified ? 'Certificato verificato ✓' : 'Segna come verificato'}
+                  </Text>
+                </TouchableOpacity>
               )}
             </View>
 
