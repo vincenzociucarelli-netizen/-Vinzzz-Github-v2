@@ -2422,6 +2422,7 @@ export default function AdminAthleteDetail() {
                   <Text style={styles.warningText}>Nessun certificato</Text>
                 </View>
               )}
+              {!certificate && (
               <TouchableOpacity
                 style={{ 
                   backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
@@ -2430,11 +2431,12 @@ export default function AdminAthleteDetail() {
                 }}
                 onPress={() => setCertModalVisible(true)}
               >
-                <Ionicons name={certificate ? "create-outline" : "calendar-outline"} size={18} color="#7B1FA2" />
+                <Ionicons name="calendar-outline" size={18} color="#7B1FA2" />
                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
-                  {certificate ? 'Modifica date certificato' : 'Inserisci dati certificato'}
+                  Inserisci dati certificato
                 </Text>
               </TouchableOpacity>
+              )}
             </View>
 
       {/* Privacy Status */}

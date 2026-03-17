@@ -94,6 +94,7 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
   };
 
   if (!showForm) {
+    if (certificate) return null; // No banner if certificate already exists
     return (
       <TouchableOpacity
         style={{ 
@@ -104,9 +105,9 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
         onPress={() => setShowForm(true)}
         data-testid="insert-certificate-dates-btn"
       >
-        <Ionicons name={certificate ? "create-outline" : "calendar-outline"} size={18} color="#7B1FA2" />
+        <Ionicons name="calendar-outline" size={18} color="#7B1FA2" />
         <Text style={{ color: '#7B1FA2', fontWeight: '600', fontSize: 14 }}>
-          {certificate ? 'Modifica date certificato' : 'Inserisci dati certificato'}
+          Inserisci dati certificato
         </Text>
       </TouchableOpacity>
     );

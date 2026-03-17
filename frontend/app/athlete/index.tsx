@@ -644,8 +644,8 @@ export default function AthleteScreen() {
             </View>
           )}
           
-          {/* Banner viola per inserimento/modifica date */}
-          {!isMinor && (
+          {/* Banner viola per inserimento/modifica date - solo senza certificato */}
+          {!isMinor && !(profile as any)?.medical_certificate_expiry && (
           <TouchableOpacity 
             style={{ 
               backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
@@ -656,7 +656,7 @@ export default function AthleteScreen() {
           >
             <Ionicons name={showCertForm ? "chevron-up" : "calendar-outline"} size={18} color="#7B1FA2" />
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
-              {(profile as any)?.medical_certificate_expiry ? 'Modifica date certificato' : 'Inserisci dati certificato'}
+              Inserisci dati certificato
             </Text>
           </TouchableOpacity>
           )}
@@ -1006,29 +1006,24 @@ export default function AthleteScreen() {
             <Text style={styles.warningText}>Nessun certificato inserito</Text>
           </View>
         )}
-        
-        {/* Banner viola per inserimento/modifica date */}
-        <TouchableOpacity 
-          style={{ 
-            backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-            borderWidth: 1, borderColor: '#CE93D8',
-          }}
-          onPress={() => setShowCertForm(!showCertForm)}
-        >
-          <Ionicons name={showCertForm ? "chevron-up" : "calendar-outline"} size={18} color="#7B1FA2" />
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
-            {(profile as any)?.medical_certificate_expiry ? 'Modifica date certificato' : 'Inserisci dati certificato'}
-          </Text>
-        </TouchableOpacity>
-          <Ionicons name={showCertForm ? "chevron-up" : "chevron-down"} size={20} color="#007AFF" />
-        </TouchableOpacity>
-        
+        {!(profile as any)?.medical_certificate_expiry && (
+          <TouchableOpacity 
+            style={{ 
+              backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+              borderWidth: 1, borderColor: '#CE93D8',
+            }}
+            onPress={() => setShowCertForm(!showCertForm)}
+          >
+            <Ionicons name={showCertForm ? "chevron-up" : "calendar-outline"} size={18} color="#7B1FA2" />
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
+              Inserisci dati certificato
+            </Text>
+          </TouchableOpacity>
+        )}
         {showCertForm && (
-        <View>
-        {/* Form inserimento data emissione */}
-        <View style={{ marginTop: 8 }}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 }}>Data di Emissione (GG/MM/AAAA)</Text>
+          <View style={{ marginTop: 8 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 }}>Data di Emissione (GG/MM/AAAA)</Text>
           <TextInput
             style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' }}
             value={certIssueDateAthlete}
@@ -1109,14 +1104,6 @@ export default function AthleteScreen() {
               {savingCertAthlete ? 'Salvataggio...' : 'Salva Data Certificato'}
             </Text>
           </TouchableOpacity>
-        </View>
-        
-        {/* Info consegna/spedizione */}
-        <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginTop: 12, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
-          <Text style={{ fontSize: 12, color: '#E65100', lineHeight: 18 }}>
-            Copia del certificato dovrà essere consegnata alla Società e inviata per e-mail al seguente indirizzo: <Text style={{ fontWeight: 'bold' }}>{(profile as any)?.society_email || societyEmail || '-'}</Text> in formato pdf
-          </Text>
-        </View>
         </View>
         )}
       </View>
