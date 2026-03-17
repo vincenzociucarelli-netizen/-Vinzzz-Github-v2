@@ -564,6 +564,19 @@ export default function ParentsScreen() {
             )}
             
             <TouchableOpacity
+              style={{ backgroundColor: '#EDE7F6', borderRadius: 10, padding: 14, marginHorizontal: 16, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#CE93D8' }}
+              onPress={() => {
+                setDetailModalVisible(false);
+                setNewPassword('');
+                setResetPwModalVisible(true);
+              }}
+              data-testid="reset-password-detail-btn"
+            >
+              <Ionicons name="key" size={18} color="#7B1FA2" />
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>Reset Password</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
               style={styles.closeDetailBtn}
               onPress={() => setDetailModalVisible(false)}
             >
