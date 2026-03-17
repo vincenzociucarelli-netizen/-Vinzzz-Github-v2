@@ -13754,7 +13754,20 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
     is_email_match = document.get("signer_email") == current_user.get("email")
     is_admin = current_user["role"] == UserRole.ADMIN
     
-    if not (is_signer or is_related or is_email_match or is_admin):
+    # For parents: allow access to documents of their children
+    is_parent_of_minor = False
+    if current_user["role"] == UserRole.PARENT and document.get("minor_id"):
+        minor = await db.athletes.find_one(
+            {"id": document["minor_id"]},
+            {"_id": 0, "parent_id": 1, "second_parent_id": 1}
+        )
+        if minor:
+            is_parent_of_minor = (
+                minor.get("parent_id") == current_user["id"] or
+                minor.get("second_parent_id") == current_user["id"]
+            )
+    
+    if not (is_signer or is_related or is_email_match or is_admin or is_parent_of_minor):
         raise HTTPException(status_code=403, detail="Non autorizzato a visualizzare questo documento")
     
     # Check if PDF exists

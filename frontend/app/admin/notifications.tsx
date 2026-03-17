@@ -48,6 +48,13 @@ export default function AdminNotifications() {
     loadNotifications();
   }, []);
 
+  // Auto-mark all as read when page is opened
+  useEffect(() => {
+    if (notifications.length > 0 && notifications.some(n => !n.read)) {
+      markAllAsRead();
+    }
+  }, [notifications.length]);
+
   const onRefresh = () => {
     setRefreshing(true);
     loadNotifications();
