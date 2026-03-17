@@ -8201,16 +8201,28 @@ async def upload_self_certificate(request: dict, current_user = Depends(get_curr
 @api_router.get("/certificates/{athlete_id}")
 async def get_certificate(athlete_id: str, current_user = Depends(get_current_user)):
     certificate = await db.certificates.find_one({"athlete_id": athlete_id})
-    if not certificate:
-        raise HTTPException(status_code=404, detail="Certificato non trovato")
     
-    # Check permissions - allow primary and second parent
+    # Check permissions
     athlete = await db.athletes.find_one({"id": athlete_id})
     if current_user["role"] == UserRole.PARENT:
-        is_primary = athlete.get("parent_id") == current_user["id"]
-        is_second = athlete.get("second_parent_id") == current_user["id"]
+        is_primary = athlete.get("parent_id") == current_user["id"] if athlete else False
+        is_second = athlete.get("second_parent_id") == current_user["id"] if athlete else False
         if not is_primary and not is_second:
             raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    if not certificate:
+        # Fallback: check athlete's medical_certificate fields
+        if athlete and athlete.get("medical_certificate_expiry"):
+            return {
+                "id": f"athlete-cert-{athlete_id}",
+                "athlete_id": athlete_id,
+                "issue_date": athlete.get("medical_certificate_date"),
+                "expiry_date": athlete.get("medical_certificate_expiry"),
+                "verified": athlete.get("medical_certificate_verified", False),
+                "uploaded_by": athlete.get("medical_certificate_updated_by_name"),
+                "created_at": athlete.get("medical_certificate_inserted_at"),
+            }
+        raise HTTPException(status_code=404, detail="Certificato non trovato")
     
     return Certificate(**certificate)
 
