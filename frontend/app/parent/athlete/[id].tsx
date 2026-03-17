@@ -32,6 +32,136 @@ import CodiceFiscale from 'codice-fiscale-js';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
+
+// --- Certificate Date Form Component ---
+function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: string, certificate: any, onSaved: () => void }) {
+  const [issueDate, setIssueDate] = useState(certificate?.issue_date ? format(new Date(certificate.issue_date), 'dd/MM/yyyy') : '');
+  const [validityMonths, setValidityMonths] = useState(certificate?.validity_months?.toString() || '12');
+  const [calculatedExpiry, setCalculatedExpiry] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    // Auto-calculate expiry when issue date or months change
+    if (issueDate && validityMonths) {
+      const parts = issueDate.split('/');
+      if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+        const dt = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        if (!isNaN(dt.getTime())) {
+          const expiry = subDays(addMonths(dt, parseInt(validityMonths) || 0), 1);
+          setCalculatedExpiry(format(expiry, 'dd/MM/yyyy'));
+          return;
+        }
+      }
+    }
+    setCalculatedExpiry('');
+  }, [issueDate, validityMonths]);
+
+  const handleSave = async () => {
+    if (!athleteId || !issueDate || !calculatedExpiry) return;
+    const parts = issueDate.split('/');
+    const issueDt = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    const expiryParts = calculatedExpiry.split('/');
+    const expiryDt = new Date(parseInt(expiryParts[2]), parseInt(expiryParts[1]) - 1, parseInt(expiryParts[0]));
+    
+    setSaving(true);
+    try {
+      await api.post('/certificates/simple', {
+        athlete_id: athleteId,
+        issue_date: issueDt.toISOString(),
+        expiry_date: expiryDt.toISOString(),
+      });
+      if (Platform.OS === 'web') window.alert('Certificato salvato!');
+      else Alert.alert('Successo', 'Certificato salvato!');
+      setShowForm(false);
+      onSaved();
+    } catch (e: any) {
+      const msg = e.response?.data?.detail || 'Errore nel salvataggio';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Errore', msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!showForm) {
+    return (
+      <TouchableOpacity
+        style={{ backgroundColor: '#1565C0', borderRadius: 10, padding: 14, marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+        onPress={() => setShowForm(true)}
+        data-testid="insert-certificate-dates-btn"
+      >
+        <Ionicons name={certificate ? "create" : "calendar"} size={20} color="#fff" />
+        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>
+          {certificate ? 'Modifica Date Certificato' : 'Inserisci Date Certificato'}
+        </Text>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View style={{ marginTop: 12, backgroundColor: '#F5F8FF', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#BBDEFB' }}>
+      <Text style={{ fontSize: 14, fontWeight: '700', color: '#1565C0', marginBottom: 12 }}>Date Certificato Medico</Text>
+      
+      {/* Data Emissione */}
+      <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 4 }}>Data Emissione</Text>
+      <TextInput
+        style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15, backgroundColor: '#fff', marginBottom: 12 }}
+        placeholder="GG/MM/AAAA"
+        value={issueDate}
+        onChangeText={setIssueDate}
+        keyboardType="default"
+        maxLength={10}
+        data-testid="cert-issue-date-input"
+      />
+      
+      {/* Mesi di validità */}
+      <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 4 }}>Mesi di Validità</Text>
+      <TextInput
+        style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15, backgroundColor: '#fff', marginBottom: 12 }}
+        placeholder="12"
+        value={validityMonths}
+        onChangeText={setValidityMonths}
+        keyboardType="numeric"
+        maxLength={2}
+        data-testid="cert-validity-months-input"
+      />
+      
+      {/* Scadenza calcolata */}
+      {calculatedExpiry && (
+        <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="calendar" size={18} color="#2E7D32" />
+          <Text style={{ fontSize: 14, fontWeight: '600', color: '#2E7D32' }}>
+            Scadenza: {calculatedExpiry}
+          </Text>
+        </View>
+      )}
+      
+      {/* Bottoni */}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: '#ccc', borderRadius: 8, padding: 12, alignItems: 'center' }}
+          onPress={() => setShowForm(false)}
+        >
+          <Text style={{ fontWeight: '600', color: '#333' }}>Annulla</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: calculatedExpiry ? '#1565C0' : '#90CAF9', borderRadius: 8, padding: 12, alignItems: 'center', opacity: calculatedExpiry ? 1 : 0.6 }}
+          onPress={handleSave}
+          disabled={!calculatedExpiry || saving}
+          data-testid="cert-save-btn"
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={{ fontWeight: '600', color: '#fff' }}>Salva</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 export default function AthleteDetail() {
   const router = useRouter();
   const { id, tab } = useLocalSearchParams();
@@ -1543,6 +1673,11 @@ export default function AthleteDetail() {
                   )}
                 </View>
               </View>
+              {certificate.issue_date && (
+                <Text style={{ fontSize: 13, color: '#666', marginTop: 6, paddingLeft: 32 }}>
+                  Emissione: {format(new Date(certificate.issue_date), 'dd/MM/yyyy', { locale: it })}
+                </Text>
+              )}
               {/* Stato verifica admin */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
                 <Ionicons
@@ -1556,32 +1691,14 @@ export default function AthleteDetail() {
               </View>
             </View>
           ) : (
-            <View>
-              <View style={styles.warningBox}>
-                <Ionicons name="warning" size={24} color="#FF9500" />
-                <Text style={styles.warningText}>Nessun certificato inserito</Text>
-              </View>
+            <View style={styles.warningBox}>
+              <Ionicons name="warning" size={24} color="#FF9500" />
+              <Text style={styles.warningText}>Nessun certificato inserito</Text>
             </View>
           )}
           
-          {/* Info consegna/spedizione */}
-          <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginTop: 12, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
-            <Text style={{ fontSize: 12, color: '#E65100', lineHeight: 18 }}>
-              Copia del certificato dovrà essere consegnata alla Società e inviata per e-mail al seguente indirizzo: <Text style={{ fontWeight: 'bold' }}>{societyEmail || '-'}</Text> in formato pdf
-            </Text>
-          </View>
-          
-          {/* Bottone carica/aggiorna certificato */}
-          <TouchableOpacity
-            style={{ backgroundColor: '#007AFF', borderRadius: 10, padding: 14, marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-            onPress={handleUploadCertificate}
-            data-testid="upload-certificate-btn"
-          >
-            <Ionicons name={certificate ? "refresh" : "cloud-upload"} size={20} color="#fff" />
-            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>
-              {certificate ? 'Aggiorna Certificato' : 'Carica Certificato Medico'}
-            </Text>
-          </TouchableOpacity>
+          {/* Form inserimento date certificato */}
+          <CertificateDateForm athleteId={athlete?.id} certificate={certificate} onSaved={loadAthlete} />
         </View>
 
         {/* Team Schedule Card - Allenamenti e Gare Interne */}
