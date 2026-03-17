@@ -17360,6 +17360,98 @@ async def export_audit_logs_csv(
         headers={"Content-Disposition": f"attachment; filename=audit_logs_{datetime.now().strftime('%Y%m%d')}.csv"}
     )
 
+@api_router.get("/export-csv/prima-nota")
+async def export_prima_nota_csv(current_user = Depends(get_current_user)):
+    """Export Prima Nota Cassa as CSV - Admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può esportare dati")
+    
+    society_id = current_user.get("society_id")
+    
+    # Get season boundaries from settings
+    settings = await db.settings.find_one({"society_id": society_id, "type": "society"})
+    season_start_month = settings.get("season_start_month", 7) if settings else 7
+    season_start_day = settings.get("season_start_day", 1) if settings else 1
+    now = datetime.utcnow()
+    if now.month >= season_start_month:
+        season_start = datetime(now.year, season_start_month, season_start_day)
+    else:
+        season_start = datetime(now.year - 1, season_start_month, season_start_day)
+    season_end = datetime(season_start.year + 1, season_start_month, season_start_day)
+    season_str = f"{season_start.year % 100:02d}/{season_end.year % 100:02d}"
+    
+    # Get all payments for this society in the current season
+    # First get all athletes for this society
+    athletes_cursor = db.athletes.find({"society_id": society_id}, {"_id": 1, "id": 1, "first_name": 1, "last_name": 1, "fiscal_code": 1, "team_id": 1})
+    athletes_list = await athletes_cursor.to_list(10000)
+    athlete_map = {}
+    for a in athletes_list:
+        aid = a.get("id", str(a["_id"]))
+        athlete_map[aid] = a
+    
+    athlete_ids = list(athlete_map.keys())
+    
+    # Get all payments for these athletes, sorted by receipt_number
+    payments = await db.payments.find(
+        {"athlete_id": {"$in": athlete_ids}, "receipt_number": {"$exists": True, "$nin": [None, ""]}}
+    ).sort("receipt_number", 1).to_list(50000)
+    
+    # Get teams for team name lookup
+    teams_cursor = db.teams.find({"society_id": society_id}, {"_id": 1, "name": 1})
+    teams_list = await teams_cursor.to_list(100)
+    team_map = {str(t["_id"]): t.get("name", "") for t in teams_list}
+    
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    
+    # Header
+    writer.writerow([
+        'N. Progressivo',
+        'Data Pagamento',
+        'Data Registrazione',
+        'Atleta',
+        'Codice Fiscale',
+        'Squadra',
+        'Metodo Pagamento',
+        'Descrizione',
+        'Importo'
+    ])
+    
+    for p in payments:
+        athlete = athlete_map.get(p.get("athlete_id", ""), {})
+        athlete_name = f"{athlete.get('last_name', '')} {athlete.get('first_name', '')}".strip()
+        team_name = team_map.get(athlete.get("team_id", ""), "")
+        
+        paid_date = p.get("paid_date", "")
+        if isinstance(paid_date, datetime):
+            paid_date = paid_date.strftime("%d/%m/%Y")
+        
+        reg_date = p.get("registration_date", p.get("created_at", ""))
+        if isinstance(reg_date, datetime):
+            reg_date = reg_date.strftime("%d/%m/%Y")
+        
+        amount = p.get("amount", 0)
+        amount_str = f"{amount:.2f}".replace('.', ',')
+        
+        writer.writerow([
+            p.get("receipt_number", ""),
+            paid_date,
+            reg_date,
+            athlete_name,
+            athlete.get("fiscal_code", ""),
+            team_name,
+            p.get("payment_method", ""),
+            p.get("description", ""),
+            amount_str
+        ])
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=prima_nota_cassa_{season_str.replace('/', '-')}_{datetime.now().strftime('%Y%m%d')}.csv"}
+    )
+
 # Include the router in the main app
 app.include_router(api_router)
 

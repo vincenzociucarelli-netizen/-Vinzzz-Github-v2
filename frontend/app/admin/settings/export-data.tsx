@@ -55,6 +55,14 @@ const EXPORT_OPTIONS: ExportOption[] = [
     color: '#5856D6',
     endpoint: '/export-csv/audit-logs',
   },
+  {
+    key: 'prima-nota',
+    title: 'Prima Nota Cassa',
+    description: 'N. progressivo, data pagamento, data registrazione, atleta, metodo, importo',
+    icon: 'receipt',
+    color: '#FF2D55',
+    endpoint: '/export-csv/prima-nota',
+  },
 ];
 
 export default function ExportDataPage() {
