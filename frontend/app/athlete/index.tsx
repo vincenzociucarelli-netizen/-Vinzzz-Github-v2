@@ -599,21 +599,33 @@ export default function AthleteScreen() {
           <Text style={styles.certificateCardTitle}>Certificato Medico</Text>
           {(profile as any)?.medical_certificate_expiry ? (
             <View>
-              <View style={styles.certificateInfo}>
-                <Ionicons
-                  name={new Date((profile as any)?.medical_certificate_expiry) < new Date() ? 'close-circle' : ((profile as any)?.medical_certificate_verified ? 'checkmark-circle' : 'time-outline')}
-                  size={24}
-                  color={new Date((profile as any)?.medical_certificate_expiry) < new Date() ? '#FF3B30' : ((profile as any)?.medical_certificate_verified ? '#34C759' : '#FF9500')}
-                />
-                <View style={styles.certificateDetails}>
-                  <Text style={styles.certificateLabel}>
-                    Scadenza: {formatDateIT((profile as any)?.medical_certificate_expiry)}
-                  </Text>
-                  {new Date((profile as any)?.medical_certificate_expiry) < new Date() && (
-                    <Text style={styles.certificateExpired}>SCADUTO</Text>
-                  )}
-                </View>
-              </View>
+              {(() => {
+                const expiryDate = new Date((profile as any).medical_certificate_expiry);
+                const today = new Date();
+                const daysLeft = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                const isExpired = daysLeft < 0;
+                const isExpiringSoon = daysLeft >= 0 && daysLeft <= 30;
+                const statusColor = isExpired ? '#FF3B30' : isExpiringSoon ? '#FF9500' : '#34C759';
+                const statusBg = isExpired ? '#FFF0F0' : isExpiringSoon ? '#FFF8E1' : '#E8F5E9';
+                const statusText = isExpired ? 'SCADUTO' : isExpiringSoon ? `Scade tra ${daysLeft} giorni` : 'In corso di validità';
+                return (
+                  <View style={{ backgroundColor: statusBg, padding: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: statusColor }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons
+                        name={isExpired ? 'close-circle' : isExpiringSoon ? 'alert-circle' : 'checkmark-circle'}
+                        size={22}
+                        color={statusColor}
+                      />
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: statusColor }}>
+                        Scadenza: {formatDateIT((profile as any).medical_certificate_expiry)}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: statusColor, fontWeight: '600', marginTop: 4, paddingLeft: 30 }}>
+                      {statusText}
+                    </Text>
+                  </View>
+                );
+              })()}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
                 <Ionicons
                   name={(profile as any)?.medical_certificate_verified ? 'shield-checkmark' : 'shield-outline'}
@@ -632,14 +644,20 @@ export default function AthleteScreen() {
             </View>
           )}
           
-          {/* Collapsible: Nuovo certificato - only for adults */}
+          {/* Banner viola per inserimento/modifica date */}
           {!isMinor && (
           <TouchableOpacity 
-            style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#eee' }}
+            style={{ 
+              backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+              borderWidth: 1, borderColor: '#CE93D8',
+            }}
             onPress={() => setShowCertForm(!showCertForm)}
           >
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#007AFF' }}>Nuovo certificato</Text>
-            <Ionicons name={showCertForm ? "chevron-up" : "chevron-down"} size={20} color="#007AFF" />
+            <Ionicons name={showCertForm ? "chevron-up" : "calendar-outline"} size={18} color="#7B1FA2" />
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
+              {(profile as any)?.medical_certificate_expiry ? 'Modifica date certificato' : 'Inserisci dati certificato'}
+            </Text>
           </TouchableOpacity>
           )}
           
@@ -948,22 +966,29 @@ export default function AthleteScreen() {
         <Text style={styles.certificateCardTitle}>Certificato Medico</Text>
         {(profile as any)?.medical_certificate_expiry ? (
           <View>
-            <View style={styles.certificateInfo}>
-              <Ionicons
-                name={new Date((profile as any)?.medical_certificate_expiry) < new Date() ? 'close-circle' : 'checkmark-circle'}
-                size={24}
-                color={new Date((profile as any)?.medical_certificate_expiry) < new Date() ? '#FF3B30' : '#34C759'}
-              />
-              <View style={styles.certificateDetails}>
-                <Text style={styles.certificateLabel}>
-                  Scadenza: {formatDateIT((profile as any)?.medical_certificate_expiry)}
-                </Text>
-                {new Date((profile as any)?.medical_certificate_expiry) < new Date() && (
-                  <Text style={styles.certificateExpired}>SCADUTO</Text>
-                )}
-              </View>
-            </View>
-            {/* Stato verifica admin */}
+            {(() => {
+              const expiryDate = new Date((profile as any).medical_certificate_expiry);
+              const today = new Date();
+              const daysLeft = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+              const isExpired = daysLeft < 0;
+              const isExpiringSoon = daysLeft >= 0 && daysLeft <= 30;
+              const statusColor = isExpired ? '#FF3B30' : isExpiringSoon ? '#FF9500' : '#34C759';
+              const statusBg = isExpired ? '#FFF0F0' : isExpiringSoon ? '#FFF8E1' : '#E8F5E9';
+              const statusText = isExpired ? 'SCADUTO' : isExpiringSoon ? `Scade tra ${daysLeft} giorni` : 'In corso di validità';
+              return (
+                <View style={{ backgroundColor: statusBg, padding: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: statusColor }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name={isExpired ? 'close-circle' : isExpiringSoon ? 'alert-circle' : 'checkmark-circle'} size={22} color={statusColor} />
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: statusColor }}>
+                      Scadenza: {formatDateIT((profile as any).medical_certificate_expiry)}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: statusColor, fontWeight: '600', marginTop: 4, paddingLeft: 30 }}>
+                    {statusText}
+                  </Text>
+                </View>
+              );
+            })()}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
               <Ionicons
                 name={(profile as any)?.medical_certificate_verified ? 'shield-checkmark' : 'shield-outline'}
@@ -976,20 +1001,26 @@ export default function AthleteScreen() {
             </View>
           </View>
         ) : (
-          <View>
-            <View style={styles.warningBox}>
-              <Ionicons name="warning" size={24} color="#FF9500" />
-              <Text style={styles.warningText}>Nessun certificato inserito</Text>
-            </View>
+          <View style={styles.warningBox}>
+            <Ionicons name="warning" size={24} color="#FF9500" />
+            <Text style={styles.warningText}>Nessun certificato inserito</Text>
           </View>
         )}
         
-        {/* Collapsible: Nuovo certificato */}
+        {/* Banner viola per inserimento/modifica date */}
         <TouchableOpacity 
-          style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#eee' }}
+          style={{ 
+            backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+            borderWidth: 1, borderColor: '#CE93D8',
+          }}
           onPress={() => setShowCertForm(!showCertForm)}
         >
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#007AFF' }}>Nuovo certificato</Text>
+          <Ionicons name={showCertForm ? "chevron-up" : "calendar-outline"} size={18} color="#7B1FA2" />
+          <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
+            {(profile as any)?.medical_certificate_expiry ? 'Modifica date certificato' : 'Inserisci dati certificato'}
+          </Text>
+        </TouchableOpacity>
           <Ionicons name={showCertForm ? "chevron-up" : "chevron-down"} size={20} color="#007AFF" />
         </TouchableOpacity>
         

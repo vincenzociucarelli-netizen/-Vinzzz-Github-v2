@@ -2353,18 +2353,29 @@ export default function AdminAthleteDetail() {
               <Text style={styles.cardTitle}>Certificato Medico</Text>
               {certificate ? (
                 <View>
-                  <View style={styles.certRow}>
-                    <Ionicons
-                      name={isCertificateExpired ? 'close-circle' : (certificate.verified ? 'checkmark-circle' : 'time-outline')}
-                      size={24}
-                      color={getCertificateColor()}
-                    />
-                    <Text style={[styles.certText, { color: getCertificateColor() }]}>
-                      Scadenza: {formatDate(certificate.expiry_date)} 
-                      {isCertificateExpired && ' (SCADUTO)'}
-                      {isCertificateExpiringSoon && ' (IN SCADENZA)'}
-                    </Text>
-                  </View>
+                  {(() => {
+                    const expiryDate = new Date(certificate.expiry_date);
+                    const today = new Date();
+                    const daysLeft = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    const isExpired = daysLeft < 0;
+                    const isExpiringSoon = daysLeft >= 0 && daysLeft <= 30;
+                    const statusColor = isExpired ? '#FF3B30' : isExpiringSoon ? '#FF9500' : '#34C759';
+                    const statusBg = isExpired ? '#FFF0F0' : isExpiringSoon ? '#FFF8E1' : '#E8F5E9';
+                    const statusText = isExpired ? 'SCADUTO' : isExpiringSoon ? `Scade tra ${daysLeft} giorni` : 'In corso di validità';
+                    return (
+                      <View style={{ backgroundColor: statusBg, padding: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: statusColor }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name={isExpired ? 'close-circle' : isExpiringSoon ? 'alert-circle' : 'checkmark-circle'} size={22} color={statusColor} />
+                          <Text style={{ fontSize: 16, fontWeight: '700', color: statusColor }}>
+                            Scadenza: {formatDate(certificate.expiry_date)}
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 12, color: statusColor, fontWeight: '600', marginTop: 4, paddingLeft: 30 }}>
+                          {statusText}
+                        </Text>
+                      </View>
+                    );
+                  })()}
                   {athlete?.medical_certificate_date && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, paddingLeft: 4 }}>
                       <Ionicons name="document-text-outline" size={18} color="#666" />
@@ -2412,21 +2423,18 @@ export default function AdminAthleteDetail() {
                 </View>
               )}
               <TouchableOpacity
-                style={styles.addCertButton}
+                style={{ 
+                  backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  borderWidth: 1, borderColor: '#CE93D8',
+                }}
                 onPress={() => setCertModalVisible(true)}
               >
-                <Ionicons name={certificate ? "create" : "add-circle"} size={18} color="#007AFF" />
-                <Text style={styles.addCertButtonText}>
-                  {certificate ? 'Aggiorna Certificato' : 'Inserisci dati Certificato'}
+                <Ionicons name={certificate ? "create-outline" : "calendar-outline"} size={18} color="#7B1FA2" />
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
+                  {certificate ? 'Modifica date certificato' : 'Inserisci dati certificato'}
                 </Text>
               </TouchableOpacity>
-              
-              <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginTop: 8, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
-                <Text style={{ fontSize: 12, color: '#E65100', lineHeight: 18 }}>
-                  Copia del certificato dovrà essere consegnata alla Società e inviata per e-mail al seguente indirizzo: <Text style={{ fontWeight: 'bold' }}>{societyData?.email || '-'}</Text> in formato pdf
-                </Text>
-              </View>
-              
             </View>
 
       {/* Privacy Status */}

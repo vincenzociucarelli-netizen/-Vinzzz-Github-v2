@@ -96,13 +96,17 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
   if (!showForm) {
     return (
       <TouchableOpacity
-        style={{ backgroundColor: '#1565C0', borderRadius: 10, padding: 14, marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+        style={{ 
+          backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+          borderWidth: 1, borderColor: '#CE93D8',
+        }}
         onPress={() => setShowForm(true)}
         data-testid="insert-certificate-dates-btn"
       >
-        <Ionicons name={certificate ? "create" : "calendar"} size={20} color="#fff" />
-        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>
-          {certificate ? 'Modifica Date Certificato' : 'Inserisci Date Certificato'}
+        <Ionicons name={certificate ? "create-outline" : "calendar-outline"} size={18} color="#7B1FA2" />
+        <Text style={{ color: '#7B1FA2', fontWeight: '600', fontSize: 14 }}>
+          {certificate ? 'Modifica date certificato' : 'Inserisci dati certificato'}
         </Text>
       </TouchableOpacity>
     );
@@ -1667,23 +1671,35 @@ export default function AthleteDetail() {
           <Text style={styles.cardTitle}>Certificato Medico</Text>
           {certificate ? (
             <View>
-              <View style={styles.certInfo}>
-                <Ionicons
-                  name={isCertificateExpired ? 'close-circle' : (certificate.verified ? 'checkmark-circle' : 'time-outline')}
-                  size={24}
-                  color={isCertificateExpired ? '#FF3B30' : (certificate.verified ? '#34C759' : '#FF9500')}
-                />
-                <View style={styles.certDetails}>
-                  <Text style={styles.certLabel}>
-                    Scadenza: {format(new Date(certificate.expiry_date), 'dd/MM/yyyy', { locale: it })}
-                  </Text>
-                  {isCertificateExpired && (
-                    <Text style={styles.certExpired}>SCADUTO</Text>
-                  )}
-                </View>
-              </View>
+              {(() => {
+                const expiryDate = new Date(certificate.expiry_date);
+                const today = new Date();
+                const daysLeft = differenceInDays(expiryDate, today);
+                const isExpired = daysLeft < 0;
+                const isExpiringSoon = daysLeft >= 0 && daysLeft <= 30;
+                const statusColor = isExpired ? '#FF3B30' : isExpiringSoon ? '#FF9500' : '#34C759';
+                const statusBg = isExpired ? '#FFF0F0' : isExpiringSoon ? '#FFF8E1' : '#E8F5E9';
+                const statusText = isExpired ? 'SCADUTO' : isExpiringSoon ? `Scade tra ${daysLeft} giorni` : 'In corso di validità';
+                return (
+                  <View style={{ backgroundColor: statusBg, padding: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: statusColor }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons
+                        name={isExpired ? 'close-circle' : isExpiringSoon ? 'alert-circle' : 'checkmark-circle'}
+                        size={22}
+                        color={statusColor}
+                      />
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: statusColor }}>
+                        Scadenza: {format(expiryDate, 'dd/MM/yyyy', { locale: it })}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: statusColor, fontWeight: '600', marginTop: 4, paddingLeft: 30 }}>
+                      {statusText}
+                    </Text>
+                  </View>
+                );
+              })()}
               {certificate.issue_date && (
-                <Text style={{ fontSize: 13, color: '#666', marginTop: 6, paddingLeft: 32 }}>
+                <Text style={{ fontSize: 13, color: '#666', marginTop: 8, paddingLeft: 4 }}>
                   Emissione: {format(new Date(certificate.issue_date), 'dd/MM/yyyy', { locale: it })}
                 </Text>
               )}
