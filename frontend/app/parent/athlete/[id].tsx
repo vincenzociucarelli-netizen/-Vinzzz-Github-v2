@@ -94,7 +94,20 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
   };
 
   if (!showForm) {
-    if (certificate) return null; // No banner if certificate already exists
+    if (certificate) {
+      // Certificate exists: small subtle link to modify
+      return (
+        <TouchableOpacity
+          style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 6 }}
+          onPress={() => setShowForm(true)}
+          data-testid="modify-certificate-dates-btn"
+        >
+          <Ionicons name="create-outline" size={16} color="#7B1FA2" />
+          <Text style={{ color: '#7B1FA2', fontSize: 13, fontWeight: '500' }}>Modifica date certificato</Text>
+        </TouchableOpacity>
+      );
+    }
+    // No certificate: purple banner
     return (
       <TouchableOpacity
         style={{ 
