@@ -16940,6 +16940,18 @@ async def get_my_documents(
         {"parent_id": target_user_id}
     ]}
     
+    # For parents: also include documents for their children (signed by the other parent)
+    if role == UserRole.PARENT or (signer_id and current_user.get("role") == UserRole.ADMIN):
+        lookup_id = target_user_id
+        # Find all children where this user is parent_id or second_parent_id
+        children = await db.athletes.find(
+            {"$or": [{"parent_id": lookup_id}, {"second_parent_id": lookup_id}]},
+            {"_id": 0, "id": 1}
+        ).to_list(100)
+        children_ids = [c["id"] for c in children]
+        if children_ids:
+            query["$or"].append({"minor_id": {"$in": children_ids}})
+    
     documents = []
     async for doc in db.signed_documents.find(query).sort([("signed_at", -1), ("created_at", -1)]):
         doc.pop("_id", None)
@@ -16951,6 +16963,7 @@ async def get_my_documents(
             "year": doc.get("year"),
             "amount_gross": doc.get("amount_gross"),
             "athlete_name": doc.get("athlete_name"),
+            "signer_name": doc.get("signer_name"),
             # Minor info for grouping
             "minor_id": doc.get("minor_id"),
             "minor_name": doc.get("minor_name"),
