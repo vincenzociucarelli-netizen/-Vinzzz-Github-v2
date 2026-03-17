@@ -22,6 +22,7 @@ import { captureRef } from 'react-native-view-shot';
 import { Picker } from '@react-native-picker/picker';
 import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
+import { GDPRPrivacyModal } from '../../../src/components/GDPRPrivacyModal';
 import { Athlete, Certificate, Payment, PaymentSettings, Team } from '../../../src/types';
 import { format, differenceInDays, addMonths, subDays } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -66,6 +67,9 @@ export default function AthleteDetail() {
   const [enteredPassword, setEnteredPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [checkingPassword, setCheckingPassword] = useState(false);
+  
+  // Parent profile data for GDPR signing
+  const [parentProfile, setParentProfile] = useState<any>(null);
   
   // Edit mode states
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -212,6 +216,14 @@ export default function AthleteDetail() {
         }
       } catch (error) {
         setTeamSchedule(null);
+      }
+
+      // Load parent profile for GDPR signing
+      try {
+        const parentRes = await api.get('/auth/me');
+        setParentProfile(parentRes.data);
+      } catch (error) {
+        console.log('Could not load parent profile');
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -940,24 +952,25 @@ export default function AthleteDetail() {
   };
 
   const handleAcceptPrivacy = async () => {
-    try {
-      // Accetta privacy E attiva l'atleta in un'unica chiamata
-      const response = await api.patch(`/athletes/${id}`, {
-        privacy_accepted: true,
-        image_consent: true,
-        status: 'active',
-      });
+    // Now handled by GDPRPrivacyModal onSign callback
+  };
 
-      // Chiudi il modal PRIMA di tutto
-      setPrivacyModalVisible(false);
-      setPrivacyConfirmed(false);
-      
-      // Aggiorna lo stato locale
-      setAthlete(response.data);
-      
-      showAlert('Successo', 'Privacy accettata e atleta attivato!');
-    } catch (error: any) {
-      showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'accettazione');
+  const handleGDPRPrivacySigned = async (success: boolean, documentId?: string) => {
+    if (success) {
+      try {
+        // Attiva l'atleta dopo la firma GDPR
+        const response = await api.patch(`/athletes/${id}`, {
+          privacy_accepted: true,
+          image_consent: true,
+          status: 'active',
+        });
+        setPrivacyModalVisible(false);
+        setPrivacyConfirmed(false);
+        setAthlete(response.data);
+        showAlert('Successo', 'Privacy firmata e atleta attivato!');
+      } catch (error: any) {
+        showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'attivazione');
+      }
     }
   };
 
@@ -989,9 +1002,8 @@ export default function AthleteDetail() {
   };
 
   const handlePrivacyAccept = async () => {
-    setPrivacyModalVisible(false);
-    setPrivacyConfirmed(true);
-    await executeStatusToggle('active');
+    // Apri il modal GDPR per la firma vera
+    setPrivacyModalVisible(true);
   };
 
   const executeStatusToggle = async (newStatus: string) => {
@@ -2142,79 +2154,33 @@ export default function AthleteDetail() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Privacy Modal */}
-      <Modal
-        visible={privacyModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setPrivacyModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.privacyModalContent}>
-            <Text style={styles.modalTitle}>Conferma Privacy e Liberatoria</Text>
-            
-            <ScrollView style={styles.privacyScroll}>
-              <Text style={styles.privacyTitle}>LIBERATORIA</Text>
-              
-              <Text style={styles.privacyText}>
-                Il/La sottoscritto/a, in qualità di esercente la responsabilità genitoriale 
-                sull'atleta iscritto/a alla società sportiva:
-              </Text>
-              
-              <Text style={styles.privacyTitle}>DICHIARA</Text>
-              
-              <Text style={styles.privacyText}>
-                di essere stato informato e di aver preso visione dell'informativa ai sensi 
-                degli artt. 13 e 14 del Regolamento (UE) 2016/679 sulla protezione dei dati (GDPR), 
-                disponibile anche sul sito web della società, riguardo il trattamento dei dati 
-                personali propri e dell'atleta.
-              </Text>
-              
-              <Text style={styles.privacyTitle}>PRESTA IL PROPRIO CONSENSO</Text>
-              
-              <Text style={styles.privacyText}>
-                ☑ al trattamento dei dati personali propri e dell'atleta per le finalità 
-                strettamente connesse e necessarie alla pratica sportiva dilettantistica 
-                (iscrizione, tesseramento, partecipazione a manifestazioni sportive, 
-                gestione amministrativa);{'\n\n'}
-                
-                ☑ all'utilizzo di immagini e/o video dell'atleta per finalità promozionali 
-                e comunicative della società, sia su supporti tradizionali che digitali 
-                (sito web, social network, materiale promozionale), con l'impegno che tali 
-                immagini non saranno utilizzate per fini commerciali o cedute a terzi;{'\n\n'}
-                
-                ☑ alla comunicazione dei dati a federazioni, enti di promozione sportiva, 
-                assicurazioni e altri soggetti necessari per lo svolgimento dell'attività sportiva.
-              </Text>
-              
-              <Text style={styles.privacyNote}>
-                Il consenso è revocabile in qualsiasi momento mediante comunicazione scritta 
-                alla società. Il rifiuto del consenso ai trattamenti necessari comporterà 
-                l'impossibilità di partecipare all'attività sportiva.
-              </Text>
-            </ScrollView>
-
-            <View style={styles.privacyButtons}>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonSecondary]}
-                onPress={() => {
-                  setPrivacyModalVisible(false);
-                  setPrivacyConfirmed(false);
-                }}
-              >
-                <Text style={styles.buttonSecondaryText}>Annulla</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.buttonSuccess]}
-                onPress={handleAcceptPrivacy}
-              >
-                <Text style={styles.buttonText}>Accetto e Confermo</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* GDPR Privacy Modal */}
+      {privacyModalVisible && athlete && parentProfile && (
+        <GDPRPrivacyModal
+          visible={privacyModalVisible}
+          onClose={() => setPrivacyModalVisible(false)}
+          onSign={handleGDPRPrivacySigned}
+          documentType="gdpr_minor"
+          signerInfo={{
+            name: parentProfile.first_name || (parentProfile.full_name?.split(' ').slice(1).join(' ') || ''),
+            surname: parentProfile.last_name || (parentProfile.full_name?.split(' ')[0] || ''),
+            fiscal_code: parentProfile.fiscal_code || '',
+            birth_date: parentProfile.date_of_birth || '',
+            birth_place: parentProfile.birth_place || parentProfile.place_of_birth || '',
+            address: parentProfile.address || '',
+            city: parentProfile.city || '',
+            province: parentProfile.province || '',
+          }}
+          minorInfo={{
+            id: athlete.id,
+            name: athlete.first_name || '',
+            surname: athlete.last_name || '',
+            fiscal_code: athlete.fiscal_code || '',
+            birth_date: athlete.date_of_birth || '',
+            birth_place: athlete.birth_place || '',
+          }}
+        />
+      )}
 
       {/* Edit Modal */}
       <Modal
