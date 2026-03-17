@@ -51,6 +51,10 @@ export default function ParentsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{parents: Parent[], athletes: any[]}>({parents: [], athletes: []});
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Reset password
+  const [resetPwModalVisible, setResetPwModalVisible] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
 
   const loadData = async () => {
     try {
@@ -180,6 +184,22 @@ export default function ParentsScreen() {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante la sospensione');
     }
     setActionModalVisible(false);
+  };
+
+  const handleResetPassword = async () => {
+    if (!selectedParent || !newPassword) return;
+    if (newPassword.length < 6) {
+      showAlert('Errore', 'La password deve avere almeno 6 caratteri');
+      return;
+    }
+    try {
+      await api.patch(`/users/${selectedParent.id}/reset-password`, { new_password: newPassword });
+      showAlert('Successo', `Password reimpostata per ${selectedParent.full_name}`);
+      setResetPwModalVisible(false);
+      setNewPassword('');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il reset');
+    }
   };
 
   const handleDelete = async (parent: Parent) => {
@@ -605,8 +625,62 @@ export default function ParentsScreen() {
             </TouchableOpacity>
             
             <TouchableOpacity
+              style={[styles.modalBtn, { backgroundColor: '#9C27B0' }]}
+              onPress={() => {
+                setActionModalVisible(false);
+                setNewPassword('');
+                setResetPwModalVisible(true);
+              }}
+              data-testid="reset-password-parent-btn"
+            >
+              <Ionicons name="key" size={20} color="#fff" />
+              <Text style={styles.modalBtnText}>Reset Password</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
               style={styles.cancelBtn}
               onPress={() => setActionModalVisible(false)}
+            >
+              <Text style={styles.cancelBtnText}>Annulla</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Reset Password Modal */}
+      <Modal
+        visible={resetPwModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setResetPwModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Reset Password</Text>
+            <Text style={styles.modalSubtitle}>{selectedParent?.full_name} ({selectedParent?.email})</Text>
+            
+            <TextInput
+              style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 15, marginTop: 16, marginBottom: 8, backgroundColor: '#f9f9f9' }}
+              placeholder="Nuova password (min 6 caratteri)"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry={false}
+              autoCapitalize="none"
+              data-testid="reset-password-input"
+            />
+            
+            <TouchableOpacity
+              style={[styles.modalBtn, { backgroundColor: '#9C27B0', opacity: newPassword.length < 6 ? 0.5 : 1 }]}
+              onPress={handleResetPassword}
+              disabled={newPassword.length < 6}
+            >
+              <Ionicons name="key" size={20} color="#fff" />
+              <Text style={styles.modalBtnText}>Conferma Reset</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => { setResetPwModalVisible(false); setNewPassword(''); }}
             >
               <Text style={styles.cancelBtnText}>Annulla</Text>
             </TouchableOpacity>

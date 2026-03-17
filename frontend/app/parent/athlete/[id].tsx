@@ -1570,6 +1570,18 @@ export default function AthleteDetail() {
               Copia del certificato dovrà essere consegnata alla Società e inviata per e-mail al seguente indirizzo: <Text style={{ fontWeight: 'bold' }}>{societyEmail || '-'}</Text> in formato pdf
             </Text>
           </View>
+          
+          {/* Bottone carica/aggiorna certificato */}
+          <TouchableOpacity
+            style={{ backgroundColor: '#007AFF', borderRadius: 10, padding: 14, marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            onPress={handleUploadCertificate}
+            data-testid="upload-certificate-btn"
+          >
+            <Ionicons name={certificate ? "refresh" : "cloud-upload"} size={20} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>
+              {certificate ? 'Aggiorna Certificato' : 'Carica Certificato Medico'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Team Schedule Card - Allenamenti e Gare Interne */}

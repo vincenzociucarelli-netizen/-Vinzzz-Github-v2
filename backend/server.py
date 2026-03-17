@@ -5411,6 +5411,8 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
             "team_id": a.get("team_id"),
             "team_name": team_names.get(a.get("team_id"), ""),
             "parent_id": a.get("parent_id"),
+            "second_parent_id": a.get("second_parent_id"),
+            "second_parent_email": a.get("second_parent_email"),
             "status": a.get("status", "pending"),
             "date_of_birth": a.get("date_of_birth"),
             # Additional fields for advanced search

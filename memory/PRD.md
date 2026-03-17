@@ -53,6 +53,9 @@ Sports team management application for Italian sports societies, targeting iOS A
 - Fix Prima Nota Cassa CSV: corretto bug "Squadra" vuota (il lookup usava _id MongoDB invece del campo custom id dei team)
 - Pulizia variabili inutilizzate in other.tsx (seasonStartMonth, seasonStartDay, blockExpiredCertificates rimossi)
 - Fix bug "Not authenticated" apertura PDF documenti firmati GDPR da parent/documents.tsx (window.open senza token → fetch con token + blob URL)
+- Cross-linking figli Pessi: impostato second_parent_email/id + aggiunto second_parent_id alla risposta API /api/athletes
+- Aggiunto bottone "Carica Certificato Medico" nella vista genitore del profilo minore
+- Aggiunto "Reset Password" per genitori dal pannello admin (bottone + modale in parents.tsx)
 
 ## Session 4 Completions (March 16, 2026)
 - P0: Account card email now shows only athlete's email (removed parent email fallback)
