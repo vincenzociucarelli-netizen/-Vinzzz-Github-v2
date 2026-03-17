@@ -1,10 +1,11 @@
 export interface User {
   id: string;
   email: string;
-  role: 'admin' | 'viewer' | 'coach' | 'parent' | 'athlete';
+  role: 'admin' | 'viewer' | 'coach' | 'parent' | 'athlete' | 'minor';
   full_name: string;
   status?: string;
   profile_photo?: string;
+  athlete_id?: string;
 }
 
 export interface TrainingSession {

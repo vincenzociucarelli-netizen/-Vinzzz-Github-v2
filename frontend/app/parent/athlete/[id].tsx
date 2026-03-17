@@ -293,6 +293,15 @@ export default function AthleteDetail() {
   // QR Code ref for sharing
   const qrCodeRef = useRef<View>(null);
 
+  // Minor access control states
+  const [minorAccessEnabled, setMinorAccessEnabled] = useState(false);
+  const [minorHasPin, setMinorHasPin] = useState(false);
+  const [minorAthleteCode, setMinorAthleteCode] = useState('');
+  const [minorPinModalVisible, setMinorPinModalVisible] = useState(false);
+  const [minorNewPin, setMinorNewPin] = useState('');
+  const [minorConfirmPin, setMinorConfirmPin] = useState('');
+  const [savingMinorPin, setSavingMinorPin] = useState(false);
+
   // Helper function for alerts
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
@@ -386,6 +395,16 @@ export default function AthleteDetail() {
         setParentProfile(parentRes.data);
       } catch (error) {
         console.log('Could not load parent profile');
+      }
+
+      // Load minor access status
+      try {
+        const minorStatusRes = await api.get(`/athletes/${id}/minor-access-status`);
+        setMinorAccessEnabled(minorStatusRes.data.minor_access_enabled || false);
+        setMinorHasPin(minorStatusRes.data.has_pin || false);
+        setMinorAthleteCode(minorStatusRes.data.athlete_code || '');
+      } catch (error) {
+        console.log('Could not load minor access status');
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -2090,6 +2109,76 @@ export default function AthleteDetail() {
           </View>
         )}
 
+        {/* Minor Access Control Section */}
+        <View style={[styles.card, { marginTop: 12 }]} data-testid="minor-access-section">
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <Ionicons name="phone-portrait" size={20} color="#34C759" />
+            <Text style={[styles.cardTitle, { marginBottom: 0, marginLeft: 8 }]}>Accesso Atleta dal Telefono</Text>
+          </View>
+          <Text style={{ fontSize: 13, color: '#666', marginBottom: 14, lineHeight: 18 }}>
+            Permetti a {athlete?.first_name || 'tuo figlio/a'} di accedere alla propria dashboard dal telefono con un codice e un PIN.
+            Potra vedere orari, QR code e presenze (nessun dato sensibile).
+          </Text>
+
+          {/* PIN setup */}
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: minorHasPin ? '#E8F5E9' : '#E3F2FD',
+              paddingVertical: 12, borderRadius: 10, marginBottom: 10, gap: 8,
+            }}
+            onPress={() => { setMinorNewPin(''); setMinorConfirmPin(''); setMinorPinModalVisible(true); }}
+            data-testid="minor-set-pin-button"
+          >
+            <Ionicons name={minorHasPin ? "key" : "add-circle"} size={18} color={minorHasPin ? '#2E7D32' : '#1565C0'} />
+            <Text style={{ fontWeight: '600', color: minorHasPin ? '#2E7D32' : '#1565C0', fontSize: 14 }}>
+              {minorHasPin ? 'Modifica PIN' : 'Imposta PIN'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Toggle access */}
+          {minorHasPin && (
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                backgroundColor: minorAccessEnabled ? '#FFF3E0' : '#E8F5E9',
+                paddingVertical: 12, borderRadius: 10, marginBottom: 10, gap: 8,
+              }}
+              onPress={async () => {
+                try {
+                  const res = await api.post(`/athletes/${id}/toggle-minor-access`);
+                  setMinorAccessEnabled(res.data.enabled);
+                  showAlert('Successo', res.data.message);
+                } catch (e: any) {
+                  showAlert('Errore', e.response?.data?.detail || 'Errore');
+                }
+              }}
+              data-testid="minor-toggle-access-button"
+            >
+              <Ionicons name={minorAccessEnabled ? "pause-circle" : "play-circle"} size={18} color={minorAccessEnabled ? '#E65100' : '#2E7D32'} />
+              <Text style={{ fontWeight: '600', color: minorAccessEnabled ? '#E65100' : '#2E7D32', fontSize: 14 }}>
+                {minorAccessEnabled ? 'Disattiva Accesso' : 'Attiva Accesso'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Credentials info */}
+          {minorAccessEnabled && minorHasPin && (
+            <View style={{ backgroundColor: '#F1F8E9', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#34C759' }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#33691E', marginBottom: 6 }}>
+                Credenziali per l'accesso:
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Text style={{ fontSize: 13, color: '#555' }}>Codice Atleta:</Text>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e', letterSpacing: 1 }}>{minorAthleteCode}</Text>
+              </View>
+              <Text style={{ fontSize: 12, color: '#888', fontStyle: 'italic', marginTop: 4 }}>
+                Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il codice e il PIN che hai impostato.
+              </Text>
+            </View>
+          )}
+        </View>
+
         {/* Request Deletion Section - Only visible when data is unlocked */}
         {dataUnlocked && (
           <View style={styles.deleteSection}>
@@ -2867,7 +2956,91 @@ export default function AthleteDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Minor PIN Setup Modal */}
+      <Modal
+        visible={minorPinModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setMinorPinModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 8, textAlign: 'center' }}>
+              {minorHasPin ? 'Modifica PIN Atleta' : 'Imposta PIN Atleta'}
+            </Text>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 20, textAlign: 'center' }}>
+              Il PIN deve essere di 4-6 cifre. {athlete?.first_name || "L'atleta"} lo usera per accedere alla propria dashboard.
+            </Text>
+            <TextInput
+              style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14, fontSize: 20, textAlign: 'center', letterSpacing: 8, marginBottom: 12, borderWidth: 1, borderColor: '#e0e0e0' }}
+              placeholder="PIN"
+              placeholderTextColor="#bbb"
+              value={minorNewPin}
+              onChangeText={setMinorNewPin}
+              keyboardType="number-pad"
+              maxLength={6}
+              secureTextEntry
+              data-testid="minor-pin-input"
+            />
+            <TextInput
+              style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14, fontSize: 20, textAlign: 'center', letterSpacing: 8, marginBottom: 20, borderWidth: 1, borderColor: '#e0e0e0' }}
+              placeholder="Conferma PIN"
+              placeholderTextColor="#bbb"
+              value={minorConfirmPin}
+              onChangeText={setMinorConfirmPin}
+              keyboardType="number-pad"
+              maxLength={6}
+              secureTextEntry
+              data-testid="minor-pin-confirm-input"
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: '#f0f0f0', borderRadius: 10, padding: 14, alignItems: 'center' }}
+                onPress={() => setMinorPinModalVisible(false)}
+              >
+                <Text style={{ fontWeight: '600', color: '#666' }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: '#34C759', borderRadius: 10, padding: 14, alignItems: 'center', opacity: savingMinorPin ? 0.6 : 1 }}
+                disabled={savingMinorPin}
+                onPress={async () => {
+                  if (!minorNewPin || minorNewPin.length < 4) {
+                    showAlert('Errore', 'Il PIN deve avere almeno 4 cifre');
+                    return;
+                  }
+                  if (minorNewPin !== minorConfirmPin) {
+                    showAlert('Errore', 'I PIN non coincidono');
+                    return;
+                  }
+                  setSavingMinorPin(true);
+                  try {
+                    await api.post(`/athletes/${id}/set-minor-pin`, { pin: minorNewPin });
+                    setMinorHasPin(true);
+                    setMinorAccessEnabled(true);
+                    setMinorPinModalVisible(false);
+                    showAlert('Successo', `PIN impostato! ${athlete?.first_name || "L'atleta"} puo ora accedere con il codice ${minorAthleteCode} e il PIN.`);
+                  } catch (e: any) {
+                    showAlert('Errore', e.response?.data?.detail || 'Errore nel salvataggio');
+                  } finally {
+                    setSavingMinorPin(false);
+                  }
+                }}
+                data-testid="minor-pin-save-button"
+              >
+                {savingMinorPin ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={{ fontWeight: '600', color: '#fff' }}>Salva PIN</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {

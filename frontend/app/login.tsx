@@ -23,9 +23,14 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loginMode, setLoginMode] = useState<'standard' | 'minor'>('standard');
+  
+  // Minor login fields
+  const [athleteCode, setAthleteCode] = useState('');
+  const [pin, setPin] = useState('');
   
   // Society branding
-  const [societyName, setSocietyName] = useState('GESTIONE SOCIETÀ');
+  const [societyName, setSocietyName] = useState('GESTIONE SOCIETA');
   const [societyLogo, setSocietyLogo] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,7 +53,7 @@ export default function Login() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Errore', 'Inserisci email e password');
+      showAlert('Errore', 'Inserisci email e password');
       return;
     }
 
@@ -60,7 +65,6 @@ export default function Login() {
       // Navigate based on role
       const role = response.data.user.role;
       if (role === 'admin') {
-        // Admin può scegliere se entrare come Admin o Dirigente
         router.replace('/select-role');
       } else if (role === 'coach') {
         router.replace('/coach');
@@ -75,6 +79,27 @@ export default function Login() {
       }
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMinorLogin = async () => {
+    if (!athleteCode || !pin) {
+      showAlert('Errore', 'Inserisci il codice atleta e il PIN');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.post('/auth/minor-login', {
+        athlete_code: athleteCode.trim().toUpperCase(),
+        pin: pin.trim(),
+      });
+      await setUser(response.data.user, response.data.token);
+      router.replace('/minor');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Codice o PIN non validi');
     } finally {
       setLoading(false);
     }
@@ -104,65 +129,134 @@ export default function Login() {
           </View>
         )}
         <Text style={styles.title}>{societyName}</Text>
-        <Text style={styles.subtitle}>Accedi al tuo account</Text>
 
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Password"
-              placeholderTextColor="#999"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-            />
-            <TouchableOpacity 
-              style={styles.eyeButton}
-              onPress={() => setShowPassword(!showPassword)}
-            >
-              <Ionicons 
-                name={showPassword ? "eye-off" : "eye"} 
-                size={22} 
-                color="#666" 
-              />
-            </TouchableOpacity>
-          </View>
-
+        {/* Mode selector tabs */}
+        <View style={styles.tabContainer}>
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-            data-testid="login-submit-button"
+            style={[styles.tab, loginMode === 'standard' && styles.tabActive]}
+            onPress={() => setLoginMode('standard')}
+            data-testid="login-tab-standard"
           >
-            <Text style={styles.buttonText}>{loading ? 'Accesso...' : 'Accedi'}</Text>
+            <Ionicons name="mail" size={16} color={loginMode === 'standard' ? '#007AFF' : '#999'} />
+            <Text style={[styles.tabText, loginMode === 'standard' && styles.tabTextActive]}>
+              Accesso Standard
+            </Text>
           </TouchableOpacity>
-
           <TouchableOpacity
-            style={styles.forgotButton}
-            onPress={() => router.push('/forgot-password')}
+            style={[styles.tab, loginMode === 'minor' && styles.tabActive]}
+            onPress={() => setLoginMode('minor')}
+            data-testid="login-tab-minor"
           >
-            <Text style={styles.forgotText}>Password dimenticata?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.linkButton}
-            onPress={() => router.push('/register')}
-          >
-            <Text style={styles.linkText}>Non hai un account? Registrati</Text>
+            <Ionicons name="person" size={16} color={loginMode === 'minor' ? '#007AFF' : '#999'} />
+            <Text style={[styles.tabText, loginMode === 'minor' && styles.tabTextActive]}>
+              Accesso Atleta
+            </Text>
           </TouchableOpacity>
         </View>
+
+        {loginMode === 'standard' ? (
+          <View style={styles.form}>
+            <Text style={styles.subtitle}>Accedi con email e password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              data-testid="login-email-input"
+            />
+
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Password"
+                placeholderTextColor="#999"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                data-testid="login-password-input"
+              />
+              <TouchableOpacity 
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons 
+                  name={showPassword ? "eye-off" : "eye"} 
+                  size={22} 
+                  color="#666" 
+                />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
+              data-testid="login-submit-button"
+            >
+              <Text style={styles.buttonText}>{loading ? 'Accesso...' : 'Accedi'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.forgotButton}
+              onPress={() => router.push('/forgot-password')}
+            >
+              <Text style={styles.forgotText}>Password dimenticata?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={() => router.push('/register')}
+            >
+              <Text style={styles.linkText}>Non hai un account? Registrati</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.form}>
+            <Text style={styles.subtitle}>Accedi con codice atleta e PIN</Text>
+            <Text style={styles.minorHint}>
+              Chiedi al tuo genitore il codice atleta e il PIN
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Codice Atleta"
+              placeholderTextColor="#999"
+              value={athleteCode}
+              onChangeText={(t) => setAthleteCode(t.toUpperCase())}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              data-testid="minor-login-code-input"
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="PIN (4-6 cifre)"
+              placeholderTextColor="#999"
+              value={pin}
+              onChangeText={setPin}
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={6}
+              data-testid="minor-login-pin-input"
+            />
+
+            <TouchableOpacity
+              style={[styles.button, styles.buttonMinor, loading && styles.buttonDisabled]}
+              onPress={handleMinorLogin}
+              disabled={loading}
+              data-testid="minor-login-submit-button"
+            >
+              <Ionicons name="log-in" size={20} color="#fff" />
+              <Text style={[styles.buttonText, { marginLeft: 8 }]}>
+                {loading ? 'Accesso...' : 'Entra'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -191,16 +285,56 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#e9ecef',
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 24,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  tabActive: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 13,
+    color: '#999',
+    fontWeight: '500',
+  },
+  tabTextActive: {
+    color: '#007AFF',
+    fontWeight: '600',
   },
   form: {
     width: '100%',
+  },
+  minorHint: {
+    fontSize: 13,
+    color: '#888',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontStyle: 'italic',
   },
   input: {
     backgroundColor: '#fff',
@@ -237,6 +371,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  buttonMinor: {
+    backgroundColor: '#34C759',
   },
   buttonDisabled: {
     opacity: 0.6,

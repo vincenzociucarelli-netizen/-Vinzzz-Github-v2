@@ -21,6 +21,12 @@ export default function Index() {
           case 'parent':
             router.replace('/parent');
             break;
+          case 'minor':
+            router.replace('/minor');
+            break;
+          case 'athlete':
+            router.replace('/athlete');
+            break;
           case 'viewer':
             router.replace('/dirigente');
             break;

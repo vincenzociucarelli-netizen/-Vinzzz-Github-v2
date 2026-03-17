@@ -1,85 +1,72 @@
 <analysis>**original_problem_statement**:
-The user's primary goal is to finalize a sports team management application for publication in the iOS App Store and Google Play Store. This involves implementing the final core features, fixing bugs, and ensuring the application meets legal and platform-specific requirements (particularly Apple's).
+The user's primary goal is to finalize a sports team management application for publication in the iOS App Store and Google Play Store. This involves implementing the final core features, fixing bugs, and ensuring the application meets legal and platform-specific requirements.
 
 **PRODUCT REQUIREMENTS**:
 *   A society's admin must accept Terms of Use before using the app. **DONE**.
-*   All users must accept a legal disclaimer (Privacy Policy and Terms) on their first login to comply with Apple's guidelines. **DONE**.
+*   All users must accept a legal disclaimer (Privacy Policy and Terms) on their first login. **DONE**.
 *   The application must have dedicated, accessible pages for the Privacy Policy and Terms of Use. **DONE**.
-*   A new athlete registration flow via admin email invitation needs to be created. **REPLACED** with a more flexible Share Registration Link feature.
-*   A public self-registration flow for athletes/parents must be available, including email verification to prevent fake accounts. **DONE**.
+*   A public self-registration flow for athletes/parents must be available, including email verification. **DONE**.
 *   Transactional emails should include links to the App Store and Play Store. **DONE**.
 *   The form for creating minor athletes must include fields for Codice Fiscale and a second parent's email. **DONE**.
-*   Each parent of a minor athlete must have their own separate, unique password (password dati) to access the minor's sensitive data, and the admin must be able to reset these passwords individually for each parent. **IN PROGRESS**.
+*   Each parent of a minor athlete must have their own separate, unique password (password dati) to access the minor's sensitive data. **DONE**.
+*   The application should feature a brief, role-specific onboarding tutorial for new users. **DONE**.
+*   The fiscal code calculation must support foreign-born athletes by including Country of Birth. **DONE**.
+*   A GDPR-compliant privacy acceptance flow (with signature) must be implemented for parents signing on behalf of minors. **DONE**.
+*   The payment system must support sequential receipt numbers per season and track payment registration dates. **DONE**.
+*   Admins must be able to export a Prima Nota Cassa (Cash Journal). **DONE**.
+*   Admins need to configure season start/end dates. **DONE**.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application is a sports team management tool with role-based access. Core legal and registration flows are implemented. Based on extensive user feedback this session, numerous UI/UX improvements have been made across the application, especially in the admin and parent-facing forms for athlete registration.
+The application is a nearly feature-complete sports management tool. This session was heavily focused on iterative bug fixing and feature refinement based on detailed user testing.
 
-Key changes include:
-*   **Simplified Invitation Flow**: The admin's athlete invitation process was completely refactored from three separate buttons (Major, Minor, Invite by Email) to a single, user-friendly Share Registration Link feature that generates a universal registration link to be shared via WhatsApp or other means.
-*   **Enhanced Forms**: The athlete registration forms now include automatic fiscal code calculation, gender selection, and better layouts. The parent registration form correctly pre-fills the phone number based on whether the user identifies as the father or mother.
-*   **UI/UX Fixes**: Multiple crashes related to missing state variables on the parent's athlete detail page have been resolved. The layout of various components (QR codes, admin modals, password fields) has been adjusted per the user's visual feedback.
-*   **Backend Updates**: The backend models and API endpoints were updated to support new fields like , , and  for athletes.
+Key areas addressed:
+- **Parent & Document Management**: Fixed critical bugs preventing parents from seeing documents signed by their spouse for shared children. Implemented a secure pattern for viewing token-protected PDF documents across the app.
+- **Medical Certificate Flow**: The entire workflow was overhauled. It's now a date-entry system (not file upload) with color-coded expiry status (green/orange/red). The UI was refined to show an add button only when no certificate exists, and an edit link otherwise. Regressions related to admin edit permissions and data consistency were also fixed.
+- **Password Management**: Implemented two crucial features:
+    1.  Admin can now reset both a parent's **login password** and their secondary **data password**.
+    2.  Parents have a secure, self-service method to reset their **data password** via a code sent to their email.
+- **Admin Panel Refinements**: The admin settings page was reorganized as per user request. The Prima Nota Cassa CSV export was fixed (column order, missing team data). A bug preventing the admin notification badge from clearing was resolved.
 
 **Last working item**:
-*   **Last item agent was working**: The user requested to overhaul the minor athlete's profile page as seen by a parent (). The goal is to make its structure, component order, and styling identical to the adult athlete's profile page (), which the user considers the correct template. They also reported a usability issue with the back button on legal document pages.
-*   **Status**: NOT STARTED
-*   **Agent Testing Done**: N
-*   **Which testing method agent to use?**: Frontend testing agent
-*   **User Testing Done**: N
+- **Last item agent was working**: Investigating the backend logic for automatic parent cross-linking. The user confirmed that when an athlete is created with a , the system should automatically find that user and populate the  field. The agent was about to check if this logic exists in .
+- **Status**: IN PROGRESS
+- **Agent Testing Done**: N
+- **Which testing method agent to use?**: backend testing agent
+- **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1: Inconsistent Minor Athlete Profile Layout (P0)**
-    *   **Description**: The profile page for a minor athlete, when viewed by a parent (), has a different component order and layout than the adult athlete's profile page (). The user wants the minor's profile to exactly match the adult's.
-    *   **Attempted fixes**: None.
-    *   **Next debug checklist**:
-        1.  Analyze  to document the correct component order (Header, QR, Payments, Coach, Schedule, etc.).
-        2.  Analyze .
-        3.  Reorder the components inside  to match the structure of .
-        4.  Ensure the styling of shared components is consistent between the two pages.
-    *   **Why fix this issue and what will be achieved with the fix?**: To create a consistent and predictable user experience across all athlete profiles.
-    *   **Status**: NOT STARTED
-    *   **Should Test frontend/backend/both after fix?**: Frontend
+- **Issue 1: Implement Automatic Parent Cross-Linking (P0)**
+    - **Description**: Currently, linking a second parent to a child is a manual database operation. The system needs to automatically resolve the  from the provided  when an athlete is created or updated. This is critical for data integrity as more families register.
+    - **Next debug checklist**:
+        - Review the athlete creation and update endpoints in .
+        - Check if there is any existing logic that attempts to find a user by .
+        - If not, implement logic to query the  collection for the email and populate  on the athlete document.
+        - Test the flow by creating a new athlete with a  that already exists as a user.
+    - **Why fix this issue and what will be achieved with the fix?**: To automate a core piece of data relationship management, ensuring that parents correctly see all their shared children without manual intervention.
+    - **Status**: NOT STARTED
+    - **Is recurring issue?**: Y
+    - **Should Test frontend/backend/both after fix?**: backend
+    - **Blocked on other issue**: None
 
-*   **Issue 2: Poor Back-Button Usability on Legal Pages (P1)**
-    *   **Description**: On the pages that display the Privacy Policy and Terms of Use, the top-left back button is too small. Furthermore, using the phone's native back button exits the application entirely instead of navigating to the previous screen.
-    *   **Attempted fixes**: None.
-    *   **Next debug checklist**:
-        1.  Locate the back button component in  and .
-        2.  Increase the button's size and touch-target area for better usability.
-        3.  Investigate the navigation handling. The native back button should trigger the router's  function, not exit the app. This may require adding an event listener for the  event in React Native.
-    *   **Why fix this issue and what will be achieved with the fix?**: To improve navigation and prevent users from accidentally closing the app.
-    *   **Status**: NOT STARTED
-    *   **Should Test frontend/backend/both after fix?**: Frontend
+- **Issue 2: Ambiguous User Deletion Logic (P2)**
+    - **Description**: It's unclear what should happen when an athlete profile is deleted. Should the associated user login account also be deleted, or retained for auditing? This has legal and data management implications.
+    - **Next debug checklist**: Clarify the desired behavior with the user.
+    - **Why fix this issue and what will be achieved with the fix?**: To ensure data management is consistent and compliant with user requirements and GDPR.
+    - **Status**: NOT STARTED
+    - **Is recurring issue?**: Y
+    - **Should Test frontend/backend/both after fix?**: backend
+    - **Blocked on other issue**: None
 
 **In progress Task List**:
-*   **Task 1: Complete Separate Data Passwords for Parents (P0)**
-    *   **Description**: This was the original high-priority task from the previous session but was deferred to address the user's immediate UI feedback. The backend is ready, but the frontend is incomplete.
-    *   **Where to resume**:
-        1.  Modify the parent registration form in  to add a Password Dati (Data Password) input.
-        2.  Update the  function to send this password to the backend.
-        3.  Implement the flow where a parent is prompted to create a new data password after an admin has reset it.
-    *   **What will be achieved with this?**: Completes a critical security feature, ensuring each parent has a unique password for their child's sensitive data.
-    *   **Status**: IN PROGRESS
-    *   **Should Test frontend/backend/both after fix?**: Both
-
-*   **Task 2: Implement Simplified Invite Person Modal (P1)**
-    *   **Description**: The user requested a simple way for an admin to send a direct invitation, in addition to the Share Link feature. The plan is to create a modal with only Name, Surname, and Email fields.
-    *   **Where to resume**:
-        1.  In , add a new button Invita Persona.
-        2.  Wire this button to open the .
-        3.  The agent already simplified the 's state () to only include name and email, but this needs to be connected to the UI.
-    *   **What will be achieved with this?**: Provides admins with two clear options: a mass-sharing link for public registration and a direct, targeted invitation.
-    *   **Status**: IN PROGRESS
-    *   **Should Test frontend/backend/both after fix?**: Frontend
+None.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks**:
-    *   (P0) **User-Guided Testing**: User wants to test the full lifecycle for Minors, Teams, and Excel Templates.
-    *   (P1) **Add Data Processor Checkbox**: Add a mandatory checkbox in the admin creation form confirming the user's appointment as a Data Processor under GDPR.
+    *   (P0) **Implement Lite Dashboard for Minor Athletes**: A major new feature requested by the user. A detailed, GDPR-compliant plan has been discussed.
+    *   (P1) **User-Guided Testing**: User wants to test the full lifecycle for Minors, Teams, and Excel Templates.
 *   **Future Tasks**:
-    *   (P2) **User Deletion Flow**: Clarify and implement the business logic for user deletion.
     *   (P2) **Refine UI for Contracted Athletes**: Improve the UI/UX for athletes marked as .
     *   (P3) **Backend Refactoring**: Decompose  into a modular structure.
     *   (P3) **Stripe Integration**: Re-implement Stripe for payments.
@@ -87,98 +74,98 @@ Key changes include:
     *   (P3) **Domain & App Store Publication**: Assist with final publication steps.
 
 **Completed work in this session**
--   **Refactored Athlete Invitation**: Replaced the admin's multi-button invite system with a single Share Registration Link button that generates a universal link for WhatsApp/copy-paste.
--   **Fixed Parent Registration Logic**: Added a Sei il padre o la madre? selector in the minor athlete registration form to correctly pre-fill the registering parent's phone number.
--   **Resolved Critical Frontend Crashes**: Fixed multiple crashes on the parent's athlete detail page () by declaring missing state variables (, , ).
--   **Implemented Numerous UI/UX Fixes**:
-    *   **Legal Screen**: Checkbox is now disabled until both legal documents have been opened.
-    *   **Athlete Registration Forms**: Added a Gender field, an automatic Calculate Fiscal Code button, renamed Fatturazione to Attestato di Versamento, and removed the Team selection section for parents.
-    *   **Admin Modals**: Fixed broken layouts (e.g., vertical gender buttons) and added missing fields (Birth Place/Province) to the minor athlete creation modal.
-    *   **Admin Athlete View**: Added a WhatsApp notification button for admins to inform a parent after resetting their data password.
-    *   **Data Password Field**: Made the data password input visible (not masked) and disabled autocomplete to prevent browsers from saving it.
--   **Corrected PDF Document Naming**: Changed Ricevuta (Receipt) to Attestato di Versamento (Payment Certificate) in the generated PDF for adult athletes' payments.
--   **User Support**: Assisted the user in finding the correct credentials for a test account (Luna Nuova) after an initial database connection issue.
+- **Admin Settings & CSV Export**: Reorganized the Dati Società settings page and fixed the Prima Nota Cassa CSV export by correcting the MongoDB aggregation pipeline to join on the correct fields and fixing the column order. (DONE)
+- **Secure Document Viewing**: Fixed a critical security/usability bug across the app where protected PDFs failed to load. Replaced direct  calls with a secure  +  pattern. (DONE)
+- **Shared Document & Child Visibility**: Modified backend logic to ensure parents can see children and documents associated with their spouse, enabling correct data sharing within a family unit. (DONE)
+- **Medical Certificate Overhaul**:
+    - Replaced file upload with a date-entry form for parents. (DONE)
+    - Implemented color-coding (green/orange/red) for certificate expiry status. (DONE)
+    - Fixed multiple regressions where admin editing was disabled and data was inconsistent between admin/athlete views. (DONE)
+- **Comprehensive Password Reset**:
+    - Implemented admin functionality to reset both a parent's **login password** and **data password**. (DONE)
+    - Built a secure, self-service flow for parents to reset their own **data password** via a code sent to their email. (DONE)
+- **Admin Notification Badge Fix**: Corrected a bug where the unread notification count did not reset after viewing notifications. (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-*   **Issue 1: Ambiguous User Deletion**
-    *   **Debug checklist**: Determine the desired behavior with the user: when an athlete profile is deleted, should the associated login account in the  collection also be deleted or retained for auditing?
-    *   **Why to solve this issue and what will be achieved with this?**: To ensure data management practices are consistent and align with the user's business and legal requirements.
-    *   **Should Test frontend/backend/both after fix?**: Backend
-    *   **Is recurring issue?**: Y
+-   **Issue 1: Ambiguous User Deletion Logic**
+    -   **Debug checklist**: Determine the desired behavior with the user: when an athlete profile is deleted, should the associated login account in the  collection also be deleted or retained for auditing?
+    -   **Why to solve this issue and what will be achieved with this?**: To ensure data management practices are consistent and align with the user's business and legal requirements (e.g., GDPR).
+    -   **Should Test frontend/backend/both after fix?**: Backend
+    -   **Is recurring issue?**: Y
 
 **Known issue recurrence from previous fork**
-*   **Issue recurrence in previous fork**: Ambiguous User Deletion
-*   **Recurrence count**: 3
-*   **Status**: NOT STARTED
+-   **Issue recurrence in previous fork**: Ambiguous User Deletion
+-   **Recurrence count**: 7
+-   **Status**: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Dynamic UI Rendering**: Extensive use of conditional rendering based on user roles (admin, parent), data state (athlete is minor/major), and UI state (modal visibility).
-*   **Complex State Management**: Heavy reliance on the  hook in React to manage complex forms with interdependent fields, validation, and API data.
-*   **Client-Side API Integration**: Widespread use of  with  to communicate with the backend for tasks like calculating fiscal codes, registering users, and fetching society settings.
-*   **External App Linking**: Use of React Native Web's  API to open WhatsApp with a pre-populated message, facilitating the sharing of registration links.
+- **Secure Document Viewing**: Migrated from insecure  to a -based approach using  and  to handle token-authenticated file downloads.
+- **Complex Backend Authorization**: Enhanced endpoints (, ) to correctly handle permissions within family structures, allowing a parent to access documents signed by a co-parent for a shared child.
+- **Data Consistency & Fallbacks**: Resolved a data discrepancy by modifying a backend endpoint () to use the main  document as a fallback source of truth if a record in the  collection was missing.
+- **Secure Password Reset Flow**: Designed and implemented a two-endpoint system (, ) for securely resetting a sensitive, secondary password using a time-limited code sent via email.
+- **State Management & Regression Fixing**: Iteratively debugged and fixed multiple regressions introduced during rapid feature changes, particularly around conditional UI rendering and user permissions.
 
 **key DB schema**
-*   **athletes**:
-    *    (, Optional): Added to store the athlete's gender.
-    *    (, Optional): Added to store the athlete's place of birth.
-    *    (, Optional): Added to store the athlete's province of birth.
+- **athletes**: Relies on  (ObjectId) and  (ObjectId) to link to the  collection. The automatic population of  from  is the next critical task.
+- **users**: Contains  (hashed) for sensitive data access. A temporary  and  are used during the new self-service reset flow.
+- **certificates**: Data in this collection can be inconsistent with fields like  on the  document, which was addressed with a backend fallback.
 
 **All files of reference**
-*   
-*    (Major UI/UX changes)
-*    (Major form logic changes)
-*    (Crash fixes, upcoming layout overhaul)
-*    (Reference file for correct profile layout)
-*    (Needs back button fix)
-*    (Needs back button fix)
-*   
-*   
+- 
+- 
+- 
+- 
+- 
+- 
+- 
+- 
 
 **Critical Info for New Agent**
-*   **User Language**: You must respond in **Italiano**.
-*   **Highest Priority (P0)**: Address the user's latest request to make the minor athlete's profile page () identical in layout and component order to the adult athlete's profile ().
-*   **Follow-up Priority (P1)**: Fix the usability of the back button on the legal document pages (, ).
-*   **Unfinished Core Feature**: The original P0 task to add the Password Dati field to the parent registration form () is still pending and must be completed. The user has been patient while many other UI fixes were prioritized, so this should be tackled soon.
-*   **Iterative, Visual Feedback**: The user provides frequent, specific, and image-based feedback. Be prepared to work iteratively on UI/UX details and use screenshots to verify changes.
+- **User Language**: You must respond in **Italiano**.
+- **Highest Priority (P0)**: Implement the **automatic parent cross-linking** logic in the backend. This is a critical data integrity feature that is currently a manual process. When an athlete is created with a , the backend should automatically find the corresponding user and populate the .
+- **Next Major Task (P0)**: Begin implementation of the **Lite Dashboard for Minors.** This is the next big feature on the roadmap.
+- **User Interaction Style**: The user is a very active tester and provides excellent, detailed feedback, often with screenshots. Be prepared for rapid iteration and to address regressions promptly. The distinction between login password and data password is crucial.
 
 **documents and test reports created in this job**
-*   
+None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User**: The invitation flow is too much work for the admin at the start of the season. Can we have a simpler link to share on WhatsApp?
-9.  **Agent**: Proposes a single Share Registration Link button that provides a universal link.
-8.  **User**: Agrees, but wants the WhatsApp share to work even if the number isn't in the admin's contacts.
-7.  **Agent**: Confirms this is possible and outlines the new implementation.
-6.  **User**: But the modals [for creating users manually] are not set up well... just one modal with name, surname, email.
-5.  **Agent**: Agrees to simplify the manual invite modal.
-4.  **User**: Reports issues with the minor athlete's profile (Lucia), requesting it be structured exactly like the adult athlete's profile (Luna), providing reference photos for layout, payments, and pointing out a bug with the back button on the legal pages. **(PENDING)**
-3.  **Agent**: Acknowledges the request and begins analyzing the files.
-2.  **User**: Provides the reference photos.
-1.  **Agent**: Confirms understanding of the required changes based on the photos and identifies the relevant files ( and ) to begin the work.
+- 10. **Msg #507**: User confirms the business logic for automatic cross-linking: it should be automatic if the second parent's email is provided, but not otherwise (to support blended families).
+- 9. **Msg #506**: User correctly points out that the cross-linking problem should be solved automatically by the system, not via a manual data fix.
+- 8. **Msg #505**: User asks for a reminder about the original cross-linking problem they had reported.
+- 7. **Msg #490**: User signals they are ready to proceed with testing.
+- 6. **Msg #460**: User explains that the Lite Dashboard feature is why the data password reset flow needs to be secure (e.g., via email) and cannot be initiated from a simple logged-in session.
+- 5. **Msg #450**: User confirms the login password reset works but raises the critical need to also reset the separate data password, both by the admin and autonomously by the parent.
+- 4. **Msg #444**: User reports a regression where parents can no longer edit or add a medical certificate date.
+- 3. **Msg #426**: User confirms the admin certificate view is fixed but reports that the admin-side reset parent password button is missing.
+- 2. **Msg #402**: User reports a regression where the admin lost the ability to edit/verify an athlete's certificate after a previous fix.
+- 1. **Msg #400**: User states they are about to begin testing the work done in the session.
 
 **Project Health Check:**
-*   **Broken**:
-    *   The layout of the minor athlete's profile page is inconsistent with the rest of the app, leading to a confusing user experience.
-    *   The back-button navigation on legal document pages is broken, trapping the user or forcing them to exit the app.
-*   **Mocked**: None.
+- **Broken**:
+    - The automatic parent cross-linking mechanism is not implemented. This is a manual, error-prone process that needs to be automated in the backend to ensure data integrity.
+- **Mocked**: None.
 
 **3rd Party Integrations**
-*   : Used for calculating Italian fiscal codes.
-*   : Used for sending transactional emails.
+*   : For calculating Italian fiscal codes.
+*   : For sending transactional emails (including the new data password reset codes).
+*   : For copy-to-clipboard functionality.
 
 **Testing status**
-*   **Testing agent used after significant changes**: YES
-*   **Troubleshoot agent used after agent stuck in loop**: NO
-*   **Test files created**: []
-*   **Known regressions**: None
+- **Testing agent used after significant changes**: NO
+- **Troubleshoot agent used after agent stuck in loop**: NO
+- **Test files created**: []
+- **Known regressions**: Several regressions were identified by the user and fixed during the session (e.g., admin certificate controls, parent certificate edit button). The  file was particularly fragile and required multiple fixes for build errors.
 
 **Credentials to test flow:**
 *   **Admin**:  / 
-*   **Test Parent**:  / 
-*   **Test Adult Athlete**:  / 
+*   **Test Parent (Sauro)**:  / 
+*   **Test Parent (Mara)**:  / 
+*   **Test Adult Athlete (Luna)**:  / 
+*   **Minor Athletes (Lucia & Marta Pessi)**: Children of Sauro and Mara. Their data was used extensively for testing parent/child relationships and document sharing.
 
 **What agent forgot to execute**
-*   The agent did not complete the original P0 task from the previous handoff: modifying  to include the Password Dati field for a second parent registering. This crucial security feature was deprioritized in favor of numerous UI fixes requested by the user and remains unfinished.</analysis>
+- The agent did not implement the **automatic** parent cross-linking logic. It only performed a one-time manual data fix for the Pessi family. The core task of making this an automated part of the athlete creation/update process is still pending.</analysis>

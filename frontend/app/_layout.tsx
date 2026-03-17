@@ -49,6 +49,7 @@ export default function RootLayout() {
         <Stack.Screen name="admin" />
         <Stack.Screen name="coach" />
         <Stack.Screen name="parent" />
+        <Stack.Screen name="minor" />
       </Stack>
     </View>
   );

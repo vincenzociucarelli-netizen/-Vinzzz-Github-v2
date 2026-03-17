@@ -537,6 +537,13 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class MinorLogin(BaseModel):
+    athlete_code: str
+    pin: str
+
+class SetMinorPin(BaseModel):
+    pin: str  # 4-6 digit PIN
+
 class TokenResponse(BaseModel):
     token: str
     user: dict
@@ -1021,12 +1028,14 @@ def hash_password(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
-def create_token(user_id: str, role: str) -> str:
+def create_token(user_id: str, role: str, athlete_id: str = None) -> str:
     payload = {
         "user_id": user_id,
         "role": role,
         "exp": datetime.utcnow() + timedelta(days=30)
     }
+    if athlete_id:
+        payload["athlete_id"] = athlete_id
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -1035,6 +1044,22 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
         role = payload.get("role")
+        
+        # Minor role: user_id is the athlete_id, no user document
+        if role == "minor":
+            athlete = await db.athletes.find_one({"id": user_id})
+            if not athlete:
+                raise HTTPException(status_code=401, detail="Atleta non trovato")
+            return {
+                "id": user_id,
+                "role": "minor",
+                "email": "",
+                "full_name": athlete.get("full_name", ""),
+                "assigned_teams": [],
+                "status": athlete.get("status", "active"),
+                "society_id": athlete.get("society_id"),
+                "athlete_id": user_id,
+            }
         
         user = await db.users.find_one({"id": user_id})
         if not user:
@@ -2324,9 +2349,78 @@ async def login(request: Request, credentials: UserLogin):
         }
     )
 
+@api_router.post("/auth/minor-login")
+async def minor_login(request: Request, credentials: MinorLogin):
+    """Login per atleta minorenne con codice atleta + PIN"""
+    code = credentials.athlete_code.strip().upper()
+    pin = credentials.pin.strip()
+    
+    # Trova atleta per codice
+    athlete = await db.athletes.find_one({"athlete_code": code})
+    if not athlete:
+        athlete = await db.athletes.find_one({"qr_identifier": code})
+    if not athlete:
+        raise HTTPException(status_code=401, detail="Codice atleta non valido")
+    
+    # Verifica che sia un minorenne con accesso abilitato
+    if not athlete.get("is_minor"):
+        raise HTTPException(status_code=403, detail="Questo accesso è riservato agli atleti minorenni")
+    
+    if not athlete.get("minor_access_enabled"):
+        raise HTTPException(status_code=403, detail="L'accesso per questo atleta non è stato ancora attivato dal genitore")
+    
+    # Verifica PIN
+    stored_pin_hash = athlete.get("minor_pin_hash")
+    if not stored_pin_hash or not verify_password(pin, stored_pin_hash):
+        raise HTTPException(status_code=401, detail="PIN non corretto")
+    
+    # Crea token con ruolo "minor"
+    token = create_token(athlete["id"], "minor", athlete_id=athlete["id"])
+    
+    return TokenResponse(
+        token=token,
+        user={
+            "id": athlete["id"],
+            "email": "",
+            "role": "minor",
+            "full_name": athlete.get("full_name", ""),
+            "status": athlete.get("status", "active"),
+            "athlete_id": athlete["id"],
+        }
+    )
+
 @api_router.get("/auth/me")
 async def get_me(current_user = Depends(get_current_user)):
     """Get full user profile"""
+    # Minor role: return athlete data directly
+    if current_user.get("role") == "minor":
+        athlete = await db.athletes.find_one({"id": current_user["id"]})
+        if not athlete:
+            raise HTTPException(status_code=404, detail="Atleta non trovato")
+        clean_mongo_doc(athlete)
+        
+        # Get team info
+        team = None
+        if athlete.get("team_id"):
+            team = await db.teams.find_one({"id": athlete["team_id"]}, {"_id": 0, "id": 1, "name": 1})
+        
+        return {
+            "id": athlete["id"],
+            "role": "minor",
+            "full_name": athlete.get("full_name", ""),
+            "first_name": athlete.get("first_name", ""),
+            "last_name": athlete.get("last_name", ""),
+            "status": athlete.get("status", "active"),
+            "athlete_id": athlete["id"],
+            "team_id": athlete.get("team_id"),
+            "team_name": team.get("name") if team else None,
+            "qr_code": athlete.get("qr_code"),
+            "qr_identifier": athlete.get("qr_identifier"),
+            "athlete_code": athlete.get("athlete_code"),
+            "society_id": athlete.get("society_id"),
+            "profile_photo": athlete.get("profile_photo"),
+        }
+    
     user = await db.users.find_one({"id": current_user["id"]})
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
@@ -5817,6 +5911,18 @@ async def create_minor_athlete(data: MinorAthleteCreate, current_user = Depends(
             if data.phone:
                 reactivate_data["phone_athlete"] = data.phone
             
+            # Cross-linking automatico per riattivazione
+            if data.second_parent_email:
+                sp_email = data.second_parent_email.lower().strip()
+                reactivate_data["second_parent_email"] = sp_email
+                second_parent = await db.users.find_one({
+                    "email": sp_email,
+                    "society_id": society_id,
+                    "role": UserRole.PARENT
+                })
+                if second_parent:
+                    reactivate_data["second_parent_id"] = second_parent["id"]
+            
             await db.athletes.update_one({"id": existing_athlete["id"]}, {"$set": reactivate_data})
             return {"message": "Atleta minorenne riattivato", "athlete_id": existing_athlete["id"], "parent_id": parent_id, "reactivated": True}
     
@@ -5855,6 +5961,16 @@ async def create_minor_athlete(data: MinorAthleteCreate, current_user = Depends(
         "privacy_accepted": False,
         "is_trial": False,
     }
+    
+    # Cross-linking automatico: se second_parent_email è fornita, cerca l'utente e collega
+    if athlete_dict.get("second_parent_email"):
+        second_parent = await db.users.find_one({
+            "email": athlete_dict["second_parent_email"],
+            "society_id": society_id,
+            "role": UserRole.PARENT
+        })
+        if second_parent:
+            athlete_dict["second_parent_id"] = second_parent["id"]
     
     await db.athletes.insert_one(athlete_dict)
     
@@ -17237,6 +17353,203 @@ async def delete_my_data(current_user = Depends(get_current_user)):
             status_code=500, 
             detail="Si è verificato un errore durante l'eliminazione dei dati. Contatta l'amministratore."
         )
+
+# ==================== MINOR DASHBOARD ENDPOINTS ====================
+
+@api_router.get("/minor/dashboard")
+async def get_minor_dashboard(current_user = Depends(get_current_user)):
+    """Dashboard read-only per atleta minorenne"""
+    if current_user.get("role") != "minor":
+        raise HTTPException(status_code=403, detail="Accesso riservato agli atleti minorenni")
+    
+    athlete_id = current_user["athlete_id"]
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Team info
+    team = None
+    team_schedule = None
+    if athlete.get("team_id"):
+        team = await db.teams.find_one({"id": athlete["team_id"]}, {"_id": 0})
+        if team:
+            team_schedule = {
+                "training_sessions": team.get("training_sessions", []),
+                "match_day": team.get("match_day"),
+                "warmup_session": team.get("warmup_session"),
+            }
+    
+    # Society info
+    society = None
+    if athlete.get("society_id"):
+        society = await db.societies.find_one({"id": athlete["society_id"]}, {"_id": 0, "name": 1, "logo": 1, "sport_type": 1})
+    
+    # Attendance stats
+    week_start = datetime.now() - timedelta(days=datetime.now().weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    total_attendances = await db.attendances.count_documents({"athlete_id": athlete_id})
+    weekly_attendances = await db.attendances.count_documents({
+        "athlete_id": athlete_id,
+        "check_in_time": {"$gte": week_start}
+    })
+    monthly_attendances = await db.attendances.count_documents({
+        "athlete_id": athlete_id,
+        "check_in_time": {"$gte": month_start}
+    })
+    
+    # Recent attendances (last 10)
+    recent_attendances = await db.attendances.find(
+        {"athlete_id": athlete_id},
+        {"_id": 0, "id": 1, "date": 1, "check_in_time": 1, "training_slot": 1}
+    ).sort("check_in_time", -1).limit(10).to_list(10)
+    
+    for att in recent_attendances:
+        if isinstance(att.get("check_in_time"), datetime):
+            att["check_in_time"] = att["check_in_time"].isoformat()
+    
+    # Upcoming matches
+    upcoming_matches = await db.matches.find({
+        "team_id": athlete.get("team_id"),
+        "date": {"$gte": datetime.now().strftime("%Y-%m-%d")}
+    }, {"_id": 0, "id": 1, "date": 1, "time": 1, "opponent": 1, "venue": 1, "home_away": 1}).sort("date", 1).limit(5).to_list(5)
+    
+    # Trial info
+    trial_info = None
+    if athlete.get("is_trial") or athlete.get("status") == "trial":
+        trial_info = {
+            "is_trial": True,
+            "trial_start_date": athlete.get("trial_start_date"),
+            "trial_end_date": athlete.get("trial_end_date"),
+            "trial_days_remaining": None,
+        }
+        if athlete.get("trial_end_date"):
+            try:
+                end_dt = athlete["trial_end_date"] if isinstance(athlete["trial_end_date"], datetime) else datetime.fromisoformat(str(athlete["trial_end_date"]))
+                remaining = (end_dt - datetime.now()).days
+                trial_info["trial_days_remaining"] = max(0, remaining)
+            except:
+                pass
+    
+    return {
+        "athlete": {
+            "id": athlete["id"],
+            "full_name": athlete.get("full_name", ""),
+            "first_name": athlete.get("first_name", ""),
+            "last_name": athlete.get("last_name", ""),
+            "team_id": athlete.get("team_id"),
+            "qr_code": athlete.get("qr_code"),
+            "qr_identifier": athlete.get("qr_identifier"),
+            "athlete_code": athlete.get("athlete_code"),
+            "profile_photo": athlete.get("profile_photo"),
+            "status": athlete.get("status"),
+        },
+        "team": {
+            "id": team.get("id") if team else None,
+            "name": team.get("name") if team else None,
+        } if team else None,
+        "schedule": team_schedule,
+        "society": {
+            "name": society.get("name") if society else None,
+            "logo": society.get("logo") if society else None,
+            "sport_type": society.get("sport_type") if society else None,
+        } if society else None,
+        "stats": {
+            "total_attendances": total_attendances,
+            "weekly_attendances": weekly_attendances,
+            "monthly_attendances": monthly_attendances,
+        },
+        "recent_attendances": recent_attendances,
+        "upcoming_matches": upcoming_matches,
+        "trial_info": trial_info,
+    }
+
+@api_router.post("/athletes/{athlete_id}/set-minor-pin")
+async def set_minor_pin(athlete_id: str, data: SetMinorPin, current_user = Depends(get_current_user)):
+    """Genitore imposta il PIN per l'accesso minorenne"""
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Solo genitori o admin possono impostare il PIN")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if not athlete.get("is_minor"):
+        raise HTTPException(status_code=400, detail="L'atleta non è minorenne")
+    
+    # Verify parent ownership
+    if current_user["role"] == UserRole.PARENT:
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    
+    # Validate PIN (4-6 digits)
+    pin = data.pin.strip()
+    if not pin.isdigit() or len(pin) < 4 or len(pin) > 6:
+        raise HTTPException(status_code=400, detail="Il PIN deve essere composto da 4 a 6 cifre")
+    
+    # Hash and store PIN
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "minor_pin_hash": hash_password(pin),
+            "minor_access_enabled": True,
+        }}
+    )
+    
+    return {"message": "PIN impostato con successo. L'accesso per l'atleta è ora attivo."}
+
+@api_router.post("/athletes/{athlete_id}/toggle-minor-access")
+async def toggle_minor_access(athlete_id: str, current_user = Depends(get_current_user)):
+    """Genitore attiva/disattiva l'accesso minorenne"""
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Solo genitori o admin possono gestire l'accesso")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if not athlete.get("is_minor"):
+        raise HTTPException(status_code=400, detail="L'atleta non è minorenne")
+    
+    if current_user["role"] == UserRole.PARENT:
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    
+    current_status = athlete.get("minor_access_enabled", False)
+    new_status = not current_status
+    
+    # Cannot enable without a PIN
+    if new_status and not athlete.get("minor_pin_hash"):
+        raise HTTPException(status_code=400, detail="Devi prima impostare un PIN per attivare l'accesso")
+    
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {"minor_access_enabled": new_status}}
+    )
+    
+    status_text = "attivato" if new_status else "disattivato"
+    return {"message": f"Accesso minorenne {status_text}", "enabled": new_status}
+
+@api_router.get("/athletes/{athlete_id}/minor-access-status")
+async def get_minor_access_status(athlete_id: str, current_user = Depends(get_current_user)):
+    """Ottieni lo stato dell'accesso minorenne"""
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if current_user["role"] == UserRole.PARENT:
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    
+    return {
+        "minor_access_enabled": athlete.get("minor_access_enabled", False),
+        "has_pin": bool(athlete.get("minor_pin_hash")),
+        "athlete_code": athlete.get("athlete_code"),
+    }
 
 @api_router.get("/health")
 async def api_health():
