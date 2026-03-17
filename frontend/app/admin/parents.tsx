@@ -573,8 +573,38 @@ export default function ParentsScreen() {
               data-testid="reset-password-detail-btn"
             >
               <Ionicons name="key" size={18} color="#7B1FA2" />
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>Reset Password</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>Reset Password Accesso</Text>
             </TouchableOpacity>
+            
+            {/* Reset Password Dati per ogni figlio minore */}
+            {selectedParent?.athletes && selectedParent.athletes.length > 0 && (
+              <TouchableOpacity
+                style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, marginHorizontal: 16, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#FFB74D' }}
+                onPress={async () => {
+                  if (!selectedParent) return;
+                  const parentId = selectedParent.id;
+                  try {
+                    // Reset data password for each minor child of this parent
+                    let resetCount = 0;
+                    for (const ath of selectedParent.athletes || []) {
+                      // Determine if primary or second parent
+                      const parentType = ath.parent_id === parentId ? 'primary' : 'second';
+                      try {
+                        await api.patch(`/athletes/${ath.id}/reset-data-password`, { parent_type: parentType });
+                        resetCount++;
+                      } catch (e) { /* skip if no password set */ }
+                    }
+                    showAlert('Successo', `Password dati resettata per ${resetCount} atleti. Il genitore dovrà impostarne una nuova al prossimo accesso.`);
+                  } catch (error: any) {
+                    showAlert('Errore', error.response?.data?.detail || 'Errore durante il reset');
+                  }
+                }}
+                data-testid="reset-data-password-btn"
+              >
+                <Ionicons name="lock-open" size={18} color="#E65100" />
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#E65100' }}>Reset Password Dati (sensibili)</Text>
+              </TouchableOpacity>
+            )}
             
             <TouchableOpacity
               style={styles.closeDetailBtn}
