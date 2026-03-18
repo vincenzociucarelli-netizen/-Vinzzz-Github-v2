@@ -2998,6 +2998,13 @@ class SocietySettingsUpdate(BaseModel):
     season_start_day: Optional[int] = None  # Day when season starts (1-31, default 1)
     # Medical certificate settings
     block_expired_certificates: Optional[bool] = None  # If True, QR scan blocked for expired certificates
+    # Season end settings
+    season_end_month: Optional[int] = None  # Month when season ends (1-12, default 6 = June)
+    season_end_day: Optional[int] = None  # Day when season ends (1-31, default 30)
+    # Banking & affiliation data
+    iban: Optional[str] = None
+    bank_name: Optional[str] = None
+    affiliations: Optional[List[dict]] = None  # [{name: str, number: str}]
 
 
 # ==================== STRIPE PAYMENT SETTINGS ====================
@@ -3039,7 +3046,10 @@ async def get_society_settings():
             "phone": None,
             "phone2": None,
             "president_name": None,
-            "stamp_signature": None
+            "stamp_signature": None,
+            "iban": None,
+            "bank_name": None,
+            "affiliations": [],
         }
     return {
         "name": settings.get("name", "Società Sportiva"),
@@ -3067,7 +3077,12 @@ async def get_society_settings():
         "pro_enabled": settings.get("pro_enabled", False),
         "season_start_month": settings.get("season_start_month", 7),
         "season_start_day": settings.get("season_start_day", 1),
-        "block_expired_certificates": settings.get("block_expired_certificates", False)
+        "block_expired_certificates": settings.get("block_expired_certificates", False),
+        "iban": settings.get("iban"),
+        "bank_name": settings.get("bank_name"),
+        "affiliations": settings.get("affiliations", []),
+        "season_end_month": settings.get("season_end_month", 6),
+        "season_end_day": settings.get("season_end_day", 30),
     }
 
 @api_router.patch("/settings/society")
@@ -3152,6 +3167,16 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
                 "ip_address": client_ip,
                 "created_at": datetime.now(timezone.utc)
             })
+    if data.season_end_month is not None:
+        update_dict["season_end_month"] = data.season_end_month
+    if data.season_end_day is not None:
+        update_dict["season_end_day"] = data.season_end_day
+    if data.iban is not None:
+        update_dict["iban"] = data.iban
+    if data.bank_name is not None:
+        update_dict["bank_name"] = data.bank_name
+    if data.affiliations is not None:
+        update_dict["affiliations"] = data.affiliations
     
     if update_dict:
         await db.settings.update_one(
@@ -17387,6 +17412,141 @@ async def delete_my_data(current_user = Depends(get_current_user)):
             status_code=500, 
             detail="Si è verificato un errore durante l'eliminazione dei dati. Contatta l'amministratore."
         )
+
+# ==================== SOCIETY CARD PDF ENDPOINTS ====================
+
+@api_router.get("/society/card-fiscale")
+async def generate_fiscal_card(current_user = Depends(get_current_user)):
+    """Genera PDF card con i dati fiscali della societa"""
+    # I dati societa sono nella collection settings
+    society = await db.settings.find_one({"type": "society"})
+    if not society:
+        society = await db.societies.find_one({"id": current_user.get("society_id")})
+    if not society:
+        raise HTTPException(status_code=404, detail="Societa non trovata")
+    
+    from reportlab.lib.pagesizes import A5, landscape
+    from reportlab.lib.units import cm, mm
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.lib.colors import HexColor
+    
+    buffer = io.BytesIO()
+    page_size = landscape(A5)
+    doc = SimpleDocTemplate(buffer, pagesize=page_size, leftMargin=2*cm, rightMargin=2*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Title'], fontSize=18, spaceAfter=4, textColor=HexColor('#1a1a2e'), fontName='Helvetica-Bold', alignment=TA_CENTER)
+    subtitle_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=11, alignment=TA_CENTER, spaceAfter=16, textColor=HexColor('#555'), fontName='Helvetica')
+    
+    elements = []
+    
+    name = society.get("name", "Societa Sportiva")
+    elements.append(Paragraph(name.upper(), title_style))
+    if society.get("ragione_sociale"):
+        elements.append(Paragraph(society["ragione_sociale"], subtitle_style))
+    elements.append(HRFlowable(width="100%", thickness=2, color=HexColor('#1565C0')))
+    elements.append(Spacer(1, 14))
+    
+    data = []
+    if society.get("fiscal_code"):
+        data.append(["CF / P.IVA", society["fiscal_code"]])
+    if society.get("address"):
+        addr = society["address"]
+        if society.get("postal_code") or society.get("city"):
+            addr += f" - {society.get('postal_code', '')} {society.get('city', '')} ({society.get('province', '')})"
+        data.append(["Sede", addr])
+    if society.get("president_name"):
+        data.append(["Presidente", society["president_name"]])
+    if society.get("email"):
+        data.append(["Email", society["email"]])
+    if society.get("pec"):
+        data.append(["PEC", society["pec"]])
+    if society.get("phone"):
+        data.append(["Cellulare", society["phone"]])
+    if society.get("phone2"):
+        data.append(["Telefono", society["phone2"]])
+    
+    if data:
+        t = Table(data, colWidths=[3.5*cm, 12*cm])
+        t.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('TEXTCOLOR', (0, 0), (0, -1), HexColor('#1565C0')),
+            ('TEXTCOLOR', (1, 0), (1, -1), HexColor('#333333')),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('LINEBELOW', (0, 0), (-1, -2), 0.5, HexColor('#eeeeee')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(t)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"Dati_Fiscali_{name.replace(' ', '_')}.pdf"
+    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+@api_router.get("/society/card-bancaria")
+async def generate_bank_card(current_user = Depends(get_current_user)):
+    """Genera PDF card con i dati bancari della societa"""
+    # I dati societa sono nella collection settings
+    society = await db.settings.find_one({"type": "society"})
+    if not society:
+        society = await db.societies.find_one({"id": current_user.get("society_id")})
+    if not society:
+        raise HTTPException(status_code=404, detail="Societa non trovata")
+    
+    if not society.get("iban"):
+        raise HTTPException(status_code=400, detail="Nessun IBAN inserito nel profilo societa")
+    
+    from reportlab.lib.pagesizes import A5, landscape
+    from reportlab.lib.units import cm
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.lib.colors import HexColor
+    
+    buffer = io.BytesIO()
+    page_size = landscape(A5)
+    doc = SimpleDocTemplate(buffer, pagesize=page_size, leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Title'], fontSize=18, spaceAfter=4, textColor=HexColor('#1a1a2e'), fontName='Helvetica-Bold', alignment=TA_CENTER)
+    iban_style = ParagraphStyle('IBAN', parent=styles['Normal'], fontSize=16, alignment=TA_CENTER, spaceAfter=8, textColor=HexColor('#2E7D32'), fontName='Helvetica-Bold', leading=22)
+    
+    elements = []
+    
+    name = society.get("name", "Societa Sportiva")
+    elements.append(Paragraph(name.upper(), title_style))
+    elements.append(Spacer(1, 4))
+    elements.append(HRFlowable(width="100%", thickness=2, color=HexColor('#2E7D32')))
+    elements.append(Spacer(1, 20))
+    
+    elements.append(Paragraph("COORDINATE BANCARIE", ParagraphStyle('Lab', parent=styles['Normal'], fontSize=12, alignment=TA_CENTER, textColor=HexColor('#666'), fontName='Helvetica')))
+    elements.append(Spacer(1, 12))
+    
+    # Nome intestatario
+    elements.append(Paragraph(f"<b>Intestatario:</b> {name}", ParagraphStyle('Int', parent=styles['Normal'], fontSize=13, alignment=TA_CENTER, fontName='Helvetica')))
+    elements.append(Spacer(1, 8))
+    
+    # IBAN grande e leggibile
+    iban_val = society.get("iban", "")
+    # Formatta IBAN a gruppi di 4
+    iban_formatted = " ".join([iban_val[i:i+4] for i in range(0, len(iban_val), 4)])
+    elements.append(Paragraph(iban_formatted, iban_style))
+    
+    if society.get("bank_name"):
+        elements.append(Spacer(1, 8))
+        elements.append(Paragraph(f"Banca: {society['bank_name']}", ParagraphStyle('Bank', parent=styles['Normal'], fontSize=12, alignment=TA_CENTER, textColor=HexColor('#666'), fontName='Helvetica')))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"Dati_Bancari_{name.replace(' ', '_')}.pdf"
+    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 # ==================== TRIAL PERIOD ENDPOINTS ====================
 

@@ -217,49 +217,6 @@ export default function OtherSettings() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Immagine Sport */}
-        <View style={styles.section}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <SportIcon size={20} />
-            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Immagine Sport</Text>
-          </View>
-          <Text style={styles.sectionDesc}>
-            Carica un'immagine che rappresenta il tuo sport
-          </Text>
-          
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8 }}>
-            {sportImage ? (
-              <View style={{ position: 'relative' }}>
-                <Image
-                  source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
-                  style={{ width: 100, height: 100, borderRadius: 8 }}
-                  resizeMode="contain"
-                />
-                <TouchableOpacity 
-                  style={{ position: 'absolute', top: -8, right: -8 }}
-                  onPress={() => setSportImage(null)}
-                >
-                  <Ionicons name="close-circle" size={28} color="#FF3B30" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={{ width: 100, height: 100, borderRadius: 8, backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#ddd', borderStyle: 'dashed' }}>
-                <Ionicons name="football-outline" size={48} color="#ccc" />
-              </View>
-            )}
-            
-            <TouchableOpacity 
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f0f0f0', padding: 10, borderRadius: 8 }}
-              onPress={handleSelectSportImage}
-            >
-              <Ionicons name="cloud-upload" size={20} color="#007AFF" />
-              <Text style={{ color: '#007AFF', fontWeight: '600' }}>
-                {sportImage ? 'Cambia' : 'Seleziona'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Certificato Medico */}
         <View style={styles.section}>
           <Ionicons name="medkit" size={20} color="#E65100" />
@@ -363,6 +320,49 @@ export default function OtherSettings() {
             <Text style={{ fontSize: 12, color: '#2E7D32' }}>
               Stagione corrente: dal {String(seasonStartDay).padStart(2, '0')}/{String(seasonStartMonth).padStart(2, '0')} al {String(seasonEndDay).padStart(2, '0')}/{String(seasonEndMonth).padStart(2, '0')} dell'anno successivo
             </Text>
+          </View>
+        </View>
+
+        {/* Immagine Sport */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <SportIcon size={20} />
+            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Immagine Sport</Text>
+          </View>
+          <Text style={styles.sectionDesc}>
+            Carica un'immagine che rappresenta il tuo sport
+          </Text>
+          
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8 }}>
+            {sportImage ? (
+              <View style={{ position: 'relative' as const }}>
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
+                  style={{ width: 100, height: 100, borderRadius: 8 }}
+                  resizeMode="contain"
+                />
+                <TouchableOpacity 
+                  style={{ position: 'absolute' as const, top: -8, right: -8 }}
+                  onPress={() => setSportImage(null)}
+                >
+                  <Ionicons name="close-circle" size={28} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ width: 100, height: 100, borderRadius: 8, backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#ddd', borderStyle: 'dashed' }}>
+                <Ionicons name="football-outline" size={48} color="#ccc" />
+              </View>
+            )}
+            
+            <TouchableOpacity 
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f0f0f0', padding: 10, borderRadius: 8 }}
+              onPress={handleSelectSportImage}
+            >
+              <Ionicons name="cloud-upload" size={20} color="#007AFF" />
+              <Text style={{ color: '#007AFF', fontWeight: '600' }}>
+                {sportImage ? 'Cambia' : 'Seleziona'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
