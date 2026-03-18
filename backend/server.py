@@ -6869,12 +6869,12 @@ async def get_deletion_requests(current_user = Depends(get_current_user)):
         requested_by = users_dict.get(athlete.get("deletion_requested_by"))
         result.append({
             "id": athlete["id"],
-            "full_name": athlete["full_name"],
+            "full_name": athlete.get("full_name", f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}"),
             "team_name": team["name"] if team else "Sconosciuta",
             "parent_name": parent["full_name"] if parent else "Sconosciuto",
             "parent_email": parent["email"] if parent else "",
             "requested_at": athlete.get("deletion_requested_at"),
-            "requested_by_name": requested_by["full_name"] if requested_by else "Sconosciuto",
+            "requested_by_name": requested_by.get("full_name", "Sconosciuto") if requested_by else athlete.get("deletion_requested_by_name", "Sconosciuto"),
         })
     
     return result
@@ -7776,9 +7776,44 @@ async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_c
         {"$set": {
             "deletion_requested": True,
             "deletion_requested_at": datetime.utcnow(),
-            "deletion_requested_by": current_user["id"]
+            "deletion_requested_by": current_user["id"],
+            "deletion_requested_by_name": current_user.get("full_name", current_user.get("email", ""))
         }}
     )
+    
+    # Audit log
+    athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}"
+    await log_audit(
+        action="deletion_requested",
+        user_id=current_user["id"],
+        user_email=current_user.get("email", ""),
+        society_id=current_user.get("society_id", ""),
+        target_user_id=athlete_id,
+        target_user_name=athlete_name,
+        details={
+            "requester_name": current_user.get("full_name", ""),
+            "requester_role": current_user.get("role", ""),
+            "athlete_name": athlete_name,
+        }
+    )
+    
+    # Notification to admin
+    society_id = current_user.get("society_id") or athlete.get("society_id")
+    if society_id:
+        admin_users = await db.users.find({"society_id": society_id, "role": "admin"}).to_list(100)
+        for admin_user in admin_users:
+            await db.admin_notifications.insert_one({
+                "id": str(ObjectId()),
+                "society_id": society_id,
+                "admin_id": admin_user["id"],
+                "type": "deletion_requested",
+                "title": "Richiesta cancellazione dati",
+                "message": f"{current_user.get('full_name', current_user.get('email', ''))} ha richiesto la cancellazione dei dati dell'atleta {athlete_name}.",
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "entity_type": "athlete",
+                "entity_id": athlete_id,
+            })
     
     return {"message": "Richiesta di cancellazione inviata"}
 
@@ -7791,6 +7826,27 @@ async def approve_athlete_deletion(athlete_id: str, current_user = Depends(get_c
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Audit log - who approved and executed the deletion (log BEFORE deleting)
+    athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}"
+    requester_name = athlete.get("deletion_requested_by_name", "N/D")
+    await log_audit(
+        action="deletion_approved",
+        user_id=current_user["id"],
+        user_email=current_user.get("email", ""),
+        society_id=current_user.get("society_id", ""),
+        target_user_id=athlete_id,
+        target_user_name=athlete_name,
+        details={
+            "executor_name": current_user.get("full_name", ""),
+            "executor_role": current_user.get("role", ""),
+            "athlete_name": athlete_name,
+            "originally_requested_by": athlete.get("deletion_requested_by", ""),
+            "originally_requested_by_name": requester_name,
+            "originally_requested_at": str(athlete.get("deletion_requested_at", "")),
+            "deleted_data": ["certificates", "payments", "attendances", "athlete_record"],
+        }
+    )
     
     # Delete all related data
     await db.certificates.delete_many({"athlete_id": athlete_id})
@@ -7818,8 +7874,26 @@ async def reject_athlete_deletion(athlete_id: str, current_user = Depends(get_cu
         {"$unset": {
             "deletion_requested": "",
             "deletion_requested_at": "",
-            "deletion_requested_by": ""
+            "deletion_requested_by": "",
+            "deletion_requested_by_name": ""
         }}
+    )
+    
+    # Audit log
+    athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}"
+    await log_audit(
+        action="deletion_rejected",
+        user_id=current_user["id"],
+        user_email=current_user.get("email", ""),
+        society_id=current_user.get("society_id", ""),
+        target_user_id=athlete_id,
+        target_user_name=athlete_name,
+        details={
+            "executor_name": current_user.get("full_name", ""),
+            "athlete_name": athlete_name,
+            "originally_requested_by": athlete.get("deletion_requested_by", ""),
+            "originally_requested_by_name": athlete.get("deletion_requested_by_name", "N/D"),
+        }
     )
     
     return {"message": "Richiesta di cancellazione rifiutata"}
