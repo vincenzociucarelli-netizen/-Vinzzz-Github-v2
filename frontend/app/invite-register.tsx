@@ -28,6 +28,19 @@ export default function InviteRegister() {
   // Invitation info
   const [inviteInfo, setInviteInfo] = useState<any>(null);
   
+  // Dati originali dall'invito (usati come placeholder)
+  const [invitePlaceholders, setInvitePlaceholders] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    date_of_birth: '',
+    gender: '' as '' | 'M' | 'F',
+    parent_first_name: '',
+    parent_last_name: '',
+    parent_phone: '',
+  });
+  
   // Form
   const [form, setForm] = useState({
     first_name: '',
@@ -82,12 +95,18 @@ export default function InviteRegister() {
     try {
       const res = await api.get(`/athletes/invite-info/${token}`);
       setInviteInfo(res.data);
-      setForm(prev => ({
-        ...prev,
+      // Salva i dati come placeholder (suggerimenti grigi), NON come valori del form
+      setInvitePlaceholders({
         first_name: res.data.first_name || '',
         last_name: res.data.last_name || '',
         email: res.data.email || '',
-      }));
+        phone: res.data.phone || '',
+        date_of_birth: res.data.date_of_birth || '',
+        gender: res.data.gender || '',
+        parent_first_name: res.data.parent_first_name || '',
+        parent_last_name: res.data.parent_last_name || '',
+        parent_phone: res.data.parent_phone || '',
+      });
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invito non valido o scaduto');
     } finally {
@@ -96,8 +115,22 @@ export default function InviteRegister() {
   };
 
   const handleRegister = async () => {
+    // Usa i placeholder come fallback per i campi vuoti
+    const finalForm = {
+      ...form,
+      first_name: form.first_name || invitePlaceholders.first_name,
+      last_name: form.last_name || invitePlaceholders.last_name,
+      email: form.email || invitePlaceholders.email,
+      phone: form.phone || invitePlaceholders.phone,
+      date_of_birth: form.date_of_birth || invitePlaceholders.date_of_birth,
+      gender: form.gender || invitePlaceholders.gender,
+      parent_first_name: form.parent_first_name || invitePlaceholders.parent_first_name,
+      parent_last_name: form.parent_last_name || invitePlaceholders.parent_last_name,
+      parent_phone: form.parent_phone || invitePlaceholders.parent_phone,
+    };
+
     // Validation
-    if (!form.first_name || !form.last_name) {
+    if (!finalForm.first_name || !finalForm.last_name) {
       showAlert('Errore', 'Nome e cognome sono obbligatori');
       return;
     }
@@ -238,7 +271,8 @@ export default function InviteRegister() {
         <Text style={styles.label}>Cognome *</Text>
         <TextInput
           style={styles.input}
-          placeholder="Cognome"
+          placeholder={invitePlaceholders.last_name || "Cognome"}
+          placeholderTextColor="#999"
           value={form.last_name}
           onChangeText={(v) => setForm({...form, last_name: v})}
           autoCapitalize="characters"
@@ -248,7 +282,8 @@ export default function InviteRegister() {
         <Text style={styles.label}>Nome *</Text>
         <TextInput
           style={styles.input}
-          placeholder="Nome"
+          placeholder={invitePlaceholders.first_name || "Nome"}
+          placeholderTextColor="#999"
           value={form.first_name}
           onChangeText={(v) => setForm({...form, first_name: v})}
           autoCapitalize="characters"
@@ -258,7 +293,8 @@ export default function InviteRegister() {
         <Text style={styles.label}>Data di Nascita (GG/MM/AAAA)</Text>
         <TextInput
           style={styles.input}
-          placeholder="GG/MM/AAAA"
+          placeholder={invitePlaceholders.date_of_birth || "GG/MM/AAAA"}
+          placeholderTextColor="#999"
           value={form.date_of_birth}
           onChangeText={(v) => setForm({...form, date_of_birth: formatDateInput(v)})}
           keyboardType="numeric"
@@ -285,7 +321,8 @@ export default function InviteRegister() {
         <Text style={styles.label}>Telefono *</Text>
         <TextInput
           style={styles.input}
-          placeholder="Numero di telefono"
+          placeholder={invitePlaceholders.phone || "Numero di telefono"}
+          placeholderTextColor="#999"
           value={form.phone}
           onChangeText={(v) => setForm({...form, phone: v})}
           keyboardType="phone-pad"
@@ -300,7 +337,8 @@ export default function InviteRegister() {
             <Text style={styles.label}>Cognome Genitore *</Text>
             <TextInput
               style={styles.input}
-              placeholder="Cognome genitore"
+              placeholder={invitePlaceholders.parent_last_name || "Cognome genitore"}
+              placeholderTextColor="#999"
               value={form.parent_last_name}
               onChangeText={(v) => setForm({...form, parent_last_name: v})}
               autoCapitalize="characters"
@@ -310,7 +348,8 @@ export default function InviteRegister() {
             <Text style={styles.label}>Nome Genitore *</Text>
             <TextInput
               style={styles.input}
-              placeholder="Nome genitore"
+              placeholder={invitePlaceholders.parent_first_name || "Nome genitore"}
+              placeholderTextColor="#999"
               value={form.parent_first_name}
               onChangeText={(v) => setForm({...form, parent_first_name: v})}
               autoCapitalize="characters"
@@ -320,7 +359,8 @@ export default function InviteRegister() {
             <Text style={styles.label}>Telefono Genitore</Text>
             <TextInput
               style={styles.input}
-              placeholder="Telefono genitore"
+              placeholder={invitePlaceholders.parent_phone || "Telefono genitore"}
+              placeholderTextColor="#999"
               value={form.parent_phone}
               onChangeText={(v) => setForm({...form, parent_phone: v})}
               keyboardType="phone-pad"
@@ -334,7 +374,8 @@ export default function InviteRegister() {
         <Text style={styles.label}>Email (anche username di accesso) *</Text>
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder={invitePlaceholders.email || "Email"}
+          placeholderTextColor="#999"
           value={form.email}
           onChangeText={(v) => setForm({...form, email: v})}
           keyboardType="email-address"
