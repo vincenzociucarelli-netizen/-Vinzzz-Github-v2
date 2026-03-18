@@ -400,7 +400,7 @@ export default function AdminCollaboratoreDetail() {
         yearReceipts.forEach((receipt: any) => {
           const receiptAmount = receipt.amount_gross || receipt.amount || 0;
           if (receiptAmount > monthly) {
-            supplementaryThisYear += (receiptAmount - monthly);
+            supplementaryThisYear += receiptAmount;
           }
         });
         
@@ -482,7 +482,7 @@ export default function AdminCollaboratoreDetail() {
         }
         
         if (isInContract && receiptAmount > monthly) {
-          supplementaryTotal += (receiptAmount - monthly);
+          supplementaryTotal += receiptAmount;
         }
       });
     }

@@ -345,12 +345,12 @@ export default function AdminDirigenteDetail() {
         
         const baseAmountThisYear = monthly * monthsThisYear;
         
-        // Calculate supplementary: sum of (receipt_amount - monthly) for receipts with amount > monthly
+        // Calculate supplementary: full amount of receipts that differ from monthly rate
         let supplementaryThisYear = 0;
         yearReceipts.forEach((receipt: any) => {
           const receiptAmount = receipt.amount_gross || receipt.amount || 0;
           if (receiptAmount > monthly) {
-            supplementaryThisYear += (receiptAmount - monthly);
+            supplementaryThisYear += receiptAmount;
           }
         });
         
@@ -434,7 +434,7 @@ export default function AdminDirigenteDetail() {
         }
         
         if (isInContract && receiptAmount > monthly) {
-          supplementaryTotal += (receiptAmount - monthly);
+          supplementaryTotal += receiptAmount;
         }
       });
     }
