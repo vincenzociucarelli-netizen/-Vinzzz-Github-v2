@@ -557,7 +557,7 @@ export default function CoachCompensation() {
       
       // Calculate supplementary (amount above standard monthly)
       if (receiptAmount > monthlyComp) {
-        supplementaryTotal += (receiptAmount - monthlyComp);
+        supplementaryTotal += receiptAmount;
       }
     });
     

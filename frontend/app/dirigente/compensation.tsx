@@ -454,7 +454,7 @@ export default function DirigenteCompensation() {
       
       // Calculate supplementary (amount above standard monthly)
       if (receiptAmount > monthlyComp) {
-        supplementaryTotal += (receiptAmount - monthlyComp);
+        supplementaryTotal += receiptAmount;
       }
     });
     
