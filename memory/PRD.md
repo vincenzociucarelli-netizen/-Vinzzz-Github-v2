@@ -50,12 +50,14 @@ App di gestione societa sportiva per pubblicazione su iOS App Store e Google Pla
 - Audit log + notifiche admin per richieste cancellazione dati
 - Ripristinati banner SUPERAMENTO 5k/15k per dirigente e collaboratore
 
-### Sessione 2026-03-18 (sera)
-- Fix calcolo "Somme suppl." per dirigenti: da hardcoded 0 a calcolo reale da quietanze firmate
-- Fix calcolo "Somme suppl." per collaboratori: stessa logica del coach
-- Fix "TOTALE RAS" per dirigenti e collaboratori: include ora le somme supplementari
-- Fix "Compenso base" per anno solare: mostra baseAmount separato da supplementary
-- Aggiunto pulsante "Il Mio Profilo Dirigente" nel dashboard admin (compensi, contratto, quietanze)
+### Sessione 2026-03-18 (sera) - QUESTA SESSIONE
+- **Fix calcolo "Somme suppl."**: da hardcoded 0 a importo INTERO delle quietanze diverse dal compenso mensile (6 file aggiornati: admin/dirigente, admin/collaboratore, admin/coach, dirigente/compensation, coach/compensation, collaboratore/compensation)
+- **Fix "TOTALE RAS"**: include correttamente le somme supplementari
+- **Fix "Compenso base"**: mostra baseAmount separato da supplementary nel breakdown annuale
+- **Pulsante "Passa a Modalità Dirigente"** nella pagina admin/dirigente/[id] (checklist e documenti compattati su una riga)
+- **Rimosso pulsante duplicato** "Passa a Modalità Dirigente" dalla dashboard admin (c'era già l'icona briefcase nell'header)
+- **Email invito corretta**: "sotto controllo gratuitamente:", "Scadenza certificato medico" (senza "del"), "Versione Lite per i tuoi giovani atleti" (senza "gratuita"), "Pagamenti, scadenze e ricevute utili per la denuncia dei redditi"
+- **Popup "Invita Persona" ridisegnato**: header blu con icona, campi stilizzati, checkbox con highlight, pulsante blu "Invia Invito" in linea con il tema app
 
 ## Key API Endpoints
 - `GET/PATCH /api/settings/society` - Dati societa
@@ -65,8 +67,6 @@ App di gestione societa sportiva per pubblicazione su iOS App Store e Google Pla
 - `GET /api/minor/dashboard` - Dashboard minorenne
 - `GET /api/athletes/{id}/trial-document` - PDF dichiarazione prova
 - `POST /api/athletes/{id}/request-deletion` - Richiesta cancellazione (con audit+notifica)
-- `POST /api/athletes/{id}/approve-deletion` - Approva cancellazione (con audit)
-- `POST /api/athletes/{id}/reject-deletion` - Rifiuta cancellazione (con audit)
 - `GET /api/dirigente/{id}/compensation` - Lista compensi dirigente
 - `GET /api/dirigente/{id}/threshold-status/{year}` - Stato soglie dirigente
 - `GET /api/users/dirigenti` - Lista dirigenti (esclude account societa)
