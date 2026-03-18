@@ -252,9 +252,11 @@ async def log_audit(
     - document_accepted: Accettazione documenti digitali
     - user_deleted: Cancellazione atleta o coach
     """
+    now = datetime.now(timezone.utc)
     audit_entry = {
         "id": str(ObjectId()),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": now.isoformat(),
+        "created_at": now,
         "action": action,
         "user_id": user_id,
         "user_email": user_email,
