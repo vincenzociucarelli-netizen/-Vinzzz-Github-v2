@@ -17770,6 +17770,9 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     
     parent_name = parent.get("full_name", "") if parent else ""
     parent_cf = parent.get("fiscal_code", "") if parent else ""
+    # If parent has no fiscal code, try tax_payer_fiscal_code from athlete record
+    if not parent_cf:
+        parent_cf = athlete.get("tax_payer_fiscal_code", "")
     parent_phone = parent.get("phone", "") if parent else ""
     
     parent_data = [
