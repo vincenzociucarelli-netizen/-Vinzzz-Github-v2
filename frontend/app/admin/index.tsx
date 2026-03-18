@@ -628,7 +628,27 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
-          {/* Dirigenti / Società */}
+          {/* Dirigenti / Admin */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/dirigenti')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#FFF3E0' }]}>
+              <Text style={{ fontSize: 26 }}>👔</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Admin e Dirigenti</Text>
+              <Text style={styles.menuCardSubtitle}>Gestione ruoli e accessi</Text>
+            </View>
+            {pendingCounts.dirigenti > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingCounts.dirigenti}</Text>
+              </View>
+            )}
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
+          {/* Società */}
           <TouchableOpacity
             style={styles.menuCard}
             onPress={() => router.push('/admin/society-profile')}
@@ -648,11 +668,6 @@ export default function AdminDashboard() {
               <Text style={styles.menuCardTitle}>{society.name || 'Società'}</Text>
               <Text style={styles.menuCardSubtitle}>Profilo, dati e contatti</Text>
             </View>
-            {pendingCounts.dirigenti > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{pendingCounts.dirigenti}</Text>
-              </View>
-            )}
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 

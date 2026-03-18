@@ -2257,25 +2257,40 @@ export default function AthleteDetail() {
             <TouchableOpacity
               style={styles.deleteRequestButton}
               onPress={() => {
-                Alert.alert(
-                  'Richiesta Cancellazione',
-                  'Vuoi inviare una richiesta di cancellazione all\'amministratore?\n\nL\'amministratore dovrà approvare la cancellazione dell\'atleta e del genitore associato.',
-                  [
-                    { text: 'Annulla', style: 'cancel' },
-                    { 
-                      text: 'Invia Richiesta', 
-                      style: 'destructive',
-                      onPress: async () => {
-                        try {
-                          await api.post(`/athletes/${id}/request-deletion`);
-                          Alert.alert('Richiesta Inviata', 'La richiesta di cancellazione è stata inviata all\'amministratore. Verrai contattato quando sarà elaborata.');
-                        } catch (error) {
-                          Alert.alert('Errore', 'Impossibile inviare la richiesta. Riprova più tardi.');
+                if (Platform.OS === 'web') {
+                  const confirmed = window.confirm(
+                    'Vuoi inviare una richiesta di cancellazione all\'amministratore?\n\nL\'amministratore dovrà approvare la cancellazione dell\'atleta e del genitore associato.'
+                  );
+                  if (confirmed) {
+                    api.post(`/athletes/${id}/request-deletion`)
+                      .then(() => {
+                        showAlert('Richiesta Inviata', 'La richiesta di cancellazione è stata inviata all\'amministratore. Verrai contattato quando sarà elaborata.');
+                      })
+                      .catch(() => {
+                        showAlert('Errore', 'Impossibile inviare la richiesta. Riprova più tardi.');
+                      });
+                  }
+                } else {
+                  Alert.alert(
+                    'Richiesta Cancellazione',
+                    'Vuoi inviare una richiesta di cancellazione all\'amministratore?\n\nL\'amministratore dovrà approvare la cancellazione dell\'atleta e del genitore associato.',
+                    [
+                      { text: 'Annulla', style: 'cancel' },
+                      { 
+                        text: 'Invia Richiesta', 
+                        style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            await api.post(`/athletes/${id}/request-deletion`);
+                            Alert.alert('Richiesta Inviata', 'La richiesta di cancellazione è stata inviata all\'amministratore. Verrai contattato quando sarà elaborata.');
+                          } catch (error) {
+                            Alert.alert('Errore', 'Impossibile inviare la richiesta. Riprova più tardi.');
+                          }
                         }
                       }
-                    }
-                  ]
-                );
+                    ]
+                  );
+                }
               }}
             >
               <Ionicons name="trash-outline" size={20} color="#FF3B30" />
