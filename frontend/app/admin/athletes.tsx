@@ -1083,78 +1083,89 @@ export default function AdminAthletes() {
         onRequestClose={() => { setShowInviteModal(false); resetInviteForm(); }}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxWidth: 400, padding: 20 }]}>
-              <Text style={[styles.modalTitle, { fontSize: 18, marginBottom: 4 }]}>Invita Persona</Text>
-              <Text style={{ color: '#666', fontSize: 13, marginBottom: 20, lineHeight: 18 }}>
-                Riceverà un'email con il link per registrarsi.
-              </Text>
-
-              <Text style={styles.inputLabel}>Email *</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Email"
-                value={inviteForm.email}
-                onChangeText={(v) => setInviteForm({...inviteForm, email: v.toLowerCase()})}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                data-testid="invite-email-input"
-              />
-
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>Nome</Text>
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Opzionale"
-                    value={inviteForm.first_name}
-                    onChangeText={(v) => setInviteForm({...inviteForm, first_name: v})}
-                    autoCapitalize="words"
-                  />
+          <View style={[styles.modalContent, { maxWidth: 400, padding: 0, overflow: 'hidden' }]}>
+              {/* Header blu */}
+              <View style={{ backgroundColor: '#007AFF', paddingVertical: 18, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="person-add" size={22} color="#fff" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>Cognome</Text>
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Opzionale"
-                    value={inviteForm.last_name}
-                    onChangeText={(v) => setInviteForm({...inviteForm, last_name: v})}
-                    autoCapitalize="words"
-                  />
+                  <Text style={{ fontSize: 17, fontWeight: '700', color: '#fff' }}>Invita Persona</Text>
+                  <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
+                    Riceverà un'email con il link per registrarsi
+                  </Text>
                 </View>
+                <TouchableOpacity onPress={() => { setShowInviteModal(false); resetInviteForm(); }}>
+                  <Ionicons name="close-circle" size={28} color="rgba(255,255,255,0.7)" />
+                </TouchableOpacity>
               </View>
 
-              <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 }}
-                onPress={() => setInviteForm({...inviteForm, is_minor: !inviteForm.is_minor})}
-                data-testid="invite-minor-toggle"
-              >
-                <View style={[{ width: 22, height: 22, borderRadius: 4, borderWidth: 2, borderColor: '#FF9800', alignItems: 'center', justifyContent: 'center' }, inviteForm.is_minor && { backgroundColor: '#FF9800' }]}>
-                  {inviteForm.is_minor && <Ionicons name="checkmark" size={14} color="#fff" />}
-                </View>
-                <Text style={{ fontSize: 13, color: '#555' }}>Minorenne (email inviata al genitore)</Text>
-              </TouchableOpacity>
+              {/* Body */}
+              <View style={{ padding: 20 }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#007AFF', textTransform: 'uppercase', marginBottom: 6 }}>Email *</Text>
+                <TextInput
+                  style={{ backgroundColor: '#F5F7FA', borderRadius: 10, padding: 12, fontSize: 15, borderWidth: 1, borderColor: '#E0E0E0', marginBottom: 14 }}
+                  placeholder="nome@email.com"
+                  placeholderTextColor="#aaa"
+                  value={inviteForm.email}
+                  onChangeText={(v) => setInviteForm({...inviteForm, email: v.toLowerCase()})}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  data-testid="invite-email-input"
+                />
 
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#4CAF50' }, sendingInvite && { opacity: 0.5 }]}
-                onPress={handleInviteAthlete}
-                disabled={sendingInvite}
-                data-testid="send-invite-btn"
-              >
-                {sendingInvite ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="mail" size={18} color="#fff" />
-                    <Text style={styles.modalBtnText}>Invia Invito</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#999', marginTop: 8 }]}
-                onPress={() => { setShowInviteModal(false); resetInviteForm(); }}
-              >
-                <Text style={styles.modalBtnText}>Annulla</Text>
-              </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#007AFF', textTransform: 'uppercase', marginBottom: 6 }}>Nome</Text>
+                    <TextInput
+                      style={{ backgroundColor: '#F5F7FA', borderRadius: 10, padding: 12, fontSize: 15, borderWidth: 1, borderColor: '#E0E0E0' }}
+                      placeholder="Opzionale"
+                      placeholderTextColor="#aaa"
+                      value={inviteForm.first_name}
+                      onChangeText={(v) => setInviteForm({...inviteForm, first_name: v})}
+                      autoCapitalize="words"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#007AFF', textTransform: 'uppercase', marginBottom: 6 }}>Cognome</Text>
+                    <TextInput
+                      style={{ backgroundColor: '#F5F7FA', borderRadius: 10, padding: 12, fontSize: 15, borderWidth: 1, borderColor: '#E0E0E0' }}
+                      placeholder="Opzionale"
+                      placeholderTextColor="#aaa"
+                      value={inviteForm.last_name}
+                      onChangeText={(v) => setInviteForm({...inviteForm, last_name: v})}
+                      autoCapitalize="words"
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20, gap: 10, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: inviteForm.is_minor ? '#FFF3E0' : '#F5F5F5', borderRadius: 10, borderWidth: 1, borderColor: inviteForm.is_minor ? '#FF9800' : '#E0E0E0' }}
+                  onPress={() => setInviteForm({...inviteForm, is_minor: !inviteForm.is_minor})}
+                  data-testid="invite-minor-toggle"
+                >
+                  <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#FF9800', alignItems: 'center', justifyContent: 'center', backgroundColor: inviteForm.is_minor ? '#FF9800' : 'transparent' }}>
+                    {inviteForm.is_minor && <Ionicons name="checkmark" size={15} color="#fff" />}
+                  </View>
+                  <Text style={{ fontSize: 13, color: '#555', flex: 1 }}>Minorenne (email inviata al genitore)</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{ backgroundColor: '#007AFF', borderRadius: 12, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, ...(sendingInvite ? { opacity: 0.6 } : {}) }}
+                  onPress={handleInviteAthlete}
+                  disabled={sendingInvite}
+                  data-testid="send-invite-btn"
+                >
+                  {sendingInvite ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="send" size={18} color="#fff" />
+                      <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Invia Invito</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
           </View>
         </View>
       </Modal>
