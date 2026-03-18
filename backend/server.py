@@ -2318,7 +2318,7 @@ async def login(request: Request, credentials: UserLogin):
             await record_failed_login(client_ip)
         raise HTTPException(status_code=429, detail=rate_check["message"])
     
-    user = await db.users.find_one({"email": credentials.email})
+    user = await db.users.find_one({"email": credentials.email.lower().strip()})
     if not user or not verify_password(credentials.password, user["password_hash"]):
         # Record failed attempt
         await record_failed_login(client_ip)
