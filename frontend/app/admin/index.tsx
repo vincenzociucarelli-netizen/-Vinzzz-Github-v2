@@ -631,7 +631,7 @@ export default function AdminDashboard() {
           {/* Dirigenti / Società */}
           <TouchableOpacity
             style={styles.menuCard}
-            onPress={() => router.push('/admin/dirigenti')}
+            onPress={() => router.push('/admin/society-profile')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E8F4FD' }]}>
               {society.logo ? (
@@ -646,7 +646,7 @@ export default function AdminDashboard() {
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>{society.name || 'Società'}</Text>
-              <Text style={styles.menuCardSubtitle}>Amministratori e Dirigenti</Text>
+              <Text style={styles.menuCardSubtitle}>Profilo, dati e contatti</Text>
             </View>
             {pendingCounts.dirigenti > 0 && (
               <View style={styles.badge}>

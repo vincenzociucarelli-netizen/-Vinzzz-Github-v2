@@ -57,24 +57,6 @@ export default function SettingsIndex() {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {/* Card Società */}
-        <TouchableOpacity 
-          style={[styles.card, { borderColor: '#1565C0', backgroundColor: '#E3F2FD' }]}
-          onPress={() => router.push('/admin/settings/society')}
-          data-testid="settings-society-btn"
-        >
-          <View style={[styles.iconContainer, { backgroundColor: '#1565C0' }]}>
-            <Ionicons name="business" size={32} color="#fff" />
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={[styles.cardTitle, { color: '#1565C0' }]}>Società</Text>
-            <Text style={styles.cardDescription}>
-              Dati anagrafici, fiscali, logo e timbro
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color="#1565C0" />
-        </TouchableOpacity>
-
         {/* Card Altre Impostazioni */}
         <TouchableOpacity 
           style={[styles.card, { borderColor: '#E65100', backgroundColor: '#FFF3E0' }]}
