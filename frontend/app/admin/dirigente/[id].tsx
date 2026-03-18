@@ -1020,20 +1020,20 @@ export default function AdminDirigenteDetail() {
                         
                         {/* Header Calcolo per Anno */}
                         <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 10, marginBottom: 12 }}>
-                          <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>Calcolo per Anno Solare</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>📊 Calcolo per Anno Solare (soglie €5k/€15k)</Text>
                         </View>
                         
                         {/* Box Anno Inizio */}
                         {years.length > 0 && years[0] && yearlyBreakdown[years[0]] && (
                           <View style={[styles.totalBox, { 
-                            backgroundColor: '#E8F5E9',
+                            backgroundColor: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9',
                             marginBottom: 12 
                           }]}>
                             <Text style={[styles.totalLabel, { 
-                              color: '#2E7D32',
+                              color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32',
                               fontWeight: 'bold' 
                             }]}>
-                              Anno {years[0]} ({yearlyBreakdown[years[0]].startMonth}-Dic: {yearlyBreakdown[years[0]].months} mesi)
+                              {yearlyBreakdown[years[0]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[0]} ({yearlyBreakdown[years[0]].startMonth}-Dic: {yearlyBreakdown[years[0]].months} mesi)
                             </Text>
                             <View style={{ marginTop: 8 }}>
                               <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].total)}</Text></Text>
@@ -1041,28 +1041,68 @@ export default function AdminDirigenteDetail() {
                               {prior > 0 && (
                                 <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(prior)}</Text></Text>
                               )}
-                              <Text style={{ fontSize: 15, color: '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].grandTotal)}</Text></Text>
+                              <Text style={{ fontSize: 15, color: yearlyBreakdown[years[0]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].grandTotal)}</Text></Text>
                             </View>
+                            {yearlyBreakdown[years[0]].exceedsThreshold5k && !yearlyBreakdown[years[0]].exceedsThreshold15k && (
+                              <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#E65100', fontWeight: 'bold', textAlign: 'center' }}>
+                                  ⚠️ SUPERAMENTO € 5.000,00
+                                </Text>
+                                <Text style={{ fontSize: 11, color: '#F57F17', textAlign: 'center', marginTop: 4 }}>
+                                  Contributi previdenziali INPS
+                                </Text>
+                              </View>
+                            )}
+                            {yearlyBreakdown[years[0]].exceedsThreshold15k && (
+                              <View style={{ backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#F44336', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#C62828', fontWeight: 'bold', textAlign: 'center' }}>
+                                  🚨 SUPERAMENTO € 15.000,00
+                                </Text>
+                                <Text style={{ fontSize: 11, color: '#D32F2F', textAlign: 'center', marginTop: 4 }}>
+                                  Tassazione IRPEF obbligatoria
+                                </Text>
+                              </View>
+                            )}
                           </View>
                         )}
                         
                         {/* Box Anno Fine (se diverso) */}
                         {years.length > 1 && years[1] && yearlyBreakdown[years[1]] && (
                           <View style={[styles.totalBox, { 
-                            backgroundColor: '#E8F5E9',
+                            backgroundColor: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9',
                             marginBottom: 12 
                           }]}>
                             <Text style={[styles.totalLabel, { 
-                              color: '#2E7D32',
+                              color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32',
                               fontWeight: 'bold' 
                             }]}>
-                              Anno {years[1]} (Gen-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
+                              {yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} (Gen-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
                             </Text>
                             <View style={{ marginTop: 8 }}>
                               <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].total)}</Text></Text>
                               <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(0)}</Text></Text>
-                              <Text style={{ fontSize: 15, color: '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].grandTotal)}</Text></Text>
+                              <Text style={{ fontSize: 15, color: yearlyBreakdown[years[1]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].grandTotal)}</Text></Text>
                             </View>
+                            {yearlyBreakdown[years[1]].exceedsThreshold5k && !yearlyBreakdown[years[1]].exceedsThreshold15k && (
+                              <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#E65100', fontWeight: 'bold', textAlign: 'center' }}>
+                                  ⚠️ SUPERAMENTO € 5.000,00
+                                </Text>
+                                <Text style={{ fontSize: 11, color: '#F57F17', textAlign: 'center', marginTop: 4 }}>
+                                  Contributi previdenziali INPS
+                                </Text>
+                              </View>
+                            )}
+                            {yearlyBreakdown[years[1]].exceedsThreshold15k && (
+                              <View style={{ backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#F44336', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#C62828', fontWeight: 'bold', textAlign: 'center' }}>
+                                  🚨 SUPERAMENTO € 15.000,00
+                                </Text>
+                                <Text style={{ fontSize: 11, color: '#D32F2F', textAlign: 'center', marginTop: 4 }}>
+                                  Tassazione IRPEF obbligatoria
+                                </Text>
+                              </View>
+                            )}
                           </View>
                         )}
                       </>
