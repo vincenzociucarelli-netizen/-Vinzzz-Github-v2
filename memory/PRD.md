@@ -26,35 +26,51 @@ App di gestione societa sportiva per pubblicazione su iOS App Store e Google Pla
 - Lite Dashboard per Minorenni (codice+PIN)
 - Gestione Periodo di Prova 7 giorni
 
-### Sessione 2026-03-18
+### Sessione 2026-03-18 (mattina)
 - Profilo Societa dedicato (spostato da impostazioni)
 - Biglietto da visita digitale (WhatsApp/Email)
 - Affiliazioni sportive editabili (FIPAV, UISP, etc.)
 - Dati bancari: IBAN e nome banca
-- Card PDF dati fiscali condivisibile
-- Card PDF dati bancari condivisibile
+- Card PDF dati fiscali/bancari condivisibili
 - Cellulare come campo principale (per WhatsApp)
-- Rimosso pulsante Dirigenti dal profilo (esterni alla societa)
-- Immagine sport spostata in Altre Impostazioni dopo stagione
-- Certificato medico e stagione in Altre Impostazioni
+- Immagine sport spostata in Altre Impostazioni
+- Fix login case-insensitive email
+
+### Sessione 2026-03-18 (pomeriggio)
+- Email invito migliorata con 5 benefici accattivanti
+- Card "Stato" unificata con "Periodo di Prova" (una sola card)
+- Badge dashboard genitore: viola (attesa), arancione (in prova), verde (attivo)
+- Testo dichiarazione prova migliorato
+- "Accesso Lite per [nome]" con descrizione QR/orari/gare/PIN
+- Pulsante "Desidero non rimanere, cancella tutti i miei dati" nella GDPR modal
+- Fix bug cancellazione: Alert.alert() non funzionava su Chrome/web → window.confirm()
+- Admin/Dirigenti: ripristinati come voce separata nel dashboard admin
+- Rimosso "Il Mio Profilo" (doppio profilo) dal dashboard admin
+- Account societa nascosto dalla lista dirigenti
+- Audit log + notifiche admin per richieste cancellazione dati
+- Rimossi banner SUPERAMENTO €5k/€15k da dirigente e collaboratore
 
 ## Key API Endpoints
-- `GET/PATCH /api/settings/society` - Dati societa (iban, bank_name, affiliations, season_end)
+- `GET/PATCH /api/settings/society` - Dati societa
 - `GET /api/society/card-fiscale` - PDF card dati fiscali
 - `GET /api/society/card-bancaria` - PDF card dati bancari
 - `POST /api/auth/minor-login` - Login minorenne
 - `GET /api/minor/dashboard` - Dashboard minorenne
 - `GET /api/athletes/{id}/trial-document` - PDF dichiarazione prova
+- `POST /api/athletes/{id}/request-deletion` - Richiesta cancellazione (con audit+notifica)
+- `POST /api/athletes/{id}/approve-deletion` - Approva cancellazione (con audit)
+- `POST /api/athletes/{id}/reject-deletion` - Rifiuta cancellazione (con audit)
 
 ## Test Credentials
 - Admin: pallavoloperugia@gmail.com / password
-- Parent Sauro: sauro@test.com / Test1234
-- Minor Lucia: code KWP9R9PJWJXJ / pin 1234
+- Parent (Sauro): sauro@test.com / password
+- Parent (Mara): mara2@test.com / password
 
-## Pending Issues
-- **P2**: Logica cancellazione utente ambigua
-
-## Upcoming Tasks
-- **P1**: Testing guidato (Minorenni, Squadre, Template Excel)
-- **P2**: UI atleti "a contratto"
-- **P3**: Refactoring backend, Stripe, pulizia DB, pubblicazione App Store
+## Pending / Upcoming Tasks
+- (P1) Test ciclo completo: Minori, Squadre, Excel Templates
+- (P2) Migliorare UI atleti "a contratto"
+- (P2) Chiarire logica cancellazione utente/atleta
+- (P3) Refactoring backend (decomposizione server.py)
+- (P3) Integrazione Stripe pagamenti
+- (P3) Pulizia database (migrazione ruolo "viewer" → "dirigente")
+- (P3) Pubblicazione App Store / Domain

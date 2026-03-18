@@ -1020,7 +1020,7 @@ export default function AdminDirigenteDetail() {
                         
                         {/* Header Calcolo per Anno */}
                         <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 10, marginBottom: 12 }}>
-                          <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>📊 Calcolo per Anno Solare (soglie €5k/€15k)</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>Calcolo per Anno Solare</Text>
                         </View>
                         
                         {/* Box Anno Inizio */}
