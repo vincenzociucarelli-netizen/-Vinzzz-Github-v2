@@ -36,6 +36,9 @@ const ACTION_LABELS: Record<string, { label: string; icon: string; color: string
   document_accepted: { label: 'Documento Accettato', icon: 'checkmark-circle', color: '#5856D6' },
   document_signed: { label: 'Documento Firmato', icon: 'create', color: '#8E44AD' },
   user_deleted: { label: 'Utente Eliminato', icon: 'trash', color: '#FF3B30' },
+  deletion_requested: { label: 'Richiesta Cancellazione', icon: 'trash', color: '#FF3B30' },
+  deletion_approved: { label: 'Cancellazione Approvata', icon: 'checkmark-done-circle', color: '#FF3B30' },
+  deletion_rejected: { label: 'Cancellazione Rifiutata', icon: 'close-circle', color: '#FF9500' },
   qr_codes_regenerated: { label: 'QR Rigenerati', icon: 'qr-code', color: '#FF9500' },
   stripe_settings_updated: { label: 'Impostazioni Stripe', icon: 'card', color: '#6772E5' },
   stripe_keys_deleted: { label: 'Chiavi Stripe Eliminate', icon: 'card', color: '#FF3B30' },
@@ -48,6 +51,7 @@ const ACTION_FILTERS = [
   { key: 'certificate_override', label: 'Override' },
   { key: 'certificate_block_changed', label: 'Blocco Cert.' },
   { key: 'compensation_modified', label: 'Compensi' },
+  { key: 'deletion_requested', label: 'Cancellazioni' },
   { key: 'document_accepted', label: 'Documenti' },
   { key: 'user_deleted', label: 'Eliminazioni' },
 ];

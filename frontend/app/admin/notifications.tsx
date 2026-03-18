@@ -123,6 +123,12 @@ export default function AdminNotifications() {
       case 'coach_exceeded_15000':
       case 'dirigente_exceeded_15000':
         return { name: 'alert-circle', color: '#FF3B30' };
+      case 'deletion_requested':
+        return { name: 'trash', color: '#FF3B30' };
+      case 'deletion_approved':
+        return { name: 'checkmark-circle', color: '#34C759' };
+      case 'deletion_rejected':
+        return { name: 'close-circle', color: '#FF9500' };
       default:
         return { name: 'notifications', color: '#007AFF' };
     }
