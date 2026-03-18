@@ -1981,7 +1981,7 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
             </p>
 
             <p style="font-size: 15px; color: #333; font-weight: 600; margin: 0 0 12px;">
-                Con un semplice click avrai sempre sotto controllo:
+                Con un semplice click avrai sempre sotto controllo gratuitamente:
             </p>
 
             <!-- Benefits list -->
@@ -2008,7 +2008,7 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
                     <td style="padding: 10px 14px; background-color: #E8F5E9; border-radius: 8px;">
                         <table cellpadding="0" cellspacing="0" border="0"><tr>
                             <td style="font-size: 20px; padding-right: 10px; vertical-align: middle;">&#128203;</td>
-                            <td style="font-size: 14px; color: #2E7D32; font-weight: 600;">Scadenza del certificato medico</td>
+                            <td style="font-size: 14px; color: #2E7D32; font-weight: 600;">Scadenza certificato medico</td>
                         </tr></table>
                     </td>
                 </tr>
@@ -2026,7 +2026,7 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
                     <td style="padding: 10px 14px; background-color: #F3E5F5; border-radius: 8px;">
                         <table cellpadding="0" cellspacing="0" border="0"><tr>
                             <td style="font-size: 20px; padding-right: 10px; vertical-align: middle;">&#128100;</td>
-                            <td style="font-size: 14px; color: #6A1B9A; font-weight: 600;">Versione Lite gratuita per i tuoi giovani atleti</td>
+                            <td style="font-size: 14px; color: #6A1B9A; font-weight: 600;">Versione Lite per i tuoi giovani atleti</td>
                         </tr></table>
                     </td>
                 </tr>
