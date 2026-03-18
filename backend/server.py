@@ -3496,10 +3496,20 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin, coach e collaboratori possono vedere i dirigenti")
     
     society_id = current_user.get("society_id")
-    dirigenti = await db.users.find({
+    
+    # Get society to find owner_id (society admin account to exclude)
+    society = await db.societies.find_one({"id": society_id})
+    society_owner_id = society.get("owner_id") if society else None
+    
+    query = {
         "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE]},
         "society_id": society_id
-    }).to_list(1000)
+    }
+    # Exclude the society owner account from the dirigenti list
+    if society_owner_id:
+        query["id"] = {"$ne": society_owner_id}
+    
+    dirigenti = await db.users.find(query).to_list(1000)
     
     # Get all teams for this society to resolve team names
     teams = await db.teams.find({"society_id": society_id}).to_list(1000)

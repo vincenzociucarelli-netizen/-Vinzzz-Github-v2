@@ -928,29 +928,6 @@ export default function AdminDashboard() {
             </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
-
-          {/* Il Mio Profilo */}
-          <TouchableOpacity
-            style={styles.menuCard}
-            onPress={() => router.push('/admin/profile')}
-          >
-            <View style={[styles.menuIcon, { backgroundColor: '#E3F2FD' }]}>
-              {user?.profile_photo ? (
-                <Image 
-                  source={{ uri: `data:image/jpeg;base64,${user.profile_photo}` }}
-                  style={{ width: 40, height: 40, borderRadius: 20 }}
-                  resizeMode="cover"
-                />
-              ) : (
-                <Text style={{ fontSize: 26 }}>{Icons.person}</Text>
-              )}
-            </View>
-            <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Il Mio Profilo</Text>
-              <Text style={styles.menuCardSubtitle}>Dati personali e compensi</Text>
-            </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Rigenera Codice - A fondo pagina */}
