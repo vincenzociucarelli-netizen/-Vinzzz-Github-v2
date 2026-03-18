@@ -629,40 +629,6 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
-          {/* Passa a Modalità Dirigente */}
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#F3E5F5',
-              marginBottom: 8,
-              padding: 14,
-              borderRadius: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              borderWidth: 1,
-              borderColor: '#8E44AD',
-            }}
-            data-testid="switch-to-dirigente-btn"
-            onPress={() => router.replace('/dirigente')}
-          >
-            <View style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: '#fff',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
-              <Ionicons name="briefcase" size={24} color="#8E44AD" />
-            </View>
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: '#8E44AD' }}>Passa a Modalità Dirigente</Text>
-              <Text style={{ fontSize: 12, color: '#666' }}>
-                Compensi, quietanze e profilo personale
-              </Text>
-            </View>
-            <Ionicons name="arrow-forward-circle" size={28} color="#8E44AD" />
-          </TouchableOpacity>
-
           {/* Dirigenti / Admin */}
           <TouchableOpacity
             style={styles.menuCard}
