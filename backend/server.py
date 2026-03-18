@@ -717,6 +717,8 @@ class Athlete(BaseModel):
     qr_code: str = ""  # Base64 encoded QR code
     registration_date: datetime = Field(default_factory=datetime.utcnow)
     trial_end_date: Optional[datetime] = None  # 7 days after registration (None per atleti maggiorenni)
+    trial_start_date: Optional[datetime] = None  # Data inizio effettivo periodo di prova (prima scansione QR)
+    is_trial: bool = False  # True se l'atleta è in modalità periodo di prova
     privacy_accepted: bool = False
     privacy_accepted_date: Optional[datetime] = None
     image_consent: bool = False

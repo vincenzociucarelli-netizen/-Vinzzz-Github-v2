@@ -53,6 +53,8 @@ interface GDPRPrivacyModalProps {
   signerInfo: SignerInfo;
   societyInfo?: SocietyInfo;
   minorInfo?: MinorInfo; // Required for gdpr_minor
+  showDeleteOption?: boolean; // Show "I don't want to stay" option
+  onDeleteRequest?: () => void; // Callback when user requests data deletion
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -65,6 +67,8 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
   signerInfo,
   societyInfo,
   minorInfo,
+  showDeleteOption,
+  onDeleteRequest,
 }) => {
   const signatureRef = useRef<ReactSignatureCanvas>(null);
   const [signing, setSigning] = useState(false);
@@ -479,6 +483,30 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                 <Text style={styles.nextButtonText}>Ho letto e compreso → Procedi alla firma</Text>
                 <Ionicons name="arrow-forward" size={20} color="#fff" />
               </TouchableOpacity>
+
+              {showDeleteOption && onDeleteRequest && (
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: 14,
+                    borderRadius: 8,
+                    marginTop: 10,
+                    backgroundColor: '#FFEBEE',
+                    borderWidth: 1,
+                    borderColor: '#EF5350',
+                    gap: 8,
+                  }}
+                  onPress={onDeleteRequest}
+                  data-testid="gdpr-delete-data-btn"
+                >
+                  <Ionicons name="trash-outline" size={18} color="#C62828" />
+                  <Text style={{ color: '#C62828', fontSize: 13, fontWeight: '600' }}>
+                    Desidero non rimanere, cancella tutti i miei dati
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             /* STEP 2: Sign */

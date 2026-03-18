@@ -686,18 +686,35 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
         ) : (
           <View style={styles.athletesList}>
             {athletes.map((athlete) => {
-              // Determina colore bordo in base allo stato
-              const borderColor = athlete.status === 'pending' 
-                ? '#FFE082' 
-                : athlete.status === 'trial' 
-                  ? '#FF9500' // Arancione per prova
-                  : '#34C759'; // Verde per attivo
+              // Determina stato e colori in base al trial
+              const isWaitingTrial = athlete.status === 'trial' && !athlete.trial_start_date;
+              const isInTrial = athlete.status === 'trial' && !!athlete.trial_start_date;
+              const isActive = athlete.status === 'active';
+              const isPending = athlete.status === 'pending';
               
-              const iconColor = athlete.status === 'pending' 
+              const borderColor = isPending 
+                ? '#FFE082'
+                : isWaitingTrial
+                  ? '#9C27B0' // Viola
+                  : isInTrial
+                    ? '#FF9500' // Arancione
+                    : '#34C759'; // Verde
+              
+              const iconColor = isPending 
                 ? '#FF9500' 
-                : athlete.status === 'trial' 
-                  ? '#FF9500' 
-                  : '#34C759';
+                : isWaitingTrial
+                  ? '#9C27B0'
+                  : isInTrial
+                    ? '#FF9500'
+                    : '#34C759';
+              
+              const statusText = isPending
+                ? 'In attesa di approvazione'
+                : isWaitingTrial
+                  ? 'In attesa di inizio prova'
+                  : isInTrial
+                    ? 'In prova'
+                    : 'Attivo';
               
               return (
               <TouchableOpacity
@@ -729,11 +746,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                     styles.athleteStatus,
                     { color: iconColor, fontWeight: '600' }
                   ]}>
-                    {athlete.status === 'pending' 
-                      ? '⏳ In attesa di approvazione' 
-                      : athlete.status === 'trial' 
-                        ? '🔶 Periodo di prova' 
-                        : '✓ Attivo'}
+                    {statusText}
                   </Text>
                 </View>
                 {athlete.status !== 'pending' && (

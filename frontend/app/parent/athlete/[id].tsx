@@ -1384,10 +1384,10 @@ export default function AthleteDetail() {
     );
   }
 
-  const trialDaysRemaining = differenceInDays(
-    new Date(athlete.trial_end_date),
-    new Date()
-  );
+  const trialDaysRemaining = athlete.trial_end_date 
+    ? differenceInDays(new Date(athlete.trial_end_date), new Date())
+    : 0;
+  const trialHasStarted = !!(athlete.trial_start_date && athlete.trial_end_date);
 
   const isCertificateExpired = certificate
     ? new Date() > new Date(certificate.expiry_date)
@@ -1704,53 +1704,113 @@ export default function AthleteDetail() {
           </View>
         )}
 
-        {/* Status Card */}
+        {/* Stato e Periodo di Prova - Card unificata */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Stato</Text>
           
-          {/* Toggle Status */}
-          <TouchableOpacity 
-            style={styles.statusToggleRow}
-            onPress={handleToggleStatus}
-            disabled={togglingStatus}
-          >
-            <View style={styles.statusToggleInfo}>
-              <Text style={styles.statusToggleLabel}>
-                {athlete.status === 'trial' ? '⏳ In Prova' : '✅ Attivo'}
+          {/* In attesa d'inizio prova (VIOLA) */}
+          {athlete.status === 'trial' && !trialHasStarted && (
+            <>
+              <View style={{ backgroundColor: '#F3E5F5', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#9C27B0', marginBottom: 12 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#7B1FA2', marginBottom: 4 }}>In attesa di inizio prova</Text>
+                <Text style={{ fontSize: 12, color: '#6A1B9A', lineHeight: 18 }}>
+                  Il periodo di prova di 7 giorni iniziera automaticamente quando {athlete.first_name} registrera la prima presenza tramite scansione QR.
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: '#EDE7F6', paddingVertical: 12, borderRadius: 10, gap: 8,
+                  opacity: downloadingTrialDoc ? 0.6 : 1,
+                }}
+                disabled={downloadingTrialDoc}
+                onPress={async () => {
+                  setDownloadingTrialDoc(true);
+                  try {
+                    const res = await api.get(`/athletes/${id}/trial-document`, { responseType: 'blob' });
+                    const blob = new Blob([res.data], { type: 'application/pdf' });
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                  } catch (e: any) {
+                    showAlert('Errore', e.response?.data?.detail || 'Errore nel download del documento');
+                  } finally {
+                    setDownloadingTrialDoc(false);
+                  }
+                }}
+                data-testid="trial-download-document-button"
+              >
+                <Ionicons name="document-text" size={18} color="#7B1FA2" />
+                <Text style={{ fontWeight: '600', color: '#7B1FA2', fontSize: 14 }}>
+                  {downloadingTrialDoc ? 'Download...' : 'Scarica Dichiarazione di Prova'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={{ fontSize: 11, color: '#888', marginTop: 6, textAlign: 'center', fontStyle: 'italic' }}>
+                Scarica, stampa, firma e compila con la data il giorno del primo allenamento di {athlete?.first_name || 'tuo figlio/a'}
               </Text>
-              <Text style={styles.statusToggleSubtext}>
-                {athlete.status === 'trial' 
-                  ? `Tocca per terminare la prova (${trialDaysRemaining} giorni rimanenti)`
-                  : 'Atleta confermato con privacy accettata'}
-              </Text>
-            </View>
-            <View style={[
-              styles.statusToggle,
-              athlete.status === 'active' && styles.statusToggleActive
-            ]}>
-              {togglingStatus ? (
-                <Text style={styles.statusToggleText}>...</Text>
-              ) : (
-                <View style={[
-                  styles.statusToggleKnob,
-                  athlete.status === 'active' && styles.statusToggleKnobActive
-                ]} />
-              )}
-            </View>
-          </TouchableOpacity>
+            </>
+          )}
 
-          {athlete.status === 'trial' && trialDaysRemaining <= 0 && !athlete.privacy_accepted && (
-            <View style={[styles.statusBox, { marginTop: 12 }]}>
-              <Ionicons name="alert-circle" size={24} color="#FF3B30" />
-              <Text style={styles.statusTextDanger}>
-                Periodo di prova terminato - Conferma privacy richiesta
+          {/* In prova (ARANCIONE) */}
+          {athlete.status === 'trial' && trialHasStarted && trialDaysRemaining > 0 && (
+            <>
+              <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF9500', marginBottom: 12 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>In Prova</Text>
+                <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18 }}>
+                  {trialDaysRemaining} giorni rimanenti (iniziata il {new Date(athlete.trial_start_date).toLocaleDateString('it-IT')})
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: '#FFF3E0', paddingVertical: 12, borderRadius: 10, gap: 8,
+                  opacity: downloadingTrialDoc ? 0.6 : 1,
+                }}
+                disabled={downloadingTrialDoc}
+                onPress={async () => {
+                  setDownloadingTrialDoc(true);
+                  try {
+                    const res = await api.get(`/athletes/${id}/trial-document`, { responseType: 'blob' });
+                    const blob = new Blob([res.data], { type: 'application/pdf' });
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                  } catch (e: any) {
+                    showAlert('Errore', e.response?.data?.detail || 'Errore nel download del documento');
+                  } finally {
+                    setDownloadingTrialDoc(false);
+                  }
+                }}
+                data-testid="trial-download-document-button-active"
+              >
+                <Ionicons name="document-text" size={18} color="#E65100" />
+                <Text style={{ fontWeight: '600', color: '#E65100', fontSize: 14 }}>
+                  {downloadingTrialDoc ? 'Download...' : 'Scarica Dichiarazione di Prova'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* Periodo di prova terminato (ROSSO) */}
+          {athlete.status === 'trial' && trialHasStarted && trialDaysRemaining <= 0 && !athlete.privacy_accepted && (
+            <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#F44336' }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#C62828', marginBottom: 6 }}>Periodo di prova terminato</Text>
+              <Text style={{ fontSize: 12, color: '#555', lineHeight: 18, marginBottom: 12 }}>
+                E' necessario firmare la privacy per confermare l'iscrizione oppure richiedere la cancellazione dei dati.
               </Text>
               <TouchableOpacity
-                style={styles.actionButton}
+                style={{ backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
                 onPress={() => setPrivacyModalVisible(true)}
+                data-testid="confirm-privacy-btn"
               >
-                <Text style={styles.actionButtonText}>Conferma Privacy</Text>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Conferma Privacy e Firma</Text>
               </TouchableOpacity>
+            </View>
+          )}
+
+          {/* In attività (VERDE) */}
+          {athlete.status === 'active' && (
+            <View style={{ backgroundColor: '#E8F5E9', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#34C759' }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#2E7D32' }}>In attività</Text>
+              <Text style={{ fontSize: 12, color: '#555', lineHeight: 18 }}>Atleta confermato con privacy accettata</Text>
             </View>
           )}
         </View>
@@ -2121,118 +2181,15 @@ export default function AthleteDetail() {
           </View>
         )}
 
-        {/* Trial Period Section */}
-        {trialStatus && (
-          <View style={[styles.card, { marginTop: 12 }]} data-testid="trial-period-section">
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <Ionicons name="timer" size={20} color="#FF9500" />
-              <Text style={[styles.cardTitle, { marginBottom: 0, marginLeft: 8 }]}>Periodo di Prova</Text>
-            </View>
-
-            {trialStatus.is_trial ? (
-              <>
-                {/* Trial active states */}
-                {trialStatus.waiting_first_attendance && (
-                  <View style={{ backgroundColor: '#FFF8E1', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FFB300', marginBottom: 10 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#F57F17', marginBottom: 4 }}>In attesa del primo allenamento</Text>
-                    <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18 }}>
-                      Il periodo di prova di 7 giorni iniziera automaticamente quando {athlete?.first_name || 'l\'atleta'} registrera la prima presenza tramite scansione QR.
-                    </Text>
-                  </View>
-                )}
-
-                {trialStatus.trial_active && (
-                  <View style={{ backgroundColor: '#E8F5E9', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#4CAF50', marginBottom: 10 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#2E7D32', marginBottom: 4 }}>Prova in Corso</Text>
-                    <Text style={{ fontSize: 12, color: '#555', lineHeight: 18 }}>
-                      {trialStatus.days_remaining !== null ? `${trialStatus.days_remaining} giorni rimanenti` : ''}
-                      {trialStatus.trial_start_date ? ` (iniziata il ${new Date(trialStatus.trial_start_date).toLocaleDateString('it-IT')})` : ''}
-                    </Text>
-                  </View>
-                )}
-
-                {trialStatus.trial_expired && (
-                  <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#F44336', marginBottom: 10 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#C62828', marginBottom: 4 }}>Periodo di Prova Terminato</Text>
-                    <Text style={{ fontSize: 12, color: '#555', lineHeight: 18 }}>
-                      Il periodo di prova e terminato. E' necessario procedere con l'iscrizione completa e il certificato medico.
-                    </Text>
-                  </View>
-                )}
-
-                {/* Download trial document */}
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: '#E3F2FD', paddingVertical: 12, borderRadius: 10, gap: 8,
-                    opacity: downloadingTrialDoc ? 0.6 : 1,
-                  }}
-                  disabled={downloadingTrialDoc}
-                  onPress={async () => {
-                    setDownloadingTrialDoc(true);
-                    try {
-                      const res = await api.get(`/athletes/${id}/trial-document`, { responseType: 'blob' });
-                      const blob = new Blob([res.data], { type: 'application/pdf' });
-                      const url = URL.createObjectURL(blob);
-                      window.open(url, '_blank');
-                    } catch (e: any) {
-                      showAlert('Errore', e.response?.data?.detail || 'Errore nel download del documento');
-                    } finally {
-                      setDownloadingTrialDoc(false);
-                    }
-                  }}
-                  data-testid="trial-download-document-button"
-                >
-                  <Ionicons name="document-text" size={18} color="#1565C0" />
-                  <Text style={{ fontWeight: '600', color: '#1565C0', fontSize: 14 }}>
-                    {downloadingTrialDoc ? 'Download...' : (trialStatus.trial_document_generated ? 'Riscarica Dichiarazione di Prova' : 'Scarica Dichiarazione di Prova')}
-                  </Text>
-                </TouchableOpacity>
-                <Text style={{ fontSize: 11, color: '#888', marginTop: 6, textAlign: 'center', fontStyle: 'italic' }}>
-                  Stampa, compila con data e firma il giorno del primo allenamento
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={{ fontSize: 13, color: '#666', marginBottom: 14, lineHeight: 18 }}>
-                  Puoi attivare un periodo di prova di 7 giorni per {athlete?.first_name || 'tuo figlio/a'}. 
-                  Durante la prova non e richiesto il certificato medico. Il periodo inizia automaticamente 
-                  dalla prima presenza registrata (scansione QR).
-                </Text>
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: '#FFF3E0', paddingVertical: 12, borderRadius: 10, gap: 8,
-                  }}
-                  onPress={async () => {
-                    try {
-                      await api.post(`/athletes/${id}/start-trial`);
-                      const trialRes = await api.get(`/athletes/${id}/trial-status`);
-                      setTrialStatus(trialRes.data);
-                      showAlert('Successo', 'Periodo di prova attivato. Scarica ora il documento da stampare.');
-                    } catch (e: any) {
-                      showAlert('Errore', e.response?.data?.detail || 'Errore');
-                    }
-                  }}
-                  data-testid="trial-start-button"
-                >
-                  <Ionicons name="play-circle" size={18} color="#E65100" />
-                  <Text style={{ fontWeight: '600', color: '#E65100', fontSize: 14 }}>Attiva Periodo di Prova</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        )}
 
         {/* Minor Access Control Section */}
         <View style={[styles.card, { marginTop: 12 }]} data-testid="minor-access-section">
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <Ionicons name="phone-portrait" size={20} color="#34C759" />
-            <Text style={[styles.cardTitle, { marginBottom: 0, marginLeft: 8 }]}>Accesso Atleta dal Telefono</Text>
+            <Text style={[styles.cardTitle, { marginBottom: 0, marginLeft: 8 }]}>Accesso Lite per {athlete?.first_name || 'tuo figlio/a'}</Text>
           </View>
           <Text style={{ fontSize: 13, color: '#666', marginBottom: 14, lineHeight: 18 }}>
-            Permetti a {athlete?.first_name || 'tuo figlio/a'} di accedere alla propria dashboard dal telefono con un codice e un PIN.
-            Potra vedere orari, QR code e presenze (nessun dato sensibile).
+            Consenti a {athlete?.first_name || 'tuo figlio/a'} di accedere dal proprio telefono a informazioni utili: QR Code per la registrazione presenze, orari degli allenamenti, gare in calendario. Dati semplici e informativi, protetti da un PIN personale.
           </Text>
 
           {/* PIN setup */}
@@ -2288,7 +2245,7 @@ export default function AthleteDetail() {
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e', letterSpacing: 1 }}>{minorAthleteCode}</Text>
               </View>
               <Text style={{ fontSize: 12, color: '#888', fontStyle: 'italic', marginTop: 4 }}>
-                Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il codice e il PIN che hai impostato.
+                Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il codice e il PIN.
               </Text>
             </View>
           )}
@@ -2577,6 +2534,46 @@ export default function AthleteDetail() {
           onClose={() => setPrivacyModalVisible(false)}
           onSign={handleGDPRPrivacySigned}
           documentType="gdpr_minor"
+          showDeleteOption={athlete.status === 'trial'}
+          onDeleteRequest={() => {
+            setPrivacyModalVisible(false);
+            if (Platform.OS === 'web') {
+              const confirmed = window.confirm(
+                'Sei sicuro di voler cancellare tutti i dati?\n\nQuesta azione inviera una richiesta di cancellazione all\'amministratore. Tutti i dati dell\'atleta verranno rimossi dopo l\'approvazione.'
+              );
+              if (confirmed) {
+                api.post(`/athletes/${athlete.id}/request-deletion`)
+                  .then(() => {
+                    showAlert('Richiesta Inviata', 'La richiesta di cancellazione dei dati e stata inviata all\'amministratore.');
+                    router.replace('/parent');
+                  })
+                  .catch(() => {
+                    showAlert('Errore', 'Impossibile inviare la richiesta. Riprova.');
+                  });
+              }
+            } else {
+              Alert.alert(
+                'Cancellazione Dati',
+                'Sei sicuro di voler cancellare tutti i dati?\n\nQuesta azione inviera una richiesta di cancellazione all\'amministratore.',
+                [
+                  { text: 'Annulla', style: 'cancel' },
+                  {
+                    text: 'Conferma Cancellazione',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await api.post(`/athletes/${athlete.id}/request-deletion`);
+                        showAlert('Richiesta Inviata', 'La richiesta di cancellazione dei dati e stata inviata all\'amministratore.');
+                        router.replace('/parent');
+                      } catch {
+                        showAlert('Errore', 'Impossibile inviare la richiesta. Riprova.');
+                      }
+                    }
+                  }
+                ]
+              );
+            }
+          }}
           signerInfo={{
             name: parentProfile.first_name || (parentProfile.full_name?.split(' ').slice(1).join(' ') || ''),
             surname: parentProfile.last_name || (parentProfile.full_name?.split(' ')[0] || ''),
