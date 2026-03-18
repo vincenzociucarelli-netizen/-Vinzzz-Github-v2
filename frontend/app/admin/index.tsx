@@ -648,6 +648,22 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
+          {/* Il mio profilo Dirigente */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            data-testid="my-dirigente-profile-btn"
+            onPress={() => router.push(`/admin/dirigente/${user?.id}`)}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E8EAF6' }]}>
+              <Text style={{ fontSize: 26 }}>📋</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Il Mio Profilo Dirigente</Text>
+              <Text style={styles.menuCardSubtitle}>Compensi, contratto e quietanze</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
           {/* Società */}
           <TouchableOpacity
             style={styles.menuCard}

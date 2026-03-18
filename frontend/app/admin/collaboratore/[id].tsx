@@ -372,7 +372,7 @@ export default function AdminCollaboratoreDetail() {
     const prior = parseFloat(otherAnnualCompensation) || 0;
     const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
     
-    const years: { [year: number]: { months: number, startMonth: string, endMonth: string, total: number, prior: number, grandTotal: number, exceedsThreshold5k: boolean, exceedsThreshold15k: boolean } } = {};
+    const years: { [year: number]: { months: number, startMonth: string, endMonth: string, total: number, baseAmount: number, supplementary: number, prior: number, grandTotal: number, exceedsThreshold5k: boolean, exceedsThreshold15k: boolean } } = {};
     
     const start = parseDate(contractStartDate);
     const end = parseDate(contractEndDate);
@@ -386,8 +386,25 @@ export default function AdminCollaboratoreDetail() {
         const yearEndMonth = (year === endYear) ? end.getMonth() : 11;
         
         const monthsThisYear = yearEndMonth - yearStartMonth + 1;
-        const totalThisYear = monthly * monthsThisYear;
         
+        // Calculate from actual receipts if available
+        const yearReceipts = (signedReceipts || []).filter((r: any) => {
+          if (r.year !== year) return false;
+          const monthIndex = r.month - 1;
+          return monthIndex >= yearStartMonth && monthIndex <= yearEndMonth;
+        });
+        
+        const baseAmountThisYear = monthly * monthsThisYear;
+        
+        let supplementaryThisYear = 0;
+        yearReceipts.forEach((receipt: any) => {
+          const receiptAmount = receipt.amount_gross || receipt.amount || 0;
+          if (receiptAmount > monthly) {
+            supplementaryThisYear += (receiptAmount - monthly);
+          }
+        });
+        
+        const totalThisYear = baseAmountThisYear + supplementaryThisYear;
         const priorThisYear = (year === startYear) ? prior : 0;
         const grandTotalThisYear = priorThisYear + totalThisYear;
         
@@ -396,6 +413,8 @@ export default function AdminCollaboratoreDetail() {
           startMonth: monthNames[yearStartMonth],
           endMonth: monthNames[yearEndMonth],
           total: totalThisYear,
+          baseAmount: baseAmountThisYear,
+          supplementary: supplementaryThisYear,
           prior: priorThisYear,
           grandTotal: grandTotalThisYear,
           exceedsThreshold5k: grandTotalThisYear > 5000,
@@ -431,6 +450,43 @@ export default function AdminCollaboratoreDetail() {
       endYear = end.getFullYear();
     }
     
+    const thisClubTotal = monthly * monthsInContract;
+    
+    let supplementaryTotal = 0;
+    let contractStartMonth = 0;
+    let contractEndMonth = 11;
+    if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
+      contractStartMonth = start.getMonth();
+      contractEndMonth = end.getMonth();
+      startYear = start.getFullYear();
+      endYear = end.getFullYear();
+    }
+    
+    if (signedReceipts && signedReceipts.length > 0) {
+      signedReceipts.forEach((receipt: any) => {
+        const receiptAmount = receipt.amount_gross || receipt.amount || 0;
+        const receiptYear = receipt.year;
+        const receiptMonth = receipt.month - 1;
+        
+        let isInContract = false;
+        if (startYear === endYear) {
+          isInContract = receiptYear === startYear && receiptMonth >= contractStartMonth && receiptMonth <= contractEndMonth;
+        } else {
+          if (receiptYear === startYear) {
+            isInContract = receiptMonth >= contractStartMonth;
+          } else if (receiptYear === endYear) {
+            isInContract = receiptMonth <= contractEndMonth;
+          } else if (receiptYear > startYear && receiptYear < endYear) {
+            isInContract = true;
+          }
+        }
+        
+        if (isInContract && receiptAmount > monthly) {
+          supplementaryTotal += (receiptAmount - monthly);
+        }
+      });
+    }
+    
     return {
       monthly,
       prior,
@@ -439,8 +495,9 @@ export default function AdminCollaboratoreDetail() {
       endMonthName,
       startYear,
       endYear,
-      thisClubTotal: monthly * monthsInContract,
-      grandTotal: prior + (monthly * monthsInContract)
+      thisClubTotal,
+      supplementaryTotal,
+      grandTotal: thisClubTotal + supplementaryTotal
     };
   };
 
@@ -810,8 +867,8 @@ export default function AdminCollaboratoreDetail() {
                           <View style={{ marginTop: 8 }}>
                             <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.thisClubTotal)}</Text></Text>
                             <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({breakdown.monthsInContract} mesi × {formatCurrency(parseFloat(monthlyCompensation) || 0)})</Text>
-                            <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(0)}</Text></Text>
-                            <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.thisClubTotal)}</Text></Text>
+                            <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.supplementaryTotal || 0)}</Text></Text>
+                            <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.grandTotal)}</Text></Text>
                           </View>
                         </View>
                         
@@ -833,8 +890,8 @@ export default function AdminCollaboratoreDetail() {
                               {yearlyBreakdown[years[0]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[0]} ({yearlyBreakdown[years[0]].startMonth}-Dic: {yearlyBreakdown[years[0]].months} mesi)
                             </Text>
                             <View style={{ marginTop: 8 }}>
-                              <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].total)}</Text></Text>
-                              <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(0)}</Text></Text>
+                              <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].baseAmount || yearlyBreakdown[years[0]].total)}</Text></Text>
+                              <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].supplementary || 0)}</Text></Text>
                               {prior > 0 && (
                                 <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(prior)}</Text></Text>
                               )}
@@ -876,8 +933,8 @@ export default function AdminCollaboratoreDetail() {
                               {yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} (Gen-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
                             </Text>
                             <View style={{ marginTop: 8 }}>
-                              <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].total)}</Text></Text>
-                              <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(0)}</Text></Text>
+                              <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].baseAmount || yearlyBreakdown[years[1]].total)}</Text></Text>
+                              <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].supplementary || 0)}</Text></Text>
                               <Text style={{ fontSize: 15, color: yearlyBreakdown[years[1]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].grandTotal)}</Text></Text>
                             </View>
                             {yearlyBreakdown[years[1]].exceedsThreshold5k && !yearlyBreakdown[years[1]].exceedsThreshold15k && (
