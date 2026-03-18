@@ -11,7 +11,7 @@ App di gestione societa sportiva per pubblicazione su iOS App Store e Google Pla
 - **Fiscal Code**: python-codicefiscale
 
 ## User Roles
-- **Admin**: Gestione completa societa
+- **Admin**: Gestione completa societa (= la societa stessa, non una persona)
 - **Coach**: Gestione allenamenti e presenze
 - **Parent**: Gestione figli minorenni
 - **Athlete**: Atleta adulto
@@ -19,6 +19,8 @@ App di gestione societa sportiva per pubblicazione su iOS App Store e Google Pla
 - **Dirigente/Viewer**: Visualizzazione dati
 
 ## Implemented Features (Complete)
+
+### Sessione precedente
 - Registrazione self-service atleti/genitori con verifica email
 - Accettazione Terms of Use e Privacy Policy
 - Gestione atleti minorenni con codice fiscale e secondo genitore
@@ -32,53 +34,37 @@ App di gestione societa sportiva per pubblicazione su iOS App Store e Google Pla
 - Calcolo codice fiscale (incluso nati all'estero)
 - Visualizzazione sicura documenti PDF (fetch+Blob)
 - Certificato medico con codifica colore scadenza
-- Cross-linking automatico genitori (P0 - Completato 2026-03-17)
-- Lite Dashboard per Minorenni (P0 - Completato 2026-03-17)
-- Gestione Periodo di Prova 7 giorni (Completato 2026-03-17)
 
-## Latest Features (2026-03-17)
+### Sessione 2026-03-17
+- **Cross-linking automatico genitori**: Quando un atleta viene creato con second_parent_email, il sistema trova automaticamente l'utente e popola second_parent_id
+- **Lite Dashboard per Minorenni**: Login tramite codice atleta + PIN, dashboard read-only con QR, orari, presenze, partite
+- **Gestione Periodo di Prova 7 giorni**: PDF dichiarazione, inizio automatico da prima presenza QR, bypass certificato medico
 
-### Cross-linking Automatico Genitori
-- Quando un atleta viene creato con `second_parent_email`, il sistema cerca automaticamente l'utente e popola `second_parent_id`
-- Funziona sia nella creazione che nell'aggiornamento e riattivazione atleta
-- Alla registrazione di un nuovo genitore, verifica se ci sono atleti con la sua email come secondo genitore
+### Sessione 2026-03-18
+- **Profilo Societa dedicato**: Nuova pagina /admin/society-profile con tutti i dati societa (anagrafici, fiscali, contatti, sede, logo, timbro)
+- **Biglietto da visita digitale**: Condivisione via WhatsApp e Email con tutti i dati societa
+- **Riorganizzazione Impostazioni**: Dati societa spostati nel profilo, impostazioni tecniche (certificato, stagione) in "Altre Impostazioni"
+- **Pulsante Dirigenti**: Accessibile dal profilo societa
 
-### Lite Dashboard per Minorenni
-- Login tramite codice atleta + PIN (4-6 cifre)
-- Dashboard read-only: QR code, orari, presenze, partite, stato prova
-- Nessun dato sensibile esposto
-- Genitore gestisce PIN e attivazione/disattivazione accesso
-- Sezione "Accesso Atleta dal Telefono" nella vista genitore
+## Key Pages/Routes
+- `/login` - Login con due tab (Standard + Atleta)
+- `/admin` - Dashboard admin
+- `/admin/society-profile` - Profilo societa (NEW)
+- `/admin/settings/other` - Impostazioni tecniche (cert blocking, stagione, ruoli, etc.)
+- `/admin/dirigenti` - Gestione dirigenti
+- `/minor` - Dashboard minorenne (NEW)
+- `/parent/athlete/[id]` - Vista genitore con periodo prova e accesso minorenne
 
-### Gestione Periodo di Prova
-- Attivazione prova da parte del genitore
-- Data inizio NON inserita manualmente - coincide con prima presenza (QR scan)
-- 7 giorni di prova dalla prima presenza
-- Certificato medico NON richiesto durante la prova
-- Generazione PDF "Dichiarazione Periodo di Prova" con reportlab
-- Stato prova visibile nella dashboard minorenne e vista genitore
-- 3 stati: in attesa primo allenamento, prova attiva, prova terminata
-
-## Pending Issues
-- **P2**: Logica cancellazione utente ambigua (cosa succede quando un atleta viene cancellato?)
-
-## Upcoming Tasks
-- **P1**: Testing guidato dall'utente (ciclo completo Minorenni, Squadre, Template Excel)
-- **P2**: Migliorare UI per atleti "a contratto"
-- **P3**: Refactoring backend (decomporre server.py)
-- **P3**: Integrazione Stripe per pagamenti
-- **P3**: Pulizia database (migrare ruolo "viewer" a "dirigente")
-- **P3**: Dominio e pubblicazione App Store
-
-## Key API Endpoints (New)
+## Key API Endpoints
 - `POST /api/auth/minor-login` - Login minorenne (codice+PIN)
 - `GET /api/minor/dashboard` - Dashboard minorenne
 - `POST /api/athletes/{id}/set-minor-pin` - Imposta PIN
 - `POST /api/athletes/{id}/toggle-minor-access` - Attiva/disattiva accesso
-- `GET /api/athletes/{id}/minor-access-status` - Stato accesso
-- `POST /api/athletes/{id}/start-trial` - Attiva periodo prova
-- `GET /api/athletes/{id}/trial-status` - Stato prova
+- `GET /api/athletes/{id}/trial-status` - Stato periodo prova
 - `GET /api/athletes/{id}/trial-document` - PDF dichiarazione prova
+- `POST /api/athletes/{id}/start-trial` - Attiva periodo prova
+- `GET /api/settings/society` - Dati societa (usato da profilo E impostazioni)
+- `PATCH /api/settings/society` - Aggiorna dati societa
 
 ## Test Credentials
 - Admin: pallavoloperugia@gmail.com / password
@@ -87,12 +73,21 @@ App di gestione societa sportiva per pubblicazione su iOS App Store e Google Pla
 - Athlete Luna: luna@18piu.com / Test1234
 - Minor Lucia: code KWP9R9PJWJXJ / pin 1234
 
-## Key DB Schema (Athletes)
+## Pending Issues
+- **P2**: Logica cancellazione utente ambigua
+
+## Upcoming Tasks
+- **P1**: Testing guidato dall'utente
+- **P2**: UI atleti "a contratto"
+- **P3**: Refactoring backend (decomporre server.py)
+- **P3**: Integrazione Stripe pagamenti
+- **P3**: Pulizia database (viewer -> dirigente)
+- **P3**: Dominio e pubblicazione App Store
+
+## DB Schema (Key Fields - Athletes)
 - `is_trial`: Boolean - Atleta in periodo di prova
-- `trial_start_date`: String/null - Data inizio prova (dalla prima presenza)
-- `trial_end_date`: String/null - Data fine prova (7 giorni dopo)
-- `trial_document_generated`: Boolean - Documento PDF generato
-- `minor_pin_hash`: String - PIN hashato per accesso minorenne
+- `trial_start_date`: String/null - Data inizio prova
+- `trial_end_date`: String/null - Data fine prova
+- `minor_pin_hash`: String - PIN per accesso minorenne
 - `minor_access_enabled`: Boolean - Accesso minorenne attivo
 - `second_parent_id`: String - ID secondo genitore (auto-popolato)
-- `second_parent_email`: String - Email secondo genitore
