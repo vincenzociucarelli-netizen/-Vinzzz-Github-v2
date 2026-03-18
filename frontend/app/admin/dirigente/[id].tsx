@@ -606,63 +606,87 @@ export default function AdminDirigenteDetail() {
           </Text>
         </View>
 
-        {/* Onboarding Checklist Button - Always visible when approved */}
-        {dirigente.status === 'approved' && (() => {
-          const checklist = dirigente.onboarding_checklist || {};
-          const totalItems = 4; // contract, ras, fiscal_code, criminal_record
-          const completedItems = [
-            checklist.contract_signed,
-            checklist.ras_registered,
-            checklist.fiscal_code_acquired,
-            checklist.criminal_record
-          ].filter(Boolean).length;
-          
-          const isComplete = completedItems === totalItems;
-          
-          return (
-            <TouchableOpacity 
-              style={[
-                styles.checklistButton,
-                isComplete ? styles.checklistButtonComplete : styles.checklistButtonIncomplete
-              ]}
-              onPress={() => setEditingOnboarding(true)}
-            >
-              <Ionicons 
-                name={isComplete ? "checkmark-circle" : "alert-circle"} 
-                size={24} 
-                color="#fff" 
-              />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.checklistButtonTitle}>
-                  Checklist Onboarding
-                </Text>
-                <Text style={styles.checklistButtonSubtitle}>
-                  {completedItems}/{totalItems} completati
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#fff" />
-            </TouchableOpacity>
-          );
-        })()}
+        {/* Checklist + Documenti on one row */}
+        <View style={{ flexDirection: 'row', marginHorizontal: 16, marginTop: 12, gap: 8 }}>
+          {/* Onboarding Checklist Button - compact */}
+          {dirigente.status === 'approved' && (() => {
+            const checklist = dirigente.onboarding_checklist || {};
+            const totalItems = 4;
+            const completedItems = [
+              checklist.contract_signed,
+              checklist.ras_registered,
+              checklist.fiscal_code_acquired,
+              checklist.criminal_record
+            ].filter(Boolean).length;
+            const isComplete = completedItems === totalItems;
+            
+            return (
+              <TouchableOpacity 
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  padding: 10,
+                  borderRadius: 10,
+                  backgroundColor: isComplete ? '#4CAF50' : '#F44336',
+                }}
+                onPress={() => setEditingOnboarding(true)}
+              >
+                <Ionicons name={isComplete ? "checkmark-circle" : "alert-circle"} size={20} color="#fff" />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#fff' }}>Checklist</Text>
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{completedItems}/{totalItems}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#fff" />
+              </TouchableOpacity>
+            );
+          })()}
 
-        {/* Documenti Firmati Button */}
-        <TouchableOpacity 
-          style={[
-            styles.checklistButton,
-            { backgroundColor: '#3498DB' }
-          ]}
-          onPress={() => setDocumentsModalVisible(true)}
+          {/* Documenti Firmati Button - compact */}
+          <TouchableOpacity 
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: 10,
+              borderRadius: 10,
+              backgroundColor: '#3498DB',
+            }}
+            onPress={() => setDocumentsModalVisible(true)}
+          >
+            <Ionicons name="folder-open" size={20} color="#fff" />
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#fff' }}>Documenti</Text>
+              <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{userDocuments.length} firmati</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Passa a Modalità Dirigente */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#F3E5F5',
+            marginHorizontal: 16,
+            marginTop: 8,
+            padding: 12,
+            borderRadius: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: '#8E44AD',
+          }}
+          data-testid="switch-to-dirigente-view-btn"
+          onPress={() => router.replace('/dirigente')}
         >
-          <Ionicons name="folder-open" size={24} color="#fff" />
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.checklistButtonTitle}>
-              Documenti Firmati
-            </Text>
-            <Text style={styles.checklistButtonSubtitle}>
-              {userDocuments.length} documenti
-            </Text>
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+            <Ionicons name="briefcase" size={20} color="#8E44AD" />
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#fff" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#8E44AD' }}>Passa a Modalità Dirigente</Text>
+            <Text style={{ fontSize: 11, color: '#666' }}>Compensi, quietanze e profilo</Text>
+          </View>
+          <Ionicons name="arrow-forward-circle" size={24} color="#8E44AD" />
         </TouchableOpacity>
 
         {/* Header con nome e contatti */}
