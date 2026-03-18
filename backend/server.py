@@ -17725,7 +17725,7 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     
     # Get society info
     society = await db.societies.find_one({"id": athlete.get("society_id")})
-    society_name = society.get("name", "Societa Sportiva") if society else "Societa Sportiva"
+    society_name = (society.get("ragione_sociale") or society.get("name") or "Societa Sportiva") if society else "Societa Sportiva"
     
     # Generate PDF
     from reportlab.lib.pagesizes import A4
