@@ -43,12 +43,19 @@ App di gestione societa sportiva per pubblicazione su iOS App Store e Google Pla
 - Testo dichiarazione prova migliorato
 - "Accesso Lite per [nome]" con descrizione QR/orari/gare/PIN
 - Pulsante "Desidero non rimanere, cancella tutti i miei dati" nella GDPR modal
-- Fix bug cancellazione: Alert.alert() non funzionava su Chrome/web → window.confirm()
+- Fix bug cancellazione: Alert.alert() non funzionava su Chrome/web
 - Admin/Dirigenti: ripristinati come voce separata nel dashboard admin
 - Rimosso "Il Mio Profilo" (doppio profilo) dal dashboard admin
 - Account societa nascosto dalla lista dirigenti
 - Audit log + notifiche admin per richieste cancellazione dati
-- Rimossi banner SUPERAMENTO €5k/€15k da dirigente e collaboratore
+- Ripristinati banner SUPERAMENTO 5k/15k per dirigente e collaboratore
+
+### Sessione 2026-03-18 (sera)
+- Fix calcolo "Somme suppl." per dirigenti: da hardcoded 0 a calcolo reale da quietanze firmate
+- Fix calcolo "Somme suppl." per collaboratori: stessa logica del coach
+- Fix "TOTALE RAS" per dirigenti e collaboratori: include ora le somme supplementari
+- Fix "Compenso base" per anno solare: mostra baseAmount separato da supplementary
+- Aggiunto pulsante "Il Mio Profilo Dirigente" nel dashboard admin (compensi, contratto, quietanze)
 
 ## Key API Endpoints
 - `GET/PATCH /api/settings/society` - Dati societa
@@ -60,6 +67,9 @@ App di gestione societa sportiva per pubblicazione su iOS App Store e Google Pla
 - `POST /api/athletes/{id}/request-deletion` - Richiesta cancellazione (con audit+notifica)
 - `POST /api/athletes/{id}/approve-deletion` - Approva cancellazione (con audit)
 - `POST /api/athletes/{id}/reject-deletion` - Rifiuta cancellazione (con audit)
+- `GET /api/dirigente/{id}/compensation` - Lista compensi dirigente
+- `GET /api/dirigente/{id}/threshold-status/{year}` - Stato soglie dirigente
+- `GET /api/users/dirigenti` - Lista dirigenti (esclude account societa)
 
 ## Test Credentials
 - Admin: pallavoloperugia@gmail.com / password
@@ -72,5 +82,5 @@ App di gestione societa sportiva per pubblicazione su iOS App Store e Google Pla
 - (P2) Chiarire logica cancellazione utente/atleta
 - (P3) Refactoring backend (decomposizione server.py)
 - (P3) Integrazione Stripe pagamenti
-- (P3) Pulizia database (migrazione ruolo "viewer" → "dirigente")
+- (P3) Pulizia database (migrazione ruolo "viewer" -> "dirigente")
 - (P3) Pubblicazione App Store / Domain
