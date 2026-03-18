@@ -2,61 +2,43 @@
 The user's primary goal is to finalize a sports team management application for publication in the iOS App Store and Google Play Store. This involves implementing the final core features, fixing bugs, and ensuring the application meets legal and platform-specific requirements.
 
 **PRODUCT REQUIREMENTS**:
-*   A society's admin must accept Terms of Use before using the app. **DONE**.
-*   All users must accept a legal disclaimer (Privacy Policy and Terms) on their first login. **DONE**.
-*   The application must have dedicated, accessible pages for the Privacy Policy and Terms of Use. **DONE**.
-*   A public self-registration flow for athletes/parents must be available, including email verification. **DONE**.
-*   Transactional emails should include links to the App Store and Play Store. **DONE**.
-*   The form for creating minor athletes must include fields for Codice Fiscale and a second parent's email. **DONE**.
-*   Each parent of a minor athlete must have their own separate, unique password (password dati) to access the minor's sensitive data. **DONE**.
-*   The application should feature a brief, role-specific onboarding tutorial for new users. **DONE**.
-*   The fiscal code calculation must support foreign-born athletes by including Country of Birth. **DONE**.
-*   A GDPR-compliant privacy acceptance flow (with signature) must be implemented for parents signing on behalf of minors. **DONE**.
-*   The payment system must support sequential receipt numbers per season and track payment registration dates. **DONE**.
-*   Admins must be able to export a Prima Nota Cassa (Cash Journal). **DONE**.
-*   Admins need to configure season start/end dates. **DONE**.
+The user has provided a series of requirements, most of which were completed in previous sessions. The work in this session focused on new feature requests and bug fixes:
+*   An admin profile for the Society entity, separate from individual user profiles.
+*   The ability to generate shareable PDF business cards for the society's fiscal and bank details.
+*   A Lite Dashboard for minor athletes, accessible with a PIN set by their parents.
+*   A Trial Period feature for new athletes, which starts upon their first recorded attendance and bypasses the medical certificate requirement for 7 days.
+*   A bug fix for case-sensitive email during login.
+*   A UI improvement on the invitation registration form to use placeholders instead of pre-filled values.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application is a nearly feature-complete sports management tool. This session was heavily focused on iterative bug fixing and feature refinement based on detailed user testing.
+The application is a comprehensive sports team management tool. This session successfully implemented three major features and several significant enhancements:
 
-Key areas addressed:
-- **Parent & Document Management**: Fixed critical bugs preventing parents from seeing documents signed by their spouse for shared children. Implemented a secure pattern for viewing token-protected PDF documents across the app.
-- **Medical Certificate Flow**: The entire workflow was overhauled. It's now a date-entry system (not file upload) with color-coded expiry status (green/orange/red). The UI was refined to show an add button only when no certificate exists, and an edit link otherwise. Regressions related to admin edit permissions and data consistency were also fixed.
-- **Password Management**: Implemented two crucial features:
-    1.  Admin can now reset both a parent's **login password** and their secondary **data password**.
-    2.  Parents have a secure, self-service method to reset their **data password** via a code sent to their email.
-- **Admin Panel Refinements**: The admin settings page was reorganized as per user request. The Prima Nota Cassa CSV export was fixed (column order, missing team data). A bug preventing the admin notification badge from clearing was resolved.
+1.  **Automatic Parent Cross-Linking**: The backend now automatically links the  when an athlete is created with a , resolving a critical data integrity issue.
+2.  **Lite Dashboard for Minors**: A complete, secure dashboard was created for minor athletes to view their information. This includes backend endpoints for PIN-based login, a dedicated frontend route (), and UI controls for parents to manage access and set the PIN.
+3.  **Trial Period Management**: A full-featured trial period system was implemented. The backend now generates a declaration PDF, starts a 7-day trial on the first QR code scan, and bypasses the medical certificate check for athletes in their trial period. The parent's dashboard was updated to show the trial status and provide a download link for the declaration.
+4.  **Society Profile Refactoring**: The Society data was moved from a settings page to a dedicated, standalone profile page for the admin, better reflecting its status as a legal entity. This included adding new editable fields (IBAN, affiliations) and creating endpoints to generate shareable PDF cards with fiscal and bank information.
+5.  **Bug Fixes**: A critical login bug caused by case-sensitive email addresses was fixed.
 
 **Last working item**:
-- **Last item agent was working**: Investigating the backend logic for automatic parent cross-linking. The user confirmed that when an athlete is created with a , the system should automatically find that user and populate the  field. The agent was about to check if this logic exists in .
+- **Last item agent was working**: The agent was modifying the registration form that users access from an email invitation (). The user requested that the pre-filled data (e.g., parent's name, athlete's name) should appear as grayed-out placeholders that clear when the user clicks into the field, rather than as editable, pre-filled values. The agent modified the code to use  attributes and updated the form submission logic to use the placeholder data as a fallback if the user leaves the field empty.
 - **Status**: IN PROGRESS
 - **Agent Testing Done**: N
-- **Which testing method agent to use?**: backend testing agent
+- **Which testing method agent to use?**: screenshot tool
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Implement Automatic Parent Cross-Linking (P0)**
-    - **Description**: Currently, linking a second parent to a child is a manual database operation. The system needs to automatically resolve the  from the provided  when an athlete is created or updated. This is critical for data integrity as more families register.
+- **Issue 1: Verify Invitation Registration Form UI (P0)**
+    - **Description**: The changes to the registration form to use placeholders are implemented but have not been visually verified. The form might not render correctly or the fallback logic on submission might fail.
     - **Next debug checklist**:
-        - Review the athlete creation and update endpoints in .
-        - Check if there is any existing logic that attempts to find a user by .
-        - If not, implement logic to query the  collection for the email and populate  on the athlete document.
-        - Test the flow by creating a new athlete with a  that already exists as a user.
-    - **Why fix this issue and what will be achieved with the fix?**: To automate a core piece of data relationship management, ensuring that parents correctly see all their shared children without manual intervention.
-    - **Status**: NOT STARTED
-    - **Is recurring issue?**: Y
-    - **Should Test frontend/backend/both after fix?**: backend
-    - **Blocked on other issue**: None
-
-- **Issue 2: Ambiguous User Deletion Logic (P2)**
-    - **Description**: It's unclear what should happen when an athlete profile is deleted. Should the associated user login account also be deleted, or retained for auditing? This has legal and data management implications.
-    - **Next debug checklist**: Clarify the desired behavior with the user.
-    - **Why fix this issue and what will be achieved with the fix?**: To ensure data management is consistent and compliant with user requirements and GDPR.
-    - **Status**: NOT STARTED
-    - **Is recurring issue?**: Y
-    - **Should Test frontend/backend/both after fix?**: backend
+        - Generate an invitation link.
+        - Use the screenshot tool to view the  page and confirm that the fields show grayed-out placeholder text.
+        - Manually test the submission to ensure that if a field is left blank, the data from the invitation (now in the placeholder) is correctly submitted.
+    - **Why fix this issue and what will be achieved with the fix?**: To complete the user's UI/UX request for a cleaner registration experience.
+    - **Status**: IN PROGRESS
+    - **Is recurring issue?**: N
+    - **Should Test frontend/backend/both after fix?**: frontend
     - **Blocked on other issue**: None
 
 **In progress Task List**:
@@ -64,27 +46,22 @@ None.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks**:
-    *   (P0) **Implement Lite Dashboard for Minor Athletes**: A major new feature requested by the user. A detailed, GDPR-compliant plan has been discussed.
     *   (P1) **User-Guided Testing**: User wants to test the full lifecycle for Minors, Teams, and Excel Templates.
 *   **Future Tasks**:
     *   (P2) **Refine UI for Contracted Athletes**: Improve the UI/UX for athletes marked as .
-    *   (P3) **Backend Refactoring**: Decompose  into a modular structure.
+    *   (P2) **Ambiguous User Deletion Logic**: Clarify with the user what should happen to a  account when the associated  profile is deleted.
+    - (P3) **Backend Refactoring**: Decompose  into a modular structure (e.g., routes, models).
     *   (P3) **Stripe Integration**: Re-implement Stripe for payments.
     *   (P3) **Database Cleanup**: Migrate the role  to .
     *   (P3) **Domain & App Store Publication**: Assist with final publication steps.
 
 **Completed work in this session**
-- **Admin Settings & CSV Export**: Reorganized the Dati Società settings page and fixed the Prima Nota Cassa CSV export by correcting the MongoDB aggregation pipeline to join on the correct fields and fixing the column order. (DONE)
-- **Secure Document Viewing**: Fixed a critical security/usability bug across the app where protected PDFs failed to load. Replaced direct  calls with a secure  +  pattern. (DONE)
-- **Shared Document & Child Visibility**: Modified backend logic to ensure parents can see children and documents associated with their spouse, enabling correct data sharing within a family unit. (DONE)
-- **Medical Certificate Overhaul**:
-    - Replaced file upload with a date-entry form for parents. (DONE)
-    - Implemented color-coding (green/orange/red) for certificate expiry status. (DONE)
-    - Fixed multiple regressions where admin editing was disabled and data was inconsistent between admin/athlete views. (DONE)
-- **Comprehensive Password Reset**:
-    - Implemented admin functionality to reset both a parent's **login password** and **data password**. (DONE)
-    - Built a secure, self-service flow for parents to reset their own **data password** via a code sent to their email. (DONE)
-- **Admin Notification Badge Fix**: Corrected a bug where the unread notification count did not reset after viewing notifications. (DONE)
+- **Automatic Parent Cross-Linking**: Backend logic added to  to automatically populate  on athlete creation, resolving a major data integrity gap. (DONE)
+- **Lite Dashboard for Minors**: Implemented a full-stack feature allowing minors to log in with a PIN. This included new backend endpoints, schema changes, and new frontend components for login and the dashboard itself. (DONE)
+- **Trial Period Management**: Implemented a full-stack feature for a 7-day trial period. This included backend logic for starting the trial upon first attendance, dynamic PDF generation for the trial agreement, and frontend UI for parents. (DONE)
+- **Society Profile Refactoring**: Overhauled the admin interface to create a dedicated profile page for the society, separating its data from general settings. Added new fields and created endpoints for generating PDF business cards. (DONE)
+- **Case-Insensitive Login Fix**: Fixed a bug in  by making the email check during login case-insensitive, preventing login failures. (DONE)
+- **Invitation Form UI Improvement**: The agent started working on this by using placeholders in the registration form but the work is not yet tested and verified.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Ambiguous User Deletion Logic**
@@ -95,77 +72,80 @@ None.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork**: Ambiguous User Deletion
--   **Recurrence count**: 7
+-   **Recurrence count**: 8
 -   **Status**: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Secure Document Viewing**: Migrated from insecure  to a -based approach using  and  to handle token-authenticated file downloads.
-- **Complex Backend Authorization**: Enhanced endpoints (, ) to correctly handle permissions within family structures, allowing a parent to access documents signed by a co-parent for a shared child.
-- **Data Consistency & Fallbacks**: Resolved a data discrepancy by modifying a backend endpoint () to use the main  document as a fallback source of truth if a record in the  collection was missing.
-- **Secure Password Reset Flow**: Designed and implemented a two-endpoint system (, ) for securely resetting a sensitive, secondary password using a time-limited code sent via email.
-- **State Management & Regression Fixing**: Iteratively debugged and fixed multiple regressions introduced during rapid feature changes, particularly around conditional UI rendering and user permissions.
+- **Multi-Role Authentication**: Extended the JWT authentication system to support a minor role, which validates against the  collection using an athlete code and PIN, rather than the  collection.
+- **Dynamic PDF Generation**: Used the  library in the backend to dynamically generate multiple PDF documents on-the-fly, including trial agreements and business cards with society data.
+- **Conditional Backend Logic**: Implemented complex logic within the attendance recording endpoint () to automatically trigger the start of a trial period and to bypass certificate validation for trial athletes.
+- **Frontend Form Placeholders**: Modified a React form () to use data fetched from an API as  text for a better UX, while ensuring the data is used as a fallback on submission if the user doesn't edit the field.
 
 **key DB schema**
-- **athletes**: Relies on  (ObjectId) and  (ObjectId) to link to the  collection. The automatic population of  from  is the next critical task.
-- **users**: Contains  (hashed) for sensitive data access. A temporary  and  are used during the new self-service reset flow.
-- **certificates**: Data in this collection can be inconsistent with fields like  on the  document, which was addressed with a backend fallback.
+-   **athletes**: Added fields  (string, for minor login),  (boolean),  (datetime),  (datetime), and  (boolean).
+-   **settings**: The  settings object within this collection was expanded to include , , and  (a list of objects).
 
 **All files of reference**
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-- 
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   
 
 **Critical Info for New Agent**
-- **User Language**: You must respond in **Italiano**.
-- **Highest Priority (P0)**: Implement the **automatic parent cross-linking** logic in the backend. This is a critical data integrity feature that is currently a manual process. When an athlete is created with a , the backend should automatically find the corresponding user and populate the .
-- **Next Major Task (P0)**: Begin implementation of the **Lite Dashboard for Minors.** This is the next big feature on the roadmap.
-- **User Interaction Style**: The user is a very active tester and provides excellent, detailed feedback, often with screenshots. Be prepared for rapid iteration and to address regressions promptly. The distinction between login password and data password is crucial.
+-   **User Language**: You MUST respond in **Italiano**.
+-   **Highest Priority (P0)**: The immediate task is to verify the last change: the invitation registration form (). Take a screenshot to confirm the fields correctly appear as grayed-out placeholders and that the form submission still works.
+-   **User Interaction**: The user provides requests in batches. After completing and verifying the current task, present a clear plan for the next steps and await confirmation.
+-   **Codebase Structure**: The application has a large monolithic  file. Be mindful of this when adding new logic, and place new endpoints near related existing ones. The frontend is Next.js with pages and app router components.
 
 **documents and test reports created in this job**
-None.
+- 
+- 
+- 
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-- 10. **Msg #507**: User confirms the business logic for automatic cross-linking: it should be automatic if the second parent's email is provided, but not otherwise (to support blended families).
-- 9. **Msg #506**: User correctly points out that the cross-linking problem should be solved automatically by the system, not via a manual data fix.
-- 8. **Msg #505**: User asks for a reminder about the original cross-linking problem they had reported.
-- 7. **Msg #490**: User signals they are ready to proceed with testing.
-- 6. **Msg #460**: User explains that the Lite Dashboard feature is why the data password reset flow needs to be secure (e.g., via email) and cannot be initiated from a simple logged-in session.
-- 5. **Msg #450**: User confirms the login password reset works but raises the critical need to also reset the separate data password, both by the admin and autonomously by the parent.
-- 4. **Msg #444**: User reports a regression where parents can no longer edit or add a medical certificate date.
-- 3. **Msg #426**: User confirms the admin certificate view is fixed but reports that the admin-side reset parent password button is missing.
-- 2. **Msg #402**: User reports a regression where the admin lost the ability to edit/verify an athlete's certificate after a previous fix.
-- 1. **Msg #400**: User states they are about to begin testing the work done in the session.
+-   **10. Msg #442**: User reports an issue with the invitation registration form, asking for pre-filled fields to be editable placeholders.
+-   **9. Msg #441**: Agent confirms the case-sensitive login bug is fixed.
+-   **8. Msg #434**: Agent identifies the case-sensitive email as the root cause of the login issue for user Grigi Lauro.
+-   **7. Msg #428**: Agent incorrectly identifies  vs  as the bug, before realizing the field name is correct.
+-   **6. Msg #424**: Agent confirms the user's password field is  in the database, leading to a wrong conclusion.
+-   **5. Msg #420**: Agent begins investigating the login issue for user Grigi Lauro.
+-   **4. Msg #419**: User reports that user Grigi Lauro cannot log in even after an admin password reset, and provides a screenshot.
+-   **3. Msg #355**: Agent confirms the plan to implement the society profile changes and asks for confirmation to start.
+-   **2. Msg #354**: User confirms the plan and specifies to use cellulare (mobile phone) for WhatsApp integration.
+-   **1. Msg #351**: User provides a detailed list of new requirements: move sport image setting, add editable affiliations, create two shareable PDF cards (fiscal and bank), and separate Admins/Managers from the society profile.
 
 **Project Health Check:**
 - **Broken**:
-    - The automatic parent cross-linking mechanism is not implemented. This is a manual, error-prone process that needs to be automated in the backend to ensure data integrity.
+    - The UI of the invitation registration form () has been modified but is untested. It may not render or function as the user expects.
 - **Mocked**: None.
 
 **3rd Party Integrations**
 *   : For calculating Italian fiscal codes.
-*   : For sending transactional emails (including the new data password reset codes).
+*   : For sending transactional emails.
 *   : For copy-to-clipboard functionality.
+*   : Used in the backend to dynamically generate PDF documents.
 
 **Testing status**
-- **Testing agent used after significant changes**: NO
+- **Testing agent used after significant changes**: YES (used successfully after each major feature implementation).
 - **Troubleshoot agent used after agent stuck in loop**: NO
 - **Test files created**: []
-- **Known regressions**: Several regressions were identified by the user and fixed during the session (e.g., admin certificate controls, parent certificate edit button). The  file was particularly fragile and required multiple fixes for build errors.
+- **Known regressions**: None currently. All regressions identified during the session were fixed.
 
 **Credentials to test flow:**
 *   **Admin**:  / 
 *   **Test Parent (Sauro)**:  / 
 *   **Test Parent (Mara)**:  / 
-*   **Test Adult Athlete (Luna)**:  / 
-*   **Minor Athletes (Lucia & Marta Pessi)**: Children of Sauro and Mara. Their data was used extensively for testing parent/child relationships and document sharing.
+*   **Minor Athletes (Lucia & Marta Pessi)**: Children of Sauro and Mara.
 
 **What agent forgot to execute**
-- The agent did not implement the **automatic** parent cross-linking logic. It only performed a one-time manual data fix for the Pessi family. The core task of making this an automated part of the athlete creation/update process is still pending.</analysis>
+- The agent did not test or verify the final change made to the  page. The code was written to implement the placeholder logic, but no screenshot was taken or functional test was performed to confirm it works as intended.</analysis>

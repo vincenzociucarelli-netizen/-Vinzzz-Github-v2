@@ -1957,27 +1957,91 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
     recipient_label = "Genitore" if data.is_minor else "Atleta"
     athlete_name = ""
     if data.first_name and data.last_name:
-        athlete_name = f" per {data.first_name} {data.last_name}"
+        athlete_name = f" per <strong>{data.first_name} {data.last_name}</strong>"
     
-    subject = f"Invito a RegistraTEAM - {society.get('name', '')}"
+    subject = f"{society.get('name', '')} - Tutto sullo sport dei tuoi figli, in un click"
     store_footer = _get_email_store_footer()
     html_content = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background-color: #1565C0; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px;">RegistraTEAM</h1>
-            <p style="margin: 8px 0 0; opacity: 0.9;">Invito alla piattaforma</p>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%); color: white; padding: 28px 24px; border-radius: 12px 12px 0 0; text-align: center;">
+            <h1 style="margin: 0; font-size: 26px; letter-spacing: 0.5px;">RegistraTEAM</h1>
+            <p style="margin: 8px 0 0; opacity: 0.85; font-size: 14px;">{society.get('name', '')}</p>
         </div>
-        <div style="background-color: #f5f7fa; padding: 24px; border: 1px solid #e0e0e0;">
-            <p>Gentile {recipient_label},</p>
-            <p>Sei stato invitato a unirti a <strong>{society.get('name', '')}</strong> su RegistraTEAM{athlete_name}.</p>
-            <p>RegistraTEAM è la piattaforma gestionale della società sportiva. Attraverso di essa potrai gestire il tuo profilo, certificati medici, pagamenti e molto altro.</p>
-            <div style="text-align: center; margin: 24px 0;">
-                <a href="{register_link}" style="background-color: #1565C0; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
-                    Completa la Registrazione
+
+        <!-- Body -->
+        <div style="background-color: #ffffff; padding: 28px 24px; border-left: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0;">
+            <p style="font-size: 16px; color: #333; margin: 0 0 6px;">Gentile {recipient_label},</p>
+            <p style="font-size: 15px; color: #444; line-height: 1.6; margin: 0 0 20px;">
+                Sei stato invitato a unirti a <strong>{society.get('name', '')}</strong>{athlete_name}.
+            </p>
+
+            <p style="font-size: 15px; color: #333; font-weight: 600; margin: 0 0 12px;">
+                Con un semplice click avrai sempre sotto controllo:
+            </p>
+
+            <!-- Benefits list -->
+            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 20px;">
+                <tr>
+                    <td style="padding: 10px 14px; background-color: #E3F2FD; border-radius: 8px; margin-bottom: 6px;">
+                        <table cellpadding="0" cellspacing="0" border="0"><tr>
+                            <td style="font-size: 20px; padding-right: 10px; vertical-align: middle;">&#9200;</td>
+                            <td style="font-size: 14px; color: #1565C0; font-weight: 600;">Gli impegni sportivi di oggi e dei prossimi giorni</td>
+                        </tr></table>
+                    </td>
+                </tr>
+                <tr><td style="height: 6px;"></td></tr>
+                <tr>
+                    <td style="padding: 10px 14px; background-color: #FFF8E1; border-radius: 8px;">
+                        <table cellpadding="0" cellspacing="0" border="0"><tr>
+                            <td style="font-size: 20px; padding-right: 10px; vertical-align: middle;">&#127942;</td>
+                            <td style="font-size: 14px; color: #E65100; font-weight: 600;">Gare e partite in calendario</td>
+                        </tr></table>
+                    </td>
+                </tr>
+                <tr><td style="height: 6px;"></td></tr>
+                <tr>
+                    <td style="padding: 10px 14px; background-color: #E8F5E9; border-radius: 8px;">
+                        <table cellpadding="0" cellspacing="0" border="0"><tr>
+                            <td style="font-size: 20px; padding-right: 10px; vertical-align: middle;">&#128203;</td>
+                            <td style="font-size: 14px; color: #2E7D32; font-weight: 600;">Scadenza del certificato medico</td>
+                        </tr></table>
+                    </td>
+                </tr>
+                <tr><td style="height: 6px;"></td></tr>
+                <tr>
+                    <td style="padding: 10px 14px; background-color: #FCE4EC; border-radius: 8px;">
+                        <table cellpadding="0" cellspacing="0" border="0"><tr>
+                            <td style="font-size: 20px; padding-right: 10px; vertical-align: middle;">&#128176;</td>
+                            <td style="font-size: 14px; color: #C62828; font-weight: 600;">Pagamenti e scadenze da saldare</td>
+                        </tr></table>
+                    </td>
+                </tr>
+                <tr><td style="height: 6px;"></td></tr>
+                <tr>
+                    <td style="padding: 10px 14px; background-color: #F3E5F5; border-radius: 8px;">
+                        <table cellpadding="0" cellspacing="0" border="0"><tr>
+                            <td style="font-size: 20px; padding-right: 10px; vertical-align: middle;">&#128241;</td>
+                            <td style="font-size: 14px; color: #6A1B9A; font-weight: 600;">Comunicazioni dalla società, sempre a portata di mano</td>
+                        </tr></table>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 28px 0;">
+                <a href="{register_link}" style="background: linear-gradient(135deg, #1565C0, #1976D2); color: white; padding: 16px 36px; text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 17px; display: inline-block; box-shadow: 0 4px 12px rgba(21,101,192,0.35);">
+                    Registrati ora
                 </a>
             </div>
-            <p style="color: #666; font-size: 13px;">Questo invito è valido per 7 giorni. Se non riesci a cliccare il pulsante, copia e incolla questo link nel browser:</p>
-            <p style="color: #1565C0; font-size: 12px; word-break: break-all;">{register_link}</p>
+            <p style="text-align: center; font-size: 13px; color: #888; margin: 0 0 16px;">Bastano 2 minuti per completare la registrazione</p>
+        </div>
+
+        <!-- Footer note -->
+        <div style="background-color: #f5f7fa; padding: 16px 24px; border: 1px solid #e0e0e0; border-top: none;">
+            <p style="color: #888; font-size: 12px; margin: 0 0 6px;">Questo invito è valido per 7 giorni.</p>
+            <p style="color: #888; font-size: 11px; margin: 0;">Se il pulsante non funziona, copia e incolla questo link nel browser:</p>
+            <p style="color: #1565C0; font-size: 11px; word-break: break-all; margin: 4px 0 0;">{register_link}</p>
         </div>
         {store_footer}
     </div>
