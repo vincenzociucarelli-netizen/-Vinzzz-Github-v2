@@ -15506,7 +15506,7 @@ async def sign_collaboratore_compensation_receipt(
     
     # Get society info
     society = await db.societies.find_one()
-    society_name = society.get("name", "PALLAVOLO PERUGIA SSD A RL") if society else "PALLAVOLO PERUGIA SSD A RL"
+    society_name = (society.get("ragione_sociale") or society.get("name") or "Societa Sportiva") if society else "Societa Sportiva"
     settings = await db.settings.find_one({"type": "society"})
     admin_email = settings.get("admin_email") if settings else None
     
@@ -16954,7 +16954,9 @@ async def get_monthly_compensation_report(
     # Get society name
     society_settings = await db.settings.find_one({"type": "society"})
     society = await db.societies.find_one()
-    society_name = (society_settings.get("name") if society_settings else None) or \
+    society_name = (society_settings.get("ragione_sociale") if society_settings else None) or \
+                   (society.get("ragione_sociale") if society else None) or \
+                   (society_settings.get("name") if society_settings else None) or \
                    (society.get("name") if society else None) or "ASD/SSD"
     
     # Month names in Italian
@@ -17594,9 +17596,10 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     
     elements = []
     
-    name = society.get("name", "Societa Sportiva")
+    name = society.get("ragione_sociale") or society.get("name", "Societa Sportiva")
     elements.append(Paragraph(name.upper(), title_style))
-    if society.get("ragione_sociale"):
+    # Show full name as subtitle only if title uses short name
+    if society.get("ragione_sociale") and society.get("name") and society.get("ragione_sociale") != society.get("name"):
         elements.append(Paragraph(society["ragione_sociale"], subtitle_style))
     elements.append(HRFlowable(width="100%", thickness=2, color=HexColor('#1565C0')))
     elements.append(Spacer(1, 14))
@@ -17671,7 +17674,7 @@ async def generate_bank_card(current_user = Depends(get_current_user)):
     
     elements = []
     
-    name = society.get("name", "Societa Sportiva")
+    name = society.get("ragione_sociale") or society.get("name", "Societa Sportiva")
     elements.append(Paragraph(name.upper(), title_style))
     elements.append(Spacer(1, 4))
     elements.append(HRFlowable(width="100%", thickness=2, color=HexColor('#2E7D32')))
