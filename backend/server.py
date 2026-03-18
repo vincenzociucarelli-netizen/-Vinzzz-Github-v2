@@ -2017,7 +2017,7 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
                     <td style="padding: 10px 14px; background-color: #FCE4EC; border-radius: 8px;">
                         <table cellpadding="0" cellspacing="0" border="0"><tr>
                             <td style="font-size: 20px; padding-right: 10px; vertical-align: middle;">&#128176;</td>
-                            <td style="font-size: 14px; color: #C62828; font-weight: 600;">Pagamenti e scadenze da saldare</td>
+                            <td style="font-size: 14px; color: #C62828; font-weight: 600;">Pagamenti, scadenze e ricevute utili per la denuncia dei redditi</td>
                         </tr></table>
                     </td>
                 </tr>
@@ -2025,8 +2025,8 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
                 <tr>
                     <td style="padding: 10px 14px; background-color: #F3E5F5; border-radius: 8px;">
                         <table cellpadding="0" cellspacing="0" border="0"><tr>
-                            <td style="font-size: 20px; padding-right: 10px; vertical-align: middle;">&#128241;</td>
-                            <td style="font-size: 14px; color: #6A1B9A; font-weight: 600;">Comunicazioni dalla società, sempre a portata di mano</td>
+                            <td style="font-size: 20px; padding-right: 10px; vertical-align: middle;">&#128100;</td>
+                            <td style="font-size: 14px; color: #6A1B9A; font-weight: 600;">Versione Lite gratuita per i tuoi giovani atleti</td>
                         </tr></table>
                     </td>
                 </tr>
