@@ -9243,6 +9243,50 @@ async def get_expiring_notifications(current_user = Depends(get_current_user)):
                             "amount": amount
                         })
     
+        # Check trial period expiring
+        if athlete.get("is_trial") and athlete.get("trial_start_date"):
+            society_settings = await db.settings.find_one({"type": "society"})
+            max_sessions = society_settings.get("trial_max_sessions", 3) if society_settings else 3
+            max_days = society_settings.get("trial_max_days", 7) if society_settings else 7
+            sessions_count = athlete.get("trial_sessions_count", 0)
+            sessions_remaining = max_sessions - sessions_count
+            
+            days_remaining = None
+            trial_end = athlete.get("trial_end_date")
+            if trial_end:
+                try:
+                    end_dt = datetime.fromisoformat(str(trial_end)) if isinstance(trial_end, str) else trial_end
+                    days_remaining = max(0, (end_dt.replace(tzinfo=None) - today).days)
+                except:
+                    pass
+            
+            trial_expired = (days_remaining is not None and days_remaining <= 0) or sessions_count >= max_sessions
+            trial_warning = not trial_expired and (sessions_remaining <= 1 or (days_remaining is not None and days_remaining <= 2))
+            
+            if trial_expired:
+                notifications.append({
+                    "type": "trial",
+                    "athlete_id": athlete_id,
+                    "athlete_name": athlete_name,
+                    "message": "Periodo di prova terminato. Inserire certificato medico per proseguire.",
+                    "status": "expired",
+                    "days_until": 0,
+                    "sessions_remaining": 0,
+                    "trial_days_remaining": days_remaining or 0,
+                })
+            elif trial_warning:
+                warn_detail = f"Rimane {sessions_remaining} allenamento" if sessions_remaining <= 1 else f"Rimangono {days_remaining} giorni"
+                notifications.append({
+                    "type": "trial",
+                    "athlete_id": athlete_id,
+                    "athlete_name": athlete_name,
+                    "message": f"Il periodo di prova sta per terminare. {warn_detail}. Per continuare l'attivita e necessario inserire il certificato medico.",
+                    "status": "urgent",
+                    "days_until": days_remaining if days_remaining is not None else 1,
+                    "sessions_remaining": max(0, sessions_remaining),
+                    "trial_days_remaining": days_remaining,
+                })
+    
     # Sort by urgency (expired first, then by days_until)
     notifications.sort(key=lambda x: (
         0 if x["status"] == "expired" else (1 if x["status"] == "urgent" else 2),

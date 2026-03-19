@@ -677,6 +677,47 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
         {/* ATLETI Section */}
         <Text style={styles.athletesSectionTitle}>👨‍👩‍👧‍👦 I Miei Figli</Text>
 
+        {/* Notifiche Trial in scadenza */}
+        {notifications.filter((n: any) => n.type === 'trial').map((n: any, i: number) => (
+          <TouchableOpacity
+            key={`trial-notif-${i}`}
+            style={{
+              backgroundColor: n.status === 'expired' ? '#FFEBEE' : '#FFF8E1',
+              borderRadius: 12,
+              padding: 14,
+              marginHorizontal: 16,
+              marginBottom: 12,
+              borderLeftWidth: 4,
+              borderLeftColor: n.status === 'expired' ? '#F44336' : '#FF6F00',
+            }}
+            onPress={() => router.push(`/parent/athlete/${n.athlete_id}`)}
+            data-testid={`trial-notification-${i}`}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <Ionicons
+                name={n.status === 'expired' ? 'close-circle' : 'warning'}
+                size={20}
+                color={n.status === 'expired' ? '#C62828' : '#E65100'}
+              />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: n.status === 'expired' ? '#C62828' : '#E65100', flex: 1 }}>
+                {n.status === 'expired'
+                  ? `Prova terminata per ${n.athlete_name}`
+                  : `Il periodo di prova sta per terminare`
+                }
+              </Text>
+            </View>
+            <Text style={{ fontSize: 12, color: '#555', lineHeight: 18, marginBottom: 8, marginLeft: 28 }}>
+              {n.message}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 28 }}>
+              <Ionicons name="arrow-forward-circle" size={16} color={n.status === 'expired' ? '#C62828' : '#FF6F00'} />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: n.status === 'expired' ? '#C62828' : '#FF6F00' }}>
+                Inseriscilo ora
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+
         {athletes.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={80} color="#ccc" />
