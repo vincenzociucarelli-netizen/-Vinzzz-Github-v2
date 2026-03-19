@@ -17891,11 +17891,13 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     
     parent_name = parent.get("full_name", "") if parent else ""
     parent_phone = parent.get("phone", "") if parent else ""
+    parent_cf = parent.get("fiscal_code", "") if parent else ""
     
     parent_qualifier = "in qualita di genitore/tutore del minore"
     
     pd = Table([
         ["Nome e Cognome:", parent_name or "________________________________"],
+        ["Codice Fiscale:", parent_cf or "________________________________"],
         ["Telefono:", parent_phone or "________________________________"],
     ], colWidths=[4*cm, 12*cm])
     pd.setStyle(data_table_style)
@@ -17987,12 +17989,12 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     ))
     elements.append(Spacer(1, 20))
     
-    # === FIRMA ===
+    # === FIRMA DIGITALE ===
     elements.append(HRFlowable(width="100%", thickness=0.5, color=border_color))
     elements.append(Spacer(1, 14))
     
     sign_data = [
-        ["Luogo e Data: ____________________________", "Firma del genitore/tutore:"],
+        ["", "Firma del genitore/tutore:"],
         ["", ""],
         ["", "____________________________"],
     ]

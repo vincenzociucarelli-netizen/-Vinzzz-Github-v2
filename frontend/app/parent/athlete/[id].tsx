@@ -1741,7 +1741,7 @@ export default function AthleteDetail() {
               >
                 <Ionicons name="document-text" size={18} color="#7B1FA2" />
                 <Text style={{ fontWeight: '600', color: '#7B1FA2', fontSize: 14 }}>
-                  {downloadingTrialDoc ? 'Download...' : 'Scarica Dichiarazione di Prova'}
+                  {downloadingTrialDoc ? 'Download...' : 'Firma Dichiarazione di Prova'}
                 </Text>
               </TouchableOpacity>
             </>
@@ -1789,7 +1789,7 @@ export default function AthleteDetail() {
               >
                 <Ionicons name="document-text" size={18} color="#1565C0" />
                 <Text style={{ fontWeight: '600', color: '#1565C0', fontSize: 14 }}>
-                  {downloadingTrialDoc ? 'Download...' : 'Scarica Dichiarazione di Prova'}
+                  {downloadingTrialDoc ? 'Download...' : 'Firma Dichiarazione di Prova'}
                 </Text>
               </TouchableOpacity>
             </>
