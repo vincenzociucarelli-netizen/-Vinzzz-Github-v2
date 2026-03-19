@@ -1,76 +1,54 @@
 # RegistraTEAM - Product Requirements Document
 
-## Original Problem Statement
-App di gestione societa sportiva per pubblicazione su iOS App Store e Google Play Store.
+## Problem Statement
+Sports team management application for Pallavolo Perugia SSD. Manages athletes, parents, coaches, dirigenti, payments, documents, trial periods, medical certificates, compensation, and more.
 
-## Core Architecture
-- **Frontend**: Expo/React Native (Web + Mobile)
-- **Backend**: FastAPI + MongoDB
-- **Email**: Brevo (Sendinblue)
-- **PDF**: ReportLab
+## Core Features Implemented
+- User authentication and role-based access (admin, parent, coach, dirigente, collaboratore)
+- Athlete management with parent linking
+- Team management with training schedules
+- Payment tracking and installment plans
+- QR code attendance system
+- Medical certificate management with auto-block toggle
+- Dynamic trial period system (admin-configurable days/sessions)
+- Trial PDF document generation (dynamic, professional)
+- Compensation management for coaches/dirigenti/collaboratori
+- GDPR privacy document signing
+- Parent/Coach dashboards with notifications
+- Profile completeness validation before document generation
 
-## Implemented Features (Complete)
+## Latest Changes (March 2026)
+- Moved "Certificato Medico" toggle from "Altre Impostazioni" to "Periodo di Prova" settings page
+- Renamed page to "Certificato Medico e Periodo di Prova" with descriptive subtitles
+- Implemented mandatory profile completeness check before document generation:
+  - Parent required fields: full_name, fiscal_code, phone
+  - Athlete required fields: full_name, date_of_birth, fiscal_code, place_of_birth
+  - Backend validation blocks document generation with 400 error and detailed message
+  - Frontend shows "Anagrafica incompleta" banner with missing fields and quick-links to complete profiles
+  - New API endpoint: GET /api/athletes/{athlete_id}/profile-check
+- Fixed NoneType error in validation functions for null field values
 
-### Sessioni precedenti
-- Registrazione self-service con verifica email
-- Terms of Use, Privacy Policy, GDPR con firma
-- Gestione atleti minorenni con codice fiscale e secondo genitore
-- Password dati separata + reset (admin e self-service)
-- Pagamenti con ricevute sequenziali, Prima Nota Cassa CSV
-- Certificato medico con codifica colore scadenza
-- Onboarding tutorial, calcolo codice fiscale
-- Visualizzazione sicura documenti PDF
-- Cross-linking automatico genitori
-- Lite Dashboard per Minorenni (codice+PIN)
-- Profilo Societa dedicato, biglietto da visita digitale
-- Affiliazioni sportive, dati bancari, card PDF
-- Email invito migliorata
-- Audit log + notifiche admin per cancellazione dati
-- Banner SUPERAMENTO 5k/15k per dirigente e collaboratore
+## Architecture
+- Frontend: React Native Web (Expo) on port 3000
+- Backend: FastAPI (Python) on port 8001
+- Database: MongoDB
+- All routes prefixed with /api
 
-### Sessione 2026-03-19 (corrente)
-- **Fix calcolo "Somme suppl."**: usa importo INTERO delle quietanze diverse dal compenso mensile (6 file: admin/dirigente, admin/collaboratore, admin/coach, dirigente/compensation, coach/compensation, collaboratore/compensation)
-- **Fix "TOTALE RAS"**: include correttamente le somme supplementari
-- **Pulsante "Passa a Modalità Dirigente"** nella pagina admin/dirigente/[id]
-- **Email invito corretta**: "gratuitamente", "Scadenza certificato medico", "Versione Lite per i tuoi giovani atleti", "ricevute utili per la denuncia dei redditi"
-- **Popup "Invita Persona" ridisegnato**: header blu, campi stilizzati, pulsante in tema
-- **Cross-linking manuale Perla→Laura**: fix second_parent_id mancante
-- **Codice Fiscale nel profilo genitore**: nuovo campo editabile
-- **Tutti i PDF usano ragione_sociale**: trial doc, soglia 5k, quietanza, card fiscale/bancaria (4 punti corretti)
-- **Rimosso codice fiscale genitore dal PDF prova** (potenziale errore genitore sbagliato)
+## Prioritized Backlog
+### P0 (Critical)
+- User-guided testing of trial period lifecycle
+- Digital signature flow for trial declaration (capture signature, embed metadata)
 
-#### Nuovo sistema Periodo di Prova (completo)
-- **Impostazioni società**: `trial_max_days` (3-15, default 7) e `trial_max_sessions` (1-5, default 3)
-- **Pagina settings admin** (`/admin/settings/trial`): stepper +/-, suggerimenti, regole automatiche
-- **PDF dichiarazione prova riscritto**: template professionale con sezioni colorate, valori dinamici da settings
-- **API trial-status aggiornata**: restituisce sessions_count, max_sessions, max_days, sessions_remaining, trial_warning, trial_expired
-- **Contatore allenamenti**: incrementato ad ogni scansione QR durante la prova
-- **Data inizio prova = prima scansione QR**: trial_start_date impostata automaticamente
-- **Card stato prova genitore** (3 livelli):
-  - BLU: Attivo con allenamenti/giorni rimanenti
-  - ARANCIONE: Warning ultimo allenamento/ultimo giorno
-  - ROSSO: Scaduto, necessario certificato medico
-- **Badge QR coach**: "IN PROVA — 2/3 allenamenti — 5 giorni rimanenti" dopo scansione
+### P1 (Important)
+- Automatic parent cross-linking when second_parent_email matches existing user
 
-## Key API Endpoints
-- `GET/PATCH /api/settings/society` - Dati societa + trial settings
-- `GET /api/athletes/{id}/trial-status` - Stato prova con sessioni/giorni
-- `GET /api/athletes/{id}/trial-document` - PDF dichiarazione prova (dinamico)
-- `POST /api/attendance/register` - Registra presenza + incrementa trial_sessions_count
-- `GET /api/dirigente/{id}/compensation` - Lista compensi dirigente
-- `GET /api/users/dirigenti` - Lista dirigenti
+### P2 (Nice to have)
+- Refine UI for contracted athletes
+- Clarify user deletion logic
 
-## Test Credentials
-- Admin: pallavoloperugia@gmail.com / password
-- Parent (Sauro): sauro@test.com / password
-
-## Pending / Upcoming Tasks
-- (P1) Firma digitale dichiarazione prova (sostituire cartaceo)
-- (P1) Notifica automatica a 1 allenamento/2 giorni dalla scadenza prova
-- (P1) Test ciclo completo: Minori, Squadre, Excel Templates
-- (P2) Migliorare UI atleti "a contratto"
-- (P2) Chiarire logica cancellazione utente/atleta
-- (P3) Refactoring backend (decomposizione server.py)
-- (P3) Integrazione Stripe pagamenti
-- (P3) Pulizia database (migrazione ruolo "viewer" -> "dirigente")
-- (P3) Pubblicazione App Store / Domain
+### P3 (Future)
+- Refactor server.py into modular structure
+- Re-implement Stripe for payments
+- Database cleanup: migrate "viewer" role to "dirigente"
+- App Store / domain publication
+- Centralize compensation calculation logic (currently duplicated in 6 files)
