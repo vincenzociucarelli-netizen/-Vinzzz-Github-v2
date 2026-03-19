@@ -305,6 +305,7 @@ export default function AthleteDetail() {
   // Trial period states
   const [trialStatus, setTrialStatus] = useState<any>(null);
   const [downloadingTrialDoc, setDownloadingTrialDoc] = useState(false);
+  const [profileCheck, setProfileCheck] = useState<any>(null);
 
   // Helper function for alerts
   const showAlert = (title: string, message: string) => {
@@ -417,6 +418,14 @@ export default function AthleteDetail() {
         setTrialStatus(trialRes.data);
       } catch (error) {
         console.log('Could not load trial status');
+      }
+
+      // Load profile completeness check
+      try {
+        const profileRes = await api.get(`/athletes/${id}/profile-check`);
+        setProfileCheck(profileRes.data);
+      } catch (error) {
+        console.log('Could not load profile check');
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -1705,6 +1714,49 @@ export default function AthleteDetail() {
         )}
 
         {/* Stato e Periodo di Prova - Card unificata */}
+        {/* Banner profilo incompleto */}
+        {profileCheck && !profileCheck.is_complete && (
+          <View style={{ backgroundColor: '#FFF3E0', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#FF6F00' }} data-testid="profile-incomplete-banner">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Ionicons name="alert-circle" size={20} color="#E65100" />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100' }}>Anagrafica incompleta</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18, marginBottom: 8 }}>
+              Per generare o firmare documenti, completa i seguenti campi:
+            </Text>
+            {profileCheck.parent_missing?.length > 0 && (
+              <Text style={{ fontSize: 12, color: '#E65100', marginBottom: 4 }}>
+                Genitore: {profileCheck.parent_missing.join(', ')}
+              </Text>
+            )}
+            {profileCheck.athlete_missing?.length > 0 && (
+              <Text style={{ fontSize: 12, color: '#E65100', marginBottom: 4 }}>
+                Atleta: {profileCheck.athlete_missing.join(', ')}
+              </Text>
+            )}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+              {profileCheck.parent_missing?.length > 0 && (
+                <TouchableOpacity 
+                  style={{ flex: 1, backgroundColor: '#FF6F00', borderRadius: 8, paddingVertical: 10, alignItems: 'center' }}
+                  onPress={() => router.push('/parent/profile')}
+                  data-testid="go-to-parent-profile-btn"
+                >
+                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Completa Profilo Genitore</Text>
+                </TouchableOpacity>
+              )}
+              {profileCheck.athlete_missing?.length > 0 && (
+                <TouchableOpacity 
+                  style={{ flex: 1, backgroundColor: '#FF6F00', borderRadius: 8, paddingVertical: 10, alignItems: 'center' }}
+                  onPress={() => setEditModalVisible(true)}
+                  data-testid="go-to-athlete-profile-btn"
+                >
+                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Completa Dati Atleta</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Stato</Text>
           
@@ -1732,7 +1784,11 @@ export default function AthleteDetail() {
                     const url = URL.createObjectURL(blob);
                     window.open(url, '_blank');
                   } catch (e: any) {
-                    showAlert('Errore', e.response?.data?.detail || 'Errore nel download del documento');
+                    let msg = 'Errore nel download del documento';
+                    if (e.response?.data instanceof Blob) {
+                      try { const text = await e.response.data.text(); const json = JSON.parse(text); msg = json.detail || msg; } catch {}
+                    } else if (e.response?.data?.detail) { msg = e.response.data.detail; }
+                    showAlert('Errore', msg);
                   } finally {
                     setDownloadingTrialDoc(false);
                   }
@@ -1780,7 +1836,11 @@ export default function AthleteDetail() {
                     const url = URL.createObjectURL(blob);
                     window.open(url, '_blank');
                   } catch (e: any) {
-                    showAlert('Errore', e.response?.data?.detail || 'Errore nel download del documento');
+                    let msg = 'Errore nel download del documento';
+                    if (e.response?.data instanceof Blob) {
+                      try { const text = await e.response.data.text(); const json = JSON.parse(text); msg = json.detail || msg; } catch {}
+                    } else if (e.response?.data?.detail) { msg = e.response.data.detail; }
+                    showAlert('Errore', msg);
                   } finally {
                     setDownloadingTrialDoc(false);
                   }

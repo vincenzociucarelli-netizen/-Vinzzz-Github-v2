@@ -52,9 +52,6 @@ export default function OtherSettings() {
   // Immagine Sport
   const [sportImage, setSportImage] = useState<string | null>(null);
 
-  // Certificato Medico
-  const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(false);
-
   // Stagione sportiva
   const [seasonStartMonth, setSeasonStartMonth] = useState(7);
   const [seasonStartDay, setSeasonStartDay] = useState(1);
@@ -88,7 +85,6 @@ export default function OtherSettings() {
       setDirigenteQualifications(response.data.dirigente_qualifications || []);
       setVenues(response.data.venues || []);
       setSportImage(response.data.sport_image || null);
-      setBlockExpiredCertificates(response.data.block_expired_certificates || false);
       setSeasonStartMonth(response.data.season_start_month || 7);
       setSeasonStartDay(response.data.season_start_day || 1);
       setSeasonEndMonth(response.data.season_end_month || 6);
@@ -109,7 +105,6 @@ export default function OtherSettings() {
         dirigente_qualifications: dirigenteQualifications,
         venues: venues,
         sport_image: sportImage,
-        block_expired_certificates: blockExpiredCertificates,
         season_start_month: seasonStartMonth,
         season_start_day: seasonStartDay,
         season_end_month: seasonEndMonth,
@@ -217,48 +212,6 @@ export default function OtherSettings() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Certificato Medico */}
-        <View style={styles.section}>
-          <Ionicons name="medkit" size={20} color="#E65100" />
-          <Text style={[styles.sectionTitle, { marginLeft: 6, display: 'inline' }]}>Certificato Medico</Text>
-          <Text style={styles.sectionDesc}>
-            Gestione scadenza certificati medici atleti
-          </Text>
-          
-          <TouchableOpacity 
-            style={{
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-              padding: 14, borderRadius: 10,
-              backgroundColor: blockExpiredCertificates ? '#E8F5E9' : '#FFF3E0',
-              borderWidth: 1, borderColor: blockExpiredCertificates ? '#66BB6A' : '#FFB74D',
-            }}
-            onPress={() => setBlockExpiredCertificates(!blockExpiredCertificates)}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1, marginRight: 12 }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: blockExpiredCertificates ? '#2E7D32' : '#E65100', marginBottom: 4 }}>
-                {blockExpiredCertificates ? 'Blocco automatico ATTIVO' : 'Blocco automatico DISATTIVO'}
-              </Text>
-              <Text style={{ fontSize: 12, color: '#666' }}>
-                {blockExpiredCertificates 
-                  ? 'La scansione QR blocca la registrazione per atleti con certificato scaduto/mancante'
-                  : 'La scansione QR permette la registrazione anche con certificato scaduto'}
-              </Text>
-            </View>
-            <View style={{
-              width: 50, height: 28, borderRadius: 14, padding: 2,
-              backgroundColor: blockExpiredCertificates ? '#66BB6A' : '#ccc',
-              justifyContent: 'center',
-            }}>
-              <View style={{
-                width: 24, height: 24, borderRadius: 12,
-                backgroundColor: '#fff',
-                alignSelf: blockExpiredCertificates ? 'flex-end' : 'flex-start',
-              }} />
-            </View>
-          </TouchableOpacity>
-        </View>
-
         {/* Stagione Sportiva */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Stagione Sportiva</Text>

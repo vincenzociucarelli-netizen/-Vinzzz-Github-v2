@@ -69,7 +69,7 @@ export default function SettingsIndex() {
           <View style={styles.cardContent}>
             <Text style={[styles.cardTitle, { color: '#E65100' }]}>Altre Impostazioni</Text>
             <Text style={styles.cardDescription}>
-              Gestione scadenza certificati, ruoli atleti, qualifiche, palestre
+              Stagione sportiva, ruoli atleti, qualifiche, palestre
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#E65100" />
@@ -139,9 +139,9 @@ export default function SettingsIndex() {
             <Ionicons name="timer" size={32} color="#fff" />
           </View>
           <View style={styles.cardContent}>
-            <Text style={[styles.cardTitle, { color: '#FF6F00' }]}>Periodo di Prova</Text>
+            <Text style={[styles.cardTitle, { color: '#FF6F00' }]}>Certificato Medico e Periodo di Prova</Text>
             <Text style={styles.cardDescription}>
-              Giorni massimi, allenamenti e documento di prova
+              Blocco certificati scaduti, giorni massimi, allenamenti e documento di prova
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#FF6F00" />

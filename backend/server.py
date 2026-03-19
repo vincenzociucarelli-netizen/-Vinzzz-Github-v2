@@ -128,6 +128,47 @@ def format_rome_timestamp(dt: datetime) -> str:
     rome_dt = to_rome_time(dt)
     return rome_dt.strftime('%Y-%m-%d %H:%M:%S')
 
+
+def validate_parent_profile(parent: dict) -> list:
+    """Check required fields for parent profile. Returns list of missing field names."""
+    missing = []
+    if not (parent.get("full_name") or "").strip():
+        missing.append("Nome completo")
+    if not (parent.get("fiscal_code") or "").strip():
+        missing.append("Codice Fiscale")
+    if not (parent.get("phone") or "").strip():
+        missing.append("Telefono")
+    return missing
+
+def validate_athlete_profile(athlete: dict) -> list:
+    """Check required fields for athlete profile. Returns list of missing field names."""
+    missing = []
+    if not (athlete.get("full_name") or "").strip():
+        missing.append("Nome completo")
+    if not athlete.get("date_of_birth"):
+        missing.append("Data di nascita")
+    if not (athlete.get("fiscal_code") or "").strip():
+        missing.append("Codice Fiscale")
+    place = athlete.get("place_of_birth") or athlete.get("birth_place") or ""
+    if not place.strip():
+        missing.append("Luogo di nascita")
+    return missing
+
+def check_profiles_for_document(parent: dict = None, athlete: dict = None):
+    """Raise HTTPException if parent or athlete profiles are incomplete."""
+    all_missing = []
+    if parent:
+        parent_missing = validate_parent_profile(parent)
+        if parent_missing:
+            all_missing.append(f"Genitore: {', '.join(parent_missing)}")
+    if athlete:
+        athlete_missing = validate_athlete_profile(athlete)
+        if athlete_missing:
+            all_missing.append(f"Atleta: {', '.join(athlete_missing)}")
+    if all_missing:
+        detail = "Anagrafica incompleta. Compilare i seguenti campi prima di generare il documento: " + " | ".join(all_missing)
+        raise HTTPException(status_code=400, detail=detail)
+
 # Progressive rate limiting configuration
 def get_real_ip(request: Request) -> str:
     """Get real client IP from X-Forwarded-For header or fall back to remote address"""
@@ -14035,6 +14076,11 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
         athlete = await db.athletes.find_one({"id": request.related_entity_id})
         if athlete:
             athlete_data = athlete
+            # If athlete is minor, validate parent + athlete profiles
+            if athlete.get("is_minor"):
+                parent = await db.users.find_one({"id": athlete.get("parent_id")})
+                if parent:
+                    check_profiles_for_document(parent=parent, athlete=athlete)
     
     # Generate PDF - use appropriate function based on document type
     try:
@@ -14484,6 +14530,9 @@ async def sign_gdpr_privacy_document(
             minor = await db.athletes.find_one({"id": request.minor_id})
             if not minor:
                 raise HTTPException(status_code=404, detail="Atleta minore non trovato")
+            
+            # Validate parent and athlete profiles before generating document
+            check_profiles_for_document(parent=current_user, athlete=minor)
             
             # Get parent data
             parent_name = request.signer_name or current_user.get("first_name", "")
@@ -17791,6 +17840,28 @@ async def generate_bank_card(current_user = Depends(get_current_user)):
 
 # ==================== TRIAL PERIOD ENDPOINTS ====================
 
+
+@api_router.get("/athletes/{athlete_id}/profile-check")
+async def check_athlete_profile_completeness(athlete_id: str, current_user = Depends(get_current_user)):
+    """Check if parent and athlete profiles are complete for document generation"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    parent = await db.users.find_one({"id": athlete.get("parent_id")})
+    
+    parent_missing = validate_parent_profile(parent) if parent else ["Account genitore non trovato"]
+    athlete_missing = validate_athlete_profile(athlete)
+    
+    is_complete = len(parent_missing) == 0 and len(athlete_missing) == 0
+    
+    return {
+        "is_complete": is_complete,
+        "parent_missing": parent_missing,
+        "athlete_missing": athlete_missing
+    }
+
+
 @api_router.get("/athletes/{athlete_id}/trial-document")
 async def generate_trial_document(athlete_id: str, current_user = Depends(get_current_user)):
     """Genera il PDF della dichiarazione per il periodo di prova"""
@@ -17811,6 +17882,9 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     
     # Get parent info
     parent = await db.users.find_one({"id": athlete.get("parent_id")})
+    
+    # Validate profiles before generating document
+    check_profiles_for_document(parent=parent, athlete=athlete)
     
     # Get society info
     society = await db.societies.find_one({"id": athlete.get("society_id")})

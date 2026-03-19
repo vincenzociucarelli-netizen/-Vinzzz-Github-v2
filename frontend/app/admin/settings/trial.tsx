@@ -8,6 +8,7 @@ export default function TrialSettings() {
   const router = useRouter();
   const [maxDays, setMaxDays] = useState(7);
   const [maxSessions, setMaxSessions] = useState(3);
+  const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -20,6 +21,7 @@ export default function TrialSettings() {
       const res = await api.get('/settings/society');
       setMaxDays(res.data.trial_max_days ?? 7);
       setMaxSessions(res.data.trial_max_sessions ?? 3);
+      setBlockExpiredCertificates(res.data.block_expired_certificates || false);
     } catch (e) {}
     setLoaded(true);
   };
@@ -30,11 +32,12 @@ export default function TrialSettings() {
       await api.patch('/settings/society', {
         trial_max_days: maxDays,
         trial_max_sessions: maxSessions,
+        block_expired_certificates: blockExpiredCertificates,
       });
       if (Platform.OS === 'web') {
         window.alert('Impostazioni salvate!');
       } else {
-        Alert.alert('Salvato', 'Impostazioni periodo di prova aggiornate.');
+        Alert.alert('Salvato', 'Impostazioni aggiornate.');
       }
     } catch (e) {
       if (Platform.OS === 'web') {
@@ -64,18 +67,48 @@ export default function TrialSettings() {
             <Ionicons name="chevron-back" size={24} color="#FF6F00" />
           </View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Periodo di Prova</Text>
+        <Text style={styles.headerTitle}>Certificato Medico e Periodo di Prova</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        {/* Info box */}
-        <View style={styles.infoBox} data-testid="trial-info-box">
-          <Ionicons name="information-circle" size={22} color="#FF6F00" />
-          <Text style={styles.infoText}>
-            Definisce i limiti del periodo di prova senza certificato medico. Il documento di prova utilizza automaticamente questi valori.
-          </Text>
+        {/* Sezione Certificato Medico */}
+        <View style={styles.sectionHeader} data-testid="medical-cert-section">
+          <Ionicons name="medkit" size={20} color="#E65100" />
+          <Text style={styles.sectionTitle}>Certificato Medico</Text>
         </View>
+        <Text style={styles.sectionSubtitle}>Gestione scadenza e blocco automatico certificati medici atleti</Text>
+
+        <TouchableOpacity 
+          style={[styles.certToggleCard, blockExpiredCertificates && styles.certToggleCardActive]}
+          onPress={() => setBlockExpiredCertificates(!blockExpiredCertificates)}
+          activeOpacity={0.7}
+          data-testid="block-expired-cert-toggle"
+        >
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={[styles.certToggleTitle, blockExpiredCertificates && styles.certToggleTitleActive]}>
+              {blockExpiredCertificates ? 'Blocco automatico ATTIVO' : 'Blocco automatico DISATTIVO'}
+            </Text>
+            <Text style={styles.certToggleDesc}>
+              {blockExpiredCertificates 
+                ? 'La scansione QR blocca la registrazione per atleti con certificato scaduto/mancante'
+                : 'La scansione QR permette la registrazione anche con certificato scaduto'}
+            </Text>
+          </View>
+          <View style={[styles.toggleSwitch, blockExpiredCertificates && styles.toggleSwitchOn]}>
+            <View style={[styles.toggleKnob, blockExpiredCertificates && styles.toggleKnobOn]} />
+          </View>
+        </TouchableOpacity>
+
+        {/* Divider */}
+        <View style={styles.divider} />
+
+        {/* Sezione Periodo di Prova */}
+        <View style={styles.sectionHeader} data-testid="trial-period-section">
+          <Ionicons name="timer" size={20} color="#FF6F00" />
+          <Text style={styles.sectionTitle}>Periodo di Prova</Text>
+        </View>
+        <Text style={styles.sectionSubtitle}>Definisci i limiti del periodo di prova senza certificato medico. Il documento di prova utilizza automaticamente questi valori.</Text>
 
         {/* Durata massima giorni */}
         <View style={styles.settingCard} data-testid="trial-days-card">
@@ -181,11 +214,27 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingHorizontal: 16, paddingBottom: 16, backgroundColor: '#FF6F00' },
   backBtn: {},
   backIcon: { backgroundColor: '#fff', borderRadius: 20, padding: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 3 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: '#fff' },
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
-  infoBox: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#FFF8E1', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#FFE082', gap: 10 },
-  infoText: { flex: 1, fontSize: 13, color: '#5D4037', lineHeight: 19 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4, marginTop: 4 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#333' },
+  sectionSubtitle: { fontSize: 13, color: '#777', lineHeight: 19, marginBottom: 14 },
+  divider: { height: 1, backgroundColor: '#e0e0e0', marginVertical: 20 },
+  certToggleCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 14, borderRadius: 12,
+    backgroundColor: '#FFF3E0', borderWidth: 1, borderColor: '#FFB74D',
+    marginBottom: 4,
+  },
+  certToggleCardActive: { backgroundColor: '#E8F5E9', borderColor: '#66BB6A' },
+  certToggleTitle: { fontSize: 14, fontWeight: '700', color: '#E65100', marginBottom: 4 },
+  certToggleTitleActive: { color: '#2E7D32' },
+  certToggleDesc: { fontSize: 12, color: '#666' },
+  toggleSwitch: { width: 50, height: 28, borderRadius: 14, padding: 2, backgroundColor: '#ccc', justifyContent: 'center' },
+  toggleSwitchOn: { backgroundColor: '#66BB6A' },
+  toggleKnob: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff', alignSelf: 'flex-start' },
+  toggleKnobOn: { alignSelf: 'flex-end' },
   settingCard: { backgroundColor: '#fff', borderRadius: 14, padding: 20, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2, borderWidth: 1, borderColor: '#f0f0f0' },
   settingHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   settingLabel: { fontSize: 15, fontWeight: '600', color: '#333' },
