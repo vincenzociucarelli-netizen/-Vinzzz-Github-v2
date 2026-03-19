@@ -442,6 +442,7 @@ export default function ParentProfile() {
             <Text style={styles.cardTitle}>📋 I Miei Dati</Text>
             {renderField('Cognome', profileData.last_name, 'last_name')}
             {renderField('Nome', profileData.first_name, 'first_name')}
+            {renderField('Codice Fiscale', profileData.fiscal_code, 'fiscal_code')}
             {renderField('Telefono', profileData.phone, 'phone')}
             <Text style={styles.phoneHint}>Il telefono è necessario per comunicazioni urgenti dalla società</Text>
           </View>
