@@ -16,7 +16,7 @@ import os
 import uuid
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://sports-app-qa.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prova-system.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"

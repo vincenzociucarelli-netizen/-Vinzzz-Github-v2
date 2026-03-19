@@ -14,7 +14,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://sports-app-qa.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prova-system.preview.emergentagent.com')
 
 class TestDirigenteCompensationAPIs:
     """Test dirigente compensation APIs"""

@@ -20,7 +20,7 @@ from pathlib import Path
 load_dotenv(Path('/app/backend/.env'))
 load_dotenv(Path('/app/frontend/.env'))
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://sports-app-qa.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://prova-system.preview.emergentagent.com').rstrip('/')
 
 # Credentials from test request
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"

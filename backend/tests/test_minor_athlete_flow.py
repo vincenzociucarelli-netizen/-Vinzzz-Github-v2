@@ -8,7 +8,7 @@ import requests
 import os
 from datetime import datetime, timedelta
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://sports-app-qa.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://prova-system.preview.emergentagent.com')
 
 # Test credentials
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"

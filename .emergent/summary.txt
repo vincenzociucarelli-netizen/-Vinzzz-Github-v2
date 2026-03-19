@@ -1,60 +1,50 @@
 <analysis>**original_problem_statement**:
-The user's primary goal is to finalize a sports team management application for publication in the iOS App Store and Google Play Store. This involves implementing the final core features, fixing bugs, and ensuring the application meets legal and platform-specific requirements.
-
-In this session, the user requested several UI/UX improvements and bug fixes:
-1.  Make the invitation email more engaging and informative.
-2.  Fix a series of UI bugs and text inconsistencies on the parent's athlete detail page related to the Trial Period feature.
-3.  Add a Delete my data button to the GDPR privacy modal for users at the end of their trial period.
-4.  Address two issues in the admin dashboard: a missing link to the Admin/Dirigenti page and a duplicate My Profile entry for the main society account.
-5.  Ensure that user deletion requests are properly logged in the audit trail and generate notifications for the admin.
-6.  Fix a bug where compensation amounts for dirigenti were not being calculated or displayed correctly.
-7.  A major misunderstanding occurred where the agent removed critical financial threshold warnings (€5k/€15k) from manager/collaborator profiles. The user urgently requested this be undone.
+The user's goal is to finalize their sports team management application. This session focused on resolving critical financial calculation bugs, overhauling the user interface for better usability, and implementing a brand-new, highly dynamic Trial Period system. Key requests included fixing incorrect compensation calculations, improving navigation for admins, redesigning modals and emails, and ensuring all generated documents use the correct, dynamic society name. A major new feature was introduced to allow admins to define trial period limits (days and sessions), which are then automatically enforced by the system, reflected in a new dynamic PDF, and tracked via QR code scans. The final request was to add a safeguard to prevent the generation of documents if user or athlete profiles are incomplete.
 
 **PRODUCT REQUIREMENTS**:
-*   Improve the user experience for parents and admins.
-*   Ensure all critical user actions (like data deletion requests) are logged for auditing purposes.
-*   Fix data inconsistencies and bugs related to financial calculations and UI state management.
-*   The admin dashboard should be clear and not contain redundant or incorrect navigation links.
+*   Ensure financial calculations for compensation are accurate.
+*   Improve UI/UX for admins, parents, and coaches, focusing on clarity and ease of use.
+*   Implement a flexible, admin-configurable trial period system that is automated and legally sound.
+*   Guarantee data integrity by using dynamic data (like the society's legal name) in all official documents.
+*   Add validation to require complete user profiles before allowing document generation.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application is a full-stack sports team management tool. This session focused heavily on UI/UX refinement and critical bug fixes. The agent successfully revamped the invitation email template, corrected multiple UI issues on the parent and admin dashboards, and implemented a robust audit trail for user data deletion requests. A significant issue where financial threshold warnings were incorrectly removed was identified by the user and subsequently fixed by restoring the functionality from a similar coach profile. The application's core features are mostly in place, but several bugs related to financial compensation display remain.
+The application is a full-stack sports team management tool. This session saw a massive number of fixes and feature implementations. The agent successfully corrected a complex bug in the compensation calculation logic across six different files. The UI was significantly improved with a redesigned Invite Person modal, better navigation toggles for admins, and multiple text corrections in the invitation email.
+
+The most significant achievement is the new **Dynamic Trial Period System**:
+1.  **Admin Configuration**: A new settings page () allows admins to set the maximum number of days and training sessions for a trial.
+2.  **Dynamic PDF**: The trial declaration document was completely rewritten to be more professional and now dynamically includes the trial limits and the society's official legal name ().
+3.  **Automated Tracking**: The trial period now starts automatically with the first QR code scan for an athlete's attendance, and the system tracks the number of sessions used.
+4.  **Parent & Coach UI**: The parent's view of an athlete on trial now features a multi-state status card (active, warning, expired) with counters for remaining days and sessions. The coach's QR scanner now shows an IN PROVA badge.
+5.  **Notifications**: The system now generates notifications on the parent dashboard when a trial period is about to expire.
+
+The agent also fixed a parent-linking issue and ensured all PDFs use the correct society name from the database.
 
 **Last working item**:
-- **Last item agent was working**: The agent was investigating a series of related bugs in the compensation tracking for dirigenti (directors/managers). The user reported that a €4,800 payment in March 2026 was not being correctly reflected as a supplementary sum for the year, the declaration PDF showed an incorrect amount (€4,500), and there was no easy way for an admin to view their own dirigente profile.
+- **Last item agent was working**: Implementing a mandatory profile completion check before any document can be generated or signed. The user specified the required fields, and the agent had just added the place of birth field for athletes and was about to implement the backend blocking logic.
 - **Status**: IN PROGRESS
 - **Agent Testing Done**: N
-- **Which testing method agent to use?**: both. Use the screenshot tool to verify the UI changes on the dirigente profile page. Use  or  to inspect the backend API responses for compensation data and the generated PDF content to ensure the calculation logic is correct.
+- **Which testing method agent to use?**: backend testing agent. The agent should verify that API endpoints for generating documents (e.g., ) return a 400 Bad Request error if the required profile fields are missing for the associated athlete or parent.
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Incorrect Compensation Calculation and Display (P0)**
-    - **Description**: There are multiple bugs in how compensations are calculated and displayed for 2026.
-        1.  In the Calcolo per Anno Solare section, Somme suppl. (supplementary sums) is hardcoded to €0 instead of showing the correct value (€4,800).
-        2.  The generated PDF for the €5k threshold declaration incorrectly states the supplementary sum is €4,500 instead of €4,800.
-    - **Attempted fixes**: The agent found the hardcoded  in the frontend file .
+- **Issue 1: Incomplete Profile Check for Document Generation (P0)**
+    - **Description**: The user wants to prevent the generation, download, or signing of any document if the associated parent and athlete profiles are missing key information.
+    - **Required Fields**:
+        - **Parent**: , , .
+        - **Athlete**: , , , .
+    - **Attempted fixes**: The agent added the  field to the athlete model and profile editing UI.
     - **Next debug checklist**:
-        - **Frontend**: In , replace the hardcoded  with the correct variable from the  object, which should be .
-        - **Backend**: Investigate the PDF generation logic in . Specifically, review the functions  and  to understand how the  amount is calculated and passed to the PDF template. It seems to be using an incorrect value.
-        - **Database**: Check the  collection to verify the record for the March 2026 payment is correct.
-    - **Why fix this issue and what will be achieved with the fix?**: Financial data accuracy is critical for the application's credibility. This fix will ensure that compensation reports and declarations are correct.
+        - In , modify all functions that generate documents (e.g., , , ).
+        - Before generating a document, fetch the relevant user and athlete records from the database.
+        - Add a validation step to check that all required fields are present and not empty.
+        - If validation fails, raise an  with a 400 status and a clear error message (e.g., Anagrafica incompleta. Compilare tutti i campi obbligatori prima di generare il documento.).
+    - **Why fix this issue and what will be achieved with the fix?**: This is a critical data integrity feature to ensure all legal documents generated by the app are complete and valid.
     - **Status**: IN PROGRESS
     - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: both
-    - **Blocked on other issue**: None
-
-- **Issue 2: Missing Admin-to-Dirigente Profile Button (P1)**
-    - **Description**: The user pointed out that an Admin cannot easily navigate to their own dirigente profile page from the admin dashboard.
-    - **Attempted fixes**: None.
-    - **Next debug checklist**:
-        - Edit .
-        - Add a new button or link card, perhaps in the Impostazioni section, labeled Visualizza il mio profilo Dirigente.
-        - This button should use the  to navigate to , where  is the current admin's user ID, which can be retrieved from the .
-    - **Why fix this issue and what will be achieved with the fix?**: This is a quality-of-life improvement that simplifies navigation for administrators who also have a dirigente role.
-    - **Status**: NOT STARTED
-    - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: frontend
+    - **Should Test frontend/backend/both after fix?**: backend
     - **Blocked on other issue**: None
 
 **In progress Task List**:
@@ -62,59 +52,61 @@ None.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks**:
-    *   (P1) **User-Guided Testing**: User wants to test the full lifecycle for Minors, Teams, and Excel Templates.
+    *   (P0) **User-Guided Testing**: The user needs to test the many features implemented, especially the full lifecycle of the new dynamic trial period.
+    - (P1) **Digital Signature Flow**: The trial document download button was renamed to Firma Dichiarazione di Prova. The next step is to implement the actual digital signature capture and embed the metadata (timestamp, IP address, user agent) into the signed document for legal validity.
 *   **Future Tasks**:
-    *   (P2) **Refine UI for Contracted Athletes**: Improve the UI/UX for athletes marked as .
-    *   (P2) **Ambiguous User Deletion Logic**: Clarify with the user what should happen to a  account when the associated  profile is deleted.
-    *   (P3) **Backend Refactoring**: Decompose  into a modular structure (e.g., routes, models).
-    *   (P3) **Stripe Integration**: Re-implement Stripe for payments.
-    *   (P3) **Database Cleanup**: Migrate the role  to .
-    *   (P3) **Domain & App Store Publication**: Assist with final publication steps.
+    *   (P2) Refine UI for Contracted Athletes.
+    *   (P2) Clarify ambiguous user deletion logic.
+    *   (P3) Refactor  into a modular structure.
+    - (P3) Re-implement Stripe for payments.
+    - (P3) Clean up the database by migrating the  role to .
+    - (P3) Assist with final domain and App Store publication steps.
 
 **Completed work in this session**
-- **Invitation Email Redesign**: Rewrote the HTML template in  to create a more engaging and visually appealing invitation email, highlighting key platform benefits.
-- **Trial Period UI Overhaul**:
-    - Fixed a bug causing a negative day count for trial periods.
-    - Unified the Stato and Periodo di Prova cards into a single, cohesive component in .
-    - Updated status badges on the parent dashboard () to correctly display In attesa di inizio prova (purple), In prova (orange), and In attività (green).
-    - Corrected descriptive texts for clarity.
-- **Data Deletion Flow & Audit Trail**:
-    - Fixed a bug where deletion requests made on the web did not work by replacing  with a cross-platform solution in .
-    - Implemented a complete audit trail in  for deletion requests, approvals, and rejections using the  function.
-    - Added admin notifications for new deletion requests.
-    - Fixed a critical bug where audit logs were not appearing in the UI due to a  vs.  field mismatch and a string vs. datetime type mismatch. Wrote a migration script to fix existing data in the  collection.
-    - Updated the notification page () and audit log page () to correctly display these new events.
-- **Admin Dashboard Cleanup**:
-    - Corrected the navigation links in  to properly separate the Admin e Dirigenti page from the Society Profile page.
-    - Removed a redundant Il Mio Profilo link from the admin dashboard.
-    - Filtered the main society account from being listed on the Dirigenti page by updating the  endpoint in .
-- **Compensation UI Correction**:
-    - **Misunderstanding & Reversal**: Incorrectly removed crucial financial threshold warnings (€5k/€15k) from  and  profiles.
-    - **Correction**: Successfully reinstated the correct UI and logic for the threshold warnings by copying the working code from  into  and . The only item that remained removed was a single duplicate alert banner.
+- **Compensation Logic Fix**: Corrected the supplementary compensation calculation logic in all 6 relevant files for , , and  (both admin-view and self-view).
+- **Dynamic Trial Period System**:
+    - Created an admin settings page () to configure trial days and sessions.
+    - Updated the backend API () to manage these settings with validation.
+    - Completely rewrote the trial declaration PDF generation ( in ) to be dynamic and professional.
+    - Implemented logic to start the trial on the first QR scan and track session usage ().
+    - Created a multi-state trial status card for parents ().
+    - Added an IN PROVA badge to the coach's QR scan result ().
+    - Implemented trial expiration notifications for parents ( and ).
+- **UI/UX & Navigation**:
+    - Redesigned the Invite Person modal in  for a modern look.
+    - Implemented and refined a Passa a Modalità Dirigente toggle button on the admin dashboard () and dirigente profile.
+    - Updated the invitation email template in  with corrected wording multiple times.
+- **Data Integrity & Fixes**:
+    - **Parent-Athlete Linking**: Manually fixed the  for a user and identified a limitation in the current linking logic.
+    - **Dynamic Society Name**: Ensured all PDF generation functions in  use the society's legal name () from the database.
+    - **Profile Completion**: Added a Codice Fiscale field to the parent profile page () and Luogo di nascita to the athlete's data model.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Ambiguous User Deletion Logic**
-    -   **Debug checklist**: Determine the desired behavior with the user: when an athlete profile is deleted, should the associated login account in the  collection also be deleted or retained for auditing?
-    -   **Why to solve this issue and what will be achieved with this?**: To ensure data management practices are consistent and align with the user's business and legal requirements (e.g., GDPR).
+-   **Issue 1: Incomplete Parent Cross-Linking Logic**
+    -   **Debug checklist**: In , find the endpoint that updates an athlete's . After a successful update, add logic to search for a  with that email in the same society and, if found, populate the athlete's  field.
+    -   **Why to solve this issue and what will be achieved with this?**: To prevent the manual fix scenario (Perla/Laura) from happening again and ensure parent accounts are linked automatically regardless of registration order.
     -   **Should Test frontend/backend/both after fix?**: Backend
     -   **Is recurring issue?**: Y
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork**: Ambiguous User Deletion
--   **Recurrence count**: 9
+-   **Recurrence count**: 10
 -   **Status**: NOT STARTED
 
 **Code Architecture**
-created_at
+ragione_sociale
 
 **Key Technical Concepts**
-- **Database Migration Scripting**: Wrote and executed one-off Python scripts using  to update a large number of documents in the  collection, adding a  field and converting its data type from  to  to fix a critical sorting bug.
-- **API and Data Type Debugging**: Diagnosed a frontend sorting issue by tracing it back to an API () that was ordering by a  field which was  for some documents. Further investigation revealed a data type mismatch ( vs. ) between different log entry types, which was the root cause.
-- **Cross-Platform Compatibility**: Identified and fixed a bug where  (from React Native) was used in a component, which does not function on web browsers, preventing a critical feature (deletion request) from working. Replaced it with a custom modal confirmation.
-- **State Restoration**: After misinterpreting a user request and removing a feature, the agent successfully restored it by using a similar, working component () as a source of truth to copy and paste the correct code back into the affected components (, ).
+- **Dynamic PDF Generation**: Heavily modified  logic in  to create a professional, multi-section PDF that dynamically pulls configuration data (trial limits, society name) from the database.
+- **Stateful UI Components**: Implemented a complex, multi-state UI card for the trial period status on the parent dashboard.
+- **Backend API Extension**: Added new fields to a Pydantic model () and extended the corresponding GET/PATCH API endpoints to manage trial settings.
+- **Environment Troubleshooting**: Successfully diagnosed and resolved a persistent Ngrok tunneling error () and cleared the Metro bundler cache to fix stale UI issues.
+- **Database Manipulation**: Performed direct database operations via  to fix data integrity issues (deleting a receipt, linking a parent).
 
 **key DB schema**
--   **audit_logs**: The schema was corrected. The field  was identified as the primary date field, but the API was querying by . All new entries now include , and a migration script was run to add this field (converted from ) to all existing documents, ensuring correct chronological sorting.
+-   **settings**: Extended with  (int) and  (int).
+-   **athletes**:  (datetime) is now set on first attendance.  (string) was added.
+-   **users**: The  (string) field on the parent profile is now populated and editable.
 
 **changes in tech stack**
 None.
@@ -131,60 +123,109 @@ None.
 -   
 
 **Areas that need refactoring**:
-- The  and  files share a very large and complex block of JSX for rendering compensation details. This could be extracted into a reusable component to avoid code duplication and simplify maintenance.
+- The compensation calculation logic is duplicated across 6 files. It should be centralized into a reusable hook or utility function.
+- The  file has grown significantly and is a prime candidate for modularization, as noted in the future tasks.
 
 **key api endpoints**
-- : (POST) Now triggers an audit log and admin notification.
-- : (POST) Now triggers an audit log.
-- : (POST) Now triggers an audit log.
-- : (GET) API logic was fixed to sort correctly by  after a data migration.
-- : (GET) Now filters out the main society owner account.
+-   : (GET/PATCH) Now includes  and .
+-   : (GET) Rewritten to generate a new, dynamic PDF based on admin settings.
+-   : (POST) Now triggers the start of a trial period and increments the session count.
+-   : (GET) Now returns detailed trial status including session counts.
+-   : (GET) Now includes notifications for expiring trial periods.
 
 **Critical Info for New Agent**
 -   **User Language**: You MUST respond in **Italiano**.
--   **Highest Priority (P0)**: The immediate task is to fix the compensation calculation bugs (Issue #1 in the pending list).
--   **CRITICAL - AVOID REPEAT MISTAKE**: The previous agent misinterpreted a user request and removed a critical financial reporting feature. The user was very clear that this was a major error. **Before removing any feature, especially related to finance or data display, double-check your understanding with the user.** If in doubt, ask for clarification. When the user provides screenshots, analyze them carefully to understand what should be removed versus what should be kept.
--   **UI Testing Issues**: The  frequently failed at the login step. The agent had to resort to manually injecting the auth token into  via script to proceed. Be prepared for this workaround if automated login fails.
--   **Database State**: The agent performed several manual database updates to create test cases and later cleaned them up. Be aware that the DB state might not always perfectly match a clean user flow.
+-   **Highest Priority (P0)**: The immediate next step is to finish implementing the incomplete profile check before document generation.
+-   **Cache & Environment**: The frontend development environment is sensitive to caching. If UI changes don't appear, force a hard refresh, clear the Metro cache (), or restart the 
+  Usage: expo [command] [options]
+
+  Options:
+  
+    -V, --version                     output the version number
+    --non-interactive                 Fail, if an interactive prompt would be required to continue.
+    -h, --help                        output usage information
+  
+  Commands:
+
+    init [name]                       Create a new Expo project
+    start [path]                      Start a local dev server for the app
+    start:web [path]                  Start a Webpack dev server for the web app
+    export [path]                     Export the static files of the app for hosting it on a web server
+    install [packages...]             Install a module or other package to a project
+    run:android [path]                Run the Android app binary locally
+    run:ios [path]                    Run the iOS app binary locally
+    send [path]                       Share the project's URL to an email address
+
+    login                             Login to an Expo account
+    logout                            Logout of an Expo account
+    register                          Sign up for a new Expo account
+    whoami                            Return the currently authenticated account
+
+    client:install:ios                Install Expo Go for iOS on the simulator
+    client:install:android            Install Expo Go for Android on a connected device or emulator
+
+    config [path]                     Show the project config
+    doctor [path]                     Diagnose issues with the project
+    upgrade [sdk-version]             Upgrade the project packages and config for the given SDK version
+
+    customize:web [path]              Eject the default web files for customization
+    prebuild [path]                   Create native iOS and Android project files before building natively.
+                                      Learn more: https://docs.expo.dev/workflow/customizing/
+
+    build:web [path]                  Build the web app for production
+
+    credentials:manager [path]        Superseded by eas credentials in eas-cli
+
+    url [path]                        Log a URL for opening the project in Expo Go
+    url:ipa [path]                    Log the download URL for the standalone iOS binary
+    url:apk [path]                    Log the download URL for the standalone Android binary
+
+    webhooks [path]                   List all webhooks for a project
+    webhooks:add [path]               Add a webhook to a project
+    webhooks:remove [path]            Delete a webhook
+    webhooks:update [path]            Update an existing webhook
+
+    build:ios [path]                  Superseded by eas build in eas-cli
+    build:android [path]              Superseded by eas build in eas-cli
+    build:status [path]               Superseded by eas build:list in eas-cli
+    eject [path]                      Superseded by expo prebuild
+    fetch:ios:certs [path]            Superseded by eas credentials in eas-cli
+    fetch:android:keystore [path]     Superseded by eas credentials in eas-cli
+    fetch:android:hashes [path]       Superseded by eas credentials in eas-cli
+    fetch:android:upload-cert [path]  Superseded by eas credentials in eas-cli
+    publish [path]                    Superseded by eas update in eas-cli
+    publish:set [path]                Superseded by eas update:republish in eas-cli
+    publish:rollback [path]           Superseded by eas update:republish in eas-cli
+    publish:history [path]            Superseded by eas update:list in eas-cli
+    publish:details [path]            Superseded by eas update:view in eas-cli
+    push:android:upload [path]        Superseded by eas credentials in eas-cli
+    push:android:show [path]          Superseded by eas credentials in eas-cli
+    push:android:clear [path]         Superseded by eas credentials in eas-cli
+    upload:android [path]             Superseded by eas submit in eas-cli
+    upload:ios [path]                 Superseded by eas submit in eas-cli
+    client:ios [path]                 Superseded by Expo Dev Clients
+
+[07:59:41]   Run a command with --help for more info 💡
+[07:59:41]     $ expo start --help
+[07:59:41] service. If Ngrok fails with , change the  in .
+-   **Complex Feature**: The new Trial Period system is a core feature with interconnected parts (admin settings, backend logic, parent UI, coach UI). When testing or debugging, be sure to consider the entire workflow.
 
 **documents and test reports created in this job**
--  (updated)
+-    (updated)
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-- **10. Msg #482**: User reports multiple issues with compensation for 2026: supplementary sums are wrong (€0 instead of €4800), the declaration PDF is wrong (€4500), and the admin can't switch to their dirigente profile. (IN PROGRESS)
-- **9. Msg #480**: Agent confirms the audit log and notification fixes are working and asks for user verification. (RESOLVED by user's next message)
-- **8. Msg #478**: Agent confirms the audit log API is now returning deletion logs correctly. (DONE)
-- **7. Msg #476**: Agent runs a script to convert  from string to datetime in the database. (DONE)
-- **6. Msg #474**: Agent correctly identifies the root cause of the missing audit logs: a data type mismatch ( vs. ) in the  field used for sorting. (DONE)
-- **5. Msg #472**: Agent continues to debug why deletion logs aren't appearing at the top of the list. (IN PROGRESS)
-- **4. Msg #470**: Agent confirms the fix for  field is working and the API returns logs. (PARTIALLY DONE, sorting still wrong)
-- **3. Msg #468**: Agent runs a script to backfill the  field in existing audit logs. (DONE)
-- **2. Msg #466**: Agent debugs the backfill script. (DONE)
-- **1. Msg #464**: Agent finds the root cause of missing audit logs: the  function was saving  but the API was sorting by . The agent adds the  field to the  function. (DONE)
+- **10. User msg#503**: Approved the list of required fields and added place of birth for the athlete.
+- **9. User msg#501**: Confirmed he will test later and made a new critical request: obligate users to complete their profiles (parent and athlete) before they can download or sign any documents.
+- **8. User msg#499**: Said thanks and goodnight.
+- **7. User msg#493**: Requested two final UI/PDF tweaks: change the Download button to Firma Dichiarazione di Prova and add the parent's fiscal code back to the PDF while removing the Place and Date line.
+- **6. User msg#455**: Provided the exact text for the trial period warning notification.
+- **5. User msg#453**: Expressed satisfaction and said he would conduct tests the next day.
+- **4. User msg#446**: Said Continue, thanks.
+- **3. User msg#409**: Confirmed the logic for the new trial system: 1. Use the existing athlete QR code. 2. The trial starts from the first scan of that QR code.
+- **2. User msg#406**: Provided a detailed design specification for the trial status display on the parent and coach UIs.
+- **1. User msg#368**: Provided a PDF template created by ChatGPT for the new dynamic trial declaration and asked the agent to implement it, making it graphically better and pulling data from the new admin settings.
 
 **Project Health Check:**
-- **Broken**:
-    - The compensation display for dirigenti is showing incorrect data ( for supplementary sums).
-    - The generated PDF for threshold declarations contains incorrect financial data.
-- **Mocked**: None.
-
-**3rd Party Integrations**
-*   : For calculating Italian fiscal codes.
-*   : For sending transactional emails.
-*   : For copy-to-clipboard functionality.
-*   : Used in the backend to dynamically generate PDF documents.
-
-**Testing status**
-- **Testing agent used after significant changes**: NO
-- **Troubleshoot agent used after agent stuck in loop**: NO
-- **Test files created**: []
-- **Known regressions**: A feature (threshold warnings) was temporarily regressed due to a misunderstanding but has since been fixed.
-
-**Credentials to test flow:**
-*   **Admin**:  / 
-*   **Test Parent (Sauro)**:  / 
-*   **Test Parent (Grigi Lauro)**: User associated with the deletion request flow. Credentials may need to be reset.
-
-**What agent forgot to execute**
-- The agent did not add the requested button for an admin to switch to their own dirigente profile.
-- The agent only partially debugged the compensation issue, identifying a hardcoded UI value but not the root cause of the incorrect calculation in the backend and PDF.</analysis>
+-   **Broken**:
+    -   Document generation endpoints</analysis>
