@@ -1772,7 +1772,7 @@ export default function AthleteDetail() {
                   </View>
                 ) : (
                   <Text style={{ fontSize: 12, color: '#6A1B9A', lineHeight: 18 }}>
-                    Il periodo di prova inizier{'à'} automaticamente nel momento in cui {athlete.first_name || athlete.full_name?.split(' ').pop() || ''} registrer{'à'} la sua prima presenza in palestra, tramite la scansione del suo codice QR da parte del coach.{'\n'}Per poter partecipare, dovr{'à'} avere la dichiarazione di prova firmata da un genitore.{'\n'}Per evitare dimenticanze, ti consigliamo di firmare la dichiarazione sin da ora.
+                    Il periodo di prova inizier{'à'} automaticamente nel momento in cui {athlete.first_name || athlete.full_name?.split(' ').pop() || ''} registrer{'à'} la sua prima presenza in palestra, con la scansione del suo codice QR da parte del coach.{'\n'}Per poter partecipare, dovr{'à'} avere la dichiarazione di prova firmata da un genitore.{'\n'}Per evitare dimenticanze, ti consigliamo di firmare la dichiarazione sin da ora.
                   </Text>
                 )}
               </View>
