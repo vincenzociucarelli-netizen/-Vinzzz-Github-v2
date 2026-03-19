@@ -1766,7 +1766,7 @@ export default function AthleteDetail() {
               <View style={{ backgroundColor: '#F3E5F5', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#9C27B0', marginBottom: 12 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#7B1FA2', marginBottom: 4 }}>In attesa di inizio prova</Text>
                 <Text style={{ fontSize: 12, color: '#6A1B9A', lineHeight: 18 }}>
-                  Il periodo di prova iniziera automaticamente quando {athlete.first_name} registrera la prima presenza tramite scansione QR.
+                  Il periodo di prova inizier{'à'} automaticamente quando {athlete.first_name || athlete.full_name} registrer{'à'} la prima presenza tramite scansione QR.{'\n'}In quel momento {athlete.first_name || athlete.full_name} dovr{'à'} avere la dichiarazione di prova firmata da un genitore.{'\n'}Per evitare di dimenticare puoi firmare ora l'autorizzazione.
                 </Text>
               </View>
               <TouchableOpacity
