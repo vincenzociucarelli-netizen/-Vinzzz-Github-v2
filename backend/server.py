@@ -9892,14 +9892,24 @@ async def check_attendance(attendance_data: AttendanceCreate, current_user = Dep
     
     # 9b. Trial period: if first attendance, set trial start date
     if athlete.get("is_trial") and not athlete.get("trial_start_date"):
+        # Get trial settings from society
+        society_settings = await db.settings.find_one({"type": "society"})
+        max_days = society_settings.get("trial_max_days", 7) if society_settings else 7
         trial_start = datetime.now()
-        trial_end = trial_start + timedelta(days=7)
+        trial_end = trial_start + timedelta(days=max_days)
         await db.athletes.update_one(
             {"id": athlete_id},
             {"$set": {
                 "trial_start_date": trial_start.isoformat(),
                 "trial_end_date": trial_end.isoformat(),
+                "trial_sessions_count": 1,
             }}
+        )
+    elif athlete.get("is_trial") and athlete.get("trial_start_date"):
+        # Increment trial sessions count
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$inc": {"trial_sessions_count": 1}}
         )
     
     # 10. Return response with athlete name for display (ensure all values are JSON serializable)
@@ -9919,6 +9929,29 @@ async def check_attendance(attendance_data: AttendanceCreate, current_user = Dep
         "force_note": attendance_dict.get("force_note"),
         "qr_code_used": str(attendance_dict.get("qr_code_used", ""))
     }
+    
+    # Add trial info if athlete is in trial
+    if athlete.get("is_trial"):
+        society_settings = await db.settings.find_one({"type": "society"})
+        max_sessions = society_settings.get("trial_max_sessions", 3) if society_settings else 3
+        max_days = society_settings.get("trial_max_days", 7) if society_settings else 7
+        sessions_count = athlete.get("trial_sessions_count", 0)
+        # After the increment above, get the updated count
+        updated_athlete = await db.athletes.find_one({"id": athlete_id})
+        sessions_count = updated_athlete.get("trial_sessions_count", 0) if updated_athlete else sessions_count
+        days_remaining = None
+        trial_end = updated_athlete.get("trial_end_date") if updated_athlete else None
+        if trial_end:
+            try:
+                end_dt = datetime.fromisoformat(str(trial_end)) if isinstance(trial_end, str) else trial_end
+                days_remaining = max(0, (end_dt - datetime.now()).days)
+            except:
+                pass
+        response["is_trial"] = True
+        response["trial_sessions_count"] = sessions_count
+        response["trial_max_sessions"] = max_sessions
+        response["trial_days_remaining"] = days_remaining
+    
     return response
 
 @api_router.get("/attendance/athlete/{athlete_id}", response_model=List[Attendance])
@@ -17976,7 +18009,7 @@ async def start_trial_period(athlete_id: str, current_user = Depends(get_current
 
 @api_router.get("/athletes/{athlete_id}/trial-status")
 async def get_trial_status(athlete_id: str, current_user = Depends(get_current_user)):
-    """Ottieni lo stato del periodo di prova"""
+    """Ottieni lo stato del periodo di prova con sessioni e giorni"""
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
@@ -17984,9 +18017,18 @@ async def get_trial_status(athlete_id: str, current_user = Depends(get_current_u
     is_trial = athlete.get("is_trial", False)
     trial_start = athlete.get("trial_start_date")
     trial_end = athlete.get("trial_end_date")
+    sessions_count = athlete.get("trial_sessions_count", 0)
+    
+    # Get trial limits from society settings
+    society_settings = await db.settings.find_one({"type": "society"})
+    max_days = society_settings.get("trial_max_days", 7) if society_settings else 7
+    max_sessions = society_settings.get("trial_max_sessions", 3) if society_settings else 3
     
     days_remaining = None
     trial_expired = False
+    sessions_remaining = max_sessions - sessions_count
+    sessions_expired = sessions_count >= max_sessions
+    
     if trial_end:
         try:
             end_dt = datetime.fromisoformat(str(trial_end)) if isinstance(trial_end, str) else trial_end
@@ -17996,14 +18038,29 @@ async def get_trial_status(athlete_id: str, current_user = Depends(get_current_u
         except:
             pass
     
+    # Determine status: active / warning / expired
+    # Warning: last session available OR <= 1 day remaining
+    is_warning = False
+    is_expired = False
+    if is_trial and trial_start:
+        if trial_expired or sessions_expired:
+            is_expired = True
+        elif (sessions_remaining <= 1) or (days_remaining is not None and days_remaining <= 1):
+            is_warning = True
+    
     return {
         "is_trial": is_trial,
         "trial_start_date": trial_start,
         "trial_end_date": trial_end,
         "trial_document_generated": athlete.get("trial_document_generated", False),
         "days_remaining": days_remaining,
-        "trial_expired": trial_expired,
-        "trial_active": is_trial and not trial_expired and trial_start is not None,
+        "max_days": max_days,
+        "sessions_count": sessions_count,
+        "max_sessions": max_sessions,
+        "sessions_remaining": max(0, sessions_remaining),
+        "trial_expired": is_expired,
+        "trial_warning": is_warning,
+        "trial_active": is_trial and not is_expired and trial_start is not None,
         "waiting_first_attendance": is_trial and trial_start is None,
     }
 

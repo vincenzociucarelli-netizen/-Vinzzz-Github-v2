@@ -405,15 +405,22 @@ export default function CoachScreen() {
         const athleteName = attendance.athlete_name || 'Atleta';
         const hasWarning = attendance.block_reason && attendance.block_reason.trim() !== '';
         
+        // Build trial badge info
+        let trialBadge = '';
+        if (attendance.is_trial) {
+          trialBadge = `\n\n🔵 IN PROVA\n${attendance.trial_sessions_count}/${attendance.trial_max_sessions} allenamenti` +
+            (attendance.trial_days_remaining !== null ? `\n${attendance.trial_days_remaining} giorni rimanenti` : '');
+        }
+        
         if (hasWarning) {
           showAlert(
             '✅ PRESENZA REGISTRATA - ATTENZIONE!',
-            `${athleteName} ammesso/a all'allenamento.\n\n${attendance.block_reason}`
+            `${athleteName} ammesso/a all'allenamento.\n\n${attendance.block_reason}${trialBadge}`
           );
         } else {
           showAlert(
             '✅ Presenza Registrata',
-            `${athleteName} - Presenza registrata con successo!`
+            `${athleteName} - Presenza registrata con successo!${trialBadge}`
           );
         }
       }

@@ -1714,7 +1714,7 @@ export default function AthleteDetail() {
               <View style={{ backgroundColor: '#F3E5F5', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#9C27B0', marginBottom: 12 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#7B1FA2', marginBottom: 4 }}>In attesa di inizio prova</Text>
                 <Text style={{ fontSize: 12, color: '#6A1B9A', lineHeight: 18 }}>
-                  Il periodo di prova di 7 giorni iniziera automaticamente quando {athlete.first_name} registrera la prima presenza tramite scansione QR.
+                  Il periodo di prova iniziera automaticamente quando {athlete.first_name} registrera la prima presenza tramite scansione QR.
                 </Text>
               </View>
               <TouchableOpacity
@@ -1744,25 +1744,31 @@ export default function AthleteDetail() {
                   {downloadingTrialDoc ? 'Download...' : 'Scarica Dichiarazione di Prova'}
                 </Text>
               </TouchableOpacity>
-              <Text style={{ fontSize: 11, color: '#888', marginTop: 6, textAlign: 'center', fontStyle: 'italic' }}>
-                Scarica, stampa, firma e compila con la data il giorno del primo allenamento di {athlete?.first_name || 'tuo figlio/a'}
-              </Text>
             </>
           )}
 
-          {/* In prova (ARANCIONE) */}
-          {athlete.status === 'trial' && trialHasStarted && trialDaysRemaining > 0 && (
+          {/* In prova ATTIVA (ARANCIONE/BLU) */}
+          {athlete.status === 'trial' && trialHasStarted && trialStatus && !trialStatus.trial_expired && !trialStatus.trial_warning && (
             <>
-              <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF9500', marginBottom: 12 }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>In Prova</Text>
-                <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18 }}>
-                  {trialDaysRemaining} giorni rimanenti (iniziata il {new Date(athlete.trial_start_date).toLocaleDateString('it-IT')})
-                </Text>
+              <View style={{ backgroundColor: '#E3F2FD', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#1976D2', marginBottom: 12 }} data-testid="trial-status-active">
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#1565C0', marginBottom: 8 }}>Periodo di prova attivo</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <Ionicons name="fitness" size={16} color="#1976D2" />
+                  <Text style={{ fontSize: 13, color: '#333' }}>
+                    <Text style={{ fontWeight: '700' }}>{trialStatus.sessions_remaining}</Text> allenamenti disponibili ({trialStatus.sessions_count}/{trialStatus.max_sessions})
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="calendar" size={16} color="#1976D2" />
+                  <Text style={{ fontSize: 13, color: '#333' }}>
+                    <Text style={{ fontWeight: '700' }}>{trialStatus.days_remaining}</Text> giorni rimanenti
+                  </Text>
+                </View>
               </View>
               <TouchableOpacity
                 style={{
                   flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: '#FFF3E0', paddingVertical: 12, borderRadius: 10, gap: 8,
+                  backgroundColor: '#E3F2FD', paddingVertical: 12, borderRadius: 10, gap: 8,
                   opacity: downloadingTrialDoc ? 0.6 : 1,
                 }}
                 disabled={downloadingTrialDoc}
@@ -1781,20 +1787,52 @@ export default function AthleteDetail() {
                 }}
                 data-testid="trial-download-document-button-active"
               >
-                <Ionicons name="document-text" size={18} color="#E65100" />
-                <Text style={{ fontWeight: '600', color: '#E65100', fontSize: 14 }}>
+                <Ionicons name="document-text" size={18} color="#1565C0" />
+                <Text style={{ fontWeight: '600', color: '#1565C0', fontSize: 14 }}>
                   {downloadingTrialDoc ? 'Download...' : 'Scarica Dichiarazione di Prova'}
                 </Text>
               </TouchableOpacity>
             </>
           )}
 
-          {/* Periodo di prova terminato (ROSSO) */}
-          {athlete.status === 'trial' && trialHasStarted && trialDaysRemaining <= 0 && !athlete.privacy_accepted && (
-            <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#F44336' }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#C62828', marginBottom: 6 }}>Periodo di prova terminato</Text>
-              <Text style={{ fontSize: 12, color: '#555', lineHeight: 18, marginBottom: 12 }}>
-                E' necessario firmare la privacy per confermare l'iscrizione oppure richiedere la cancellazione dei dati.
+          {/* WARNING - Ultimo allenamento o ultimo giorno (ARANCIONE) */}
+          {athlete.status === 'trial' && trialHasStarted && trialStatus && trialStatus.trial_warning && !trialStatus.trial_expired && (
+            <>
+              <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF6F00', marginBottom: 12 }} data-testid="trial-status-warning">
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <Ionicons name="warning" size={18} color="#E65100" />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100' }}>
+                    {trialStatus.sessions_remaining <= 1 ? 'Ultimo allenamento disponibile' : 'Ultimi giorni di prova'}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18, marginBottom: 6 }}>
+                  Certificato medico necessario per continuare l'attivita sportiva.
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                  <Ionicons name="fitness" size={14} color="#E65100" />
+                  <Text style={{ fontSize: 12, color: '#555' }}>
+                    {trialStatus.sessions_count}/{trialStatus.max_sessions} allenamenti utilizzati
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="calendar" size={14} color="#E65100" />
+                  <Text style={{ fontSize: 12, color: '#555' }}>
+                    {trialStatus.days_remaining} giorni rimanenti
+                  </Text>
+                </View>
+              </View>
+            </>
+          )}
+
+          {/* SCADUTO (ROSSO) */}
+          {athlete.status === 'trial' && trialHasStarted && trialStatus && trialStatus.trial_expired && !athlete.privacy_accepted && (
+            <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#F44336' }} data-testid="trial-status-expired">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <Ionicons name="close-circle" size={18} color="#C62828" />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#C62828' }}>Periodo di prova terminato</Text>
+              </View>
+              <Text style={{ fontSize: 12, color: '#555', lineHeight: 18, marginBottom: 8 }}>
+                Inserire il certificato medico per proseguire l'attivita sportiva.
               </Text>
               <TouchableOpacity
                 style={{ backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
