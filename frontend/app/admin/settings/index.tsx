@@ -128,6 +128,24 @@ export default function SettingsIndex() {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#6772E5" />
         </TouchableOpacity>
+
+        {/* Card Periodo di Prova */}
+        <TouchableOpacity 
+          style={[styles.card, { borderColor: '#FF6F00', backgroundColor: '#FFF8E1' }]}
+          onPress={() => router.push('/admin/settings/trial')}
+          data-testid="settings-trial-btn"
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#FF6F00' }]}>
+            <Ionicons name="timer" size={32} color="#fff" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: '#FF6F00' }]}>Periodo di Prova</Text>
+            <Text style={styles.cardDescription}>
+              Giorni massimi, allenamenti e documento di prova
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#FF6F00" />
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );

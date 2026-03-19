@@ -3073,6 +3073,9 @@ class SocietySettingsUpdate(BaseModel):
     iban: Optional[str] = None
     bank_name: Optional[str] = None
     affiliations: Optional[List[dict]] = None  # [{name: str, number: str}]
+    # Trial period settings
+    trial_max_days: Optional[int] = None  # Max days for trial (3-15, default 7)
+    trial_max_sessions: Optional[int] = None  # Max training sessions (1-5, default 3)
 
 
 # ==================== STRIPE PAYMENT SETTINGS ====================
@@ -3151,6 +3154,8 @@ async def get_society_settings():
         "affiliations": settings.get("affiliations", []),
         "season_end_month": settings.get("season_end_month", 6),
         "season_end_day": settings.get("season_end_day", 30),
+        "trial_max_days": settings.get("trial_max_days", 7),
+        "trial_max_sessions": settings.get("trial_max_sessions", 3),
     }
 
 @api_router.patch("/settings/society")
@@ -3245,6 +3250,10 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
         update_dict["bank_name"] = data.bank_name
     if data.affiliations is not None:
         update_dict["affiliations"] = data.affiliations
+    if data.trial_max_days is not None:
+        update_dict["trial_max_days"] = max(3, min(15, data.trial_max_days))
+    if data.trial_max_sessions is not None:
+        update_dict["trial_max_sessions"] = max(1, min(5, data.trial_max_sessions))
     
     if update_dict:
         await db.settings.update_one(
@@ -17730,105 +17739,128 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     society = await db.societies.find_one({"id": athlete.get("society_id")})
     society_name = (society.get("ragione_sociale") or society.get("name") or "Societa Sportiva") if society else "Societa Sportiva"
     
+    # Get trial settings from society settings
+    society_settings = await db.settings.find_one({"type": "society"})
+    trial_max_days = (society_settings.get("trial_max_days", 7) if society_settings else 7)
+    trial_max_sessions = (society_settings.get("trial_max_sessions", 3) if society_settings else 3)
+    
     # Generate PDF
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import cm, mm
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-    from reportlab.lib.colors import HexColor, black, grey
+    from reportlab.lib.colors import HexColor, black, grey, white
     
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=2.5*cm, rightMargin=2.5*cm, topMargin=2*cm, bottomMargin=2*cm)
     
-    # Styles
+    # Colors
+    primary = HexColor('#1a237e')
+    accent = HexColor('#0d47a1')
+    light_bg = HexColor('#f5f7fa')
+    border_color = HexColor('#d0d7de')
+    text_dark = HexColor('#1a1a2e')
+    text_muted = HexColor('#555555')
+    
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Title'], fontSize=16, spaceAfter=6, textColor=HexColor('#1a1a2e'), fontName='Helvetica-Bold')
-    subtitle_style = ParagraphStyle('SubtitleStyle', parent=styles['Normal'], fontSize=11, alignment=TA_CENTER, spaceAfter=20, textColor=HexColor('#555555'), fontName='Helvetica')
-    heading_style = ParagraphStyle('HeadingStyle', parent=styles['Heading2'], fontSize=12, spaceBefore=16, spaceAfter=8, textColor=HexColor('#2c3e50'), fontName='Helvetica-Bold')
-    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=10, leading=14, spaceAfter=4, fontName='Helvetica')
-    body_justify = ParagraphStyle('BodyJustify', parent=styles['Normal'], fontSize=10, leading=15, alignment=TA_JUSTIFY, spaceAfter=6, fontName='Helvetica')
-    bullet_style = ParagraphStyle('BulletStyle', parent=styles['Normal'], fontSize=10, leading=15, alignment=TA_JUSTIFY, leftIndent=20, spaceAfter=4, fontName='Helvetica')
-    field_label = ParagraphStyle('FieldLabel', parent=styles['Normal'], fontSize=9, textColor=HexColor('#666666'), fontName='Helvetica')
-    field_value = ParagraphStyle('FieldValue', parent=styles['Normal'], fontSize=11, fontName='Helvetica-Bold', spaceBefore=2, spaceAfter=8)
-    sign_style = ParagraphStyle('SignStyle', parent=styles['Normal'], fontSize=10, spaceBefore=30, fontName='Helvetica')
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Title'], fontSize=15, spaceAfter=2, textColor=primary, fontName='Helvetica-Bold', alignment=TA_CENTER)
+    doc_title_style = ParagraphStyle('DocTitle', parent=styles['Normal'], fontSize=11, alignment=TA_CENTER, spaceAfter=16, textColor=accent, fontName='Helvetica-Bold', leading=14)
+    heading_style = ParagraphStyle('HeadingStyle', parent=styles['Normal'], fontSize=10, spaceBefore=14, spaceAfter=6, textColor=white, fontName='Helvetica-Bold', backColor=primary, leading=16)
+    body_justify = ParagraphStyle('BodyJustify', parent=styles['Normal'], fontSize=9.5, leading=14, alignment=TA_JUSTIFY, spaceAfter=4, fontName='Helvetica')
+    bullet_style = ParagraphStyle('BulletStyle', parent=styles['Normal'], fontSize=9.5, leading=14, alignment=TA_JUSTIFY, leftIndent=16, spaceAfter=3, fontName='Helvetica')
+    highlight_style = ParagraphStyle('Highlight', parent=styles['Normal'], fontSize=10, leading=15, alignment=TA_JUSTIFY, spaceAfter=4, fontName='Helvetica-Bold', textColor=accent)
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=7.5, textColor=HexColor('#999999'), alignment=TA_CENTER, leading=10)
     
     elements = []
     
-    # Header
+    # === HEADER ===
     elements.append(Paragraph(society_name.upper(), title_style))
-    elements.append(Spacer(1, 4))
-    elements.append(HRFlowable(width="100%", thickness=2, color=HexColor('#1a1a2e')))
-    elements.append(Spacer(1, 12))
-    elements.append(Paragraph("DICHIARAZIONE PER PERIODO DI PROVA ATLETA MINORE", subtitle_style))
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 3))
+    elements.append(HRFlowable(width="100%", thickness=2, color=primary))
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph("DICHIARAZIONE PER PERIODO DI PROVA ATLETA MINORE", doc_title_style))
     
-    # Parent/Guardian Info
-    elements.append(Paragraph("DATI DEL GENITORE/TUTORE", heading_style))
-    elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#cccccc')))
-    elements.append(Spacer(1, 6))
+    # === DATI GENITORE (table with background) ===
+    section_header_style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), primary),
+        ('TEXTCOLOR', (0, 0), (-1, 0), white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ('TOPPADDING', (0, 0), (-1, 0), 6),
+        ('LEFTPADDING', (0, 0), (-1, 0), 10),
+    ])
+    
+    data_table_style = TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9.5),
+        ('TEXTCOLOR', (0, 0), (0, -1), text_muted),
+        ('TEXTCOLOR', (1, 0), (1, -1), text_dark),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('BACKGROUND', (0, 0), (-1, -1), light_bg),
+        ('BOX', (0, 0), (-1, -1), 0.5, border_color),
+        ('LINEBELOW', (0, 0), (-1, -2), 0.3, border_color),
+    ])
+    
+    # Section: Genitore
+    sh1 = Table([["DATI DEL GENITORE / TUTORE"]], colWidths=[16*cm])
+    sh1.setStyle(section_header_style)
+    elements.append(sh1)
     
     parent_name = parent.get("full_name", "") if parent else ""
     parent_phone = parent.get("phone", "") if parent else ""
     
-    parent_data = [
-        ["Nome e Cognome:", parent_name or "______________________________"],
-        ["Telefono:", parent_phone or "______________________________"],
-    ]
-    t = Table(parent_data, colWidths=[4*cm, 12*cm])
-    t.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
-        ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('TEXTCOLOR', (0, 0), (0, -1), HexColor('#666666')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    elements.append(t)
+    parent_qualifier = "in qualita di genitore/tutore del minore"
+    
+    pd = Table([
+        ["Nome e Cognome:", parent_name or "________________________________"],
+        ["Telefono:", parent_phone or "________________________________"],
+    ], colWidths=[4*cm, 12*cm])
+    pd.setStyle(data_table_style)
+    elements.append(pd)
+    elements.append(Spacer(1, 4))
+    elements.append(Paragraph(f"<i>{parent_qualifier}</i>", ParagraphStyle('Qualifier', parent=styles['Normal'], fontSize=9, textColor=text_muted, fontName='Helvetica-Oblique', alignment=TA_CENTER)))
     elements.append(Spacer(1, 8))
     
-    # Minor Info
-    elements.append(Paragraph("DATI DELL'ATLETA MINORE", heading_style))
-    elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#cccccc')))
-    elements.append(Spacer(1, 6))
+    # Section: Minore
+    sh2 = Table([["DATI DELL'ATLETA MINORE"]], colWidths=[16*cm])
+    sh2.setStyle(section_header_style)
+    elements.append(sh2)
     
     athlete_name = athlete.get("full_name", "")
     athlete_dob = athlete.get("date_of_birth", "")
     athlete_cf = athlete.get("codice_fiscale", "") or athlete.get("fiscal_code", "")
     
-    minor_data = [
-        ["Nome e Cognome:", athlete_name or "______________________________"],
-        ["Data di Nascita:", athlete_dob or "______________________________"],
-        ["Codice Fiscale:", athlete_cf or "______________________________"],
-    ]
-    t2 = Table(minor_data, colWidths=[4*cm, 12*cm])
-    t2.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
-        ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('TEXTCOLOR', (0, 0), (0, -1), HexColor('#666666')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    elements.append(t2)
-    elements.append(Spacer(1, 12))
+    md = Table([
+        ["Nome e Cognome:", athlete_name or "________________________________"],
+        ["Data di Nascita:", athlete_dob or "________________________________"],
+        ["Codice Fiscale:", athlete_cf or "________________________________"],
+    ], colWidths=[4*cm, 12*cm])
+    md.setStyle(data_table_style)
+    elements.append(md)
+    elements.append(Spacer(1, 10))
     
-    # Request
-    elements.append(Paragraph("RICHIESTA", heading_style))
-    elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#cccccc')))
+    # === RICHIESTA ===
+    sh3 = Table([["RICHIESTA"]], colWidths=[16*cm])
+    sh3.setStyle(section_header_style)
+    elements.append(sh3)
     elements.append(Spacer(1, 6))
     elements.append(Paragraph(
         f"CHIEDE che il minore sopra indicato possa partecipare ad un periodo di prova "
         f"dell'attivita sportiva organizzata dalla societa sportiva <b>{society_name}</b>.",
         body_justify
     ))
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 6))
     
-    # Declarations
-    elements.append(Paragraph("DICHIARA", heading_style))
-    elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#cccccc')))
+    # === DICHIARA ===
+    sh4 = Table([["DICHIARA"]], colWidths=[16*cm])
+    sh4.setStyle(section_header_style)
+    elements.append(sh4)
     elements.append(Spacer(1, 6))
     
     declarations = [
@@ -17840,22 +17872,47 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     for decl in declarations:
         elements.append(Paragraph(f"\u2022  {decl}", bullet_style))
     
-    elements.append(Spacer(1, 12))
+    elements.append(Spacer(1, 8))
     
-    # Trial period duration
-    elements.append(Paragraph("DURATA DEL PERIODO DI PROVA", heading_style))
-    elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#cccccc')))
+    # === DURATA PERIODO DI PROVA (highlighted box) ===
+    sh5 = Table([["DURATA DEL PERIODO DI PROVA"]], colWidths=[16*cm])
+    sh5.setStyle(section_header_style)
+    elements.append(sh5)
+    elements.append(Spacer(1, 6))
+    
+    duration_text = (
+        f"Il periodo di prova ha durata massima di <b>{trial_max_days} giorni</b> a partire dalla prima "
+        f"presenza registrata presso la societa e comunque e limitato ad un massimo di "
+        f"<b>{trial_max_sessions} allenamenti</b>."
+    )
+    # Highlighted box for duration
+    dur_table = Table([[Paragraph(duration_text, highlight_style)]], colWidths=[15.4*cm])
+    dur_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), HexColor('#e3f2fd')),
+        ('BOX', (0, 0), (-1, -1), 1, accent),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    elements.append(dur_table)
+    elements.append(Spacer(1, 10))
+    
+    # === ACCETTAZIONE ===
+    sh6 = Table([["ACCETTAZIONE"]], colWidths=[16*cm])
+    sh6.setStyle(section_header_style)
+    elements.append(sh6)
     elements.append(Spacer(1, 6))
     elements.append(Paragraph(
-        "Il periodo di prova ha durata di <b>7 (sette) giorni</b> a partire dalla data del primo allenamento. "
-        "La data di inizio decorre automaticamente dalla prima presenza registrata tramite scansione QR.",
+        "Con la sottoscrizione del presente documento il genitore/tutore autorizza la partecipazione del "
+        "minore al periodo di prova alle condizioni sopra indicate.",
         body_justify
     ))
     elements.append(Spacer(1, 20))
     
-    # Signature area
-    elements.append(HRFlowable(width="100%", thickness=0.5, color=HexColor('#cccccc')))
-    elements.append(Spacer(1, 16))
+    # === FIRMA ===
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=border_color))
+    elements.append(Spacer(1, 14))
     
     sign_data = [
         ["Luogo e Data: ____________________________", "Firma del genitore/tutore:"],
@@ -17865,7 +17922,7 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     t3 = Table(sign_data, colWidths=[8*cm, 8*cm])
     t3.setStyle(TableStyle([
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('FONTSIZE', (0, 0), (-1, -1), 9.5),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('TOPPADDING', (0, 0), (-1, -1), 4),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
@@ -17873,10 +17930,10 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     ]))
     elements.append(t3)
     
-    elements.append(Spacer(1, 24))
+    elements.append(Spacer(1, 20))
     elements.append(Paragraph(
-        f"<i>Documento generato dal sistema {society_name} - Da stampare, compilare con data e firma il giorno del primo allenamento.</i>",
-        ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=HexColor('#999999'), alignment=TA_CENTER)
+        f"<i>Documento generato automaticamente da {society_name} tramite RegistraTEAM</i>",
+        footer_style
     ))
     
     doc.build(elements)
