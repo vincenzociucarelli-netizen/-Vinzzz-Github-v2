@@ -18190,13 +18190,239 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     doc.build(elements)
     buffer.seek(0)
     
-    # Mark trial document as generated
-    await db.athletes.update_one(
-        {"id": athlete_id},
-        {"$set": {"trial_document_generated": True, "is_trial": True}}
-    )
+    # GET endpoint is preview only - does NOT mark as generated/signed
     
     filename = f"Dichiarazione_Prova_{athlete.get('last_name', '')}_{athlete.get('first_name', '')}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+class TrialSignRequest(BaseModel):
+    signature_base64: str
+
+@api_router.post("/athletes/{athlete_id}/sign-trial-document")
+async def sign_trial_document(athlete_id: str, body: TrialSignRequest, current_user = Depends(get_current_user)):
+    """Firma digitale della dichiarazione periodo di prova e genera PDF firmato"""
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+    
+    if not body.signature_base64 or len(body.signature_base64) < 100:
+        raise HTTPException(status_code=400, detail="Firma non valida. Disegna la tua firma nel riquadro.")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if not athlete.get("is_minor"):
+        raise HTTPException(status_code=400, detail="Il documento di prova e disponibile solo per atleti minorenni")
+    
+    if current_user["role"] == UserRole.PARENT:
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    
+    parent = await db.users.find_one({"id": athlete.get("parent_id")})
+    check_profiles_for_document(parent=parent, athlete=athlete)
+    
+    society = await db.societies.find_one({"id": athlete.get("society_id")})
+    society_name = (society.get("ragione_sociale") or society.get("name") or "Societa Sportiva") if society else "Societa Sportiva"
+    
+    society_settings = await db.settings.find_one({"type": "society"})
+    trial_max_days = (society_settings.get("trial_max_days", 7) if society_settings else 7)
+    trial_max_sessions = (society_settings.get("trial_max_sessions", 3) if society_settings else 3)
+    
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm, mm
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage
+    from reportlab.lib.colors import HexColor, black, grey, white
+    import base64
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=2.5*cm, rightMargin=2.5*cm, topMargin=2*cm, bottomMargin=2*cm)
+    
+    primary = HexColor('#1a237e')
+    accent = HexColor('#0d47a1')
+    light_bg = HexColor('#f5f7fa')
+    border_color = HexColor('#d0d7de')
+    text_dark = HexColor('#1a1a2e')
+    text_muted = HexColor('#555555')
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Title'], fontSize=15, spaceAfter=2, textColor=primary, fontName='Helvetica-Bold', alignment=TA_CENTER)
+    doc_title_style = ParagraphStyle('DocTitle', parent=styles['Normal'], fontSize=11, alignment=TA_CENTER, spaceAfter=16, textColor=accent, fontName='Helvetica-Bold', leading=14)
+    section_header_style_tbl = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), primary),
+        ('TEXTCOLOR', (0, 0), (-1, 0), white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ('TOPPADDING', (0, 0), (-1, 0), 6),
+        ('LEFTPADDING', (0, 0), (-1, 0), 10),
+    ])
+    data_table_style = TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9.5),
+        ('TEXTCOLOR', (0, 0), (0, -1), text_muted),
+        ('TEXTCOLOR', (1, 0), (1, -1), text_dark),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('BACKGROUND', (0, 0), (-1, -1), light_bg),
+        ('GRID', (0, 0), (-1, -1), 0.5, border_color),
+    ])
+    body_justify = ParagraphStyle('BodyJustify', parent=styles['Normal'], fontSize=9.5, leading=14, alignment=TA_JUSTIFY, spaceAfter=4, fontName='Helvetica')
+    bullet_style = ParagraphStyle('BulletStyle', parent=styles['Normal'], fontSize=9.5, leading=14, alignment=TA_JUSTIFY, leftIndent=16, spaceAfter=3, fontName='Helvetica')
+    highlight_style = ParagraphStyle('Highlight', parent=styles['Normal'], fontSize=10, leading=15, alignment=TA_JUSTIFY, spaceAfter=4, fontName='Helvetica-Bold', textColor=accent)
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=7.5, textColor=HexColor('#999999'), alignment=TA_CENTER, leading=10)
+    
+    elements = []
+    
+    # === HEADER ===
+    elements.append(Paragraph(society_name.upper(), title_style))
+    elements.append(Spacer(1, 3))
+    elements.append(HRFlowable(width="100%", thickness=2, color=primary))
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph("DICHIARAZIONE PER PERIODO DI PROVA ATLETA MINORE", doc_title_style))
+    
+    # === DATI GENITORE ===
+    sh1 = Table([["DATI DEL GENITORE/TUTORE"]], colWidths=[16*cm])
+    sh1.setStyle(section_header_style_tbl)
+    elements.append(sh1)
+    parent_name = parent.get("full_name", "") if parent else ""
+    parent_cf = parent.get("fiscal_code", "") if parent else ""
+    parent_phone = parent.get("phone", "") if parent else ""
+    parent_email = parent.get("email", "") if parent else ""
+    data1 = [
+        ["Nome e Cognome:", parent_name],
+        ["Codice Fiscale:", parent_cf],
+        ["Telefono:", parent_phone],
+        ["Email:", parent_email],
+    ]
+    t1 = Table(data1, colWidths=[5*cm, 11*cm])
+    t1.setStyle(data_table_style)
+    elements.append(t1)
+    elements.append(Spacer(1, 10))
+    
+    # === DATI ATLETA ===
+    sh2 = Table([["DATI DELL'ATLETA MINORE"]], colWidths=[16*cm])
+    sh2.setStyle(section_header_style_tbl)
+    elements.append(sh2)
+    athlete_name = athlete.get("full_name", "")
+    athlete_dob = ""
+    if athlete.get("date_of_birth"):
+        dob = athlete["date_of_birth"]
+        if isinstance(dob, str):
+            try:
+                dob = datetime.fromisoformat(dob.replace('Z', '+00:00'))
+            except:
+                pass
+        if isinstance(dob, datetime):
+            athlete_dob = dob.strftime("%d/%m/%Y")
+    athlete_cf = athlete.get("fiscal_code", "")
+    athlete_pob = athlete.get("place_of_birth") or athlete.get("birth_place", "")
+    data2 = [
+        ["Nome e Cognome:", athlete_name],
+        ["Data di Nascita:", athlete_dob],
+        ["Luogo di Nascita:", athlete_pob],
+        ["Codice Fiscale:", athlete_cf],
+    ]
+    t2 = Table(data2, colWidths=[5*cm, 11*cm])
+    t2.setStyle(data_table_style)
+    elements.append(t2)
+    elements.append(Spacer(1, 10))
+    
+    # === DICHIARAZIONE ===
+    sh3 = Table([["DICHIARAZIONE"]], colWidths=[16*cm])
+    sh3.setStyle(section_header_style_tbl)
+    elements.append(sh3)
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(
+        f"Il/La sottoscritto/a <b>{parent_name}</b>, in qualita di genitore/tutore legale "
+        f"dell'atleta minore <b>{athlete_name}</b>, dichiara di autorizzare la partecipazione "
+        f"del minore al periodo di prova presso <b>{society_name}</b> alle seguenti condizioni:",
+        body_justify
+    ))
+    elements.append(Spacer(1, 6))
+    
+    # === CONDIZIONI ===
+    sh4 = Table([["CONDIZIONI DEL PERIODO DI PROVA"]], colWidths=[16*cm])
+    sh4.setStyle(section_header_style_tbl)
+    elements.append(sh4)
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(f"Il periodo di prova avra una durata massima di <b>{trial_max_days} giorni</b> dalla data della prima presenza registrata.", bullet_style))
+    elements.append(Paragraph(f"Durante questo periodo, l'atleta potra partecipare a un massimo di <b>{trial_max_sessions} allenamenti</b>.", bullet_style))
+    elements.append(Paragraph("La partecipazione e subordinata alla presentazione di un certificato medico valido per attivita sportiva non agonistica.", bullet_style))
+    elements.append(Paragraph("Il genitore/tutore si impegna a comunicare tempestivamente eventuali problematiche di salute dell'atleta.", bullet_style))
+    elements.append(Paragraph("Al termine del periodo di prova, l'atleta potra essere tesserato con il consenso del genitore/tutore.", bullet_style))
+    elements.append(Spacer(1, 10))
+    
+    # === ACCETTAZIONE ===
+    sh6 = Table([["ACCETTAZIONE"]], colWidths=[16*cm])
+    sh6.setStyle(section_header_style_tbl)
+    elements.append(sh6)
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(
+        "Con la sottoscrizione del presente documento il genitore/tutore autorizza la partecipazione del "
+        "minore al periodo di prova alle condizioni sopra indicate.",
+        body_justify
+    ))
+    elements.append(Spacer(1, 14))
+    
+    # === FIRMA DIGITALE (embedded signature image) ===
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=border_color))
+    elements.append(Spacer(1, 10))
+    
+    now = datetime.now(timezone.utc)
+    sign_date_str = now.strftime("%d/%m/%Y alle ore %H:%M")
+    
+    elements.append(Paragraph(f"<b>Firmato digitalmente il {sign_date_str}</b>", ParagraphStyle('SignDate', parent=styles['Normal'], fontSize=9, textColor=text_muted, fontName='Helvetica')))
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph("Firma del genitore/tutore:", ParagraphStyle('SignLabel', parent=styles['Normal'], fontSize=9.5, fontName='Helvetica', textColor=text_muted)))
+    elements.append(Spacer(1, 4))
+    
+    # Embed the actual signature image
+    try:
+        sig_data = body.signature_base64
+        if ',' in sig_data:
+            sig_data = sig_data.split(',')[1]
+        sig_bytes = base64.b64decode(sig_data)
+        sig_buffer = io.BytesIO(sig_bytes)
+        sig_img = RLImage(sig_buffer, width=6*cm, height=2.5*cm)
+        elements.append(sig_img)
+    except Exception as e:
+        logging.error(f"Error embedding signature: {e}")
+        raise HTTPException(status_code=400, detail="Errore nell'elaborazione della firma")
+    
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(f"<b>{parent_name}</b>", ParagraphStyle('SignName', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', textColor=text_dark)))
+    
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph(
+        f"<i>Documento firmato digitalmente tramite RegistraTEAM per conto di {society_name}</i>",
+        footer_style
+    ))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    # Mark as signed with signature data and timestamp
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "trial_document_generated": True,
+            "trial_document_signed_date": now.isoformat(),
+            "trial_document_signed_by": current_user["id"],
+            "is_trial": True,
+        }}
+    )
+    
+    filename = f"Dichiarazione_Prova_Firmata_{athlete.get('last_name', '')}_{athlete.get('first_name', '')}.pdf"
     
     return StreamingResponse(
         buffer,
