@@ -17769,15 +17769,10 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     elements.append(Spacer(1, 6))
     
     parent_name = parent.get("full_name", "") if parent else ""
-    parent_cf = parent.get("fiscal_code", "") if parent else ""
-    # If parent has no fiscal code, try tax_payer_fiscal_code from athlete record
-    if not parent_cf:
-        parent_cf = athlete.get("tax_payer_fiscal_code", "")
     parent_phone = parent.get("phone", "") if parent else ""
     
     parent_data = [
         ["Nome e Cognome:", parent_name or "______________________________"],
-        ["Codice Fiscale:", parent_cf or "______________________________"],
         ["Telefono:", parent_phone or "______________________________"],
     ]
     t = Table(parent_data, colWidths=[4*cm, 12*cm])
