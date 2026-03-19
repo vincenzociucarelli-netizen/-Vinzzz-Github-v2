@@ -17706,83 +17706,127 @@ async def delete_my_data(current_user = Depends(get_current_user)):
 
 @api_router.get("/society/card-fiscale")
 async def generate_fiscal_card(current_user = Depends(get_current_user)):
-    """Genera PDF card con i dati fiscali della societa"""
-    # I dati societa sono nella collection settings
+    """Genera immagine JPG biglietto da visita della societa"""
     society = await db.settings.find_one({"type": "society"})
     if not society:
         society = await db.societies.find_one({"id": current_user.get("society_id")})
     if not society:
         raise HTTPException(status_code=404, detail="Societa non trovata")
     
-    from reportlab.lib.pagesizes import A5, landscape
-    from reportlab.lib.units import cm, mm
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-    from reportlab.lib.colors import HexColor
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
+    import base64
+    
+    # Card dimensions (business card proportions)
+    W, H = 1200, 680
+    img = Image.new('RGB', (W, H), '#FFFFFF')
+    draw = ImageDraw.Draw(img)
+    
+    # Gradient background - subtle blue to white
+    for y in range(H):
+        r = int(240 + (255 - 240) * y / H)
+        g = int(245 + (255 - 245) * y / H)
+        b = int(255)
+        draw.line([(0, y), (W, y)], fill=(r, g, b))
+    
+    # Top accent bar
+    draw.rectangle([(0, 0), (W, 6)], fill='#1565C0')
+    # Bottom accent bar
+    draw.rectangle([(0, H - 4), (W, H)], fill='#1565C0')
+    # Left accent bar
+    draw.rectangle([(0, 0), (4, H)], fill='#1565C0')
+    
+    # Try to load fonts
+    try:
+        font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
+        font_subtitle = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+        font_label = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 14)
+        font_value = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 15)
+        font_sport = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 13)
+    except:
+        font_title = ImageFont.load_default()
+        font_subtitle = font_label = font_value = font_sport = font_title
+    
+    # Logo area
+    logo_x, logo_y = 30, 24
+    logo_size = 100
+    logo_data = society.get("logo")
+    if logo_data:
+        try:
+            if ',' in logo_data:
+                logo_data = logo_data.split(',')[1]
+            logo_bytes = base64.b64decode(logo_data)
+            logo_img = Image.open(io.BytesIO(logo_bytes)).convert('RGBA')
+            # Maintain aspect ratio
+            w, h = logo_img.size
+            ratio = min(logo_size / w, logo_size / h)
+            new_w, new_h = int(w * ratio), int(h * ratio)
+            logo_img = logo_img.resize((new_w, new_h), Image.LANCZOS)
+            # Center in logo area
+            paste_x = logo_x + (logo_size - new_w) // 2
+            paste_y = logo_y + (logo_size - new_h) // 2
+            img.paste(logo_img, (paste_x, paste_y), logo_img)
+        except:
+            pass
+    
+    # Society name - right of logo
+    text_x = logo_x + logo_size + 24
+    name = society.get("ragione_sociale") or society.get("name", "Societa Sportiva")
+    draw.text((text_x, 30), name.upper(), fill='#1a237e', font=font_title)
+    
+    # Sport under name
+    sport = society.get("sport", "")
+    if sport:
+        draw.text((text_x, 68), sport.upper(), fill='#1565C0', font=font_sport)
+    
+    # Separator line
+    draw.line([(30, 140), (W - 30, 140)], fill='#1565C0', width=2)
+    
+    # Info section - two columns
+    left_x = 40
+    right_x = W // 2 + 20
+    y_start = 165
+    line_h = 46
+    
+    def draw_field(x, y, label, value, color='#555'):
+        if value:
+            draw.text((x, y), label, fill='#1565C0', font=font_label)
+            draw.text((x, y + 18), str(value), fill=color, font=font_value)
+    
+    # Left column
+    y = y_start
+    addr = society.get("address", "")
+    if society.get("postal_code") or society.get("city"):
+        addr += f" - {society.get('postal_code', '')} {society.get('city', '')} ({society.get('province', '')})"
+    draw_field(left_x, y, "SEDE", addr.strip()); y += line_h
+    draw_field(left_x, y, "CF / P.IVA", society.get("fiscal_code", "")); y += line_h
+    draw_field(left_x, y, "PRESIDENTE", society.get("president_name", "")); y += line_h
+    
+    # Right column
+    y = y_start
+    draw_field(right_x, y, "CELLULARE", society.get("phone", "")); y += line_h
+    if society.get("phone2"):
+        draw_field(right_x, y, "TELEFONO", society.get("phone2", "")); y += line_h
+    draw_field(right_x, y, "EMAIL", society.get("email", "")); y += line_h
+    draw_field(right_x, y, "PEC", society.get("pec", "")); y += line_h
+    
+    # Affiliations at bottom
+    affiliations = society.get("affiliations", [])
+    if affiliations:
+        aff_y = H - 55
+        draw.line([(30, aff_y - 12), (W - 30, aff_y - 12)], fill='#e0e0e0', width=1)
+        aff_text = " | ".join([f"{a.get('name','')}: {a.get('number','')}" for a in affiliations])
+        draw.text((left_x, aff_y), aff_text, fill='#888', font=font_subtitle)
     
     buffer = io.BytesIO()
-    page_size = landscape(A5)
-    doc = SimpleDocTemplate(buffer, pagesize=page_size, leftMargin=2*cm, rightMargin=2*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
-    
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('Title', parent=styles['Title'], fontSize=18, spaceAfter=4, textColor=HexColor('#1a1a2e'), fontName='Helvetica-Bold', alignment=TA_CENTER)
-    subtitle_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=11, alignment=TA_CENTER, spaceAfter=16, textColor=HexColor('#555'), fontName='Helvetica')
-    
-    elements = []
-    
-    name = society.get("ragione_sociale") or society.get("name", "Societa Sportiva")
-    elements.append(Paragraph(name.upper(), title_style))
-    # Show full name as subtitle only if title uses short name
-    if society.get("ragione_sociale") and society.get("name") and society.get("ragione_sociale") != society.get("name"):
-        elements.append(Paragraph(society["ragione_sociale"], subtitle_style))
-    elements.append(HRFlowable(width="100%", thickness=2, color=HexColor('#1565C0')))
-    elements.append(Spacer(1, 14))
-    
-    data = []
-    if society.get("fiscal_code"):
-        data.append(["CF / P.IVA", society["fiscal_code"]])
-    if society.get("address"):
-        addr = society["address"]
-        if society.get("postal_code") or society.get("city"):
-            addr += f" - {society.get('postal_code', '')} {society.get('city', '')} ({society.get('province', '')})"
-        data.append(["Sede", addr])
-    if society.get("president_name"):
-        data.append(["Presidente", society["president_name"]])
-    if society.get("email"):
-        data.append(["Email", society["email"]])
-    if society.get("pec"):
-        data.append(["PEC", society["pec"]])
-    if society.get("phone"):
-        data.append(["Cellulare", society["phone"]])
-    if society.get("phone2"):
-        data.append(["Telefono", society["phone2"]])
-    
-    if data:
-        t = Table(data, colWidths=[3.5*cm, 12*cm])
-        t.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 11),
-            ('TEXTCOLOR', (0, 0), (0, -1), HexColor('#1565C0')),
-            ('TEXTCOLOR', (1, 0), (1, -1), HexColor('#333333')),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('LINEBELOW', (0, 0), (-1, -2), 0.5, HexColor('#eeeeee')),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        elements.append(t)
-    
-    doc.build(elements)
+    img.save(buffer, format='JPEG', quality=92)
     buffer.seek(0)
     
-    filename = f"Dati_Fiscali_{name.replace(' ', '_')}.pdf"
-    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    filename = f"Biglietto_{name.replace(' ', '_')}.jpg"
+    return StreamingResponse(buffer, media_type="image/jpeg", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 @api_router.get("/society/card-bancaria")
 async def generate_bank_card(current_user = Depends(get_current_user)):
-    """Genera PDF card con i dati bancari della societa"""
-    # I dati societa sono nella collection settings
+    """Genera immagine JPG con i dati bancari della societa"""
     society = await db.settings.find_one({"type": "society"})
     if not society:
         society = await db.societies.find_one({"id": current_user.get("society_id")})
@@ -17792,51 +17836,104 @@ async def generate_bank_card(current_user = Depends(get_current_user)):
     if not society.get("iban"):
         raise HTTPException(status_code=400, detail="Nessun IBAN inserito nel profilo societa")
     
-    from reportlab.lib.pagesizes import A5, landscape
-    from reportlab.lib.units import cm
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-    from reportlab.lib.colors import HexColor
+    from PIL import Image, ImageDraw, ImageFont
+    import base64
     
-    buffer = io.BytesIO()
-    page_size = landscape(A5)
-    doc = SimpleDocTemplate(buffer, pagesize=page_size, leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    W, H = 1200, 500
+    img = Image.new('RGB', (W, H), '#FFFFFF')
+    draw = ImageDraw.Draw(img)
     
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('Title', parent=styles['Title'], fontSize=18, spaceAfter=4, textColor=HexColor('#1a1a2e'), fontName='Helvetica-Bold', alignment=TA_CENTER)
-    iban_style = ParagraphStyle('IBAN', parent=styles['Normal'], fontSize=16, alignment=TA_CENTER, spaceAfter=8, textColor=HexColor('#2E7D32'), fontName='Helvetica-Bold', leading=22)
+    # Gradient background - subtle green to white
+    for y in range(H):
+        r = int(232 + (255 - 232) * y / H)
+        g = int(245 + (255 - 245) * y / H)
+        b = int(233 + (255 - 233) * y / H)
+        draw.line([(0, y), (W, y)], fill=(r, g, b))
     
-    elements = []
+    # Top accent bar
+    draw.rectangle([(0, 0), (W, 6)], fill='#2E7D32')
+    # Bottom accent bar
+    draw.rectangle([(0, H - 4), (W, H)], fill='#2E7D32')
+    # Left accent bar
+    draw.rectangle([(0, 0), (4, H)], fill='#2E7D32')
+    
+    try:
+        font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28)
+        font_label = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+        font_iban = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 34)
+        font_bank = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
+    except:
+        font_title = ImageFont.load_default()
+        font_label = font_iban = font_bank = font_small = font_title
+    
+    # Logo area (top left)
+    logo_x, logo_y = 30, 24
+    logo_size = 80
+    logo_data = society.get("logo")
+    if logo_data:
+        try:
+            if ',' in logo_data:
+                logo_data = logo_data.split(',')[1]
+            logo_bytes = base64.b64decode(logo_data)
+            logo_img = Image.open(io.BytesIO(logo_bytes)).convert('RGBA')
+            w, h = logo_img.size
+            ratio = min(logo_size / w, logo_size / h)
+            new_w, new_h = int(w * ratio), int(h * ratio)
+            logo_img = logo_img.resize((new_w, new_h), Image.LANCZOS)
+            paste_x = logo_x + (logo_size - new_w) // 2
+            paste_y = logo_y + (logo_size - new_h) // 2
+            img.paste(logo_img, (paste_x, paste_y), logo_img)
+        except:
+            pass
     
     name = society.get("ragione_sociale") or society.get("name", "Societa Sportiva")
-    elements.append(Paragraph(name.upper(), title_style))
-    elements.append(Spacer(1, 4))
-    elements.append(HRFlowable(width="100%", thickness=2, color=HexColor('#2E7D32')))
-    elements.append(Spacer(1, 20))
     
-    elements.append(Paragraph("COORDINATE BANCARIE", ParagraphStyle('Lab', parent=styles['Normal'], fontSize=12, alignment=TA_CENTER, textColor=HexColor('#666'), fontName='Helvetica')))
-    elements.append(Spacer(1, 12))
+    # Society name
+    text_x = logo_x + logo_size + 20
+    draw.text((text_x, 35), name.upper(), fill='#1B5E20', font=font_title)
     
-    # Nome intestatario
-    elements.append(Paragraph(f"<b>Intestatario:</b> {name}", ParagraphStyle('Int', parent=styles['Normal'], fontSize=13, alignment=TA_CENTER, fontName='Helvetica')))
-    elements.append(Spacer(1, 8))
+    # Separator
+    draw.line([(30, 120), (W - 30, 120)], fill='#2E7D32', width=2)
     
-    # IBAN grande e leggibile
+    # Section label
+    draw.text((W // 2 - 120, 145), "COORDINATE BANCARIE", fill='#666', font=font_label)
+    
+    # Intestatario
+    draw.text((W // 2 - 100, 185), f"Intestatario: {name}", fill='#333', font=font_bank)
+    
+    # IBAN - large and formatted
     iban_val = society.get("iban", "")
-    # Formatta IBAN a gruppi di 4
-    iban_formatted = " ".join([iban_val[i:i+4] for i in range(0, len(iban_val), 4)])
-    elements.append(Paragraph(iban_formatted, iban_style))
+    iban_formatted = "  ".join([iban_val[i:i+4] for i in range(0, len(iban_val), 4)])
     
+    # IBAN background box
+    iban_box_y = 235
+    draw.rounded_rectangle([(60, iban_box_y), (W - 60, iban_box_y + 70)], radius=12, fill='#E8F5E9', outline='#A5D6A7', width=2)
+    
+    # Center IBAN text
+    iban_bbox = draw.textbbox((0, 0), iban_formatted, font=font_iban)
+    iban_w = iban_bbox[2] - iban_bbox[0]
+    draw.text(((W - iban_w) // 2, iban_box_y + 16), iban_formatted, fill='#1B5E20', font=font_iban)
+    
+    # Bank name
     if society.get("bank_name"):
-        elements.append(Spacer(1, 8))
-        elements.append(Paragraph(f"Banca: {society['bank_name']}", ParagraphStyle('Bank', parent=styles['Normal'], fontSize=12, alignment=TA_CENTER, textColor=HexColor('#666'), fontName='Helvetica')))
+        bank_text = f"Banca: {society['bank_name']}"
+        bank_bbox = draw.textbbox((0, 0), bank_text, font=font_bank)
+        bank_w = bank_bbox[2] - bank_bbox[0]
+        draw.text(((W - bank_w) // 2, iban_box_y + 90), bank_text, fill='#555', font=font_bank)
     
-    doc.build(elements)
+    # Footer note
+    footer_text = "Utilizzare queste coordinate per i pagamenti alla societa"
+    ft_bbox = draw.textbbox((0, 0), footer_text, font=font_small)
+    ft_w = ft_bbox[2] - ft_bbox[0]
+    draw.text(((W - ft_w) // 2, H - 45), footer_text, fill='#999', font=font_small)
+    
+    buffer = io.BytesIO()
+    img.save(buffer, format='JPEG', quality=92)
     buffer.seek(0)
     
-    filename = f"Dati_Bancari_{name.replace(' ', '_')}.pdf"
-    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    filename = f"Dati_Bancari_{name.replace(' ', '_')}.jpg"
+    return StreamingResponse(buffer, media_type="image/jpeg", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 # ==================== TRIAL PERIOD ENDPOINTS ====================
 
