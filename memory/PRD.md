@@ -12,21 +12,24 @@ Sports team management application for Pallavolo Perugia SSD. Manages athletes, 
 - Medical certificate management with auto-block toggle
 - Dynamic trial period system (admin-configurable days/sessions)
 - Trial PDF document generation (dynamic, professional)
+- Digital signature flow for trial declaration (signature pad + embedded in PDF)
 - Compensation management for coaches/dirigenti/collaboratori
 - GDPR privacy document signing
 - Parent/Coach dashboards with notifications
 - Profile completeness validation before document generation
+- Society info cards as JPG images (fiscal + bank)
 
 ## Latest Changes (March 2026)
-- Moved "Certificato Medico" toggle from "Altre Impostazioni" to "Periodo di Prova" settings page
-- Renamed page to "Certificato Medico e Periodo di Prova" with descriptive subtitles
-- Implemented mandatory profile completeness check before document generation:
-  - Parent required fields: full_name, fiscal_code, phone
-  - Athlete required fields: full_name, date_of_birth, fiscal_code, place_of_birth
-  - Backend validation blocks document generation with 400 error and detailed message
-  - Frontend shows "Anagrafica incompleta" banner with missing fields and quick-links to complete profiles
-  - New API endpoint: GET /api/athletes/{athlete_id}/profile-check
-- Fixed NoneType error in validation functions for null field values
+- Implemented digital signature flow for trial declaration:
+  - New POST /api/athletes/{id}/sign-trial-document endpoint
+  - Signature pad modal in frontend (SignaturePadInline component)
+  - Signature image embedded in PDF document
+  - GET trial-document endpoint no longer marks document as signed (preview only)
+  - trial_document_generated field added to Athlete model and TypeScript interface
+- Society cards converted from PDF to JPG (Pillow-based image generation)
+- Frontend card download handlers updated for image/jpeg content type
+- Updated trial status text per user's exact wording
+- Profile completeness validation implemented and tested
 
 ## Architecture
 - Frontend: React Native Web (Expo) on port 3000
@@ -36,15 +39,14 @@ Sports team management application for Pallavolo Perugia SSD. Manages athletes, 
 
 ## Prioritized Backlog
 ### P0 (Critical)
-- User-guided testing of trial period lifecycle
-- Digital signature flow for trial declaration (capture signature, embed metadata)
+- User-guided testing of digital signature + trial period lifecycle
 
 ### P1 (Important)
 - Automatic parent cross-linking when second_parent_email matches existing user
 
 ### P2 (Nice to have)
 - Refine UI for contracted athletes
-- Clarify user deletion logic
+- Clarify user deletion logic (recurring issue x11)
 
 ### P3 (Future)
 - Refactor server.py into modular structure
