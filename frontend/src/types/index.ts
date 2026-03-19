@@ -75,6 +75,9 @@ export interface Athlete {
   qr_code: string;
   registration_date: string;
   trial_end_date: string;
+  trial_start_date?: string;
+  trial_document_generated?: boolean;
+  is_trial?: boolean;
   privacy_accepted: boolean;
   privacy_accepted_date?: string;
   image_consent: boolean;

@@ -762,6 +762,7 @@ class Athlete(BaseModel):
     trial_end_date: Optional[datetime] = None  # 7 days after registration (None per atleti maggiorenni)
     trial_start_date: Optional[datetime] = None  # Data inizio effettivo periodo di prova (prima scansione QR)
     is_trial: bool = False  # True se l'atleta è in modalità periodo di prova
+    trial_document_generated: bool = False  # True se il documento di prova è stato generato/firmato
     privacy_accepted: bool = False
     privacy_accepted_date: Optional[datetime] = None
     image_consent: bool = False

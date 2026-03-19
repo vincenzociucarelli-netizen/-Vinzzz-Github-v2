@@ -1765,41 +1765,53 @@ export default function AthleteDetail() {
             <>
               <View style={{ backgroundColor: '#F3E5F5', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#9C27B0', marginBottom: 12 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#7B1FA2', marginBottom: 4 }}>In attesa di inizio prova</Text>
-                <Text style={{ fontSize: 12, color: '#6A1B9A', lineHeight: 18 }}>
-                  Il periodo di prova inizier{'à'} automaticamente quando {athlete.first_name || athlete.full_name} registrer{'à'} la prima presenza tramite scansione QR.{'\n'}In quel momento {athlete.first_name || athlete.full_name} dovr{'à'} avere la dichiarazione di prova firmata da un genitore.{'\n'}Per evitare di dimenticare puoi firmare ora la dichiarazione.
-                </Text>
+                {athlete.trial_document_generated ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+                    <Text style={{ fontSize: 13, color: '#4CAF50', fontWeight: '600' }}>Dichiarazione di prova firmata</Text>
+                  </View>
+                ) : (
+                  <Text style={{ fontSize: 12, color: '#6A1B9A', lineHeight: 18 }}>
+                    Il periodo di prova inizier{'à'} automaticamente nel momento in cui {athlete.first_name || athlete.full_name?.split(' ').pop() || ''} registrer{'à'} la sua prima presenza in palestra, tramite la scansione del suo codice QR da parte del coach.{'\n'}Per poter partecipare, dovr{'à'} avere la dichiarazione di prova firmata da un genitore.{'\n'}Per evitare dimenticanze, ti consigliamo di firmare la dichiarazione sin da ora.
+                  </Text>
+                )}
               </View>
-              <TouchableOpacity
-                style={{
-                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: '#EDE7F6', paddingVertical: 12, borderRadius: 10, gap: 8,
-                  opacity: downloadingTrialDoc ? 0.6 : 1,
-                }}
-                disabled={downloadingTrialDoc}
-                onPress={async () => {
-                  setDownloadingTrialDoc(true);
-                  try {
-                    const res = await api.get(`/athletes/${id}/trial-document`, { responseType: 'blob' });
-                    const blob = new Blob([res.data], { type: 'application/pdf' });
-                    const url = URL.createObjectURL(blob);
-                    window.open(url, '_blank');
-                  } catch (e: any) {
-                    let msg = 'Errore nel download del documento';
-                    if (e.response?.data instanceof Blob) {
-                      try { const text = await e.response.data.text(); const json = JSON.parse(text); msg = json.detail || msg; } catch {}
-                    } else if (e.response?.data?.detail) { msg = e.response.data.detail; }
-                    showAlert('Errore', msg);
-                  } finally {
-                    setDownloadingTrialDoc(false);
-                  }
-                }}
-                data-testid="trial-download-document-button"
-              >
-                <Ionicons name="document-text" size={18} color="#7B1FA2" />
-                <Text style={{ fontWeight: '600', color: '#7B1FA2', fontSize: 14 }}>
-                  {downloadingTrialDoc ? 'Download...' : 'Firma Dichiarazione di Prova'}
-                </Text>
-              </TouchableOpacity>
+              {!athlete.trial_document_generated && (
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: '#EDE7F6', paddingVertical: 12, borderRadius: 10, gap: 8,
+                    opacity: downloadingTrialDoc ? 0.6 : 1,
+                  }}
+                  disabled={downloadingTrialDoc}
+                  onPress={async () => {
+                    setDownloadingTrialDoc(true);
+                    try {
+                      const res = await api.get(`/athletes/${id}/trial-document`, { responseType: 'blob' });
+                      const blob = new Blob([res.data], { type: 'application/pdf' });
+                      const url = URL.createObjectURL(blob);
+                      window.open(url, '_blank');
+                      // Reload athlete data to reflect trial_document_generated
+                      const updated = await api.get(`/athletes/${id}`);
+                      setAthlete(updated.data);
+                    } catch (e: any) {
+                      let msg = 'Errore nel download del documento';
+                      if (e.response?.data instanceof Blob) {
+                        try { const text = await e.response.data.text(); const json = JSON.parse(text); msg = json.detail || msg; } catch {}
+                      } else if (e.response?.data?.detail) { msg = e.response.data.detail; }
+                      showAlert('Errore', msg);
+                    } finally {
+                      setDownloadingTrialDoc(false);
+                    }
+                  }}
+                  data-testid="trial-download-document-button"
+                >
+                  <Ionicons name="document-text" size={18} color="#7B1FA2" />
+                  <Text style={{ fontWeight: '600', color: '#7B1FA2', fontSize: 14 }}>
+                    {downloadingTrialDoc ? 'Download...' : 'Firma Dichiarazione di Prova'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
 

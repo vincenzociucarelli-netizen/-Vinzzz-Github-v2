@@ -216,27 +216,47 @@ export default function SocietyProfile() {
     }
   };
 
-  // Scarica Card PDF Dati Fiscali
+  // Scarica Card JPG Dati Fiscali
   const handleDownloadFiscalCard = async () => {
     try {
       const res = await api.get('/society/card-fiscale', { responseType: 'blob' });
-      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blob = new Blob([res.data], { type: 'image/jpeg' });
       const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Biglietto_${societyName?.replace(/\s+/g, '_') || 'Societa'}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (e: any) {
-      showAlert('Errore', e.response?.data?.detail || 'Errore nel download');
+      let msg = 'Errore nel download';
+      if (e.response?.data instanceof Blob) {
+        try { const text = await e.response.data.text(); const json = JSON.parse(text); msg = json.detail || msg; } catch {}
+      } else if (e.response?.data?.detail) { msg = e.response.data.detail; }
+      showAlert('Errore', msg);
     }
   };
 
-  // Scarica Card PDF Dati Bancari
+  // Scarica Card JPG Dati Bancari
   const handleDownloadBankCard = async () => {
     try {
       const res = await api.get('/society/card-bancaria', { responseType: 'blob' });
-      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blob = new Blob([res.data], { type: 'image/jpeg' });
       const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Dati_Bancari_${societyName?.replace(/\s+/g, '_') || 'Societa'}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (e: any) {
-      showAlert('Errore', e.response?.data?.detail || 'Errore nel download');
+      let msg = 'Errore nel download';
+      if (e.response?.data instanceof Blob) {
+        try { const text = await e.response.data.text(); const json = JSON.parse(text); msg = json.detail || msg; } catch {}
+      } else if (e.response?.data?.detail) { msg = e.response.data.detail; }
+      showAlert('Errore', msg);
     }
   };
 
