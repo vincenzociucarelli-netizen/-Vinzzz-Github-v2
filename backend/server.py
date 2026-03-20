@@ -5704,6 +5704,11 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
             "qr_code": a.get("qr_code"),
             "qr_identifier": a.get("qr_identifier"),
             "athlete_code": a.get("athlete_code"),
+            # Trial fields
+            "trial_start_date": a.get("trial_start_date"),
+            "trial_end_date": a.get("trial_end_date"),
+            "trial_document_generated": a.get("trial_document_generated", False),
+            "is_trial": a.get("is_trial", False),
         })
     
     return result
