@@ -18384,9 +18384,9 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     elements.append(Paragraph(f"<b>Firmato digitalmente il {sign_date_str}</b>", ParagraphStyle('SignDate', parent=styles['Normal'], fontSize=9, textColor=text_muted, fontName='Helvetica')))
     elements.append(Spacer(1, 6))
     elements.append(Paragraph("Firma del genitore/tutore:", ParagraphStyle('SignLabel', parent=styles['Normal'], fontSize=9.5, fontName='Helvetica', textColor=text_muted)))
-    elements.append(Spacer(1, 4))
+    elements.append(Spacer(1, 2))
     
-    # Embed the actual signature image
+    # Embed the actual signature image (ridotto spazio sopra per avvicinare alla label)
     try:
         sig_data = body.signature_base64
         if ',' in sig_data:
@@ -18415,7 +18415,7 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     
     meta_line_style = ParagraphStyle('MetaLine', parent=styles['Normal'], fontSize=7, fontName='Helvetica', textColor=HexColor('#666666'), leading=11)
     
-    elements.append(Paragraph("─" * 120, meta_line_style))
+    elements.append(Paragraph("─" * 60, meta_line_style))
     elements.append(Spacer(1, 4))
     elements.append(Paragraph("METADATI DI VERIFICA (generati automaticamente)", meta_line_style))
     elements.append(Paragraph(f"Timestamp firma: {timestamp_rome}", meta_line_style))
