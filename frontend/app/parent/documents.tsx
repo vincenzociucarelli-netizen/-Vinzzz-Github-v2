@@ -104,10 +104,9 @@ export default function ParentDocuments() {
     });
   };
 
-  const openDocument = async (docId: string) => {
+  const openDocument = async (docId: string, docTitle?: string) => {
     try {
       if (Platform.OS === 'web') {
-        // Fetch PDF with auth token, then open blob URL
         const token = localStorage.getItem('token') || '';
         const baseUrl = api.defaults.baseURL || '';
         const response = await fetch(`${baseUrl}/documents/signed/${docId}/pdf`, {
@@ -116,7 +115,13 @@ export default function ParentDocuments() {
         if (!response.ok) throw new Error('Download failed');
         const blob = await response.blob();
         const blobUrl = window.URL.createObjectURL(blob);
-        window.open(blobUrl, '_blank');
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `${docTitle || 'documento'}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
       } else {
         const url = `${api.defaults.baseURL}/documents/signed/${docId}/pdf`;
         await Linking.openURL(url);
@@ -159,7 +164,7 @@ export default function ParentDocuments() {
     <TouchableOpacity
       key={doc.id}
       style={styles.documentItem}
-      onPress={() => openDocument(doc.id)}
+      onPress={() => openDocument(doc.id, doc.document_title || doc.document_type)}
     >
       <View style={styles.documentIcon}>
         <Ionicons name={getDocumentIcon(doc.document_type)} size={24} color="#8E44AD" />
