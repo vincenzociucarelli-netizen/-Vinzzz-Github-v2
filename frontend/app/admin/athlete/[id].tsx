@@ -1767,7 +1767,40 @@ export default function AdminAthleteDetail() {
 
             {/* Dati Tecnici */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>📊 Dati Tecnici</Text>
+              {/* Box Periodo di Prova - solo per atleti trial */}
+              {athlete.status === 'trial' && (
+                <View style={[styles.card, { borderLeftWidth: 3, borderLeftColor: athlete.trial_start_date ? '#1976D2' : '#9C27B0', marginBottom: 16 }]} data-testid="admin-trial-info-box">
+                  <Text style={styles.cardTitle}>Periodo di Prova</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                      <Text style={styles.label}>Stato</Text>
+                      <Text style={[styles.value, { color: athlete.trial_start_date ? '#1976D2' : '#9C27B0', fontWeight: '700' }]}>
+                        {athlete.trial_start_date ? 'In corso' : 'In attesa di inizio'}
+                      </Text>
+                    </View>
+                    {athlete.trial_start_date && (
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={styles.label}>Data inizio</Text>
+                        <Text style={styles.value}>{new Date(athlete.trial_start_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</Text>
+                      </View>
+                    )}
+                    {athlete.trial_end_date && (
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={styles.label}>Scadenza</Text>
+                        <Text style={styles.value}>{new Date(athlete.trial_end_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</Text>
+                      </View>
+                    )}
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                      <Text style={styles.label}>Dichiarazione firmata</Text>
+                      <Text style={[styles.value, { color: athlete.trial_document_generated ? '#4CAF50' : '#E53935', fontWeight: '600' }]}>
+                        {athlete.trial_document_generated ? 'Si' : 'No'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              <Text style={styles.cardTitle}>Dati Tecnici</Text>
               {editing ? (
                 <>
                   <Text style={styles.inputLabel}>Ruolo</Text>
