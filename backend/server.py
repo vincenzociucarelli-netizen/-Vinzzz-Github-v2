@@ -18384,16 +18384,15 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     elements.append(Paragraph(f"<b>Firmato digitalmente il {sign_date_str}</b>", ParagraphStyle('SignDate', parent=styles['Normal'], fontSize=9, textColor=text_muted, fontName='Helvetica')))
     elements.append(Spacer(1, 6))
     elements.append(Paragraph("Firma del genitore/tutore:", ParagraphStyle('SignLabel', parent=styles['Normal'], fontSize=9.5, fontName='Helvetica', textColor=text_muted)))
-    elements.append(Spacer(1, 2))
     
-    # Embed the actual signature image (ridotto spazio sopra per avvicinare alla label)
+    # Embed the actual signature image (subito sotto la label, allineata a sinistra)
     try:
         sig_data = body.signature_base64
         if ',' in sig_data:
             sig_data = sig_data.split(',')[1]
         sig_bytes = base64.b64decode(sig_data)
         sig_buffer = io.BytesIO(sig_bytes)
-        sig_img = RLImage(sig_buffer, width=6*cm, height=2.5*cm)
+        sig_img = RLImage(sig_buffer, width=5*cm, height=2*cm, hAlign='LEFT')
         elements.append(sig_img)
     except Exception as e:
         logging.error(f"Error embedding signature: {e}")
