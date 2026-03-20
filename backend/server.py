@@ -18223,8 +18223,9 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
         if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
             raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
     
-    parent = await db.users.find_one({"id": athlete.get("parent_id")})
-    check_profiles_for_document(parent=parent, athlete=athlete)
+    # Usa i dati di chi sta firmando (current_user), NON del parent_id dell'atleta
+    signing_parent = await db.users.find_one({"id": current_user["id"]})
+    check_profiles_for_document(parent=signing_parent, athlete=athlete)
     
     society = await db.societies.find_one({"id": athlete.get("society_id")})
     society_name = (society.get("ragione_sociale") or society.get("name") or "Societa Sportiva") if society else "Societa Sportiva"
@@ -18294,10 +18295,10 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     sh1 = Table([["DATI DEL GENITORE/TUTORE"]], colWidths=[16*cm])
     sh1.setStyle(section_header_style_tbl)
     elements.append(sh1)
-    parent_name = parent.get("full_name", "") if parent else ""
-    parent_cf = parent.get("fiscal_code", "") if parent else ""
-    parent_phone = parent.get("phone", "") if parent else ""
-    parent_email = parent.get("email", "") if parent else ""
+    parent_name = signing_parent.get("full_name", "") if signing_parent else ""
+    parent_cf = signing_parent.get("fiscal_code", "") if signing_parent else ""
+    parent_phone = signing_parent.get("phone", "") if signing_parent else ""
+    parent_email = signing_parent.get("email", "") if signing_parent else ""
     data1 = [
         ["Nome e Cognome:", parent_name],
         ["Codice Fiscale:", parent_cf],
@@ -18444,22 +18445,45 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     
     filename = f"Dichiarazione_Prova_Firmata_{athlete.get('last_name', '')}_{athlete.get('first_name', '')}.pdf"
     
-    # Send email with signed PDF to parent
+    # Save to signed_documents archive for parent's document section
+    import base64 as b64_archive
+    pdf_bytes_for_archive = buffer.getvalue()
+    pdf_b64_archive = b64_archive.b64encode(pdf_bytes_for_archive).decode('utf-8')
+    
+    signed_doc_record = {
+        "id": str(uuid.uuid4()),
+        "document_type": "trial_declaration",
+        "document_title": f"Dichiarazione Periodo di Prova - {athlete.get('full_name', '')}",
+        "signer_id": current_user["id"],
+        "signer_name": parent_name,
+        "parent_id": current_user["id"],
+        "minor_id": athlete_id,
+        "minor_name": athlete.get("full_name", ""),
+        "athlete_name": athlete.get("full_name", ""),
+        "society_id": athlete.get("society_id"),
+        "pdf_base64": pdf_b64_archive,
+        "pdf_filename": filename,
+        "signed_at": now,
+        "created_at": now,
+    }
+    await db.signed_documents.insert_one(signed_doc_record)
+    
+    # Send email with signed PDF to signing parent
     try:
         pdf_bytes = buffer.getvalue()
         import base64 as b64_email
         pdf_base64 = b64_email.b64encode(pdf_bytes).decode('utf-8')
         
-        parent_email = parent.get("email", "") if parent else ""
-        parent_name = parent.get("full_name", "") if parent else ""
+        signer_email = signing_parent.get("email", "") if signing_parent else ""
+        signer_name = signing_parent.get("full_name", "") if signing_parent else ""
         athlete_name = athlete.get("full_name", "")
         
-        if parent_email:
+        if signer_email:
             html_content = f"""
             <html>
             <body style="font-family: Arial, sans-serif; padding: 20px;">
                 <h2 style="color: #7B1FA2;">Dichiarazione di Prova - {athlete_name}</h2>
-                <p>Gentile {parent_name},</p>
+                <p>Gentile {signer_name},</p>
                 <p>In allegato la dichiarazione firmata per il periodo di prova.</p>
                 <p>Puoi sempre consultarla anche nell'app.</p>
                 <br>
@@ -18472,14 +18496,14 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
             """
             
             await send_email_with_pdf(
-                to_email=parent_email,
+                to_email=signer_email,
                 subject=f"Dichiarazione di Prova firmata - {athlete_name}",
                 html_content=html_content,
                 pdf_base64=pdf_base64,
                 pdf_filename=filename,
-                to_name=parent_name
+                to_name=signer_name
             )
-            logging.info(f"Trial declaration email sent to {parent_email} for athlete {athlete_name}")
+            logging.info(f"Trial declaration email sent to {signer_email} for athlete {athlete_name}")
     except Exception as e:
         logging.warning(f"Could not send trial declaration email: {e}")
     
