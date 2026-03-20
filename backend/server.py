@@ -8763,8 +8763,27 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     
-    # Get all athletes in the team
-    athletes = await db.athletes.find({"team_id": team_id}).to_list(1000)
+    # Get all athletes in the team (including trial athletes)
+    athletes = await db.athletes.find({
+        "$or": [
+            {"team_id": team_id},
+            {"team_id_2": team_id}
+        ],
+        "status": {"$in": ["active", "trial"]},
+        "is_withdrawn": {"$ne": True}
+    }).to_list(1000)
+    
+    # Also include trial athletes who have attendances for this team but no team_id set
+    team_athlete_ids = [a["id"] for a in athletes]
+    trial_attendance_ids = await db.attendances.distinct("athlete_id", {"team_id": team_id})
+    missing_trial_ids = [aid for aid in trial_attendance_ids if aid not in team_athlete_ids]
+    if missing_trial_ids:
+        extra_athletes = await db.athletes.find({
+            "id": {"$in": missing_trial_ids},
+            "status": "trial",
+            "is_withdrawn": {"$ne": True}
+        }).to_list(100)
+        athletes.extend(extra_athletes)
     
     # Get team's training sessions configuration
     training_sessions = team.get("training_sessions", [])
@@ -8789,9 +8808,12 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
         athlete_id = athlete["id"]
         
         # Get registration date for total calculation (fallback to created_at or today)
-        reg_date = athlete.get("registration_date") or athlete.get("created_at") or today_start
+        reg_date = athlete.get("registration_date") or athlete.get("created_at") or now
         if isinstance(reg_date, str):
-            reg_date = datetime.fromisoformat(reg_date)
+            reg_date = datetime.fromisoformat(reg_date.replace('Z', '+00:00'))
+        # Ensure naive datetime for comparison
+        if reg_date.tzinfo is not None:
+            reg_date = reg_date.replace(tzinfo=None)
         
         # Calculate expected total trainings from registration to today
         expected_total = count_training_days_in_period(training_sessions, reg_date, today_end)
@@ -8824,6 +8846,7 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
         stats.append({
             "athlete_id": athlete_id,
             "athlete_name": athlete["full_name"],
+            "status": athlete.get("status", "active"),
             "total_attendances": all_attendances,
             "weekly_attendances": week_attendances,
             "monthly_attendances": month_attendances,

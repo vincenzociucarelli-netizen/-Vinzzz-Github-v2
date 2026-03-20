@@ -211,7 +211,14 @@ export default function CoachTeamAttendances() {
             return (
               <View key={athlete.athlete_id} style={styles.athleteCard}>
                 <View style={styles.athleteInfo}>
-                  <Text style={styles.athleteName}>{athlete.athlete_name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.athleteName}>{athlete.athlete_name}</Text>
+                    {athlete.status === 'trial' && (
+                      <View style={{ backgroundColor: '#F3E5F5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#9C27B0' }}>In prova</Text>
+                      </View>
+                    )}
+                  </View>
                   <View style={styles.attendanceInfo}>
                     <Ionicons 
                       name={getPercentageIcon(percentage)} 
