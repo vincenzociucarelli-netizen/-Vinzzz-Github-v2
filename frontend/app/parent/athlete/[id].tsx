@@ -1826,38 +1826,13 @@ export default function AthleteDetail() {
                     <Text style={{ fontWeight: '700' }}>{trialStatus.days_remaining}</Text> giorni rimanenti
                   </Text>
                 </View>
+                {athlete.trial_document_generated && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                    <Text style={{ fontSize: 13, color: '#4CAF50', fontWeight: '600' }}>Dichiarazione di prova firmata</Text>
+                  </View>
+                )}
               </View>
-              <TouchableOpacity
-                style={{
-                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: '#E3F2FD', paddingVertical: 12, borderRadius: 10, gap: 8,
-                  opacity: downloadingTrialDoc ? 0.6 : 1,
-                }}
-                disabled={downloadingTrialDoc}
-                onPress={async () => {
-                  setDownloadingTrialDoc(true);
-                  try {
-                    const res = await api.get(`/athletes/${id}/trial-document`, { responseType: 'blob' });
-                    const blob = new Blob([res.data], { type: 'application/pdf' });
-                    const url = URL.createObjectURL(blob);
-                    window.open(url, '_blank');
-                  } catch (e: any) {
-                    let msg = 'Errore nel download del documento';
-                    if (e.response?.data instanceof Blob) {
-                      try { const text = await e.response.data.text(); const json = JSON.parse(text); msg = json.detail || msg; } catch {}
-                    } else if (e.response?.data?.detail) { msg = e.response.data.detail; }
-                    showAlert('Errore', msg);
-                  } finally {
-                    setDownloadingTrialDoc(false);
-                  }
-                }}
-                data-testid="trial-download-document-button-active"
-              >
-                <Ionicons name="document-text" size={18} color="#1565C0" />
-                <Text style={{ fontWeight: '600', color: '#1565C0', fontSize: 14 }}>
-                  {downloadingTrialDoc ? 'Download...' : 'Firma Dichiarazione di Prova'}
-                </Text>
-              </TouchableOpacity>
             </>
           )}
 

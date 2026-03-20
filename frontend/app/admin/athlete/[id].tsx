@@ -1769,31 +1769,24 @@ export default function AdminAthleteDetail() {
             <View style={styles.card}>
               {/* Box Periodo di Prova - solo per atleti trial */}
               {athlete.status === 'trial' && (
-                <View style={[styles.card, { borderLeftWidth: 3, borderLeftColor: athlete.trial_start_date ? '#1976D2' : '#9C27B0', marginBottom: 16 }]} data-testid="admin-trial-info-box">
-                  <Text style={styles.cardTitle}>Periodo di Prova</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                    <View style={{ flex: 1, minWidth: 140 }}>
-                      <Text style={styles.label}>Stato</Text>
-                      <Text style={[styles.value, { color: athlete.trial_start_date ? '#1976D2' : '#9C27B0', fontWeight: '700' }]}>
-                        {athlete.trial_start_date ? 'In corso' : 'In attesa di inizio'}
-                      </Text>
-                    </View>
+                <View style={{ marginBottom: 16 }}>
+                  <View style={{ backgroundColor: athlete.trial_start_date ? '#E3F2FD' : '#F3E5F5', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: athlete.trial_start_date ? '#1976D2' : '#9C27B0' }} data-testid="admin-trial-info-box">
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: athlete.trial_start_date ? '#1565C0' : '#7B1FA2', marginBottom: 8 }}>
+                      {athlete.trial_start_date ? 'Periodo di prova attivo' : 'In attesa di inizio prova'}
+                    </Text>
                     {athlete.trial_start_date && (
-                      <View style={{ flex: 1, minWidth: 140 }}>
-                        <Text style={styles.label}>Data inizio</Text>
-                        <Text style={styles.value}>{new Date(athlete.trial_start_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <Ionicons name="calendar-outline" size={16} color="#1976D2" />
+                        <Text style={{ fontSize: 13, color: '#333' }}>
+                          Inizio: <Text style={{ fontWeight: '700' }}>{new Date(athlete.trial_start_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</Text>
+                          {'  '}Scadenza: <Text style={{ fontWeight: '700' }}>{athlete.trial_end_date ? new Date(athlete.trial_end_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</Text>
+                        </Text>
                       </View>
                     )}
-                    {athlete.trial_end_date && (
-                      <View style={{ flex: 1, minWidth: 140 }}>
-                        <Text style={styles.label}>Scadenza</Text>
-                        <Text style={styles.value}>{new Date(athlete.trial_end_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</Text>
-                      </View>
-                    )}
-                    <View style={{ flex: 1, minWidth: 140 }}>
-                      <Text style={styles.label}>Dichiarazione firmata</Text>
-                      <Text style={[styles.value, { color: athlete.trial_document_generated ? '#4CAF50' : '#E53935', fontWeight: '600' }]}>
-                        {athlete.trial_document_generated ? 'Si' : 'No'}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <Ionicons name="document-text" size={16} color={athlete.trial_start_date ? '#1976D2' : '#7B1FA2'} />
+                      <Text style={{ fontSize: 13, color: '#333' }}>
+                        Dichiarazione firmata: <Text style={{ fontWeight: '700', color: athlete.trial_document_generated ? '#4CAF50' : '#E53935' }}>{athlete.trial_document_generated ? 'Si' : 'No'}</Text>
                       </Text>
                     </View>
                   </View>

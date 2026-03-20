@@ -487,7 +487,9 @@ export default function AdminAthletes() {
 
   const getStatusText = (item: Athlete) => {
     if (item.is_withdrawn) return 'Ritirato';
-    if (item.status === 'trial') return 'In prova';
+    if (item.status === 'trial') {
+      return item.trial_start_date ? 'In prova' : 'In attesa';
+    }
     return 'Attivo';
   };
 
