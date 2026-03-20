@@ -18204,7 +18204,7 @@ class TrialSignRequest(BaseModel):
     signature_base64: str
 
 @api_router.post("/athletes/{athlete_id}/sign-trial-document")
-async def sign_trial_document(athlete_id: str, body: TrialSignRequest, current_user = Depends(get_current_user)):
+async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: Request, current_user = Depends(get_current_user)):
     """Firma digitale della dichiarazione periodo di prova e genera PDF firmato"""
     if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
@@ -18402,7 +18402,49 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, current_u
     elements.append(Spacer(1, 6))
     elements.append(Paragraph(f"<b>{parent_name}</b>", ParagraphStyle('SignName', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', textColor=text_dark)))
     
-    elements.append(Spacer(1, 20))
+    # === METADATI DI FIRMA ===
+    elements.append(Spacer(1, 16))
+    
+    import hashlib
+    ip_address = get_real_ip(request)
+    user_agent = request.headers.get("user-agent", "unknown")
+    document_version = "TRIAL-DECL-v1.0"
+    timestamp_rome = now.strftime("%d/%m/%Y %H:%M:%S UTC")
+    
+    # Hash del contenuto del documento per integrità
+    hash_content = f"{parent_name}|{athlete_name}|{athlete_cf}|{now.isoformat()}|{society_name}"
+    document_hash = hashlib.sha256(hash_content.encode()).hexdigest()[:32]
+    
+    meta_header_style = ParagraphStyle('MetaHeader', parent=styles['Normal'], fontSize=9, fontName='Helvetica-Bold', textColor=HexColor('#2C3E50'))
+    meta_style = ParagraphStyle('MetaText', parent=styles['Normal'], fontSize=7.5, fontName='Courier', textColor=HexColor('#555555'), leading=11)
+    
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=border_color))
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph("METADATI DI FIRMA (validit\u00e0 probatoria)", meta_header_style))
+    elements.append(Spacer(1, 4))
+    
+    meta_data = [
+        [f"document_version: {document_version}", f"timestamp: {timestamp_rome}"],
+        [f"user_id: {current_user['id']}", f"society_id: {athlete.get('society_id', 'N/D')}"],
+        [f"hash_document: {document_hash}", f"ip_address: {ip_address}"],
+        [f"device_type: {user_agent[:70]}{'...' if len(user_agent) > 70 else ''}", ""],
+    ]
+    
+    meta_table = Table(meta_data, colWidths=[8*cm, 8*cm])
+    meta_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Courier'),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
+        ('TEXTCOLOR', (0, 0), (-1, -1), HexColor('#555555')),
+        ('BACKGROUND', (0, 0), (-1, -1), HexColor('#ECF0F1')),
+        ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#BDC3C7')),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    elements.append(meta_table)
+    
+    elements.append(Spacer(1, 14))
     elements.append(Paragraph(
         f"<i>Documento firmato digitalmente tramite RegistraTEAM per conto di {society_name}</i>",
         footer_style
