@@ -1811,7 +1811,12 @@ export default function AthleteDetail() {
                   <Ionicons name="calendar-outline" size={16} color="#1976D2" />
                   <Text style={{ fontSize: 13, color: '#333' }}>
                     Inizio: <Text style={{ fontWeight: '700' }}>{athlete.trial_start_date ? new Date(athlete.trial_start_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</Text>
-                    {'  '}Scadenza: <Text style={{ fontWeight: '700' }}>{athlete.trial_end_date ? new Date(athlete.trial_end_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</Text>
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <Ionicons name="calendar" size={16} color="#1976D2" />
+                  <Text style={{ fontSize: 13, color: '#333' }}>
+                    Scadenza: <Text style={{ fontWeight: '700' }}>{athlete.trial_end_date ? new Date(athlete.trial_end_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</Text>
                   </Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>

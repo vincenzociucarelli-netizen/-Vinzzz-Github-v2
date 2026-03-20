@@ -238,6 +238,8 @@ export default function AdminAthleteDetail() {
   // Compensation data (for compensated athletes)
   const [compensation, setCompensation] = useState<any>(null);
   const [compensationModalVisible, setCompensationModalVisible] = useState(false);
+  // Trial status data
+  const [trialStatus, setTrialStatus] = useState<any>(null);
   const [compensationAmount, setCompensationAmount] = useState('');
   const [compensationStartDate, setCompensationStartDate] = useState('');
   const [compensationEndDate, setCompensationEndDate] = useState('');
@@ -473,6 +475,16 @@ export default function AdminAthleteDetail() {
         setHasDataPassword(hasPassRes.data.has_password);
       } catch (e) {
         console.log('Could not check data password');
+      }
+      
+      // Load trial status if athlete is in trial
+      if (athleteData.status === 'trial' && athleteData.trial_start_date) {
+        try {
+          const trialRes = await api.get(`/athletes/${id}/trial-status`);
+          setTrialStatus(trialRes.data);
+        } catch (e) {
+          console.log('Could not load trial status');
+        }
       }
     } catch (error) {
       console.error('Error loading athlete data:', error);
@@ -1775,18 +1787,41 @@ export default function AdminAthleteDetail() {
                       {athlete.trial_start_date ? 'Periodo di prova attivo' : 'In attesa di inizio prova'}
                     </Text>
                     {athlete.trial_start_date && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                        <Ionicons name="calendar-outline" size={16} color="#1976D2" />
-                        <Text style={{ fontSize: 13, color: '#333' }}>
-                          Inizio: <Text style={{ fontWeight: '700' }}>{new Date(athlete.trial_start_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</Text>
-                          {'  '}Scadenza: <Text style={{ fontWeight: '700' }}>{athlete.trial_end_date ? new Date(athlete.trial_end_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</Text>
-                        </Text>
-                      </View>
+                      <>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <Ionicons name="calendar-outline" size={16} color="#1976D2" />
+                          <Text style={{ fontSize: 13, color: '#333' }}>
+                            Inizio: <Text style={{ fontWeight: '700' }}>{new Date(athlete.trial_start_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</Text>
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <Ionicons name="calendar" size={16} color="#1976D2" />
+                          <Text style={{ fontSize: 13, color: '#333' }}>
+                            Scadenza: <Text style={{ fontWeight: '700' }}>{athlete.trial_end_date ? new Date(athlete.trial_end_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</Text>
+                          </Text>
+                        </View>
+                        {trialStatus && (
+                          <>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                              <Ionicons name="fitness" size={16} color="#1976D2" />
+                              <Text style={{ fontSize: 13, color: '#333' }}>
+                                <Text style={{ fontWeight: '700' }}>{trialStatus.sessions_remaining}</Text> allenamenti disponibili ({trialStatus.sessions_count}/{trialStatus.max_sessions})
+                              </Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                              <Ionicons name="calendar" size={16} color="#1976D2" />
+                              <Text style={{ fontSize: 13, color: '#333' }}>
+                                <Text style={{ fontWeight: '700' }}>{trialStatus.days_remaining}</Text> giorni rimanenti
+                              </Text>
+                            </View>
+                          </>
+                        )}
+                      </>
                     )}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                      <Ionicons name="document-text" size={16} color={athlete.trial_start_date ? '#1976D2' : '#7B1FA2'} />
-                      <Text style={{ fontSize: 13, color: '#333' }}>
-                        Dichiarazione firmata: <Text style={{ fontWeight: '700', color: athlete.trial_document_generated ? '#4CAF50' : '#E53935' }}>{athlete.trial_document_generated ? 'Si' : 'No'}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <Ionicons name={athlete.trial_document_generated ? "checkmark-circle" : "close-circle"} size={16} color={athlete.trial_document_generated ? '#4CAF50' : '#E53935'} />
+                      <Text style={{ fontSize: 13, color: athlete.trial_document_generated ? '#4CAF50' : '#E53935', fontWeight: '600' }}>
+                        {athlete.trial_document_generated ? 'Dichiarazione di prova firmata' : 'Dichiarazione non ancora firmata'}
                       </Text>
                     </View>
                   </View>

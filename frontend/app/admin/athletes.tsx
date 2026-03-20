@@ -495,7 +495,9 @@ export default function AdminAthletes() {
 
   const getStatusColor = (item: Athlete) => {
     if (item.is_withdrawn) return '#FF3B30';
-    if (item.status === 'trial') return '#FF9500';
+    if (item.status === 'trial') {
+      return item.trial_start_date ? '#FF9500' : '#9C27B0';
+    }
     return '#34C759';
   };
 
