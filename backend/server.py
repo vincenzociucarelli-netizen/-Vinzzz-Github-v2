@@ -18424,6 +18424,47 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, current_u
     
     filename = f"Dichiarazione_Prova_Firmata_{athlete.get('last_name', '')}_{athlete.get('first_name', '')}.pdf"
     
+    # Send email with signed PDF to parent
+    try:
+        pdf_bytes = buffer.getvalue()
+        import base64 as b64_email
+        pdf_base64 = b64_email.b64encode(pdf_bytes).decode('utf-8')
+        
+        parent_email = parent.get("email", "") if parent else ""
+        parent_name = parent.get("full_name", "") if parent else ""
+        athlete_name = athlete.get("full_name", "")
+        
+        if parent_email:
+            html_content = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2 style="color: #7B1FA2;">Dichiarazione di Prova - {athlete_name}</h2>
+                <p>Gentile {parent_name},</p>
+                <p>In allegato la dichiarazione firmata per il periodo di prova.</p>
+                <p>Puoi sempre consultarla anche nell'app.</p>
+                <br>
+                <p style="color: #666; font-size: 12px;">
+                    {society_name}<br>
+                    Email generata automaticamente da RegistraTEAM
+                </p>
+            </body>
+            </html>
+            """
+            
+            await send_email_with_pdf(
+                to_email=parent_email,
+                subject=f"Dichiarazione di Prova firmata - {athlete_name}",
+                html_content=html_content,
+                pdf_base64=pdf_base64,
+                pdf_filename=filename,
+                to_name=parent_name
+            )
+            logging.info(f"Trial declaration email sent to {parent_email} for athlete {athlete_name}")
+    except Exception as e:
+        logging.warning(f"Could not send trial declaration email: {e}")
+    
+    buffer.seek(0)
+    
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
