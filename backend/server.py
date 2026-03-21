@@ -17765,37 +17765,65 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     from PIL import Image, ImageDraw, ImageFont
     import base64
     
-    # 9x5 cm at 300 DPI = 1063x591 px - compact: height adapts to content
-    W = 1004
-    
     PRIMARY = (21, 101, 192)
     DARK_TEXT = (26, 26, 46)
     MID_TEXT = (80, 80, 100)
     BG_COLOR = (255, 255, 255)
     
-    img = Image.new('RGB', (W, 700), BG_COLOR)
-    draw = ImageDraw.Draw(img)
-    draw.rectangle([(0, 0), (W, 6)], fill=PRIMARY)
-    
-    # Load fonts
     FONT_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
     FONT_REG = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
-    FONT_ITALIC = "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf"
     try:
-        font_role = ImageFont.truetype(FONT_ITALIC, 15)
         font_label = ImageFont.truetype(FONT_BOLD, 12)
         font_value = ImageFont.truetype(FONT_REG, 14)
         font_aff_value = ImageFont.truetype(FONT_BOLD, 13)
     except Exception:
-        font_role = ImageFont.load_default()
-        font_label = font_value = font_aff_value = font_role
+        font_label = ImageFont.load_default()
+        font_value = font_aff_value = font_label
     
-    # --- TOP SECTION: Logo + Society Name ---
     pad_x = 30
     top_y = 18
     logo_max = 70
+    
+    # --- Step 1: Measure name to determine card width ---
+    # Split name: line1 = main name, line2 = suffix (SSD...)
+    full_name = society.get("name", "Societa Sportiva")
+    name_upper = full_name.upper()
+    
+    # Split at "SSD" if present
+    ssd_idx = name_upper.find("SSD")
+    if ssd_idx > 0:
+        line1 = name_upper[:ssd_idx].strip()
+        line2 = name_upper[ssd_idx:].strip()
+    else:
+        line1 = name_upper
+        line2 = ""
+    
+    # Temp canvas to measure text
+    tmp_img = Image.new('RGB', (2000, 100), BG_COLOR)
+    tmp_draw = ImageDraw.Draw(tmp_img)
+    
+    title_font_size = 30
+    font_title = ImageFont.truetype(FONT_BOLD, title_font_size)
+    
+    # Measure line1 width for card width
+    bbox1 = tmp_draw.textbbox((0, 0), line1, font=font_title)
+    line1_w = bbox1[2] - bbox1[0]
+    
+    logo_right_edge = pad_x + logo_max + 14  # estimate with logo
+    name_x = logo_right_edge
+    
+    # Card width = logo + name + padding
+    W = name_x + line1_w + pad_x + 10
+    W = max(W, 600)  # minimum width for contact info
+    
+    # --- Step 2: Create actual canvas ---
+    img = Image.new('RGB', (W, 700), BG_COLOR)
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([(0, 0), (W, 6)], fill=PRIMARY)
+    
+    # --- Step 3: Logo ---
     logo_data = society.get("logo")
-    logo_right_edge = pad_x
+    actual_logo_right = pad_x
     
     if logo_data:
         try:
@@ -17807,69 +17835,40 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
             ratio = min(logo_max / w, logo_max / h)
             new_w, new_h = int(w * ratio), int(h * ratio)
             logo_img = logo_img.resize((new_w, new_h), Image.LANCZOS)
-            paste_x = pad_x
-            paste_y = top_y + (logo_max - new_h) // 2
             bg_patch = Image.new('RGB', (new_w, new_h), BG_COLOR)
             bg_patch.paste(logo_img, (0, 0), logo_img)
-            img.paste(bg_patch, (paste_x, paste_y))
-            logo_right_edge = pad_x + new_w + 14
+            img.paste(bg_patch, (pad_x, top_y + (logo_max - new_h) // 2))
+            actual_logo_right = pad_x + new_w + 14
         except Exception:
-            logo_right_edge = pad_x
+            actual_logo_right = pad_x
     
-    # Society name - bold, slightly smaller
-    short_name = society.get("name", "Societa Sportiva")
-    name_x = logo_right_edge
-    max_text_w = W - name_x - pad_x
+    name_x = actual_logo_right
     
-    title_font_size = 26
-    while title_font_size > 18:
-        test_font = ImageFont.truetype(FONT_BOLD, title_font_size)
-        bbox = draw.textbbox((0, 0), short_name.upper(), font=test_font)
-        if (bbox[2] - bbox[0]) <= max_text_w:
-            break
-        title_font_size -= 2
-    font_name_big = ImageFont.truetype(FONT_BOLD, title_font_size)
+    # --- Step 4: Name on 2 lines (same bold font) ---
+    draw.text((name_x, top_y + 4), line1, fill=DARK_TEXT, font=font_title)
+    cursor_y = top_y + title_font_size + 8
+    if line2:
+        draw.text((name_x, cursor_y), line2, fill=DARK_TEXT, font=font_title)
+        cursor_y += title_font_size + 6
     
-    draw.text((name_x, top_y + 4), short_name.upper(), fill=DARK_TEXT, font=font_name_big)
-    cursor_y = top_y + title_font_size + 12
-    
-    # Role only on the line below (skip user name if same as society)
-    role_map = {
-        "admin": "Amministratore",
-        "coach": "Allenatore",
-        "parent": "Genitore",
-        "dirigente": "Dirigente",
-        "viewer": "Dirigente",
-    }
-    user_name = current_user.get("full_name", "")
-    user_role = role_map.get(current_user.get("role", ""), current_user.get("role", ""))
-    
-    if user_name and user_name.strip().upper() != short_name.strip().upper():
-        font_user = ImageFont.truetype(FONT_REG, 15)
-        draw.text((name_x, cursor_y), user_name, fill=MID_TEXT, font=font_user)
-        cursor_y += 20
-    if user_role:
-        draw.text((name_x, cursor_y), user_role, fill=PRIMARY, font=font_role)
-        cursor_y += 20
-    
-    # Separator line
-    sep_y = max(top_y + logo_max + 10, cursor_y + 6)
+    # --- Step 5: Separator ---
+    sep_y = max(top_y + logo_max + 10, cursor_y + 4)
     draw.line([(pad_x, sep_y), (W - pad_x, sep_y)], fill=PRIMARY, width=2)
     
-    # --- CONTACT INFO in 2 columns (compact) ---
+    # --- Step 6: Contact info in 2 columns (NO cellulare) ---
     info_y = sep_y + 12
     col_left_x = pad_x
     col_right_x = W // 2 + 10
-    line_h = 36
+    line_h = 38
     
     def draw_info(x, y, label, value):
         if not value:
             return y
         draw.text((x, y), label.upper(), fill=PRIMARY, font=font_label)
-        draw.text((x, y + 14), str(value), fill=MID_TEXT, font=font_value)
+        draw.text((x, y + 15), str(value), fill=MID_TEXT, font=font_value)
         return y + line_h
     
-    # Left column
+    # Left column: Sede, CF/P.IVA, Presidente
     y_left = info_y
     addr_parts = []
     if society.get("address"):
@@ -17883,37 +17882,31 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
         loc_parts.append(f"({society['province']})")
     if loc_parts:
         addr_parts.append(" ".join(loc_parts))
-    addr_str = " - ".join(addr_parts) if addr_parts else ""
-    
-    y_left = draw_info(col_left_x, y_left, "Sede", addr_str)
+    y_left = draw_info(col_left_x, y_left, "Sede", " - ".join(addr_parts) if addr_parts else "")
     y_left = draw_info(col_left_x, y_left, "CF / P.IVA", society.get("fiscal_code", ""))
     y_left = draw_info(col_left_x, y_left, "Presidente", society.get("president_name", ""))
     
-    # Right column
+    # Right column: Email, PEC (NO cellulare)
     y_right = info_y
-    y_right = draw_info(col_right_x, y_right, "Cellulare", society.get("phone", ""))
-    if society.get("phone2"):
-        y_right = draw_info(col_right_x, y_right, "Telefono", society["phone2"])
     y_right = draw_info(col_right_x, y_right, "Email", society.get("email", ""))
     y_right = draw_info(col_right_x, y_right, "PEC", society.get("pec", ""))
     
-    # --- AFFILIATIONS only (no sport) ---
-    bottom_content_y = max(y_left, y_right) + 4
-    
+    # --- Step 7: Affiliations ---
+    bottom_y = max(y_left, y_right) + 4
     affiliations = society.get("affiliations", [])
     if affiliations:
-        draw.line([(pad_x, bottom_content_y), (W - pad_x, bottom_content_y)], fill=(220, 220, 225), width=1)
-        bottom_content_y += 10
-        draw.text((pad_x, bottom_content_y), "AFFILIAZIONI", fill=PRIMARY, font=font_label)
+        draw.line([(pad_x, bottom_y), (W - pad_x, bottom_y)], fill=(220, 220, 225), width=1)
+        bottom_y += 10
+        draw.text((pad_x, bottom_y), "AFFILIAZIONI", fill=PRIMARY, font=font_label)
         aff_x = pad_x + 110
         for aff in affiliations:
             aff_line = f"{aff.get('name', '')}: {aff.get('number', '')}"
-            draw.text((aff_x, bottom_content_y), aff_line, fill=MID_TEXT, font=font_aff_value)
+            draw.text((aff_x, bottom_y), aff_line, fill=MID_TEXT, font=font_aff_value)
             aff_x += draw.textbbox((0, 0), aff_line + "    ", font=font_aff_value)[2]
-        bottom_content_y += 22
+        bottom_y += 22
     
-    # Crop to content
-    final_h = bottom_content_y + 16
+    # --- Step 8: Crop ---
+    final_h = bottom_y + 16
     img = img.crop((0, 0, W, final_h))
     draw = ImageDraw.Draw(img)
     draw.rectangle([(0, final_h - 4), (W, final_h)], fill=PRIMARY)
@@ -17922,7 +17915,7 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     img.save(buffer, format='JPEG', quality=95, dpi=(300, 300))
     buffer.seek(0)
     
-    filename = f"Biglietto_{short_name.replace(' ', '_')}.jpg"
+    filename = f"Biglietto_{full_name.replace(' ', '_')}.jpg"
     return StreamingResponse(buffer, media_type="image/jpeg", headers={
         "Content-Disposition": f'attachment; filename="{filename}"',
         "Cache-Control": "no-cache, no-store, must-revalidate",
