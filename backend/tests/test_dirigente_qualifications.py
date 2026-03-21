@@ -14,7 +14,7 @@ import requests
 import os
 
 # Get base URL from environment - DO NOT add default URL
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://athlete-trial-sys.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://accesso-atleta-2024.preview.emergentagent.com').rstrip('/')
 
 # Test credentials from the review request
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"

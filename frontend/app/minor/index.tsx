@@ -133,7 +133,7 @@ export default function MinorDashboard() {
     >
       {/* Header */}
       <View style={styles.header} data-testid="minor-dashboard-header">
-        {/* Row 1: Society logo left + Sport icon right */}
+        {/* Row 1: Society logo left + Sport image right (bigger) */}
         <View style={styles.headerTop}>
           {data.society?.logo ? (
             <Image
@@ -142,32 +142,32 @@ export default function MinorDashboard() {
               resizeMode="contain"
             />
           ) : <View style={styles.societyLogoLarge} />}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            {data.society?.sport_image ? (
-              <Image
-                source={{ uri: data.society.sport_image.startsWith('data:') ? data.society.sport_image : `data:image/png;base64,${data.society.sport_image}` }}
-                style={styles.sportImage}
-                resizeMode="contain"
-              />
-            ) : data.society?.sport ? (
-              <View style={styles.sportBadge}>
-                <Ionicons name="fitness" size={22} color="#1565C0" />
-                <Text style={styles.sportText}>{data.society.sport}</Text>
-              </View>
-            ) : null}
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} data-testid="minor-logout-button">
-              <Ionicons name="log-out" size={22} color="#ff3b30" />
-            </TouchableOpacity>
-          </View>
+          {data.society?.sport_image ? (
+            <Image
+              source={{ uri: data.society.sport_image.startsWith('data:') ? data.society.sport_image : `data:image/png;base64,${data.society.sport_image}` }}
+              style={styles.sportImage}
+              resizeMode="contain"
+            />
+          ) : data.society?.sport ? (
+            <View style={styles.sportBadge}>
+              <Ionicons name="fitness" size={22} color="#1565C0" />
+              <Text style={styles.sportText}>{data.society.sport}</Text>
+            </View>
+          ) : null}
         </View>
         {/* Row 2: Society name - UPPERCASE and bold */}
         {data.society?.name && (
           <Text style={styles.societyNameHeader}>{data.society.name.toUpperCase()}</Text>
         )}
-        {/* Row 3: Welcome - first name capitalized */}
-        <Text style={styles.welcomeText}>Ciao, <Text style={styles.athleteName}>
-          {(data.athlete.first_name || '').charAt(0).toUpperCase() + (data.athlete.first_name || '').slice(1).toLowerCase()}
-        </Text></Text>
+        {/* Row 3: Welcome + Logout */}
+        <View style={styles.welcomeRow}>
+          <Text style={styles.welcomeText}>Ciao, <Text style={styles.athleteName}>
+            {(data.athlete.first_name || '').charAt(0).toUpperCase() + (data.athlete.first_name || '').slice(1).toLowerCase()}
+          </Text></Text>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} data-testid="minor-logout-button">
+            <Ionicons name="log-out" size={22} color="#ff3b30" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Status Banners Row */}
@@ -418,10 +418,15 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 10,
   },
+  welcomeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
   welcomeText: {
     fontSize: 16,
     color: '#888',
-    marginTop: 8,
   },
   athleteName: {
     fontSize: 20,
@@ -453,9 +458,9 @@ const styles = StyleSheet.create({
     color: '#1565C0',
   },
   sportImage: {
-    width: 52,
-    height: 52,
-    borderRadius: 10,
+    width: 70,
+    height: 70,
+    borderRadius: 12,
   },
   statusBannersRow: {
     flexDirection: 'row',
