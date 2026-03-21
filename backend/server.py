@@ -17755,7 +17755,7 @@ async def delete_my_data(current_user = Depends(get_current_user)):
 
 @api_router.get("/society/card-fiscale")
 async def generate_fiscal_card(current_user = Depends(get_current_user)):
-    """Genera immagine JPG biglietto da visita della societa (~9x5 cm)"""
+    """Genera immagine JPG biglietto da visita della societa"""
     society = await db.settings.find_one({"type": "society"})
     if not society:
         society = await db.societies.find_one({"id": current_user.get("society_id")})
@@ -17766,20 +17766,15 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     import base64
     
     # 9x5 cm at 300 DPI = 1063x591 px - compact: height adapts to content
-    W = 1063
+    W = 1004
     
-    # Colors
-    PRIMARY = (21, 101, 192)       # #1565C0
-    DARK_TEXT = (26, 26, 46)       # #1a1a2e
-    MID_TEXT = (80, 80, 100)       # #505064
-    LIGHT_TEXT = (130, 130, 145)   # #828291
+    PRIMARY = (21, 101, 192)
+    DARK_TEXT = (26, 26, 46)
+    MID_TEXT = (80, 80, 100)
     BG_COLOR = (255, 255, 255)
     
-    # Start with oversize canvas, crop to content at the end
-    img = Image.new('RGB', (W, 800), BG_COLOR)
+    img = Image.new('RGB', (W, 700), BG_COLOR)
     draw = ImageDraw.Draw(img)
-    
-    # Top accent bar
     draw.rectangle([(0, 0), (W, 6)], fill=PRIMARY)
     
     # Load fonts
@@ -17787,15 +17782,13 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     FONT_REG = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
     FONT_ITALIC = "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf"
     try:
-        font_user_name = ImageFont.truetype(FONT_REG, 17)
-        font_user_role = ImageFont.truetype(FONT_ITALIC, 14)
+        font_role = ImageFont.truetype(FONT_ITALIC, 15)
         font_label = ImageFont.truetype(FONT_BOLD, 12)
         font_value = ImageFont.truetype(FONT_REG, 14)
-        font_aff_label = ImageFont.truetype(FONT_BOLD, 12)
-        font_aff_value = ImageFont.truetype(FONT_REG, 13)
+        font_aff_value = ImageFont.truetype(FONT_BOLD, 13)
     except Exception:
-        font_user_name = ImageFont.load_default()
-        font_user_role = font_label = font_value = font_aff_label = font_aff_value = font_user_name
+        font_role = ImageFont.load_default()
+        font_label = font_value = font_aff_value = font_role
     
     # --- TOP SECTION: Logo + Society Name ---
     pad_x = 30
@@ -17823,14 +17816,13 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
         except Exception:
             logo_right_edge = pad_x
     
-    # Society name from 'name' field - BOLD and LARGE
+    # Society name - bold, slightly smaller
     short_name = society.get("name", "Societa Sportiva")
     name_x = logo_right_edge
     max_text_w = W - name_x - pad_x
     
-    # Auto-size title font, start large
-    title_font_size = 38
-    while title_font_size > 20:
+    title_font_size = 30
+    while title_font_size > 18:
         test_font = ImageFont.truetype(FONT_BOLD, title_font_size)
         bbox = draw.textbbox((0, 0), short_name.upper(), font=test_font)
         if (bbox[2] - bbox[0]) <= max_text_w:
@@ -17838,10 +17830,10 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
         title_font_size -= 2
     font_name_big = ImageFont.truetype(FONT_BOLD, title_font_size)
     
-    draw.text((name_x, top_y), short_name.upper(), fill=DARK_TEXT, font=font_name_big)
-    cursor_y = top_y + title_font_size + 4
+    draw.text((name_x, top_y + 4), short_name.upper(), fill=DARK_TEXT, font=font_name_big)
+    cursor_y = top_y + title_font_size + 12
     
-    # User name and role below
+    # Role only on the line below (skip user name if same as society)
     role_map = {
         "admin": "Amministratore",
         "coach": "Allenatore",
@@ -17852,12 +17844,13 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     user_name = current_user.get("full_name", "")
     user_role = role_map.get(current_user.get("role", ""), current_user.get("role", ""))
     
-    if user_name:
-        draw.text((name_x, cursor_y), user_name, fill=MID_TEXT, font=font_user_name)
+    if user_name and user_name.strip().upper() != short_name.strip().upper():
+        font_user = ImageFont.truetype(FONT_REG, 15)
+        draw.text((name_x, cursor_y), user_name, fill=MID_TEXT, font=font_user)
         cursor_y += 20
     if user_role:
-        draw.text((name_x, cursor_y), user_role, fill=PRIMARY, font=font_user_role)
-        cursor_y += 18
+        draw.text((name_x, cursor_y), user_role, fill=PRIMARY, font=font_role)
+        cursor_y += 20
     
     # Separator line
     sep_y = max(top_y + logo_max + 10, cursor_y + 6)
@@ -17904,42 +17897,25 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     y_right = draw_info(col_right_x, y_right, "Email", society.get("email", ""))
     y_right = draw_info(col_right_x, y_right, "PEC", society.get("pec", ""))
     
-    # --- BOTTOM: Sport + Affiliations ---
-    bottom_content_y = max(y_left, y_right) + 6
+    # --- AFFILIATIONS only (no sport) ---
+    bottom_content_y = max(y_left, y_right) + 4
     
-    # Thin separator before affiliations
-    draw.line([(pad_x, bottom_content_y), (W - pad_x, bottom_content_y)], fill=(220, 220, 225), width=1)
-    bottom_content_y += 10
-    
-    # Sport type on the left
-    sport = society.get("sport_praticato") or society.get("sport", "")
-    if sport:
-        draw.text((pad_x, bottom_content_y), "SPORT", fill=PRIMARY, font=font_label)
-        draw.text((pad_x, bottom_content_y + 14), sport, fill=MID_TEXT, font=font_value)
-    
-    # Affiliations on the right
     affiliations = society.get("affiliations", [])
-    aff_bottom_y = bottom_content_y
     if affiliations:
-        aff_x = col_right_x
-        draw.text((aff_x, bottom_content_y), "AFFILIAZIONI", fill=PRIMARY, font=font_label)
-        aff_y = bottom_content_y + 16
+        draw.line([(pad_x, bottom_content_y), (W - pad_x, bottom_content_y)], fill=(220, 220, 225), width=1)
+        bottom_content_y += 10
+        draw.text((pad_x, bottom_content_y), "AFFILIAZIONI", fill=PRIMARY, font=font_label)
+        aff_x = pad_x + 110
         for aff in affiliations:
-            aff_name = aff.get("name", "")
-            aff_num = aff.get("number", "")
-            aff_line = f"{aff_name}: {aff_num}"
-            draw.text((aff_x, aff_y), aff_line, fill=MID_TEXT, font=font_aff_value)
-            aff_y += 18
-        aff_bottom_y = max(aff_bottom_y, aff_y)
+            aff_line = f"{aff.get('name', '')}: {aff.get('number', '')}"
+            draw.text((aff_x, bottom_content_y), aff_line, fill=MID_TEXT, font=font_aff_value)
+            aff_x += draw.textbbox((0, 0), aff_line + "    ", font=font_aff_value)[2]
+        bottom_content_y += 22
     
-    # Calculate final height: crop to content + padding + bottom bar
-    final_h = max(aff_bottom_y, bottom_content_y + 30) + 20
-    
-    # Crop canvas to final height
+    # Crop to content
+    final_h = bottom_content_y + 16
     img = img.crop((0, 0, W, final_h))
     draw = ImageDraw.Draw(img)
-    
-    # Bottom accent bar (on cropped image)
     draw.rectangle([(0, final_h - 4), (W, final_h)], fill=PRIMARY)
     
     buffer = io.BytesIO()

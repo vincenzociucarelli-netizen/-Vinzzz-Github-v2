@@ -7,7 +7,6 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
-  FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../../src/services/api';
@@ -249,13 +248,11 @@ export default function CoachTeamAthletes() {
                   </View>
                 </View>
               </View>
-              <FlatList
-                data={sortedAthletes}
-                renderItem={renderAthleteItem}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-                removeClippedSubviews={false}
-              />
+              {sortedAthletes.map((item) => (
+                <React.Fragment key={item.id}>
+                  {renderAthleteItem({ item })}
+                </React.Fragment>
+              ))}
             </>
           )}
         </View>
