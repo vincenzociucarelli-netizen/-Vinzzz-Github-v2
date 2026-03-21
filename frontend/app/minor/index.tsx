@@ -133,7 +133,7 @@ export default function MinorDashboard() {
     >
       {/* Header */}
       <View style={styles.header} data-testid="minor-dashboard-header">
-        {/* Row 1: Logo centered + logout button */}
+        {/* Row 1: Society logo left + Sport icon right */}
         <View style={styles.headerTop}>
           {data.society?.logo ? (
             <Image
@@ -142,16 +142,26 @@ export default function MinorDashboard() {
               resizeMode="contain"
             />
           ) : <View style={styles.societyLogoLarge} />}
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} data-testid="minor-logout-button">
-            <Ionicons name="log-out" size={22} color="#ff3b30" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            {data.society?.sport && (
+              <View style={styles.sportBadge}>
+                <Ionicons name="fitness" size={22} color="#1565C0" />
+                <Text style={styles.sportText}>{data.society.sport}</Text>
+              </View>
+            )}
+            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} data-testid="minor-logout-button">
+              <Ionicons name="log-out" size={22} color="#ff3b30" />
+            </TouchableOpacity>
+          </View>
         </View>
-        {/* Row 2: Society name */}
-        {data.society && (
-          <Text style={styles.societyNameHeader}>{data.society.name}</Text>
+        {/* Row 2: Society name - UPPERCASE and bold */}
+        {data.society?.name && (
+          <Text style={styles.societyNameHeader}>{data.society.name.toUpperCase()}</Text>
         )}
-        {/* Row 3: Welcome */}
-        <Text style={styles.welcomeText}>Ciao, <Text style={styles.athleteName}>{data.athlete.first_name}</Text></Text>
+        {/* Row 3: Welcome - first name capitalized */}
+        <Text style={styles.welcomeText}>Ciao, <Text style={styles.athleteName}>
+          {(data.athlete.first_name || '').charAt(0).toUpperCase() + (data.athlete.first_name || '').slice(1).toLowerCase()}
+        </Text></Text>
       </View>
 
       {/* Status Banners Row */}
@@ -416,10 +426,25 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   societyNameHeader: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     color: '#1565C0',
     marginTop: 6,
+    letterSpacing: 0.5,
+  },
+  sportBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  sportText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1565C0',
   },
   statusBannersRow: {
     flexDirection: 'row',

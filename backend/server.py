@@ -18713,10 +18713,10 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
                 "warmup_session": team.get("warmup_session"),
             }
     
-    # Society info
-    society = None
-    if athlete.get("society_id"):
-        society = await db.societies.find_one({"id": athlete["society_id"]}, {"_id": 0, "name": 1, "logo": 1, "sport_type": 1})
+    # Society info - try settings first, then societies collection
+    society = await db.settings.find_one({"type": "society"}, {"_id": 0, "name": 1, "logo": 1, "sport_praticato": 1, "sport": 1})
+    if not society and athlete.get("society_id"):
+        society = await db.societies.find_one({"id": athlete["society_id"]}, {"_id": 0, "name": 1, "logo": 1, "sport_praticato": 1, "sport": 1})
     
     # Attendance stats
     week_start = datetime.now() - timedelta(days=datetime.now().weekday())
@@ -18788,7 +18788,7 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
         "society": {
             "name": society.get("name") if society else None,
             "logo": society.get("logo") if society else None,
-            "sport_type": society.get("sport_type") if society else None,
+            "sport": society.get("sport_praticato") or society.get("sport") if society else None,
         } if society else None,
         "stats": {
             "total_attendances": total_attendances,
