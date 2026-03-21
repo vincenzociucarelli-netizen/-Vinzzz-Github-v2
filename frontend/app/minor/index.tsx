@@ -143,12 +143,18 @@ export default function MinorDashboard() {
             />
           ) : <View style={styles.societyLogoLarge} />}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            {data.society?.sport && (
+            {data.society?.sport_image ? (
+              <Image
+                source={{ uri: data.society.sport_image.startsWith('data:') ? data.society.sport_image : `data:image/png;base64,${data.society.sport_image}` }}
+                style={styles.sportImage}
+                resizeMode="contain"
+              />
+            ) : data.society?.sport ? (
               <View style={styles.sportBadge}>
                 <Ionicons name="fitness" size={22} color="#1565C0" />
                 <Text style={styles.sportText}>{data.society.sport}</Text>
               </View>
-            )}
+            ) : null}
             <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} data-testid="minor-logout-button">
               <Ionicons name="log-out" size={22} color="#ff3b30" />
             </TouchableOpacity>
@@ -445,6 +451,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#1565C0',
+  },
+  sportImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
   },
   statusBannersRow: {
     flexDirection: 'row',
