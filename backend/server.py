@@ -833,6 +833,11 @@ class Athlete(BaseModel):
     # Fine periodo di prova
     end_trial_requested: bool = False  # True se atleta/genitore ha richiesto fine prova
     end_trial_requested_date: Optional[datetime] = None  # Data richiesta fine prova
+    # Cancellazione
+    deletion_requested: bool = False
+    deletion_requested_at: Optional[datetime] = None
+    deletion_requested_by: Optional[str] = None
+    deletion_requested_by_name: Optional[str] = None
 
 class AthleteCreate(BaseModel):
     full_name: str
@@ -5290,6 +5295,8 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
     
     # Helper function to parse date in multiple formats
     def parse_date(date_str: str) -> datetime:
+        if not date_str:
+            return None
         # Try DD/MM/YYYY format first
         if '/' in date_str:
             parts = date_str.split('/')
@@ -7821,6 +7828,79 @@ async def transform_athlete_photo(athlete_id: str, data: ImageTransformRequest, 
     raise HTTPException(status_code=410, detail="Funzionalità foto profilo rimossa per privacy")
 
 
+@api_router.get("/athletes/{athlete_id}/deletion-check")
+async def check_deletion_obligations(athlete_id: str, current_user = Depends(get_current_user)):
+    """Pre-check: verifica obblighi amministrativi prima della cancellazione"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.PARENT]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # 1. Pagamenti non saldati
+    unpaid_payments = await db.payments.find({"athlete_id": athlete_id, "paid": False}).to_list(1000)
+    unpaid_total = sum(p.get("amount", 0) for p in unpaid_payments)
+    
+    # 2. Documenti fiscali gia emessi (compensi, ricevute, soglie)
+    fiscal_doc_types = [
+        "compensation_receipt", "collaboratore_compensation_receipt",
+        "threshold_declaration_5000", "threshold_declaration_15000",
+        "threshold_5000_communication", "threshold_15000_communication",
+    ]
+    fiscal_docs = await db.signed_documents.find({
+        "related_entity_id": athlete_id,
+        "document_type": {"$in": fiscal_doc_types}
+    }).to_list(1000)
+    
+    # 3. Compensi collaboratore (se atleta e anche collaboratore)
+    compensations = await db.collaboratore_compensations.find({"collaboratore_id": athlete_id}).to_list(1000)
+    
+    # 4. Check genitore - ha altri figli?
+    parent_id = athlete.get("parent_id")
+    parent_has_other_children = False
+    parent_can_be_deleted = False
+    if parent_id:
+        other_children = await db.athletes.count_documents({"parent_id": parent_id, "id": {"$ne": athlete_id}})
+        # Check also as second_parent
+        other_children += await db.athletes.count_documents({"second_parent_id": parent_id, "id": {"$ne": athlete_id}})
+        parent_has_other_children = other_children > 0
+        parent_can_be_deleted = not parent_has_other_children
+    
+    has_obligations = bool(unpaid_payments) or bool(fiscal_docs) or bool(compensations)
+    
+    return {
+        "athlete_id": athlete_id,
+        "athlete_name": athlete.get("full_name", ""),
+        "has_obligations": has_obligations,
+        "obligations": {
+            "unpaid_payments": {
+                "count": len(unpaid_payments),
+                "total": unpaid_total,
+                "details": [{"id": p["id"], "amount": p.get("amount", 0), "description": p.get("description", "")} for p in unpaid_payments],
+            },
+            "fiscal_documents": {
+                "count": len(fiscal_docs),
+                "types": list(set(d.get("document_type", "") for d in fiscal_docs)),
+            },
+            "compensations": {
+                "count": len(compensations),
+            },
+        },
+        "parent_info": {
+            "parent_id": parent_id,
+            "parent_has_other_children": parent_has_other_children,
+            "parent_can_be_deleted": parent_can_be_deleted,
+        },
+        "data_to_delete": {
+            "attendances": await db.attendances.count_documents({"athlete_id": athlete_id}),
+            "certificates": await db.certificates.count_documents({"athlete_id": athlete_id}),
+            "signed_documents": await db.signed_documents.count_documents({"related_entity_id": athlete_id}),
+            "payments": await db.payments.count_documents({"athlete_id": athlete_id}),
+        },
+    }
+
+
 @api_router.post("/athletes/{athlete_id}/request-deletion")
 async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_current_user)):
     """Request deletion of an athlete - sends notification to admin"""
@@ -7828,19 +7908,24 @@ async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_c
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Check permissions - only parent of the athlete can request deletion (primary or second)
+    # Check permissions - only parent or adult athlete can request
     if current_user["role"] == UserRole.PARENT:
         is_primary = athlete.get("parent_id") == current_user["id"]
         is_second = athlete.get("second_parent_id") == current_user["id"]
         if not is_primary and not is_second:
             raise HTTPException(status_code=403, detail="Accesso negato")
+    elif current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    if athlete.get("deletion_requested"):
+        raise HTTPException(status_code=400, detail="Richiesta di cancellazione gia inviata")
     
     # Mark athlete for deletion request
     await db.athletes.update_one(
         {"id": athlete_id},
         {"$set": {
             "deletion_requested": True,
-            "deletion_requested_at": datetime.utcnow(),
+            "deletion_requested_at": datetime.now(timezone.utc),
             "deletion_requested_by": current_user["id"],
             "deletion_requested_by_name": current_user.get("full_name", current_user.get("email", ""))
         }}
@@ -7884,22 +7969,94 @@ async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_c
 
 @api_router.post("/athletes/{athlete_id}/approve-deletion")
 async def approve_athlete_deletion(athlete_id: str, current_user = Depends(get_current_user)):
-    """Approve deletion request and delete the athlete - admin only"""
+    """Approve deletion request - admin verifies obligations and deletes"""
     if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può approvare le cancellazioni")
+        raise HTTPException(status_code=403, detail="Solo admin puo approvare le cancellazioni")
     
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Audit log - who approved and executed the deletion (log BEFORE deleting)
     athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}"
     requester_name = athlete.get("deletion_requested_by_name", "N/D")
+    parent_id = athlete.get("parent_id")
+    society_id = athlete.get("society_id") or current_user.get("society_id", "")
+    
+    # Check administrative obligations
+    unpaid_payments = await db.payments.find({"athlete_id": athlete_id, "paid": False}).to_list(1000)
+    fiscal_doc_types = [
+        "compensation_receipt", "collaboratore_compensation_receipt",
+        "threshold_declaration_5000", "threshold_declaration_15000",
+        "threshold_5000_communication", "threshold_15000_communication",
+    ]
+    fiscal_docs = await db.signed_documents.find({
+        "related_entity_id": athlete_id,
+        "document_type": {"$in": fiscal_doc_types}
+    }).to_list(1000)
+    compensations = await db.collaboratore_compensations.find({"collaboratore_id": athlete_id}).to_list(1000)
+    
+    has_obligations = bool(unpaid_payments) or bool(fiscal_docs) or bool(compensations)
+    archived_data = {}
+    
+    if has_obligations:
+        # Archive minimum data for legal compliance before deleting rest
+        archived_record = {
+            "id": str(uuid.uuid4()),
+            "original_athlete_id": athlete_id,
+            "athlete_name": athlete_name,
+            "athlete_fiscal_code": athlete.get("fiscal_code", ""),
+            "athlete_birth_date": athlete.get("birth_date", ""),
+            "society_id": society_id,
+            "parent_id": parent_id,
+            "parent_name": "",
+            "archived_at": datetime.now(timezone.utc),
+            "archived_by": current_user["id"],
+            "archived_by_name": current_user.get("full_name", ""),
+            "reason": "deletion_request_with_obligations",
+            "unpaid_payments": [
+                {"id": p["id"], "amount": p.get("amount", 0), "description": p.get("description", ""), "due_date": p.get("due_date", "")}
+                for p in unpaid_payments
+            ],
+            "fiscal_document_ids": [d["id"] for d in fiscal_docs],
+            "compensation_ids": [c["id"] for c in compensations],
+        }
+        # Fetch parent name
+        if parent_id:
+            parent = await db.users.find_one({"id": parent_id})
+            if parent:
+                archived_record["parent_name"] = parent.get("full_name", "")
+        
+        await db.archived_deletions.insert_one(archived_record)
+        archived_data = {
+            "unpaid_payments_count": len(unpaid_payments),
+            "fiscal_documents_preserved": len(fiscal_docs),
+            "compensations_preserved": len(compensations),
+        }
+        # Keep fiscal documents and compensations, delete the rest
+        non_fiscal_doc_types = [t for t in await db.signed_documents.distinct("document_type", {"related_entity_id": athlete_id}) if t not in fiscal_doc_types]
+        if non_fiscal_doc_types:
+            await db.signed_documents.delete_many({"related_entity_id": athlete_id, "document_type": {"$in": non_fiscal_doc_types}})
+    else:
+        # No obligations - delete everything
+        await db.signed_documents.delete_many({"related_entity_id": athlete_id})
+        await db.collaboratore_compensations.delete_many({"collaboratore_id": athlete_id})
+    
+    # Always delete these (non-fiscal)
+    await db.certificates.delete_many({"athlete_id": athlete_id})
+    await db.attendances.delete_many({"athlete_id": athlete_id})
+    
+    # Delete payments that are paid (keep unpaid for obligations)
+    if has_obligations:
+        await db.payments.delete_many({"athlete_id": athlete_id, "paid": True})
+    else:
+        await db.payments.delete_many({"athlete_id": athlete_id})
+    
+    # Audit log BEFORE deleting athlete
     await log_audit(
         action="deletion_approved",
         user_id=current_user["id"],
         user_email=current_user.get("email", ""),
-        society_id=current_user.get("society_id", ""),
+        society_id=society_id,
         target_user_id=athlete_id,
         target_user_name=athlete_name,
         details={
@@ -7909,19 +8066,73 @@ async def approve_athlete_deletion(athlete_id: str, current_user = Depends(get_c
             "originally_requested_by": athlete.get("deletion_requested_by", ""),
             "originally_requested_by_name": requester_name,
             "originally_requested_at": str(athlete.get("deletion_requested_at", "")),
-            "deleted_data": ["certificates", "payments", "attendances", "athlete_record"],
+            "had_obligations": has_obligations,
+            "archived_data": archived_data,
         }
     )
     
-    # Delete all related data
-    await db.certificates.delete_many({"athlete_id": athlete_id})
-    await db.payments.delete_many({"athlete_id": athlete_id})
-    await db.attendances.delete_many({"athlete_id": athlete_id})
-    
-    # Delete the athlete
+    # Delete athlete record
     await db.athletes.delete_one({"id": athlete_id})
     
-    return {"message": "Atleta eliminato con successo"}
+    # Check if parent account should be deleted
+    parent_deleted = False
+    if parent_id:
+        other_children_primary = await db.athletes.count_documents({"parent_id": parent_id})
+        other_children_second = await db.athletes.count_documents({"second_parent_id": parent_id})
+        total_children = other_children_primary + other_children_second
+        
+        if total_children == 0:
+            # Check parent fiscal obligations
+            parent_fiscal_docs = await db.signed_documents.find({
+                "signer_id": parent_id,
+                "document_type": {"$in": fiscal_doc_types}
+            }).to_list(100)
+            parent_compensations = await db.collaboratore_compensations.find({"collaboratore_id": parent_id}).to_list(100)
+            
+            if not parent_fiscal_docs and not parent_compensations:
+                # Delete parent account
+                await db.users.delete_one({"id": parent_id})
+                await db.signed_documents.delete_many({"signer_id": parent_id})
+                parent_deleted = True
+                await log_audit(
+                    action="parent_account_deleted",
+                    user_id=current_user["id"],
+                    user_email=current_user.get("email", ""),
+                    society_id=society_id,
+                    target_user_id=parent_id,
+                    details={
+                        "reason": "no_other_children_no_obligations",
+                        "triggered_by_athlete_deletion": athlete_id,
+                    }
+                )
+    
+    # Notify requester if possible (via admin notification system)
+    if athlete.get("deletion_requested_by"):
+        await db.admin_notifications.insert_one({
+            "id": str(ObjectId()),
+            "society_id": society_id,
+            "admin_id": athlete.get("deletion_requested_by"),
+            "type": "deletion_approved",
+            "title": "Cancellazione approvata",
+            "message": f"La cancellazione dei dati dell'atleta {athlete_name} e stata approvata ed eseguita.",
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "entity_type": "athlete",
+            "entity_id": athlete_id,
+        })
+    
+    result_msg = f"Atleta {athlete_name} eliminato con successo."
+    if has_obligations:
+        result_msg += " Alcuni dati fiscali sono stati archiviati per obblighi di legge."
+    if parent_deleted:
+        result_msg += " Account genitore eliminato (nessun altro figlio e nessun obbligo)."
+    
+    return {
+        "message": result_msg,
+        "had_obligations": has_obligations,
+        "archived_data": archived_data,
+        "parent_deleted": parent_deleted,
+    }
 
 @api_router.post("/athletes/{athlete_id}/reject-deletion")
 async def reject_athlete_deletion(athlete_id: str, current_user = Depends(get_current_user)):

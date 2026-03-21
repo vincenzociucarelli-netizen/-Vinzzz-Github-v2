@@ -318,6 +318,9 @@ export default function AthleteDetail() {
   const [endTrialStatus, setEndTrialStatus] = useState<any>(null);
   const [requestingEndTrial, setRequestingEndTrial] = useState(false);
   const [showEndTrialChoice, setShowEndTrialChoice] = useState(false);
+  const [deletionCheck, setDeletionCheck] = useState<any>(null);
+  const [requestingDeletion, setRequestingDeletion] = useState(false);
+  const [showDeletionConfirm, setShowDeletionConfirm] = useState(false);
 
   // Helper function for alerts
   const showAlert = (title: string, message: string) => {
@@ -1271,6 +1274,35 @@ export default function AthleteDetail() {
     }
   };
 
+  const handleShowDeletionOption = async () => {
+    if (!athlete) return;
+    try {
+      const res = await api.get(`/athletes/${athlete.id}/deletion-check`);
+      setDeletionCheck(res.data);
+      setShowDeletionConfirm(true);
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il controllo');
+    }
+  };
+
+  const handleRequestDeletion = async () => {
+    if (!athlete) return;
+    setRequestingDeletion(true);
+    try {
+      await api.post(`/athletes/${athlete.id}/request-deletion`);
+      setShowDeletionConfirm(false);
+      setShowEndTrialChoice(false);
+      // Reload athlete to show deletion_requested state
+      const res = await api.get(`/athletes/${athlete.id}`);
+      setAthlete(res.data);
+      showAlert('Richiesta Inviata', 'La richiesta di cancellazione e stata inviata all\'amministratore. Verrai contattato quando sara elaborata.');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la richiesta');
+    } finally {
+      setRequestingDeletion(false);
+    }
+  };
+
   const formatDateForDisplay = (isoDate: string) => {
     // Converti da ISO a GG/MM/AAAA
     try {
@@ -1851,6 +1883,19 @@ export default function AthleteDetail() {
                 </TouchableOpacity>
               )}
             </>
+          )}
+
+          {/* Banner - Richiesta cancellazione in attesa */}
+          {athlete.deletion_requested && (
+            <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#C62828', marginBottom: 12 }} data-testid="deletion-pending-banner">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <Ionicons name="time" size={18} color="#C62828" />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#C62828' }}>Cancellazione in attesa</Text>
+              </View>
+              <Text style={{ fontSize: 12, color: '#555', lineHeight: 18 }}>
+                La richiesta di cancellazione e stata inviata all'amministratore. In attesa di approvazione.
+              </Text>
+            </View>
           )}
 
           {/* In prova ATTIVA (ARANCIONE/BLU) */}
@@ -2829,62 +2874,202 @@ export default function AthleteDetail() {
         visible={showEndTrialChoice}
         animationType="fade"
         transparent={true}
-        onRequestClose={() => setShowEndTrialChoice(false)}
+        onRequestClose={() => { setShowEndTrialChoice(false); setShowDeletionConfirm(false); }}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }} style={{ width: '100%' }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, overflow: 'hidden' }}>
             {/* Header */}
             <View style={{ backgroundColor: '#0D47A1', paddingVertical: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Fine Periodo di Prova</Text>
-              <TouchableOpacity onPress={() => setShowEndTrialChoice(false)} data-testid="end-trial-choice-close">
+              <TouchableOpacity onPress={() => { setShowEndTrialChoice(false); setShowDeletionConfirm(false); }} data-testid="end-trial-choice-close">
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
-            <View style={{ padding: 20 }}>
-              <Text style={{ fontSize: 14, color: '#333', lineHeight: 22, marginBottom: 16 }}>
-                Per diventare membro effettivo della societa, dovrai completare 3 passaggi obbligatori:
-              </Text>
-              <View style={{ backgroundColor: '#E3F2FD', borderRadius: 10, padding: 14, marginBottom: 16 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>1</Text>
+
+            {!showDeletionConfirm ? (
+              <View style={{ padding: 20 }}>
+                <Text style={{ fontSize: 14, color: '#333', lineHeight: 22, marginBottom: 20 }}>
+                  Il periodo di prova sta per concludersi. Cosa vuoi fare?
+                </Text>
+
+                {/* Option 1: Voglio restare */}
+                <View style={{ backgroundColor: '#E3F2FD', borderRadius: 12, padding: 16, marginBottom: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <Ionicons name="heart-circle" size={22} color="#1565C0" />
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0' }}>Voglio restare</Text>
                   </View>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#1565C0' }}>Inserire data scadenza certificato medico</Text>
+                  <Text style={{ fontSize: 12, color: '#555', lineHeight: 18, marginBottom: 10 }}>
+                    Per diventare membro effettivo, dovrai completare 3 passaggi:
+                  </Text>
+                  <View style={{ marginLeft: 4, marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>1</Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: '#1565C0', fontWeight: '500' }}>Inserire data scadenza certificato medico</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>2</Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: '#1565C0', fontWeight: '500' }}>Verifica certificato da parte dell'admin</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>3</Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: '#1565C0', fontWeight: '500' }}>Firma del documento privacy GDPR</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: requestingEndTrial ? '#90CAF9' : '#0D47A1',
+                      borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+                      flexDirection: 'row', justifyContent: 'center', gap: 8,
+                    }}
+                    onPress={handleRequestEndTrial}
+                    disabled={requestingEndTrial}
+                    data-testid="confirm-end-trial-btn"
+                  >
+                    {requestingEndTrial ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                    )}
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                      {requestingEndTrial ? 'Invio...' : 'Voglio restare'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>2</Text>
-                  </View>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#1565C0' }}>Verifica certificato da parte dell'admin</Text>
+
+                {/* Separator */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: '#E0E0E0' }} />
+                  <Text style={{ marginHorizontal: 12, color: '#999', fontSize: 12 }}>oppure</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: '#E0E0E0' }} />
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>3</Text>
+
+                {/* Option 2: Me ne vado */}
+                <View style={{ backgroundColor: '#FFF3E0', borderRadius: 12, padding: 16 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <Ionicons name="exit-outline" size={22} color="#E65100" />
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100' }}>Me ne vado</Text>
                   </View>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#1565C0' }}>Firma del documento privacy GDPR</Text>
+                  <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18, marginBottom: 10 }}>
+                    Tutti i dati dell'atleta verranno cancellati (presenze, documenti, certificati). L'admin dovra approvare la richiesta.
+                  </Text>
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: '#E65100',
+                      borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+                      flexDirection: 'row', justifyContent: 'center', gap: 8,
+                    }}
+                    onPress={handleShowDeletionOption}
+                    data-testid="show-deletion-btn"
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Richiedi cancellazione</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-              <TouchableOpacity
-                style={{
-                  backgroundColor: requestingEndTrial ? '#90CAF9' : '#0D47A1',
-                  borderRadius: 10, paddingVertical: 14, alignItems: 'center',
-                  flexDirection: 'row', justifyContent: 'center', gap: 8,
-                }}
-                onPress={handleRequestEndTrial}
-                disabled={requestingEndTrial}
-                data-testid="confirm-end-trial-btn"
-              >
-                {requestingEndTrial ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+            ) : (
+              /* Deletion Confirmation View */
+              <View style={{ padding: 20 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                  <Ionicons name="warning" size={24} color="#C62828" />
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#C62828' }}>Conferma Cancellazione</Text>
+                </View>
+
+                {deletionCheck?.has_obligations && (
+                  <View style={{ backgroundColor: '#FFF8E1', borderRadius: 10, padding: 14, marginBottom: 14, borderLeftWidth: 3, borderLeftColor: '#FF8F00' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <Ionicons name="alert-circle" size={18} color="#FF8F00" />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#FF8F00' }}>Obblighi amministrativi rilevati</Text>
+                    </View>
+                    {deletionCheck.obligations.unpaid_payments.count > 0 && (
+                      <Text style={{ fontSize: 12, color: '#795548', marginBottom: 4 }}>
+                        - {deletionCheck.obligations.unpaid_payments.count} pagamenti non saldati (totale: {deletionCheck.obligations.unpaid_payments.total.toFixed(2)} EUR)
+                      </Text>
+                    )}
+                    {deletionCheck.obligations.fiscal_documents.count > 0 && (
+                      <Text style={{ fontSize: 12, color: '#795548', marginBottom: 4 }}>
+                        - {deletionCheck.obligations.fiscal_documents.count} documenti fiscali gia emessi
+                      </Text>
+                    )}
+                    {deletionCheck.obligations.compensations.count > 0 && (
+                      <Text style={{ fontSize: 12, color: '#795548', marginBottom: 4 }}>
+                        - {deletionCheck.obligations.compensations.count} compensi registrati
+                      </Text>
+                    )}
+                    <Text style={{ fontSize: 11, color: '#999', marginTop: 4, fontStyle: 'italic' }}>
+                      I dati minimi necessari per obblighi di legge verranno conservati.
+                    </Text>
+                  </View>
                 )}
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
-                  {requestingEndTrial ? 'Invio...' : 'Conferma - Voglio restare'}
+
+                <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#C62828', marginBottom: 8 }}>Dati che verranno eliminati:</Text>
+                  {deletionCheck && (
+                    <>
+                      <Text style={{ fontSize: 12, color: '#555', marginBottom: 2 }}>- Record atleta</Text>
+                      {deletionCheck.data_to_delete.attendances > 0 && (
+                        <Text style={{ fontSize: 12, color: '#555', marginBottom: 2 }}>- {deletionCheck.data_to_delete.attendances} presenze</Text>
+                      )}
+                      {deletionCheck.data_to_delete.certificates > 0 && (
+                        <Text style={{ fontSize: 12, color: '#555', marginBottom: 2 }}>- {deletionCheck.data_to_delete.certificates} certificati</Text>
+                      )}
+                      {deletionCheck.data_to_delete.signed_documents > 0 && (
+                        <Text style={{ fontSize: 12, color: '#555', marginBottom: 2 }}>- {deletionCheck.data_to_delete.signed_documents} documenti firmati</Text>
+                      )}
+                      {deletionCheck.data_to_delete.payments > 0 && (
+                        <Text style={{ fontSize: 12, color: '#555', marginBottom: 2 }}>- {deletionCheck.data_to_delete.payments} pagamenti</Text>
+                      )}
+                    </>
+                  )}
+                  {deletionCheck?.parent_info?.parent_can_be_deleted && (
+                    <Text style={{ fontSize: 12, color: '#C62828', fontWeight: '600', marginTop: 6 }}>
+                      Anche l'account genitore verra eliminato (nessun altro figlio iscritto).
+                    </Text>
+                  )}
+                </View>
+
+                <Text style={{ fontSize: 12, color: '#888', lineHeight: 18, marginBottom: 16, textAlign: 'center' }}>
+                  La richiesta sara inviata all'amministratore per l'approvazione.
                 </Text>
-              </TouchableOpacity>
-            </View>
+
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: '#E0E0E0', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
+                    onPress={() => setShowDeletionConfirm(false)}
+                    data-testid="cancel-deletion-btn"
+                  >
+                    <Text style={{ fontWeight: '600', fontSize: 14, color: '#555' }}>Annulla</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1, backgroundColor: requestingDeletion ? '#EF9A9A' : '#C62828',
+                      borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+                      flexDirection: 'row', justifyContent: 'center', gap: 6,
+                    }}
+                    onPress={handleRequestDeletion}
+                    disabled={requestingDeletion}
+                    data-testid="confirm-deletion-btn"
+                  >
+                    {requestingDeletion ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Ionicons name="trash" size={16} color="#fff" />
+                    )}
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                      {requestingDeletion ? 'Invio...' : 'Conferma'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
+          </ScrollView>
         </View>
       </Modal>
 

@@ -165,25 +165,56 @@ export default function AdminDashboard() {
   };
 
   const handleApproveDeletion = async (athleteId: string, athleteName: string) => {
-    const confirmAction = Platform.OS === 'web'
-      ? window.confirm(`Sei sicuro di voler ELIMINARE definitivamente l'atleta "${athleteName}"?\n\nQuesta azione è irreversibile!`)
-      : await new Promise((resolve) => {
-          Alert.alert(
-            '⚠️ Conferma Eliminazione',
-            `Sei sicuro di voler ELIMINARE definitivamente l'atleta "${athleteName}"?\n\nQuesta azione è irreversibile!`,
-            [
-              { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'ELIMINA', style: 'destructive', onPress: () => resolve(true) },
-            ]
-          );
-        });
-    
-    if (!confirmAction) return;
-    
     setProcessingDeletion(athleteId);
     try {
-      await api.post(`/athletes/${athleteId}/approve-deletion`);
-      showAlert('Successo', 'Atleta eliminato con successo');
+      // Pre-check obligations
+      const checkRes = await api.get(`/athletes/${athleteId}/deletion-check`);
+      const check = checkRes.data;
+      
+      let confirmMsg = `Sei sicuro di voler ELIMINARE definitivamente l'atleta "${athleteName}"?\n\n`;
+      
+      if (check.has_obligations) {
+        confirmMsg += `ATTENZIONE - Obblighi amministrativi rilevati:\n`;
+        if (check.obligations.unpaid_payments.count > 0) {
+          confirmMsg += `- ${check.obligations.unpaid_payments.count} pagamenti non saldati (${check.obligations.unpaid_payments.total.toFixed(2)} EUR)\n`;
+        }
+        if (check.obligations.fiscal_documents.count > 0) {
+          confirmMsg += `- ${check.obligations.fiscal_documents.count} documenti fiscali emessi\n`;
+        }
+        if (check.obligations.compensations.count > 0) {
+          confirmMsg += `- ${check.obligations.compensations.count} compensi registrati\n`;
+        }
+        confirmMsg += `\nI dati fiscali minimi verranno conservati per obblighi di legge.\n`;
+      }
+      
+      confirmMsg += `\nDati da eliminare: ${check.data_to_delete.attendances} presenze, ${check.data_to_delete.certificates} certificati, ${check.data_to_delete.signed_documents} documenti, ${check.data_to_delete.payments} pagamenti.`;
+      
+      if (check.parent_info.parent_can_be_deleted) {
+        confirmMsg += `\n\nAnche l'account genitore verra eliminato (nessun altro figlio).`;
+      }
+      
+      confirmMsg += `\n\nQuesta azione e irreversibile!`;
+      
+      const confirmAction = Platform.OS === 'web'
+        ? window.confirm(confirmMsg)
+        : await new Promise((resolve) => {
+            Alert.alert(
+              'Conferma Eliminazione',
+              confirmMsg,
+              [
+                { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'ELIMINA', style: 'destructive', onPress: () => resolve(true) },
+              ]
+            );
+          });
+      
+      if (!confirmAction) {
+        setProcessingDeletion(null);
+        return;
+      }
+      
+      const result = await api.post(`/athletes/${athleteId}/approve-deletion`);
+      showAlert('Successo', result.data.message || 'Atleta eliminato con successo');
       loadStats();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'eliminazione');

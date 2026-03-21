@@ -85,6 +85,10 @@ export interface Athlete {
   // Fine periodo di prova
   end_trial_requested?: boolean;
   end_trial_requested_date?: string;
+  // Cancellazione
+  deletion_requested?: boolean;
+  deletion_requested_at?: string;
+  deletion_requested_by_name?: string;
   // Sconto
   discount_amount?: number;
   discount_note?: string;
