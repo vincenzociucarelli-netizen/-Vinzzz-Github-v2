@@ -219,7 +219,7 @@ export default function SocietyProfile() {
   // Scarica Card JPG Dati Fiscali
   const handleDownloadFiscalCard = async () => {
     try {
-      const res = await api.get('/society/card-fiscale', { responseType: 'blob' });
+      const res = await api.get(`/society/card-fiscale?t=${Date.now()}`, { responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'image/jpeg' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

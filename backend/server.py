@@ -17821,7 +17821,7 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     name_x = logo_right_edge
     max_text_w = W - name_x - pad_x
     
-    title_font_size = 30
+    title_font_size = 26
     while title_font_size > 18:
         test_font = ImageFont.truetype(FONT_BOLD, title_font_size)
         bbox = draw.textbbox((0, 0), short_name.upper(), font=test_font)
@@ -17923,7 +17923,12 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     buffer.seek(0)
     
     filename = f"Biglietto_{short_name.replace(' ', '_')}.jpg"
-    return StreamingResponse(buffer, media_type="image/jpeg", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    return StreamingResponse(buffer, media_type="image/jpeg", headers={
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    })
 
 @api_router.get("/society/card-bancaria")
 async def generate_bank_card(current_user = Depends(get_current_user)):
