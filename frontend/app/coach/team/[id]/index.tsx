@@ -22,6 +22,7 @@ interface AthleteWithCert {
   certificate_expiry?: string;
   is_expired?: boolean;
   athlete_role?: string;
+  status?: string;
 }
 
 interface Team {
@@ -80,6 +81,7 @@ export default function CoachTeamAthletes() {
   };
 
   const renderAthleteItem = ({ item }: { item: AthleteWithCert }) => {
+    const isTrial = item.status === 'trial';
     const today = new Date();
     const expiryDate = item.certificate_expiry ? new Date(item.certificate_expiry) : null;
     const isExpired = item.is_expired || (expiryDate && expiryDate < today);
@@ -117,17 +119,26 @@ export default function CoachTeamAthletes() {
         activeOpacity={0.7}
       >
         <View style={styles.athleteInfo}>
-          <Text style={styles.athleteName}>{item.full_name}</Text>
-          <View style={styles.certRow}>
-            <Ionicons 
-              name={statusIcon as any} 
-              size={18} 
-              color={statusColor} 
-            />
-            <Text style={[styles.certText, { color: statusColor }]}>
-              {statusText}
-            </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={styles.athleteName}>{item.full_name}</Text>
+            {isTrial && (
+              <View style={styles.trialBadge}>
+                <Text style={styles.trialBadgeText}>In prova</Text>
+              </View>
+            )}
           </View>
+          {!isTrial && (
+            <View style={styles.certRow}>
+              <Ionicons 
+                name={statusIcon as any} 
+                size={18} 
+                color={statusColor} 
+              />
+              <Text style={[styles.certText, { color: statusColor }]}>
+                {statusText}
+              </Text>
+            </View>
+          )}
           {item.athlete_role && (
             <View style={styles.roleTag}>
               <Ionicons name="person" size={12} color="#5856D6" />
@@ -141,6 +152,14 @@ export default function CoachTeamAthletes() {
       </TouchableOpacity>
     );
   };
+
+  // Sort: trial athletes first, then alphabetically
+  const sortedAthletes = [...athletes].sort((a, b) => {
+    const aIsTrial = a.status === 'trial' ? 0 : 1;
+    const bIsTrial = b.status === 'trial' ? 0 : 1;
+    if (aIsTrial !== bIsTrial) return aIsTrial - bIsTrial;
+    return (a.full_name || '').localeCompare(b.full_name || '');
+  });
 
   if (loading) {
     return (
@@ -231,10 +250,11 @@ export default function CoachTeamAthletes() {
                 </View>
               </View>
               <FlatList
-                data={athletes}
+                data={sortedAthletes}
                 renderItem={renderAthleteItem}
                 keyExtractor={(item) => item.id}
                 scrollEnabled={false}
+                removeClippedSubviews={false}
               />
             </>
           )}
@@ -430,5 +450,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     marginTop: 12,
+  },
+  trialBadge: {
+    backgroundColor: '#F3E5F5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  trialBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9C27B0',
   },
 });

@@ -24,6 +24,7 @@ interface AthleteStats {
   total_percentage: number;
   monthly_percentage: number;
   weekly_percentage: number;
+  status?: string;
 }
 
 interface TeamAttendanceStats {
@@ -189,7 +190,12 @@ export default function CoachTeamAttendances() {
             <Text style={styles.emptyText}>Nessun atleta in questa squadra</Text>
           </View>
         ) : (
-          stats.athletes.map((athlete) => {
+          [...stats.athletes].sort((a, b) => {
+            const aT = a.status === 'trial' ? 0 : 1;
+            const bT = b.status === 'trial' ? 0 : 1;
+            if (aT !== bT) return aT - bT;
+            return (a.athlete_name || '').localeCompare(b.athlete_name || '');
+          }).map((athlete) => {
             const percentage = viewMode === 'weekly' 
               ? athlete.weekly_percentage 
               : viewMode === 'monthly' 

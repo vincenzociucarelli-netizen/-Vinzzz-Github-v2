@@ -8858,8 +8858,8 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
             "weekly_percentage": weekly_percentage,
         })
     
-    # Sort by name
-    stats.sort(key=lambda x: x["athlete_name"])
+    # Sort: trial athletes first, then by name
+    stats.sort(key=lambda x: (0 if x.get("status") == "trial" else 1, x["athlete_name"]))
     
     return {
         "team_name": team["name"],
