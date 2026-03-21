@@ -2483,7 +2483,7 @@ async def login(request: Request, credentials: UserLogin):
 
 @api_router.post("/auth/minor-login")
 async def minor_login(request: Request, credentials: MinorLogin):
-    """Login per atleta minorenne con codice atleta + PIN"""
+    """Login per atleta con codice atleta + PIN (Accesso Lite)"""
     code = credentials.athlete_code.strip().upper()
     pin = credentials.pin.strip()
     
@@ -2494,12 +2494,9 @@ async def minor_login(request: Request, credentials: MinorLogin):
     if not athlete:
         raise HTTPException(status_code=401, detail="Codice atleta non valido")
     
-    # Verifica che sia un minorenne con accesso abilitato
-    if not athlete.get("is_minor"):
-        raise HTTPException(status_code=403, detail="Questo accesso è riservato agli atleti minorenni")
-    
+    # Verifica che l'accesso lite sia abilitato
     if not athlete.get("minor_access_enabled"):
-        raise HTTPException(status_code=403, detail="L'accesso per questo atleta non è stato ancora attivato dal genitore")
+        raise HTTPException(status_code=403, detail="L'accesso Lite per questo atleta non è stato ancora attivato")
     
     # Verifica PIN
     stored_pin_hash = athlete.get("minor_pin_hash")
@@ -18838,16 +18835,13 @@ async def set_minor_pin(athlete_id: str, data: SetMinorPin, current_user = Depen
 
 @api_router.post("/athletes/{athlete_id}/toggle-minor-access")
 async def toggle_minor_access(athlete_id: str, current_user = Depends(get_current_user)):
-    """Genitore attiva/disattiva l'accesso minorenne"""
+    """Genitore attiva/disattiva l'accesso Lite per l'atleta"""
     if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Solo genitori o admin possono gestire l'accesso")
     
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
-    
-    if not athlete.get("is_minor"):
-        raise HTTPException(status_code=400, detail="L'atleta non è minorenne")
     
     if current_user["role"] == UserRole.PARENT:
         if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
