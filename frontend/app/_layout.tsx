@@ -50,6 +50,7 @@ export default function RootLayout() {
         <Stack.Screen name="coach" />
         <Stack.Screen name="parent" />
         <Stack.Screen name="minor" />
+        <Stack.Screen name="preseason" />
       </Stack>
     </View>
   );

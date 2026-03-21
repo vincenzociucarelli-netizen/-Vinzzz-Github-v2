@@ -19623,6 +19623,406 @@ async def export_prima_nota_csv(current_user = Depends(get_current_user)):
     )
 
 # Include the router in the main app
+# ==================== PRE-SEASON CAMPAIGN ====================
+
+class PreseasonCampaignCreate(BaseModel):
+    title: str
+    season: str  # es: "2026/2027"
+    open_date: Optional[str] = None
+    close_date: Optional[str] = None
+    description: Optional[str] = None
+
+class PreseasonCampaignUpdate(BaseModel):
+    title: Optional[str] = None
+    season: Optional[str] = None
+    open_date: Optional[str] = None
+    close_date: Optional[str] = None
+    is_active: Optional[bool] = None
+    description: Optional[str] = None
+
+class PreseasonResponse(BaseModel):
+    first_name: str
+    last_name: str
+    birth_date: str
+    phone_athlete: Optional[str] = None
+    phone_parent: Optional[str] = None
+    already_member: bool = False
+    previous_club: Optional[str] = None
+    championships_played: Optional[str] = None
+    role_played: Optional[str] = None
+    interest_level: str  # "si", "ci_penso", "no"
+    notes: Optional[str] = None
+
+
+@api_router.post("/preseason/campaigns")
+async def create_preseason_campaign(data: PreseasonCampaignCreate, current_user = Depends(get_current_user)):
+    """Admin crea una campagna pre-stagione"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    society_id = current_user.get("society_id", "")
+    
+    # Get society info for public page
+    society = await db.settings.find_one({"society_id": society_id, "type": "society"})
+    society_name = ""
+    if society:
+        society_name = society.get("name", "")
+    
+    campaign = {
+        "id": str(uuid.uuid4()),
+        "society_id": society_id,
+        "society_name": society_name,
+        "title": data.title,
+        "season": data.season,
+        "description": data.description or "",
+        "open_date": data.open_date,
+        "close_date": data.close_date,
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc),
+        "created_by": current_user["id"],
+        "response_count": 0,
+    }
+    
+    await db.preseason_campaigns.insert_one(campaign)
+    campaign.pop("_id", None)
+    return campaign
+
+
+@api_router.get("/preseason/campaigns")
+async def get_preseason_campaigns(current_user = Depends(get_current_user)):
+    """Admin lista campagne pre-stagione"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    society_id = current_user.get("society_id", "")
+    campaigns = await db.preseason_campaigns.find(
+        {"society_id": society_id}, {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Update response counts
+    for c in campaigns:
+        count = await db.preseason_responses.count_documents({"campaign_id": c["id"]})
+        c["response_count"] = count
+    
+    return campaigns
+
+
+@api_router.get("/preseason/campaigns/{campaign_id}")
+async def get_preseason_campaign(campaign_id: str, current_user = Depends(get_current_user)):
+    """Admin dettaglio campagna"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    campaign = await db.preseason_campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campagna non trovata")
+    
+    count = await db.preseason_responses.count_documents({"campaign_id": campaign_id})
+    campaign["response_count"] = count
+    
+    return campaign
+
+
+@api_router.patch("/preseason/campaigns/{campaign_id}")
+async def update_preseason_campaign(campaign_id: str, data: PreseasonCampaignUpdate, current_user = Depends(get_current_user)):
+    """Admin modifica campagna"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    update = {k: v for k, v in data.dict().items() if v is not None}
+    if not update:
+        raise HTTPException(status_code=400, detail="Nessun campo da aggiornare")
+    
+    await db.preseason_campaigns.update_one({"id": campaign_id}, {"$set": update})
+    campaign = await db.preseason_campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    return campaign
+
+
+@api_router.delete("/preseason/campaigns/{campaign_id}")
+async def delete_preseason_campaign(campaign_id: str, current_user = Depends(get_current_user)):
+    """Admin elimina campagna"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    await db.preseason_responses.delete_many({"campaign_id": campaign_id})
+    await db.preseason_campaigns.delete_one({"id": campaign_id})
+    return {"message": "Campagna eliminata"}
+
+
+@api_router.get("/preseason/campaigns/{campaign_id}/responses")
+async def get_preseason_responses(campaign_id: str, current_user = Depends(get_current_user)):
+    """Admin vede le risposte"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    responses = await db.preseason_responses.find(
+        {"campaign_id": campaign_id}, {"_id": 0}
+    ).sort("created_at", -1).to_list(10000)
+    
+    # Stats
+    total = len(responses)
+    interested = sum(1 for r in responses if r.get("interest_level") == "si")
+    thinking = sum(1 for r in responses if r.get("interest_level") == "ci_penso")
+    not_interested = sum(1 for r in responses if r.get("interest_level") == "no")
+    members = sum(1 for r in responses if r.get("already_member"))
+    new_athletes = sum(1 for r in responses if not r.get("already_member"))
+    
+    return {
+        "responses": responses,
+        "stats": {
+            "total": total,
+            "interested": interested,
+            "thinking": thinking,
+            "not_interested": not_interested,
+            "existing_members": members,
+            "new_athletes": new_athletes,
+        }
+    }
+
+
+@api_router.get("/preseason/campaigns/{campaign_id}/export")
+async def export_preseason_responses(campaign_id: str, current_user = Depends(get_current_user)):
+    """Admin esporta risposte in CSV"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    responses = await db.preseason_responses.find(
+        {"campaign_id": campaign_id}, {"_id": 0}
+    ).sort("created_at", 1).to_list(10000)
+    
+    import csv
+    import io
+    
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow([
+        "Nome", "Cognome", "Data Nascita", "Telefono Atleta", "Telefono Genitore",
+        "Gia Iscritto", "Club Precedente", "Campionati Giocati", "Ruolo",
+        "Interesse", "Note", "Data Risposta"
+    ])
+    
+    interest_map = {"si": "Si", "ci_penso": "Ci sto pensando", "no": "No"}
+    
+    for r in responses:
+        created = r.get("created_at", "")
+        if isinstance(created, datetime):
+            created = created.strftime("%d/%m/%Y %H:%M")
+        elif isinstance(created, str):
+            try:
+                created = datetime.fromisoformat(created.replace("Z", "+00:00")).strftime("%d/%m/%Y %H:%M")
+            except:
+                pass
+        
+        writer.writerow([
+            r.get("first_name", ""),
+            r.get("last_name", ""),
+            r.get("birth_date", ""),
+            r.get("phone_athlete", ""),
+            r.get("phone_parent", ""),
+            "Si" if r.get("already_member") else "No",
+            r.get("previous_club", ""),
+            r.get("championships_played", ""),
+            r.get("role_played", ""),
+            interest_map.get(r.get("interest_level", ""), r.get("interest_level", "")),
+            r.get("notes", ""),
+            created,
+        ])
+    
+    csv_content = output.getvalue()
+    
+    from fastapi.responses import Response
+    return Response(
+        content=csv_content,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f"attachment; filename=preiscrizioni_{campaign_id}.csv",
+        }
+    )
+
+
+# --- PUBLIC ENDPOINTS (no auth) ---
+
+@api_router.get("/preseason/public/{campaign_id}")
+async def get_public_campaign_info(campaign_id: str):
+    """Info pubblica campagna per il form esterno"""
+    campaign = await db.preseason_campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campagna non trovata")
+    
+    if not campaign.get("is_active"):
+        raise HTTPException(status_code=410, detail="La campagna non e piu attiva")
+    
+    # Check dates
+    now = datetime.now(timezone.utc)
+    if campaign.get("close_date"):
+        try:
+            close_str = campaign["close_date"]
+            # Parse the close date - handle both date-only and datetime formats
+            if "T" in close_str or "+" in close_str or "Z" in close_str:
+                close = datetime.fromisoformat(close_str.replace("Z", "+00:00"))
+            else:
+                # Date-only format (YYYY-MM-DD) - treat as end of day UTC
+                close = datetime.fromisoformat(close_str + "T23:59:59+00:00")
+            if now > close:
+                raise HTTPException(status_code=410, detail="La campagna e scaduta")
+        except (ValueError, TypeError):
+            pass
+    
+    # Get society logo
+    society = await db.settings.find_one({"society_id": campaign.get("society_id"), "type": "society"})
+    logo = ""
+    if society:
+        logo = society.get("logo", "")
+    
+    return {
+        "id": campaign["id"],
+        "title": campaign.get("title", ""),
+        "season": campaign.get("season", ""),
+        "description": campaign.get("description", ""),
+        "society_name": campaign.get("society_name", ""),
+        "society_logo": logo,
+        "open_date": campaign.get("open_date"),
+        "close_date": campaign.get("close_date"),
+    }
+
+
+@api_router.post("/preseason/public/{campaign_id}/respond")
+async def submit_public_preseason_response(campaign_id: str, data: PreseasonResponse):
+    """Risposta pubblica (senza autenticazione) al form pre-stagione"""
+    campaign = await db.preseason_campaigns.find_one({"id": campaign_id})
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campagna non trovata")
+    
+    if not campaign.get("is_active"):
+        raise HTTPException(status_code=410, detail="La campagna non e piu attiva")
+    
+    # Check dates
+    now = datetime.now(timezone.utc)
+    if campaign.get("close_date"):
+        try:
+            close_str = campaign["close_date"]
+            # Parse the close date - handle both date-only and datetime formats
+            if "T" in close_str or "+" in close_str or "Z" in close_str:
+                close = datetime.fromisoformat(close_str.replace("Z", "+00:00"))
+            else:
+                # Date-only format (YYYY-MM-DD) - treat as end of day UTC
+                close = datetime.fromisoformat(close_str + "T23:59:59+00:00")
+            if now > close:
+                raise HTTPException(status_code=410, detail="La campagna e scaduta")
+        except (ValueError, TypeError):
+            pass
+    
+    response_doc = {
+        "id": str(uuid.uuid4()),
+        "campaign_id": campaign_id,
+        "society_id": campaign.get("society_id", ""),
+        "first_name": data.first_name.strip().upper(),
+        "last_name": data.last_name.strip().upper(),
+        "birth_date": data.birth_date,
+        "phone_athlete": data.phone_athlete or "",
+        "phone_parent": data.phone_parent or "",
+        "already_member": data.already_member,
+        "previous_club": data.previous_club or "",
+        "championships_played": data.championships_played or "",
+        "role_played": data.role_played or "",
+        "interest_level": data.interest_level,
+        "notes": data.notes or "",
+        "is_existing_athlete": False,
+        "athlete_id": None,
+        "created_at": datetime.now(timezone.utc),
+        "source": "public_form",
+    }
+    
+    await db.preseason_responses.insert_one(response_doc)
+    
+    # Update count
+    await db.preseason_campaigns.update_one(
+        {"id": campaign_id},
+        {"$inc": {"response_count": 1}}
+    )
+    
+    return {"message": "Grazie! La tua risposta e stata registrata.", "id": response_doc["id"]}
+
+
+# Authenticated response (for existing athletes/parents)
+@api_router.post("/preseason/campaigns/{campaign_id}/respond")
+async def submit_authenticated_preseason_response(campaign_id: str, data: PreseasonResponse, current_user = Depends(get_current_user)):
+    """Risposta autenticata per atleti gia iscritti"""
+    campaign = await db.preseason_campaigns.find_one({"id": campaign_id})
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campagna non trovata")
+    
+    if not campaign.get("is_active"):
+        raise HTTPException(status_code=410, detail="La campagna non e piu attiva")
+    
+    response_doc = {
+        "id": str(uuid.uuid4()),
+        "campaign_id": campaign_id,
+        "society_id": campaign.get("society_id", ""),
+        "first_name": data.first_name.strip().upper(),
+        "last_name": data.last_name.strip().upper(),
+        "birth_date": data.birth_date,
+        "phone_athlete": data.phone_athlete or "",
+        "phone_parent": data.phone_parent or "",
+        "already_member": data.already_member,
+        "previous_club": data.previous_club or "",
+        "championships_played": data.championships_played or "",
+        "role_played": data.role_played or "",
+        "interest_level": data.interest_level,
+        "notes": data.notes or "",
+        "is_existing_athlete": True,
+        "athlete_id": data.dict().get("athlete_id"),
+        "user_id": current_user["id"],
+        "created_at": datetime.now(timezone.utc),
+        "source": "app",
+    }
+    
+    await db.preseason_responses.insert_one(response_doc)
+    await db.preseason_campaigns.update_one(
+        {"id": campaign_id},
+        {"$inc": {"response_count": 1}}
+    )
+    
+    return {"message": "Grazie! La tua risposta e stata registrata.", "id": response_doc["id"]}
+
+
+# Get active campaign for parent banner
+@api_router.get("/preseason/active")
+async def get_active_preseason_campaign(current_user = Depends(get_current_user)):
+    """Ritorna la campagna attiva per mostrare il banner al genitore"""
+    society_id = current_user.get("society_id", "")
+    now = datetime.now(timezone.utc)
+    
+    campaign = await db.preseason_campaigns.find_one(
+        {"society_id": society_id, "is_active": True},
+        {"_id": 0}
+    )
+    
+    if not campaign:
+        return {"active": False}
+    
+    # Check close date
+    if campaign.get("close_date"):
+        try:
+            close = datetime.fromisoformat(campaign["close_date"].replace("Z", "+00:00"))
+            if now > close:
+                return {"active": False}
+        except (ValueError, TypeError):
+            pass
+    
+    # Check if user already responded
+    already_responded = await db.preseason_responses.count_documents({
+        "campaign_id": campaign["id"],
+        "user_id": current_user["id"],
+    })
+    
+    return {
+        "active": True,
+        "campaign": campaign,
+        "already_responded": already_responded > 0,
+    }
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -19632,6 +20032,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Configure logging
 logging.basicConfig(

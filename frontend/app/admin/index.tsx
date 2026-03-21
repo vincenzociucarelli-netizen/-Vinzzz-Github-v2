@@ -683,6 +683,22 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
+          {/* Pre-iscrizioni Stagione */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/preseason')}
+            data-testid="preseason-btn"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
+              <Ionicons name="megaphone-outline" size={26} color="#2E7D32" />
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Pre-iscrizioni</Text>
+              <Text style={styles.menuCardSubtitle}>Sondaggio interesse prossima stagione</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
           {/* Dirigenti / Admin */}
           <TouchableOpacity
             style={styles.menuCard}
