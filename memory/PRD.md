@@ -1,62 +1,67 @@
-# RegistraTEAM - Product Requirements Document
+# PRD - Sport Society Management App
 
-## Problem Statement
-Sports team management application for Pallavolo Perugia SSD. Manages athletes, parents, coaches, dirigenti, payments, documents, trial periods, medical certificates, compensation, and more.
+## Problema Originale
+Applicazione full-stack per la gestione di società sportive. Include gestione atleti, squadre, presenze, documenti legali (firma digitale periodo di prova), profilo società con biglietto da visita, e ruoli multipli (admin, coach, genitore, dirigente).
 
-## Core Features Implemented
-- User authentication and role-based access (admin, parent, coach, dirigente, collaboratore)
-- Athlete management with parent linking
-- Team management with training schedules
-- Payment tracking and installment plans
-- QR code attendance system
-- Medical certificate management with auto-block toggle
-- Dynamic trial period system (admin-configurable days/sessions)
-- Trial PDF document generation (dynamic, professional)
-- **Digital signature flow for trial declaration** (signature pad + embedded in PDF + metadata)
-- **Email with signed PDF** sent automatically to the signing parent
-- **Document archive** for parents, grouped by child, accessible by both parents
-- Compensation management for coaches/dirigenti/collaboratori
-- GDPR privacy document signing
-- Parent/Coach dashboards with notifications
-- Profile completeness validation before document generation
-- Society info cards as JPG images (fiscal + bank)
+## Architettura
+- **Frontend**: React Native/Expo (web) con TypeScript
+- **Backend**: FastAPI (Python) con MongoDB
+- **File principali**: `backend/server.py`, `frontend/app/admin/`, `frontend/app/coach/`, `frontend/app/parent/`
 
-## Latest Changes (March 20, 2026)
-- Implemented digital signature flow for trial declaration:
-  - New POST /api/athletes/{id}/sign-trial-document endpoint with Request for metadata
-  - Signature pad modal in frontend (SignaturePadInline component)
-  - Signature image embedded in PDF document
-  - Metadata box "METADATI DI VERIFICA" in uniform style with other documents
-  - GET trial-document endpoint does NOT mark document as signed (preview only)
-  - trial_document_generated field added to Athlete model and TypeScript interface
-- **Bug fix**: Document now uses signing user's data (current_user), not parent_id
-- **Feature**: Signed trial documents saved to signed_documents collection for archive
-- **Feature**: Email with signed PDF sent to signing parent via Brevo
-- **Fix**: Document download on Chrome Android (blob URL → direct download)
-- Society cards converted from PDF to JPG (Pillow-based image generation)
-- Frontend card download handlers updated for image/jpeg content type
-- Updated trial status text per user's exact wording
+## Funzionalità Completate
 
-## Architecture
-- Frontend: React Native Web (Expo) on port 3000
-- Backend: FastAPI (Python) on port 8001
-- Database: MongoDB
-- All routes prefixed with /api
+### Sessioni Precedenti
+- Sistema completo di firma digitale per documenti di prova
+- Flusso firma → PDF con metadati legali → email al genitore → archivio documenti
+- Fix crash vista coach presenze (datetime timezone-aware)
+- Visibilità atleti seconda squadra e atleti in prova per coach
+- Fix display stato "In prova" vs "In attesa" per admin
+- Fix download documenti su mobile
+- UI migliorata per admin e genitori (box periodo di prova, menu riordinato)
 
-## Prioritized Backlog
-### P0 (Critical)
-- Test inizio periodo di prova (QR scan by coach triggers trial start)
+### Sessione Corrente (21 Mar 2026)
+- **Biglietto da Visita Fiscale (JPG)**: Redesign completo
+  - Dimensioni compatte (~8.5x2.3 cm), crop dinamico al contenuto
+  - Nome società da campo `name` in grassetto (font 26pt, auto-sizing)
+  - Solo ruolo utente sotto il nome (no duplicazione nome se uguale a società)
+  - Sport rimosso, affiliazioni (FIPAV/CSI) su una riga
+  - Headers anti-cache + timestamp frontend per evitare cache browser
+  
+- **Vista Coach - Elenco Atleti**: 
+  - Aggiunto badge "In prova" (viola) nell'elenco atleti (come nel registro presenze)
+  - Nascosto info certificato medico per atleti in prova
+  - Ordinamento: atleti in prova PRIMA, poi alfabetico (entrambe le liste)
+  - Fix scroll: sostituito FlatList con .map() per eliminare conflitto scroll con ScrollView
 
-### P1 (Important)  
-- Automatic parent cross-linking when second_parent_email matches existing user
+- **Vista Coach - Registro Presenze**:
+  - Ordinamento: trial prima, poi alfabetico (backend + frontend)
 
-### P2 (Nice to have)
-- Refine UI for contracted athletes
-- Clarify user deletion logic (recurring issue x11)
+## Task In Corso
+Nessuno
 
-### P3 (Future)
-- Refactor server.py into modular structure
-- Re-implement Stripe for payments
-- Database cleanup: migrate "viewer" role to "dirigente"
-- App Store / domain publication
-- Centralize compensation calculation logic (currently duplicated in 6 files)
+## Prossimi Task (P0)
+- **Versione Lite Atleta**: Card/badge semplificata per uso quotidiano degli atleti
+  - Da implementare sia per atleti minorenni che maggiorenni
+  - Toggle on/off per atleti maggiorenni
+  - Pratica e sicura per uso di tutti i giorni
+
+## Backlog (P1-P3)
+- (P1) **Cross-Linking Genitori**: Collegamento automatico `second_parent_id` quando email secondo genitore corrisponde a utente esistente
+- (P2) Miglioramenti UI per atleti contrattualizzati
+- (P2) Chiarire e implementare logica cancellazione utenti
+- (P3) Refactoring `server.py` in struttura modulare
+- (P3) Re-implementazione Stripe per pagamenti
+- (P3) Pulizia DB: migrazione ruolo "viewer" → "dirigente"
+- (P3) Supporto pubblicazione dominio / App Store
+
+## API Chiave
+- `GET /api/society/card-fiscale` - Genera JPG biglietto da visita (con anti-cache)
+- `GET /api/society/card-bancaria` - Genera JPG dati bancari
+- `POST /api/athletes/{id}/sign-trial-document` - Firma digitale documento prova
+- `GET /api/coach/team/{team_id}/athletes` - Lista atleti squadra (con status trial)
+- `GET /api/teams/{team_id}/attendance-stats` - Statistiche presenze (ordinate: trial prima)
+
+## Schema DB Rilevante
+- `athletes`: include `status` (active/trial), `trial_start_date`, `trial_document_signed_date`, `team_id`, `team_id_2`
+- `signed_documents`: `document_type`, `signer_id`, `minor_id`, `pdf_blob`
+- `settings` (type: "society"): dati società, logo, affiliazioni
