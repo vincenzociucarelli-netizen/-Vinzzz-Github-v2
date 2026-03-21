@@ -302,6 +302,8 @@ export default function AthleteDetail() {
   const [minorNewPin, setMinorNewPin] = useState('');
   const [minorConfirmPin, setMinorConfirmPin] = useState('');
   const [savingMinorPin, setSavingMinorPin] = useState(false);
+  const [customCodeModalVisible, setCustomCodeModalVisible] = useState(false);
+  const [customCode, setCustomCode] = useState('');
 
   // Trial period states
   const [trialStatus, setTrialStatus] = useState<any>(null);
@@ -2328,7 +2330,17 @@ export default function AthleteDetail() {
                 <Text style={{ fontSize: 13, color: '#555' }}>Codice Atleta:</Text>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e', letterSpacing: 1 }}>{minorAthleteCode}</Text>
               </View>
-              <Text style={{ fontSize: 12, color: '#888', fontStyle: 'italic', marginTop: 4 }}>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 4 }}
+                onPress={() => setCustomCodeModalVisible(true)}
+                data-testid="customize-code-button"
+              >
+                <Ionicons name="create-outline" size={15} color="#1565C0" />
+                <Text style={{ fontSize: 12, color: '#1565C0', fontWeight: '600' }}>
+                  Personalizza codice
+                </Text>
+              </TouchableOpacity>
+              <Text style={{ fontSize: 12, color: '#888', fontStyle: 'italic', marginTop: 6 }}>
                 Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il codice e il PIN.
               </Text>
             </View>
@@ -3336,6 +3348,67 @@ export default function AthleteDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Custom Code Modal */}
+      <Modal
+        visible={customCodeModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setCustomCodeModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 8, textAlign: 'center' }}>
+              Personalizza Codice Atleta
+            </Text>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 6, textAlign: 'center' }}>
+              Scegli un codice facile da ricordare (minimo 6 caratteri).
+            </Text>
+            <Text style={{ fontSize: 12, color: '#999', marginBottom: 16, textAlign: 'center' }}>
+              Esempi: MARTA2016, SARA.PG, LUCA-VOLLEY
+            </Text>
+            <TextInput
+              style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14, fontSize: 18, textAlign: 'center', letterSpacing: 2, marginBottom: 16, borderWidth: 1, borderColor: '#e0e0e0' }}
+              placeholder="Nuovo codice"
+              placeholderTextColor="#bbb"
+              value={customCode}
+              onChangeText={(t) => setCustomCode(t.toUpperCase())}
+              autoCapitalize="characters"
+              maxLength={20}
+              data-testid="custom-code-input"
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: '#f0f0f0', borderRadius: 10, padding: 14, alignItems: 'center' }}
+                onPress={() => setCustomCodeModalVisible(false)}
+              >
+                <Text style={{ fontWeight: '600', color: '#666' }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: '#1565C0', borderRadius: 10, padding: 14, alignItems: 'center' }}
+                onPress={async () => {
+                  if (!customCode || customCode.trim().length < 6) {
+                    showAlert('Errore', 'Il codice deve avere almeno 6 caratteri');
+                    return;
+                  }
+                  try {
+                    const res = await api.post(`/athletes/${id}/set-custom-code`, { code: customCode.trim() });
+                    setMinorAthleteCode(res.data.athlete_code);
+                    setCustomCodeModalVisible(false);
+                    showAlert('Successo', `Codice aggiornato: ${res.data.athlete_code}`);
+                  } catch (e: any) {
+                    showAlert('Errore', e.response?.data?.detail || 'Errore nel salvataggio');
+                  }
+                }}
+                data-testid="custom-code-save-button"
+              >
+                <Text style={{ fontWeight: '600', color: '#fff' }}>Salva Codice</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }

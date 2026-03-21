@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import api from '../src/services/api';
 import { Ionicons } from '../src/components/Icon';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Login() {
   const router = useRouter();
@@ -35,7 +36,21 @@ export default function Login() {
 
   useEffect(() => {
     loadSocietySettings();
+    loadSavedAthleteCode();
   }, []);
+
+  const loadSavedAthleteCode = async () => {
+    try {
+      const savedCode = await AsyncStorage.getItem('last_athlete_code');
+      if (savedCode) setAthleteCode(savedCode);
+    } catch {}
+  };
+
+  const saveAthleteCode = async (code: string) => {
+    try {
+      await AsyncStorage.setItem('last_athlete_code', code);
+    } catch {}
+  };
 
   const loadSocietySettings = async () => {
     try {
@@ -96,6 +111,7 @@ export default function Login() {
         athlete_code: athleteCode.trim().toUpperCase(),
         pin: pin.trim(),
       });
+      await saveAthleteCode(athleteCode.trim().toUpperCase());
       await setUser(response.data.user, response.data.token);
       router.replace('/minor');
     } catch (error: any) {

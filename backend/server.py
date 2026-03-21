@@ -18831,6 +18831,44 @@ async def set_minor_pin(athlete_id: str, data: SetMinorPin, current_user = Depen
     
     return {"message": "PIN impostato con successo. L'accesso per l'atleta è ora attivo."}
 
+
+class SetCustomAthleteCode(BaseModel):
+    code: str
+
+@api_router.post("/athletes/{athlete_id}/set-custom-code")
+async def set_custom_athlete_code(athlete_id: str, data: SetCustomAthleteCode, current_user = Depends(get_current_user)):
+    """Genitore o admin imposta un codice personalizzato per l'accesso Lite"""
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if current_user["role"] == UserRole.PARENT:
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    
+    code = data.code.strip().upper()
+    if len(code) < 6:
+        raise HTTPException(status_code=400, detail="Il codice deve avere almeno 6 caratteri")
+    if len(code) > 20:
+        raise HTTPException(status_code=400, detail="Il codice non può superare 20 caratteri")
+    if not code.replace(".", "").replace("-", "").replace("_", "").isalnum():
+        raise HTTPException(status_code=400, detail="Il codice può contenere solo lettere, numeri, punti, trattini")
+    
+    # Check uniqueness
+    existing = await db.athletes.find_one({"athlete_code": code, "id": {"$ne": athlete_id}})
+    if existing:
+        raise HTTPException(status_code=409, detail="Questo codice è già in uso da un altro atleta")
+    
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {"athlete_code": code}}
+    )
+    
+    return {"message": f"Codice aggiornato: {code}", "athlete_code": code}
+
 @api_router.post("/athletes/{athlete_id}/toggle-minor-access")
 async def toggle_minor_access(athlete_id: str, current_user = Depends(get_current_user)):
     """Genitore attiva/disattiva l'accesso Lite per l'atleta"""
