@@ -18778,6 +18778,7 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
             "athlete_code": athlete.get("athlete_code"),
             "profile_photo": athlete.get("profile_photo"),
             "status": athlete.get("status"),
+            "certificate_expiry": athlete.get("certificate_expiry"),
         },
         "team": {
             "id": team.get("id") if team else None,
@@ -18801,16 +18802,13 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
 
 @api_router.post("/athletes/{athlete_id}/set-minor-pin")
 async def set_minor_pin(athlete_id: str, data: SetMinorPin, current_user = Depends(get_current_user)):
-    """Genitore imposta il PIN per l'accesso minorenne"""
+    """Genitore imposta il PIN per l'accesso Lite dell'atleta"""
     if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Solo genitori o admin possono impostare il PIN")
     
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
-    
-    if not athlete.get("is_minor"):
-        raise HTTPException(status_code=400, detail="L'atleta non è minorenne")
     
     # Verify parent ownership
     if current_user["role"] == UserRole.PARENT:

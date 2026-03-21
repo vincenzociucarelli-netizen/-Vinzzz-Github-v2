@@ -36,6 +36,7 @@ interface DashboardData {
     athlete_code: string;
     profile_photo: string | null;
     status: string;
+    certificate_expiry?: string;
   };
   team: { id: string; name: string } | null;
   schedule: {
@@ -130,19 +131,21 @@ export default function MinorDashboard() {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadDashboard(); }} colors={['#34C759']} />}
     >
-      {/* Header */}
+      {/* Header with Society Logo */}
       <View style={styles.header} data-testid="minor-dashboard-header">
         <View style={styles.headerLeft}>
           {data.society?.logo && (
             <Image
-              source={{ uri: `data:image/jpeg;base64,${data.society.logo}` }}
+              source={{ uri: data.society.logo.startsWith('data:') ? data.society.logo : `data:image/png;base64,${data.society.logo}` }}
               style={styles.societyLogo}
               resizeMode="contain"
             />
           )}
           <View>
-            <Text style={styles.welcomeText}>Ciao,</Text>
-            <Text style={styles.athleteName}>{data.athlete.first_name}</Text>
+            <Text style={styles.welcomeText}>Ciao, <Text style={styles.athleteName}>{data.athlete.first_name}</Text></Text>
+            {data.society && (
+              <Text style={styles.societyNameHeader}>{data.society.name}</Text>
+            )}
           </View>
         </View>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} data-testid="minor-logout-button">
@@ -150,27 +153,58 @@ export default function MinorDashboard() {
         </TouchableOpacity>
       </View>
 
-      {/* Society & Team */}
-      {data.society && (
-        <Text style={styles.societyName}>{data.society.name}</Text>
-      )}
-
-      {/* Trial Banner */}
-      {data.trial_info?.is_trial && (
-        <View style={styles.trialBanner} data-testid="minor-trial-banner">
-          <Ionicons name="time" size={20} color="#FF9500" />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.trialTitle}>Periodo di Prova</Text>
-            {data.trial_info.trial_days_remaining !== null && data.trial_info.trial_days_remaining !== undefined && (
-              <Text style={styles.trialDays}>
-                {data.trial_info.trial_days_remaining > 0
-                  ? `${data.trial_info.trial_days_remaining} giorni rimanenti`
-                  : 'Periodo di prova terminato'}
-              </Text>
-            )}
+      {/* Status Banners Row */}
+      <View style={styles.statusBannersRow}>
+        {/* Trial Banner */}
+        {data.trial_info?.is_trial && (
+          <View style={[styles.statusBanner, styles.trialBanner]} data-testid="minor-trial-banner">
+            <Ionicons name="time" size={20} color="#FF9500" />
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={styles.trialTitle}>Periodo di Prova</Text>
+              {data.trial_info.trial_days_remaining !== null && data.trial_info.trial_days_remaining !== undefined && (
+                <Text style={styles.trialDays}>
+                  {data.trial_info.trial_days_remaining > 0
+                    ? `${data.trial_info.trial_days_remaining} giorni rimanenti`
+                    : 'Periodo terminato'}
+                </Text>
+              )}
+            </View>
           </View>
-        </View>
-      )}
+        )}
+        
+        {/* Certificate Expiry Banner */}
+        {(() => {
+          const cert = data.athlete.certificate_expiry;
+          if (!cert) {
+            return (
+              <View style={[styles.statusBanner, styles.certBannerExpired]} data-testid="minor-cert-banner">
+                <Ionicons name="document-text" size={20} color="#FF3B30" />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={styles.certTitle}>Certificato Medico</Text>
+                  <Text style={styles.certExpired}>Non presente</Text>
+                </View>
+              </View>
+            );
+          }
+          const expDate = new Date(cert);
+          const today = new Date();
+          const daysLeft = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          const isExpired = daysLeft < 0;
+          const isExpiringSoon = !isExpired && daysLeft <= 30;
+          
+          return (
+            <View style={[styles.statusBanner, isExpired ? styles.certBannerExpired : isExpiringSoon ? styles.certBannerWarning : styles.certBannerOk]} data-testid="minor-cert-banner">
+              <Ionicons name="document-text" size={20} color={isExpired ? '#FF3B30' : isExpiringSoon ? '#FF9500' : '#34C759'} />
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.certTitle}>Certificato Medico</Text>
+                <Text style={[styles.certDate, { color: isExpired ? '#FF3B30' : isExpiringSoon ? '#FF6D00' : '#2E7D32' }]}>
+                  {isExpired ? `Scaduto il ${formatDate(cert)}` : `Scadenza: ${formatDate(cert)}`}
+                </Text>
+              </View>
+            </View>
+          );
+        })()}
+      </View>
 
       {/* QR Code Card */}
       <TouchableOpacity
@@ -354,12 +388,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   societyLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: 52,
+    height: 52,
+    borderRadius: 10,
   },
   welcomeText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#888',
   },
   athleteName: {
@@ -370,34 +404,64 @@ const styles = StyleSheet.create({
   logoutButton: {
     padding: 8,
   },
-  societyName: {
-    fontSize: 13,
-    color: '#666',
-    textAlign: 'center',
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  societyNameHeader: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1565C0',
+    marginTop: 2,
   },
-  trialBanner: {
+  statusBannersRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginTop: 12,
+    gap: 10,
+  },
+  statusBanner: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF3E0',
-    marginHorizontal: 16,
-    marginTop: 12,
-    padding: 14,
+    padding: 12,
     borderRadius: 12,
     borderLeftWidth: 4,
+  },
+  trialBanner: {
+    backgroundColor: '#FFF3E0',
     borderLeftColor: '#FF9500',
   },
   trialTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#E65100',
   },
   trialDays: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#FF6D00',
+    marginTop: 2,
+  },
+  certBannerOk: {
+    backgroundColor: '#E8F5E9',
+    borderLeftColor: '#34C759',
+  },
+  certBannerWarning: {
+    backgroundColor: '#FFF3E0',
+    borderLeftColor: '#FF9500',
+  },
+  certBannerExpired: {
+    backgroundColor: '#FFEBEE',
+    borderLeftColor: '#FF3B30',
+  },
+  certTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#333',
+  },
+  certDate: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  certExpired: {
+    fontSize: 11,
+    color: '#FF3B30',
     marginTop: 2,
   },
   qrCard: {
