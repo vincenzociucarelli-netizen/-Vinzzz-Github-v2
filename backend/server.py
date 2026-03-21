@@ -20023,6 +20023,148 @@ async def get_active_preseason_campaign(current_user = Depends(get_current_user)
     }
 
 
+@api_router.post("/preseason/campaigns/{campaign_id}/send-notifications")
+async def send_preseason_notifications(campaign_id: str, current_user = Depends(get_current_user)):
+    """Admin invia email + notifiche in-app ai genitori che non hanno ancora risposto"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    campaign = await db.preseason_campaigns.find_one({"id": campaign_id})
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campagna non trovata")
+    
+    society_id = campaign.get("society_id", "")
+    
+    # Get society info for the email
+    society = await db.settings.find_one({"society_id": society_id, "type": "society"})
+    society_name = society.get("name", "La tua societa sportiva") if society else "La tua societa sportiva"
+    
+    # Find all parents in this society
+    all_parents = await db.users.find(
+        {"society_id": society_id, "role": "parent"},
+        {"_id": 0, "id": 1, "email": 1, "full_name": 1}
+    ).to_list(10000)
+    
+    # Find parents who already responded (via user_id in responses)
+    responded_user_ids = set()
+    responses = await db.preseason_responses.find(
+        {"campaign_id": campaign_id, "user_id": {"$exists": True, "$ne": None}},
+        {"_id": 0, "user_id": 1}
+    ).to_list(10000)
+    for r in responses:
+        if r.get("user_id"):
+            responded_user_ids.add(r["user_id"])
+    
+    # Filter: only parents who haven't responded
+    parents_to_notify = [p for p in all_parents if p["id"] not in responded_user_ids]
+    
+    if not parents_to_notify:
+        return {
+            "message": "Tutti i genitori hanno gia risposto!",
+            "notified_count": 0,
+            "already_responded_count": len(responded_user_ids),
+            "total_parents": len(all_parents),
+        }
+    
+    # Build public form link
+    base_url = str(os.environ.get("FRONTEND_URL", "")).rstrip("/")
+    if not base_url:
+        # Try to build from request context
+        base_url = ""
+    form_link = f"{base_url}/preseason/{campaign_id}" if base_url else f"/preseason/{campaign_id}"
+    
+    # Build email HTML
+    email_html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #0D47A1; font-size: 22px; margin: 0;">{society_name}</h1>
+            <p style="color: #666; font-size: 14px; margin-top: 8px;">{campaign.get('title', 'Pre-iscrizione')}</p>
+        </div>
+        
+        <div style="background-color: #E3F2FD; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <h2 style="color: #1565C0; font-size: 18px; margin: 0 0 12px 0;">Stai pensando alla prossima stagione?</h2>
+            <p style="color: #333; font-size: 14px; line-height: 22px; margin: 0;">
+                Stiamo programmando la stagione <strong>{campaign.get('season', '')}</strong> e ci piacerebbe sapere se sei interessato/a a continuare con noi!
+            </p>
+        </div>
+        
+        {f'<p style="color: #555; font-size: 14px; line-height: 22px;">{campaign.get("description", "")}</p>' if campaign.get("description") else ""}
+        
+        <div style="text-align: center; margin: 24px 0;">
+            <a href="{form_link}" style="display: inline-block; background-color: #0D47A1; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: bold;">
+                Compila il modulo
+            </a>
+        </div>
+        
+        <div style="background-color: #E8F5E9; border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 20px;">
+            <p style="color: #2E7D32; font-size: 12px; margin: 0; font-weight: 600;">
+                La compilazione e non vincolante — serve solo per la programmazione
+            </p>
+        </div>
+        
+        {f'<p style="color: #999; font-size: 12px; text-align: center;">Scadenza: {campaign.get("close_date", "")[:10] if campaign.get("close_date") else "non definita"}</p>' if campaign.get("close_date") else ""}
+        
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="color: #aaa; font-size: 11px; text-align: center;">
+            Questa email e stata inviata da {society_name} tramite RegistraTEAM.
+        </p>
+    </div>
+    """
+    
+    # Send emails and in-app notifications
+    from email_service import send_transactional_email
+    email_sent = 0
+    email_failed = 0
+    
+    for parent in parents_to_notify:
+        # In-app notification
+        await db.admin_notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "society_id": society_id,
+            "admin_id": parent["id"],
+            "type": "preseason_survey",
+            "title": f"Pre-iscrizione {campaign.get('season', '')}",
+            "message": f"{society_name} ti chiede: torni la prossima stagione? Compila il modulo di interesse.",
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "entity_type": "preseason_campaign",
+            "entity_id": campaign_id,
+            "action_url": f"/preseason/{campaign_id}",
+        })
+        
+        # Email
+        if parent.get("email"):
+            try:
+                await send_transactional_email(
+                    to_email=parent["email"],
+                    subject=f"{society_name} - {campaign.get('title', 'Pre-iscrizione prossima stagione')}",
+                    html_content=email_html,
+                )
+                email_sent += 1
+            except Exception as e:
+                logger.error(f"Email failed for {parent['email']}: {e}")
+                email_failed += 1
+    
+    # Log the notification send
+    await db.preseason_campaigns.update_one(
+        {"id": campaign_id},
+        {"$set": {
+            "last_notification_sent": datetime.now(timezone.utc),
+            "notification_count": (campaign.get("notification_count", 0) or 0) + 1,
+        }}
+    )
+    
+    return {
+        "message": f"Notifiche inviate a {len(parents_to_notify)} genitori",
+        "notified_count": len(parents_to_notify),
+        "email_sent": email_sent,
+        "email_failed": email_failed,
+        "already_responded_count": len(responded_user_ids),
+        "total_parents": len(all_parents),
+    }
+
+
+
 app.include_router(api_router)
 
 app.add_middleware(

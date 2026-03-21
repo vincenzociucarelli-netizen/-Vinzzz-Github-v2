@@ -68,6 +68,8 @@ export default function PreseasonAdmin() {
   const [newCloseDate, setNewCloseDate] = useState('');
   const [creating, setCreating] = useState(false);
 
+  const [sendingNotifications, setSendingNotifications] = useState<string | null>(null);
+
   const loadCampaigns = useCallback(async () => {
     try {
       const res = await api.get('/preseason/campaigns');
@@ -112,6 +114,27 @@ export default function PreseasonAdmin() {
       loadCampaigns();
     } catch (err: any) {
       showAlert('Errore', err.response?.data?.detail || 'Errore');
+    }
+  };
+
+  const handleSendNotifications = async (campaign: Campaign) => {
+    const confirm = Platform.OS === 'web'
+      ? window.confirm(`Inviare email e notifiche ai genitori che non hanno ancora risposto per "${campaign.title}"?`)
+      : await new Promise(resolve => Alert.alert('Invia Notifiche', `Inviare email ai genitori che non hanno risposto?`, [
+          { text: 'Annulla', onPress: () => resolve(false) },
+          { text: 'Invia', onPress: () => resolve(true) },
+        ]));
+    if (!confirm) return;
+    
+    setSendingNotifications(campaign.id);
+    try {
+      const res = await api.post(`/preseason/campaigns/${campaign.id}/send-notifications`);
+      const d = res.data;
+      showAlert('Notifiche Inviate', `${d.notified_count} genitori notificati (${d.email_sent} email inviate).\n${d.already_responded_count} avevano gia risposto su ${d.total_parents} totali.`);
+    } catch (err: any) {
+      showAlert('Errore', err.response?.data?.detail || 'Errore invio notifiche');
+    } finally {
+      setSendingNotifications(null);
     }
   };
 
@@ -254,6 +277,14 @@ export default function PreseasonAdmin() {
                   </Text>
                 </View>
               )}
+              {(c as any).last_notification_sent && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="notifications" size={14} color="#6A1B9A" />
+                  <Text style={{ fontSize: 11, color: '#6A1B9A' }}>
+                    Notifiche: {(c as any).notification_count || 0}x
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Actions */}
@@ -274,6 +305,21 @@ export default function PreseasonAdmin() {
                 <Ionicons name="download-outline" size={14} color="#2E7D32" />
                 <Text style={{ fontSize: 12, fontWeight: '600', color: '#2E7D32' }}>CSV</Text>
               </TouchableOpacity>
+              {c.is_active && (
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EDE7F6', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, opacity: sendingNotifications === c.id ? 0.6 : 1 }}
+                  onPress={() => handleSendNotifications(c)}
+                  disabled={sendingNotifications === c.id}
+                  data-testid={`send-notifications-${c.id}`}
+                >
+                  {sendingNotifications === c.id ? (
+                    <ActivityIndicator size={14} color="#6A1B9A" />
+                  ) : (
+                    <Ionicons name="notifications-outline" size={14} color="#6A1B9A" />
+                  )}
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#6A1B9A' }}>Notifica</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFF3E0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}
                 onPress={() => copyLink(c.id)}
