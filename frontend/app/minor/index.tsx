@@ -131,26 +131,27 @@ export default function MinorDashboard() {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadDashboard(); }} colors={['#34C759']} />}
     >
-      {/* Header with Society Logo */}
+      {/* Header */}
       <View style={styles.header} data-testid="minor-dashboard-header">
-        <View style={styles.headerLeft}>
-          {data.society?.logo && (
+        {/* Row 1: Logo centered + logout button */}
+        <View style={styles.headerTop}>
+          {data.society?.logo ? (
             <Image
               source={{ uri: data.society.logo.startsWith('data:') ? data.society.logo : `data:image/png;base64,${data.society.logo}` }}
-              style={styles.societyLogo}
+              style={styles.societyLogoLarge}
               resizeMode="contain"
             />
-          )}
-          <View>
-            <Text style={styles.welcomeText}>Ciao, <Text style={styles.athleteName}>{data.athlete.first_name}</Text></Text>
-            {data.society && (
-              <Text style={styles.societyNameHeader}>{data.society.name}</Text>
-            )}
-          </View>
+          ) : <View style={styles.societyLogoLarge} />}
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} data-testid="minor-logout-button">
+            <Ionicons name="log-out" size={22} color="#ff3b30" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} data-testid="minor-logout-button">
-          <Ionicons name="log-out" size={22} color="#ff3b30" />
-        </TouchableOpacity>
+        {/* Row 2: Society name */}
+        {data.society && (
+          <Text style={styles.societyNameHeader}>{data.society.name}</Text>
+        )}
+        {/* Row 3: Welcome */}
+        <Text style={styles.welcomeText}>Ciao, <Text style={styles.athleteName}>{data.athlete.first_name}</Text></Text>
       </View>
 
       {/* Status Banners Row */}
@@ -374,18 +375,27 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 12,
-    backgroundColor: '#fff',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  societyLogoLarge: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
   },
   societyLogo: {
     width: 52,
@@ -395,6 +405,7 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 16,
     color: '#888',
+    marginTop: 8,
   },
   athleteName: {
     fontSize: 20,
@@ -405,10 +416,10 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   societyNameHeader: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     color: '#1565C0',
-    marginTop: 2,
+    marginTop: 6,
   },
   statusBannersRow: {
     flexDirection: 'row',
