@@ -1934,14 +1934,14 @@ export default function AthleteDetail() {
                   </View>
                 )}
               </View>
-              {/* Bottone Termina Periodo di Prova (solo se non ancora richiesto) */}
+              {/* Bottone Conferma / Rinuncia (solo se non ancora richiesto) */}
               {!endTrialStatus?.end_trial_requested && (
                 <TouchableOpacity
                   style={{ backgroundColor: '#0D47A1', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 4 }}
                   onPress={() => setShowEndTrialChoice(true)}
                   data-testid="end-trial-btn"
                 >
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Voglio restare - Termina Periodo di Prova</Text>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Conferma / Rinuncia</Text>
                 </TouchableOpacity>
               )}
             </>
@@ -1973,14 +1973,14 @@ export default function AthleteDetail() {
                   </Text>
                 </View>
               </View>
-              {/* Bottone Termina Periodo di Prova (solo se non ancora richiesto) */}
+              {/* Bottone Conferma / Rinuncia (solo se non ancora richiesto) */}
               {!endTrialStatus?.end_trial_requested && (
                 <TouchableOpacity
                   style={{ backgroundColor: '#E65100', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 4 }}
                   onPress={() => setShowEndTrialChoice(true)}
                   data-testid="end-trial-warning-btn"
                 >
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Voglio restare - Termina Periodo di Prova</Text>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Conferma / Rinuncia</Text>
                 </TouchableOpacity>
               )}
             </>
@@ -2001,7 +2001,7 @@ export default function AthleteDetail() {
                 onPress={() => setShowEndTrialChoice(true)}
                 data-testid="end-trial-expired-btn"
               >
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Voglio restare - Diventa Membro</Text>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Conferma / Rinuncia</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -2009,6 +2009,22 @@ export default function AthleteDetail() {
           {/* STEPPER - Procedura Fine Prova (quando end_trial_requested) */}
           {athlete.status === 'trial' && endTrialStatus?.end_trial_requested && (
             <View style={{ backgroundColor: '#F5F5F5', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E0E0E0' }} data-testid="end-trial-stepper">
+
+              {/* Bottone Conferma / Rinuncia in cima */}
+              {!athlete.deletion_requested && (
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#0D47A1', borderRadius: 10, paddingVertical: 13, alignItems: 'center',
+                    flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 14,
+                  }}
+                  onPress={() => setShowEndTrialChoice(true)}
+                  data-testid="conferma-rinuncia-btn"
+                >
+                  <Ionicons name="document-text" size={18} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Conferma / Rinuncia</Text>
+                </TouchableOpacity>
+              )}
+
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                 <Ionicons name="clipboard" size={20} color="#1565C0" />
                 <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0' }}>Procedura di Iscrizione</Text>
@@ -2039,7 +2055,7 @@ export default function AthleteDetail() {
                     </Text>
                   ) : (
                     <Text style={{ fontSize: 12, color: '#888', lineHeight: 18 }}>
-                      Inserisci la data di scadenza del certificato medico nella sezione sottostante.
+                      Inserisci la data di scadenza del certificato medico nella sezione sottostante e consegna una copia alla societa.
                     </Text>
                   )}
                 </View>
@@ -2100,13 +2116,9 @@ export default function AthleteDetail() {
                   {endTrialStatus.steps.privacy_signed ? (
                     <Text style={{ fontSize: 12, color: '#4CAF50' }}>Privacy firmata</Text>
                   ) : (
-                    <TouchableOpacity
-                      style={{ backgroundColor: '#1565C0', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16, alignSelf: 'flex-start', marginTop: 4 }}
-                      onPress={() => setPrivacyModalVisible(true)}
-                      data-testid="end-trial-sign-privacy-btn"
-                    >
-                      <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Firma Privacy GDPR</Text>
-                    </TouchableOpacity>
+                    <Text style={{ fontSize: 12, color: '#888', lineHeight: 18 }}>
+                      La firma privacy verra richiesta al momento della conferma.
+                    </Text>
                   )}
                 </View>
               </View>
@@ -2881,7 +2893,7 @@ export default function AthleteDetail() {
           <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, overflow: 'hidden' }}>
             {/* Header */}
             <View style={{ backgroundColor: '#0D47A1', paddingVertical: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Fine Periodo di Prova</Text>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Conferma / Rinuncia</Text>
               <TouchableOpacity onPress={() => { setShowEndTrialChoice(false); setShowDeletionConfirm(false); }} data-testid="end-trial-choice-close">
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
@@ -2890,14 +2902,14 @@ export default function AthleteDetail() {
             {!showDeletionConfirm ? (
               <View style={{ padding: 20 }}>
                 <Text style={{ fontSize: 14, color: '#333', lineHeight: 22, marginBottom: 20 }}>
-                  Il periodo di prova sta per concludersi. Cosa vuoi fare?
+                  Cosa vuoi fare al termine del periodo di prova?
                 </Text>
 
-                {/* Option 1: Voglio restare */}
+                {/* Option 1: Conferma */}
                 <View style={{ backgroundColor: '#E3F2FD', borderRadius: 12, padding: 16, marginBottom: 14 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <Ionicons name="heart-circle" size={22} color="#1565C0" />
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0' }}>Voglio restare</Text>
+                    <Ionicons name="checkmark-circle" size={22} color="#1565C0" />
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0' }}>Conferma - Voglio restare</Text>
                   </View>
                   <Text style={{ fontSize: 12, color: '#555', lineHeight: 18, marginBottom: 10 }}>
                     Per diventare membro effettivo, dovrai completare 3 passaggi:
@@ -2928,7 +2940,17 @@ export default function AthleteDetail() {
                       borderRadius: 10, paddingVertical: 12, alignItems: 'center',
                       flexDirection: 'row', justifyContent: 'center', gap: 8,
                     }}
-                    onPress={handleRequestEndTrial}
+                    onPress={() => {
+                      if (endTrialStatus?.end_trial_requested) {
+                        // Already requested - open privacy signing if steps 1 & 2 are done
+                        setShowEndTrialChoice(false);
+                        if (!endTrialStatus.steps.privacy_signed) {
+                          setPrivacyModalVisible(true);
+                        }
+                      } else {
+                        handleRequestEndTrial();
+                      }
+                    }}
                     disabled={requestingEndTrial}
                     data-testid="confirm-end-trial-btn"
                   >
@@ -2938,7 +2960,7 @@ export default function AthleteDetail() {
                       <Ionicons name="checkmark-circle" size={18} color="#fff" />
                     )}
                     <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
-                      {requestingEndTrial ? 'Invio...' : 'Voglio restare'}
+                      {requestingEndTrial ? 'Invio...' : endTrialStatus?.end_trial_requested ? 'Firma Privacy GDPR' : 'Conferma'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -2950,11 +2972,11 @@ export default function AthleteDetail() {
                   <View style={{ flex: 1, height: 1, backgroundColor: '#E0E0E0' }} />
                 </View>
 
-                {/* Option 2: Me ne vado */}
+                {/* Option 2: Rinuncia */}
                 <View style={{ backgroundColor: '#FFF3E0', borderRadius: 12, padding: 16 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     <Ionicons name="exit-outline" size={22} color="#E65100" />
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100' }}>Me ne vado</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100' }}>Rinuncia - Me ne vado</Text>
                   </View>
                   <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18, marginBottom: 10 }}>
                     Tutti i dati dell'atleta verranno cancellati (presenze, documenti, certificati). L'admin dovra approvare la richiesta.
