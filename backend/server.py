@@ -17755,122 +17755,192 @@ async def delete_my_data(current_user = Depends(get_current_user)):
 
 @api_router.get("/society/card-fiscale")
 async def generate_fiscal_card(current_user = Depends(get_current_user)):
-    """Genera immagine JPG biglietto da visita della societa"""
+    """Genera immagine JPG biglietto da visita della societa (~9x5 cm)"""
     society = await db.settings.find_one({"type": "society"})
     if not society:
         society = await db.societies.find_one({"id": current_user.get("society_id")})
     if not society:
         raise HTTPException(status_code=404, detail="Societa non trovata")
     
-    from PIL import Image, ImageDraw, ImageFont, ImageFilter
+    from PIL import Image, ImageDraw, ImageFont
     import base64
     
-    # Card dimensions (business card proportions)
-    W, H = 1200, 680
-    img = Image.new('RGB', (W, H), '#FFFFFF')
+    # 9x5 cm at 300 DPI = 1063x591 px
+    W, H = 1063, 591
+    
+    # Colors
+    PRIMARY = (21, 101, 192)       # #1565C0
+    DARK_TEXT = (26, 26, 46)       # #1a1a2e
+    MID_TEXT = (80, 80, 100)       # #505064
+    LIGHT_TEXT = (130, 130, 145)   # #828291
+    ACCENT_LINE = (21, 101, 192)   # #1565C0
+    BG_COLOR = (255, 255, 255)     # white
+    
+    img = Image.new('RGB', (W, H), BG_COLOR)
     draw = ImageDraw.Draw(img)
     
-    # Gradient background - subtle blue to white
-    for y in range(H):
-        r = int(240 + (255 - 240) * y / H)
-        g = int(245 + (255 - 245) * y / H)
-        b = int(255)
-        draw.line([(0, y), (W, y)], fill=(r, g, b))
-    
     # Top accent bar
-    draw.rectangle([(0, 0), (W, 6)], fill='#1565C0')
-    # Bottom accent bar
-    draw.rectangle([(0, H - 4), (W, H)], fill='#1565C0')
-    # Left accent bar
-    draw.rectangle([(0, 0), (4, H)], fill='#1565C0')
+    draw.rectangle([(0, 0), (W, 8)], fill=PRIMARY)
     
-    # Try to load fonts
+    # Load fonts
+    FONT_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+    FONT_REG = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+    FONT_ITALIC = "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf"
     try:
-        font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
-        font_subtitle = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
-        font_label = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 14)
-        font_value = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 15)
-        font_sport = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 13)
-    except:
-        font_title = ImageFont.load_default()
-        font_subtitle = font_label = font_value = font_sport = font_title
+        font_name_big = ImageFont.truetype(FONT_BOLD, 36)
+        font_user_name = ImageFont.truetype(FONT_REG, 20)
+        font_user_role = ImageFont.truetype(FONT_ITALIC, 16)
+        font_label = ImageFont.truetype(FONT_BOLD, 13)
+        font_value = ImageFont.truetype(FONT_REG, 15)
+        font_aff = ImageFont.truetype(FONT_REG, 12)
+    except Exception:
+        font_name_big = ImageFont.load_default()
+        font_user_name = font_user_role = font_label = font_value = font_aff = font_name_big
     
-    # Logo area
-    logo_x, logo_y = 30, 24
-    logo_size = 100
+    # --- TOP SECTION: Logo + Society Name + User info ---
+    pad_x = 36
+    top_y = 20
+    logo_max = 80
     logo_data = society.get("logo")
+    logo_right_edge = pad_x
+    
     if logo_data:
         try:
             if ',' in logo_data:
                 logo_data = logo_data.split(',')[1]
             logo_bytes = base64.b64decode(logo_data)
             logo_img = Image.open(io.BytesIO(logo_bytes)).convert('RGBA')
-            # Maintain aspect ratio
             w, h = logo_img.size
-            ratio = min(logo_size / w, logo_size / h)
+            ratio = min(logo_max / w, logo_max / h)
             new_w, new_h = int(w * ratio), int(h * ratio)
             logo_img = logo_img.resize((new_w, new_h), Image.LANCZOS)
-            # Center in logo area
-            paste_x = logo_x + (logo_size - new_w) // 2
-            paste_y = logo_y + (logo_size - new_h) // 2
-            img.paste(logo_img, (paste_x, paste_y), logo_img)
-        except:
-            pass
+            paste_x = pad_x
+            paste_y = top_y + (logo_max - new_h) // 2
+            bg_patch = Image.new('RGB', (new_w, new_h), BG_COLOR)
+            bg_patch.paste(logo_img, (0, 0), logo_img)
+            img.paste(bg_patch, (paste_x, paste_y))
+            logo_right_edge = pad_x + new_w + 18
+        except Exception:
+            logo_right_edge = pad_x
     
-    # Society name - right of logo
-    text_x = logo_x + logo_size + 24
-    name = society.get("ragione_sociale") or society.get("name", "Societa Sportiva")
-    draw.text((text_x, 30), name.upper(), fill='#1a237e', font=font_title)
+    # Society name: use short name as big title, ragione_sociale smaller below
+    short_name = society.get("name", "Societa Sportiva")
+    rag_sociale = society.get("ragione_sociale", "")
+    name_x = logo_right_edge
+    max_text_w = W - name_x - pad_x
     
-    # Sport under name
-    sport = society.get("sport", "")
-    if sport:
-        draw.text((text_x, 68), sport.upper(), fill='#1565C0', font=font_sport)
+    # Auto-size: shrink font if name overflows
+    title_font_size = 36
+    while title_font_size > 18:
+        test_font = ImageFont.truetype(FONT_BOLD, title_font_size)
+        bbox = draw.textbbox((0, 0), short_name.upper(), font=test_font)
+        if (bbox[2] - bbox[0]) <= max_text_w:
+            break
+        title_font_size -= 2
+    font_name_big = ImageFont.truetype(FONT_BOLD, title_font_size)
     
-    # Separator line
-    draw.line([(30, 140), (W - 30, 140)], fill='#1565C0', width=2)
+    draw.text((name_x, top_y), short_name.upper(), fill=DARK_TEXT, font=font_name_big)
+    cursor_y = top_y + title_font_size + 6
     
-    # Info section - two columns
-    left_x = 40
-    right_x = W // 2 + 20
-    y_start = 165
-    line_h = 46
+    # Show ragione_sociale below if different from name
+    if rag_sociale and rag_sociale.lower() != short_name.lower():
+        # Auto-size ragione sociale too
+        rag_font_size = 14
+        rag_font = ImageFont.truetype(FONT_REG, rag_font_size)
+        bbox = draw.textbbox((0, 0), rag_sociale, font=rag_font)
+        if (bbox[2] - bbox[0]) > max_text_w:
+            rag_font_size = 11
+            rag_font = ImageFont.truetype(FONT_REG, rag_font_size)
+        draw.text((name_x, cursor_y), rag_sociale, fill=LIGHT_TEXT, font=rag_font)
+        cursor_y += rag_font_size + 6
     
-    def draw_field(x, y, label, value, color='#555'):
-        if value:
-            draw.text((x, y), label, fill='#1565C0', font=font_label)
-            draw.text((x, y + 18), str(value), fill=color, font=font_value)
+    # User name and role
+    role_map = {
+        "admin": "Amministratore",
+        "coach": "Allenatore",
+        "parent": "Genitore",
+        "dirigente": "Dirigente",
+        "viewer": "Dirigente",
+    }
+    user_name = current_user.get("full_name", "")
+    user_role = role_map.get(current_user.get("role", ""), current_user.get("role", ""))
     
-    # Left column
-    y = y_start
-    addr = society.get("address", "")
-    if society.get("postal_code") or society.get("city"):
-        addr += f" - {society.get('postal_code', '')} {society.get('city', '')} ({society.get('province', '')})"
-    draw_field(left_x, y, "SEDE", addr.strip()); y += line_h
-    draw_field(left_x, y, "CF / P.IVA", society.get("fiscal_code", "")); y += line_h
-    draw_field(left_x, y, "PRESIDENTE", society.get("president_name", "")); y += line_h
+    if user_name:
+        draw.text((name_x, cursor_y), user_name, fill=MID_TEXT, font=font_user_name)
+        cursor_y += 24
+    if user_role:
+        draw.text((name_x, cursor_y), user_role, fill=PRIMARY, font=font_user_role)
+        cursor_y += 20
     
-    # Right column
-    y = y_start
-    draw_field(right_x, y, "CELLULARE", society.get("phone", "")); y += line_h
+    # Separator line below header (dynamic, based on content height)
+    sep_y = max(top_y + logo_max + 16, cursor_y + 8)
+    draw.line([(pad_x, sep_y), (W - pad_x, sep_y)], fill=ACCENT_LINE, width=2)
+    
+    # --- BOTTOM SECTION: Contact info in 2 columns ---
+    info_y_start = sep_y + 18
+    col_left_x = pad_x
+    col_right_x = W // 2 + 16
+    line_h = 42
+    
+    def draw_info(x, y, label, value):
+        if not value:
+            return y
+        draw.text((x, y), label.upper(), fill=PRIMARY, font=font_label)
+        draw.text((x, y + 16), str(value), fill=MID_TEXT, font=font_value)
+        return y + line_h
+    
+    # Left column: address, fiscal code, president
+    y_left = info_y_start
+    addr_parts = []
+    if society.get("address"):
+        addr_parts.append(society["address"])
+    loc_parts = []
+    if society.get("postal_code"):
+        loc_parts.append(society["postal_code"])
+    if society.get("city"):
+        loc_parts.append(society["city"])
+    if society.get("province"):
+        loc_parts.append(f"({society['province']})")
+    if loc_parts:
+        addr_parts.append(" ".join(loc_parts))
+    addr_str = " - ".join(addr_parts) if addr_parts else ""
+    
+    y_left = draw_info(col_left_x, y_left, "Sede", addr_str)
+    y_left = draw_info(col_left_x, y_left, "CF / P.IVA", society.get("fiscal_code", ""))
+    y_left = draw_info(col_left_x, y_left, "Presidente", society.get("president_name", ""))
+    
+    # Right column: phone, email, PEC
+    y_right = info_y_start
+    y_right = draw_info(col_right_x, y_right, "Cellulare", society.get("phone", ""))
     if society.get("phone2"):
-        draw_field(right_x, y, "TELEFONO", society.get("phone2", "")); y += line_h
-    draw_field(right_x, y, "EMAIL", society.get("email", "")); y += line_h
-    draw_field(right_x, y, "PEC", society.get("pec", "")); y += line_h
+        y_right = draw_info(col_right_x, y_right, "Telefono", society["phone2"])
+    y_right = draw_info(col_right_x, y_right, "Email", society.get("email", ""))
+    y_right = draw_info(col_right_x, y_right, "PEC", society.get("pec", ""))
     
-    # Affiliations at bottom
+    # Sport type (small, at bottom-right)
+    sport = society.get("sport_praticato") or society.get("sport", "")
+    if sport:
+        sport_text = sport.upper()
+        bbox = draw.textbbox((0, 0), sport_text, font=font_label)
+        sport_w = bbox[2] - bbox[0]
+        draw.text((W - pad_x - sport_w, H - 60), sport_text, fill=PRIMARY, font=font_label)
+    
+    # Affiliations at very bottom
     affiliations = society.get("affiliations", [])
     if affiliations:
-        aff_y = H - 55
-        draw.line([(30, aff_y - 12), (W - 30, aff_y - 12)], fill='#e0e0e0', width=1)
-        aff_text = " | ".join([f"{a.get('name','')}: {a.get('number','')}" for a in affiliations])
-        draw.text((left_x, aff_y), aff_text, fill='#888', font=font_subtitle)
+        aff_y = H - 36
+        draw.line([(pad_x, aff_y - 10), (W - pad_x, aff_y - 10)], fill=(220, 220, 225), width=1)
+        aff_text = "  |  ".join([f"{a.get('name','')}: {a.get('number','')}" for a in affiliations])
+        draw.text((pad_x, aff_y), aff_text, fill=LIGHT_TEXT, font=font_aff)
+    
+    # Bottom accent bar
+    draw.rectangle([(0, H - 4), (W, H)], fill=PRIMARY)
     
     buffer = io.BytesIO()
-    img.save(buffer, format='JPEG', quality=92)
+    img.save(buffer, format='JPEG', quality=95, dpi=(300, 300))
     buffer.seek(0)
     
-    filename = f"Biglietto_{name.replace(' ', '_')}.jpg"
+    filename = f"Biglietto_{short_name.replace(' ', '_')}.jpg"
     return StreamingResponse(buffer, media_type="image/jpeg", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 @api_router.get("/society/card-bancaria")

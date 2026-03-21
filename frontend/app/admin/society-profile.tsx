@@ -397,14 +397,14 @@ export default function SocietyProfile() {
                   data-testid="download-fiscal-card-btn"
                 >
                   <Ionicons name="download" size={14} color="#1565C0" />
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#1565C0' }}>PDF</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#1565C0' }}>JPG</Text>
                 </TouchableOpacity>
               </View>
               <InfoRow icon="card" label="Codice Fiscale / P.IVA" value={fiscalCode} />
               <InfoRow icon="person" label="Presidente" value={presidentName} />
             </View>
 
-            {/* Dati Bancari + Card PDF */}
+            {/* Dati Bancari + Card JPG */}
             <View style={styles.section}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={styles.sectionTitle}>Dati Bancari</Text>
@@ -415,7 +415,7 @@ export default function SocietyProfile() {
                     data-testid="download-bank-card-btn"
                   >
                     <Ionicons name="download" size={14} color="#2E7D32" />
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#2E7D32' }}>PDF</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#2E7D32' }}>JPG</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
