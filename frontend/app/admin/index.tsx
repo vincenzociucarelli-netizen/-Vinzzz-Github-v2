@@ -599,7 +599,30 @@ export default function AdminDashboard() {
 
         {/* 4 Main Sections */}
         <View style={styles.menuContainer}>
-          {/* Calendario Gare - PRIMA ICONA */}
+          {/* Società - PRIMO */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/society-profile')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E8F4FD' }]}>
+              {society.logo ? (
+                <Image 
+                  source={{ uri: `data:image/jpeg;base64,${society.logo}` }}
+                  style={{ width: 40, height: 40, borderRadius: 8 }}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Text style={{ fontSize: 26 }}>{Icons.business}</Text>
+              )}
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>{society.name || 'Società'}</Text>
+              <Text style={styles.menuCardSubtitle}>Profilo, dati e contatti</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
+          {/* Calendario Gare */}
           <TouchableOpacity
             style={styles.menuCard}
             onPress={() => router.push('/admin/matches')}
@@ -646,29 +669,6 @@ export default function AdminDashboard() {
                 <Text style={styles.badgeText}>{pendingCounts.dirigenti}</Text>
               </View>
             )}
-            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
-          </TouchableOpacity>
-
-          {/* Società */}
-          <TouchableOpacity
-            style={styles.menuCard}
-            onPress={() => router.push('/admin/society-profile')}
-          >
-            <View style={[styles.menuIcon, { backgroundColor: '#E8F4FD' }]}>
-              {society.logo ? (
-                <Image 
-                  source={{ uri: `data:image/jpeg;base64,${society.logo}` }}
-                  style={{ width: 40, height: 40, borderRadius: 8 }}
-                  resizeMode="contain"
-                />
-              ) : (
-                <Text style={{ fontSize: 26 }}>{Icons.business}</Text>
-              )}
-            </View>
-            <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>{society.name || 'Società'}</Text>
-              <Text style={styles.menuCardSubtitle}>Profilo, dati e contatti</Text>
-            </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
