@@ -830,6 +830,9 @@ class Athlete(BaseModel):
     medical_certificate_updated_at: Optional[str] = None  # Data ultimo aggiornamento
     privacy_signature: Optional[str] = None  # Firma privacy (base64) - DA RIMUOVERE in futuro
     privacy_pdf_url: Optional[str] = None  # URL PDF privacy firmato
+    # Fine periodo di prova
+    end_trial_requested: bool = False  # True se atleta/genitore ha richiesto fine prova
+    end_trial_requested_date: Optional[datetime] = None  # Data richiesta fine prova
 
 class AthleteCreate(BaseModel):
     full_name: str
@@ -7313,6 +7316,13 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
         await db.athletes.update_one({"id": athlete_id}, {"$set": update_dict})
         athlete.update(update_dict)
     
+    # Check end-trial auto-activation when privacy is accepted
+    if update_data.privacy_accepted and athlete.get("end_trial_requested"):
+        activated = await check_and_activate_if_ready(athlete_id)
+        if activated:
+            athlete["status"] = "active"
+            athlete["is_trial"] = False
+    
     return Athlete(**athlete)
 
 # ==================== DATA PASSWORD ENDPOINTS ====================
@@ -8317,13 +8327,19 @@ async def create_certificate_simple(
         }
         await db.admin_notifications.insert_one(admin_notification)
     
+    # Check if end-trial flow can be completed
+    activated = False
+    if verified_value and athlete.get("end_trial_requested"):
+        activated = await check_and_activate_if_ready(data.athlete_id)
+    
     return {
         "id": certificate.id,
         "athlete_id": certificate.athlete_id,
         "expiry_date": certificate.expiry_date.isoformat(),
         "verified": verified_value,
         "updated_by": current_user.get("full_name", ""),
-        "message": "Certificato salvato con successo"
+        "message": "Certificato salvato con successo" + (" - Atleta attivato!" if activated else ""),
+        "athlete_activated": activated,
     }
 
 # Override blocco certificato scaduto (solo Admin)
@@ -18687,6 +18703,114 @@ async def get_trial_status(athlete_id: str, current_user = Depends(get_current_u
         "trial_active": is_trial and not is_expired and trial_start is not None,
         "waiting_first_attendance": is_trial and trial_start is None,
     }
+
+# ==================== END TRIAL FLOW ENDPOINTS ====================
+
+async def check_and_activate_if_ready(athlete_id: str):
+    """Check if all 3 steps for end-trial are complete and activate athlete"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        return False
+    if not athlete.get("end_trial_requested"):
+        return False
+    
+    has_certificate = bool(athlete.get("medical_certificate_expiry"))
+    cert_verified = bool(athlete.get("medical_certificate_verified"))
+    privacy_signed = bool(athlete.get("privacy_accepted"))
+    
+    if has_certificate and cert_verified and privacy_signed:
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {
+                "status": "active",
+                "is_trial": False,
+            }}
+        )
+        return True
+    return False
+
+
+@api_router.post("/athletes/{athlete_id}/request-end-trial")
+async def request_end_trial(athlete_id: str, current_user = Depends(get_current_user)):
+    """Genitore o admin richiede la fine del periodo di prova"""
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if current_user["role"] == UserRole.PARENT:
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    
+    if athlete.get("status") != "trial":
+        raise HTTPException(status_code=400, detail="L'atleta non e in periodo di prova")
+    
+    if athlete.get("end_trial_requested"):
+        raise HTTPException(status_code=400, detail="Richiesta gia effettuata")
+    
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "end_trial_requested": True,
+            "end_trial_requested_date": datetime.now(timezone.utc),
+        }}
+    )
+    
+    # Notifica admin
+    if current_user["role"] == UserRole.PARENT:
+        admin_notification = {
+            "id": str(uuid.uuid4()),
+            "type": "end_trial_request",
+            "title": "Richiesta fine periodo di prova",
+            "message": f"{current_user.get('full_name', '')} ha richiesto la fine del periodo di prova per {athlete.get('full_name', '')}. Verificare il certificato medico.",
+            "data": {
+                "athlete_id": athlete_id,
+                "athlete_name": athlete.get("full_name", ""),
+                "parent_name": current_user.get("full_name", ""),
+            },
+            "read": False,
+            "created_at": datetime.now(timezone.utc),
+            "society_id": current_user.get("society_id", ""),
+        }
+        await db.admin_notifications.insert_one(admin_notification)
+    
+    return {"message": "Richiesta di fine prova registrata", "end_trial_requested": True}
+
+
+@api_router.get("/athletes/{athlete_id}/end-trial-status")
+async def get_end_trial_status(athlete_id: str, current_user = Depends(get_current_user)):
+    """Stato dei 3 step per concludere il periodo di prova"""
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN, UserRole.COACH]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    has_certificate = bool(athlete.get("medical_certificate_expiry"))
+    cert_verified = bool(athlete.get("medical_certificate_verified"))
+    privacy_signed = bool(athlete.get("privacy_accepted"))
+    all_complete = has_certificate and cert_verified and privacy_signed
+    
+    return {
+        "end_trial_requested": athlete.get("end_trial_requested", False),
+        "end_trial_requested_date": athlete.get("end_trial_requested_date"),
+        "steps": {
+            "certificate_date_entered": has_certificate,
+            "certificate_expiry": athlete.get("medical_certificate_expiry"),
+            "admin_verified": cert_verified,
+            "admin_verified_by": athlete.get("medical_certificate_verified_by_name"),
+            "admin_verified_at": athlete.get("medical_certificate_verified_at"),
+            "privacy_signed": privacy_signed,
+            "privacy_accepted_date": athlete.get("privacy_accepted_date"),
+        },
+        "all_complete": all_complete,
+        "athlete_status": athlete.get("status"),
+    }
+
+
 
 # ==================== MINOR DASHBOARD ENDPOINTS ====================
 

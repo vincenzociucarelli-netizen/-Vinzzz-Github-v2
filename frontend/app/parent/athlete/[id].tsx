@@ -314,6 +314,11 @@ export default function AthleteDetail() {
   const [signingTrialDoc, setSigningTrialDoc] = useState(false);
   const trialSignatureRef = useRef<SignaturePadInlineRef>(null);
 
+  // End trial flow states
+  const [endTrialStatus, setEndTrialStatus] = useState<any>(null);
+  const [requestingEndTrial, setRequestingEndTrial] = useState(false);
+  const [showEndTrialChoice, setShowEndTrialChoice] = useState(false);
+
   // Helper function for alerts
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
@@ -433,6 +438,14 @@ export default function AthleteDetail() {
         setProfileCheck(profileRes.data);
       } catch (error) {
         console.log('Could not load profile check');
+      }
+
+      // Load end-trial status
+      try {
+        const endTrialRes = await api.get(`/athletes/${id}/end-trial-status`);
+        setEndTrialStatus(endTrialRes.data);
+      } catch (error) {
+        console.log('Could not load end-trial status');
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -1206,19 +1219,55 @@ export default function AthleteDetail() {
   const handleGDPRPrivacySigned = async (success: boolean, documentId?: string) => {
     if (success) {
       try {
-        // Attiva l'atleta dopo la firma GDPR
-        const response = await api.patch(`/athletes/${id}`, {
-          privacy_accepted: true,
-          image_consent: true,
-          status: 'active',
-        });
-        setPrivacyModalVisible(false);
-        setPrivacyConfirmed(false);
-        setAthlete(response.data);
-        showAlert('Successo', 'Privacy firmata e atleta attivato!');
+        const isEndTrialFlow = endTrialStatus?.end_trial_requested;
+        if (isEndTrialFlow) {
+          // End-trial flow: only set privacy, let backend auto-activate if all steps done
+          const response = await api.patch(`/athletes/${id}`, {
+            privacy_accepted: true,
+            image_consent: true,
+          });
+          setPrivacyModalVisible(false);
+          setPrivacyConfirmed(false);
+          setAthlete(response.data);
+          // Reload end-trial status
+          const etRes = await api.get(`/athletes/${id}/end-trial-status`);
+          setEndTrialStatus(etRes.data);
+          if (response.data.status === 'active') {
+            showAlert('Successo', 'Tutti i passaggi completati! Atleta attivato!');
+          } else {
+            showAlert('Successo', 'Privacy firmata! In attesa della verifica del certificato medico da parte dell\'admin.');
+          }
+        } else {
+          // Normal flow: activate directly
+          const response = await api.patch(`/athletes/${id}`, {
+            privacy_accepted: true,
+            image_consent: true,
+            status: 'active',
+          });
+          setPrivacyModalVisible(false);
+          setPrivacyConfirmed(false);
+          setAthlete(response.data);
+          showAlert('Successo', 'Privacy firmata e atleta attivato!');
+        }
       } catch (error: any) {
         showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'attivazione');
       }
+    }
+  };
+
+  const handleRequestEndTrial = async () => {
+    if (!athlete) return;
+    setRequestingEndTrial(true);
+    try {
+      await api.post(`/athletes/${athlete.id}/request-end-trial`);
+      const etRes = await api.get(`/athletes/${athlete.id}/end-trial-status`);
+      setEndTrialStatus(etRes.data);
+      setShowEndTrialChoice(false);
+      showAlert('Perfetto!', 'Hai avviato la procedura per diventare membro effettivo. Segui i 3 passaggi richiesti.');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la richiesta');
+    } finally {
+      setRequestingEndTrial(false);
     }
   };
 
@@ -1840,6 +1889,16 @@ export default function AthleteDetail() {
                   </View>
                 )}
               </View>
+              {/* Bottone Termina Periodo di Prova (solo se non ancora richiesto) */}
+              {!endTrialStatus?.end_trial_requested && (
+                <TouchableOpacity
+                  style={{ backgroundColor: '#0D47A1', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 4 }}
+                  onPress={() => setShowEndTrialChoice(true)}
+                  data-testid="end-trial-btn"
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Voglio restare - Termina Periodo di Prova</Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
 
@@ -1869,26 +1928,153 @@ export default function AthleteDetail() {
                   </Text>
                 </View>
               </View>
+              {/* Bottone Termina Periodo di Prova (solo se non ancora richiesto) */}
+              {!endTrialStatus?.end_trial_requested && (
+                <TouchableOpacity
+                  style={{ backgroundColor: '#E65100', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 4 }}
+                  onPress={() => setShowEndTrialChoice(true)}
+                  data-testid="end-trial-warning-btn"
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Voglio restare - Termina Periodo di Prova</Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
 
           {/* SCADUTO (ROSSO) */}
-          {athlete.status === 'trial' && trialHasStarted && trialStatus && trialStatus.trial_expired && !athlete.privacy_accepted && (
-            <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#F44336' }} data-testid="trial-status-expired">
+          {athlete.status === 'trial' && trialHasStarted && trialStatus && trialStatus.trial_expired && !athlete.privacy_accepted && !endTrialStatus?.end_trial_requested && (
+            <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#F44336', marginBottom: 12 }} data-testid="trial-status-expired">
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                 <Ionicons name="close-circle" size={18} color="#C62828" />
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#C62828' }}>Periodo di prova terminato</Text>
               </View>
               <Text style={{ fontSize: 12, color: '#555', lineHeight: 18, marginBottom: 8 }}>
-                Inserire il certificato medico per proseguire l'attivita sportiva.
+                Per proseguire l'attivita sportiva, avvia la procedura di iscrizione.
               </Text>
               <TouchableOpacity
-                style={{ backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
-                onPress={() => setPrivacyModalVisible(true)}
-                data-testid="confirm-privacy-btn"
+                style={{ backgroundColor: '#C62828', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
+                onPress={() => setShowEndTrialChoice(true)}
+                data-testid="end-trial-expired-btn"
               >
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Conferma Privacy e Firma</Text>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Voglio restare - Diventa Membro</Text>
               </TouchableOpacity>
+            </View>
+          )}
+
+          {/* STEPPER - Procedura Fine Prova (quando end_trial_requested) */}
+          {athlete.status === 'trial' && endTrialStatus?.end_trial_requested && (
+            <View style={{ backgroundColor: '#F5F5F5', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E0E0E0' }} data-testid="end-trial-stepper">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <Ionicons name="clipboard" size={20} color="#1565C0" />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0' }}>Procedura di Iscrizione</Text>
+              </View>
+
+              {/* Step 1 - Certificato Medico */}
+              <View style={{ flexDirection: 'row', marginBottom: 12 }} data-testid="end-trial-step-1">
+                <View style={{ width: 28, alignItems: 'center', marginRight: 10 }}>
+                  <View style={{
+                    width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: endTrialStatus.steps.certificate_date_entered ? '#4CAF50' : '#E0E0E0',
+                  }}>
+                    {endTrialStatus.steps.certificate_date_entered ? (
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                    ) : (
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#666' }}>1</Text>
+                    )}
+                  </View>
+                  <View style={{ width: 2, flex: 1, backgroundColor: endTrialStatus.steps.certificate_date_entered ? '#4CAF50' : '#E0E0E0', marginTop: 4 }} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: endTrialStatus.steps.certificate_date_entered ? '#2E7D32' : '#333', marginBottom: 2 }}>
+                    Certificato Medico
+                  </Text>
+                  {endTrialStatus.steps.certificate_date_entered ? (
+                    <Text style={{ fontSize: 12, color: '#4CAF50' }}>
+                      Scadenza inserita: {new Date(endTrialStatus.steps.certificate_expiry).toLocaleDateString('it-IT')}
+                    </Text>
+                  ) : (
+                    <Text style={{ fontSize: 12, color: '#888', lineHeight: 18 }}>
+                      Inserisci la data di scadenza del certificato medico nella sezione sottostante.
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Step 2 - Verifica Admin */}
+              <View style={{ flexDirection: 'row', marginBottom: 12 }} data-testid="end-trial-step-2">
+                <View style={{ width: 28, alignItems: 'center', marginRight: 10 }}>
+                  <View style={{
+                    width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: endTrialStatus.steps.admin_verified ? '#4CAF50' : '#E0E0E0',
+                  }}>
+                    {endTrialStatus.steps.admin_verified ? (
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                    ) : (
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#666' }}>2</Text>
+                    )}
+                  </View>
+                  <View style={{ width: 2, flex: 1, backgroundColor: endTrialStatus.steps.admin_verified ? '#4CAF50' : '#E0E0E0', marginTop: 4 }} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: endTrialStatus.steps.admin_verified ? '#2E7D32' : '#333', marginBottom: 2 }}>
+                    Verifica Admin
+                  </Text>
+                  {endTrialStatus.steps.admin_verified ? (
+                    <Text style={{ fontSize: 12, color: '#4CAF50' }}>
+                      Verificato da {endTrialStatus.steps.admin_verified_by}
+                    </Text>
+                  ) : endTrialStatus.steps.certificate_date_entered ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <ActivityIndicator size="small" color="#FF9500" />
+                      <Text style={{ fontSize: 12, color: '#FF9500' }}>In attesa di verifica da parte dell'admin</Text>
+                    </View>
+                  ) : (
+                    <Text style={{ fontSize: 12, color: '#888' }}>L'admin verifichera il certificato di persona</Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Step 3 - Firma Privacy */}
+              <View style={{ flexDirection: 'row' }} data-testid="end-trial-step-3">
+                <View style={{ width: 28, alignItems: 'center', marginRight: 10 }}>
+                  <View style={{
+                    width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: endTrialStatus.steps.privacy_signed ? '#4CAF50' : '#E0E0E0',
+                  }}>
+                    {endTrialStatus.steps.privacy_signed ? (
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                    ) : (
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#666' }}>3</Text>
+                    )}
+                  </View>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: endTrialStatus.steps.privacy_signed ? '#2E7D32' : '#333', marginBottom: 2 }}>
+                    Firma Privacy
+                  </Text>
+                  {endTrialStatus.steps.privacy_signed ? (
+                    <Text style={{ fontSize: 12, color: '#4CAF50' }}>Privacy firmata</Text>
+                  ) : (
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#1565C0', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16, alignSelf: 'flex-start', marginTop: 4 }}
+                      onPress={() => setPrivacyModalVisible(true)}
+                      data-testid="end-trial-sign-privacy-btn"
+                    >
+                      <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Firma Privacy GDPR</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
+              {/* All complete message */}
+              {endTrialStatus.all_complete && athlete.status === 'trial' && (
+                <View style={{ backgroundColor: '#E8F5E9', borderRadius: 8, padding: 12, marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+                  <Text style={{ fontSize: 13, color: '#2E7D32', fontWeight: '600', flex: 1 }}>
+                    Tutti i passaggi completati! L'atleta verra attivato automaticamente.
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -2636,6 +2822,70 @@ export default function AthleteDetail() {
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* End Trial Choice Modal */}
+      <Modal
+        visible={showEndTrialChoice}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowEndTrialChoice(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, overflow: 'hidden' }}>
+            {/* Header */}
+            <View style={{ backgroundColor: '#0D47A1', paddingVertical: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Fine Periodo di Prova</Text>
+              <TouchableOpacity onPress={() => setShowEndTrialChoice(false)} data-testid="end-trial-choice-close">
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <View style={{ padding: 20 }}>
+              <Text style={{ fontSize: 14, color: '#333', lineHeight: 22, marginBottom: 16 }}>
+                Per diventare membro effettivo della societa, dovrai completare 3 passaggi obbligatori:
+              </Text>
+              <View style={{ backgroundColor: '#E3F2FD', borderRadius: 10, padding: 14, marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>1</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#1565C0' }}>Inserire data scadenza certificato medico</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>2</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#1565C0' }}>Verifica certificato da parte dell'admin</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>3</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#1565C0' }}>Firma del documento privacy GDPR</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: requestingEndTrial ? '#90CAF9' : '#0D47A1',
+                  borderRadius: 10, paddingVertical: 14, alignItems: 'center',
+                  flexDirection: 'row', justifyContent: 'center', gap: 8,
+                }}
+                onPress={handleRequestEndTrial}
+                disabled={requestingEndTrial}
+                data-testid="confirm-end-trial-btn"
+              >
+                {requestingEndTrial ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                )}
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
+                  {requestingEndTrial ? 'Invio...' : 'Conferma - Voglio restare'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       {/* GDPR Privacy Modal */}
