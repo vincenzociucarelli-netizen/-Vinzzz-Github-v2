@@ -10486,8 +10486,27 @@ async def get_coach_team_athletes(team_id: str, current_user = Depends(get_curre
     if team_id not in assigned_team_ids:
         raise HTTPException(status_code=403, detail="Non sei assegnato a questa squadra")
     
-    # Get athletes
-    athletes = await db.athletes.find({"team_id": team_id}).to_list(1000)
+    # Get athletes (team_id or team_id_2, including trial athletes with attendances)
+    athletes = await db.athletes.find({
+        "$or": [
+            {"team_id": team_id},
+            {"team_id_2": team_id}
+        ],
+        "is_withdrawn": {"$ne": True}
+    }).to_list(1000)
+    
+    # Also include trial athletes who have attendances for this team
+    team_athlete_ids = [a["id"] for a in athletes]
+    trial_attendance_ids = await db.attendances.distinct("athlete_id", {"team_id": team_id})
+    missing_ids = [aid for aid in trial_attendance_ids if aid not in team_athlete_ids]
+    if missing_ids:
+        extra_athletes = await db.athletes.find({
+            "id": {"$in": missing_ids},
+            "status": "trial",
+            "is_withdrawn": {"$ne": True}
+        }).to_list(100)
+        athletes.extend(extra_athletes)
+    
     clean_mongo_docs(athletes)
     
     # Get certificate info and return limited data
@@ -10500,6 +10519,7 @@ async def get_coach_team_athletes(team_id: str, current_user = Depends(get_curre
             "full_name": athlete.get("full_name", ""),
             "first_name": athlete.get("first_name", ""),
             "last_name": athlete.get("last_name", ""),
+            "status": athlete.get("status", "active"),
             "certificate_expiry": cert["expiry_date"].isoformat() if cert and cert.get("expiry_date") else None,
             "is_expired": cert["expiry_date"] < datetime.now() if cert and cert.get("expiry_date") else True
         }
