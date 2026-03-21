@@ -17753,7 +17753,7 @@ async def delete_my_data(current_user = Depends(get_current_user)):
 
 # ==================== SOCIETY CARD PDF ENDPOINTS ====================
 
-@api_router.get("/society/card-fiscale")
+@api_router.api_route("/society/card-fiscale", methods=["GET", "POST"])
 async def generate_fiscal_card(current_user = Depends(get_current_user)):
     """Genera immagine JPG biglietto da visita della societa"""
     society = await db.settings.find_one({"type": "society"})
