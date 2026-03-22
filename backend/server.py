@@ -839,6 +839,10 @@ class Athlete(BaseModel):
     deletion_requested_at: Optional[datetime] = None
     deletion_requested_by: Optional[str] = None
     deletion_requested_by_name: Optional[str] = None
+    # Versione Lite - personalizzazione
+    nome_lite: Optional[str] = None  # Nome scelto dal genitore/atleta per login Lite (unico)
+    lite_color: Optional[str] = None  # Colore identificativo scelto dall'atleta nella versione Lite
+    lite_emoji: Optional[str] = None  # Emoji personale scelto dall'atleta nella versione Lite
 
 class AthleteCreate(BaseModel):
     full_name: str
@@ -2492,27 +2496,59 @@ async def login(request: Request, credentials: UserLogin):
 
 @api_router.post("/auth/minor-login")
 async def minor_login(request: Request, credentials: MinorLogin):
-    """Login per atleta con codice atleta + PIN (Accesso Lite)"""
-    code = credentials.athlete_code.strip().upper()
+    """Login per atleta con nome_lite + PIN (Accesso Lite)"""
+    code = credentials.athlete_code.strip()
     pin = credentials.pin.strip()
     
-    # Trova atleta per codice
-    athlete = await db.athletes.find_one({"athlete_code": code})
-    if not athlete:
-        athlete = await db.athletes.find_one({"qr_identifier": code})
-    if not athlete:
-        raise HTTPException(status_code=401, detail="Codice atleta non valido")
+    # Rate limiting key based on nome_lite
+    rate_key = f"minor_login_{code.upper()}"
     
-    # Verifica che l'accesso lite sia abilitato
+    # Check if blocked from too many attempts
+    now = datetime.now(timezone.utc)
+    attempt_record = await db.login_attempts.find_one({"key": rate_key})
+    if attempt_record and attempt_record.get("blocked_until"):
+        blocked_until = attempt_record["blocked_until"]
+        if isinstance(blocked_until, str):
+            blocked_until = datetime.fromisoformat(blocked_until.replace('Z', '+00:00'))
+        if now < blocked_until:
+            remaining = int((blocked_until - now).total_seconds())
+            raise HTTPException(
+                status_code=429, 
+                detail=f"Troppi tentativi. Riprova tra {remaining} secondi."
+            )
+    
+    # Find athlete by nome_lite first, then fallback to athlete_code/qr_identifier
+    athlete = await db.athletes.find_one({"nome_lite": {"$regex": f"^{code}$", "$options": "i"}})
+    if not athlete:
+        athlete = await db.athletes.find_one({"athlete_code": code.upper()})
+    if not athlete:
+        athlete = await db.athletes.find_one({"qr_identifier": code.upper()})
+    if not athlete:
+        # Record failed attempt
+        await _record_minor_login_attempt(rate_key, False)
+        raise HTTPException(status_code=401, detail="Nome Lite non valido")
+    
+    # Verify lite access is enabled
     if not athlete.get("minor_access_enabled"):
         raise HTTPException(status_code=403, detail="L'accesso Lite per questo atleta non è stato ancora attivato")
     
-    # Verifica PIN
+    # Verify PIN
     stored_pin_hash = athlete.get("minor_pin_hash")
     if not stored_pin_hash or not verify_password(pin, stored_pin_hash):
-        raise HTTPException(status_code=401, detail="PIN non corretto")
+        await _record_minor_login_attempt(rate_key, False)
+        
+        # Get updated attempt count for error message
+        updated_record = await db.login_attempts.find_one({"key": rate_key})
+        attempts = updated_record.get("consecutive_failures", 0) if updated_record else 0
+        if attempts >= 5:
+            raise HTTPException(status_code=429, detail="Account bloccato temporaneamente per troppi tentativi.")
+        remaining_attempts = 5 - attempts
+        raise HTTPException(status_code=401, detail=f"PIN non corretto. {remaining_attempts} tentativi rimasti.")
     
-    # Crea token con ruolo "minor"
+    # Successful login - clear attempts
+    await db.login_attempts.delete_one({"key": rate_key})
+    
+    # Create token with minor role
     token = create_token(athlete["id"], "minor", athlete_id=athlete["id"])
     
     return TokenResponse(
@@ -2525,6 +2561,42 @@ async def minor_login(request: Request, credentials: MinorLogin):
             "status": athlete.get("status", "active"),
             "athlete_id": athlete["id"],
         }
+    )
+
+
+async def _record_minor_login_attempt(rate_key: str, success: bool):
+    """Record a minor login attempt with progressive blocking."""
+    now = datetime.now(timezone.utc)
+    record = await db.login_attempts.find_one({"key": rate_key})
+    
+    if success:
+        await db.login_attempts.delete_one({"key": rate_key})
+        return
+    
+    consecutive = (record.get("consecutive_failures", 0) if record else 0) + 1
+    
+    # Progressive blocking: 3 attempts = 30s, 5 = 2min, 7 = 5min, 10+ = 15min
+    block_duration = None
+    if consecutive >= 10:
+        block_duration = timedelta(minutes=15)
+    elif consecutive >= 7:
+        block_duration = timedelta(minutes=5)
+    elif consecutive >= 5:
+        block_duration = timedelta(minutes=2)
+    elif consecutive >= 3:
+        block_duration = timedelta(seconds=30)
+    
+    blocked_until = (now + block_duration).isoformat() if block_duration else None
+    
+    await db.login_attempts.update_one(
+        {"key": rate_key},
+        {"$set": {
+            "key": rate_key,
+            "consecutive_failures": consecutive,
+            "last_attempt": now.isoformat(),
+            "blocked_until": blocked_until,
+        }},
+        upsert=True
     )
 
 @api_router.get("/auth/me")
@@ -19166,6 +19238,9 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
             "status": athlete.get("status"),
             "certificate_expiry": cert_expiry,
             "certificate_verified": cert_verified,
+            "nome_lite": athlete.get("nome_lite"),
+            "lite_color": athlete.get("lite_color"),
+            "lite_emoji": athlete.get("lite_emoji"),
         },
         "team": {
             "id": team.get("id") if team else None,
@@ -19256,6 +19331,74 @@ async def set_custom_athlete_code(athlete_id: str, data: SetCustomAthleteCode, c
     )
     
     return {"message": f"Codice aggiornato: {code}", "athlete_code": code}
+
+
+class SetNomeLite(BaseModel):
+    nome_lite: str
+
+@api_router.post("/athletes/{athlete_id}/set-nome-lite")
+async def set_nome_lite(athlete_id: str, data: SetNomeLite, current_user = Depends(get_current_user)):
+    """Genitore o atleta maggiorenne imposta il nome lite per l'accesso Lite"""
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN, "minor"]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Verify ownership
+    if current_user["role"] == UserRole.PARENT:
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    elif current_user["role"] == "minor":
+        if current_user.get("athlete_id") != athlete_id:
+            raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    nome = data.nome_lite.strip()
+    if len(nome) < 3:
+        raise HTTPException(status_code=400, detail="Il nome lite deve avere almeno 3 caratteri")
+    if len(nome) > 20:
+        raise HTTPException(status_code=400, detail="Il nome lite non può superare 20 caratteri")
+    
+    # Check uniqueness (case-insensitive)
+    existing = await db.athletes.find_one({
+        "nome_lite": {"$regex": f"^{nome}$", "$options": "i"},
+        "id": {"$ne": athlete_id}
+    })
+    if existing:
+        raise HTTPException(status_code=409, detail="Questo nome lite è già in uso da un altro atleta")
+    
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {"nome_lite": nome}}
+    )
+    
+    return {"message": f"Nome Lite impostato: {nome}", "nome_lite": nome}
+
+
+class SetLitePersonalization(BaseModel):
+    lite_color: Optional[str] = None
+    lite_emoji: Optional[str] = None
+
+@api_router.post("/athletes/{athlete_id}/set-lite-personalization")
+async def set_lite_personalization(athlete_id: str, data: SetLitePersonalization, current_user = Depends(get_current_user)):
+    """Atleta personalizza colore e emoji dalla versione Lite"""
+    if current_user.get("role") != "minor":
+        raise HTTPException(status_code=403, detail="Solo l'atleta può personalizzare la versione Lite")
+    
+    if current_user.get("athlete_id") != athlete_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    update_fields = {}
+    if data.lite_color is not None:
+        update_fields["lite_color"] = data.lite_color
+    if data.lite_emoji is not None:
+        update_fields["lite_emoji"] = data.lite_emoji
+    
+    if update_fields:
+        await db.athletes.update_one({"id": athlete_id}, {"$set": update_fields})
+    
+    return {"message": "Personalizzazione salvata", **update_fields}
 
 @api_router.post("/athletes/{athlete_id}/toggle-minor-access")
 async def toggle_minor_access(athlete_id: str, current_user = Depends(get_current_user)):

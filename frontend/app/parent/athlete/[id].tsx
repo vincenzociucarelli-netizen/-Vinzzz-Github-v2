@@ -303,6 +303,8 @@ export default function AthleteDetail() {
   const [minorConfirmPin, setMinorConfirmPin] = useState('');
   const [savingMinorPin, setSavingMinorPin] = useState(false);
   const [customCodeModalVisible, setCustomCodeModalVisible] = useState(false);
+  const [nomeLiteModalVisible, setNomeLiteModalVisible] = useState(false);
+  const [nomeLiteInput, setNomeLiteInput] = useState('');
   const [customCode, setCustomCode] = useState('');
 
   // Trial period states
@@ -2524,21 +2526,21 @@ export default function AthleteDetail() {
                 Credenziali per l'accesso:
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <Text style={{ fontSize: 13, color: '#555' }}>Codice Atleta:</Text>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e', letterSpacing: 1 }}>{minorAthleteCode}</Text>
+                <Text style={{ fontSize: 13, color: '#555' }}>Nome Lite:</Text>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e' }}>{athlete?.nome_lite || 'Non impostato'}</Text>
               </View>
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 4 }}
-                onPress={() => setCustomCodeModalVisible(true)}
-                data-testid="customize-code-button"
+                style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4 }}
+                onPress={() => setNomeLiteModalVisible(true)}
+                data-testid="set-nome-lite-button"
               >
                 <Ionicons name="create-outline" size={15} color="#1565C0" />
                 <Text style={{ fontSize: 12, color: '#1565C0', fontWeight: '600' }}>
-                  Personalizza codice
+                  {athlete?.nome_lite ? 'Modifica Nome Lite' : 'Imposta Nome Lite'}
                 </Text>
               </TouchableOpacity>
               <Text style={{ fontSize: 12, color: '#888', fontStyle: 'italic', marginTop: 6 }}>
-                Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il codice e il PIN.
+                Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il Nome Lite e il PIN.
               </Text>
             </View>
           )}
@@ -3677,6 +3679,63 @@ export default function AthleteDetail() {
                 data-testid="custom-code-save-button"
               >
                 <Text style={{ fontWeight: '600', color: '#fff' }}>Salva Codice</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: Nome Lite */}
+      <Modal
+        visible={nomeLiteModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setNomeLiteModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 8, textAlign: 'center' }}>
+              Imposta Nome Lite
+            </Text>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 16, textAlign: 'center' }}>
+              Scegli un nome facile da ricordare per l'accesso Lite (3-20 caratteri). Deve essere unico.
+            </Text>
+            <TextInput
+              style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14, fontSize: 16, textAlign: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#e0e0e0' }}
+              placeholder="Es: MartinaG, Marti08"
+              placeholderTextColor="#bbb"
+              value={nomeLiteInput}
+              onChangeText={setNomeLiteInput}
+              autoCapitalize="none"
+              maxLength={20}
+              data-testid="nome-lite-input"
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: '#f0f0f0', borderRadius: 10, padding: 14, alignItems: 'center' }}
+                onPress={() => setNomeLiteModalVisible(false)}
+              >
+                <Text style={{ fontWeight: '600', color: '#666' }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: '#1565C0', borderRadius: 10, padding: 14, alignItems: 'center' }}
+                onPress={async () => {
+                  if (!nomeLiteInput || nomeLiteInput.trim().length < 3) {
+                    showAlert('Errore', 'Il nome deve avere almeno 3 caratteri');
+                    return;
+                  }
+                  try {
+                    const res = await api.post(`/athletes/${id}/set-nome-lite`, { nome_lite: nomeLiteInput.trim() });
+                    setAthlete((prev: any) => prev ? { ...prev, nome_lite: res.data.nome_lite } : prev);
+                    setNomeLiteModalVisible(false);
+                    showAlert('Successo', `Nome Lite impostato: ${res.data.nome_lite}`);
+                  } catch (e: any) {
+                    showAlert('Errore', e.response?.data?.detail || 'Errore nel salvataggio');
+                  }
+                }}
+                data-testid="nome-lite-save-button"
+              >
+                <Text style={{ fontWeight: '600', color: '#fff' }}>Salva</Text>
               </TouchableOpacity>
             </View>
           </View>

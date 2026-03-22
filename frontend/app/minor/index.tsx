@@ -38,6 +38,9 @@ interface DashboardData {
     status: string;
     certificate_expiry?: string;
     certificate_verified?: boolean;
+    nome_lite?: string;
+    lite_color?: string;
+    lite_emoji?: string;
   };
   team: { id: string; name: string } | null;
   schedule: {
@@ -70,6 +73,11 @@ export default function MinorDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const [showQR, setShowQR] = useState(false);
+  const [showPersonalize, setShowPersonalize] = useState(false);
+  const [savingPersonalization, setSavingPersonalization] = useState(false);
+
+  const EMOJI_OPTIONS = ['⚽', '🏐', '🏀', '🎾', '🏈', '🏊', '⭐', '🔥', '💪', '🎯', '🦁', '🐯', '🦅', '🐺', '🌟', '💎'];
+  const COLOR_OPTIONS = ['#E91E63', '#9C27B0', '#3F51B5', '#2196F3', '#00BCD4', '#009688', '#4CAF50', '#FF9800', '#FF5722', '#795548', '#607D8B', '#F44336'];
 
   const loadDashboard = async () => {
     try {
@@ -90,6 +98,30 @@ export default function MinorDashboard() {
   const handleLogout = async () => {
     await logout();
     router.replace('/login');
+  };
+
+  const handleSavePersonalization = async (color?: string, emoji?: string) => {
+    if (!data) return;
+    setSavingPersonalization(true);
+    try {
+      const payload: any = {};
+      if (color !== undefined) payload.lite_color = color;
+      if (emoji !== undefined) payload.lite_emoji = emoji;
+      await api.post(`/athletes/${data.athlete.id}/set-lite-personalization`, payload);
+      // Update local state
+      setData(prev => prev ? {
+        ...prev,
+        athlete: {
+          ...prev.athlete,
+          ...(color !== undefined && { lite_color: color }),
+          ...(emoji !== undefined && { lite_emoji: emoji }),
+        }
+      } : null);
+    } catch (e) {
+      console.error('Error saving personalization:', e);
+    } finally {
+      setSavingPersonalization(false);
+    }
   };
 
   if (loading) {
@@ -164,15 +196,68 @@ export default function MinorDashboard() {
         {data.society?.name && (
           <Text style={styles.societyNameHeader}>{data.society.name.toUpperCase()}</Text>
         )}
-        {/* Row 3: Welcome + Logout */}
+        {/* Row 3: Welcome with emoji/color + Logout + Personalize */}
         <View style={styles.welcomeRow}>
-          <Text style={styles.welcomeText}>Ciao, <Text style={styles.athleteName}>
-            {(data.athlete.first_name || '').charAt(0).toUpperCase() + (data.athlete.first_name || '').slice(1).toLowerCase()}
-          </Text></Text>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} data-testid="minor-logout-button">
-            <Ionicons name="log-out" size={22} color="#ff3b30" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
+            {data.athlete.lite_emoji ? (
+              <Text style={{ fontSize: 24 }}>{data.athlete.lite_emoji}</Text>
+            ) : null}
+            <Text style={styles.welcomeText}>Ciao, <Text style={[styles.athleteName, data.athlete.lite_color ? { color: data.athlete.lite_color } : {}]}>
+              {(data.athlete.first_name || '').charAt(0).toUpperCase() + (data.athlete.first_name || '').slice(1).toLowerCase()}{data.athlete.last_name ? ` ${data.athlete.last_name.charAt(0).toUpperCase()}.` : ''}
+            </Text></Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity onPress={() => setShowPersonalize(!showPersonalize)} style={{ padding: 4 }} data-testid="personalize-btn">
+              <Ionicons name="color-palette" size={22} color={data.athlete.lite_color || '#007AFF'} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} data-testid="minor-logout-button">
+              <Ionicons name="log-out" size={22} color="#ff3b30" />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* Personalization Panel */}
+        {showPersonalize && (
+          <View style={{ backgroundColor: '#f8f9fa', borderRadius: 12, padding: 14, marginTop: 10 }} data-testid="personalize-panel">
+            <Text style={{ fontWeight: '700', fontSize: 14, color: '#333', marginBottom: 10 }}>Personalizza il tuo profilo</Text>
+            
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>Scegli il tuo colore</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+              {COLOR_OPTIONS.map(c => (
+                <TouchableOpacity
+                  key={c}
+                  onPress={() => handleSavePersonalization(c, undefined)}
+                  style={{
+                    width: 32, height: 32, borderRadius: 16, backgroundColor: c,
+                    borderWidth: data.athlete.lite_color === c ? 3 : 0,
+                    borderColor: '#fff',
+                    ...(data.athlete.lite_color === c ? { shadowColor: c, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 4 } : {}),
+                  }}
+                  data-testid={`color-${c}`}
+                />
+              ))}
+            </View>
+            
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>Scegli la tua emoji</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {EMOJI_OPTIONS.map(e => (
+                <TouchableOpacity
+                  key={e}
+                  onPress={() => handleSavePersonalization(undefined, e)}
+                  style={{
+                    width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center',
+                    backgroundColor: data.athlete.lite_emoji === e ? (data.athlete.lite_color || '#007AFF') + '20' : '#fff',
+                    borderWidth: data.athlete.lite_emoji === e ? 2 : 1,
+                    borderColor: data.athlete.lite_emoji === e ? (data.athlete.lite_color || '#007AFF') : '#e0e0e0',
+                  }}
+                  data-testid={`emoji-${e}`}
+                >
+                  <Text style={{ fontSize: 20 }}>{e}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Status Banners Row */}

@@ -101,14 +101,14 @@ export default function Login() {
 
   const handleMinorLogin = async () => {
     if (!athleteCode || !pin) {
-      showAlert('Errore', 'Inserisci il codice atleta e il PIN');
+      showAlert('Errore', 'Inserisci il Nome Lite e il PIN');
       return;
     }
 
     setLoading(true);
     try {
       const response = await api.post('/auth/minor-login', {
-        athlete_code: athleteCode.trim().toUpperCase(),
+        athlete_code: athleteCode.trim(),
         pin: pin.trim(),
       });
       await saveAthleteCode(athleteCode.trim().toUpperCase());
@@ -233,17 +233,17 @@ export default function Login() {
           </View>
         ) : (
           <View style={styles.form}>
-            <Text style={styles.subtitle}>Accedi con codice atleta e PIN</Text>
+            <Text style={styles.subtitle}>Accedi con Nome Lite e PIN</Text>
             <Text style={styles.minorHint}>
-              Chiedi al tuo genitore il codice atleta e il PIN
+              Chiedi al tuo genitore il tuo Nome Lite e il PIN
             </Text>
             <TextInput
               style={styles.input}
-              placeholder="Codice Atleta"
+              placeholder="Nome Lite"
               placeholderTextColor="#999"
               value={athleteCode}
-              onChangeText={(t) => setAthleteCode(t.toUpperCase())}
-              autoCapitalize="characters"
+              onChangeText={setAthleteCode}
+              autoCapitalize="none"
               autoCorrect={false}
               data-testid="minor-login-code-input"
             />
