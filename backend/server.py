@@ -20216,6 +20216,18 @@ async def send_preseason_notifications(campaign_id: str, current_user = Depends(
     }
 
 
+# Manual trigger endpoint for admins
+@api_router.post("/admin/trigger-certificate-notifications")
+async def trigger_certificate_notifications(current_user = Depends(get_current_user)):
+    """Manually trigger certificate expiry notification check (admin only)."""
+    if current_user.get("role") not in [UserRole.ADMIN, "dirigente"]:
+        raise HTTPException(status_code=403, detail="Solo admin può eseguire questa operazione")
+    
+    import asyncio as _asyncio
+    _asyncio.create_task(check_certificate_expiry_notifications())
+    return {"message": "Controllo notifiche certificati avviato. Le email verranno inviate in background."}
+
+
 
 app.include_router(api_router)
 
@@ -20238,3 +20250,200 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+
+# ============================================================
+# SCHEDULED TASK: Certificate Expiry Email Notifications
+# Runs daily, sends emails at 30 and 15 days before expiry
+# ============================================================
+
+async def check_certificate_expiry_notifications():
+    """Check all athletes for certificate expiry and send email notifications at 30 and 15 days."""
+    from email_service import send_transactional_email
+    import asyncio as _asyncio
+    
+    logger.info("Running certificate expiry notification check...")
+    
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Get all athletes with certificate expiry
+    athletes = await db.athletes.find({
+        "medical_certificate_expiry": {"$exists": True, "$ne": None},
+        "status": {"$in": ["active", "trial"]}
+    }).to_list(5000)
+    
+    sent_count = 0
+    
+    for athlete in athletes:
+        cert_expiry = athlete.get("medical_certificate_expiry")
+        if not cert_expiry:
+            continue
+        
+        try:
+            if isinstance(cert_expiry, str):
+                expiry_date = datetime.fromisoformat(cert_expiry.replace('Z', '+00:00'))
+            elif isinstance(cert_expiry, datetime):
+                expiry_date = cert_expiry if cert_expiry.tzinfo else cert_expiry.replace(tzinfo=timezone.utc)
+            else:
+                continue
+        except Exception:
+            continue
+        
+        expiry_date_clean = expiry_date.replace(tzinfo=None)
+        today_clean = today.replace(tzinfo=None)
+        days_until = (expiry_date_clean - today_clean).days
+        
+        # Only notify at 30 and 15 days
+        notification_type = None
+        if days_until == 30:
+            notification_type = "30_days"
+        elif days_until == 15:
+            notification_type = "15_days"
+        
+        if not notification_type:
+            continue
+        
+        athlete_id = athlete.get("id")
+        athlete_name = athlete.get("full_name", "Atleta")
+        
+        # Check if already sent this notification
+        existing = await db.certificate_notifications.find_one({
+            "athlete_id": athlete_id,
+            "notification_type": notification_type,
+            "expiry_date": cert_expiry
+        })
+        if existing:
+            continue
+        
+        # Get parent(s) email
+        parent_emails = []
+        parent_id = athlete.get("parent_id")
+        second_parent_id = athlete.get("second_parent_id")
+        
+        if parent_id:
+            parent = await db.users.find_one({"id": parent_id}, {"_id": 0, "email": 1, "first_name": 1, "last_name": 1})
+            if parent and parent.get("email"):
+                parent_emails.append({"email": parent["email"], "name": f"{parent.get('first_name','')} {parent.get('last_name','')}".strip()})
+        
+        if second_parent_id:
+            parent2 = await db.users.find_one({"id": second_parent_id}, {"_id": 0, "email": 1, "first_name": 1, "last_name": 1})
+            if parent2 and parent2.get("email"):
+                parent_emails.append({"email": parent2["email"], "name": f"{parent2.get('first_name','')} {parent2.get('last_name','')}".strip()})
+        
+        # For adult athletes, send to their own user account
+        if not parent_emails:
+            user_id = athlete.get("user_id")
+            if user_id:
+                user = await db.users.find_one({"id": user_id}, {"_id": 0, "email": 1, "first_name": 1, "last_name": 1})
+                if user and user.get("email"):
+                    parent_emails.append({"email": user["email"], "name": f"{user.get('first_name','')} {user.get('last_name','')}".strip()})
+        
+        if not parent_emails:
+            continue
+        
+        # Get society info
+        society_id = athlete.get("society_id")
+        society = await db.societies.find_one({"id": society_id}, {"_id": 0, "name": 1}) if society_id else None
+        society_name = society.get("name", "La Società Sportiva") if society else "La Società Sportiva"
+        
+        expiry_formatted = expiry_date_clean.strftime("%d/%m/%Y")
+        web_app_url = os.environ.get("WEB_APP_URL", "https://app.registrateam.it")
+        
+        # Build email
+        urgency = "URGENTE: " if days_until == 15 else ""
+        subject = f"{urgency}Certificato Medico in Scadenza - {athlete_name}"
+        
+        html_content = f"""
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+            <div style="background: {'#FF6F00' if days_until == 15 else '#1565C0'}; padding: 24px 32px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 22px;">{'⚠️' if days_until == 15 else '📋'} Promemoria Certificato Medico</h1>
+            </div>
+            <div style="padding: 32px;">
+                <p style="font-size: 16px; color: #333;">Gentile Genitore,</p>
+                <p style="font-size: 15px; color: #555; line-height: 1.6;">
+                    ti informiamo che il <strong>certificato medico sportivo</strong> di 
+                    <strong style="color: {'#E65100' if days_until == 15 else '#1565C0'};">{athlete_name}</strong> 
+                    scadrà tra <strong>{days_until} giorni</strong>, il <strong>{expiry_formatted}</strong>.
+                </p>
+                
+                <div style="background: {'#FFF3E0' if days_until == 15 else '#E3F2FD'}; border-left: 4px solid {'#FF6F00' if days_until == 15 else '#1565C0'}; padding: 16px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 14px; color: #333;">
+                        {'<strong>ATTENZIONE:</strong> Mancano solo 15 giorni alla scadenza! Provvedere urgentemente al rinnovo per evitare la sospensione dagli allenamenti.' if days_until == 15 else 'Ti consigliamo di prenotare la visita medica sportiva per il rinnovo del certificato, in modo da evitare interruzioni nella partecipazione agli allenamenti.'}
+                    </p>
+                </div>
+                
+                <p style="font-size: 14px; color: #555; line-height: 1.6;">
+                    Ricordiamo che senza un certificato medico valido, l'atleta <strong>non potrà partecipare</strong> agli allenamenti e alle competizioni.
+                </p>
+                
+                <div style="text-align: center; margin: 28px 0;">
+                    <a href="{web_app_url}" style="display: inline-block; background: {'#FF6F00' if days_until == 15 else '#1565C0'}; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
+                        Accedi all'App
+                    </a>
+                </div>
+                
+                <p style="font-size: 13px; color: #999; margin-top: 24px;">
+                    Cordiali saluti,<br/>
+                    <strong>{society_name}</strong>
+                </p>
+            </div>
+            <div style="background: #f5f5f5; padding: 16px 32px; text-align: center;">
+                <p style="font-size: 11px; color: #999; margin: 0;">
+                    Questa email è stata inviata automaticamente da RegistraTEAM.
+                </p>
+            </div>
+        </div>
+        """
+        
+        # Send to all parents
+        for parent_info in parent_emails:
+            try:
+                await send_transactional_email(
+                    to_email=parent_info["email"],
+                    subject=subject,
+                    html_content=html_content,
+                    to_name=parent_info["name"]
+                )
+                sent_count += 1
+                logger.info(f"Certificate expiry email sent to {parent_info['email']} for {athlete_name} ({days_until} days)")
+            except Exception as e:
+                logger.error(f"Failed to send certificate expiry email to {parent_info['email']}: {e}")
+        
+        # Record notification
+        await db.certificate_notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "athlete_id": athlete_id,
+            "athlete_name": athlete_name,
+            "notification_type": notification_type,
+            "expiry_date": cert_expiry,
+            "sent_to": [p["email"] for p in parent_emails],
+            "sent_at": datetime.now(timezone.utc),
+            "days_before_expiry": days_until
+        })
+    
+    logger.info(f"Certificate expiry check complete. {sent_count} notifications sent.")
+
+
+async def certificate_notification_scheduler():
+    """Background scheduler that runs the certificate check once daily."""
+    import asyncio as _asyncio
+    
+    # Wait 30 seconds after startup before first run
+    await _asyncio.sleep(30)
+    
+    while True:
+        try:
+            await check_certificate_expiry_notifications()
+        except Exception as e:
+            logger.error(f"Certificate notification scheduler error: {e}")
+        
+        # Sleep 24 hours
+        await _asyncio.sleep(86400)
+
+
+@app.on_event("startup")
+async def start_certificate_scheduler():
+    """Start the certificate notification background task on app startup."""
+    import asyncio as _asyncio
+    _asyncio.create_task(certificate_notification_scheduler())
+    logger.info("Certificate expiry notification scheduler started.")

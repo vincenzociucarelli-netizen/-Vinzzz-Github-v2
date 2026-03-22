@@ -17,7 +17,8 @@ Build a comprehensive sports team management application with pre-season registr
 - [x] Parent Cross-Linking: Auto-link when second_parent_email matches
 - [x] Audit Logging: Filterable, collapsible, with deletion_request_cancelled support
 - [x] Minor Dashboard: Certificate expiry + verification status display (FIXED)
-- [x] Profile: PW Protezione Dati button added (March 22, 2026)
+- [x] Profile: PW Protezione Dati button added
+- [x] Certificate Expiry Auto-Notifications: Email at 30 and 15 days before expiry
 - [x] Bug fixes: Profile completeness, PDF viewer, admin state persistence, deletion flow
 
 ## Recent Changes (March 22, 2026 - Fork Session)
@@ -25,6 +26,7 @@ Build a comprehensive sports team management application with pre-season registr
 2. **PW Protezione Dati on Parent Profile**: Added button + full management UI for data protection passwords per athlete
 3. **Audit Log Enhancements**: Added summary line in collapsed view, deletion_request_cancelled action support
 4. **Date formatting**: Fixed Invalid Date handling in minor dashboard
+5. **Certificate Expiry Auto-Email**: Background scheduler sends email to parents at 30 and 15 days before certificate expiry, with duplicate prevention and manual admin trigger endpoint
 
 ## Pending Tasks
 - (P1) Athlete History/Timeline Page
@@ -41,8 +43,19 @@ Build a comprehensive sports team management application with pre-season registr
 - frontend/app/parent/profile.tsx (parent profile with data password)
 - frontend/app/minor/index.tsx (minor lite dashboard)
 - frontend/app/admin/settings/audit-logs.tsx (audit log page)
+- backend/email_service.py (Brevo email integration)
+
+## Key API Endpoints (New/Updated)
+- POST /api/admin/trigger-certificate-notifications - Manual trigger for cert expiry check (admin only)
+- GET /api/minor/dashboard - Now returns certificate_expiry and certificate_verified
+- GET /api/athletes/{id}/has-password - Check data protection password status
+- POST /api/athletes/{id}/change-password - Set/change data protection password
+- POST /api/athletes/{id}/request-end-trial - Now cancels pending deletion and logs audit
+
+## DB Collections (New)
+- certificate_notifications: Tracks sent expiry notifications to prevent duplicates
 
 ## Credentials (Test Environment)
-- Admin: admin@test.com (in test_database)
+- Admin: pallavoloperugia@gmail.com / Test1234
 - Parent: perla@test.com / Test1234
 - Minor: MARTY2008 / PIN 1234
