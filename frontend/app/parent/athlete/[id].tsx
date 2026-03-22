@@ -1517,44 +1517,65 @@ export default function AthleteDetail() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Account Card - Compact */}
-        <View style={[styles.card, { paddingVertical: 12 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Account</Text>
-            <Text style={{ fontSize: 14, color: '#666' }}>{athlete.email || '-'}</Text>
+        {/* Profile Card - Same style as 18+ */}
+        <View style={{ backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#333' }} data-testid="athlete-name-card">{athlete.full_name}</Text>
+              <Text style={{ fontSize: 14, color: '#666', marginTop: 2 }}>
+                Squadra: <Text style={{ fontWeight: '600', color: '#E53935' }}>{athlete.team_name || getTeamName(athlete.team_id) || 'Non assegnata'}</Text>
+              </Text>
+              {athlete.email && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                  <Ionicons name="mail" size={14} color="#999" />
+                  <Text style={{ marginLeft: 4, color: '#999', fontSize: 12 }}>{athlete.email}</Text>
+                </View>
+              )}
+            </View>
+            <View style={{ 
+              backgroundColor: athlete.status === 'active' ? '#E8F5E9' : athlete.status === 'trial' ? '#FFF3E0' : athlete.status === 'deletion_requested' ? '#FFEBEE' : '#E3F2FD',
+              paddingHorizontal: 10, 
+              paddingVertical: 5, 
+              borderRadius: 12
+            }}>
+              <Text style={{ 
+                color: athlete.status === 'active' ? '#4CAF50' : athlete.status === 'trial' ? '#FF9800' : athlete.status === 'deletion_requested' ? '#F44336' : '#1976D2',
+                fontWeight: '600',
+                fontSize: 12
+              }} data-testid="athlete-status-badge">
+                {athlete.status === 'active' ? 'Attivo' : athlete.status === 'trial' ? 'In Prova' : athlete.status === 'deletion_requested' ? 'Cancellazione' : athlete.status || ''}
+              </Text>
+            </View>
           </View>
         </View>
 
-        {/* QR Code - Compact */}
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={styles.qrButtonCompact}
-            onPress={() => router.push(`/parent/athlete/timeline?id=${athlete.id}`)}
-            data-testid="timeline-btn"
-          >
-            <Ionicons name="time" size={40} color="#AF52DE" />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.cardTitle}>Cronologia Atleta</Text>
-              <Text style={styles.qrButtonText}>Visualizza la storia completa</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-        </View>
+        {/* Cronologia Atleta */}
+        <TouchableOpacity
+          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+          onPress={() => router.push(`/parent/athlete/timeline?id=${athlete.id}`)}
+          data-testid="timeline-btn"
+        >
+          <Ionicons name="time" size={36} color="#AF52DE" />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Cronologia Atleta</Text>
+            <Text style={{ fontSize: 12, color: '#888' }}>Visualizza la storia completa</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
 
         {/* QR Code - Compact */}
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={styles.qrButtonCompact}
-            onPress={() => setQrModalVisible(true)}
-          >
-            <Ionicons name="qr-code" size={40} color="#007AFF" />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.cardTitle}>QR Code Personale</Text>
-              <Text style={styles.qrButtonText}>Tocca per visualizzare</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+          onPress={() => setQrModalVisible(true)}
+          data-testid="qr-code-btn"
+        >
+          <Ionicons name="qr-code" size={36} color="#007AFF" />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>QR Code Personale</Text>
+            <Text style={{ fontSize: 12, color: '#888' }}>Tocca per visualizzare</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
 
         {/* Athlete Photo Card - Only for adults */}
         {!athlete.is_minor && (
