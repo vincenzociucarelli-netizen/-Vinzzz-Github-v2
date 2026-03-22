@@ -1265,8 +1265,11 @@ export default function AthleteDetail() {
       await api.post(`/athletes/${athlete.id}/request-end-trial`);
       const etRes = await api.get(`/athletes/${athlete.id}/end-trial-status`);
       setEndTrialStatus(etRes.data);
+      // Refresh athlete to get updated state
+      const athRes = await api.get(`/athletes/${athlete.id}`);
+      setAthlete(athRes.data);
       setShowEndTrialChoice(false);
-      showAlert('Perfetto!', 'Hai avviato la procedura per diventare membro effettivo. Segui i 3 passaggi richiesti.');
+      showAlert('Perfetto!', 'Hai avviato la procedura per diventare membro effettivo. Segui i passaggi richiesti.');
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante la richiesta');
     } finally {
