@@ -2963,7 +2963,7 @@ export default function AthleteDetail() {
           onClose={() => setPrivacyModalVisible(false)}
           onSign={handleGDPRPrivacySigned}
           documentType="gdpr_minor"
-          showDeleteOption={athlete.status === 'trial'}
+          showDeleteOption={athlete.status === 'trial' && !endTrialStatus?.end_trial_requested}
           onDeleteRequest={() => {
             setPrivacyModalVisible(false);
             if (Platform.OS === 'web') {

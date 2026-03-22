@@ -3729,6 +3729,7 @@ async def get_parents(current_user = Depends(get_current_user)):
             "created_at": p.get("created_at"),
             "approved_at": p.get("approved_at"),
             "phone": p.get("phone", ""),
+            "fiscal_code": p.get("fiscal_code", ""),
         })
     
     return result
@@ -14805,7 +14806,9 @@ async def sign_gdpr_privacy_document(
                 raise HTTPException(status_code=404, detail="Atleta minore non trovato")
             
             # Validate parent and athlete profiles before generating document
-            check_profiles_for_document(parent=current_user, athlete=minor)
+            # Fetch full parent record (current_user has limited fields)
+            full_parent = await db.users.find_one({"id": current_user["id"]})
+            check_profiles_for_document(parent=full_parent, athlete=minor)
             
             # Get parent data
             parent_name = request.signer_name or current_user.get("first_name", "")
@@ -18268,7 +18271,8 @@ async def check_athlete_profile_completeness(athlete_id: str, current_user = Dep
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    parent = await db.users.find_one({"id": athlete.get("parent_id")})
+    # Check the CURRENT user's profile (the one who will sign), not necessarily parent_id
+    parent = await db.users.find_one({"id": current_user["id"]})
     
     parent_missing = validate_parent_profile(parent) if parent else ["Account genitore non trovato"]
     athlete_missing = validate_athlete_profile(athlete)

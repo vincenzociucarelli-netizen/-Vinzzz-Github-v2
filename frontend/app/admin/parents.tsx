@@ -495,6 +495,13 @@ export default function ParentsScreen() {
                   <Text style={styles.detailLabel}>Email</Text>
                   <Text style={styles.detailValue}>{selectedParent.email}</Text>
                 </View>
+
+                {selectedParent.fiscal_code && (
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailLabel}>Codice Fiscale</Text>
+                    <Text style={styles.detailValue}>{selectedParent.fiscal_code}</Text>
+                  </View>
+                )}
                 
                 {/* Phone and WhatsApp */}
                 <View style={styles.detailSection}>
