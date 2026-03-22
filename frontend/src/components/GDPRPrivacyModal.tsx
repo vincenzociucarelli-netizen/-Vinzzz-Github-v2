@@ -600,21 +600,30 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
-            <View style={{ flex: 1 }}>
-              {Platform.OS === 'web' && previewUrl ? (
-                <iframe
-                  src={previewUrl}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                  title="Anteprima Privacy GDPR"
-                />
-              ) : (
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                  <Ionicons name="document-text-outline" size={48} color="#8E44AD" />
-                  <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', marginTop: 16 }}>
-                    Documento PDF generato con successo
-                  </Text>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+              <Ionicons name="document-text-outline" size={48} color="#8E44AD" />
+              <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', marginTop: 16, marginBottom: 24 }}>
+                Documento PDF generato con successo
+              </Text>
+              <TouchableOpacity
+                style={{ backgroundColor: '#007AFF', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 25 }}
+                onPress={() => {
+                  if (previewUrl && Platform.OS === 'web') {
+                    // Create anchor and trigger download - works on mobile browsers
+                    const link = document.createElement('a');
+                    link.href = previewUrl;
+                    link.download = 'privacy_gdpr.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="download-outline" size={20} color="#fff" />
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Scarica PDF</Text>
                 </View>
-              )}
+              </TouchableOpacity>
             </View>
             <TouchableOpacity 
               style={styles.pdfViewerCloseButton}
