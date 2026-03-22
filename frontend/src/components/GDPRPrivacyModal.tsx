@@ -600,21 +600,21 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-              <Text style={{ fontSize: 48, marginBottom: 16 }}>📄</Text>
-              <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 24 }}>
-                Documento PDF generato con successo
-              </Text>
-              <TouchableOpacity
-                style={{ backgroundColor: '#007AFF', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 25 }}
-                onPress={() => {
-                  if (previewUrl) {
-                    window.open(previewUrl, '_blank');
-                  }
-                }}
-              >
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Visualizza PDF</Text>
-              </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              {Platform.OS === 'web' && previewUrl ? (
+                <iframe
+                  src={previewUrl}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  title="Anteprima Privacy GDPR"
+                />
+              ) : (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                  <Ionicons name="document-text-outline" size={48} color="#8E44AD" />
+                  <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', marginTop: 16 }}>
+                    Documento PDF generato con successo
+                  </Text>
+                </View>
+              )}
             </View>
             <TouchableOpacity 
               style={styles.pdfViewerCloseButton}
