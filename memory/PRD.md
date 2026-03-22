@@ -1,70 +1,65 @@
-# PRD - Sport Society Management App
+# PRD - Sport Society Management Platform (RegistraTeam)
 
 ## Problema Originale
-Applicazione full-stack per la gestione di societa sportive. Include gestione atleti, squadre, presenze, documenti legali, profilo societa, e ruoli multipli (admin, coach, genitore, dirigente).
+Piattaforma gestionale per societa sportive con gestione atleti, genitori, coach, presenze, pagamenti e documenti.
+
+## Utenti
+- Admin (societa sportiva)
+- Genitori (gestiscono i propri figli atleti)
+- Coach
+- Dirigenti
+- Atleti minori (accesso lite)
 
 ## Architettura
-- **Frontend**: React Native/Expo (web) con TypeScript
-- **Backend**: FastAPI (Python) con MongoDB
+- Backend: FastAPI + MongoDB (server.py ~20.000 righe)
+- Frontend: Expo/React Native Web (app/parent/athlete/[id].tsx ~4.800 righe)
+- Email: Brevo (ex Sendinblue)
+- Auth: JWT
 
-## Funzionalita Completate
+## Feature Implementate
 
-### Sessioni Precedenti
-- Firma digitale documenti di prova, PDF, email
-- Fix coach presenze, visibilita atleti, stati "In prova"/"In attesa"
-- Download documenti mobile, UI admin/genitori
-- Biglietto da Visita Fiscale JPG
-- Vista Coach: badge "In prova", ordinamento, fix scroll
-- Versione Lite Atleta: accesso adulti, codice personalizzato, login memorizzato, dashboard redesign
+### Fine Periodo di Prova (Completato)
+- 2 bottoni "Rimani e Firma Privacy" (blu) + "Non Rimanere" (rosso) nella sezione stato
+- "Non Rimanere" visibile in fondo pagina per atleti trial E attivi
+- Flusso "Rimani": request-end-trial → firma privacy → auto-attivazione
+- Flusso "Non Rimanere": deletion-check obblighi → modale conferma → richiesta admin
+- Cancellazione condizionale: check obblighi fiscali, altri figli, pagamenti
+- Admin approva/rifiuta cancellazioni (supporto admin + dirigente)
+- Audit log dettagliato con nomi atleta/genitore
+- Profile-check controlla il genitore che firma (current_user, non parent_id)
+- Certificato verificato persistente dopo reload
 
-### Sessione Corrente (21 Mar 2026)
+### Pre-iscrizioni Stagionali (Completato)
+- CRUD campagne pre-iscrizioni
+- Form pubblico con link condivisibile
+- Dashboard admin gestione campagne
+- Export risposte in CSV
+- Notifiche email manuali ai genitori non rispondenti (Brevo)
 
-#### Feature 1: Fine Periodo di Prova - "Voglio restare"
-- Stepper 3 step: certificato medico -> verifica admin -> firma privacy -> auto-attivazione
-- Test: 17/17 (100%)
+### Cross-Linking Genitori (Completato)
+- Collegamento automatico secondo genitore via email
+- Attivo alla creazione atleta, aggiornamento email, registrazione genitore
+- Endpoint /athletes/my restituisce atleti dove user e parent_id O second_parent_id
 
-#### Feature 2: Fine Periodo di Prova - "Me ne vado" (Cancellazione)
-- Cancellazione completa con approvazione admin, pre-check obblighi fiscali, archiviazione legale
-- Cancellazione account genitore condizionale
-- Test: 17/18 (94%)
+### Audit Log Migliorato (Completato)
+- Titoli cliccabili con dettagli espandibili
+- Label + icona per parent_account_deleted
+- Info complete: nome atleta, nome genitore, email, motivo
+- Supporto per tutte le azioni di cancellazione
 
-#### Feature 3: Pre-iscrizioni Stagione Successiva
-- Admin crea campagna con date personalizzabili
-- Link pubblico condivisibile (WhatsApp, social) — nessun login richiesto
-- Form: Nome, Cognome, Nascita, Telefoni, Gia iscritto?, Club precedente, Campionati, Ruolo, Interesse, Note
-- Dashboard admin con statistiche + export CSV
-- Test: 20/20 (100%)
+## Bug Risolti (22 Mar 2026)
+- Profile-check usava parent_id dell'atleta invece del current_user
+- certVerified non sincronizzato con DB al reload
+- PDF privacy non si apriva su mobile (ora scarica direttamente)
+- Codice Fiscale mancante nel modale admin "Dettaglio Genitore"
+- "Certificati" rimosso da descrizioni cancellazione (non esistono nell'app)
+- Dirigente abilitato per approvazione cancellazioni
 
-#### Feature 4: Sistema Notifiche Pre-iscrizioni
-- Email automatiche ai genitori che non hanno ancora risposto (Brevo)
-- Notifiche in-app per genitori
-- Admin controlla invio: bottone "Notifica" nella gestione campagna
-- Esclude automaticamente chi ha gia risposto
-- Contatore notifiche inviate sulla campagna
-- Test: endpoint testato con successo (18 email inviate, 0 errori)
-
-## Frontend Pages
-- `/preseason/{id}` — Form pubblico (no auth)
-- `/admin/preseason` — Gestione campagne admin
-- Menu admin: bottone "Pre-iscrizioni" nell'area admin
-
-## API Pre-iscrizioni
-- `POST /api/preseason/campaigns` — Crea campagna
-- `GET /api/preseason/campaigns` — Lista campagne
-- `PATCH /api/preseason/campaigns/{id}` — Modifica
-- `DELETE /api/preseason/campaigns/{id}` — Elimina + risposte
-- `GET /api/preseason/campaigns/{id}/responses` — Risposte + stats
-- `GET /api/preseason/campaigns/{id}/export` — CSV
-- `POST /api/preseason/campaigns/{id}/send-notifications` — Email + notifiche in-app
-- `GET /api/preseason/public/{id}` — Info pubblica (no auth)
-- `POST /api/preseason/public/{id}/respond` — Risposta pubblica (no auth)
-- `POST /api/preseason/campaigns/{id}/respond` — Risposta autenticata
-- `GET /api/preseason/active` — Campagna attiva per banner
-
-## Backlog
-- (P1) Cross-Linking Genitori automatico
-- (P2) UI atleti contrattualizzati
-- (P3) Refactoring server.py
-- (P3) Stripe pagamenti
-- (P3) Pulizia DB "viewer" -> "dirigente"
+## Task Futuri (Backlog)
+- (P1) Promemoria automatici pre-iscrizioni (ogni 5-7 giorni)
+- (P2) UI atleti contrattualizzati (dopo pubblicazione)
+- (P3) Refactoring server.py in moduli
+- (P3) Re-implementazione Stripe
+- (P3) Pulizia DB: ruolo "viewer" → "dirigente"
 - (P3) Pubblicazione dominio / App Store
+- (P3) Refactoring athlete/[id].tsx
