@@ -1783,7 +1783,7 @@ export default function AdminAthleteDetail() {
             {/* Cronologia Atleta Button */}
             <TouchableOpacity 
               style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#AF52DE40' }}
-              onPress={() => router.push(`/parent/athlete/timeline?id=${athlete.id}`)}
+              onPress={() => router.push(`/admin/athlete/timeline?id=${athlete.id}`)}
               data-testid="admin-timeline-btn"
             >
               <Ionicons name="time" size={32} color="#AF52DE" />
