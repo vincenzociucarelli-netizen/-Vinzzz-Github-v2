@@ -271,6 +271,7 @@ class AuditAction:
     COMPENSATION_MODIFIED = "compensation_modified"
     DOCUMENT_ACCEPTED = "document_accepted"
     USER_DELETED = "user_deleted"
+    DELETION_REQUEST_CANCELLED = "deletion_request_cancelled"
 
 async def log_audit(
     action: str,
@@ -18969,13 +18970,42 @@ async def request_end_trial(athlete_id: str, current_user = Depends(get_current_
     if athlete.get("end_trial_requested"):
         raise HTTPException(status_code=400, detail="Richiesta gia effettuata")
     
+    # Check if athlete had a pending deletion request - if so, cancel it and log
+    had_deletion_request = athlete.get("deletion_requested", False)
+    
+    update_fields = {
+        "end_trial_requested": True,
+        "end_trial_requested_date": datetime.now(timezone.utc),
+    }
+    
+    if had_deletion_request:
+        update_fields["deletion_requested"] = False
+        update_fields["deletion_requested_at"] = None
+        update_fields["deletion_requested_by"] = None
+        update_fields["deletion_requested_by_name"] = None
+    
     await db.athletes.update_one(
         {"id": athlete_id},
-        {"$set": {
-            "end_trial_requested": True,
-            "end_trial_requested_date": datetime.now(timezone.utc),
-        }}
+        {"$set": update_fields}
     )
+    
+    # Log deletion_request_cancelled if applicable
+    if had_deletion_request:
+        await db.audit_logs.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": current_user["id"],
+            "user_email": current_user.get("email", ""),
+            "society_id": current_user.get("society_id", ""),
+            "action": "deletion_request_cancelled",
+            "details": {
+                "athlete_id": athlete_id,
+                "athlete_name": athlete.get("full_name", ""),
+                "parent_name": current_user.get("full_name", ""),
+                "reason": "Il genitore ha scelto di rimanere dopo aver richiesto la cancellazione"
+            },
+            "ip_address": "",
+            "created_at": datetime.now(timezone.utc)
+        })
     
     # Notifica admin
     if current_user["role"] == UserRole.PARENT:
@@ -19043,6 +19073,19 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Certificate expiry - check both athlete field and certificates collection
+    cert_expiry = athlete.get("medical_certificate_expiry")
+    cert_verified = athlete.get("medical_certificate_verified", False)
+    if not cert_expiry:
+        cert_doc = await db.certificates.find_one({"athlete_id": athlete_id}, {"_id": 0, "expiry_date": 1, "verified": 1})
+        if cert_doc and cert_doc.get("expiry_date"):
+            cert_expiry = cert_doc["expiry_date"]
+            if isinstance(cert_expiry, datetime):
+                cert_expiry = cert_expiry.isoformat()
+            cert_verified = cert_doc.get("verified", False)
+    elif isinstance(cert_expiry, datetime):
+        cert_expiry = cert_expiry.isoformat()
     
     # Team info
     team = None
@@ -19121,7 +19164,8 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
             "athlete_code": athlete.get("athlete_code"),
             "profile_photo": athlete.get("profile_photo"),
             "status": athlete.get("status"),
-            "certificate_expiry": athlete.get("certificate_expiry"),
+            "certificate_expiry": cert_expiry,
+            "certificate_verified": cert_verified,
         },
         "team": {
             "id": team.get("id") if team else None,

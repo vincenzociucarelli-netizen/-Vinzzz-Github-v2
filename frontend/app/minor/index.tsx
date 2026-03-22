@@ -37,6 +37,7 @@ interface DashboardData {
     profile_photo: string | null;
     status: string;
     certificate_expiry?: string;
+    certificate_verified?: boolean;
   };
   team: { id: string; name: string } | null;
   schedule: {
@@ -208,15 +209,19 @@ export default function MinorDashboard() {
           const daysLeft = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
           const isExpired = daysLeft < 0;
           const isExpiringSoon = !isExpired && daysLeft <= 30;
+          const isVerified = data.athlete.certificate_verified;
           
           return (
             <View style={[styles.statusBanner, isExpired ? styles.certBannerExpired : isExpiringSoon ? styles.certBannerWarning : styles.certBannerOk]} data-testid="minor-cert-banner">
-              <Ionicons name="document-text" size={20} color={isExpired ? '#FF3B30' : isExpiringSoon ? '#FF9500' : '#34C759'} />
+              <Ionicons name={isVerified ? "shield-checkmark" : "document-text"} size={20} color={isExpired ? '#FF3B30' : isExpiringSoon ? '#FF9500' : '#34C759'} />
               <View style={{ flex: 1, marginLeft: 8 }}>
                 <Text style={styles.certTitle}>Certificato Medico</Text>
                 <Text style={[styles.certDate, { color: isExpired ? '#FF3B30' : isExpiringSoon ? '#FF6D00' : '#2E7D32' }]}>
                   {isExpired ? `Scaduto il ${formatDate(cert)}` : `Scadenza: ${formatDate(cert)}`}
                 </Text>
+                {isVerified && !isExpired && (
+                  <Text style={{ fontSize: 11, color: '#4CAF50', fontWeight: '500', marginTop: 2 }}>Convalidato</Text>
+                )}
               </View>
             </View>
           );

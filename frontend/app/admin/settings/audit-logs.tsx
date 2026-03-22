@@ -39,6 +39,7 @@ const ACTION_LABELS: Record<string, { label: string; icon: string; color: string
   deletion_requested: { label: 'Richiesta Cancellazione', icon: 'trash', color: '#FF3B30' },
   deletion_approved: { label: 'Cancellazione Approvata', icon: 'checkmark-done-circle', color: '#FF3B30' },
   deletion_rejected: { label: 'Cancellazione Rifiutata', icon: 'close-circle', color: '#FF9500' },
+  deletion_request_cancelled: { label: 'Cancellazione Annullata', icon: 'arrow-undo-circle', color: '#007AFF' },
   parent_account_deleted: { label: 'Account Genitore Eliminato', icon: 'person-remove', color: '#FF3B30' },
   qr_codes_regenerated: { label: 'QR Rigenerati', icon: 'qr-code', color: '#FF9500' },
   stripe_settings_updated: { label: 'Impostazioni Stripe', icon: 'card', color: '#6772E5' },
@@ -156,6 +157,8 @@ export default function AuditLogsPage() {
         return details.athlete_name?.trim() ? `Atleta: ${details.athlete_name}` : log.target_user_name || '';
       case 'deletion_rejected':
         return details.athlete_name?.trim() ? `Atleta: ${details.athlete_name}` : log.target_user_name || '';
+      case 'deletion_request_cancelled':
+        return details.athlete_name?.trim() ? `Atleta: ${details.athlete_name}` : log.target_user_name || '';
       case 'parent_account_deleted':
         return details.parent_name ? `${details.parent_name}` : log.target_user_name || '';
       case 'user_deleted':
@@ -168,8 +171,36 @@ export default function AuditLogsPage() {
         return details.document_type || log.target_user_name || '';
       case 'login':
         return '';
+      case 'compensation_modified':
+        return log.target_user_name || '';
       default:
         return log.target_user_name || '';
+    }
+  };
+
+  // Brief summary visible without expanding
+  const getLogSummary = (log: AuditLog): string => {
+    const details = log.details || {};
+    const action = log.action;
+    switch (action) {
+      case 'deletion_approved':
+        return details.had_obligations ? 'Con obblighi pendenti' : 'Nessun obbligo';
+      case 'deletion_requested':
+        return details.parent_name ? `Da: ${details.parent_name}` : '';
+      case 'deletion_request_cancelled':
+        return details.parent_name ? `${details.parent_name} ha rinunciato alla cancellazione` : 'Cancellazione ritirata';
+      case 'certificate_modified':
+        return details.new_expiry ? `Nuova scadenza: ${details.new_expiry.split('T')[0]}` : '';
+      case 'certificate_override':
+        return details.reason || '';
+      case 'compensation_modified':
+        if (details.old_compensation !== undefined && details.new_compensation !== undefined)
+          return `${details.old_compensation} -> ${details.new_compensation}`;
+        return '';
+      case 'document_signed':
+        return details.signer_name || '';
+      default:
+        return '';
     }
   };
 
@@ -250,6 +281,7 @@ export default function AuditLogsPage() {
   const renderLogItem = (log: AuditLog) => {
     const actionInfo = getActionInfo(log);
     const title = getLogTitle(log);
+    const summary = getLogSummary(log);
     const expandedDetails = formatExpandedDetails(log);
     const isExpanded = expandedLogs.has(log.id);
     const hasDetails = expandedDetails.length > 0 || log.ip_address;
@@ -279,6 +311,9 @@ export default function AuditLogsPage() {
                 ) : null}
               </View>
               <Text style={styles.logUser}>{log.user_email}</Text>
+              {summary ? (
+                <Text style={{ fontSize: 11, color: '#888', marginTop: 1 }} numberOfLines={1}>{summary}</Text>
+              ) : null}
             </View>
             <View style={{ alignItems: 'flex-end', gap: 2 }}>
               <Text style={styles.logTime}>{formatDate(log)}</Text>
