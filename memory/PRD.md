@@ -1,65 +1,48 @@
-# PRD - Sport Society Management Platform (RegistraTeam)
+# PRD - Sport Society Management App (RegistraTeam)
 
-## Problema Originale
-Piattaforma gestionale per societa sportive con gestione atleti, genitori, coach, presenze, pagamenti e documenti.
+## Problem Statement
+Build a comprehensive sports team management application with pre-season registration, end-of-trial period flow, conditional data deletion, notification system, parent cross-linking, and audit logging. The app serves sports clubs managing athletes, parents, coaches, and admin staff.
 
-## Utenti
-- Admin (societa sportiva)
-- Genitori (gestiscono i propri figli atleti)
-- Coach
-- Dirigenti
-- Atleti minori (accesso lite)
+## Architecture
+- **Backend**: FastAPI (Python) with MongoDB via motor
+- **Frontend**: React Native (Expo) for web and mobile
+- **Email**: Brevo (formerly Sendinblue)
+- **Database**: MongoDB (test_database)
 
-## Architettura
-- Backend: FastAPI + MongoDB (server.py ~20.000 righe)
-- Frontend: Expo/React Native Web (app/parent/athlete/[id].tsx ~4.800 righe)
-- Email: Brevo (ex Sendinblue)
-- Auth: JWT
+## Completed Features (as of March 22, 2026)
+- [x] Pre-Season Registration: Campaigns, public form, admin dashboard, CSV export
+- [x] End-of-Trial Flow: "Rimani e Firma Privacy" + "Non Rimanere" inline buttons
+- [x] Data Deletion: Admin-approved, obligation checks, comprehensive deletion
+- [x] Notification System: Manual email notifications via Brevo
+- [x] Parent Cross-Linking: Auto-link when second_parent_email matches
+- [x] Audit Logging: Filterable, collapsible, with deletion_request_cancelled support
+- [x] Minor Dashboard: Certificate expiry + verification status display (FIXED)
+- [x] Profile: PW Protezione Dati button added (March 22, 2026)
+- [x] Bug fixes: Profile completeness, PDF viewer, admin state persistence, deletion flow
 
-## Feature Implementate
+## Recent Changes (March 22, 2026 - Fork Session)
+1. **Certificate Expiry in Minor Lite Dashboard**: Fixed backend field name (medical_certificate_expiry), added certificate_verified field
+2. **PW Protezione Dati on Parent Profile**: Added button + full management UI for data protection passwords per athlete
+3. **Audit Log Enhancements**: Added summary line in collapsed view, deletion_request_cancelled action support
+4. **Date formatting**: Fixed Invalid Date handling in minor dashboard
 
-### Fine Periodo di Prova (Completato)
-- 2 bottoni "Rimani e Firma Privacy" (blu) + "Non Rimanere" (rosso) nella sezione stato
-- "Non Rimanere" visibile in fondo pagina per atleti trial E attivi
-- Flusso "Rimani": request-end-trial → firma privacy → auto-attivazione
-- Flusso "Non Rimanere": deletion-check obblighi → modale conferma → richiesta admin
-- Cancellazione condizionale: check obblighi fiscali, altri figli, pagamenti
-- Admin approva/rifiuta cancellazioni (supporto admin + dirigente)
-- Audit log dettagliato con nomi atleta/genitore
-- Profile-check controlla il genitore che firma (current_user, non parent_id)
-- Certificato verificato persistente dopo reload
+## Pending Tasks
+- (P1) Athlete History/Timeline Page
+- (P1) Automated Pre-Season Reminders
+- (P2) UI for Contracted Athletes
+- (P3) Refactor server.py (monolithic, 20K+ lines)
+- (P3) Stripe integration
+- (P3) DB Cleanup (viewer → dirigente migration)
+- (P3) Publication assistance (domain/App Store)
 
-### Pre-iscrizioni Stagionali (Completato)
-- CRUD campagne pre-iscrizioni
-- Form pubblico con link condivisibile
-- Dashboard admin gestione campagne
-- Export risposte in CSV
-- Notifiche email manuali ai genitori non rispondenti (Brevo)
+## Key Files
+- backend/server.py (main backend, 20K+ lines)
+- frontend/app/parent/athlete/[id].tsx (athlete page, 4700+ lines)
+- frontend/app/parent/profile.tsx (parent profile with data password)
+- frontend/app/minor/index.tsx (minor lite dashboard)
+- frontend/app/admin/settings/audit-logs.tsx (audit log page)
 
-### Cross-Linking Genitori (Completato)
-- Collegamento automatico secondo genitore via email
-- Attivo alla creazione atleta, aggiornamento email, registrazione genitore
-- Endpoint /athletes/my restituisce atleti dove user e parent_id O second_parent_id
-
-### Audit Log Migliorato (Completato)
-- Titoli cliccabili con dettagli espandibili
-- Label + icona per parent_account_deleted
-- Info complete: nome atleta, nome genitore, email, motivo
-- Supporto per tutte le azioni di cancellazione
-
-## Bug Risolti (22 Mar 2026)
-- Profile-check usava parent_id dell'atleta invece del current_user
-- certVerified non sincronizzato con DB al reload
-- PDF privacy non si apriva su mobile (ora scarica direttamente)
-- Codice Fiscale mancante nel modale admin "Dettaglio Genitore"
-- "Certificati" rimosso da descrizioni cancellazione (non esistono nell'app)
-- Dirigente abilitato per approvazione cancellazioni
-
-## Task Futuri (Backlog)
-- (P1) Promemoria automatici pre-iscrizioni (ogni 5-7 giorni)
-- (P2) UI atleti contrattualizzati (dopo pubblicazione)
-- (P3) Refactoring server.py in moduli
-- (P3) Re-implementazione Stripe
-- (P3) Pulizia DB: ruolo "viewer" → "dirigente"
-- (P3) Pubblicazione dominio / App Store
-- (P3) Refactoring athlete/[id].tsx
+## Credentials (Test Environment)
+- Admin: admin@test.com (in test_database)
+- Parent: perla@test.com / Test1234
+- Minor: MARTY2008 / PIN 1234

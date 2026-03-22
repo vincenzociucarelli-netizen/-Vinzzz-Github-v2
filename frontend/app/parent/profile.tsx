@@ -52,6 +52,16 @@ export default function ParentProfile() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
   
+  // Data Protection Password state
+  const [showDataPassword, setShowDataPassword] = useState(false);
+  const [athletes, setAthletes] = useState<any[]>([]);
+  const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
+  const [dataOldPassword, setDataOldPassword] = useState('');
+  const [dataNewPassword, setDataNewPassword] = useState('');
+  const [dataConfirmPassword, setDataConfirmPassword] = useState('');
+  const [savingDataPassword, setSavingDataPassword] = useState(false);
+  const [athletePasswordStatus, setAthletePasswordStatus] = useState<Record<string, boolean>>({});
+  
   // Profile photo
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [profilePhotoArtistic, setProfilePhotoArtistic] = useState<string | null>(null);
@@ -214,6 +224,71 @@ export default function ParentProfile() {
     }
   };
 
+  const handleOpenDataPassword = async () => {
+    setShowDataPassword(!showDataPassword);
+    if (!showDataPassword) {
+      try {
+        const res = await api.get('/athletes/my');
+        const athleteList = res.data || [];
+        setAthletes(athleteList);
+        const statusMap: Record<string, boolean> = {};
+        for (const a of athleteList) {
+          try {
+            const checkRes = await api.get(`/athletes/${a.id}/has-password`);
+            statusMap[a.id] = checkRes.data?.has_password || false;
+          } catch {
+            statusMap[a.id] = false;
+          }
+        }
+        setAthletePasswordStatus(statusMap);
+        if (athleteList.length > 0 && !selectedAthleteId) {
+          setSelectedAthleteId(athleteList[0].id);
+        }
+      } catch (error) {
+        console.error('Error loading athletes for data password:', error);
+      }
+    }
+  };
+
+  const handleSaveDataPassword = async () => {
+    if (!selectedAthleteId) return;
+    const hasExisting = athletePasswordStatus[selectedAthleteId];
+    
+    if (hasExisting && !dataOldPassword) {
+      showAlert('Errore', 'Inserisci la password attuale');
+      return;
+    }
+    if (!dataNewPassword) {
+      showAlert('Errore', 'Inserisci la nuova password');
+      return;
+    }
+    if (dataNewPassword.length < 4) {
+      showAlert('Errore', 'La password deve essere di almeno 4 caratteri');
+      return;
+    }
+    if (dataNewPassword !== dataConfirmPassword) {
+      showAlert('Errore', 'Le password non corrispondono');
+      return;
+    }
+
+    setSavingDataPassword(true);
+    try {
+      await api.post(`/athletes/${selectedAthleteId}/change-password`, {
+        old_password: hasExisting ? dataOldPassword : null,
+        new_password: dataNewPassword,
+      });
+      showAlert('Successo', 'Password protezione dati aggiornata!');
+      setDataOldPassword('');
+      setDataNewPassword('');
+      setDataConfirmPassword('');
+      setAthletePasswordStatus(prev => ({ ...prev, [selectedAthleteId!]: true }));
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il cambio password');
+    } finally {
+      setSavingDataPassword(false);
+    }
+  };
+
   const handlePickPhoto = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -336,6 +411,7 @@ export default function ParentProfile() {
                 </TouchableOpacity>
               </>
             ) : (
+              <View>
               <View style={styles.headerButtonsRow}>
                 <TouchableOpacity
                   style={[styles.actionButton, styles.editButton]}
@@ -351,6 +427,17 @@ export default function ParentProfile() {
                   <Ionicons name="key" size={20} color="#E91E63" />
                   <Text style={styles.passwordButtonText}>Password</Text>
                 </TouchableOpacity>
+              </View>
+              <View style={{ alignItems: 'center', marginTop: 8 }}>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.dataPasswordButton]}
+                  onPress={handleOpenDataPassword}
+                  data-testid="data-password-btn"
+                >
+                  <Ionicons name="shield-checkmark" size={20} color="#E91E63" />
+                  <Text style={styles.passwordButtonText}>PW Protezione Dati</Text>
+                </TouchableOpacity>
+              </View>
               </View>
             )}
           </View>
@@ -423,6 +510,125 @@ export default function ParentProfile() {
                   </TouchableOpacity>
                 </View>
               </View>
+            </View>
+          )}
+
+          {/* Data Protection Password Section */}
+          {showDataPassword && (
+            <View style={styles.card} data-testid="data-password-section">
+              <Text style={styles.cardTitle}>🛡️ PW Protezione Dati</Text>
+              <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
+                La password di protezione dati protegge l'accesso ai dati sensibili dei tuoi atleti.
+              </Text>
+              
+              {athletes.length === 0 ? (
+                <Text style={{ color: '#999', textAlign: 'center', padding: 10 }}>Nessun atleta registrato</Text>
+              ) : (
+                <>
+                  {/* Athlete selector */}
+                  {athletes.length > 1 && (
+                    <View style={{ marginBottom: 12 }}>
+                      <Text style={styles.fieldLabel}>Seleziona Atleta</Text>
+                      {athletes.map(a => (
+                        <TouchableOpacity
+                          key={a.id}
+                          style={{
+                            padding: 10,
+                            borderRadius: 8,
+                            marginBottom: 4,
+                            backgroundColor: selectedAthleteId === a.id ? '#E91E63' : '#f5f5f5',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 8,
+                          }}
+                          onPress={() => setSelectedAthleteId(a.id)}
+                        >
+                          <Ionicons name="person" size={16} color={selectedAthleteId === a.id ? '#fff' : '#666'} />
+                          <Text style={{ color: selectedAthleteId === a.id ? '#fff' : '#333', fontWeight: '600', fontSize: 13 }}>
+                            {a.full_name}
+                          </Text>
+                          {athletePasswordStatus[a.id] && (
+                            <Ionicons name="shield-checkmark" size={14} color={selectedAthleteId === a.id ? '#fff' : '#4CAF50'} />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                  
+                  {athletes.length === 1 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                      <Text style={{ fontWeight: '600', color: '#333' }}>{athletes[0].full_name}</Text>
+                      {athletePasswordStatus[athletes[0].id] && (
+                        <Ionicons name="shield-checkmark" size={14} color="#4CAF50" />
+                      )}
+                    </View>
+                  )}
+
+                  {selectedAthleteId && (
+                    <View style={styles.changePasswordForm}>
+                      {athletePasswordStatus[selectedAthleteId] && (
+                        <View style={styles.fieldContainer}>
+                          <Text style={styles.fieldLabel}>Password Attuale</Text>
+                          <TextInput
+                            style={styles.input}
+                            value={dataOldPassword}
+                            onChangeText={setDataOldPassword}
+                            secureTextEntry
+                            placeholder="Password attuale"
+                            placeholderTextColor="#999"
+                          />
+                        </View>
+                      )}
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldLabel}>{athletePasswordStatus[selectedAthleteId] ? 'Nuova Password' : 'Imposta Password'}</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={dataNewPassword}
+                          onChangeText={setDataNewPassword}
+                          secureTextEntry
+                          placeholder="Minimo 4 caratteri"
+                          placeholderTextColor="#999"
+                        />
+                      </View>
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldLabel}>Conferma Password</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={dataConfirmPassword}
+                          onChangeText={setDataConfirmPassword}
+                          secureTextEntry
+                          placeholder="Ripeti la password"
+                          placeholderTextColor="#999"
+                        />
+                      </View>
+                      <View style={styles.changePasswordButtonsRow}>
+                        <TouchableOpacity
+                          style={styles.cancelPasswordButton}
+                          onPress={() => {
+                            setShowDataPassword(false);
+                            setDataOldPassword('');
+                            setDataNewPassword('');
+                            setDataConfirmPassword('');
+                          }}
+                        >
+                          <Text style={styles.cancelPasswordButtonText}>Annulla</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.changePasswordButton, savingDataPassword && styles.buttonDisabled]}
+                          onPress={handleSaveDataPassword}
+                          disabled={savingDataPassword}
+                          data-testid="save-data-password-btn"
+                        >
+                          <Ionicons name="shield-checkmark" size={18} color="#fff" />
+                          <Text style={styles.changePasswordButtonText}>
+                            {savingDataPassword ? 'Salvataggio...' : 'Salva'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </>
+              )}
             </View>
           )}
 
@@ -573,6 +779,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   passwordButton: {
+    backgroundColor: '#FCE4EC',
+    borderWidth: 1,
+    borderColor: '#E91E63',
+  },
+  dataPasswordButton: {
     backgroundColor: '#FCE4EC',
     borderWidth: 1,
     borderColor: '#E91E63',
