@@ -13,7 +13,7 @@ from datetime import datetime
 # Get BASE_URL from environment - no defaults for production safety
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://trial-end-flow.preview.emergentagent.com"
+    BASE_URL = "https://deletion-workflow-2.preview.emergentagent.com"
 
 
 class TestCertificateEndpoints:

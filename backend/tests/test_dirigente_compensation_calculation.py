@@ -14,7 +14,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://trial-end-flow.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://deletion-workflow-2.preview.emergentagent.com')
 
 class TestDirigenteCompensationAPIs:
     """Test dirigente compensation APIs"""

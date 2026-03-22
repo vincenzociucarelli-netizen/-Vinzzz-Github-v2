@@ -12,7 +12,7 @@ import os
 import json
 from datetime import datetime, timedelta
 
-BASE_URL = "https://trial-end-flow.preview.emergentagent.com"
+BASE_URL = "https://deletion-workflow-2.preview.emergentagent.com"
 
 # Test credentials
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"
