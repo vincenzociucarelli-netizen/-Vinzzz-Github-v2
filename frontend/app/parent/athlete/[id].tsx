@@ -1280,6 +1280,7 @@ export default function AthleteDetail() {
       const res = await api.get(`/athletes/${athlete.id}/deletion-check`);
       setDeletionCheck(res.data);
       setShowDeletionConfirm(true);
+      setShowEndTrialChoice(true);
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il controllo');
     }
@@ -1934,15 +1935,32 @@ export default function AthleteDetail() {
                   </View>
                 )}
               </View>
-              {/* Bottone Conferma / Rinuncia (solo se non ancora richiesto) */}
+              {/* Bottoni Rimani / Non Rimanere (solo se non ancora richiesto) */}
               {!endTrialStatus?.end_trial_requested && (
-                <TouchableOpacity
-                  style={{ backgroundColor: '#0D47A1', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 4 }}
-                  onPress={() => setShowEndTrialChoice(true)}
-                  data-testid="end-trial-btn"
-                >
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Conferma / Rinuncia</Text>
-                </TouchableOpacity>
+                <View style={{ marginBottom: 4 }}>
+                  <Text style={{ fontSize: 13, color: '#333', textAlign: 'center', marginBottom: 8, fontWeight: '500' }}>
+                    Vuoi terminare il periodo di prova?
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity
+                      style={{ flex: 1, borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#fff' }}
+                      onPress={() => handleRequestEndTrial()}
+                      disabled={requestingEndTrial}
+                      data-testid="rimani-firma-btn"
+                    >
+                      <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>
+                        {requestingEndTrial ? 'Invio...' : 'Rimani e Firma\nPrivacy'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#FFEBEE' }}
+                      onPress={() => handleShowDeletionOption()}
+                      data-testid="non-rimanere-btn"
+                    >
+                      <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Non Rimanere</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               )}
             </>
           )}
@@ -1973,15 +1991,32 @@ export default function AthleteDetail() {
                   </Text>
                 </View>
               </View>
-              {/* Bottone Conferma / Rinuncia (solo se non ancora richiesto) */}
+              {/* Bottoni Rimani / Non Rimanere (warning state) */}
               {!endTrialStatus?.end_trial_requested && (
-                <TouchableOpacity
-                  style={{ backgroundColor: '#E65100', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 4 }}
-                  onPress={() => setShowEndTrialChoice(true)}
-                  data-testid="end-trial-warning-btn"
-                >
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Conferma / Rinuncia</Text>
-                </TouchableOpacity>
+                <View style={{ marginBottom: 4 }}>
+                  <Text style={{ fontSize: 13, color: '#333', textAlign: 'center', marginBottom: 8, fontWeight: '500' }}>
+                    Vuoi terminare il periodo di prova?
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity
+                      style={{ flex: 1, borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#fff' }}
+                      onPress={() => handleRequestEndTrial()}
+                      disabled={requestingEndTrial}
+                      data-testid="rimani-firma-warning-btn"
+                    >
+                      <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>
+                        {requestingEndTrial ? 'Invio...' : 'Rimani e Firma\nPrivacy'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#FFEBEE' }}
+                      onPress={() => handleShowDeletionOption()}
+                      data-testid="non-rimanere-warning-btn"
+                    >
+                      <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Non Rimanere</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               )}
             </>
           )}
@@ -1996,30 +2031,57 @@ export default function AthleteDetail() {
               <Text style={{ fontSize: 12, color: '#555', lineHeight: 18, marginBottom: 8 }}>
                 Per proseguire l'attivita sportiva, avvia la procedura di iscrizione.
               </Text>
-              <TouchableOpacity
-                style={{ backgroundColor: '#C62828', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
-                onPress={() => setShowEndTrialChoice(true)}
-                data-testid="end-trial-expired-btn"
-              >
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Conferma / Rinuncia</Text>
-              </TouchableOpacity>
+              <Text style={{ fontSize: 13, color: '#333', textAlign: 'center', marginBottom: 8, fontWeight: '500' }}>
+                Vuoi terminare il periodo di prova?
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#fff' }}
+                  onPress={() => handleRequestEndTrial()}
+                  disabled={requestingEndTrial}
+                  data-testid="rimani-firma-expired-btn"
+                >
+                  <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>
+                    {requestingEndTrial ? 'Invio...' : 'Rimani e Firma\nPrivacy'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#FFEBEE' }}
+                  onPress={() => handleShowDeletionOption()}
+                  data-testid="non-rimanere-expired-btn"
+                >
+                  <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Non Rimanere</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
-          {/* BOTTONE Conferma / Rinuncia (quando end_trial_requested) */}
+          {/* Bottoni quando end_trial_requested - mostra prossimo step + opzione rinuncia */}
           {athlete.status === 'trial' && endTrialStatus?.end_trial_requested && !athlete.deletion_requested && (
             <View style={{ backgroundColor: '#F5F5F5', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E0E0E0' }} data-testid="end-trial-stepper">
-              <TouchableOpacity
-                style={{
-                  backgroundColor: '#0D47A1', borderRadius: 10, paddingVertical: 13, alignItems: 'center',
-                  flexDirection: 'row', justifyContent: 'center', gap: 8,
-                }}
-                onPress={() => setShowEndTrialChoice(true)}
-                data-testid="conferma-rinuncia-btn"
-              >
-                <Ionicons name="document-text" size={18} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Conferma / Rinuncia</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 13, alignItems: 'center', backgroundColor: '#E3F2FD' }}
+                  onPress={() => {
+                    if (!endTrialStatus.steps.privacy_signed) {
+                      setPrivacyModalVisible(true);
+                    }
+                  }}
+                  disabled={endTrialStatus.steps.privacy_signed}
+                  data-testid="rimani-firma-requested-btn"
+                >
+                  <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>
+                    {endTrialStatus.steps.privacy_signed ? 'Privacy Firmata' : 'Rimani e Firma\nPrivacy'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 13, alignItems: 'center', backgroundColor: '#FFEBEE' }}
+                  onPress={() => handleShowDeletionOption()}
+                  data-testid="non-rimanere-requested-btn"
+                >
+                  <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Non Rimanere</Text>
+                </TouchableOpacity>
+              </View>
 
               {/* All complete message */}
               {endTrialStatus.all_complete && athlete.status === 'trial' && (
@@ -2790,110 +2852,14 @@ export default function AthleteDetail() {
           <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }} style={{ width: '100%' }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, overflow: 'hidden' }}>
             {/* Header */}
-            <View style={{ backgroundColor: '#0D47A1', paddingVertical: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Conferma / Rinuncia</Text>
+            <View style={{ backgroundColor: '#C62828', paddingVertical: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Conferma Cancellazione</Text>
               <TouchableOpacity onPress={() => { setShowEndTrialChoice(false); setShowDeletionConfirm(false); }} data-testid="end-trial-choice-close">
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
 
-            {!showDeletionConfirm ? (
-              <View style={{ padding: 20 }}>
-                <Text style={{ fontSize: 14, color: '#333', lineHeight: 22, marginBottom: 20 }}>
-                  Cosa vuoi fare al termine del periodo di prova?
-                </Text>
-
-                {/* Option 1: Conferma */}
-                <View style={{ backgroundColor: '#E3F2FD', borderRadius: 12, padding: 16, marginBottom: 14 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <Ionicons name="checkmark-circle" size={22} color="#1565C0" />
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0' }}>Conferma - Voglio restare</Text>
-                  </View>
-                  <Text style={{ fontSize: 12, color: '#555', lineHeight: 18, marginBottom: 10 }}>
-                    Per diventare membro effettivo, dovrai completare 3 passaggi:
-                  </Text>
-                  <View style={{ marginLeft: 4, marginBottom: 12 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                      <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>1</Text>
-                      </View>
-                      <Text style={{ fontSize: 12, color: '#1565C0', fontWeight: '500' }}>Inserire data scadenza certificato medico</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                      <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>2</Text>
-                      </View>
-                      <Text style={{ fontSize: 12, color: '#1565C0', fontWeight: '500' }}>Verifica certificato da parte dell'admin</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>3</Text>
-                      </View>
-                      <Text style={{ fontSize: 12, color: '#1565C0', fontWeight: '500' }}>Firma del documento privacy GDPR</Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    style={{
-                      backgroundColor: requestingEndTrial ? '#90CAF9' : '#0D47A1',
-                      borderRadius: 10, paddingVertical: 12, alignItems: 'center',
-                      flexDirection: 'row', justifyContent: 'center', gap: 8,
-                    }}
-                    onPress={() => {
-                      if (endTrialStatus?.end_trial_requested) {
-                        // Already requested - open privacy signing if steps 1 & 2 are done
-                        setShowEndTrialChoice(false);
-                        if (!endTrialStatus.steps.privacy_signed) {
-                          setPrivacyModalVisible(true);
-                        }
-                      } else {
-                        handleRequestEndTrial();
-                      }
-                    }}
-                    disabled={requestingEndTrial}
-                    data-testid="confirm-end-trial-btn"
-                  >
-                    {requestingEndTrial ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                    )}
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
-                      {requestingEndTrial ? 'Invio...' : endTrialStatus?.end_trial_requested ? 'Firma Privacy GDPR' : 'Conferma'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Separator */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-                  <View style={{ flex: 1, height: 1, backgroundColor: '#E0E0E0' }} />
-                  <Text style={{ marginHorizontal: 12, color: '#999', fontSize: 12 }}>oppure</Text>
-                  <View style={{ flex: 1, height: 1, backgroundColor: '#E0E0E0' }} />
-                </View>
-
-                {/* Option 2: Rinuncia */}
-                <View style={{ backgroundColor: '#FFF3E0', borderRadius: 12, padding: 16 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <Ionicons name="exit-outline" size={22} color="#E65100" />
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100' }}>Rinuncia - Me ne vado</Text>
-                  </View>
-                  <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18, marginBottom: 10 }}>
-                    Tutti i dati dell'atleta e dei genitori verranno cancellati (presenze, documenti, etc.). L'admin dovra approvare la richiesta.
-                  </Text>
-                  <TouchableOpacity
-                    style={{
-                      backgroundColor: '#E65100',
-                      borderRadius: 10, paddingVertical: 12, alignItems: 'center',
-                      flexDirection: 'row', justifyContent: 'center', gap: 8,
-                    }}
-                    onPress={handleShowDeletionOption}
-                    data-testid="show-deletion-btn"
-                  >
-                    <Ionicons name="trash-outline" size={18} color="#fff" />
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Richiedi cancellazione</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
+            {showDeletionConfirm && (
               /* Deletion Confirmation View */
               <View style={{ padding: 20 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -2961,7 +2927,7 @@ export default function AthleteDetail() {
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <TouchableOpacity
                     style={{ flex: 1, backgroundColor: '#E0E0E0', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
-                    onPress={() => setShowDeletionConfirm(false)}
+                    onPress={() => { setShowDeletionConfirm(false); setShowEndTrialChoice(false); }}
                     data-testid="cancel-deletion-btn"
                   >
                     <Text style={{ fontWeight: '600', fontSize: 14, color: '#555' }}>Annulla</Text>
