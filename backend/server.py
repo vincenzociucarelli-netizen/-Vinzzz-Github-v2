@@ -19191,15 +19191,24 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
         "check_in_time": {"$gte": month_start}
     })
     
-    # Recent attendances (last 10)
+    # Recent attendances (last 10) - include team_id for team name lookup
     recent_attendances = await db.attendances.find(
         {"athlete_id": athlete_id},
-        {"_id": 0, "id": 1, "date": 1, "check_in_time": 1, "training_slot": 1}
+        {"_id": 0, "id": 1, "date": 1, "check_in_time": 1, "training_slot": 1, "team_id": 1}
     ).sort("check_in_time", -1).limit(10).to_list(10)
+    
+    # Look up team names for attendances
+    att_team_ids = list(set(a.get("team_id") for a in recent_attendances if a.get("team_id")))
+    att_teams = {}
+    if att_team_ids:
+        teams_cursor = await db.teams.find({"id": {"$in": att_team_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(100)
+        att_teams = {t["id"]: t.get("name", "") for t in teams_cursor}
     
     for att in recent_attendances:
         if isinstance(att.get("check_in_time"), datetime):
             att["check_in_time"] = att["check_in_time"].isoformat()
+        att["team_name"] = att_teams.get(att.get("team_id"), "")
+        att.pop("team_id", None)
     
     # Upcoming matches
     upcoming_matches = await db.matches.find({
