@@ -112,22 +112,36 @@ export default function ParentDocuments() {
         const response = await fetch(`${baseUrl}/documents/signed/${docId}/pdf`, {
           headers: { 'Authorization': `Bearer ${token}` },
         });
-        if (!response.ok) throw new Error('Download failed');
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'Errore sconosciuto');
+          Alert.alert('Errore', `Impossibile aprire il documento: ${response.status}`);
+          return;
+        }
         const blob = await response.blob();
+        if (blob.size === 0) {
+          Alert.alert('Errore', 'Il documento è vuoto o non disponibile');
+          return;
+        }
         const blobUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = `${docTitle || 'documento'}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+        // Try opening in new tab first, fallback to download
+        const newWindow = window.open(blobUrl, '_blank');
+        if (!newWindow) {
+          // Popup blocked - fallback to download
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `${docTitle || 'documento'}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 5000);
       } else {
         const url = `${api.defaults.baseURL}/documents/signed/${docId}/pdf`;
         await Linking.openURL(url);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error opening document:', error);
+      Alert.alert('Errore', 'Impossibile aprire il documento. Riprova.');
     }
   };
 

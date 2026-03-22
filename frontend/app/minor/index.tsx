@@ -196,12 +196,23 @@ export default function MinorDashboard() {
         {data.society?.name && (
           <Text style={styles.societyNameHeader}>{data.society.name.toUpperCase()}</Text>
         )}
-        {/* Row 3: Welcome with emoji/color + Logout + Personalize */}
+        {/* Emoji Avatar - Centered at top like profile photo */}
+        {data.athlete.lite_emoji && (
+          <View style={{ alignItems: 'center', marginBottom: 4 }} data-testid="emoji-avatar">
+            <View style={{
+              width: 72, height: 72, borderRadius: 36,
+              backgroundColor: (data.athlete.lite_color || '#007AFF') + '20',
+              borderWidth: 3, borderColor: data.athlete.lite_color || '#007AFF',
+              justifyContent: 'center', alignItems: 'center',
+            }}>
+              <Text style={{ fontSize: 36 }}>{data.athlete.lite_emoji}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Row 3: Welcome with color + Logout + Personalize */}
         <View style={styles.welcomeRow}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
-            {data.athlete.lite_emoji ? (
-              <Text style={{ fontSize: 24 }}>{data.athlete.lite_emoji}</Text>
-            ) : null}
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
             <Text style={styles.welcomeText}>Ciao, <Text style={[styles.athleteName, data.athlete.lite_color ? { color: data.athlete.lite_color } : {}]}>
               {(data.athlete.first_name || '').charAt(0).toUpperCase() + (data.athlete.first_name || '').slice(1).toLowerCase()}{data.athlete.last_name ? ` ${data.athlete.last_name.charAt(0).toUpperCase()}.` : ''}
             </Text></Text>
