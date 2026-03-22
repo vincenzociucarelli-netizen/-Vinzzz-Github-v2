@@ -2877,7 +2877,7 @@ export default function AthleteDetail() {
                     <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100' }}>Rinuncia - Me ne vado</Text>
                   </View>
                   <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18, marginBottom: 10 }}>
-                    Tutti i dati dell'atleta verranno cancellati (presenze, documenti, certificati). L'admin dovra approvare la richiesta.
+                    Tutti i dati dell'atleta e dei genitori verranno cancellati (presenze, documenti, certificati). L'admin dovra approvare la richiesta.
                   </Text>
                   <TouchableOpacity
                     style={{
@@ -3005,7 +3005,7 @@ export default function AthleteDetail() {
             setPrivacyModalVisible(false);
             if (Platform.OS === 'web') {
               const confirmed = window.confirm(
-                'Sei sicuro di voler cancellare tutti i dati?\n\nQuesta azione inviera una richiesta di cancellazione all\'amministratore. Tutti i dati dell\'atleta verranno rimossi dopo l\'approvazione.'
+                'Sei sicuro di voler cancellare tutti i dati?\n\nQuesta azione inviera una richiesta di cancellazione all\'amministratore. Tutti i dati dell\'atleta e dei genitori verranno rimossi dopo l\'approvazione.'
               );
               if (confirmed) {
                 api.post(`/athletes/${athlete.id}/request-deletion`)
