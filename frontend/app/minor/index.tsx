@@ -114,15 +114,19 @@ export default function MinorDashboard() {
   }
 
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
     try {
       const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr || '-';
       return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    } catch { return dateStr; }
+    } catch { return dateStr || '-'; }
   };
 
   const formatTime = (dateStr: string) => {
+    if (!dateStr) return '';
     try {
       const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
       return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     } catch { return ''; }
   };
