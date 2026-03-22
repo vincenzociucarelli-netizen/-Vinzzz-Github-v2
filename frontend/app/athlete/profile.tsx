@@ -114,6 +114,15 @@ export default function AthleteProfile() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
+  // Versione Lite state
+  const [liteEnabled, setLiteEnabled] = useState(false);
+  const [nomeLite, setNomeLite] = useState('');
+  const [showNomeLiteModal, setShowNomeLiteModal] = useState(false);
+  const [nomeLiteInput, setNomeLiteInput] = useState('');
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [savingLite, setSavingLite] = useState(false);
+  
   // Document images
   const [docFrontImage, setDocFrontImage] = useState(null);
   const [docBackImage, setDocBackImage] = useState(null);
@@ -201,6 +210,10 @@ export default function AthleteProfile() {
       
       // Store athlete_id
       setAthleteId(data.athlete_id || data.id);
+      
+      // Load Lite access info
+      setNomeLite(data.nome_lite || '');
+      setLiteEnabled(data.minor_access_enabled || false);
       
       // Check if athlete is quota type (pays fees) vs compensated (receives payment)
       setIsQuotaAthlete(data.athlete_type !== 'compensated');
@@ -670,6 +683,46 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il cambio password');
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  // Versione Lite handlers
+  const handleSaveNomeLite = async () => {
+    const nome = nomeLiteInput.trim();
+    if (nome.length < 3) {
+      showAlert('Errore', 'Il nome lite deve avere almeno 3 caratteri');
+      return;
+    }
+    setSavingLite(true);
+    try {
+      const res = await api.post(`/athletes/${athleteId}/set-nome-lite`, { nome_lite: nome });
+      setNomeLite(res.data.nome_lite);
+      setShowNomeLiteModal(false);
+      showAlert('Successo', `Nome Lite impostato: ${res.data.nome_lite}`);
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
+    } finally {
+      setSavingLite(false);
+    }
+  };
+
+  const handleSavePin = async () => {
+    const pin = pinInput.trim();
+    if (!pin.match(/^\d{4,6}$/)) {
+      showAlert('Errore', 'Il PIN deve essere composto da 4 a 6 cifre');
+      return;
+    }
+    setSavingLite(true);
+    try {
+      await api.post(`/athletes/${athleteId}/set-minor-pin`, { pin });
+      setLiteEnabled(true);
+      setShowPinModal(false);
+      setPinInput('');
+      showAlert('Successo', 'PIN impostato! Ora puoi accedere alla Versione Lite.');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
+    } finally {
+      setSavingLite(false);
     }
   };
 
@@ -1171,6 +1224,62 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           </View>
         )}
 
+        {/* Versione Lite Section */}
+        <View style={styles.card} data-testid="lite-access-section">
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <Ionicons name="phone-portrait" size={24} color="#007AFF" />
+            <Text style={[styles.cardTitle, { marginBottom: 0, marginLeft: 8 }]}>Versione Lite</Text>
+          </View>
+          
+          <Text style={{ fontSize: 13, color: '#666', marginBottom: 14, lineHeight: 18 }}>
+            Accedi a una versione semplificata con QR code, presenze e orari. Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il Nome Lite e il PIN.
+          </Text>
+
+          {/* Nome Lite */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, backgroundColor: '#f8f9fa', padding: 12, borderRadius: 10 }}>
+            <View>
+              <Text style={{ fontSize: 13, color: '#555' }}>Nome Lite:</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e', marginTop: 2 }}>{nomeLite || 'Non impostato'}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => { setNomeLiteInput(nomeLite); setShowNomeLiteModal(true); }}
+              style={{ backgroundColor: '#007AFF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 }}
+              data-testid="set-nome-lite-btn"
+            >
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>
+                {nomeLite ? 'Modifica' : 'Imposta'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* PIN */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8f9fa', padding: 12, borderRadius: 10 }}>
+            <View>
+              <Text style={{ fontSize: 13, color: '#555' }}>PIN di accesso:</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: liteEnabled ? '#34C759' : '#FF9500', marginTop: 2 }}>
+                {liteEnabled ? 'Attivo' : 'Non impostato'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => { setPinInput(''); setShowPinModal(true); }}
+              style={{ backgroundColor: liteEnabled ? '#34C759' : '#FF9500', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 }}
+              data-testid="set-pin-btn"
+            >
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>
+                {liteEnabled ? 'Cambia PIN' : 'Imposta PIN'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {liteEnabled && nomeLite ? (
+            <View style={{ backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8, marginTop: 10 }}>
+              <Text style={{ fontSize: 12, color: '#2E7D32', textAlign: 'center' }}>
+                Accesso Lite attivo! Usa "{nomeLite}" + PIN per accedere.
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
         <View style={{ height: 120 }} />
       </ScrollView>
       </KeyboardAvoidingView>
@@ -1268,6 +1377,77 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           }}
         />
       )}
+
+      {/* Modal: Nome Lite */}
+      {showNomeLiteModal && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 999 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '85%', maxWidth: 360 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#1a1a2e', marginBottom: 16 }}>Imposta Nome Lite</Text>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>Scegli un nome unico per accedere alla Versione Lite (min 3, max 20 caratteri).</Text>
+            <TextInput
+              value={nomeLiteInput}
+              onChangeText={setNomeLiteInput}
+              placeholder="Es: MarioR"
+              style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 16, marginBottom: 16 }}
+              maxLength={20}
+              data-testid="nome-lite-input"
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setShowNomeLiteModal(false)}
+                style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#f0f0f0', alignItems: 'center' }}
+              >
+                <Text style={{ color: '#666', fontWeight: '600' }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSaveNomeLite}
+                disabled={savingLite}
+                style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#007AFF', alignItems: 'center', opacity: savingLite ? 0.6 : 1 }}
+                data-testid="save-nome-lite-btn"
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>{savingLite ? 'Salvataggio...' : 'Salva'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Modal: PIN */}
+      {showPinModal && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 999 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '85%', maxWidth: 360 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#1a1a2e', marginBottom: 16 }}>Imposta PIN</Text>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>Inserisci un PIN numerico da 4 a 6 cifre per l'accesso alla Versione Lite.</Text>
+            <TextInput
+              value={pinInput}
+              onChangeText={(t) => setPinInput(t.replace(/\D/g, ''))}
+              placeholder="Es: 1234"
+              keyboardType="numeric"
+              secureTextEntry
+              maxLength={6}
+              style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 20, textAlign: 'center', letterSpacing: 8, marginBottom: 16 }}
+              data-testid="pin-input"
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setShowPinModal(false)}
+                style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#f0f0f0', alignItems: 'center' }}
+              >
+                <Text style={{ color: '#666', fontWeight: '600' }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSavePin}
+                disabled={savingLite}
+                style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#34C759', alignItems: 'center', opacity: savingLite ? 0.6 : 1 }}
+                data-testid="save-pin-btn"
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>{savingLite ? 'Salvataggio...' : 'Salva'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
     </View>
   );
 }

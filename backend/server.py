@@ -2677,6 +2677,9 @@ async def get_me(current_user = Depends(get_current_user)):
                     user[cert_field] = athlete[cert_field]
             # Include athlete's own ID for certificate API calls
             user["athlete_record_id"] = athlete["id"]
+            # Include Lite access fields
+            user["nome_lite"] = athlete.get("nome_lite", "")
+            user["minor_access_enabled"] = athlete.get("minor_access_enabled", False)
     
     return user
 
@@ -19318,18 +19321,21 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
 
 @api_router.post("/athletes/{athlete_id}/set-minor-pin")
 async def set_minor_pin(athlete_id: str, data: SetMinorPin, current_user = Depends(get_current_user)):
-    """Genitore imposta il PIN per l'accesso Lite dell'atleta"""
-    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
-        raise HTTPException(status_code=403, detail="Solo genitori o admin possono impostare il PIN")
+    """Genitore o atleta maggiorenne imposta il PIN per l'accesso Lite dell'atleta"""
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN, UserRole.ATHLETE]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Verify parent ownership
+    # Verify ownership
     if current_user["role"] == UserRole.PARENT:
         if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
             raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    elif current_user["role"] == UserRole.ATHLETE:
+        if current_user["id"] != athlete.get("user_id") and current_user.get("athlete_id") != athlete_id and current_user["id"] != athlete_id:
+            raise HTTPException(status_code=403, detail="Non autorizzato")
     
     # Validate PIN (4-6 digits)
     pin = data.pin.strip()
@@ -19392,7 +19398,7 @@ class SetNomeLite(BaseModel):
 @api_router.post("/athletes/{athlete_id}/set-nome-lite")
 async def set_nome_lite(athlete_id: str, data: SetNomeLite, current_user = Depends(get_current_user)):
     """Genitore o atleta maggiorenne imposta il nome lite per l'accesso Lite"""
-    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN, "minor"]:
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN, UserRole.ATHLETE, "minor"]:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     
     athlete = await db.athletes.find_one({"id": athlete_id})
@@ -19405,6 +19411,9 @@ async def set_nome_lite(athlete_id: str, data: SetNomeLite, current_user = Depen
             raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
     elif current_user["role"] == "minor":
         if current_user.get("athlete_id") != athlete_id:
+            raise HTTPException(status_code=403, detail="Non autorizzato")
+    elif current_user["role"] == UserRole.ATHLETE:
+        if current_user["id"] != athlete.get("user_id") and current_user.get("athlete_id") != athlete_id and current_user["id"] != athlete_id:
             raise HTTPException(status_code=403, detail="Non autorizzato")
     
     nome = data.nome_lite.strip()
