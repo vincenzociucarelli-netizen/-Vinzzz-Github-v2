@@ -2056,32 +2056,23 @@ export default function AthleteDetail() {
             </View>
           )}
 
-          {/* Bottoni quando end_trial_requested - mostra prossimo step + opzione rinuncia */}
+          {/* Bottoni quando end_trial_requested - mostra solo Rimani/Firma Privacy */}
           {athlete.status === 'trial' && endTrialStatus?.end_trial_requested && !athlete.deletion_requested && (
             <View style={{ backgroundColor: '#F5F5F5', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E0E0E0' }} data-testid="end-trial-stepper">
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TouchableOpacity
-                  style={{ flex: 1, borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 13, alignItems: 'center', backgroundColor: '#E3F2FD' }}
-                  onPress={() => {
-                    if (!endTrialStatus.steps.privacy_signed) {
-                      setPrivacyModalVisible(true);
-                    }
-                  }}
-                  disabled={endTrialStatus.steps.privacy_signed}
-                  data-testid="rimani-firma-requested-btn"
-                >
-                  <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>
-                    {endTrialStatus.steps.privacy_signed ? 'Privacy Firmata' : 'Rimani e Firma\nPrivacy'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 13, alignItems: 'center', backgroundColor: '#FFEBEE' }}
-                  onPress={() => handleShowDeletionOption()}
-                  data-testid="non-rimanere-requested-btn"
-                >
-                  <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Non Rimanere</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={{ borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 13, alignItems: 'center', backgroundColor: endTrialStatus.steps.privacy_signed ? '#E8F5E9' : '#E3F2FD' }}
+                onPress={() => {
+                  if (!endTrialStatus.steps.privacy_signed) {
+                    setPrivacyModalVisible(true);
+                  }
+                }}
+                disabled={endTrialStatus.steps.privacy_signed}
+                data-testid="rimani-firma-requested-btn"
+              >
+                <Text style={{ color: endTrialStatus.steps.privacy_signed ? '#2E7D32' : '#1565C0', fontWeight: '700', fontSize: 14, textAlign: 'center' }}>
+                  {endTrialStatus.steps.privacy_signed ? 'Privacy Firmata' : 'Rimani e Firma Privacy'}
+                </Text>
+              </TouchableOpacity>
 
               {/* All complete message */}
               {endTrialStatus.all_complete && athlete.status === 'trial' && (
@@ -2550,54 +2541,16 @@ export default function AthleteDetail() {
           )}
         </View>
 
-        {/* Request Deletion Section - Only visible when data is unlocked */}
-        {dataUnlocked && (
-          <View style={styles.deleteSection}>
+        {/* Non Rimanere - solo dopo che l'atleta ha scelto di restare */}
+        {athlete.status === 'trial' && endTrialStatus?.end_trial_requested && !athlete.deletion_requested && (
+          <View style={{ marginTop: 24, marginBottom: 16, paddingHorizontal: 4 }}>
             <TouchableOpacity
-              style={styles.deleteRequestButton}
-              onPress={() => {
-                if (Platform.OS === 'web') {
-                  const confirmed = window.confirm(
-                    'Vuoi inviare una richiesta di cancellazione all\'amministratore?\n\nL\'amministratore dovrà approvare la cancellazione dell\'atleta e del genitore associato.'
-                  );
-                  if (confirmed) {
-                    api.post(`/athletes/${id}/request-deletion`)
-                      .then(() => {
-                        showAlert('Richiesta Inviata', 'La richiesta di cancellazione è stata inviata all\'amministratore. Verrai contattato quando sarà elaborata.');
-                      })
-                      .catch(() => {
-                        showAlert('Errore', 'Impossibile inviare la richiesta. Riprova più tardi.');
-                      });
-                  }
-                } else {
-                  Alert.alert(
-                    'Richiesta Cancellazione',
-                    'Vuoi inviare una richiesta di cancellazione all\'amministratore?\n\nL\'amministratore dovrà approvare la cancellazione dell\'atleta e del genitore associato.',
-                    [
-                      { text: 'Annulla', style: 'cancel' },
-                      { 
-                        text: 'Invia Richiesta', 
-                        style: 'destructive',
-                        onPress: async () => {
-                          try {
-                            await api.post(`/athletes/${id}/request-deletion`);
-                            Alert.alert('Richiesta Inviata', 'La richiesta di cancellazione è stata inviata all\'amministratore. Verrai contattato quando sarà elaborata.');
-                          } catch (error) {
-                            Alert.alert('Errore', 'Impossibile inviare la richiesta. Riprova più tardi.');
-                          }
-                        }
-                      }
-                    ]
-                  );
-                }
-              }}
+              style={{ borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 13, alignItems: 'center', backgroundColor: '#FFEBEE' }}
+              onPress={() => handleShowDeletionOption()}
+              data-testid="non-rimanere-bottom-btn"
             >
-              <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-              <Text style={styles.deleteRequestButtonText}>Richiedi Cancellazione</Text>
+              <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 14, textAlign: 'center' }}>Non Rimanere</Text>
             </TouchableOpacity>
-            <Text style={styles.deleteWarning}>
-              Solo l'amministratore può cancellare l'atleta e il genitore
-            </Text>
           </View>
         )}
       </ScrollView>
