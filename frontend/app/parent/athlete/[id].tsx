@@ -2006,122 +2006,20 @@ export default function AthleteDetail() {
             </View>
           )}
 
-          {/* STEPPER - Procedura Fine Prova (quando end_trial_requested) */}
-          {athlete.status === 'trial' && endTrialStatus?.end_trial_requested && (
+          {/* BOTTONE Conferma / Rinuncia (quando end_trial_requested) */}
+          {athlete.status === 'trial' && endTrialStatus?.end_trial_requested && !athlete.deletion_requested && (
             <View style={{ backgroundColor: '#F5F5F5', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E0E0E0' }} data-testid="end-trial-stepper">
-
-              {/* Bottone Conferma / Rinuncia in cima */}
-              {!athlete.deletion_requested && (
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: '#0D47A1', borderRadius: 10, paddingVertical: 13, alignItems: 'center',
-                    flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 14,
-                  }}
-                  onPress={() => setShowEndTrialChoice(true)}
-                  data-testid="conferma-rinuncia-btn"
-                >
-                  <Ionicons name="document-text" size={18} color="#fff" />
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Conferma / Rinuncia</Text>
-                </TouchableOpacity>
-              )}
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                <Ionicons name="clipboard" size={20} color="#1565C0" />
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0' }}>Procedura di Iscrizione</Text>
-              </View>
-
-              {/* Step 1 - Certificato Medico */}
-              <View style={{ flexDirection: 'row', marginBottom: 12 }} data-testid="end-trial-step-1">
-                <View style={{ width: 28, alignItems: 'center', marginRight: 10 }}>
-                  <View style={{
-                    width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: endTrialStatus.steps.certificate_date_entered ? '#4CAF50' : '#E0E0E0',
-                  }}>
-                    {endTrialStatus.steps.certificate_date_entered ? (
-                      <Ionicons name="checkmark" size={16} color="#fff" />
-                    ) : (
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#666' }}>1</Text>
-                    )}
-                  </View>
-                  <View style={{ width: 2, flex: 1, backgroundColor: endTrialStatus.steps.certificate_date_entered ? '#4CAF50' : '#E0E0E0', marginTop: 4 }} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: endTrialStatus.steps.certificate_date_entered ? '#2E7D32' : '#333', marginBottom: 2 }}>
-                    Certificato Medico
-                  </Text>
-                  {endTrialStatus.steps.certificate_date_entered ? (
-                    <Text style={{ fontSize: 12, color: '#4CAF50' }}>
-                      Scadenza inserita: {new Date(endTrialStatus.steps.certificate_expiry).toLocaleDateString('it-IT')}
-                    </Text>
-                  ) : (
-                    <Text style={{ fontSize: 12, color: '#888', lineHeight: 18 }}>
-                      Inserisci la data di scadenza del certificato medico nella sezione sottostante e consegna una copia alla societa.
-                    </Text>
-                  )}
-                </View>
-              </View>
-
-              {/* Step 2 - Verifica Admin */}
-              <View style={{ flexDirection: 'row', marginBottom: 12 }} data-testid="end-trial-step-2">
-                <View style={{ width: 28, alignItems: 'center', marginRight: 10 }}>
-                  <View style={{
-                    width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: endTrialStatus.steps.admin_verified ? '#4CAF50' : '#E0E0E0',
-                  }}>
-                    {endTrialStatus.steps.admin_verified ? (
-                      <Ionicons name="checkmark" size={16} color="#fff" />
-                    ) : (
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#666' }}>2</Text>
-                    )}
-                  </View>
-                  <View style={{ width: 2, flex: 1, backgroundColor: endTrialStatus.steps.admin_verified ? '#4CAF50' : '#E0E0E0', marginTop: 4 }} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: endTrialStatus.steps.admin_verified ? '#2E7D32' : '#333', marginBottom: 2 }}>
-                    Verifica Admin
-                  </Text>
-                  {endTrialStatus.steps.admin_verified ? (
-                    <Text style={{ fontSize: 12, color: '#4CAF50' }}>
-                      Verificato da {endTrialStatus.steps.admin_verified_by}
-                    </Text>
-                  ) : endTrialStatus.steps.certificate_date_entered ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <ActivityIndicator size="small" color="#FF9500" />
-                      <Text style={{ fontSize: 12, color: '#FF9500' }}>In attesa di verifica da parte dell'admin</Text>
-                    </View>
-                  ) : (
-                    <Text style={{ fontSize: 12, color: '#888' }}>L'admin verifichera il certificato di persona</Text>
-                  )}
-                </View>
-              </View>
-
-              {/* Step 3 - Firma Privacy */}
-              <View style={{ flexDirection: 'row' }} data-testid="end-trial-step-3">
-                <View style={{ width: 28, alignItems: 'center', marginRight: 10 }}>
-                  <View style={{
-                    width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: endTrialStatus.steps.privacy_signed ? '#4CAF50' : '#E0E0E0',
-                  }}>
-                    {endTrialStatus.steps.privacy_signed ? (
-                      <Ionicons name="checkmark" size={16} color="#fff" />
-                    ) : (
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#666' }}>3</Text>
-                    )}
-                  </View>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: endTrialStatus.steps.privacy_signed ? '#2E7D32' : '#333', marginBottom: 2 }}>
-                    Firma Privacy
-                  </Text>
-                  {endTrialStatus.steps.privacy_signed ? (
-                    <Text style={{ fontSize: 12, color: '#4CAF50' }}>Privacy firmata</Text>
-                  ) : (
-                    <Text style={{ fontSize: 12, color: '#888', lineHeight: 18 }}>
-                      La firma privacy verra richiesta al momento della conferma.
-                    </Text>
-                  )}
-                </View>
-              </View>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#0D47A1', borderRadius: 10, paddingVertical: 13, alignItems: 'center',
+                  flexDirection: 'row', justifyContent: 'center', gap: 8,
+                }}
+                onPress={() => setShowEndTrialChoice(true)}
+                data-testid="conferma-rinuncia-btn"
+              >
+                <Ionicons name="document-text" size={18} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Conferma / Rinuncia</Text>
+              </TouchableOpacity>
 
               {/* All complete message */}
               {endTrialStatus.all_complete && athlete.status === 'trial' && (

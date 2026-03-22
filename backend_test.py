@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import sys
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://accesso-atleta-2024.preview.emergentagent.com/api"
+BACKEND_URL = "https://trial-end-flow.preview.emergentagent.com/api"
 
 class TestResults:
     def __init__(self):

@@ -14,7 +14,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://accesso-atleta-2024.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://trial-end-flow.preview.emergentagent.com')
 
 # Test credentials
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"
