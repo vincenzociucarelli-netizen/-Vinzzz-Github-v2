@@ -7943,6 +7943,21 @@ async def check_deletion_obligations(athlete_id: str, current_user = Depends(get
     
     has_obligations = bool(unpaid_payments) or bool(fiscal_docs) or bool(compensations)
     
+    # Audit log: deletion check viewed
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "action": "deletion_check_viewed",
+        "user_id": current_user["id"],
+        "user_email": current_user.get("email", ""),
+        "timestamp": datetime.now(timezone.utc),
+        "details": {
+            "athlete_id": athlete_id,
+            "athlete_name": athlete.get("full_name", ""),
+            "has_obligations": has_obligations,
+            "requester_role": current_user.get("role", ""),
+        }
+    })
+    
     return {
         "athlete_id": athlete_id,
         "athlete_name": athlete.get("full_name", ""),
@@ -7973,6 +7988,32 @@ async def check_deletion_obligations(athlete_id: str, current_user = Depends(get
             "payments": await db.payments.count_documents({"athlete_id": athlete_id}),
         },
     }
+
+
+
+@api_router.post("/athletes/{athlete_id}/deletion-cancelled")
+async def log_deletion_cancelled(athlete_id: str, current_user = Depends(get_current_user)):
+    """Log when a parent views the deletion dialog but clicks 'Annulla'"""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "action": "deletion_request_cancelled",
+        "user_id": current_user["id"],
+        "user_email": current_user.get("email", ""),
+        "timestamp": datetime.now(timezone.utc),
+        "details": {
+            "athlete_id": athlete_id,
+            "athlete_name": athlete.get("full_name", ""),
+            "requester_role": current_user.get("role", ""),
+            "note": "Genitore ha visualizzato il dialogo di cancellazione e poi annullato"
+        }
+    })
+    
+    return {"message": "Cancellation logged"}
+
 
 
 @api_router.post("/athletes/{athlete_id}/request-deletion")

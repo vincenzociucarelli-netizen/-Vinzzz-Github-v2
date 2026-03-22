@@ -2884,7 +2884,12 @@ export default function AthleteDetail() {
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <TouchableOpacity
                     style={{ flex: 1, backgroundColor: '#E0E0E0', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
-                    onPress={() => { setShowDeletionConfirm(false); setShowEndTrialChoice(false); }}
+                    onPress={() => { 
+                      // Log the cancellation before closing
+                      api.post(`/athletes/${athlete?.id}/deletion-cancelled`).catch(() => {});
+                      setShowDeletionConfirm(false); 
+                      setShowEndTrialChoice(false); 
+                    }}
                     data-testid="cancel-deletion-btn"
                   >
                     <Text style={{ fontWeight: '600', fontSize: 14, color: '#555' }}>Annulla</Text>

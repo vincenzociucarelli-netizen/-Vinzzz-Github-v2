@@ -358,7 +358,7 @@ export default function MinorDashboard() {
               <Ionicons name={isVerified ? "shield-checkmark" : "document-text"} size={20} color={isExpired ? '#FF3B30' : isExpiringSoon ? '#FF9500' : '#34C759'} />
               <View style={{ flex: 1, marginLeft: 8 }}>
                 <Text style={styles.certTitle}>Certificato Medico</Text>
-                <Text style={[styles.certDate, { color: isExpired ? '#FF3B30' : isExpiringSoon ? '#FF6D00' : '#2E7D32' }]}>
+                <Text style={[styles.certDate, { color: isExpired ? '#FF3B30' : isExpiringSoon ? '#FF6D00' : '#2E7D32', fontSize: 14, fontWeight: '700' }]}>
                   {isExpired ? `Scaduto il ${formatDate(cert)}` : `Scadenza: ${formatDate(cert)}`}
                 </Text>
                 {isVerified && !isExpired && (
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 0,
   },
   headerSideIcon: {
     width: 52,
@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
   certBannerWarning: { backgroundColor: '#FFF3E0', borderLeftColor: '#FF9500' },
   certBannerExpired: { backgroundColor: '#FFEBEE', borderLeftColor: '#FF3B30' },
   certTitle: { fontSize: 13, fontWeight: '700', color: '#333' },
-  certDate: { fontSize: 11, marginTop: 2 },
+  certDate: { fontSize: 14, marginTop: 2, fontWeight: '700' },
   certExpired: { fontSize: 11, color: '#FF3B30', marginTop: 2 },
   // QR card
   qrCard: { backgroundColor: '#fff', marginHorizontal: 16, marginTop: 16, borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
