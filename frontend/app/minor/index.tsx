@@ -492,7 +492,7 @@ export default function MinorDashboard() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.attendanceDate}>{formatDate(att.date)}</Text>
                 {att.team_name ? (
-                  <Text style={styles.attendanceTeam}>{att.team_name}</Text>
+                  <Text style={styles.attendanceTeam}>Squadra: {att.team_name}</Text>
                 ) : null}
               </View>
               <Text style={styles.attendanceTime}>{formatTime(att.check_in_time)}</Text>
@@ -671,6 +671,6 @@ const styles = StyleSheet.create({
   // Attendances
   attendanceRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 10, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
   attendanceDate: { fontSize: 14, color: '#333' },
-  attendanceTeam: { fontSize: 11, color: '#888', marginTop: 1 },
+  attendanceTeam: { fontSize: 13, color: '#1565C0', marginTop: 2, fontWeight: '600' },
   attendanceTime: { fontSize: 13, color: '#888' },
 });
