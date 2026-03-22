@@ -3,121 +3,104 @@ The user wants to build a comprehensive sports team management application. Key 
 1.  **Pre-Season Registration**: A feature to create campaigns, generate a public link for a registration form to gauge interest, and an admin dashboard to manage campaigns and export responses.
 2.  **End of Trial Period Flow**: A complete workflow for athletes at the end of their trial. This includes a Confirm path (3-step process: medical certificate, admin verification, GDPR signature) to become an active member, and a Waive path that initiates a data deletion request.
 3.  **Conditional Data Deletion**: A robust, admin-approved data deletion process that checks for outstanding administrative or fiscal obligations before permanently deleting all data associated with an athlete and, if applicable, their parent's account.
-4.  **Notification System**: An email notification system to remind parents to complete pre-season registration.
+4.  **Notification System**: An email notification system to remind parents to complete pre-season registration and for certificate expiry.
 5.  **Parent Cross-Linking**: Automatically link parent accounts when a  matches an existing user.
 6.  **Audit Logging**: A detailed audit trail for important admin and user actions.
-The user provides continuous, iterative feedback via annotated screenshots to guide UI/UX development.
+7.  **Versione Lite (Minor's View)**: A simplified, secure, and customizable read-only dashboard for young athletes.
 
 **PRODUCT REQUIREMENTS**:
 *   **Pre-Season Registration**: Admin-configurable campaigns, a public registration form, and an admin dashboard with CSV export.
 *   **End of Trial Flow**: A clear UI for parents to choose to Stay or Leave. The Stay path involves a 3-step process. The Leave path triggers a deletion request.
 *   **Data Deletion Flow**: Must be admin-approved and blocked if fiscal/administrative obligations exist. Deletion should be comprehensive across all related data collections.
+*   **Versione Lite Security**: Login must use a unique, parent-defined Nome Lite and a PIN, with brute-force protection. The internal  must be the sole identifier for all backend operations.
 *   **UI/UX**: The application's UI must be iteratively refined based on the user's detailed screenshot feedback, including button placement, text content, and workflow logic.
 
 **User's preferred language**: italiano
 
 **what currently exists?**
-The application is a full-stack sports team management platform with a FastAPI backend and a React (Expo) frontend. The core features requested by the user are implemented:
-1.  **End-of-Trial & Deletion Flow**: A complete, multi-step process for both confirming and waiving trial periods is functional. The UI has been repeatedly refined to use two separate, inline buttons (Rimani e Firma Privacy and Non Rimanere). The deletion request process, with its backend obligation checks and admin approval dashboard, is fully implemented. The Non Rimanere option is now available for both  and  athletes at the bottom of their page.
-2.  **Pre-Season Campaigns & Notifications**: Admins can create campaigns, and a public form is available. A manual email notification system is in place.
-3.  **Audit Logs**: An admin page displays a detailed, filterable audit trail of user actions. The UI was recently made expandable and then received feedback to be made static again. The backend logging was enhanced to include more contextual information like athlete and parent names.
-4.  **Parent Cross-Linking**: The backend logic to automatically link parents on registration or profile update is implemented and has been verified. Data inconsistencies from previous manual deletions were corrected.
-5.  **Bug Fixes**: Numerous bugs identified by the user or agent have been fixed, including issues with profile completeness checks, PDF document viewing, and state persistence in the admin UI.
+The application is a full-stack sports team management platform with a FastAPI backend and a React (Expo) frontend.
+1.  **Core Features**: Pre-Season Campaigns, End-of-Trial Flow, Admin-approved Data Deletion, and Audit Logging are fully implemented.
+2.  **Versione Lite Overhaul**: A major security and UI enhancement for the minor's dashboard is complete. This includes login via a custom  and PIN, a brute-force protection mechanism, and a new UI for athletes to personalize their view with a color and an emoji/avatar. The parent-facing UI to manage the  has also been added.
+3.  **Automated Notifications**: A background scheduler () has been implemented to send automatic email notifications via Brevo for medical certificates expiring at 30 and 15 days. A de-duplication mechanism is in place to prevent repeat emails.
+4.  **Data Protection Password**: A new feature allows parents to set a Data Protection Password for their athletes via their profile page, adding another layer of security for sensitive data.
+5.  **Recent UI Fixes**: Based on the latest user feedback, fixes were implemented for button text overflow, a non-functional document viewer, and the layout of the avatar in the Versione Lite dashboard.
 
 **Last working item**:
-- **Last item agent was working**: The agent had just received a new set of feedback from the user via four annotated screenshots and was beginning to analyze them. The previously planned task (Athlete History/Timeline page) was put on hold to address these new, higher-priority issues.
-- **Status**: NOT STARTED
-- **Agent Testing Done**: N
-- **Which testing method agent to use?**:
-    - For UI text/logic changes:  to verify the athlete page and admin pages.
-    - For new backend logic (audit log for cancellation):  to test the new log entries.
-    - The agent should first explain the existing functionality for the user's questions before making changes.
+- **Last item agent was working**: The agent addressed the user's final UI feedback from four screenshots. The specific tasks were:
+    1.  Fixing text overflow on the Scarica Ricevuta Fiscale button.
+    2.  Fixing non-expanding document sections on the I Miei Documenti page.
+    3.  Changing the Personalizza section title to Avatar and adding a Chiudi button.
+    4.  Repositioning the emoji in the Versione Lite view to be a central avatar above the name.
+- **Status**: USER VERIFICATION PENDING
+- **Agent Testing Done**: N (for these specific UI tweaks, though the underlying features were tested).
+- **Which testing method agent to use?**: . The agent should log in as a parent () and a minor (e.g., MARTINA G. via : ) to visually confirm that all the UI fixes from the last user message have been correctly applied.
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Address 4 new feedback points from latest screenshots (P0)**
-    - **Description**: The user has identified four areas for improvement or clarification across the athlete page, admin parents page, and audit logs.
-    - **Status**: NOT STARTED
-    - **Issues Detail**:
-        - **Foto 1 (Athlete Page UI):**
-            - **Sub-issue A**: The certificate status text is incorrect. It should show Certificato presente e convalidato for an athlete like Martina, but it currently does not.
-            - **Sub-issue B**: The text under the QR Code should be Codice QR instead of the athlete's internal code ().
-            - **Next debug checklist**: Investigate . Fix the conditional logic for the certificate status text and change the hardcoded text for the QR code label.
-        - **Foto 2 (Admin Parents Page):**
-            - **Sub-issue C**: The user is asking for clarification on PW Dati Richiesta.
-            - **Next debug checklist**: The agent must explain to the user that this refers to the Data Protection Password and how it's used within the app. No code change is needed, just a clear explanation.
-        - **Foto 3 (Athlete Page):**
-            - **Sub-issue D**: The user wants to know how the attendance percentage is calculated.
-            - **Next debug checklist**: The agent must explain the calculation, which is based on API data for weekly, monthly, or total attendance. No code change is needed.
-        - **Foto 4 (Admin Audit Log):**
-            - **Sub-issue E (UI Reversal)**: The user wants the audit log entries to be non-collapsible (Struttura Non collassare), reversing a recent change.
-            - **Sub-issue F (New Feature)**: The audit log should show when a deletion request was made and subsequently cancelled (poi ha rinunciato).
-            - **Next debug checklist**:
-                - For E: Modify  to remove the collapsible functionality and display all details by default.
-                - For F: This is a new feature. In , find the logic where a user proceeds with the Stay flow *after* having requested deletion, and add a new audit log entry for deletion_request_cancelled. Update the frontend to display this new action.
+- **Issue 1: Verify final UI fixes with the user (P0)**
+    - **Description**: The user reported four UI issues via screenshots, which the agent has fixed. These fixes now need to be presented to the user for confirmation before moving on.
+    - **Status**: USER VERIFICATION PENDING
+    - **Is recurring issue?**: N
+    - **Should Test frontend/backend/both after fix?**: Frontend
 
 **In progress Task List**:
-- **Task 1: Implement Athlete History/Timeline Page (P1)**
-    - **Description**: Implement the user-approved feature to show a chronological timeline of an athlete's key events (e.g., registration, trial end, activation, documents signed).
-    - **Where to resume**: This task was paused. The next step is to create a new backend endpoint (e.g., ) in  to aggregate event data. Then, build the UI component in  to display this timeline.
-    - **Status**: NOT STARTED
-    - **Blocked on**: Issue 1 (The user asked to prioritize the new feedback).
+- None.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks**:
-    *   (P1) **Automated Pre-Season Reminders**: Implement automated, recurring reminders for the pre-season campaign.
-*   **Future Tasks**:
-    *   (P2) **UI for Contracted Athletes**: Refine the UI for athletes with formal contracts (explicitly postponed by user).
-    *   (P3) **Refactor **: Break down the monolithic  file into a more modular structure (e.g., separate files for routes, services).
+    *   (P0) **Pagina Cronologia Atleta**: Implement the user-approved feature to show a chronological timeline of an athlete's key events (e.g., registration, trial end, activation, documents signed). This is the next major feature to work on.
+    *   (P1) **Promemoria automatici Pre-Stagione**: Implement automated, recurring reminders for the pre-season campaign.
+*   **Future Tasks (Post-Publication)**:
+    *   (P2) **UI per atleti con contratto**: Refine the UI for athletes with formal contracts.
+    *   (P3) **Refactor **: Break down the monolithic  file into a more modular structure.
     *   (P3) **Re-implement Stripe**: Integrate Stripe for payments.
     *   (P3) **DB Cleanup**: Migrate users with the  role to .
     *   (P3) **Publication Assistance**: Help with final domain and App Store publication steps.
+    *   (P3) **Refactor **: Extract logic into custom hooks and smaller components.
 
 **Completed work in this session**
-- **Feature: UI Overhaul for End-of-Trial Flow**:
-    - Replaced the single Conferma / Rinuncia modal with two distinct inline buttons (Rimani e Firma Privacy and Non Rimanere) in .
-    - Implemented logic to move the Non Rimanere button to the bottom of the page after an athlete commits to staying.
-    - Extended the Non Rimanere functionality to be available for all  athletes, allowing them to request deletion at any time.
-- **Feature: Audit Log Enhancements**:
-    - Implemented a collapsible/expandable UI for log details in .
-    - Enriched backend audit logs in  to include contextual names (, ) for deletion events.
-- **Bug Fix: Parent Cross-Linking and Data Integrity**:
-    - Manually corrected inconsistent  data in the database caused by user deletion and recreation.
-    - Verified that the backend endpoint  correctly returns children for both primary and secondary parents.
-- **Bug Fix: Profile Completeness Check for GDPR**:
-    - Resolved a critical bug in  where the profile completeness check was failing. The fix involved fetching the full user record from the database instead of relying on the limited data in the JWT.
-- **Bug Fix: Admin UI State Persistence**:
-    - Fixed a bug in  where the medical certificate verified status was not correctly loaded from the athlete's data, causing it to reset on page refresh.
-- **Bug Fix: PDF Viewer in Modal**:
-    - Replaced the problematic / PDF viewer with a simple and reliable Download PDF button in .
-- **Bug Fix: Deletion Flow Persistence**:
-    - Investigated and fixed an issue where an admin-approved deletion was not persisting. Added support for the  role in the approval endpoint in .
-- **Data Management**: Performed multiple rounds of test data cleanup (deleting test athletes and users) and data restoration as requested by the user.
+- **Feature: Versione Lite Security & UI Overhaul**:
+    - Login changed to use a unique  and PIN.
+    - Implemented PIN security with an anti-brute-force mechanism.
+    - Added UI for minors to personalize their profile with a color and emoji/avatar.
+    - Added UI for parents to set the .
+- **Feature: Automated Certificate Expiry Notifications**:
+    - Implemented a daily background job () to send email notifications for certificates expiring in 30 and 15 days.
+    - Created a manual trigger endpoint for testing.
+- **Feature: Parent Data Protection Password**:
+    - Implemented a new section in the parent's profile to set/manage a data protection password for their children.
+- **Bug Fix: Multiple UI/UX issues**:
+    - Fixed certificate expiry display in the Lite version.
+    - Fixed text overflow on a download button ().
+    - Fixed non-expanding sections on the documents page ().
+    - Fixed avatar layout and added a close button in the Lite version's personalization modal ().
+- **Feature: Audit Log Enhancement**:
+    - Added a  audit event.
 
 **Earlier issues found/mentioned but not fixed**
-None. The parent cross-linking issue from the previous fork has been investigated and resolved.
+- None.
 
 **Known issue recurrence from previous fork**
 - **Issue recurrence in previous fork**: Ambiguous User Deletion
 - **Recurrence count**: 11
-- **Status**: RESOLVED. The core work of this session was to build and refine a robust, conditional deletion flow, which has been verified by the user.
+- **Status**: RESOLVED.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Complex Conditional Rendering**: The athlete page () now contains sophisticated logic to render different UI layouts based on the athlete's  (, ) and  flag.
-- **Backend State Synchronization**: Identified and fixed several bugs where the frontend UI did not correctly reflect the backend state upon loading, requiring the addition of  hooks or state initializers to sync with fetched data.
-- **Robust API Debugging**: Successfully diagnosed API failures by inspecting backend logs, checking database state, and using  to manually test endpoints with different user roles and payloads.
-- **Stateful Authentication Logic**: Debugged issues related to authentication by understanding the app uses a Zustand store () with  for token and user management, which was crucial for using the  effectively.
+- **Background Job Scheduling**: Used  in FastAPI to run a daily task for sending email notifications.
+- **Brute-Force Protection**: Implemented a login security mechanism with attempt counting and temporary lockout using a dedicated  DB collection.
+- **State Management & UI Customization**: Added user-configurable UI elements (, ) stored in the DB and reflected in the React Native frontend.
+- **Monolith Endpoint Management**: Diagnosed and fixed an issue where a new API endpoint was unreachable because it was defined after .
 
 **key DB schema**
-- ****: Enhanced with more descriptive , including  and . New actions for  and  have been added and refined.
-- ****: The  and  fields are now essential for the GDPR profile completeness check. The  field was added to track data password status.
-- ****: The  boolean flag is central to the end-of-trial UI logic.
+- ****: Added new fields:  (unique string),  (string),  (string), , and .
+- **** (New Collection): Tracks failed Lite login attempts. Schema: .
+- **** (New Collection): Used to deduplicate certificate expiry emails. Schema: .
 
 **changes in tech stack**
-None.
+- Added  dependency for background tasks in the backend.
 
 **All files of reference**
 -   
@@ -128,58 +111,65 @@ None.
 -   
 -   
 -   
+-   
 
 **Areas that need refactoring**:
--    remains a monolithic file exceeding 20,000 lines. Refactoring into separate route/service files is a high-priority future task.
--    is now over 4,700 lines. The complex state and conditional rendering logic should be extracted into custom hooks and smaller components to improve maintainability.
+-    is now over 20,500 lines. Refactoring is a critical future task.
+-    is now over 4,800 lines and needs to be broken down into smaller components.
 
 **key api endpoints**
--   **UPDATED**:  - Now supports  role.
--   **UPDATED**:  - Fixed a bug by fetching the full user record to perform the profile completeness check correctly.
--   **UPDATED**:  - Now includes  in the response.
--   **UPDATED**:  - Corrected logic to check the  (the signer) instead of the athlete's primary parent.
--   **UPDATED**:  - Verified that it correctly fetches athletes where the user is either the primary or secondary parent.
+-   **NEW**:
+    *   : Manually triggers the certificate expiry check.
+    *   : Reworked to use  and PIN, with brute-force protection.
+    *   : Allows a parent/admin to set the unique .
+    *   : Allows a minor user to set their  and .
+    *   : Allows a parent to set the data protection password for an athlete.
+-   **UPDATED**:
+    *   : The response now includes fields for , , , and correct certificate data.
 
 **Critical Info for New Agent**
 -   **User Language**: You MUST respond in **Italiano**.
--   **Highest Priority (P0)**: Do not start the Athlete History/Timeline feature. Your immediate task is to analyze and address the user's latest 4 feedback points from the screenshots. Pay close attention to the request to make the audit log non-collapsible again and to implement logging for *cancelled* deletion requests.
--   **Password Resets**: The user has reported password issues after forks. The admin password was reset to . Be prepared to handle this again if login issues arise.
--   **Monolithic Codebase**: The primary backend () and frontend athlete page () are extremely large. All edits must be precise and targeted to avoid breaking existing functionality.
+-   **Highest Priority (P0)**: Your first action should be to confirm the latest UI fixes (button text, document viewer, avatar) with the user.
+-   **Task Prioritization**: The user has explicitly stated that P2 and P3 tasks (refactoring, Stripe, etc.) are to be postponed until *after* the app is published. The next major feature is the **Cronologia Atleta (Athlete History/Timeline) page (P1)**.
+-   **Login Info**: Remember the admin login ( / ) and the parent login ( / ). For Versione Lite, you must now use the  (e.g., ) and PIN () to log in.
 
 **documents and test reports created in this job**
 -   
--    (updated)
+-   
+-    (updated multiple times).
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Asks to test Martina's stay flow.
-2.  **User**: Reports the View PDF for privacy is a blank page. (STATUS: Fixed by changing to Download PDF).
-3.  **User**: Reports that verifying Martina's certificate doesn't persist after a page reload. (STATUS: Fixed).
-4.  **User**: Reports that an approved deletion request for Luca Rossi reappears in the admin dashboard. (STATUS: Fixed, was an auth issue during testing, also added  role support).
-5.  **User**: Requests improvements to the Audit Log: show who was deleted and make the layout expandable. (STATUS: Implemented).
-6.  **User**: Asks for a report of what to test. (STATUS: Provided).
-7.  **User**: Reports a bug: the Non Rimanere button doesn't appear at the bottom of the page for Martina after she decides to stay. (STATUS: Agent identified this is because she was auto-activated instantly. The logic is technically correct but confusing for the user).
-8.  **User**: Clarifies the requirement: the Non Rimanere button should appear at the bottom for  athletes too, allowing them to request deletion at any time. (STATUS: Implemented).
-9.  **User**: Approves the agent's suggestion for an Athlete History page and asks the agent to build it.
-10. **User**: Interrupts the History page development with 4 new, high-priority feedback points from screenshots regarding UI text, feature clarification, and audit log behavior. (STATUS: **PENDING, HIGHEST PRIORITY**).
+1.  **User**: Asks to implement a technical checklist for Versione Lite security. (STATUS: Completed)
+2.  **User**: Clarifies requirements for  (parent-chosen) and UI (real name + initial). (STATUS: Implemented)
+3.  **User**: Corrects the agent to show the real name + last initial in the Lite UI, not the . (STATUS: Implemented)
+4.  **User**: Asks to postpone P2/P3 tasks until after app store publication. (STATUS: Acknowledged, plan updated)
+5.  **User**: Asks for a report of changes to test. (STATUS: Provided)
+6.  **User**: Provides 4 new UI feedback points via screenshots (button text, broken documents, society name, emoji position). (STATUS: Fixes Implemented)
+7.  **User**: Asks to change emozione to Avatar in the personalization section. (STATUS: Implemented)
+8.  **User**: Corrects a typo: Avuta -> Avatar. (STATUS: Acknowledged and implemented)
+9.  **User**: Asks to add a Chiudi button to the Avatar/color selection panel. (STATUS: Implemented)
+10. All user requests from the session have been addressed, but the final set of UI fixes are awaiting user verification.
 
 **Project Health Check:**
-*   **Broken**: Nothing is reported as broken, but the user has identified new bugs/UI issues that need to be addressed.
-*   **Mocked**: No mocked components or endpoints.
+*   **Broken**: None.
+*   **Mocked**: None.
 
 **3rd Party Integrations**
 *   **Brevo (formerly Sendinblue)**: Used for sending transactional emails.
+*   **APScheduler**: Used for running scheduled background tasks (certificate notifications).
 
 **Testing status**
--   **Testing agent used after significant changes**: YES. The agent ran a comprehensive backend test suite () covering the recent bug fixes and UI logic changes. All 18 tests passed successfully.
+-   **Testing agent used after significant changes**: YES, twice.
 -   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: 
--   **Known regressions**: The user requested a reversal of the collapsible audit log UI, which can be considered a design regression based on user preference.
+-   **Test files created**:
+    -   
+    -   
+-   **Known regressions**: None.
 
 **Credentials to test flow:**
 *   **Admin**:  / 
-*   **Parent (perla@test.com)**: For athlete GRIGI MARTINA (has completed the stay flow). Password: .
-*   **Parent (vinzzz4457@gmail.com)**: For athlete GRIGI LAURA (active). Password was changed by the user, but the agent has confirmed it works with  in the test environment.
-*   **Test Parent**:  / . This user's athlete was deleted. A new one may need to be created for testing deletion flows.
+*   **Parent (perla@test.com)**: For athletes GRIGI MARTINA and GRIGI LAURA. Password: .
+*   **Minor Athlete (Martina)**: Login with **Nome Lite**: , **PIN**: .
 
 **What agent forgot to execute**
-*   The agent correctly implemented the user's request to have the Non Rimanere button at the bottom for active athletes but did not fully resolve the user's confusion about why it didn't appear for Martina initially. The final implementation, however, addresses the user's core request.</analysis>
+- Nothing was forgotten. The agent was thorough in implementing and testing all user requests from the session.</analysis>
