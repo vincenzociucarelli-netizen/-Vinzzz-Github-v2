@@ -7971,7 +7971,7 @@ async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_c
 @api_router.post("/athletes/{athlete_id}/approve-deletion")
 async def approve_athlete_deletion(athlete_id: str, current_user = Depends(get_current_user)):
     """Approve deletion request - admin verifies obligations and deletes"""
-    if current_user["role"] != UserRole.ADMIN:
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.DIRIGENTE]:
         raise HTTPException(status_code=403, detail="Solo admin puo approvare le cancellazioni")
     
     athlete = await db.athletes.find_one({"id": athlete_id})
