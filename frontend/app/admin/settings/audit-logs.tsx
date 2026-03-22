@@ -39,6 +39,7 @@ const ACTION_LABELS: Record<string, { label: string; icon: string; color: string
   deletion_requested: { label: 'Richiesta Cancellazione', icon: 'trash', color: '#FF3B30' },
   deletion_approved: { label: 'Cancellazione Approvata', icon: 'checkmark-done-circle', color: '#FF3B30' },
   deletion_rejected: { label: 'Cancellazione Rifiutata', icon: 'close-circle', color: '#FF9500' },
+  parent_account_deleted: { label: 'Account Genitore Eliminato', icon: 'person-remove', color: '#FF3B30' },
   qr_codes_regenerated: { label: 'QR Rigenerati', icon: 'qr-code', color: '#FF9500' },
   stripe_settings_updated: { label: 'Impostazioni Stripe', icon: 'card', color: '#6772E5' },
   stripe_keys_deleted: { label: 'Chiavi Stripe Eliminate', icon: 'card', color: '#FF3B30' },
@@ -65,6 +66,7 @@ export default function AuditLogsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const LIMIT = 50;
 
   useEffect(() => {
@@ -142,39 +144,82 @@ export default function AuditLogsPage() {
     });
   };
 
-  const formatDetails = (log: AuditLog) => {
+  const getLogTitle = (log: AuditLog) => {
+    const details = log.details || {};
+    const action = log.action;
+    
+    // Build a concise title with key info
+    switch (action) {
+      case 'deletion_approved':
+        return details.athlete_name?.trim() ? `Atleta: ${details.athlete_name}` : log.target_user_name || '';
+      case 'deletion_requested':
+        return details.athlete_name?.trim() ? `Atleta: ${details.athlete_name}` : log.target_user_name || '';
+      case 'deletion_rejected':
+        return details.athlete_name?.trim() ? `Atleta: ${details.athlete_name}` : log.target_user_name || '';
+      case 'parent_account_deleted':
+        return details.parent_name ? `${details.parent_name}` : log.target_user_name || '';
+      case 'user_deleted':
+        return log.target_user_name || details.deleted_email || '';
+      case 'certificate_modified':
+      case 'certificate_override':
+        return log.target_user_name || '';
+      case 'document_signed':
+      case 'document_accepted':
+        return details.document_type || log.target_user_name || '';
+      case 'login':
+        return '';
+      default:
+        return log.target_user_name || '';
+    }
+  };
+
+  const formatExpandedDetails = (log: AuditLog) => {
     const details = log.details;
-    if (!details || Object.keys(details).length === 0) return null;
+    if (!details || Object.keys(details).length === 0) return [];
     
-    const items: string[] = [];
+    const items: { label: string; value: string }[] = [];
     
-    // Handle certificate_block_changed action
+    // Certificate block changed
     if (log.action === 'certificate_block_changed') {
-      if (details.action_type === 'enabled') {
-        items.push('🟢 Blocco ATTIVATO');
-      } else if (details.action_type === 'disabled') {
-        items.push('🔴 Blocco DISATTIVATO');
-      }
+      if (details.action_type === 'enabled') items.push({ label: 'Stato', value: 'Blocco ATTIVATO' });
+      else if (details.action_type === 'disabled') items.push({ label: 'Stato', value: 'Blocco DISATTIVATO' });
       if (details.old_value !== undefined) {
-        const oldText = details.old_value === true ? 'attivo' : 
-                       details.old_value === false ? 'disattivo' : 'non configurato';
-        items.push(`Prima: ${oldText}`);
+        items.push({ label: 'Prima', value: details.old_value === true ? 'attivo' : details.old_value === false ? 'disattivo' : 'non configurato' });
       }
-      return items.length > 0 ? items.join(' • ') : null;
+      return items;
     }
     
-    if (details.role) items.push(`Ruolo: ${details.role}`);
-    if (details.deleted_role) items.push(`Ruolo eliminato: ${details.deleted_role}`);
-    if (details.deleted_email) items.push(`Email: ${details.deleted_email}`);
-    if (details.old_expiry) items.push(`Vecchia scadenza: ${details.old_expiry?.split('T')[0]}`);
-    if (details.new_expiry) items.push(`Nuova scadenza: ${details.new_expiry?.split('T')[0]}`);
-    if (details.reason) items.push(`Motivo: ${details.reason}`);
-    if (details.old_compensation !== undefined) items.push(`Vecchio compenso: €${details.old_compensation}`);
-    if (details.new_compensation !== undefined) items.push(`Nuovo compenso: €${details.new_compensation}`);
-    if (details.document_type) items.push(`Documento: ${details.document_type}`);
-    if (details.athletes_count) items.push(`Atleti aggiornati: ${details.athletes_count}`);
+    // Deletion specific
+    if (details.athlete_name?.trim()) items.push({ label: 'Atleta', value: details.athlete_name.trim() });
+    if (details.parent_name) items.push({ label: 'Genitore', value: details.parent_name });
+    if (details.parent_email) items.push({ label: 'Email genitore', value: details.parent_email });
+    if (details.executor_name) items.push({ label: 'Eseguito da', value: details.executor_name });
+    if (details.requester_name) items.push({ label: 'Richiesto da', value: details.requester_name });
+    if (details.originally_requested_by_name) items.push({ label: 'Richiesto da', value: details.originally_requested_by_name });
+    if (details.originally_requested_at) items.push({ label: 'Richiesto il', value: details.originally_requested_at.split(' ')[0] || details.originally_requested_at });
+    if (details.had_obligations !== undefined) items.push({ label: 'Obblighi', value: details.had_obligations ? 'Si' : 'Nessuno' });
+    if (details.reason) {
+      const reasonMap: Record<string, string> = {
+        'no_other_children_no_obligations': 'Nessun altro figlio e nessun obbligo',
+        'has_other_children': 'Ha altri figli iscritti',
+        'has_obligations': 'Ha obblighi fiscali/amministrativi',
+      };
+      items.push({ label: 'Motivo', value: reasonMap[details.reason] || details.reason });
+    }
     
-    return items.length > 0 ? items.join(' • ') : null;
+    // General fields
+    if (details.role) items.push({ label: 'Ruolo', value: details.role });
+    if (details.deleted_role) items.push({ label: 'Ruolo eliminato', value: details.deleted_role });
+    if (details.deleted_email) items.push({ label: 'Email eliminata', value: details.deleted_email });
+    if (details.deleted_by_role) items.push({ label: 'Eliminato da', value: details.deleted_by_role });
+    if (details.old_expiry) items.push({ label: 'Vecchia scadenza', value: details.old_expiry?.split('T')[0] });
+    if (details.new_expiry) items.push({ label: 'Nuova scadenza', value: details.new_expiry?.split('T')[0] });
+    if (details.old_compensation !== undefined) items.push({ label: 'Vecchio compenso', value: `€${details.old_compensation}` });
+    if (details.new_compensation !== undefined) items.push({ label: 'Nuovo compenso', value: `€${details.new_compensation}` });
+    if (details.document_type) items.push({ label: 'Documento', value: details.document_type });
+    if (details.athletes_count) items.push({ label: 'Atleti aggiornati', value: String(details.athletes_count) });
+    
+    return items;
   };
 
   const getActionInfo = (log: AuditLog) => {
@@ -193,38 +238,74 @@ export default function AuditLogsPage() {
     return baseInfo;
   };
 
+  const toggleExpand = (logId: string) => {
+    setExpandedLogs(prev => {
+      const next = new Set(prev);
+      if (next.has(logId)) next.delete(logId);
+      else next.add(logId);
+      return next;
+    });
+  };
+
   const renderLogItem = (log: AuditLog) => {
     const actionInfo = getActionInfo(log);
-    const details = formatDetails(log);
+    const title = getLogTitle(log);
+    const expandedDetails = formatExpandedDetails(log);
+    const isExpanded = expandedLogs.has(log.id);
+    const hasDetails = expandedDetails.length > 0 || log.ip_address;
     
     return (
-      <View key={log.id} style={styles.logItem}>
+      <TouchableOpacity 
+        key={log.id} 
+        style={styles.logItem}
+        onPress={() => hasDetails && toggleExpand(log.id)}
+        activeOpacity={hasDetails ? 0.7 : 1}
+        data-testid={`audit-log-${log.id}`}
+      >
         <View style={[styles.logIcon, { backgroundColor: actionInfo.color + '20' }]}>
           <Icon name={actionInfo.icon as any} size={20} color={actionInfo.color} />
         </View>
         <View style={styles.logContent}>
           <View style={styles.logHeader}>
-            <Text style={[styles.logAction, { color: actionInfo.color }]}>
-              {actionInfo.label}
-            </Text>
-            <Text style={styles.logTime}>{formatDate(log)}</Text>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.logAction, { color: actionInfo.color }]}>
+                  {actionInfo.label}
+                </Text>
+                {title ? (
+                  <Text style={{ fontSize: 12, color: '#333', fontWeight: '500' }} numberOfLines={1}>
+                    - {title}
+                  </Text>
+                ) : null}
+              </View>
+              <Text style={styles.logUser}>{log.user_email}</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end', gap: 2 }}>
+              <Text style={styles.logTime}>{formatDate(log)}</Text>
+              {hasDetails && (
+                <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} color="#999" />
+              )}
+            </View>
           </View>
-          <Text style={styles.logUser}>
-            {log.user_email}
-          </Text>
-          {log.target_user_name && (
-            <Text style={styles.logTarget}>
-              → {log.target_user_name}
-            </Text>
-          )}
-          {details && (
-            <Text style={styles.logDetails}>{details}</Text>
-          )}
-          {log.ip_address && (
-            <Text style={styles.logIp}>IP: {log.ip_address}</Text>
+          
+          {isExpanded && (
+            <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F0F0F0' }}>
+              {expandedDetails.map((item, idx) => (
+                <View key={idx} style={{ flexDirection: 'row', marginBottom: 3 }}>
+                  <Text style={{ fontSize: 11, color: '#888', width: 110 }}>{item.label}:</Text>
+                  <Text style={{ fontSize: 11, color: '#333', flex: 1 }}>{item.value}</Text>
+                </View>
+              ))}
+              {log.ip_address && (
+                <View style={{ flexDirection: 'row', marginBottom: 3 }}>
+                  <Text style={{ fontSize: 11, color: '#888', width: 110 }}>IP:</Text>
+                  <Text style={{ fontSize: 11, color: '#333', flex: 1 }}>{log.ip_address}</Text>
+                </View>
+              )}
+            </View>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 

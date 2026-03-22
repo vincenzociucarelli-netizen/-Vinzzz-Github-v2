@@ -7978,7 +7978,7 @@ async def approve_athlete_deletion(athlete_id: str, current_user = Depends(get_c
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}"
+    athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}".strip() or athlete.get("full_name", "Atleta")
     requester_name = athlete.get("deletion_requested_by_name", "N/D")
     parent_id = athlete.get("parent_id")
     society_id = athlete.get("society_id") or current_user.get("society_id", "")
@@ -8101,9 +8101,13 @@ async def approve_athlete_deletion(athlete_id: str, current_user = Depends(get_c
                     user_email=current_user.get("email", ""),
                     society_id=society_id,
                     target_user_id=parent_id,
+                    target_user_name=parent.get("full_name", "") if parent else "",
                     details={
                         "reason": "no_other_children_no_obligations",
                         "triggered_by_athlete_deletion": athlete_id,
+                        "parent_name": parent.get("full_name", "") if parent else "",
+                        "parent_email": parent.get("email", "") if parent else "",
+                        "athlete_name": athlete_name,
                     }
                 )
     
