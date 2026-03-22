@@ -382,6 +382,11 @@ export default function AdminAthleteDetail() {
       setAthletePhoto(athleteData.athlete_photo || null);
       setAthletePhotoArtistic(athleteData.athlete_photo_artistic || null);
       
+      // Sync certificate verified state from DB
+      if (athleteData.medical_certificate_verified) {
+        setCertVerified(true);
+      }
+      
       // Load technical data
       setAthleteRole(athleteData.athlete_role || '');
       setAthleteHeight(athleteData.athlete_height?.toString() || '');
