@@ -514,7 +514,7 @@ export default function AthleteScreen() {
         {/* Cronologia Atleta */}
         <TouchableOpacity 
           style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginHorizontal: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
-          onPress={() => router.push(`/parent/athlete/timeline?id=${profile?.athlete_record_id || profile?.athlete_id}`)}
+          onPress={() => router.push('/athlete/timeline')}
           data-testid="timeline-menu-item"
         >
           <Ionicons name="time" size={36} color="#AF52DE" />
