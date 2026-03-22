@@ -19208,6 +19208,9 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
         if isinstance(att.get("check_in_time"), datetime):
             att["check_in_time"] = att["check_in_time"].isoformat()
         att["team_name"] = att_teams.get(att.get("team_id"), "")
+        # Fallback to athlete's current team if no team_id on attendance
+        if not att["team_name"] and team:
+            att["team_name"] = team.get("name", "")
         att.pop("team_id", None)
     
     # Upcoming matches

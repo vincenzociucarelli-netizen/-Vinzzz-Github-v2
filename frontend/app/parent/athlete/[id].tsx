@@ -213,6 +213,7 @@ export default function AthleteDetail() {
   const [certValidityMonthsParent, setCertValidityMonthsParent] = useState('12');
   const [savingCertParent, setSavingCertParent] = useState(false);
   const [societyEmail, setSocietyEmail] = useState('');
+  const [societyName, setSocietyName] = useState('');
   const [certModalVisible, setCertModalVisible] = useState(false);
   const [selectedFile, setSelectedFile] = useState<any>(null);
   const [certIssueDate, setCertIssueDate] = useState('');
@@ -382,12 +383,13 @@ export default function AthleteDetail() {
         setCertificate(null);
       }
 
-      // Load society email for certificate info
+      // Load society email and name for certificate info
       try {
         const settingsRes = await api.get('/settings/society');
         setSocietyEmail(settingsRes.data?.email || '');
+        setSocietyName(settingsRes.data?.name || '');
       } catch (error) {
-        console.log('Could not load society email');
+        console.log('Could not load society info');
       }
 
       // Load payment info from team - store full response with dynamic installments
@@ -1962,7 +1964,7 @@ export default function AthleteDetail() {
                       onPress={() => handleShowDeletionOption()}
                       data-testid="non-rimanere-btn"
                     >
-                      <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Non Rimanere</Text>
+                      <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Lascia {societyName || 'la Società'}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -2018,7 +2020,7 @@ export default function AthleteDetail() {
                       onPress={() => handleShowDeletionOption()}
                       data-testid="non-rimanere-warning-btn"
                     >
-                      <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Non Rimanere</Text>
+                      <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Lascia {societyName || 'la Società'}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -2055,7 +2057,7 @@ export default function AthleteDetail() {
                   onPress={() => handleShowDeletionOption()}
                   data-testid="non-rimanere-expired-btn"
                 >
-                  <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Non Rimanere</Text>
+                  <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Lascia {societyName || 'la Società'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -2554,7 +2556,7 @@ export default function AthleteDetail() {
               onPress={() => handleShowDeletionOption()}
               data-testid="non-rimanere-bottom-btn"
             >
-              <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 14, textAlign: 'center' }}>Non Rimanere</Text>
+              <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 14, textAlign: 'center' }}>Lascia {societyName || 'la Società'}</Text>
             </TouchableOpacity>
           </View>
         )}
