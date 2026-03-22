@@ -1780,6 +1780,20 @@ export default function AdminAthleteDetail() {
         {/* DATI TAB */}
         {activeTab === 'dati' && (
           <>
+            {/* Cronologia Atleta Button */}
+            <TouchableOpacity 
+              style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#AF52DE40' }}
+              onPress={() => router.push(`/parent/athlete/timeline?id=${athlete.id}`)}
+              data-testid="admin-timeline-btn"
+            >
+              <Ionicons name="time" size={32} color="#AF52DE" />
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#333' }}>Cronologia Atleta</Text>
+                <Text style={{ fontSize: 12, color: '#888' }}>Timeline eventi e storia completa</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+
             {/* Foto Atleta - RIMOSSA per privacy */}
 
             {/* Dati Tecnici */}

@@ -1529,6 +1529,22 @@ export default function AthleteDetail() {
         <View style={styles.card}>
           <TouchableOpacity
             style={styles.qrButtonCompact}
+            onPress={() => router.push(`/parent/athlete/timeline?id=${athlete.id}`)}
+            data-testid="timeline-btn"
+          >
+            <Ionicons name="time" size={40} color="#AF52DE" />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.cardTitle}>Cronologia Atleta</Text>
+              <Text style={styles.qrButtonText}>Visualizza la storia completa</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+        </View>
+
+        {/* QR Code - Compact */}
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.qrButtonCompact}
             onPress={() => setQrModalVisible(true)}
           >
             <Ionicons name="qr-code" size={40} color="#007AFF" />

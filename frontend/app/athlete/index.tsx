@@ -511,6 +511,20 @@ export default function AthleteScreen() {
           </TouchableOpacity>
         )}
         
+        {/* Cronologia Atleta */}
+        <TouchableOpacity 
+          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginHorizontal: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+          onPress={() => router.push(`/parent/athlete/timeline?id=${profile?.athlete_record_id || profile?.athlete_id}`)}
+          data-testid="timeline-menu-item"
+        >
+          <Ionicons name="time" size={36} color="#AF52DE" />
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Cronologia Atleta</Text>
+            <Text style={{ fontSize: 12, color: '#888' }}>Visualizza la storia completa</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+
         {/* Pagamenti - in evidenza */}
         <TouchableOpacity 
           style={[styles.menuItem, { backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFA000' }]}

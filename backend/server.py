@@ -19551,6 +19551,293 @@ async def get_audit_logs(
         "logs": logs
     }
 
+
+# ==================== ATHLETE TIMELINE ENDPOINT ====================
+
+@api_router.get("/athletes/{athlete_id}/timeline")
+async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_current_user)):
+    """Get chronological timeline of athlete's key events"""
+    # Access control: admin, parent of athlete, or athlete themselves
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    if current_user["role"] == UserRole.PARENT:
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non autorizzato")
+    elif current_user["role"] == UserRole.ATHLETE:
+        if current_user.get("athlete_id") != athlete_id and current_user["id"] != athlete.get("user_id") and current_user["id"] != athlete_id:
+            raise HTTPException(status_code=403, detail="Non autorizzato")
+    elif current_user["role"] not in [UserRole.ADMIN, UserRole.DIRIGENTE]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    events = []
+    
+    # 1. Registration
+    if athlete.get("created_at"):
+        events.append({
+            "type": "registration",
+            "icon": "person-add",
+            "color": "#007AFF",
+            "title": "Registrazione",
+            "description": f"{athlete.get('full_name', '')} registrato nella piattaforma",
+            "date": str(athlete["created_at"]),
+        })
+    
+    # 2. Trial Start
+    if athlete.get("trial_start_date"):
+        events.append({
+            "type": "trial_start",
+            "icon": "play-circle",
+            "color": "#FF9500",
+            "title": "Inizio Periodo di Prova",
+            "description": "Inizia il periodo di prova presso la società",
+            "date": str(athlete["trial_start_date"]),
+        })
+    
+    # 3. Trial Document Signed
+    if athlete.get("trial_document_signed_date"):
+        events.append({
+            "type": "trial_document_signed",
+            "icon": "document-text",
+            "color": "#5856D6",
+            "title": "Documento Prova Firmato",
+            "description": "Firmato il documento di consenso per il periodo di prova",
+            "date": str(athlete["trial_document_signed_date"]),
+        })
+    
+    # 4. Privacy/GDPR Accepted
+    if athlete.get("privacy_accepted_date"):
+        events.append({
+            "type": "privacy_accepted",
+            "icon": "shield-checkmark",
+            "color": "#34C759",
+            "title": "Privacy e GDPR Firmati",
+            "description": "Consenso privacy e GDPR accettati e firmati",
+            "date": str(athlete["privacy_accepted_date"]),
+        })
+    
+    # 5. Medical Certificate Uploaded
+    if athlete.get("medical_certificate_inserted_at"):
+        inserted_by = athlete.get("medical_certificate_inserted_by_name", "")
+        events.append({
+            "type": "certificate_uploaded",
+            "icon": "medkit",
+            "color": "#FF2D55",
+            "title": "Certificato Medico Caricato",
+            "description": f"Certificato caricato da {inserted_by}" if inserted_by else "Certificato medico caricato",
+            "date": str(athlete["medical_certificate_inserted_at"]),
+            "detail": f"Scadenza: {str(athlete.get('medical_certificate_expiry', ''))[:10]}" if athlete.get("medical_certificate_expiry") else None,
+        })
+    
+    # 6. Medical Certificate Verified
+    if athlete.get("medical_certificate_verified_at"):
+        verified_by = athlete.get("medical_certificate_verified_by_name", "")
+        events.append({
+            "type": "certificate_verified",
+            "icon": "checkmark-done-circle",
+            "color": "#34C759",
+            "title": "Certificato Medico Convalidato",
+            "description": f"Convalidato da {verified_by}" if verified_by else "Certificato convalidato dall'admin",
+            "date": str(athlete["medical_certificate_verified_at"]),
+        })
+    
+    # 7. End Trial Requested (activation process started)
+    if athlete.get("end_trial_requested_date"):
+        events.append({
+            "type": "end_trial_requested",
+            "icon": "flag",
+            "color": "#AF52DE",
+            "title": "Fine Prova - Processo Attivazione",
+            "description": "Richiesta di rimanere nella società, avvio procedura attivazione",
+            "date": str(athlete["end_trial_requested_date"]),
+        })
+    
+    # 8. Activation (status changed to active)
+    if athlete.get("status") == "active" and athlete.get("privacy_accepted_date"):
+        # If active, the activation happened when privacy was accepted + certificate verified
+        activation_date = athlete.get("medical_certificate_verified_at") or athlete.get("privacy_accepted_date")
+        events.append({
+            "type": "activated",
+            "icon": "star",
+            "color": "#FFD700",
+            "title": "Membro Attivo",
+            "description": "Atleta attivato come membro effettivo della società",
+            "date": str(activation_date),
+        })
+    
+    # 9. Team assignments
+    if athlete.get("team_id"):
+        team = await db.teams.find_one({"id": athlete["team_id"]}, {"_id": 0, "name": 1})
+        if team:
+            events.append({
+                "type": "team_assigned",
+                "icon": "people",
+                "color": "#007AFF",
+                "title": f"Assegnato a {team.get('name', 'Squadra')}",
+                "description": "Inserito nella squadra come membro",
+                "date": str(athlete.get("created_at", "")),
+            })
+    if athlete.get("team_id_2"):
+        team2 = await db.teams.find_one({"id": athlete["team_id_2"]}, {"_id": 0, "name": 1})
+        if team2:
+            events.append({
+                "type": "team_assigned_2",
+                "icon": "people",
+                "color": "#5AC8FA",
+                "title": f"Assegnato anche a {team2.get('name', 'Squadra')}",
+                "description": "Inserito in una seconda squadra",
+                "date": str(athlete.get("created_at", "")),
+            })
+    
+    # 10. Audit log events (deletion requests, cancellations, etc.)
+    audit_events = await db.audit_logs.find(
+        {"details.athlete_id": athlete_id},
+        {"_id": 0, "action": 1, "timestamp": 1, "details": 1, "user_email": 1}
+    ).sort("timestamp", 1).to_list(50)
+    
+    for audit in audit_events:
+        ts = audit.get("timestamp")
+        if isinstance(ts, datetime):
+            ts = ts.isoformat()
+        action = audit.get("action", "")
+        
+        if action == "deletion_requested":
+            events.append({
+                "type": "deletion_requested",
+                "icon": "trash",
+                "color": "#FF3B30",
+                "title": "Richiesta Cancellazione Dati",
+                "description": f"Richiesta inviata da {audit.get('user_email', '')}",
+                "date": str(ts),
+            })
+        elif action == "deletion_request_cancelled":
+            events.append({
+                "type": "deletion_cancelled",
+                "icon": "close-circle",
+                "color": "#FF9500",
+                "title": "Cancellazione Annullata",
+                "description": f"Richiesta annullata da {audit.get('user_email', '')}",
+                "date": str(ts),
+            })
+        elif action == "deletion_check_viewed":
+            events.append({
+                "type": "deletion_check_viewed",
+                "icon": "eye",
+                "color": "#8E8E93",
+                "title": "Verifica Cancellazione Visualizzata",
+                "description": f"Il genitore/atleta ha visualizzato le opzioni di cancellazione",
+                "date": str(ts),
+            })
+        elif action == "deletion_approved":
+            events.append({
+                "type": "deletion_approved",
+                "icon": "trash-bin",
+                "color": "#FF3B30",
+                "title": "Cancellazione Approvata",
+                "description": "L'admin ha approvato la cancellazione dei dati",
+                "date": str(ts),
+            })
+        elif action == "deletion_rejected":
+            events.append({
+                "type": "deletion_rejected",
+                "icon": "hand-left",
+                "color": "#AF52DE",
+                "title": "Cancellazione Rifiutata",
+                "description": audit.get("details", {}).get("reason", "Cancellazione rifiutata dall'admin"),
+                "date": str(ts),
+            })
+    
+    # 11. Signed documents
+    signed_docs = await db.signed_documents.find(
+        {"athlete_id": athlete_id},
+        {"_id": 0, "document_type": 1, "signed_at": 1, "signer_name": 1}
+    ).sort("signed_at", 1).to_list(20)
+    
+    doc_type_labels = {
+        "privacy_consent": "Consenso Privacy",
+        "gdpr_adult": "GDPR Adulto",
+        "gdpr_minor": "GDPR Minore",
+        "trial_consent": "Consenso Prova",
+        "membership_agreement": "Accordo Tesseramento",
+    }
+    
+    for doc in signed_docs:
+        ts = doc.get("signed_at")
+        if isinstance(ts, datetime):
+            ts = ts.isoformat()
+        doc_label = doc_type_labels.get(doc.get("document_type", ""), doc.get("document_type", "Documento"))
+        events.append({
+            "type": "document_signed",
+            "icon": "create",
+            "color": "#5856D6",
+            "title": f"Firmato: {doc_label}",
+            "description": f"Firmato da {doc.get('signer_name', '')}" if doc.get("signer_name") else "Documento firmato digitalmente",
+            "date": str(ts) if ts else "",
+        })
+    
+    # 12. Certificate history
+    cert_history = await db.certificate_history.find(
+        {"athlete_id": athlete_id},
+        {"_id": 0, "action": 1, "changed_at": 1, "changed_by_name": 1, "new_verified": 1, "old_verified": 1, "new_expiry_date": 1}
+    ).sort("changed_at", 1).to_list(20)
+    
+    for ch in cert_history:
+        ts = ch.get("changed_at")
+        if isinstance(ts, datetime):
+            ts = ts.isoformat()
+        if ch.get("action") == "insert":
+            events.append({
+                "type": "cert_history_insert",
+                "icon": "add-circle",
+                "color": "#FF2D55",
+                "title": "Certificato Inserito",
+                "description": f"Inserito da {ch.get('changed_by_name', '')}",
+                "date": str(ts) if ts else "",
+                "detail": f"Scadenza: {str(ch.get('new_expiry_date', ''))[:10]}" if ch.get("new_expiry_date") else None,
+            })
+        elif ch.get("action") == "update":
+            if ch.get("old_verified") == False and ch.get("new_verified") == True:
+                events.append({
+                    "type": "cert_history_verified",
+                    "icon": "checkmark-circle",
+                    "color": "#34C759",
+                    "title": "Certificato Verificato",
+                    "description": f"Verificato da {ch.get('changed_by_name', '')}",
+                    "date": str(ts) if ts else "",
+                })
+    
+    # Sort by date
+    def parse_date(d):
+        try:
+            if not d:
+                return datetime.min.replace(tzinfo=timezone.utc)
+            from dateutil.parser import parse as dateparse
+            parsed = dateparse(str(d))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed
+        except:
+            return datetime.min.replace(tzinfo=timezone.utc)
+    
+    events.sort(key=lambda e: parse_date(e.get("date", "")))
+    
+    # Remove duplicate events (same type and very close timestamps)
+    seen = set()
+    unique_events = []
+    for e in events:
+        key = f"{e['type']}_{e.get('date', '')[:16]}"
+        if key not in seen:
+            seen.add(key)
+            unique_events.append(e)
+    
+    return {
+        "athlete_name": athlete.get("full_name", ""),
+        "athlete_status": athlete.get("status", ""),
+        "events": unique_events,
+    }
+
+
 # ==================== CSV EXPORT ENDPOINTS ====================
 
 @api_router.get("/export-csv/athletes")
