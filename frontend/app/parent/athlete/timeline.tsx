@@ -53,6 +53,7 @@ export default function AthleteTimeline() {
   const [athleteStatus, setAthleteStatus] = useState('');
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [error, setError] = useState('');
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
 
   const loadTimeline = async () => {
     try {
@@ -161,30 +162,52 @@ export default function AthleteTimeline() {
             </View>
 
             {/* Events */}
-            {group.items.map((ev, ei) => (
-              <View key={`${gi}-${ei}`} style={styles.eventRow} data-testid={`timeline-event-${ev.type}`}>
-                {/* Timeline line */}
-                <View style={styles.timelineColumn}>
-                  {(gi > 0 || ei > 0) && <View style={styles.lineUp} />}
-                  <View style={[styles.iconCircle, { backgroundColor: ev.color + '18', borderColor: ev.color }]}>
-                    <Ionicons name={ev.icon as any} size={18} color={ev.color} />
-                  </View>
-                  {(gi < groupedEvents.length - 1 || ei < group.items.length - 1) && <View style={styles.lineDown} />}
-                </View>
+            {group.items.map((ev, ei) => {
+              const eventKey = `${gi}-${ei}`;
+              const isExpanded = expandedEvents.has(eventKey);
+              const toggleExpand = () => {
+                setExpandedEvents(prev => {
+                  const next = new Set(prev);
+                  if (next.has(eventKey)) next.delete(eventKey);
+                  else next.add(eventKey);
+                  return next;
+                });
+              };
 
-                {/* Content */}
-                <View style={styles.eventContent}>
-                  <Text style={styles.eventTitle}>{ev.title}</Text>
-                  <Text style={styles.eventDesc}>{ev.description}</Text>
-                  {ev.detail && (
-                    <Text style={styles.eventDetail}>{ev.detail}</Text>
-                  )}
-                  {formatTime(ev.date) ? (
-                    <Text style={styles.eventTime}>{formatTime(ev.date)}</Text>
-                  ) : null}
-                </View>
-              </View>
-            ))}
+              return (
+                <TouchableOpacity
+                  key={eventKey}
+                  style={styles.eventRow}
+                  onPress={toggleExpand}
+                  activeOpacity={0.7}
+                  data-testid={`timeline-event-${ev.type}`}
+                >
+                  {/* Timeline line */}
+                  <View style={styles.timelineColumn}>
+                    {(gi > 0 || ei > 0) && <View style={styles.lineUp} />}
+                    <View style={[styles.iconCircle, { backgroundColor: ev.color + '18', borderColor: ev.color }]}>
+                      <Ionicons name={ev.icon as any} size={18} color={ev.color} />
+                    </View>
+                    {(gi < groupedEvents.length - 1 || ei < group.items.length - 1) && <View style={[styles.lineDown, !isExpanded && { minHeight: 6 }]} />}
+                  </View>
+
+                  {/* Content */}
+                  <View style={[styles.eventContent, !isExpanded && styles.eventContentCollapsed]}>
+                    <View style={styles.eventTitleRow}>
+                      <Text style={styles.eventTitle} numberOfLines={isExpanded ? undefined : 1}>{ev.title}</Text>
+                      <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={16} color="#bbb" />
+                    </View>
+                    {isExpanded && (
+                      <>
+                        <Text style={styles.eventDesc}>{ev.description}</Text>
+                        {ev.detail && <Text style={styles.eventDetail}>{ev.detail}</Text>}
+                        {formatTime(ev.date) ? <Text style={styles.eventTime}>{formatTime(ev.date)}</Text> : null}
+                      </>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ))}
 
@@ -306,7 +329,17 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  eventTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a2e' },
+  eventContentCollapsed: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 4,
+  },
+  eventTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  eventTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a2e', flex: 1 },
   eventDesc: { fontSize: 12, color: '#666', marginTop: 3, lineHeight: 17 },
   eventDetail: { fontSize: 11, color: '#007AFF', marginTop: 4, fontWeight: '600' },
   eventTime: { fontSize: 11, color: '#aaa', marginTop: 4 },

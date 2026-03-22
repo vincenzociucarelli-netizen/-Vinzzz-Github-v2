@@ -19820,7 +19820,7 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
         except:
             return datetime.min.replace(tzinfo=timezone.utc)
     
-    events.sort(key=lambda e: parse_date(e.get("date", "")))
+    events.sort(key=lambda e: parse_date(e.get("date", "")), reverse=True)
     
     # Remove duplicate events (same type and very close timestamps)
     seen = set()
