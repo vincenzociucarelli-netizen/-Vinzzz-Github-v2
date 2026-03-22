@@ -20412,18 +20412,26 @@ async def get_public_campaign_info(campaign_id: str):
         except (ValueError, TypeError):
             pass
     
-    # Get society logo
-    society = await db.settings.find_one({"society_id": campaign.get("society_id"), "type": "society"})
+    # Get society settings (logo + name)
+    society = None
+    if campaign.get("society_id"):
+        society = await db.settings.find_one({"society_id": campaign["society_id"], "type": "society"})
+    if not society:
+        society = await db.settings.find_one({"type": "society"})
+    
     logo = ""
+    society_name = campaign.get("society_name", "")
     if society:
         logo = society.get("logo", "")
+        if not society_name:
+            society_name = society.get("name", "")
     
     return {
         "id": campaign["id"],
         "title": campaign.get("title", ""),
         "season": campaign.get("season", ""),
         "description": campaign.get("description", ""),
-        "society_name": campaign.get("society_name", ""),
+        "society_name": society_name,
         "society_logo": logo,
         "open_date": campaign.get("open_date"),
         "close_date": campaign.get("close_date"),

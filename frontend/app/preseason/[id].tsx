@@ -134,27 +134,34 @@ export default function PublicPreseasonForm() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={{ flex: 1, backgroundColor: '#F5F7FA' }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {/* Header */}
-        <View style={{ alignItems: 'center', marginBottom: 24, marginTop: 16 }}>
+        <View style={{ alignItems: 'center', marginBottom: 28, marginTop: 16 }}>
           {campaign?.society_logo ? (
-            <Image source={{ uri: campaign.society_logo }} style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 12 }} />
+            <Image
+              source={{ uri: campaign.society_logo.startsWith('data:') ? campaign.society_logo : `data:image/png;base64,${campaign.society_logo}` }}
+              style={{ width: 90, height: 90, borderRadius: 45, marginBottom: 16 }}
+              resizeMode="contain"
+              data-testid="society-logo"
+            />
           ) : (
-            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-              <Ionicons name="trophy" size={36} color="#fff" />
+            <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <Ionicons name="trophy" size={40} color="#fff" />
             </View>
           )}
           {campaign?.society_name ? (
-            <Text style={{ fontSize: 18, fontWeight: '700', color: '#1565C0', textAlign: 'center' }}>{campaign.society_name}</Text>
+            <Text style={{ fontSize: 22, fontWeight: '800', color: '#1A237E', textAlign: 'center', marginBottom: 14, letterSpacing: 0.3 }} data-testid="society-name">
+              {campaign.society_name}
+            </Text>
           ) : null}
-          <Text style={{ fontSize: 20, fontWeight: '800', color: '#0D47A1', marginTop: 8, textAlign: 'center' }} data-testid="campaign-title">
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#1565C0', marginTop: 2, textAlign: 'center' }} data-testid="campaign-title">
             {campaign?.title}
           </Text>
-          <Text style={{ fontSize: 13, color: '#666', marginTop: 4 }}>Stagione {campaign?.season}</Text>
+          <Text style={{ fontSize: 14, color: '#666', marginTop: 6 }}>Stagione {campaign?.season}</Text>
           {campaign?.description ? (
-            <Text style={{ fontSize: 13, color: '#888', marginTop: 8, textAlign: 'center', lineHeight: 20, maxWidth: 380 }}>
+            <Text style={{ fontSize: 13, color: '#888', marginTop: 10, textAlign: 'center', lineHeight: 20, maxWidth: 380 }}>
               {campaign.description}
             </Text>
           ) : null}
-          <View style={{ backgroundColor: '#E8F5E9', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, marginTop: 10 }}>
+          <View style={{ backgroundColor: '#E8F5E9', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, marginTop: 12 }}>
             <Text style={{ fontSize: 11, color: '#2E7D32', fontWeight: '600' }}>Compilazione non vincolante</Text>
           </View>
         </View>
