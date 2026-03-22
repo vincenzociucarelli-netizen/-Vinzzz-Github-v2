@@ -16,7 +16,7 @@ import os
 from datetime import datetime, timedelta
 from bson import ObjectId
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://sports-portal-10.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://athlete-timeline.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"

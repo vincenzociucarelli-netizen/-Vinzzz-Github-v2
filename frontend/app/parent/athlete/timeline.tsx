@@ -126,12 +126,14 @@ export default function AthleteTimeline() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} data-testid="timeline-back-btn">
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+        <TouchableOpacity onPress={() => router.back()} data-testid="timeline-back-btn">
+          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}>
+            <Ionicons name="chevron-back" size={24} color="#007AFF" />
+          </View>
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Cronologia</Text>
-          <Text style={styles.headerSubtitle}>{athleteName}</Text>
+          <Text style={styles.headerSubtitle}>Cronologia</Text>
+          <Text style={styles.headerTitle}>{athleteName}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: (statusColor[athleteStatus] || '#8E8E93') + '20' }]}>
           <View style={[styles.statusDot, { backgroundColor: statusColor[athleteStatus] || '#8E8E93' }]} />
@@ -245,8 +247,8 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 8 },
   headerContent: { flex: 1 },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#1a1a2e' },
-  headerSubtitle: { fontSize: 14, color: '#888', marginTop: 2 },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#1a1a2e' },
+  headerSubtitle: { fontSize: 13, color: '#888', marginBottom: 2 },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
