@@ -2544,9 +2544,9 @@ export default function AthleteDetail() {
           )}
         </View>
 
-        {/* Non Rimanere - solo dopo che l'atleta ha scelto di restare */}
-        {athlete.status === 'trial' && endTrialStatus?.end_trial_requested && !athlete.deletion_requested && (
-          <View style={{ marginTop: 24, marginBottom: 16, paddingHorizontal: 4 }}>
+        {/* Richiedi Cancellazione - visibile per atleti trial (dopo scelta) e attivi */}
+        {!athlete.deletion_requested && (athlete.status === 'trial' || athlete.status === 'active') && (
+          <View style={{ marginTop: 24, marginBottom: 40, paddingHorizontal: 4 }}>
             <TouchableOpacity
               style={{ borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 13, alignItems: 'center', backgroundColor: '#FFEBEE' }}
               onPress={() => handleShowDeletionOption()}
