@@ -230,7 +230,12 @@ export default function MinorDashboard() {
         {/* Personalization Panel */}
         {showPersonalize && (
           <View style={{ backgroundColor: '#f8f9fa', borderRadius: 12, padding: 14, marginTop: 10 }} data-testid="personalize-panel">
-            <Text style={{ fontWeight: '700', fontSize: 14, color: '#333', marginBottom: 10 }}>Personalizza il tuo profilo</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <Text style={{ fontWeight: '700', fontSize: 14, color: '#333' }}>Personalizza il tuo Avatar</Text>
+              <TouchableOpacity onPress={() => setShowPersonalize(false)} style={{ padding: 4 }} data-testid="close-personalize-btn">
+                <Ionicons name="close" size={22} color="#666" />
+              </TouchableOpacity>
+            </View>
             
             <Text style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>Scegli il tuo colore</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
@@ -249,7 +254,7 @@ export default function MinorDashboard() {
               ))}
             </View>
             
-            <Text style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>Scegli la tua emoji</Text>
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>Scegli il tuo avatar</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
               {EMOJI_OPTIONS.map(e => (
                 <TouchableOpacity
