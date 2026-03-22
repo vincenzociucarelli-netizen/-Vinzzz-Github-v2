@@ -187,7 +187,7 @@ export default function AdminDashboard() {
         confirmMsg += `\nI dati fiscali minimi verranno conservati per obblighi di legge.\n`;
       }
       
-      confirmMsg += `\nDati da eliminare: ${check.data_to_delete.attendances} presenze, ${check.data_to_delete.certificates} certificati, ${check.data_to_delete.signed_documents} documenti, ${check.data_to_delete.payments} pagamenti.`;
+      confirmMsg += `\nDati da eliminare: ${check.data_to_delete.attendances} presenze, ${check.data_to_delete.signed_documents} documenti, ${check.data_to_delete.payments} pagamenti.`;
       
       if (check.parent_info.parent_can_be_deleted) {
         confirmMsg += `\n\nAnche l'account genitore verra eliminato (nessun altro figlio).`;

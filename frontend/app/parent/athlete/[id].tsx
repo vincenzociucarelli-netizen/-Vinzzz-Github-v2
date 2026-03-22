@@ -1438,7 +1438,7 @@ export default function AthleteDetail() {
     
     Alert.alert(
       'Elimina Atleta',
-      `Sei sicuro di voler eliminare ${athlete.full_name}?\n\nQuesta azione è IRREVERSIBILE e cancellerà tutti i dati dell'atleta inclusi certificati, pagamenti e presenze.`,
+      `Sei sicuro di voler eliminare ${athlete.full_name}?\n\nQuesta azione è IRREVERSIBILE e cancellerà tutti i dati dell'atleta inclusi pagamenti e presenze.`,
       [
         { text: 'Annulla', style: 'cancel' },
         {
@@ -2901,9 +2901,6 @@ export default function AthleteDetail() {
                       <Text style={{ fontSize: 12, color: '#555', marginBottom: 2 }}>- Record atleta</Text>
                       {deletionCheck.data_to_delete.attendances > 0 && (
                         <Text style={{ fontSize: 12, color: '#555', marginBottom: 2 }}>- {deletionCheck.data_to_delete.attendances} presenze</Text>
-                      )}
-                      {deletionCheck.data_to_delete.certificates > 0 && (
-                        <Text style={{ fontSize: 12, color: '#555', marginBottom: 2 }}>- {deletionCheck.data_to_delete.certificates} certificati</Text>
                       )}
                       {deletionCheck.data_to_delete.signed_documents > 0 && (
                         <Text style={{ fontSize: 12, color: '#555', marginBottom: 2 }}>- {deletionCheck.data_to_delete.signed_documents} documenti firmati</Text>
