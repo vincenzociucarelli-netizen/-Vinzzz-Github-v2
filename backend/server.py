@@ -20192,6 +20192,11 @@ class PreseasonResponse(BaseModel):
     phone_parent: Optional[str] = None
     already_member: bool = False
     previous_club: Optional[str] = None
+    played_volleyball: Optional[bool] = None
+    played_at_school: bool = False
+    played_in_society: bool = False
+    years_in_society: Optional[str] = None
+    previous_sport: Optional[str] = None
     championships_played: Optional[str] = None
     role_played: Optional[str] = None
     interest_level: str  # "si", "ci_penso", "no"
@@ -20310,6 +20315,8 @@ async def get_preseason_responses(campaign_id: str, current_user = Depends(get_c
     not_interested = sum(1 for r in responses if r.get("interest_level") == "no")
     members = sum(1 for r in responses if r.get("already_member"))
     new_athletes = sum(1 for r in responses if not r.get("already_member"))
+    played_volleyball = sum(1 for r in responses if r.get("played_volleyball"))
+    not_played = sum(1 for r in responses if r.get("played_volleyball") is False)
     
     return {
         "responses": responses,
@@ -20320,6 +20327,8 @@ async def get_preseason_responses(campaign_id: str, current_user = Depends(get_c
             "not_interested": not_interested,
             "existing_members": members,
             "new_athletes": new_athletes,
+            "played_volleyball": played_volleyball,
+            "not_played_volleyball": not_played,
         }
     }
 
@@ -20341,7 +20350,8 @@ async def export_preseason_responses(campaign_id: str, current_user = Depends(ge
     writer = csv.writer(output, delimiter=';')
     writer.writerow([
         "Nome", "Cognome", "Data Nascita", "Telefono Atleta", "Telefono Genitore",
-        "Gia Iscritto", "Club Precedente", "Campionati Giocati", "Ruolo",
+        "Gia Iscritto", "Club Precedente", "Ha giocato a pallavolo", "Dove ha giocato",
+        "Anni in societa", "Sport precedente", "Campionati Giocati", "Ruolo",
         "Interesse", "Note", "Data Risposta"
     ])
     
@@ -20357,6 +20367,22 @@ async def export_preseason_responses(campaign_id: str, current_user = Depends(ge
             except:
                 pass
         
+        # Build volleyball experience info
+        played_vb = r.get("played_volleyball")
+        if played_vb is True:
+            played_vb_str = "Si"
+        elif played_vb is False:
+            played_vb_str = "No"
+        else:
+            played_vb_str = ""
+        
+        where_played = []
+        if r.get("played_at_school"):
+            where_played.append("A scuola")
+        if r.get("played_in_society"):
+            where_played.append("In societa")
+        where_played_str = ", ".join(where_played)
+        
         writer.writerow([
             r.get("first_name", ""),
             r.get("last_name", ""),
@@ -20365,6 +20391,10 @@ async def export_preseason_responses(campaign_id: str, current_user = Depends(ge
             r.get("phone_parent", ""),
             "Si" if r.get("already_member") else "No",
             r.get("previous_club", ""),
+            played_vb_str,
+            where_played_str,
+            r.get("years_in_society", ""),
+            r.get("previous_sport", ""),
             r.get("championships_played", ""),
             r.get("role_played", ""),
             interest_map.get(r.get("interest_level", ""), r.get("interest_level", "")),
@@ -20475,6 +20505,11 @@ async def submit_public_preseason_response(campaign_id: str, data: PreseasonResp
         "phone_parent": data.phone_parent or "",
         "already_member": data.already_member,
         "previous_club": data.previous_club or "",
+        "played_volleyball": data.played_volleyball,
+        "played_at_school": data.played_at_school,
+        "played_in_society": data.played_in_society,
+        "years_in_society": data.years_in_society or "",
+        "previous_sport": data.previous_sport or "",
         "championships_played": data.championships_played or "",
         "role_played": data.role_played or "",
         "interest_level": data.interest_level,
@@ -20518,6 +20553,11 @@ async def submit_authenticated_preseason_response(campaign_id: str, data: Presea
         "phone_parent": data.phone_parent or "",
         "already_member": data.already_member,
         "previous_club": data.previous_club or "",
+        "played_volleyball": data.played_volleyball,
+        "played_at_school": data.played_at_school,
+        "played_in_society": data.played_in_society,
+        "years_in_society": data.years_in_society or "",
+        "previous_sport": data.previous_sport or "",
         "championships_played": data.championships_played or "",
         "role_played": data.role_played or "",
         "interest_level": data.interest_level,

@@ -28,6 +28,11 @@ interface ResponseItem {
   phone_parent: string;
   already_member: boolean;
   previous_club: string;
+  played_volleyball?: boolean | null;
+  played_at_school?: boolean;
+  played_in_society?: boolean;
+  years_in_society?: string;
+  previous_sport?: string;
   championships_played: string;
   role_played: string;
   interest_level: string;
@@ -400,8 +405,19 @@ export default function PreseasonAdmin() {
                       {r.already_member ? 'Gia iscritto' : 'Nuovo'}
                     </Text>
                   </View>
-                  {(r.championships_played || r.role_played || r.previous_club) && (
+                  {(r.championships_played || r.role_played || r.previous_club || r.played_volleyball !== undefined) && (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                      {r.played_volleyball === true && (
+                        <Text style={{ fontSize: 11, color: '#1565C0', fontWeight: '600' }}>
+                          Pallavolo: {[r.played_at_school ? 'Scuola' : '', r.played_in_society ? `Societa${r.years_in_society ? ` (${r.years_in_society} anni)` : ''}` : ''].filter(Boolean).join(', ') || 'Si'}
+                        </Text>
+                      )}
+                      {r.played_volleyball === false && r.previous_sport && (
+                        <Text style={{ fontSize: 11, color: '#888' }}>Sport precedente: {r.previous_sport}</Text>
+                      )}
+                      {r.played_volleyball === false && !r.previous_sport && (
+                        <Text style={{ fontSize: 11, color: '#888' }}>Nessuna esperienza pallavolo</Text>
+                      )}
                       {r.championships_played ? <Text style={{ fontSize: 11, color: '#888' }}>Campionati: {r.championships_played}</Text> : null}
                       {r.role_played ? <Text style={{ fontSize: 11, color: '#888' }}>Ruolo: {r.role_played}</Text> : null}
                       {r.previous_club ? <Text style={{ fontSize: 11, color: '#888' }}>Da: {r.previous_club}</Text> : null}

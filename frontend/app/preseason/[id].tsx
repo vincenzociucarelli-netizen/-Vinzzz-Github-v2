@@ -35,6 +35,11 @@ export default function PublicPreseasonForm() {
   const [phoneParent, setPhoneParent] = useState('');
   const [alreadyMember, setAlreadyMember] = useState(false);
   const [previousClub, setPreviousClub] = useState('');
+  const [playedVolleyball, setPlayedVolleyball] = useState<boolean | null>(null);
+  const [playedAtSchool, setPlayedAtSchool] = useState(false);
+  const [playedInSociety, setPlayedInSociety] = useState(false);
+  const [yearsInSociety, setYearsInSociety] = useState('');
+  const [previousSport, setPreviousSport] = useState('');
   const [championships, setChampionships] = useState('');
   const [role, setRole] = useState('');
   const [interest, setInterest] = useState('');
@@ -79,6 +84,11 @@ export default function PublicPreseasonForm() {
         phone_parent: phoneParent.trim(),
         already_member: alreadyMember,
         previous_club: previousClub.trim(),
+        played_volleyball: playedVolleyball,
+        played_at_school: playedAtSchool,
+        played_in_society: playedInSociety,
+        years_in_society: yearsInSociety.trim(),
+        previous_sport: previousSport.trim(),
         championships_played: championships.trim(),
         role_played: role.trim(),
         interest_level: interest,
@@ -199,7 +209,84 @@ export default function PublicPreseasonForm() {
             </View>
           </View>
 
-          {/* Gia iscritto */}
+          {/* Hai gia giocato a pallavolo? */}
+          <View style={{ marginBottom: 14 }}>
+            <Text style={labelStyle}>Hai gia giocato a pallavolo?</Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
+              <TouchableOpacity
+                style={[chipStyle, playedVolleyball === true && chipActiveStyle]}
+                onPress={() => { setPlayedVolleyball(true); setPreviousSport(''); }}
+                data-testid="preseason-played-vb-yes"
+              >
+                <Text style={[chipTextStyle, playedVolleyball === true && chipTextActiveStyle]}>Si</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[chipStyle, playedVolleyball === false && chipActiveStyle]}
+                onPress={() => { setPlayedVolleyball(false); setPlayedAtSchool(false); setPlayedInSociety(false); setYearsInSociety(''); }}
+                data-testid="preseason-played-vb-no"
+              >
+                <Text style={[chipTextStyle, playedVolleyball === false && chipTextActiveStyle]}>No</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Se SI: dove hai giocato */}
+          {playedVolleyball === true && (
+            <View style={{ marginBottom: 14, marginLeft: 8, paddingLeft: 12, borderLeftWidth: 2, borderLeftColor: '#E0E0E0' }}>
+              <Text style={labelStyle}>Dove hai giocato?</Text>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 8 }}
+                onPress={() => setPlayedAtSchool(!playedAtSchool)}
+                data-testid="preseason-played-school"
+              >
+                <View style={{ width: 22, height: 22, borderRadius: 4, borderWidth: 1.5, borderColor: playedAtSchool ? '#1565C0' : '#CCC', backgroundColor: playedAtSchool ? '#1565C0' : '#fff', alignItems: 'center', justifyContent: 'center' }}>
+                  {playedAtSchool && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </View>
+                <Text style={{ fontSize: 14, color: '#333' }}>A scuola</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8 }}
+                onPress={() => { setPlayedInSociety(!playedInSociety); if (playedInSociety) setYearsInSociety(''); }}
+                data-testid="preseason-played-society"
+              >
+                <View style={{ width: 22, height: 22, borderRadius: 4, borderWidth: 1.5, borderColor: playedInSociety ? '#1565C0' : '#CCC', backgroundColor: playedInSociety ? '#1565C0' : '#fff', alignItems: 'center', justifyContent: 'center' }}>
+                  {playedInSociety && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </View>
+                <Text style={{ fontSize: 14, color: '#333' }}>In una Societa</Text>
+              </TouchableOpacity>
+
+              {/* Se in societa: per quanti anni? */}
+              {playedInSociety && (
+                <View style={{ marginTop: 10, marginLeft: 30 }}>
+                  <Text style={labelStyle}>Per quanti anni?</Text>
+                  <TextInput
+                    style={[inputStyle, { width: 120 }]}
+                    value={yearsInSociety}
+                    onChangeText={setYearsInSociety}
+                    placeholder="Es: 3"
+                    keyboardType="numeric"
+                    data-testid="preseason-years-society"
+                  />
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Se NO: che sport hai praticato */}
+          {playedVolleyball === false && (
+            <View style={{ marginBottom: 14, marginLeft: 8, paddingLeft: 12, borderLeftWidth: 2, borderLeftColor: '#E0E0E0' }}>
+              <Text style={labelStyle}>Che sport hai praticato in precedenza?</Text>
+              <TextInput
+                style={inputStyle}
+                value={previousSport}
+                onChangeText={setPreviousSport}
+                placeholder="Es: Calcio, Nuoto, Basket..."
+                data-testid="preseason-previous-sport"
+              />
+            </View>
+          )}
+
+          {/* Gia iscritto nella societa */}
           <View style={{ marginBottom: 14 }}>
             <Text style={labelStyle}>Gia iscritto nella societa?</Text>
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
@@ -219,14 +306,6 @@ export default function PublicPreseasonForm() {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Club precedente */}
-          {!alreadyMember && (
-            <View style={{ marginBottom: 14 }}>
-              <Text style={labelStyle}>Da quale societa/club vieni?</Text>
-              <TextInput style={inputStyle} value={previousClub} onChangeText={setPreviousClub} placeholder="Nome societa precedente" data-testid="preseason-previous-club" />
-            </View>
-          )}
 
           {/* Campionati e Ruolo */}
           <View style={{ marginBottom: 14 }}>
