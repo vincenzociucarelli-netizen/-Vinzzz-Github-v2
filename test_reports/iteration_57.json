@@ -1,0 +1,63 @@
+{
+  "summary": "Tested pre-season registration form with dynamic sport name, volleyball experience flow (SI/NO paths), society logo/name display, and login flows. All core features working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/auth/minor-login", "issue": "Test credentials MartinaG/PIN 1234 are incorrect - PIN returns 401 'PIN non corretto'"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_preseason_sport_name.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Update minor login test credentials - PIN 1234 is incorrect for MartinaG"
+  ],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_preseason_sport_name.py"
+  ],
+  "success_rate": {
+    "backend": "89% (8/9 tests passed)",
+    "frontend": "100% (all UI features verified)"
+  },
+  "test_credentials": {
+    "admin": "pallavoloperugia@gmail.com / Test1234 - WORKING",
+    "parent": "perla@test.com / Test1234 - WORKING",
+    "adult_athlete": "luna@18piu.com / Test1234 - WORKING",
+    "minor_lite": "MartinaG / PIN 1234 - NOT WORKING (incorrect PIN)"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Pre-season form at /preseason/{campaign_id} is working correctly. Dynamic sport name from society settings is displayed in 'Hai gia giocato a [sport]?' question. SI path shows 'A scuola' and 'In una Societa' checkboxes with conditional 'Per quanti anni?' field. NO path shows 'Che sport hai praticato in precedenza?' text field. Backend API returns sport_name, society_logo, society_name correctly. Admin timeline header code has chevron back button in white circle and inverted title/subtitle (Cronologia as subtitle, athlete name as main title).",
+  "features_tested": {
+    "preseason_public_form": {
+      "society_logo_display": "PASS - Logo displayed at top of form",
+      "society_name_display": "PASS - 'Pallavolo Perugia SSD a RL' displayed",
+      "campaign_title_display": "PASS - 'Pre-iscrizione Stagione 2026/2027' displayed",
+      "dynamic_sport_name_question": "PASS - 'Hai gia giocato a pallavolo?' shows sport name from settings",
+      "si_path_checkboxes": "PASS - 'A scuola' and 'In una Societa' checkboxes appear when SI clicked",
+      "si_path_years_field": "PASS - 'Per quanti anni?' field appears when 'In una Societa' checked",
+      "no_path_previous_sport": "PASS - 'Che sport hai praticato in precedenza?' field appears when NO clicked"
+    },
+    "backend_api": {
+      "get_public_campaign": "PASS - Returns sport_name, society_logo, society_name",
+      "submit_response_si_path": "PASS - Accepts played_volleyball=true with school/society fields",
+      "submit_response_no_path": "PASS - Accepts played_volleyball=false with previous_sport field"
+    },
+    "login_flows": {
+      "admin_login": "PASS - pallavoloperugia@gmail.com / Test1234",
+      "parent_login": "PASS - perla@test.com / Test1234",
+      "adult_athlete_login": "PASS - luna@18piu.com / Test1234",
+      "minor_lite_login": "FAIL - MartinaG / PIN 1234 (incorrect PIN)"
+    },
+    "admin_timeline_header": "Code verified - chevron back button in white circle, 'Cronologia' as subtitle, athlete name as main title",
+    "admin_settings_nome_sport": "Code verified - 'Nome sport' field present in Altre Impostazioni"
+  }
+}
