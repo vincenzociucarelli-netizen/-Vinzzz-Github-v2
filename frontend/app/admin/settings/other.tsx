@@ -51,6 +51,7 @@ export default function OtherSettings() {
 
   // Immagine Sport
   const [sportImage, setSportImage] = useState<string | null>(null);
+  const [sportName, setSportName] = useState('');
 
   // Stagione sportiva
   const [seasonStartMonth, setSeasonStartMonth] = useState(7);
@@ -85,6 +86,7 @@ export default function OtherSettings() {
       setDirigenteQualifications(response.data.dirigente_qualifications || []);
       setVenues(response.data.venues || []);
       setSportImage(response.data.sport_image || null);
+      setSportName(response.data.sport_praticato || response.data.sport_name || '');
       setSeasonStartMonth(response.data.season_start_month || 7);
       setSeasonStartDay(response.data.season_start_day || 1);
       setSeasonEndMonth(response.data.season_end_month || 6);
@@ -105,6 +107,7 @@ export default function OtherSettings() {
         dirigente_qualifications: dirigenteQualifications,
         venues: venues,
         sport_image: sportImage,
+        sport_praticato: sportName,
         season_start_month: seasonStartMonth,
         season_start_day: seasonStartDay,
         season_end_month: seasonEndMonth,
@@ -276,14 +279,14 @@ export default function OtherSettings() {
           </View>
         </View>
 
-        {/* Immagine Sport */}
+        {/* Immagine e Nome Sport */}
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <SportIcon size={20} />
-            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Immagine Sport</Text>
+            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Immagine e Nome Sport</Text>
           </View>
           <Text style={styles.sectionDesc}>
-            Carica un'immagine che rappresenta il tuo sport
+            Carica un'immagine e indica il nome dello sport praticato
           </Text>
           
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8 }}>
@@ -317,6 +320,15 @@ export default function OtherSettings() {
               </Text>
             </TouchableOpacity>
           </View>
+
+          <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginTop: 14, marginBottom: 4 }}>Nome sport *</Text>
+          <TextInput
+            style={{ borderWidth: 1, borderColor: '#DDD', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#333', backgroundColor: '#FAFAFA' }}
+            value={sportName}
+            onChangeText={setSportName}
+            placeholder="Es: Pallavolo, Calcio, Basket..."
+            data-testid="sport-name-input"
+          />
         </View>
 
         {/* Ruoli Atleti */}

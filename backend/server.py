@@ -20451,10 +20451,12 @@ async def get_public_campaign_info(campaign_id: str):
     
     logo = ""
     society_name = campaign.get("society_name", "")
+    sport_name = ""
     if society:
         logo = society.get("logo", "")
         if not society_name:
             society_name = society.get("name", "")
+        sport_name = society.get("sport_praticato", "") or society.get("sport_name", "")
     
     return {
         "id": campaign["id"],
@@ -20463,6 +20465,7 @@ async def get_public_campaign_info(campaign_id: str):
         "description": campaign.get("description", ""),
         "society_name": society_name,
         "society_logo": logo,
+        "sport_name": sport_name,
         "open_date": campaign.get("open_date"),
         "close_date": campaign.get("close_date"),
     }

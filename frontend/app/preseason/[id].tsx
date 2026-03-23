@@ -16,6 +16,7 @@ interface CampaignInfo {
   description: string;
   society_name: string;
   society_logo: string;
+  sport_name: string;
   close_date?: string;
 }
 
@@ -148,13 +149,13 @@ export default function PublicPreseasonForm() {
           {campaign?.society_logo ? (
             <Image
               source={{ uri: campaign.society_logo.startsWith('data:') ? campaign.society_logo : `data:image/png;base64,${campaign.society_logo}` }}
-              style={{ width: 90, height: 90, borderRadius: 45, marginBottom: 16 }}
+              style={{ width: 110, height: 110, borderRadius: 55, marginBottom: 16 }}
               resizeMode="contain"
               data-testid="society-logo"
             />
           ) : (
-            <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-              <Ionicons name="trophy" size={40} color="#fff" />
+            <View style={{ width: 110, height: 110, borderRadius: 55, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <Ionicons name="trophy" size={44} color="#fff" />
             </View>
           )}
           {campaign?.society_name ? (
@@ -165,7 +166,6 @@ export default function PublicPreseasonForm() {
           <Text style={{ fontSize: 18, fontWeight: '700', color: '#1565C0', marginTop: 2, textAlign: 'center' }} data-testid="campaign-title">
             {campaign?.title}
           </Text>
-          <Text style={{ fontSize: 14, color: '#666', marginTop: 6 }}>Stagione {campaign?.season}</Text>
           {campaign?.description ? (
             <Text style={{ fontSize: 13, color: '#888', marginTop: 10, textAlign: 'center', lineHeight: 20, maxWidth: 380 }}>
               {campaign.description}
@@ -209,9 +209,9 @@ export default function PublicPreseasonForm() {
             </View>
           </View>
 
-          {/* Hai gia giocato a pallavolo? */}
+          {/* Hai gia giocato a [sport]? */}
           <View style={{ marginBottom: 14 }}>
-            <Text style={labelStyle}>Hai gia giocato a pallavolo?</Text>
+            <Text style={labelStyle}>Hai gia giocato a {campaign?.sport_name?.toLowerCase() || 'questo sport'}?</Text>
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
               <TouchableOpacity
                 style={[chipStyle, playedVolleyball === true && chipActiveStyle]}
