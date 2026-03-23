@@ -149,7 +149,7 @@ export default function PublicPreseasonForm() {
           {campaign?.society_logo ? (
             <Image
               source={{ uri: campaign.society_logo.startsWith('data:') ? campaign.society_logo : `data:image/png;base64,${campaign.society_logo}` }}
-              style={{ width: 110, height: 110, borderRadius: 55, marginBottom: 16 }}
+              style={{ width: 120, height: 120, marginBottom: 16 }}
               resizeMode="contain"
               data-testid="society-logo"
             />
