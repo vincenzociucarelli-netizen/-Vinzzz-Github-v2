@@ -20250,10 +20250,22 @@ async def get_preseason_campaigns(current_user = Depends(get_current_user)):
         {"society_id": society_id}, {"_id": 0}
     ).sort("created_at", -1).to_list(100)
     
-    # Update response counts
+    # Count total parents and who responded
+    all_parents = await db.users.count_documents({"society_id": society_id, "role": "parent"})
+    
+    # Update response counts and parent stats
     for c in campaigns:
         count = await db.preseason_responses.count_documents({"campaign_id": c["id"]})
         c["response_count"] = count
+        
+        # Count parents who responded via app (have user_id)
+        responded_count = await db.preseason_responses.count_documents({
+            "campaign_id": c["id"],
+            "user_id": {"$exists": True, "$ne": None}
+        })
+        c["total_parents"] = all_parents
+        c["responded_parents"] = responded_count
+        c["missing_parents"] = all_parents - responded_count
     
     return campaigns
 

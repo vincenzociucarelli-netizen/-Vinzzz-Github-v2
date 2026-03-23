@@ -306,12 +306,26 @@ export default function PreseasonAdmin() {
             </View>
 
             {/* Stats row */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 10, flexWrap: 'wrap' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Ionicons name="people" size={16} color="#1565C0" />
                 <Text style={{ fontSize: 13, fontWeight: '600', color: '#1565C0' }}>{c.response_count}</Text>
                 <Text style={{ fontSize: 11, color: '#888' }}>risposte</Text>
               </View>
+              {(c as any).missing_parents > 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFF3E0', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
+                  <Ionicons name="alert-circle" size={14} color="#E65100" />
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#E65100' }}>
+                    {(c as any).missing_parents} genitori mancanti
+                  </Text>
+                </View>
+              )}
+              {(c as any).missing_parents === 0 && (c as any).total_parents > 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E8F5E9', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
+                  <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#2E7D32' }}>Tutti hanno risposto</Text>
+                </View>
+              )}
               {c.close_date && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <Ionicons name="calendar" size={14} color="#888" />
