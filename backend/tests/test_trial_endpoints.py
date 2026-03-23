@@ -16,7 +16,7 @@ from pathlib import Path
 # Load env
 load_dotenv(Path('/app/backend/.env'))
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://athlete-timeline.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://season-enroll.preview.emergentagent.com').rstrip('/')
 
 # Test parent credentials (will create if not exists)
 TEST_PARENT_EMAIL = "testparent@trial.com"
