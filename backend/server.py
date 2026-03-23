@@ -20183,6 +20183,8 @@ class PreseasonCampaignUpdate(BaseModel):
     close_date: Optional[str] = None
     is_active: Optional[bool] = None
     description: Optional[str] = None
+    auto_reminders_enabled: Optional[bool] = None
+    reminder_frequency_days: Optional[int] = None
 
 class PreseasonResponse(BaseModel):
     first_name: str
@@ -20984,9 +20986,152 @@ async def certificate_notification_scheduler():
         await _asyncio.sleep(86400)
 
 
+async def check_preseason_auto_reminders():
+    """Check active campaigns with auto-reminders enabled and send notifications."""
+    from email_service import send_transactional_email
+    
+    # Find active campaigns with auto-reminders enabled
+    campaigns = await db.preseason_campaigns.find({
+        "is_active": True,
+        "auto_reminders_enabled": True,
+    }, {"_id": 0}).to_list(100)
+    
+    total_sent = 0
+    
+    for campaign in campaigns:
+        campaign_id = campaign["id"]
+        frequency_days = campaign.get("reminder_frequency_days", 7) or 7
+        last_auto = campaign.get("last_auto_reminder_sent")
+        
+        # Check if enough time has passed since last auto-reminder
+        if last_auto:
+            if isinstance(last_auto, str):
+                last_auto = datetime.fromisoformat(last_auto.replace("Z", "+00:00"))
+            time_since = datetime.now(timezone.utc) - last_auto
+            if time_since.days < frequency_days:
+                continue
+        
+        society_id = campaign.get("society_id", "")
+        
+        # Get society info
+        society = await db.settings.find_one({"society_id": society_id, "type": "society"})
+        if not society:
+            society = await db.settings.find_one({"type": "society"})
+        society_name = society.get("name", "La tua societa sportiva") if society else "La tua societa sportiva"
+        
+        # Find all parents
+        all_parents = await db.users.find(
+            {"society_id": society_id, "role": "parent"},
+            {"_id": 0, "id": 1, "email": 1, "full_name": 1}
+        ).to_list(10000)
+        
+        # Find parents who already responded
+        responded_user_ids = set()
+        responses = await db.preseason_responses.find(
+            {"campaign_id": campaign_id, "user_id": {"$exists": True, "$ne": None}},
+            {"_id": 0, "user_id": 1}
+        ).to_list(10000)
+        for r in responses:
+            if r.get("user_id"):
+                responded_user_ids.add(r["user_id"])
+        
+        # Filter: only parents who haven't responded
+        parents_to_notify = [p for p in all_parents if p["id"] not in responded_user_ids]
+        
+        if not parents_to_notify:
+            continue
+        
+        # Build email
+        base_url = str(os.environ.get("FRONTEND_URL", "")).rstrip("/")
+        form_link = f"{base_url}/preseason/{campaign_id}" if base_url else f"/preseason/{campaign_id}"
+        
+        email_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <h1 style="color: #0D47A1; font-size: 22px; margin: 0;">{society_name}</h1>
+                <p style="color: #666; font-size: 14px; margin-top: 8px;">Promemoria: {campaign.get('title', 'Pre-iscrizione')}</p>
+            </div>
+            
+            <div style="background-color: #FFF3E0; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                <h2 style="color: #E65100; font-size: 18px; margin: 0 0 12px 0;">Non dimenticare!</h2>
+                <p style="color: #333; font-size: 14px; line-height: 22px; margin: 0;">
+                    Non hai ancora compilato il modulo di interesse per la stagione <strong>{campaign.get('season', '')}</strong>. 
+                    La tua risposta ci aiuta a programmare la prossima stagione!
+                </p>
+            </div>
+            
+            <div style="text-align: center; margin: 24px 0;">
+                <a href="{form_link}" style="display: inline-block; background-color: #E65100; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: bold;">
+                    Compila il modulo ora
+                </a>
+            </div>
+            
+            <div style="background-color: #E8F5E9; border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 20px;">
+                <p style="color: #2E7D32; font-size: 12px; margin: 0; font-weight: 600;">
+                    La compilazione e non vincolante
+                </p>
+            </div>
+            
+            {f'<p style="color: #999; font-size: 12px; text-align: center;">Scadenza: {campaign.get("close_date", "")[:10] if campaign.get("close_date") else "non definita"}</p>' if campaign.get("close_date") else ""}
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #aaa; font-size: 11px; text-align: center;">
+                Promemoria automatico inviato da {society_name} tramite RegistraTEAM.
+            </p>
+        </div>
+        """
+        
+        email_sent = 0
+        for parent in parents_to_notify:
+            if parent.get("email"):
+                try:
+                    await send_transactional_email(
+                        to_email=parent["email"],
+                        subject=f"Promemoria: {society_name} - {campaign.get('title', 'Pre-iscrizione')}",
+                        html_content=email_html,
+                    )
+                    email_sent += 1
+                except Exception as e:
+                    logger.error(f"Auto-reminder email failed for {parent['email']}: {e}")
+        
+        # Update campaign with last reminder sent time
+        auto_count = (campaign.get("auto_reminder_count", 0) or 0) + 1
+        await db.preseason_campaigns.update_one(
+            {"id": campaign_id},
+            {"$set": {
+                "last_auto_reminder_sent": datetime.now(timezone.utc),
+                "auto_reminder_count": auto_count,
+            }}
+        )
+        
+        total_sent += email_sent
+        logger.info(f"Pre-season auto-reminder: Campaign '{campaign.get('title')}' - {email_sent} emails sent to {len(parents_to_notify)} parents")
+    
+    logger.info(f"Pre-season auto-reminder check complete. {total_sent} total emails sent.")
+
+
+async def preseason_reminder_scheduler():
+    """Background scheduler that runs the pre-season reminder check every 12 hours."""
+    import asyncio as _asyncio
+    
+    # Wait 60 seconds after startup before first run
+    await _asyncio.sleep(60)
+    
+    while True:
+        try:
+            await check_preseason_auto_reminders()
+        except Exception as e:
+            logger.error(f"Pre-season reminder scheduler error: {e}")
+        
+        # Sleep 12 hours
+        await _asyncio.sleep(43200)
+
+
 @app.on_event("startup")
 async def start_certificate_scheduler():
     """Start the certificate notification background task on app startup."""
     import asyncio as _asyncio
     _asyncio.create_task(certificate_notification_scheduler())
     logger.info("Certificate expiry notification scheduler started.")
+    _asyncio.create_task(preseason_reminder_scheduler())
+    logger.info("Pre-season reminder scheduler started.")

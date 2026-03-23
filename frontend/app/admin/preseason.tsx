@@ -17,6 +17,12 @@ interface Campaign {
   close_date?: string;
   response_count: number;
   created_at: string;
+  auto_reminders_enabled?: boolean;
+  reminder_frequency_days?: number;
+  last_auto_reminder_sent?: string;
+  auto_reminder_count?: number;
+  last_notification_sent?: string;
+  notification_count?: number;
 }
 
 interface ResponseItem {
@@ -64,6 +70,7 @@ export default function PreseasonAdmin() {
   const [responses, setResponses] = useState<ResponseItem[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loadingResponses, setLoadingResponses] = useState(false);
+  const [togglingReminders, setTogglingReminders] = useState<string | null>(null);
 
   // Create form
   const [newTitle, setNewTitle] = useState('');
@@ -116,6 +123,37 @@ export default function PreseasonAdmin() {
   const handleToggleActive = async (campaign: Campaign) => {
     try {
       await api.patch(`/preseason/campaigns/${campaign.id}`, { is_active: !campaign.is_active });
+      loadCampaigns();
+    } catch (err: any) {
+      showAlert('Errore', err.response?.data?.detail || 'Errore');
+    }
+  };
+
+  const handleToggleReminders = async (campaign: Campaign) => {
+    const newEnabled = !campaign.auto_reminders_enabled;
+    setTogglingReminders(campaign.id);
+    try {
+      await api.patch(`/preseason/campaigns/${campaign.id}`, { 
+        auto_reminders_enabled: newEnabled,
+        reminder_frequency_days: campaign.reminder_frequency_days || 7,
+      });
+      loadCampaigns();
+      showAlert(
+        newEnabled ? 'Promemoria Attivati' : 'Promemoria Disattivati',
+        newEnabled 
+          ? `I genitori che non hanno risposto riceveranno un promemoria automatico ogni ${campaign.reminder_frequency_days || 7} giorni.`
+          : 'I promemoria automatici sono stati disattivati.'
+      );
+    } catch (err: any) {
+      showAlert('Errore', err.response?.data?.detail || 'Errore');
+    } finally {
+      setTogglingReminders(null);
+    }
+  };
+
+  const handleChangeFrequency = async (campaign: Campaign, days: number) => {
+    try {
+      await api.patch(`/preseason/campaigns/${campaign.id}`, { reminder_frequency_days: days });
       loadCampaigns();
     } catch (err: any) {
       showAlert('Errore', err.response?.data?.detail || 'Errore');
@@ -282,11 +320,11 @@ export default function PreseasonAdmin() {
                   </Text>
                 </View>
               )}
-              {(c as any).last_notification_sent && (
+              {c.last_notification_sent && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <Ionicons name="notifications" size={14} color="#6A1B9A" />
                   <Text style={{ fontSize: 11, color: '#6A1B9A' }}>
-                    Notifiche: {(c as any).notification_count || 0}x
+                    Notifiche: {c.notification_count || 0}x
                   </Text>
                 </View>
               )}
@@ -350,6 +388,64 @@ export default function PreseasonAdmin() {
                 <Text style={{ fontSize: 12, fontWeight: '600', color: '#C62828' }}>Elimina</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Auto-Reminders Section */}
+            {c.is_active && (
+              <View style={{ marginTop: 12, backgroundColor: '#FAFAFA', borderRadius: 8, padding: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="alarm-outline" size={16} color={c.auto_reminders_enabled ? '#E65100' : '#999'} />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: c.auto_reminders_enabled ? '#E65100' : '#999' }}>
+                      Promemoria automatici
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: c.auto_reminders_enabled ? '#E65100' : '#DDD',
+                      borderRadius: 12, width: 44, height: 24, justifyContent: 'center',
+                      paddingHorizontal: 2,
+                    }}
+                    onPress={() => handleToggleReminders(c)}
+                    disabled={togglingReminders === c.id}
+                    data-testid={`toggle-reminders-${c.id}`}
+                  >
+                    <View style={{
+                      width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff',
+                      alignSelf: c.auto_reminders_enabled ? 'flex-end' : 'flex-start',
+                    }} />
+                  </TouchableOpacity>
+                </View>
+                {c.auto_reminders_enabled && (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>Frequenza invio:</Text>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {[3, 5, 7, 14].map(days => (
+                        <TouchableOpacity
+                          key={days}
+                          style={{
+                            backgroundColor: (c.reminder_frequency_days || 7) === days ? '#E65100' : '#EEE',
+                            borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4,
+                          }}
+                          onPress={() => handleChangeFrequency(c, days)}
+                        >
+                          <Text style={{
+                            fontSize: 11, fontWeight: '600',
+                            color: (c.reminder_frequency_days || 7) === days ? '#fff' : '#666',
+                          }}>
+                            {days}gg
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    {c.last_auto_reminder_sent && (
+                      <Text style={{ fontSize: 10, color: '#AAA', marginTop: 6 }}>
+                        Ultimo invio: {new Date(c.last_auto_reminder_sent).toLocaleDateString('it-IT')} ({c.auto_reminder_count || 0}x)
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
           </View>
         ))
       )}
