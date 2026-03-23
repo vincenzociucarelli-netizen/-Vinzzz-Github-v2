@@ -113,12 +113,14 @@ export default function AdminAthleteTimeline() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+        <TouchableOpacity onPress={() => router.back()} data-testid="timeline-back-btn">
+          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}>
+            <Ionicons name="chevron-back" size={24} color="#007AFF" />
+          </View>
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Cronologia</Text>
-          <Text style={styles.headerSubtitle}>{athleteName}</Text>
+          <Text style={styles.headerSubtitle}>Cronologia</Text>
+          <Text style={styles.headerTitle}>{athleteName}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: (statusColor[athleteStatus] || '#8E8E93') + '20' }]}>
           <View style={[styles.statusDot, { backgroundColor: statusColor[athleteStatus] || '#8E8E93' }]} />
