@@ -13082,6 +13082,8 @@ class GDPRPrivacySignRequest(BaseModel):
     minor_fiscal_code: Optional[str] = None
     minor_birth_date: Optional[str] = None
     minor_birth_place: Optional[str] = None
+    # Granular consent data (GDPR)
+    consent_data: Optional[dict] = None
 
 
 def generate_monthly_receipt_pdf(
@@ -13228,7 +13230,8 @@ def generate_gdpr_adult_privacy_pdf(
     document_version: str,
     document_hash: str,
     user_id: str,
-    society_id: str
+    society_id: str,
+    consent_data: dict = None
 ) -> bytes:
     """Generate GDPR-compliant privacy consent PDF for adults (collaboratori, coach, dirigenti, atleti maggiorenni)"""
     if not HAS_PDF_GENERATION:
@@ -13382,7 +13385,37 @@ def generate_gdpr_adult_privacy_pdf(
     dichiarazione_text = "Il sottoscritto dichiara di aver letto e compreso la presente informativa e prende atto del trattamento dei dati personali per le finalità indicate."
     y = draw_wrapped_text(c, dichiarazione_text, 2*cm, y, max_w)
     
-    y -= 1*cm
+    y -= 0.8*cm
+    
+    # CONSENSI ESPRESSI
+    cd = consent_data or {}
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "CONSENSI ESPRESSI")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 9)
+    
+    check_pv = "X" if cd.get("privacy_viewed", True) else " "
+    c.drawString(2*cm, y, f"[{check_pv}] Presa visione dell'informativa sulla privacy (obbligatorio)")
+    y -= 0.4*cm
+    
+    check_dt = "X" if cd.get("data_treatment", True) else " "
+    c.drawString(2*cm, y, f"[{check_dt}] Autorizzazione trattamento dati per gestione rapporto (obbligatorio)")
+    y -= 0.4*cm
+    
+    check_ii = "X" if cd.get("images_internal", False) else " "
+    c.drawString(2*cm, y, f"[{check_ii}] Utilizzo immagini per uso interno (facoltativo)")
+    y -= 0.4*cm
+    
+    check_ip = "X" if cd.get("images_promo", False) else " "
+    c.drawString(2*cm, y, f"[{check_ip}] Utilizzo immagini per finalita' promozionali - sito/social (facoltativo)")
+    y -= 0.4*cm
+    
+    c.setFont("Courier", 7)
+    c.setFillColor(colors.HexColor("#888888"))
+    c.drawString(2*cm, y, f"Versione doc: {cd.get('document_version', document_version)} | Timestamp: {timestamp} | IP: {ip_address}")
+    c.setFillColor(colors.black)
+    
+    y -= 0.8*cm
     
     # Signer data box
     c.setStrokeColor(colors.HexColor("#8E44AD"))
@@ -13501,9 +13534,9 @@ def generate_gdpr_minor_privacy_pdf(
     document_version: str,
     document_hash: str,
     user_id: str,
-    society_id: str
+    society_id: str,
+    consent_data: dict = None
 ) -> bytes:
-    """Generate GDPR-compliant privacy consent PDF for minors (signed by parent/guardian)"""
     if not HAS_PDF_GENERATION:
         raise HTTPException(status_code=500, detail="PDF generation not available")
     
@@ -13719,6 +13752,36 @@ def generate_gdpr_minor_privacy_pdf(
     c.setFont("Helvetica", 10)
     dichiarazione_text = "Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente informativa e autorizza il trattamento dei dati personali del minore per le finalità indicate."
     y = draw_wrapped_text(c, dichiarazione_text, 2*cm, y, max_w)
+    
+    y -= 0.8*cm
+    
+    # CONSENSI ESPRESSI (minori)
+    cd = consent_data or {}
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "CONSENSI ESPRESSI")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 9)
+    
+    check_pv = "X" if cd.get("privacy_viewed", True) else " "
+    c.drawString(2*cm, y, f"[{check_pv}] Presa visione dell'informativa sulla privacy (obbligatorio)")
+    y -= 0.4*cm
+    
+    check_dt = "X" if cd.get("data_treatment", True) else " "
+    c.drawString(2*cm, y, f"[{check_dt}] Autorizzazione trattamento dati per attivita' sportiva (obbligatorio)")
+    y -= 0.4*cm
+    
+    check_ii = "X" if cd.get("images_internal", False) else " "
+    c.drawString(2*cm, y, f"[{check_ii}] Utilizzo immagini per uso interno (facoltativo)")
+    y -= 0.4*cm
+    
+    check_ip = "X" if cd.get("images_promo", False) else " "
+    c.drawString(2*cm, y, f"[{check_ip}] Utilizzo immagini per finalita' promozionali - sito/social (facoltativo)")
+    y -= 0.4*cm
+    
+    c.setFont("Courier", 7)
+    c.setFillColor(colors.HexColor("#888888"))
+    c.drawString(2*cm, y, f"Versione doc: {cd.get('document_version', document_version)} | Timestamp: {timestamp} | IP: {ip_address}")
+    c.setFillColor(colors.black)
     
     # Footer page 2
     c.setFont("Helvetica", 8)
@@ -14622,7 +14685,8 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
                 document_version=doc_version,
                 document_hash=doc_hash,
                 user_id=current_user["id"],
-                society_id=current_user.get("society_id", "")
+                society_id=current_user.get("society_id", ""),
+                consent_data=getattr(request, 'consent_data', None)
             )
         else:
             # Use the generic signed PDF function for other document types
@@ -14982,7 +15046,8 @@ async def sign_gdpr_privacy_document(
                 document_version=document_version,
                 document_hash=document_hash,
                 user_id=current_user["id"],
-                society_id=society_id
+                society_id=society_id,
+                consent_data=request.consent_data
             )
             
             doc_title = "Informativa Privacy GDPR - Staff"
@@ -15057,7 +15122,8 @@ async def sign_gdpr_privacy_document(
                 document_version=document_version,
                 document_hash=document_hash,
                 user_id=current_user["id"],
-                society_id=society_id
+                society_id=society_id,
+                consent_data=request.consent_data
             )
             
             doc_title = f"Informativa Privacy GDPR - Minore {minor_full_name}"
@@ -15087,6 +15153,9 @@ async def sign_gdpr_privacy_document(
         f.write(pdf_bytes)
     
     # Store document record with full metadata
+    # Extract consent_data from request
+    consent_data = getattr(request, 'consent_data', None) or {}
+    
     document_record = {
         "id": document_id,
         "document_type": request.document_type,
@@ -15107,6 +15176,13 @@ async def sign_gdpr_privacy_document(
             "user_agent": request.user_agent,
             "document_hash": document_hash,
             "hash_algorithm": "SHA-256"
+        },
+        # Granular consent tracking (GDPR compliant)
+        "consents": {
+            "privacy_viewed": {"value": consent_data.get("privacy_viewed", True), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": consent_data.get("document_version", document_version), "ip_address": client_ip},
+            "data_treatment": {"value": consent_data.get("data_treatment", True), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": consent_data.get("document_version", document_version), "ip_address": client_ip},
+            "images_internal": {"value": consent_data.get("images_internal", False), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": consent_data.get("document_version", document_version), "ip_address": client_ip},
+            "images_promo": {"value": consent_data.get("images_promo", False), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": consent_data.get("document_version", document_version), "ip_address": client_ip},
         },
         # Minor data if applicable
         **minor_data,
@@ -15281,7 +15357,8 @@ async def preview_gdpr_privacy_document(
                 document_version=document_version,
                 document_hash=document_hash,
                 user_id=current_user["id"],
-                society_id=society_id
+                society_id=society_id,
+                consent_data=None  # Preview - no consent data yet
             )
             doc_title = "ANTEPRIMA - Informativa Privacy GDPR - Staff"
             
@@ -15337,7 +15414,8 @@ async def preview_gdpr_privacy_document(
                 document_version=document_version,
                 document_hash=document_hash,
                 user_id=current_user["id"],
-                society_id=society_id
+                society_id=society_id,
+                consent_data=None  # Preview - no consent data yet
             )
             doc_title = f"ANTEPRIMA - Informativa Privacy GDPR - Minore {minor_full_name}"
         else:

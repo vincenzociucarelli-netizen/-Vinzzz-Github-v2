@@ -1,66 +1,78 @@
-# PRD - Sport Society Management App (RegistraTEAM)
+# RegistraTEAM - Product Requirements Document
 
 ## Original Problem Statement
-Build a comprehensive sports team management application with:
-- Pre-Season Registration (campaigns, public form, admin dashboard)
-- End of Trial Period Flow (Confirm/Waive paths)
-- Conditional Data Deletion (admin-approved, obligation checks)
-- Notification System (email reminders, certificate expiry)
-- Audit Logging
-- "Versione Lite" (Minor's simplified view)
-- "Cronologia Atleta" (Athlete Timeline)
-- Versione Lite for Adults
+Comprehensive sports team management application for Italian volleyball societies. Features include pre-season registration, athlete management, coach/dirigente management, payment tracking, GDPR-compliant privacy handling, and admin dashboards.
 
-## User Personas
-- **Admin**: Society administrators managing athletes, parents, coaches
-- **Parent**: Parents managing minor athletes
-- **Athlete (18+)**: Adult athletes managing their own profiles
-- **Minor (Lite)**: Simplified read-only dashboard for young athletes
+## Core Requirements
+- Pre-season registration with campaigns, public forms, conditional questions
+- Team management with training schedules, venues, installments
+- GDPR-compliant privacy system with granular consent tracking
+- Athlete lifecycle management (trial → registered → end of season)
+- Multi-role access (Admin, Coach, Dirigente, Parent, Athlete)
+- "Versione Lite" for athletes (read-only dashboard)
+- Automated email reminders for pre-season campaigns
 
-## Tech Stack
-- **Backend**: FastAPI + MongoDB (Motor)
-- **Frontend**: React Native / Expo (Web + Mobile)
+## What's Been Implemented
+
+### Session 2026-03-24 (Current)
+- **Fixed**: Frontend static build using old backend URL (sports-portal-10 → season-enroll)
+- **Fixed**: Login and forgot-password not working due to stale Metro cache
+- **Fixed**: Team creation not saving `society_id` → teams invisible in list
+- **Fixed**: `Alert.alert` not working on web → replaced with `window.alert`
+- **Removed**: "Prima Squadra" checkbox from team creation form
+- **Changed**: Venue fields in team creation → dropdown selectable from "Altre Impostazioni"
+- **Changed**: Installments → dynamic (1-12 rates), first rate named "Iscrizione"
+- **Changed**: Team list shows only total quota, no installment breakdown
+- **Changed**: Coach/Dirigenti photos → initials-based avatars (privacy compliance)
+- **GDPR Privacy System (Major Feature)**:
+  - Updated Privacy Policy (new Section 7: Images/Video, Section 4: Management software)
+  - 4 granular consent checkboxes for minors (parent registration):
+    - Presa visione informativa (mandatory)
+    - Autorizzazione trattamento dati (mandatory)
+    - Utilizzo immagini uso interno (optional)
+    - Utilizzo immagini finalità promozionali (optional)
+  - Same 4 checkboxes in GDPRPrivacyModal for staff/adult athletes
+  - Full consent tracking: value, timestamp, user_id, document_version, IP
+  - Audit trail (consent_history) in DB
+  - PDF snapshot includes "CONSENSI ESPRESSI" section with all checkbox values and metadata
+  - Blocking logic: mandatory checkboxes must be checked to proceed
+
+### Previous Sessions
+- Dynamic pre-season form with conditional logic
+- Automated pre-season reminders (APScheduler)
+- "Missing parents" counter on admin dashboard
+- Configurable "Nome Sport" in settings
+- Athlete Timeline (Cronologia Atleta)
+- End of trial period workflow
+- Data deletion flow with admin approval
+- Email notification system (Brevo)
+- Certificate management
+- Payment tracking with installments
+- QR code attendance system
+
+## Architecture
+- **Backend**: FastAPI (Python) on port 8001
+- **Frontend**: Expo React Native (Web) - static builds served via `npx serve`
+- **Database**: MongoDB (test_database)
 - **Email**: Brevo (Sendinblue)
-- **Scheduler**: Custom asyncio background tasks
+- **Background Jobs**: APScheduler (certificate expiry + pre-season reminders)
 
-## What's Implemented (Complete)
-1. Pre-Season Registration (campaigns, public form with dynamic sport name, admin dashboard, CSV export, auto-reminders)
-2. End of Trial Period Flow (Confirm 3-step, Waive with deletion request)
-3. Conditional Data Deletion (admin-approved, obligation checks)
-4. Email Notifications (Brevo integration, certificate expiry scheduler)
-5. Audit Logging (including deletion_check_viewed, deletion_request_cancelled)
-6. Versione Lite - Minor's View (PIN login, avatar selection, read-only dashboard)
-7. Cronologia Atleta (Timeline for Admin, Parent, Athlete views)
-8. Versione Lite for Adults (self-configurable by adult athletes)
-9. Automated Pre-Season Reminders (P0 - background scheduler with configurable frequency)
+## Pending / Backlog
 
-## Latest Changes (March 23, 2026)
-- **Pre-season form**: Society logo display (with base64 handling), dynamic sport name from settings, "Hai già giocato a [sport]?" conditional question flow
-- **Admin settings**: Added "Nome sport" field in "Immagine e Nome Sport" section
-- **Admin timeline header**: Fixed to match standard style (chevron in white circle, inverted title/subtitle)
-- **Auto-reminders**: Background scheduler runs every 12h, sends email reminders to parents who haven't responded. Admin toggle + frequency selector (3/5/7/14 days) in campaign card
-- **CSV export**: Updated with new volleyball experience columns
-- **Backend fixes**: Society settings query fallback for logo/name
+### P1 - Upcoming
+- User consent modification page (change consents from profile)
+- Consent audit trail admin view
+- Full manual testing of all flows
 
-## Prioritized Backlog
-### P1
-- UI per atleti con contratto (deferred to summer)
-
-### P2
-- Refactor `server.py` into modules
-- Stripe integration (prepared but not activated by client)
-- DB Cleanup: viewer → dirigente role migration
-- Publication assistance (domain, App Store)
-- Refactor `parent/athlete/[id].tsx`
+### P2 - Future
+- UI per atleti con contratto (summer)
+- Refactor server.py (monolithic)
+- Re-implement Stripe payments
+- DB cleanup: viewer → dirigente role migration
+- Publication assistance (domain + App Store)
+- Refactor frontend/app/parent/athlete/[id].tsx
 
 ## Key Credentials
 - Admin: pallavoloperugia@gmail.com / Test1234
 - Parent: perla@test.com / Test1234
 - Adult Athlete: luna@18piu.com / Test1234
-- Minor Login: MartinaG / PIN (not set)
-
-## Key API Endpoints
-- GET /api/preseason/public/{id} - Public campaign info (with sport_name, society_logo)
-- POST /api/preseason/public/{id}/respond - Submit response (with volleyball experience fields)
-- PATCH /api/preseason/campaigns/{id} - Update campaign (auto_reminders_enabled, reminder_frequency_days)
-- GET /api/athletes/{id}/timeline - Athlete timeline

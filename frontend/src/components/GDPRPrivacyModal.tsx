@@ -78,6 +78,12 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
+  
+  // Consensi granulari GDPR
+  const [consentPrivacyViewed, setConsentPrivacyViewed] = useState(false);
+  const [consentDataTreatment, setConsentDataTreatment] = useState(false);
+  const [consentImagesInternal, setConsentImagesInternal] = useState(false);
+  const [consentImagesPromo, setConsentImagesPromo] = useState(false);
 
   // Load society info if not provided
   useEffect(() => {
@@ -188,6 +194,13 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
         signer_address: signerInfo.address,
         signer_city: signerInfo.city,
         signer_province: signerInfo.province,
+        consent_data: {
+          privacy_viewed: consentPrivacyViewed,
+          data_treatment: consentDataTreatment,
+          images_internal: consentImagesInternal,
+          images_promo: consentImagesPromo,
+          document_version: '1.0-2026',
+        },
       };
 
       // Add minor info if applicable
@@ -223,6 +236,10 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
 
   const handleClose = () => {
     setStep(1);
+    setConsentPrivacyViewed(false);
+    setConsentDataTreatment(false);
+    setConsentImagesInternal(false);
+    setConsentImagesPromo(false);
     handleClear();
     onClose();
   };
@@ -460,6 +477,78 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                 <View style={{ height: 20 }} />
               </ScrollView>
 
+              {/* Checkbox consensi granulari GDPR */}
+              <View style={consentStyles.consentSection}>
+                <Text style={consentStyles.consentTitle}>Consensi Privacy</Text>
+
+                {/* 1. Presa visione informativa - OBBLIGATORIA */}
+                <TouchableOpacity 
+                  style={consentStyles.checkboxRow}
+                  onPress={() => setConsentPrivacyViewed(!consentPrivacyViewed)}
+                >
+                  <View style={[consentStyles.checkbox, consentPrivacyViewed && (isMinor ? consentStyles.checkboxCheckedMinor : consentStyles.checkboxChecked)]}>
+                    {consentPrivacyViewed && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  </View>
+                  <View style={consentStyles.checkboxTextContainer}>
+                    <Text style={consentStyles.checkboxLabel}>Presa visione informativa *</Text>
+                    <Text style={consentStyles.checkboxSubtext}>Dichiaro di aver letto e compreso l'informativa (obbligatorio)</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* 2. Autorizzazione trattamento dati - OBBLIGATORIA */}
+                <TouchableOpacity 
+                  style={consentStyles.checkboxRow}
+                  onPress={() => setConsentDataTreatment(!consentDataTreatment)}
+                >
+                  <View style={[consentStyles.checkbox, consentDataTreatment && (isMinor ? consentStyles.checkboxCheckedMinor : consentStyles.checkboxChecked)]}>
+                    {consentDataTreatment && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  </View>
+                  <View style={consentStyles.checkboxTextContainer}>
+                    <Text style={consentStyles.checkboxLabel}>
+                      {isMinor 
+                        ? 'Autorizzazione trattamento dati per attività sportiva *'
+                        : 'Autorizzazione trattamento dati per gestione rapporto *'}
+                    </Text>
+                    <Text style={consentStyles.checkboxSubtext}>
+                      {isMinor 
+                        ? 'Iscrizione, tesseramento, gestione amministrativa (obbligatorio)'
+                        : 'Gestione rapporto collaborativo e adempimenti normativi (obbligatorio)'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <View style={consentStyles.separator} />
+                <Text style={consentStyles.optionalLabel}>Consensi facoltativi - immagini/video</Text>
+
+                {/* 3. Immagini uso interno - FACOLTATIVA */}
+                <TouchableOpacity 
+                  style={consentStyles.checkboxRow}
+                  onPress={() => setConsentImagesInternal(!consentImagesInternal)}
+                >
+                  <View style={[consentStyles.checkbox, consentImagesInternal && (isMinor ? consentStyles.checkboxCheckedMinor : consentStyles.checkboxChecked)]}>
+                    {consentImagesInternal && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  </View>
+                  <View style={consentStyles.checkboxTextContainer}>
+                    <Text style={consentStyles.checkboxLabel}>Utilizzo immagini per uso interno</Text>
+                    <Text style={consentStyles.checkboxSubtext}>Documentazione attività, comunicazioni alle famiglie</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* 4. Immagini uso promozionale - FACOLTATIVA */}
+                <TouchableOpacity 
+                  style={consentStyles.checkboxRow}
+                  onPress={() => setConsentImagesPromo(!consentImagesPromo)}
+                >
+                  <View style={[consentStyles.checkbox, consentImagesPromo && (isMinor ? consentStyles.checkboxCheckedMinor : consentStyles.checkboxChecked)]}>
+                    {consentImagesPromo && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  </View>
+                  <View style={consentStyles.checkboxTextContainer}>
+                    <Text style={consentStyles.checkboxLabel}>Utilizzo immagini per finalità promozionali</Text>
+                    <Text style={consentStyles.checkboxSubtext}>Sito web, social network, materiale informativo della società</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
               {/* Preview PDF Button */}
               <TouchableOpacity
                 style={[styles.previewButton, loadingPreview && styles.previewButtonLoading]}
@@ -477,10 +566,16 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.nextButton, isMinor && styles.nextButtonMinor]}
-                onPress={() => setStep(2)}
+                style={[styles.nextButton, isMinor && styles.nextButtonMinor, (!consentPrivacyViewed || !consentDataTreatment) && { backgroundColor: '#ccc' }]}
+                onPress={() => {
+                  if (!consentPrivacyViewed || !consentDataTreatment) {
+                    alert('Devi confermare la presa visione dell\'informativa e autorizzare il trattamento dati per procedere.');
+                    return;
+                  }
+                  setStep(2);
+                }}
               >
-                <Text style={styles.nextButtonText}>Ho letto e compreso → Procedi alla firma</Text>
+                <Text style={styles.nextButtonText}>Ho letto e compreso - Procedi alla firma</Text>
                 <Ionicons name="arrow-forward" size={20} color="#fff" />
               </TouchableOpacity>
 
@@ -936,3 +1031,68 @@ const styles = StyleSheet.create({
 });
 
 export default GDPRPrivacyModal;
+
+const consentStyles = StyleSheet.create({
+  consentSection: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  consentTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 10,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 6,
+    gap: 10,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  checkboxChecked: {
+    backgroundColor: '#8E44AD',
+    borderColor: '#8E44AD',
+  },
+  checkboxCheckedMinor: {
+    backgroundColor: '#27AE60',
+    borderColor: '#27AE60',
+  },
+  checkboxTextContainer: {
+    flex: 1,
+  },
+  checkboxLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  checkboxSubtext: {
+    fontSize: 10,
+    color: '#888',
+    marginTop: 1,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+    marginVertical: 8,
+  },
+  optionalLabel: {
+    fontSize: 11,
+    color: '#666',
+    fontStyle: 'italic',
+    marginBottom: 6,
+  },
+});
