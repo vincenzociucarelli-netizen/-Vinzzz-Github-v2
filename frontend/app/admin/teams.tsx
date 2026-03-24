@@ -41,7 +41,7 @@ export default function TeamsScreen() {
   const [isPrimaSquadra, setIsPrimaSquadra] = useState(false);
   const [totalAmount, setTotalAmount] = useState('');
   const [installments, setInstallments] = useState<{name: string, amount: string, due_date: string}[]>([
-    { name: 'Rata 1', amount: '', due_date: '' },
+    { name: 'Iscrizione', amount: '', due_date: '' },
   ]);
   const [bankInfo, setBankInfo] = useState('');
   const [paypalEmail, setPaypalEmail] = useState('');
@@ -265,7 +265,7 @@ export default function TeamsScreen() {
     setDescription('');
     setIsPrimaSquadra(false);
     setTotalAmount('');
-    setInstallments([{ name: 'Rata 1', amount: '', due_date: '' }]);
+    setInstallments([{ name: 'Iscrizione', amount: '', due_date: '' }]);
     setBankInfo('');
     setPaypalEmail('');
     setTrainings([
@@ -628,7 +628,7 @@ export default function TeamsScreen() {
                             style={styles.pickerButton}
                             onPress={() => openVenuePickerForTraining(index)}
                           >
-                            <Text style={training.venue ? styles.pickerText : styles.pickerPlaceholder} numberOfLines={1}>
+                            <Text style={[training.venue ? styles.pickerText : styles.pickerPlaceholder, {flex: 1}]} numberOfLines={1}>
                               {training.venue || 'Seleziona'}
                             </Text>
                             <Ionicons name="chevron-down" size={16} color="#666" />
@@ -713,7 +713,7 @@ export default function TeamsScreen() {
                         style={styles.pickerButton}
                         onPress={() => openVenuePickerForMatch()}
                       >
-                        <Text style={matchDay.venue ? styles.pickerText : styles.pickerPlaceholder} numberOfLines={1}>
+                        <Text style={[matchDay.venue ? styles.pickerText : styles.pickerPlaceholder, {flex: 1}]} numberOfLines={1}>
                           {matchDay.venue || 'Seleziona'}
                         </Text>
                         <Ionicons name="chevron-down" size={16} color="#666" />
@@ -773,9 +773,9 @@ export default function TeamsScreen() {
                             style={styles.pickerButton}
                             onPress={() => openVenuePickerForRifinitura()}
                           >
-                            <Text style={rifinitura.venue ? styles.pickerText : styles.pickerPlaceholder} numberOfLines={1}>
+                          <Text style={[rifinitura.venue ? styles.pickerText : styles.pickerPlaceholder, {flex: 1}]} numberOfLines={1}>
                               {rifinitura.venue || 'Seleziona'}
-                            </Text>
+                          </Text>
                             <Ionicons name="chevron-down" size={16} color="#666" />
                           </TouchableOpacity>
                         </View>

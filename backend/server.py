@@ -672,6 +672,7 @@ class TeamCreate(BaseModel):
     description: Optional[str] = None
     is_prima_squadra: bool = False
     total_amount: float = 0.0
+    installments: Optional[List[dict]] = []
     installment_1_amount: float = 0.0
     installment_2_amount: float = 0.0
     installment_2_due_date: Optional[str] = None
@@ -682,6 +683,7 @@ class TeamCreate(BaseModel):
     venue: Optional[str] = None
     training_schedule: Optional[str] = None
     training_sessions: Optional[List[dict]] = []
+    trainings: Optional[List[dict]] = []
     match_day: Optional[dict] = None
     rifinitura: Optional[dict] = None
     championships: Optional[str] = None
@@ -5382,11 +5384,19 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
         # Try ISO format (YYYY-MM-DD)
         return datetime.fromisoformat(date_str)
     
+    # Use trainings field if provided (new format from frontend)
+    training_sessions = team_data.training_sessions or []
+    if not training_sessions and team_data.trainings:
+        training_sessions = team_data.trainings
+
     team = Team(
         name=team_data.name,
         description=team_data.description,
+        society_id=current_user.get("society_id"),
         created_by_admin_id=current_user["id"],
+        is_prima_squadra=team_data.is_prima_squadra,
         total_amount=team_data.total_amount,
+        installments=team_data.installments or [],
         installment_1_amount=team_data.installment_1_amount,
         installment_2_amount=team_data.installment_2_amount,
         installment_2_due_date=parse_date(team_data.installment_2_due_date),
@@ -5396,8 +5406,9 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
         paypal_email=team_data.paypal_email,
         venue=team_data.venue if team_data.venue else None,
         training_schedule=team_data.training_schedule if team_data.training_schedule else None,
-        training_sessions=team_data.training_sessions if team_data.training_sessions else [],
+        training_sessions=training_sessions,
         match_day=team_data.match_day if team_data.match_day else None,
+        rifinitura=team_data.rifinitura if team_data.rifinitura else None,
         championships=team_data.championships if team_data.championships else None,
         calendar_link=team_data.calendar_link if team_data.calendar_link else None
     )
