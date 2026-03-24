@@ -7,6 +7,7 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../../src/services/api';
@@ -28,6 +29,7 @@ interface Team {
   id: string;
   name: string;
   description?: string;
+  team_photo?: string;
 }
 
 export default function CoachTeamAthletes() {
@@ -198,6 +200,12 @@ export default function CoachTeamAthletes() {
         {/* Team Info */}
         {team && (
           <View style={styles.teamInfo}>
+            {team.team_photo ? (
+              <Image 
+                source={{ uri: `data:image/jpeg;base64,${team.team_photo}` }}
+                style={{ width: 80, height: 80, borderRadius: 12, alignSelf: 'center', marginBottom: 8 }}
+              />
+            ) : null}
             <View style={styles.teamInfoHeader}>
               <SportIcon size={24} />
               <Text style={styles.teamInfoName}>{team.name}</Text>

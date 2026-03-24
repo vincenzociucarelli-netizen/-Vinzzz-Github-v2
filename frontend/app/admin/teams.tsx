@@ -482,7 +482,14 @@ export default function TeamsScreen() {
           onPress={() => router.push(`/admin/team/${item.id}`)}
         >
           <View style={styles.teamIcon}>
-            <Ionicons name="people" size={24} color="#007AFF" />
+            {item.team_photo ? (
+              <Image 
+                source={{ uri: `data:image/jpeg;base64,${item.team_photo}` }}
+                style={{ width: 48, height: 48, borderRadius: 10 }}
+              />
+            ) : (
+              <Ionicons name="people" size={24} color="#007AFF" />
+            )}
           </View>
           <View style={styles.teamInfo}>
             <Text style={styles.teamName}>{item.name}</Text>
