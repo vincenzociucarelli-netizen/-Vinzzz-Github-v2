@@ -5819,7 +5819,7 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
     return result
 
 @api_router.post("/athletes", response_model=Athlete)
-async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get_current_user)):
+async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, current_user = Depends(get_current_user)):
     # Only parents can create athletes
     if current_user["role"] != UserRole.PARENT:
         raise HTTPException(status_code=403, detail="Solo genitori possono registrare atleti")
@@ -5852,17 +5852,20 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
     consent_img_internal = getattr(athlete_data, 'consent_images_internal', False)
     consent_img_promo = getattr(athlete_data, 'consent_images_promo', False)
     
+    # Get client IP
+    client_ip = request_obj.headers.get("x-forwarded-for", request_obj.client.host if request_obj.client else "unknown")
+    
     consents = {
-        "privacy_viewed": {"value": consent_privacy_viewed, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version},
-        "data_treatment": {"value": consent_data_treatment, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version},
-        "images_internal": {"value": consent_img_internal, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version},
-        "images_promo": {"value": consent_img_promo, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version},
+        "privacy_viewed": {"value": consent_privacy_viewed, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
+        "data_treatment": {"value": consent_data_treatment, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
+        "images_internal": {"value": consent_img_internal, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
+        "images_promo": {"value": consent_img_promo, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
     }
     consent_history = [
-        {"type": "privacy_viewed", "old_value": None, "new_value": consent_privacy_viewed, "timestamp": now.isoformat(), "user_id": current_user["id"]},
-        {"type": "data_treatment", "old_value": None, "new_value": consent_data_treatment, "timestamp": now.isoformat(), "user_id": current_user["id"]},
-        {"type": "images_internal", "old_value": None, "new_value": consent_img_internal, "timestamp": now.isoformat(), "user_id": current_user["id"]},
-        {"type": "images_promo", "old_value": None, "new_value": consent_img_promo, "timestamp": now.isoformat(), "user_id": current_user["id"]},
+        {"type": "privacy_viewed", "old_value": None, "new_value": consent_privacy_viewed, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
+        {"type": "data_treatment", "old_value": None, "new_value": consent_data_treatment, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
+        {"type": "images_internal", "old_value": None, "new_value": consent_img_internal, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
+        {"type": "images_promo", "old_value": None, "new_value": consent_img_promo, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
     ]
     
     # Hash data password if provided (for minors - protects sensitive data)
