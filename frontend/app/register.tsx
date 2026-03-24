@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
@@ -313,7 +314,106 @@ export default function Register() {
     </View>
   );
 
-  // STEP 2: Invite Code (for Coach/Dirigente)
+  // Helper: open document and track
+  const openDocument = (type: 'privacy' | 'terms') => {
+    const url = type === 'privacy' ? '/privacy-policy' : '/terms-of-use';
+    if (Platform.OS === 'web') {
+      window.open(url, '_blank');
+    } else {
+      Linking.openURL(url);
+    }
+    if (type === 'privacy') setHasOpenedPrivacy(true);
+    if (type === 'terms') setHasOpenedTerms(true);
+  };
+
+  const canContinueFromWelcome = hasOpenedPrivacy && hasOpenedTerms;
+
+  // After welcome, decide next step
+  const proceedFromWelcome = () => {
+    if (role === 'parent') {
+      setStep('form');
+    } else {
+      // coach, viewer, athlete, collaboratore need invite code in the form
+      setStep('form');
+    }
+  };
+
+  // STEP 2: Welcome Screen
+  const renderWelcome = () => (
+    <View style={styles.stepContainer}>
+      <TouchableOpacity style={styles.backBtn} onPress={() => { setStep('role'); setHasOpenedPrivacy(false); setHasOpenedTerms(false); }}>
+        <View style={{ backgroundColor: "rgba(0,122,255,0.15)", borderRadius: 20, padding: 6 }}>
+          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+        </View>
+      </TouchableOpacity>
+
+      <View style={styles.welcomeCard} data-testid="welcome-screen">
+        <View style={styles.welcomeIconWrapper}>
+          <Ionicons name="shield-checkmark" size={48} color="#007AFF" />
+        </View>
+        <Text style={styles.welcomeTitle}>Benvenuto in RegistraTEAM!</Text>
+        <Text style={styles.welcomeSubtitle}>
+          Prima di procedere con la registrazione, ti chiediamo di prendere visione dei seguenti documenti:
+        </Text>
+
+        {/* Privacy Policy Link */}
+        <TouchableOpacity
+          style={[styles.documentLink, hasOpenedPrivacy && styles.documentLinkVisited]}
+          onPress={() => openDocument('privacy')}
+          data-testid="open-privacy-policy-link"
+        >
+          <View style={styles.documentLinkLeft}>
+            <Ionicons
+              name={hasOpenedPrivacy ? "checkmark-circle" : "document-text-outline"}
+              size={22}
+              color={hasOpenedPrivacy ? "#4CAF50" : "#007AFF"}
+            />
+            <Text style={[styles.documentLinkText, hasOpenedPrivacy && { color: '#4CAF50' }]}>
+              Informativa sulla Privacy
+            </Text>
+          </View>
+          <Ionicons name="open-outline" size={18} color="#999" />
+        </TouchableOpacity>
+
+        {/* Terms of Use Link */}
+        <TouchableOpacity
+          style={[styles.documentLink, hasOpenedTerms && styles.documentLinkVisited]}
+          onPress={() => openDocument('terms')}
+          data-testid="open-terms-link"
+        >
+          <View style={styles.documentLinkLeft}>
+            <Ionicons
+              name={hasOpenedTerms ? "checkmark-circle" : "document-text-outline"}
+              size={22}
+              color={hasOpenedTerms ? "#4CAF50" : "#007AFF"}
+            />
+            <Text style={[styles.documentLinkText, hasOpenedTerms && { color: '#4CAF50' }]}>
+              Termini di Utilizzo
+            </Text>
+          </View>
+          <Ionicons name="open-outline" size={18} color="#999" />
+        </TouchableOpacity>
+
+        {!canContinueFromWelcome && (
+          <Text style={styles.welcomeHint}>
+            Apri entrambi i documenti per poter continuare
+          </Text>
+        )}
+
+        <TouchableOpacity
+          style={[styles.continueBtn, !canContinueFromWelcome && styles.btnDisabled]}
+          onPress={proceedFromWelcome}
+          disabled={!canContinueFromWelcome}
+          data-testid="welcome-continue-btn"
+        >
+          <Text style={styles.continueBtnText}>Continua</Text>
+          <Ionicons name="arrow-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // STEP 3: Invite Code (for Coach/Dirigente)
   const renderInviteCode = () => (
     <View style={styles.stepContainer}>
       <TouchableOpacity style={styles.backBtn} onPress={() => setStep('role')}>
@@ -591,6 +691,7 @@ export default function Register() {
         showsVerticalScrollIndicator={false}
       >
         {step === 'role' && renderRoleSelection()}
+        {step === 'welcome' && renderWelcome()}
         {step === 'invite' && renderInviteCode()}
         {step === 'form' && renderForm()}
       </ScrollView>
@@ -837,6 +938,68 @@ const styles = StyleSheet.create({
   },
   btnDisabled: {
     opacity: 0.6,
+  },
+  // Welcome Screen
+  welcomeCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  welcomeIconWrapper: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  welcomeSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 21,
+    marginBottom: 24,
+  },
+  documentLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F5F8FF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#D6E4FF',
+  },
+  documentLinkVisited: {
+    backgroundColor: '#F0FFF0',
+    borderColor: '#A5D6A7',
+  },
+  documentLinkLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  documentLinkText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  welcomeHint: {
+    fontSize: 12,
+    color: '#FF9500',
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 8,
   },
   loginLink: {
     alignItems: 'center',
