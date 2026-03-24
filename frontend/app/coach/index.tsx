@@ -53,6 +53,7 @@ export default function CoachScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dirigenti, setDirigenti] = useState<Dirigente[]>([]);
+  const [fellowCoaches, setFellowCoaches] = useState<Dirigente[]>([]);
   const [commitments, setCommitments] = useState<{
     today: any[];
     tomorrow: any[];
@@ -121,10 +122,20 @@ export default function CoachScreen() {
     }
   };
 
+  const loadFellowCoaches = async () => {
+    try {
+      const response = await api.get('/users/fellow-coaches');
+      setFellowCoaches(response.data);
+    } catch (error) {
+      console.error('Error loading fellow coaches:', error);
+    }
+  };
+
   useEffect(() => {
     loadTeams();
     loadCommitments();
     loadDirigenti();
+    loadFellowCoaches();
   }, []);
 
   // Auto-select team if only one
@@ -139,6 +150,7 @@ export default function CoachScreen() {
     await loadTeams();
     await loadCommitments();
     await loadDirigenti();
+    await loadFellowCoaches();
     setRefreshing(false);
   };
 
@@ -1201,8 +1213,9 @@ export default function CoachScreen() {
           style={styles.scrollContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
+          {/* Dirigenti Section */}
           <View style={styles.societySection}>
-            <Text style={styles.sectionTitle}>🏢 Dirigenti della Società</Text>
+            <Text style={styles.sectionTitle}>Dirigenti della Societa</Text>
             <Text style={styles.sectionSubtitle}>
               Contatta i dirigenti tramite WhatsApp
             </Text>
@@ -1213,32 +1226,32 @@ export default function CoachScreen() {
                 <Text style={styles.emptyText}>Nessun dirigente trovato</Text>
               </View>
             ) : (
-              dirigenti.map((dir) => (
+              dirigenti.map((dir) => {
+                const initials = dir.full_name ? dir.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : '?';
+                const colors = ['#1565C0', '#6A1B9A', '#00838F', '#2E7D32', '#D84315', '#4527A0', '#AD1457', '#00695C'];
+                const colorIndex = dir.full_name ? dir.full_name.charCodeAt(0) % colors.length : 0;
+                const bgColor = colors[colorIndex];
+                return (
                 <View key={dir.id} style={styles.dirigenteCard}>
                   <View style={styles.dirigenteInfo}>
-                    {dir.profile_photo ? (
-                      <Image 
-                        source={{ uri: `data:image/jpeg;base64,${dir.profile_photo}` }}
-                        style={styles.dirigentePhoto}
-                      />
-                    ) : (
-                      <View style={styles.dirigentePhotoPlaceholder}>
-                        <Ionicons name="person" size={24} color="#999" />
-                      </View>
-                    )}
+                    <View style={[styles.dirigentePhotoPlaceholder, { backgroundColor: bgColor }]}>
+                      <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>{initials}</Text>
+                    </View>
                     <View style={styles.dirigenteDetails}>
                       <Text style={styles.dirigenteName}>{dir.full_name}</Text>
                       {dir.qualification && (
-                        <Text style={styles.dirigenteRole}>📋 {dir.qualification}</Text>
+                        <Text style={styles.dirigenteRole}>{dir.qualification}</Text>
                       )}
                       <Text style={styles.dirigenteEmail}>{dir.email}</Text>
                       {dir.phone && (
                         <View style={styles.phoneRow}>
-                          <Text style={styles.dirigentePhone}>📞 {dir.phone}</Text>
+                          <TouchableOpacity onPress={() => Linking.openURL(`tel:${dir.phone}`)}>
+                            <Text style={styles.dirigentePhone}>{dir.phone}</Text>
+                          </TouchableOpacity>
                           <TouchableOpacity
                             style={styles.whatsappBtnSmall}
                             onPress={() => {
-                              const phone = dir.phone.replace(/\D/g, '');
+                              const phone = dir.phone!.replace(/\D/g, '');
                               const phoneWithCountry = phone.startsWith('39') ? phone : `39${phone}`;
                               Linking.openURL(`https://wa.me/${phoneWithCountry}`);
                             }}
@@ -1260,9 +1273,71 @@ export default function CoachScreen() {
                     </TouchableOpacity>
                   )}
                 </View>
-              ))
+                );
+              })
             )}
           </View>
+
+          {/* Allenatori Section */}
+          <View style={[styles.societySection, { marginTop: 16 }]}>
+            <Text style={styles.sectionTitle}>Allenatori della Societa</Text>
+            <Text style={styles.sectionSubtitle}>
+              I tuoi colleghi allenatori
+            </Text>
+            
+            {fellowCoaches.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="fitness-outline" size={48} color="#ccc" />
+                <Text style={styles.emptyText}>Nessun allenatore trovato</Text>
+              </View>
+            ) : (
+              fellowCoaches.map((coach) => {
+                const initials = coach.full_name ? coach.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : '?';
+                const colors = ['#E65100', '#1565C0', '#2E7D32', '#6A1B9A', '#00838F', '#D84315', '#4527A0', '#AD1457'];
+                const colorIndex = coach.full_name ? coach.full_name.charCodeAt(0) % colors.length : 0;
+                const bgColor = colors[colorIndex];
+                const isMe = coach.id === user?.id;
+                return (
+                <View key={coach.id} style={[styles.dirigenteCard, isMe && { borderLeftWidth: 3, borderLeftColor: '#1565C0' }]}>
+                  <View style={styles.dirigenteInfo}>
+                    <View style={[styles.dirigentePhotoPlaceholder, { backgroundColor: bgColor }]}>
+                      <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>{initials}</Text>
+                    </View>
+                    <View style={styles.dirigenteDetails}>
+                      <Text style={styles.dirigenteName}>
+                        {coach.full_name}{isMe ? ' (tu)' : ''}
+                      </Text>
+                      {coach.qualification && (
+                        <Text style={styles.dirigenteRole}>{coach.qualification}</Text>
+                      )}
+                      <Text style={styles.dirigenteEmail}>{coach.email}</Text>
+                      {coach.phone && !isMe && (
+                        <View style={styles.phoneRow}>
+                          <TouchableOpacity onPress={() => Linking.openURL(`tel:${coach.phone}`)}>
+                            <Text style={styles.dirigentePhone}>{coach.phone}</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.whatsappBtnSmall, { backgroundColor: '#25D366' }]}
+                            onPress={() => {
+                              const phone = coach.phone!.replace(/\D/g, '');
+                              const phoneWithCountry = phone.startsWith('39') ? phone : `39${phone}`;
+                              Linking.openURL(`https://wa.me/${phoneWithCountry}`);
+                            }}
+                          >
+                            <Ionicons name="logo-whatsapp" size={14} color="#fff" />
+                            <Text style={styles.whatsappBtnTextSmall}>WhatsApp</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </View>
+                );
+              })
+            )}
+          </View>
+
+          <View style={{ height: 40 }} />
         </ScrollView>
       ) : (
       <ScrollView

@@ -3740,6 +3740,32 @@ async def get_coaches(current_user = Depends(get_current_user)):
     
     return result
 
+@api_router.get("/users/fellow-coaches")
+async def get_fellow_coaches(current_user = Depends(get_current_user)):
+    """Get all coaches in the same society - accessible by coaches."""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH, "viewer"]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    society_id = current_user.get("society_id")
+    coaches = await db.users.find({
+        "role": UserRole.COACH,
+        "society_id": society_id,
+        "status": UserStatus.APPROVED,
+    }).to_list(500)
+    
+    result = []
+    for c in coaches:
+        result.append({
+            "id": c["id"],
+            "full_name": c.get("full_name", ""),
+            "email": c.get("email", ""),
+            "phone": c.get("phone"),
+            "qualification": c.get("qualification"),
+        })
+    return result
+
+
+
 @api_router.get("/users/collaboratorees")
 async def get_collaboratorees(current_user = Depends(get_current_user)):
     """Get all collaboratori"""
