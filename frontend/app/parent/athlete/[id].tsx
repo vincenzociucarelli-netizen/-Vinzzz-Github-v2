@@ -4506,7 +4506,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 8,
+    minWidth: 130,
   },
   printButton: {
     backgroundColor: '#007AFF',
