@@ -93,6 +93,24 @@ export default function SettingsIndex() {
           <Ionicons name="chevron-forward" size={24} color="#5856D6" />
         </TouchableOpacity>
 
+        {/* Card Consensi Privacy */}
+        <TouchableOpacity 
+          style={[styles.card, { borderColor: '#2E7D32', backgroundColor: '#E8F5E9' }]}
+          onPress={() => router.push('/admin/settings/consent-audit')}
+          data-testid="settings-consent-audit-btn"
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#2E7D32' }]}>
+            <Ionicons name="finger-print" size={32} color="#fff" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: '#2E7D32' }]}>Consensi Privacy</Text>
+            <Text style={styles.cardDescription}>
+              Audit trail dei consensi GDPR di utenti e atleti
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#2E7D32" />
+        </TouchableOpacity>
+
         {/* Card Export Dati */}
         <TouchableOpacity 
           style={[styles.card, { borderColor: '#00BCD4', backgroundColor: '#E0F7FA' }]}

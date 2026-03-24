@@ -23,6 +23,7 @@ import { Picker } from '@react-native-picker/picker';
 import PhotoViewer from '../../src/components/PhotoViewer';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ConsentManager } from '../../src/components/ConsentManager';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
@@ -1425,6 +1426,9 @@ Società sportiva: ${societyName}
           )}
         </View>
         )}
+
+          {/* Privacy Consent Management */}
+          <ConsentManager entityType="user" accentColor="#1565C0" />
 
         <View style={{ height: 40 }} />
       </ScrollView>

@@ -20,6 +20,7 @@ import { Ionicons } from '../../src/components/Icon';
 import { Picker } from '@react-native-picker/picker';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 import * as ImagePicker from 'expo-image-picker';
+import { ConsentManager } from '../../src/components/ConsentManager';
 
 export default function ParentProfile() {
   const router = useRouter();
@@ -684,6 +685,18 @@ export default function ParentProfile() {
               ))}
             </View>
           )}
+
+          {/* Privacy Consent Management */}
+          <ConsentManager entityType="user" accentColor="#E91E63" />
+          {children.filter(c => c.is_minor).map((child) => (
+            <ConsentManager
+              key={`consent-${child.id}`}
+              entityType="athlete"
+              entityId={child.id}
+              entityName={`${child.first_name} ${child.last_name}`}
+              accentColor="#E91E63"
+            />
+          ))}
 
           <View style={{ height: 40 }} />
         </ScrollView>

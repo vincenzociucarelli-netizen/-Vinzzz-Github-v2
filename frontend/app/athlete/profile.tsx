@@ -23,6 +23,7 @@ import PhotoViewer from '../../src/components/PhotoViewer';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { TrialEndModal } from '../../src/components/TrialEndModal';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
+import { ConsentManager } from '../../src/components/ConsentManager';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
@@ -1279,6 +1280,9 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </View>
           ) : null}
         </View>
+
+          {/* Privacy Consent Management */}
+          <ConsentManager entityType="user" accentColor="#4CAF50" />
 
         <View style={{ height: 120 }} />
       </ScrollView>

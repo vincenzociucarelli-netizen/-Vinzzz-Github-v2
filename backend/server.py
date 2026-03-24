@@ -20943,6 +20943,263 @@ async def trigger_certificate_notifications(current_user = Depends(get_current_u
 
 
 
+# ==================== CONSENT MANAGEMENT ENDPOINTS ====================
+
+class ConsentUpdateRequest(BaseModel):
+    images_internal: Optional[bool] = None
+    images_promo: Optional[bool] = None
+
+@api_router.get("/users/me/consents")
+async def get_my_consents(current_user = Depends(get_current_user)):
+    """Get current user's consent status."""
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "consents": 1, "consent_history": 1})
+    return {
+        "consents": user.get("consents") if user else None,
+        "consent_history": user.get("consent_history", []) if user else [],
+    }
+
+@api_router.patch("/users/me/consents")
+async def update_my_consents(
+    data: ConsentUpdateRequest,
+    req: Request,
+    current_user = Depends(get_current_user)
+):
+    """Update optional consents (images_internal, images_promo) for the current user."""
+    client_ip = req.client.host if req.client else "unknown"
+    forwarded_for = req.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+    
+    now = datetime.now(timezone.utc)
+    user = await db.users.find_one({"id": current_user["id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    existing_consents = user.get("consents") or {}
+    existing_history = user.get("consent_history") or []
+    
+    update_fields = {}
+    new_history_entries = []
+    
+    if data.images_internal is not None:
+        old_val = existing_consents.get("images_internal", {}).get("value") if existing_consents.get("images_internal") else None
+        if old_val != data.images_internal:
+            existing_consents["images_internal"] = {
+                "value": data.images_internal,
+                "timestamp": now.isoformat(),
+                "user_id": current_user["id"],
+                "document_version": "1.0",
+                "ip_address": client_ip,
+            }
+            new_history_entries.append({
+                "type": "images_internal",
+                "old_value": old_val,
+                "new_value": data.images_internal,
+                "timestamp": now.isoformat(),
+                "user_id": current_user["id"],
+                "ip_address": client_ip,
+            })
+    
+    if data.images_promo is not None:
+        old_val = existing_consents.get("images_promo", {}).get("value") if existing_consents.get("images_promo") else None
+        if old_val != data.images_promo:
+            existing_consents["images_promo"] = {
+                "value": data.images_promo,
+                "timestamp": now.isoformat(),
+                "user_id": current_user["id"],
+                "document_version": "1.0",
+                "ip_address": client_ip,
+            }
+            new_history_entries.append({
+                "type": "images_promo",
+                "old_value": old_val,
+                "new_value": data.images_promo,
+                "timestamp": now.isoformat(),
+                "user_id": current_user["id"],
+                "ip_address": client_ip,
+            })
+    
+    if new_history_entries:
+        updated_history = existing_history + new_history_entries
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": {"consents": existing_consents, "consent_history": updated_history}}
+        )
+    
+    return {"success": True, "consents": existing_consents}
+
+@api_router.get("/athletes/{athlete_id}/consents")
+async def get_athlete_consents(athlete_id: str, current_user = Depends(get_current_user)):
+    """Get an athlete's consent status. Accessible by parent of the athlete or admin."""
+    athlete = await db.athletes.find_one({"id": athlete_id}, {"_id": 0, "consents": 1, "consent_history": 1, "parent_id": 1, "second_parent_id": 1})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    is_parent = current_user["id"] in [athlete.get("parent_id"), athlete.get("second_parent_id")]
+    if current_user["role"] not in ["admin"] and not is_parent:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    return {
+        "consents": athlete.get("consents"),
+        "consent_history": athlete.get("consent_history", []),
+    }
+
+@api_router.patch("/athletes/{athlete_id}/consents")
+async def update_athlete_consents(
+    athlete_id: str,
+    data: ConsentUpdateRequest,
+    req: Request,
+    current_user = Depends(get_current_user)
+):
+    """Update optional consents for an athlete. Only parent or admin can do this."""
+    client_ip = req.client.host if req.client else "unknown"
+    forwarded_for = req.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    is_parent = current_user["id"] in [athlete.get("parent_id"), athlete.get("second_parent_id")]
+    if current_user["role"] not in ["admin"] and not is_parent:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    
+    now = datetime.now(timezone.utc)
+    existing_consents = athlete.get("consents") or {}
+    existing_history = athlete.get("consent_history") or []
+    
+    new_history_entries = []
+    
+    if data.images_internal is not None:
+        old_val = existing_consents.get("images_internal", {}).get("value") if existing_consents.get("images_internal") else None
+        if old_val != data.images_internal:
+            existing_consents["images_internal"] = {
+                "value": data.images_internal,
+                "timestamp": now.isoformat(),
+                "user_id": current_user["id"],
+                "document_version": "1.0",
+                "ip_address": client_ip,
+            }
+            new_history_entries.append({
+                "type": "images_internal",
+                "old_value": old_val,
+                "new_value": data.images_internal,
+                "timestamp": now.isoformat(),
+                "user_id": current_user["id"],
+                "ip_address": client_ip,
+            })
+    
+    if data.images_promo is not None:
+        old_val = existing_consents.get("images_promo", {}).get("value") if existing_consents.get("images_promo") else None
+        if old_val != data.images_promo:
+            existing_consents["images_promo"] = {
+                "value": data.images_promo,
+                "timestamp": now.isoformat(),
+                "user_id": current_user["id"],
+                "document_version": "1.0",
+                "ip_address": client_ip,
+            }
+            new_history_entries.append({
+                "type": "images_promo",
+                "old_value": old_val,
+                "new_value": data.images_promo,
+                "timestamp": now.isoformat(),
+                "user_id": current_user["id"],
+                "ip_address": client_ip,
+            })
+    
+    if new_history_entries:
+        updated_history = existing_history + new_history_entries
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {"consents": existing_consents, "consent_history": updated_history}}
+        )
+    
+    return {"success": True, "consents": existing_consents}
+
+@api_router.get("/admin/consent-history/{entity_type}/{entity_id}")
+async def get_consent_history_admin(
+    entity_type: str,
+    entity_id: str,
+    current_user = Depends(get_current_user)
+):
+    """Admin-only: get full consent audit trail for a user or athlete."""
+    if current_user["role"] not in ["admin"]:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    if entity_type == "user":
+        entity = await db.users.find_one({"id": entity_id}, {"_id": 0, "consents": 1, "consent_history": 1, "full_name": 1, "email": 1, "role": 1})
+    elif entity_type == "athlete":
+        entity = await db.athletes.find_one({"id": entity_id}, {"_id": 0, "consents": 1, "consent_history": 1, "full_name": 1, "first_name": 1, "last_name": 1})
+    else:
+        raise HTTPException(status_code=400, detail="entity_type deve essere 'user' o 'athlete'")
+    
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entità non trovata")
+    
+    return {
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "full_name": entity.get("full_name") or f'{entity.get("last_name", "")} {entity.get("first_name", "")}',
+        "email": entity.get("email"),
+        "role": entity.get("role"),
+        "consents": entity.get("consents"),
+        "consent_history": entity.get("consent_history", []),
+    }
+
+@api_router.get("/admin/all-consents")
+async def get_all_consents_admin(current_user = Depends(get_current_user)):
+    """Admin-only: Get consent overview for all users and athletes."""
+    if current_user["role"] not in ["admin"]:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    result = []
+    
+    # Get users with consents
+    users = await db.users.find(
+        {"role": {"$ne": "admin"}},
+        {"_id": 0, "id": 1, "full_name": 1, "email": 1, "role": 1, "consents": 1, "consent_history": 1}
+    ).to_list(500)
+    
+    for u in users:
+        consents = u.get("consents") or {}
+        history = u.get("consent_history") or []
+        if consents or history:
+            result.append({
+                "entity_type": "user",
+                "entity_id": u["id"],
+                "full_name": u.get("full_name", ""),
+                "email": u.get("email", ""),
+                "role": u.get("role", ""),
+                "consents": consents,
+                "history_count": len(history),
+                "last_change": history[-1]["timestamp"] if history else None,
+            })
+    
+    # Get athletes with consents
+    athletes = await db.athletes.find(
+        {},
+        {"_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1, "consents": 1, "consent_history": 1}
+    ).to_list(500)
+    
+    for a in athletes:
+        consents = a.get("consents") or {}
+        history = a.get("consent_history") or []
+        if consents or history:
+            result.append({
+                "entity_type": "athlete",
+                "entity_id": a["id"],
+                "full_name": a.get("full_name") or f'{a.get("last_name", "")} {a.get("first_name", "")}',
+                "role": "atleta",
+                "consents": consents,
+                "history_count": len(history),
+                "last_change": history[-1]["timestamp"] if history else None,
+            })
+    
+    return result
+
+
 app.include_router(api_router)
 
 app.add_middleware(
