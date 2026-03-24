@@ -278,16 +278,24 @@ export default function TeamsScreen() {
     setCalendarLink('');
   };
 
+  const showAlert = (title: string, message?: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(message ? `${title}: ${message}` : title);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const handleCreateTeam = async () => {
     if (!name.trim()) {
-      Alert.alert('Errore', 'Inserisci il nome della squadra');
+      showAlert('Errore', 'Inserisci il nome della squadra');
       return;
     }
 
     // Validate trainings (at least 2 complete)
     const validTrainings = trainings.filter(t => t.day && t.timeStart && t.timeEnd && t.venue);
     if (validTrainings.length < 2) {
-      Alert.alert('Errore', 'Inserisci almeno 2 allenamenti completi');
+      showAlert('Errore', 'Inserisci almeno 2 allenamenti completi');
       return;
     }
 
@@ -295,33 +303,33 @@ export default function TeamsScreen() {
     const hasPartialMatchDay = matchDay.day || matchDay.time || matchDay.venue;
     const hasCompleteMatchDay = matchDay.day && matchDay.time && matchDay.venue;
     if (hasPartialMatchDay && !hasCompleteMatchDay) {
-      Alert.alert('Errore', 'Completa tutti i campi del giorno gara oppure lasciali tutti vuoti');
+      showAlert('Errore', 'Completa tutti i campi del giorno gara oppure lasciali tutti vuoti');
       return;
     }
 
     // Solo per squadre NON prime squadre: valida i pagamenti
     if (!isPrimaSquadra) {
       if (!totalAmount) {
-        Alert.alert('Errore', 'Inserisci la quota totale annuale');
+        showAlert('Errore', 'Inserisci la quota totale annuale');
         return;
       }
 
       const validInstallments = installments.filter(inst => inst.amount && parseFloat(inst.amount) > 0);
       if (validInstallments.length === 0) {
-        Alert.alert('Errore', 'Inserisci almeno una rata');
+        showAlert('Errore', 'Inserisci almeno una rata');
         return;
       }
 
       // Check that installments from the 2nd onward have a due date
       for (let i = 1; i < validInstallments.length; i++) {
         if (!validInstallments[i].due_date) {
-          Alert.alert('Errore', `Inserisci la scadenza per ${validInstallments[i].name}`);
+          showAlert('Errore', `Inserisci la scadenza per ${validInstallments[i].name}`);
           return;
         }
       }
 
       if (!bankInfo || !paypalEmail) {
-        Alert.alert('Errore', 'Inserisci le informazioni di pagamento');
+        showAlert('Errore', 'Inserisci le informazioni di pagamento');
         return;
       }
     }
@@ -400,9 +408,9 @@ export default function TeamsScreen() {
       setModalVisible(false);
       resetForm();
       await loadTeams();
-      Alert.alert('Successo', 'Squadra creata con successo');
+      showAlert('Successo', 'Squadra creata con successo');
     } catch (error: any) {
-      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la creazione');
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la creazione');
     } finally {
       setLoading(false);
     }
