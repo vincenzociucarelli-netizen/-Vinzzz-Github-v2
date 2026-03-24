@@ -23,6 +23,8 @@ export default function RegisterAthlete() {
   const [loading, setLoading] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
   const [calculatingCF, setCalculatingCF] = useState(false);
+  const [consentImagesInternal, setConsentImagesInternal] = useState(false);
+  const [consentImagesPromo, setConsentImagesPromo] = useState(false);
   
   // Dati Anagrafici
   const [firstName, setFirstName] = useState('');
@@ -261,6 +263,8 @@ export default function RegisterAthlete() {
         team_id_2: null,
         is_trial: isTrialPeriod,
         privacy_accepted: !isTrialPeriod,  // Se non è prova, accetta privacy
+        consent_images_internal: !isTrialPeriod ? consentImagesInternal : false,
+        consent_images_promo: !isTrialPeriod ? consentImagesPromo : false,
         data_password: dataPassword || null,
       });
       
@@ -640,6 +644,40 @@ export default function RegisterAthlete() {
             </TouchableOpacity>
           )}
 
+          {/* Consensi immagini separati */}
+          {!isTrialPeriod && (
+            <View style={{marginTop: 8}}>
+              <Text style={{fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8}}>
+                Consenso utilizzo immagini (art. 7)
+              </Text>
+              <TouchableOpacity 
+                style={styles.checkboxRow}
+                onPress={() => setConsentImagesInternal(!consentImagesInternal)}
+              >
+                <View style={[styles.checkbox, consentImagesInternal && styles.checkboxChecked]}>
+                  {consentImagesInternal && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+                <View style={styles.checkboxTextContainer}>
+                  <Text style={styles.checkboxLabel}>Autorizzo l'utilizzo delle immagini per finalità interne</Text>
+                  <Text style={styles.checkboxSubtext}>Documentazione attività, comunicazioni alle famiglie</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.checkboxRow}
+                onPress={() => setConsentImagesPromo(!consentImagesPromo)}
+              >
+                <View style={[styles.checkbox, consentImagesPromo && styles.checkboxChecked]}>
+                  {consentImagesPromo && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+                <View style={styles.checkboxTextContainer}>
+                  <Text style={styles.checkboxLabel}>Autorizzo l'utilizzo delle immagini per finalità promozionali</Text>
+                  <Text style={styles.checkboxSubtext}>Sito web, social network, materiale informativo</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+
           <TouchableOpacity
             style={[styles.submitButton, loading && styles.submitButtonDisabled]}
             onPress={handleRegister}
@@ -696,13 +734,12 @@ export default function RegisterAthlete() {
                 (iscrizione, tesseramento, partecipazione a manifestazioni sportive, 
                 gestione amministrativa);{'\n\n'}
                 
-                ☑ all'utilizzo di immagini e/o video dell'atleta per finalità promozionali 
-                e comunicative della società, sia su supporti tradizionali che digitali 
-                (sito web, social network, materiale promozionale), con l'impegno che tali 
-                immagini non saranno utilizzate per fini commerciali o cedute a terzi;{'\n\n'}
-                
                 ☑ alla comunicazione dei dati a federazioni, enti di promozione sportiva, 
-                assicurazioni e altri soggetti necessari per lo svolgimento dell'attività sportiva.
+                assicurazioni e altri soggetti necessari per lo svolgimento dell'attività sportiva.{'\n\n'}
+
+                Per quanto riguarda l'utilizzo di immagini e/o video dell'atleta, si prega di 
+                esprimere separatamente il proprio consenso tramite le apposite checkbox nel modulo 
+                di registrazione (finalità interne e finalità promozionali).
               </Text>
               
               <Text style={styles.privacyNote}>

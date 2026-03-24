@@ -51,16 +51,16 @@ export default function PrivacyPolicy() {
           Il servizio RegistraTEAM fornisce l'infrastruttura tecnica necessaria al funzionamento dell'applicazione e può operare come responsabile del trattamento limitatamente alle attività tecniche di gestione, manutenzione e sicurezza del sistema. Gli amministratori tecnici del servizio possono accedere ai sistemi informatici esclusivamente per attività di manutenzione, supporto tecnico o risoluzione di problemi.
         </Text>
 
-        <Text style={styles.sectionTitle}>4. Tipologia di dati trattati</Text>
+        <Text style={styles.sectionTitle}>4. Tipologia di dati trattati e modalità</Text>
         <Text style={styles.text}>
           L'applicazione può trattare le seguenti categorie di dati:{'\n'}{'\n'}
           {'\u2022'} Nome e cognome dell'atleta{'\n'}
           {'\u2022'} Squadra di appartenenza{'\n'}
           {'\u2022'} Presenze agli allenamenti{'\n'}
           {'\u2022'} Identificativo QR associato all'atleta{'\n'}
-          {'\u2022'} Eventuale fotografia dell'atleta (se caricata dall'associazione){'\n'}
           {'\u2022'} Informazioni tecniche di accesso all'app (log di sistema){'\n'}{'\n'}
-          L'applicazione non raccoglie dati sanitari né dati sensibili.
+          L'applicazione non raccoglie dati sanitari né dati sensibili.{'\n'}{'\n'}
+          La società può avvalersi di applicativi gestionali informatici per supportare l'organizzazione delle attività sportive e amministrative. Tali strumenti hanno funzione di supporto operativo e non sostituiscono le responsabilità organizzative della società.
         </Text>
 
         <Text style={styles.sectionTitle}>5. Finalità del trattamento</Text>
@@ -77,7 +77,17 @@ export default function PrivacyPolicy() {
           I dati sono archiviati su infrastrutture informatiche situate all'interno dell'Unione Europea. Il database del sistema è ospitato su servizi cloud con data center europei (es. MongoDB Atlas con regioni UE come Milano o Francoforte). Questa scelta garantisce che il trattamento dei dati avvenga nel rispetto della normativa europea sulla protezione dei dati personali.
         </Text>
 
-        <Text style={styles.sectionTitle}>7. Sicurezza</Text>
+        <Text style={styles.sectionTitle}>7. Utilizzo di immagini e video</Text>
+        <Text style={styles.text}>
+          Durante le attività sportive potranno essere realizzate fotografie e/o riprese video degli atleti.{'\n'}{'\n'}
+          Le immagini potranno essere utilizzate:{'\n'}
+          {'\u2022'} per finalità interne alla società (es. documentazione attività, comunicazioni alle famiglie);{'\n'}
+          {'\u2022'} per eventuali attività informative e promozionali della società sportiva (es. sito web, social network, materiale informativo).{'\n'}{'\n'}
+          L'utilizzo per finalità promozionali è subordinato al consenso specifico del genitore/tutore.{'\n'}{'\n'}
+          Il consenso all'utilizzo delle immagini può essere revocato in qualsiasi momento mediante richiesta al Titolare del trattamento.
+        </Text>
+
+        <Text style={styles.sectionTitle}>8. Sicurezza</Text>
         <Text style={styles.text}>
           RegistraTEAM adotta misure tecniche e organizzative adeguate per proteggere i dati personali, tra cui:{'\n'}{'\n'}
           {'\u2022'} autenticazione degli utenti{'\n'}
@@ -86,19 +96,19 @@ export default function PrivacyPolicy() {
           {'\u2022'} monitoraggio dei log di accesso
         </Text>
 
-        <Text style={styles.sectionTitle}>8. Conservazione dei dati</Text>
+        <Text style={styles.sectionTitle}>9. Conservazione dei dati</Text>
         <Text style={styles.text}>
           I dati vengono conservati per il tempo necessario alla gestione delle attività sportive dell'associazione e possono essere modificati o eliminati dagli amministratori dell'associazione stessa.
         </Text>
 
-        <Text style={styles.sectionTitle}>9. Condivisione dei dati</Text>
+        <Text style={styles.sectionTitle}>10. Condivisione dei dati</Text>
         <Text style={styles.text}>
           I dati non vengono venduti né condivisi con terze parti per finalità commerciali. Possono essere accessibili esclusivamente a:{'\n'}{'\n'}
           {'\u2022'} allenatori e dirigenti autorizzati dall'associazione{'\n'}
           {'\u2022'} amministratori tecnici del sistema per finalità di manutenzione
         </Text>
 
-        <Text style={styles.sectionTitle}>10. Diritti degli interessati</Text>
+        <Text style={styles.sectionTitle}>11. Diritti degli interessati</Text>
         <Text style={styles.text}>
           Gli interessati possono esercitare i diritti previsti dal Regolamento Europeo (UE) 2016/679 (GDPR), tra cui:{'\n'}{'\n'}
           {'\u2022'} accesso ai propri dati personali{'\n'}
@@ -108,12 +118,12 @@ export default function PrivacyPolicy() {
           Le richieste devono essere rivolte all'associazione sportiva titolare del trattamento.
         </Text>
 
-        <Text style={styles.sectionTitle}>11. Modifiche alla presente informativa</Text>
+        <Text style={styles.sectionTitle}>12. Modifiche alla presente informativa</Text>
         <Text style={styles.text}>
           La presente Privacy Policy può essere aggiornata nel tempo. Eventuali modifiche saranno pubblicate all'interno dell'applicazione o sul sito del servizio.
         </Text>
 
-        <Text style={styles.sectionTitle}>12. Contatti</Text>
+        <Text style={styles.sectionTitle}>13. Contatti</Text>
         <Text style={styles.text}>
           Per informazioni relative al trattamento dei dati personali è possibile contattare l'associazione sportiva che utilizza l'applicazione oppure il responsabile tecnico del servizio RegistraTEAM all'indirizzo: privacy@registrateam.app
         </Text>

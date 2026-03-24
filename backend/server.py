@@ -768,6 +768,8 @@ class Athlete(BaseModel):
     trial_document_generated: bool = False  # True se il documento di prova è stato generato/firmato
     privacy_accepted: bool = False
     privacy_accepted_date: Optional[datetime] = None
+    consent_images_internal: bool = False
+    consent_images_promo: bool = False
     image_consent: bool = False
     status: str = "pending"  # pending, trial, active, blocked
     # Approvazione
@@ -871,6 +873,8 @@ class AthleteCreate(BaseModel):
     team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
     is_trial: bool = True  # Default: periodo di prova
     privacy_accepted: bool = False
+    consent_images_internal: bool = False
+    consent_images_promo: bool = False
     data_password: Optional[str] = None  # Password protezione dati sensibili
     
 class AthleteUpdate(BaseModel):
@@ -5871,6 +5875,8 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
             "team_id": athlete_data.team_id,
             "privacy_accepted": privacy_accepted,
             "privacy_accepted_date": datetime.utcnow() if privacy_accepted else None,
+            "consent_images_internal": getattr(athlete_data, 'consent_images_internal', False),
+            "consent_images_promo": getattr(athlete_data, 'consent_images_promo', False),
         }
         if athlete_data.first_name:
             reactivate_data["first_name"] = athlete_data.first_name
@@ -5933,6 +5939,8 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
         status=AthleteStatus.PENDING,  # ALL athletes start as PENDING
         privacy_accepted=privacy_accepted,
         privacy_accepted_date=datetime.utcnow() if privacy_accepted else None,
+        consent_images_internal=getattr(athlete_data, 'consent_images_internal', False),
+        consent_images_promo=getattr(athlete_data, 'consent_images_promo', False),
         data_password_hash=data_password_hash,
     )
     
