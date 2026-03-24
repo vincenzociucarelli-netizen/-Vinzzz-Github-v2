@@ -433,19 +433,24 @@ export default function Register() {
         </Text>
 
         {!canContinueFromWelcome && (
-          <Text style={styles.welcomeHint}>
-            Apri entrambi i documenti per poter continuare
-          </Text>
+          <View style={styles.welcomeHintBox}>
+            <Ionicons name="alert-circle" size={16} color="#E65100" />
+            <Text style={styles.welcomeHintText}>
+              Devi aprire entrambi i documenti prima di poter continuare
+            </Text>
+          </View>
         )}
 
         <TouchableOpacity
-          style={[styles.continueBtn, !canContinueFromWelcome && styles.btnDisabled]}
-          onPress={proceedFromWelcome}
-          disabled={!canContinueFromWelcome}
+          style={[styles.continueBtn, !canContinueFromWelcome && styles.btnDisabledStrong]}
+          onPress={() => { if (canContinueFromWelcome) proceedFromWelcome(); }}
+          activeOpacity={canContinueFromWelcome ? 0.7 : 1}
           data-testid="welcome-continue-btn"
         >
-          <Text style={styles.continueBtnText}>Continua</Text>
-          <Ionicons name="arrow-forward" size={20} color="#fff" />
+          <Text style={[styles.continueBtnText, !canContinueFromWelcome && { opacity: 0.5 }]}>
+            {canContinueFromWelcome ? 'Continua' : 'Apri i documenti'}
+          </Text>
+          <Ionicons name={canContinueFromWelcome ? "arrow-forward" : "lock-closed"} size={20} color={canContinueFromWelcome ? "#fff" : "rgba(255,255,255,0.5)"} />
         </TouchableOpacity>
       </View>
     </View>
@@ -1038,6 +1043,26 @@ const styles = StyleSheet.create({
     textAlign: 'center' as const,
     marginTop: 8,
     marginBottom: 8,
+  },
+  welcomeHintBox: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+    marginBottom: 4,
+    gap: 8,
+  },
+  welcomeHintText: {
+    fontSize: 13,
+    color: '#E65100',
+    fontWeight: '600' as const,
+  },
+  btnDisabledStrong: {
+    backgroundColor: '#B0BEC5',
+    opacity: 0.7,
   },
   welcomeInfoBlock: {
     flexDirection: 'row' as const,
