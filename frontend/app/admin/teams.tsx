@@ -31,6 +31,9 @@ export default function TeamsScreen() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [sportImage, setSportImage] = useState<string | null>(null);
+  const [availableVenues, setAvailableVenues] = useState<{name: string, address: string, city: string}[]>([]);
+  const [venuePickerVisible, setVenuePickerVisible] = useState(false);
+  const [venuePickerTarget, setVenuePickerTarget] = useState<{type: 'training' | 'match' | 'rifinitura', index?: number} | null>(null);
   
   // Form fields
   const [name, setName] = useState('');
@@ -87,6 +90,31 @@ export default function TeamsScreen() {
     }
     setDayPickerVisible(false);
     setDayPickerTarget(null);
+  };
+
+  // Venue picker functions
+  const openVenuePickerForTraining = (index: number) => {
+    setVenuePickerTarget({ type: 'training', index });
+    setVenuePickerVisible(true);
+  };
+  const openVenuePickerForMatch = () => {
+    setVenuePickerTarget({ type: 'match' });
+    setVenuePickerVisible(true);
+  };
+  const openVenuePickerForRifinitura = () => {
+    setVenuePickerTarget({ type: 'rifinitura' });
+    setVenuePickerVisible(true);
+  };
+  const handleVenueSelect = (venueName: string) => {
+    if (venuePickerTarget?.type === 'training' && venuePickerTarget.index !== undefined) {
+      updateTraining(venuePickerTarget.index, 'venue', venueName);
+    } else if (venuePickerTarget?.type === 'match') {
+      setMatchDay({...matchDay, venue: venueName});
+    } else if (venuePickerTarget?.type === 'rifinitura') {
+      setRifinitura({...rifinitura, venue: venueName});
+    }
+    setVenuePickerVisible(false);
+    setVenuePickerTarget(null);
   };
   
   const addTraining = () => {
@@ -222,6 +250,7 @@ export default function TeamsScreen() {
       setTeams(sortedTeams);
       setAthletesCounts(countsRes.data);
       setSportImage(societyRes.data.sport_image || null);
+      setAvailableVenues(societyRes.data.venues || []);
     } catch (error) {
       console.error('Error loading teams:', error);
     } finally {
@@ -531,26 +560,6 @@ export default function TeamsScreen() {
                 numberOfLines={2}
               />
 
-              {/* Prima Squadra Toggle */}
-              <TouchableOpacity 
-                style={styles.primaSquadraToggle}
-                onPress={() => setIsPrimaSquadra(!isPrimaSquadra)}
-              >
-                <Ionicons 
-                  name={isPrimaSquadra ? "checkbox" : "square-outline"} 
-                  size={26} 
-                  color={isPrimaSquadra ? "#FFD700" : "#999"} 
-                />
-                <View style={styles.primaSquadraTextContainer}>
-                  <Text style={[styles.primaSquadraLabel, isPrimaSquadra && styles.primaSquadraLabelActive]}>
-                    Prima Squadra
-                  </Text>
-                  <Text style={styles.primaSquadraHint}>
-                    Gli atleti ricevono compensi (nessun pagamento quote)
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
               <Text style={styles.sectionTitle}>🏟️ Allenamenti Settimanali</Text>
               <Text style={styles.hint}>Minimo 2, massimo 10 allenamenti</Text>
 
@@ -583,13 +592,17 @@ export default function TeamsScreen() {
                       </View>
                       <View style={styles.fieldHalf}>
                         <Text style={styles.miniLabel}>Palestra</Text>
-                        <TextInput
-                          style={styles.miniInput}
-                          placeholder="Es: Liceo Alessi"
-                          placeholderTextColor="#999"
-                          value={training.venue}
-                          onChangeText={(v) => updateTraining(index, 'venue', v)}
-                        />
+                        <View style={styles.pickerContainer}>
+                          <TouchableOpacity 
+                            style={styles.pickerButton}
+                            onPress={() => openVenuePickerForTraining(index)}
+                          >
+                            <Text style={training.venue ? styles.pickerText : styles.pickerPlaceholder} numberOfLines={1}>
+                              {training.venue || 'Seleziona'}
+                            </Text>
+                            <Ionicons name="chevron-down" size={16} color="#666" />
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     </View>
                     
@@ -664,13 +677,17 @@ export default function TeamsScreen() {
                 <View style={styles.fieldRow}>
                   <View style={styles.fieldFull}>
                     <Text style={styles.miniLabel}>Palestra Gare Casalinghe</Text>
-                    <TextInput
-                      style={styles.miniInput}
-                      placeholder="Es: Palasport Perugia"
-                      placeholderTextColor="#999"
-                      value={matchDay.venue}
-                      onChangeText={(v) => setMatchDay({...matchDay, venue: v})}
-                    />
+                    <View style={styles.pickerContainer}>
+                      <TouchableOpacity 
+                        style={styles.pickerButton}
+                        onPress={() => openVenuePickerForMatch()}
+                      >
+                        <Text style={matchDay.venue ? styles.pickerText : styles.pickerPlaceholder} numberOfLines={1}>
+                          {matchDay.venue || 'Seleziona'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={16} color="#666" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -720,13 +737,17 @@ export default function TeamsScreen() {
                     <View style={styles.fieldRow}>
                       <View style={styles.fieldFull}>
                         <Text style={styles.miniLabel}>Palestra</Text>
-                        <TextInput
-                          style={styles.miniInput}
-                          placeholder="Es: Palasport Perugia"
-                          placeholderTextColor="#999"
-                          value={rifinitura.venue}
-                          onChangeText={(v) => setRifinitura({...rifinitura, venue: v})}
-                        />
+                        <View style={styles.pickerContainer}>
+                          <TouchableOpacity 
+                            style={styles.pickerButton}
+                            onPress={() => openVenuePickerForRifinitura()}
+                          >
+                            <Text style={rifinitura.venue ? styles.pickerText : styles.pickerPlaceholder} numberOfLines={1}>
+                              {rifinitura.venue || 'Seleziona'}
+                            </Text>
+                            <Ionicons name="chevron-down" size={16} color="#666" />
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -925,6 +946,57 @@ export default function TeamsScreen() {
             <TouchableOpacity
               style={styles.dayPickerCancel}
               onPress={() => setDayPickerVisible(false)}
+            >
+              <Text style={styles.dayPickerCancelText}>Annulla</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Venue Picker Modal */}
+      <Modal
+        visible={venuePickerVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setVenuePickerVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.dayPickerOverlay}
+          activeOpacity={1}
+          onPress={() => setVenuePickerVisible(false)}
+        >
+          <View style={styles.dayPickerContent}>
+            <Text style={styles.dayPickerTitle}>Seleziona Palestra</Text>
+            {availableVenues.length === 0 ? (
+              <View style={{padding: 16, alignItems: 'center'}}>
+                <Text style={{color: '#999', fontSize: 14, textAlign: 'center'}}>
+                  Nessuna palestra configurata.{'\n'}Aggiungile in Altre Impostazioni.
+                </Text>
+              </View>
+            ) : (
+              availableVenues.map((venue) => (
+                <TouchableOpacity
+                  key={venue.name}
+                  style={styles.dayPickerItem}
+                  onPress={() => handleVenueSelect(venue.name)}
+                >
+                  <View style={{flex: 1}}>
+                    <Text style={styles.dayPickerItemText}>{venue.name}</Text>
+                    {venue.address ? (
+                      <Text style={{fontSize: 12, color: '#999'}}>{venue.address}{venue.city ? `, ${venue.city}` : ''}</Text>
+                    ) : null}
+                  </View>
+                  {((venuePickerTarget?.type === 'training' && venuePickerTarget.index !== undefined && trainings[venuePickerTarget.index]?.venue === venue.name) ||
+                    (venuePickerTarget?.type === 'match' && matchDay.venue === venue.name) ||
+                    (venuePickerTarget?.type === 'rifinitura' && rifinitura.venue === venue.name)) && (
+                    <Ionicons name="checkmark" size={20} color="#007AFF" />
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
+            <TouchableOpacity
+              style={styles.dayPickerCancel}
+              onPress={() => setVenuePickerVisible(false)}
             >
               <Text style={styles.dayPickerCancelText}>Annulla</Text>
             </TouchableOpacity>
