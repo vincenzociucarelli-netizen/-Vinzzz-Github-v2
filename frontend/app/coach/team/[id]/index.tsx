@@ -15,6 +15,7 @@ import { Ionicons } from '../../../../src/components/Icon';
 import { SportIcon } from '../../../../src/components/SportIcon';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import PhotoViewer from '../../../../src/components/PhotoViewer';
 
 interface AthleteWithCert {
   id: string;
@@ -39,6 +40,7 @@ export default function CoachTeamAthletes() {
   const [athletes, setAthletes] = useState<AthleteWithCert[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showTeamPhoto, setShowTeamPhoto] = useState(false);
 
   const loadTeam = async () => {
     try {
@@ -201,10 +203,12 @@ export default function CoachTeamAthletes() {
         {team && (
           <View style={styles.teamInfo}>
             {team.team_photo ? (
+              <TouchableOpacity onPress={() => setShowTeamPhoto(true)} data-testid="coach-team-photo">
               <Image 
                 source={{ uri: `data:image/jpeg;base64,${team.team_photo}` }}
                 style={{ width: 80, height: 80, borderRadius: 12, alignSelf: 'center', marginBottom: 8 }}
               />
+              </TouchableOpacity>
             ) : null}
             <View style={styles.teamInfoHeader}>
               <SportIcon size={24} />
@@ -267,6 +271,14 @@ export default function CoachTeamAthletes() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Team Photo Viewer */}
+      <PhotoViewer
+        visible={showTeamPhoto}
+        photo={team?.team_photo || null}
+        title={`Foto Squadra - ${team?.name || ''}`}
+        onClose={() => setShowTeamPhoto(false)}
+      />
     </View>
   );
 }

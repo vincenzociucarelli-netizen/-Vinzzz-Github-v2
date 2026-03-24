@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Image,
@@ -7,163 +7,257 @@ import {
   Text,
   StyleSheet,
   Dimensions,
-  Share,
   Platform,
-  Alert,
   StatusBar,
-  ScrollView,
 } from 'react-native';
 import { Ionicons } from './Icon';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 
 interface PhotoViewerProps {
   visible: boolean;
-  photo: string | null; // base64 or URI
+  photo: string | null;
   title?: string;
   onClose: () => void;
 }
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
 export default function PhotoViewer({ visible, photo, title, onClose }: PhotoViewerProps) {
-  const [isLandscape, setIsLandscape] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [translateX, setTranslateX] = useState(0);
+  const [translateY, setTranslateY] = useState(0);
+  const [dimensions, setDimensions] = useState(Dimensions.get('window'));
 
-  const handleShare = async () => {
-    if (!photo) return;
+  // Pinch state refs (avoid re-renders during gesture)
+  const pinchStartDist = useRef(0);
+  const pinchStartScale = useRef(1);
+  const panStartX = useRef(0);
+  const panStartY = useRef(0);
+  const panStartTransX = useRef(0);
+  const panStartTransY = useRef(0);
+  const activeTouches = useRef(0);
+  const containerRef = useRef<any>(null);
 
-    try {
-      // Prepare the image
-      let imageUri = photo;
-      
-      // If it's base64, we need to save it temporarily
-      if (photo.startsWith('data:') || !photo.startsWith('http')) {
-        const base64Data = photo.replace(/^data:image\/\w+;base64,/, '');
-        const filename = `${FileSystem.cacheDirectory}shared_photo_${Date.now()}.jpg`;
-        await FileSystem.writeAsStringAsync(filename, base64Data, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        imageUri = filename;
-      }
+  // Listen to dimension changes (phone rotation)
+  useEffect(() => {
+    const sub = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions(window);
+    });
+    return () => sub?.remove();
+  }, []);
 
-      if (Platform.OS === 'web') {
-        // Web sharing
-        if (navigator.share) {
-          await navigator.share({
-            title: title || 'Foto',
-            text: 'Condividi foto',
-          });
-        } else {
-          Alert.alert('Info', 'Condivisione non supportata su questo browser');
-        }
-      } else {
-        // Mobile sharing
-        const isAvailable = await Sharing.isAvailableAsync();
-        if (isAvailable) {
-          await Sharing.shareAsync(imageUri, {
-            mimeType: 'image/jpeg',
-            dialogTitle: title || 'Condividi foto',
-          });
-        } else {
-          Alert.alert('Errore', 'Condivisione non disponibile');
-        }
-      }
-    } catch (error) {
-      console.error('Share error:', error);
-      Alert.alert('Errore', 'Impossibile condividere la foto');
+  // Reset on open
+  useEffect(() => {
+    if (visible) {
+      setScale(1);
+      setTranslateX(0);
+      setTranslateY(0);
     }
-  };
-
-  const toggleFullscreen = () => {
-    setIsLandscape(!isLandscape);
-  };
+  }, [visible]);
 
   const getImageSource = () => {
     if (!photo) return undefined;
-    if (photo.startsWith('data:')) {
-      return { uri: photo };
-    }
-    if (photo.startsWith('http')) {
-      return { uri: photo };
-    }
-    // Assume base64 without prefix
+    if (photo.startsWith('data:')) return { uri: photo };
+    if (photo.startsWith('http')) return { uri: photo };
     return { uri: `data:image/jpeg;base64,${photo}` };
   };
 
+  const resetView = () => {
+    setScale(1);
+    setTranslateX(0);
+    setTranslateY(0);
+  };
+
+  const handleClose = () => {
+    resetView();
+    onClose();
+  };
+
+  const handleDownload = () => {
+    if (Platform.OS === 'web' && photo) {
+      const link = document.createElement('a');
+      if (photo.startsWith('data:')) {
+        link.href = photo;
+      } else if (photo.startsWith('http')) {
+        link.href = photo;
+      } else {
+        link.href = `data:image/jpeg;base64,${photo}`;
+      }
+      link.download = `${title || 'foto'}.jpg`;
+      link.click();
+    }
+  };
+
+  // ===== WEB TOUCH/GESTURE HANDLERS =====
+  const getTouchDist = (touches: any) => {
+    if (touches.length < 2) return 0;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const onTouchStart = useCallback((e: any) => {
+    const touches = e.touches || e.nativeEvent?.touches;
+    if (!touches) return;
+    activeTouches.current = touches.length;
+
+    if (touches.length === 2) {
+      // Pinch start
+      e.preventDefault?.();
+      pinchStartDist.current = getTouchDist(touches);
+      pinchStartScale.current = scale;
+    } else if (touches.length === 1 && scale > 1) {
+      // Pan start (only when zoomed)
+      panStartX.current = touches[0].clientX;
+      panStartY.current = touches[0].clientY;
+      panStartTransX.current = translateX;
+      panStartTransY.current = translateY;
+    }
+  }, [scale, translateX, translateY]);
+
+  const onTouchMove = useCallback((e: any) => {
+    const touches = e.touches || e.nativeEvent?.touches;
+    if (!touches) return;
+
+    if (touches.length === 2) {
+      // Pinch zoom
+      e.preventDefault?.();
+      const dist = getTouchDist(touches);
+      if (pinchStartDist.current > 0) {
+        const newScale = Math.min(Math.max(pinchStartScale.current * (dist / pinchStartDist.current), 0.5), 6);
+        setScale(newScale);
+        // Reset pan if zooming out to 1
+        if (newScale <= 1) {
+          setTranslateX(0);
+          setTranslateY(0);
+        }
+      }
+    } else if (touches.length === 1 && activeTouches.current === 1 && scale > 1) {
+      // Pan (only when zoomed in)
+      const dx = touches[0].clientX - panStartX.current;
+      const dy = touches[0].clientY - panStartY.current;
+      setTranslateX(panStartTransX.current + dx);
+      setTranslateY(panStartTransY.current + dy);
+    }
+  }, [scale]);
+
+  const onTouchEnd = useCallback((e: any) => {
+    const touches = e.touches || e.nativeEvent?.touches;
+    activeTouches.current = touches ? touches.length : 0;
+    // Snap back if zoomed out too much
+    if (scale < 1) {
+      setScale(1);
+      setTranslateX(0);
+      setTranslateY(0);
+    }
+  }, [scale]);
+
+  // Mouse wheel zoom for desktop
+  const onWheel = Platform.OS === 'web' ? (e: any) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+    const newScale = Math.min(Math.max(scale + delta, 0.5), 6);
+    setScale(newScale);
+    if (newScale <= 1) {
+      setTranslateX(0);
+      setTranslateY(0);
+    }
+  } : undefined;
+
+  // Double tap to zoom/reset
+  const lastTap = useRef(0);
+  const onDoubleTap = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      // Double tap
+      if (scale > 1.2) {
+        resetView();
+      } else {
+        setScale(2.5);
+      }
+    }
+    lastTap.current = now;
+  }, [scale]);
+
   if (!visible || !photo) return null;
+
+  const isLandscape = dimensions.width > dimensions.height;
+  const imgWidth = dimensions.width;
+  const imgHeight = dimensions.height - 100; // Leave room for header
 
   return (
     <Modal
       visible={visible}
       animationType="fade"
       transparent={false}
-      onRequestClose={onClose}
-      supportedOrientations={['portrait', 'landscape']}
+      onRequestClose={handleClose}
       statusBarTranslucent
+      supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}
     >
-      <StatusBar hidden={isLandscape} />
-      <View style={[styles.container, isLandscape && styles.containerLandscape]}>
+      <StatusBar hidden />
+      <View style={styles.container}>
         {/* Header */}
-        {!isLandscape && (
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.headerBtn}>
-              <Ionicons name="close" size={28} color="#fff" />
+        <View style={[styles.header, isLandscape && styles.headerLandscape]}>
+          <TouchableOpacity onPress={handleClose} style={styles.headerBtn} data-testid="photo-viewer-close">
+            <Ionicons name="close" size={26} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {title || 'Foto'}
+          </Text>
+          <View style={styles.headerActions}>
+            {scale > 1.05 && (
+              <TouchableOpacity onPress={resetView} style={styles.headerBtn} data-testid="photo-viewer-reset">
+                <Text style={styles.zoomBadge}>{Math.round(scale * 100)}%</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={handleDownload} style={styles.headerBtn} data-testid="photo-viewer-download">
+              <Ionicons name="download-outline" size={22} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {title || 'Foto'}
-            </Text>
-            <View style={styles.headerActions}>
-              <TouchableOpacity onPress={handleShare} style={styles.headerBtn}>
-                <Ionicons name="share-outline" size={24} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={toggleFullscreen} style={styles.headerBtn}>
-                <Ionicons name="expand-outline" size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
           </View>
-        )}
+        </View>
 
-        {/* Image with ScrollView for zoom */}
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          maximumZoomScale={5}
-          minimumZoomScale={1}
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
-          centerContent={true}
-          bouncesZoom={true}
+        {/* Image area with gesture handling */}
+        <View
+          style={styles.imageArea}
+          ref={containerRef}
+          {...(Platform.OS === 'web' ? {
+            onTouchStart,
+            onTouchMove,
+            onTouchEnd,
+            onWheel,
+          } : {})}
         >
-          <Image
-            source={getImageSource()}
-            style={[
-              styles.image,
-              isLandscape && styles.imageLandscape
-            ]}
-            resizeMode="contain"
-          />
-        </ScrollView>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={onDoubleTap}
+            style={styles.imageTouchable}
+          >
+            <Image
+              source={getImageSource()}
+              style={[
+                {
+                  width: imgWidth,
+                  height: imgHeight,
+                },
+                Platform.OS === 'web' ? {
+                  transform: `scale(${scale}) translate(${translateX / scale}px, ${translateY / scale}px)`,
+                  transition: activeTouches.current > 0 ? 'none' : 'transform 0.2s ease',
+                  touchAction: 'none',
+                } as any : {
+                  transform: [
+                    { scale },
+                    { translateX: translateX / scale },
+                    { translateY: translateY / scale },
+                  ],
+                },
+              ]}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        </View>
 
-        {/* Fullscreen controls */}
-        {isLandscape && (
-          <View style={styles.fullscreenControls}>
-            <TouchableOpacity onPress={toggleFullscreen} style={styles.fullscreenBtn}>
-              <Ionicons name="contract-outline" size={24} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleShare} style={styles.fullscreenBtn}>
-              <Ionicons name="share-outline" size={24} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} style={styles.fullscreenBtn}>
-              <Ionicons name="close" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Instructions */}
-        {!isLandscape && (
-          <View style={styles.instructions}>
-            <Text style={styles.instructionText}>
-              📌 Pizzica per zoomare • Tocca 🔲 per schermo intero
+        {/* Hint text - only when not zoomed */}
+        {scale <= 1.05 && (
+          <View style={styles.hintBar}>
+            <Text style={styles.hintText}>
+              {Platform.OS === 'web' ? 'Pizzica per zoomare · Doppio tap per ingrandire · Ruota il telefono' : 'Pizzica per zoomare · Doppio tap per ingrandire'}
             </Text>
           </View>
         )}
@@ -177,17 +271,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  containerLandscape: {
-    flexDirection: 'row',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingHorizontal: 10,
-    paddingBottom: 10,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingTop: Platform.OS === 'ios' ? 50 : 12,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    zIndex: 10,
+  },
+  headerLandscape: {
+    paddingTop: 8,
   },
   headerBtn: {
     padding: 8,
@@ -195,53 +290,43 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
-    marginHorizontal: 10,
+    marginHorizontal: 8,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  scrollView: {
-    flex: 1,
+  zoomBadge: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
-  scrollContent: {
-    flexGrow: 1,
+  imageArea: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  imageTouchable: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  image: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT - 150,
-  },
-  imageLandscape: {
-    width: SCREEN_HEIGHT,
-    height: SCREEN_WIDTH,
-  },
-  fullscreenControls: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    flexDirection: 'row',
-    gap: 15,
-  },
-  fullscreenBtn: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 10,
-    borderRadius: 20,
-  },
-  instructions: {
-    position: 'absolute',
-    bottom: 30,
-    left: 20,
-    right: 20,
+  hintBar: {
+    paddingVertical: 10,
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
   },
-  instructionText: {
-    color: 'rgba(255,255,255,0.7)',
+  hintText: {
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 12,
-    textAlign: 'center',
   },
 });

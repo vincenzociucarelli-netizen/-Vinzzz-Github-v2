@@ -418,15 +418,15 @@ export default function ParentProfile() {
                   style={[styles.actionButton, styles.editButton]}
                   onPress={() => setEditing(true)}
                 >
-                  <Ionicons name="pencil" size={20} color="#E91E63" />
-                  <Text style={styles.editButtonText}>Modifica Dati</Text>
+                  <Ionicons name="pencil" size={20} color="#1565C0" />
+                  <Text style={[styles.editButtonText, { color: '#1565C0' }]}>Modifica Dati</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionButton, styles.passwordButton]}
                   onPress={() => setShowChangePassword(!showChangePassword)}
                 >
-                  <Ionicons name="key" size={20} color="#E91E63" />
-                  <Text style={styles.passwordButtonText}>Password</Text>
+                  <Ionicons name="key" size={20} color="#E65100" />
+                  <Text style={[styles.passwordButtonText, { color: '#E65100' }]}>Pw d'accesso</Text>
                 </TouchableOpacity>
               </View>
               <View style={{ alignItems: 'center', marginTop: 8 }}>
@@ -435,8 +435,8 @@ export default function ParentProfile() {
                   onPress={handleOpenDataPassword}
                   data-testid="data-password-btn"
                 >
-                  <Ionicons name="shield-checkmark" size={20} color="#E91E63" />
-                  <Text style={styles.passwordButtonText}>PW Protezione Dati</Text>
+                  <Ionicons name="shield-checkmark" size={20} color="#6A1B9A" />
+                  <Text style={[styles.passwordButtonText, { color: '#6A1B9A' }]}>PW Protezione Dati</Text>
                 </TouchableOpacity>
               </View>
               </View>
@@ -767,10 +767,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   editButton: {
-    backgroundColor: '#FCE4EC',
+    backgroundColor: '#E3F2FD',
+    borderWidth: 1,
+    borderColor: '#1565C0',
   },
   editButtonText: {
-    color: '#E91E63',
+    color: '#1565C0',
     fontWeight: '600',
   },
   saveButton: {
@@ -792,17 +794,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   passwordButton: {
-    backgroundColor: '#FCE4EC',
+    backgroundColor: '#FFF3E0',
     borderWidth: 1,
-    borderColor: '#E91E63',
+    borderColor: '#E65100',
   },
   dataPasswordButton: {
-    backgroundColor: '#FCE4EC',
+    backgroundColor: '#F3E5F5',
     borderWidth: 1,
-    borderColor: '#E91E63',
+    borderColor: '#6A1B9A',
   },
   passwordButtonText: {
-    color: '#E91E63',
+    color: '#E65100',
     fontWeight: '600',
     marginLeft: 4,
   },
