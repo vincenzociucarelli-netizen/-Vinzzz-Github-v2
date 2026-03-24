@@ -378,7 +378,7 @@ export default function AdminDashboard() {
             <Text style={styles.betaBannerTitle}>Fase Beta Gratuita</Text>
           </View>
           <Text style={styles.betaBannerText}>
-            Accesso completo fino al 30/06/2026
+            Accesso completo fino al 30/09/2026
           </Text>
           <Text style={styles.betaBannerSubtext}>
             Dal 01/07/2026: versione FREE (30 tesserati) + pack aggiuntivi

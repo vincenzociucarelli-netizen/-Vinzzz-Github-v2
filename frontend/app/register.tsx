@@ -361,7 +361,7 @@ export default function Register() {
           <View style={{ flex: 1, marginLeft: 10 }}>
             <Text style={styles.welcomeInfoTitle}>I tuoi dati</Text>
             <Text style={styles.welcomeInfoText}>
-              I dati degli atleti sono gestiti dalla tua associazione sportiva. RegistraTEAM fornisce la tecnologia, ma non decide come vengono utilizzati.
+              I dati di tutti gli iscritti sono gestiti dalla tua associazione sportiva. RegistraTEAM fornisce la tecnologia, ma non decide come vengono utilizzati.
             </Text>
           </View>
         </View>
@@ -436,7 +436,7 @@ export default function Register() {
           <View style={styles.welcomeHintBox}>
             <Ionicons name="alert-circle" size={16} color="#E65100" />
             <Text style={styles.welcomeHintText}>
-              Devi aprire entrambi i documenti prima di poter continuare
+              Devi aprire, leggere e comprendere entrambi i documenti prima di poter continuare
             </Text>
           </View>
         )}

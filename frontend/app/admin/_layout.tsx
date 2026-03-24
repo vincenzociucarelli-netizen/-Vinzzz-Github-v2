@@ -32,7 +32,7 @@ La piattaforma può gestire la registrazione delle quote associative e dei contr
 
 7. VERSIONE GRATUITA DEL SERVIZIO
 RegistraTEAM è disponibile gratuitamente e senza limiti di funzionalità:
-- fino al 30 giugno 2026 con un limite massimo di 150 utenti registrati (atleti, staff, genitori) per società;
+- fino al 30 settembre 2026 con un limite massimo di 150 utenti registrati (atleti, staff, genitori) per società;
 - successivamente con limite massimo di 30 utenti registrati per società nella versione gratuita.
 Il fornitore si riserva la facoltà di modificare nel tempo limiti di utilizzo, funzionalità e condizioni economiche del servizio.
 
