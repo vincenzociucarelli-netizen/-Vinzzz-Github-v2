@@ -1,92 +1,104 @@
-import React, { useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, BackHandler } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../src/components/Icon';
 
-export default function TermsOfUse() {
+export default function TermsOfUsePage() {
   const router = useRouter();
-
-  const goBack = useCallback(() => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/login');
-    }
-  }, [router]);
-
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      goBack();
-      return true;
-    });
-    return () => backHandler.remove();
-  }, [goBack]);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.backBtn} data-testid="back-button">
-          <Ionicons name="arrow-back" size={28} color="#1565C0" />
-          <Text style={{ color: '#1565C0', fontSize: 16, marginLeft: 4, fontWeight: '600' }}>Indietro</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 8 }}>
+            <Ionicons name="chevron-back" size={24} color="#1565C0" />
+          </View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Termini di utilizzo</Text>
-        <View style={{ width: 32 }} />
+        <Text style={styles.headerTitle}>Termini di Utilizzo</Text>
+        <View style={{ width: 40 }} />
       </View>
-      <ScrollView style={styles.content} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
-        <Text style={styles.title}>Termini di Utilizzo della Piattaforma RegistraTEAM</Text>
-        <Text style={styles.date}>Versione 1.0 - Ultimo aggiornamento: 13 marzo 2026</Text>
 
-        <Text style={styles.sectionTitle}>1. Oggetto del Servizio</Text>
-        <Text style={styles.text}>
-          RegistraTEAM è una piattaforma gestionale per società sportive dilettantistiche. Consente la gestione digitale di atleti, staff tecnico, dirigenti, certificati medici, presenze, pagamenti e comunicazioni interne.
-        </Text>
+      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
+        <Text style={styles.mainTitle}>RegistraTEAM</Text>
+        <Text style={styles.subtitle}>Termini di Utilizzo</Text>
 
-        <Text style={styles.sectionTitle}>2. Attivazione del Servizio</Text>
-        <Text style={styles.text}>
-          L'attivazione di RegistraTEAM avviene da parte di un rappresentante autorizzato della società sportiva. Con l'attivazione, la società accetta le presenti condizioni d'uso e si assume la responsabilità della corretta gestione degli account interni (admin, dirigenti, allenatori, collaboratori).
-        </Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>1. Oggetto</Text>
+          <Text style={styles.sectionText}>
+            RegistraTEAM è un software gestionale per associazioni sportive dilettantistiche.
+          </Text>
+        </View>
 
-        <Text style={styles.sectionTitle}>3. Ruoli e Responsabilità</Text>
-        <Text style={styles.text}>
-          La società è responsabile dell'assegnazione dei ruoli all'interno della piattaforma. L'amministratore della piattaforma può creare e gestire utenti con diversi livelli di accesso (admin, dirigente, allenatore, collaboratore, atleta, genitore). La società garantisce che gli utenti ai quali vengono assegnati ruoli operativi siano stati preventivamente autorizzati.
-        </Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>2. Natura del servizio</Text>
+          <Text style={styles.sectionText}>
+            Il software è fornito nello stato in cui si trova, senza garanzia di assenza totale di errori o interruzioni.
+          </Text>
+        </View>
 
-        <Text style={styles.sectionTitle}>4. Trattamento dei Dati Personali</Text>
-        <Text style={styles.text}>
-          L'utilizzo della piattaforma comporta il trattamento di dati personali degli utenti registrati. La società sportiva opera in qualità di Titolare del trattamento ai sensi del Regolamento UE 2016/679 (GDPR). Il fornitore della piattaforma opera in qualità di Responsabile del trattamento, garantendo adeguate misure di sicurezza tecniche e organizzative. Ogni utente riceve un'informativa privacy al momento della registrazione e, dove previsto, presta il proprio consenso digitale. I dettagli sono indicati nell'Informativa Privacy della piattaforma.
-        </Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>3. Utilizzo</Text>
+          <Text style={styles.sectionText}>
+            L'app è utilizzata sotto la responsabilità dell'associazione sportiva.
+          </Text>
+        </View>
 
-        <Text style={styles.sectionTitle}>5. Certificati Medici Sportivi</Text>
-        <Text style={styles.text}>
-          La piattaforma consente la registrazione della data di emissione e di scadenza dei certificati medici sportivi degli atleti. Non è previsto il caricamento o la conservazione digitale di copie dei certificati medici. La custodia del documento originale resta a carico della società sportiva, in conformità con la normativa vigente.
-        </Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>4. Dati e responsabilità</Text>
+          <Text style={styles.sectionText}>
+            L'associazione è responsabile della correttezza dei dati e del rispetto delle normative.
+          </Text>
+        </View>
 
-        <Text style={styles.sectionTitle}>6. Attestati di Versamento</Text>
-        <Text style={styles.text}>
-          La piattaforma può gestire la registrazione delle quote associative e dei contributi sportivi. Non sostituisce la documentazione fiscale ufficiale. La società è tenuta a conservare i documenti contabili e fiscali secondo le normative vigenti.
-        </Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>5. Presenze</Text>
+          <Text style={styles.sectionText}>
+            Le presenze hanno valore organizzativo e statistico.
+          </Text>
+        </View>
 
-        <Text style={styles.sectionTitle}>7. Versione Gratuita del Servizio</Text>
-        <Text style={styles.text}>
-          RegistraTEAM è disponibile gratuitamente e senza limiti di funzionalità:{'\n'}{'\n'}
-          {'\u2022'} fino al 30 giugno 2026 con un limite massimo di 150 utenti registrati (atleti, staff, genitori) per società;{'\n'}
-          {'\u2022'} successivamente con limite massimo di 30 utenti registrati per società nella versione gratuita.{'\n'}{'\n'}
-          Il fornitore si riserva la facoltà di modificare nel tempo limiti di utilizzo, funzionalità e condizioni economiche del servizio.
-        </Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>6. Pagamenti</Text>
+          <Text style={styles.sectionText}>
+            I dati relativi ai pagamenti sono inseriti e gestiti dall'associazione. RegistraTEAM non è responsabile per errori nei dati, anche per usi amministrativi o fiscali.
+          </Text>
+        </View>
 
-        <Text style={styles.sectionTitle}>8. Limitazione di Responsabilità</Text>
-        <Text style={styles.text}>
-          Il fornitore non è responsabile per eventuali danni diretti o indiretti derivanti dall'uso improprio della piattaforma, dalla perdita di dati dovuta a cause esterne, o dall'utilizzo non conforme alle presenti condizioni. Il servizio è fornito "così com'è" e il fornitore si impegna a garantire la continuità del servizio nei limiti delle proprie possibilità tecniche.
-        </Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>7. Limitazione di responsabilità</Text>
+          <Text style={styles.sectionText}>
+            Il fornitore non è responsabile per perdite di dati o danni indiretti.
+          </Text>
+        </View>
 
-        <Text style={styles.sectionTitle}>9. Accettazione</Text>
-        <Text style={styles.text}>
-          L'attivazione della piattaforma implica la piena accettazione dei presenti Termini di Utilizzo. Il fornitore si riserva il diritto di aggiornare i presenti termini, dandone comunicazione agli utenti registrati tramite la piattaforma stessa o via email. L'utilizzo continuato del servizio successivamente alla modifica dei termini costituisce accettazione delle nuove condizioni. Per qualsiasi richiesta relativa ai presenti termini è possibile contattare il fornitore tramite i canali indicati nella piattaforma o nel sito web dell'attività sportiva.
-        </Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>8. Backup</Text>
+          <Text style={styles.sectionText}>
+            La gestione dei dati è responsabilità dell'associazione.
+          </Text>
+        </View>
 
-        <View style={styles.contactBox}>
-          <Text style={styles.contactText}>
-            Per informazioni: privacy@registrateam.app
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>9. Condizioni economiche</Text>
+          <Text style={styles.sectionText}>
+            RegistraTEAM è disponibile gratuitamente e senza limiti di funzionalità:{'\n\n'}
+            {'\u2022'} fino al 30 settembre 2026 con un limite massimo di 150 utenti registrati (atleti, staff, genitori) per società;{'\n'}
+            {'\u2022'} successivamente con limite massimo di 30 utenti registrati per società nella versione gratuita.{'\n\n'}
+            Superati i limiti indicati, sarà necessario sottoscrivere un piano a pagamento. Prezzi e condizioni saranno comunicati tramite l'app o il sito ufficiale.
+          </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>10. Modifiche</Text>
+          <Text style={styles.sectionText}>
+            Il servizio può essere aggiornato nel tempo.
+          </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>11. Accettazione</Text>
+          <Text style={styles.sectionText}>
+            L'utilizzo dell'app implica l'accettazione dei presenti termini.
           </Text>
         </View>
       </ScrollView>
@@ -95,31 +107,18 @@ export default function TermsOfUse() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 48,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    backgroundColor: '#1565C0',
+    paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  backBtn: { padding: 12, flexDirection: 'row', alignItems: 'center', minHeight: 44, minWidth: 44 },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#333' },
-  content: { flex: 1 },
-  title: { fontSize: 20, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },
-  date: { fontSize: 13, color: '#888', marginBottom: 20, fontStyle: 'italic' },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1565C0', marginTop: 20, marginBottom: 8 },
-  text: { fontSize: 14, color: '#444', lineHeight: 22 },
-  contactBox: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: '#E3F2FD',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  contactText: { fontSize: 14, color: '#1565C0', fontWeight: '600' },
+  backBtn: { padding: 4 },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
+  content: { flex: 1, padding: 20 },
+  mainTitle: { fontSize: 24, fontWeight: 'bold', color: '#1565C0', textAlign: 'center', marginBottom: 4 },
+  subtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 24 },
+  section: { marginBottom: 20 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 6 },
+  sectionText: { fontSize: 14, color: '#444', lineHeight: 22 },
 });

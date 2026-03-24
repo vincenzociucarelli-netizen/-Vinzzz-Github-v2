@@ -349,12 +349,65 @@ export default function Register() {
 
       <View style={styles.welcomeCard} data-testid="welcome-screen">
         <View style={styles.welcomeIconWrapper}>
-          <Ionicons name="shield-checkmark" size={48} color="#007AFF" />
+          <Ionicons name="trophy" size={48} color="#007AFF" />
         </View>
         <Text style={styles.welcomeTitle}>Benvenuto in RegistraTEAM!</Text>
         <Text style={styles.welcomeSubtitle}>
-          Prima di procedere con la registrazione, ti chiediamo di prendere visione dei seguenti documenti:
+          RegistraTEAM ti aiuta a gestire in modo semplice la tua attivita sportiva: presenze, comunicazioni e organizzazione della tua squadra.
         </Text>
+
+        <View style={styles.welcomeInfoBlock}>
+          <Ionicons name="lock-closed" size={18} color="#007AFF" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.welcomeInfoTitle}>I tuoi dati</Text>
+            <Text style={styles.welcomeInfoText}>
+              I dati degli atleti sono gestiti dalla tua associazione sportiva. RegistraTEAM fornisce la tecnologia, ma non decide come vengono utilizzati.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.welcomeInfoBlock}>
+          <Ionicons name="clipboard" size={18} color="#007AFF" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.welcomeInfoTitle}>Cosa utilizziamo</Text>
+            <Text style={styles.welcomeInfoText}>
+              Utilizziamo solo le informazioni necessarie per la gestione sportiva e amministrativa (presenze, certificati, quote).
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.welcomeInfoBlock}>
+          <Ionicons name="shield-checkmark" size={18} color="#007AFF" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.welcomeInfoTitle}>Sicurezza</Text>
+            <Text style={styles.welcomeInfoText}>
+              I dati sono archiviati in modo sicuro su server situati nell'Unione Europea.
+            </Text>
+          </View>
+        </View>
+
+        <Text style={[styles.welcomeSubtitle, { marginTop: 16, marginBottom: 8 }]}>
+          Per maggiori dettagli consulta:
+        </Text>
+
+        {/* Terms of Use Link */}
+        <TouchableOpacity
+          style={[styles.documentLink, hasOpenedTerms && styles.documentLinkVisited]}
+          onPress={() => openDocument('terms')}
+          data-testid="open-terms-link"
+        >
+          <View style={styles.documentLinkLeft}>
+            <Ionicons
+              name={hasOpenedTerms ? "checkmark-circle" : "document-text-outline"}
+              size={22}
+              color={hasOpenedTerms ? "#4CAF50" : "#007AFF"}
+            />
+            <Text style={[styles.documentLinkText, hasOpenedTerms && { color: '#4CAF50' }]}>
+              Termini di utilizzo
+            </Text>
+          </View>
+          <Ionicons name="open-outline" size={18} color="#999" />
+        </TouchableOpacity>
 
         {/* Privacy Policy Link */}
         <TouchableOpacity
@@ -375,24 +428,9 @@ export default function Register() {
           <Ionicons name="open-outline" size={18} color="#999" />
         </TouchableOpacity>
 
-        {/* Terms of Use Link */}
-        <TouchableOpacity
-          style={[styles.documentLink, hasOpenedTerms && styles.documentLinkVisited]}
-          onPress={() => openDocument('terms')}
-          data-testid="open-terms-link"
-        >
-          <View style={styles.documentLinkLeft}>
-            <Ionicons
-              name={hasOpenedTerms ? "checkmark-circle" : "document-text-outline"}
-              size={22}
-              color={hasOpenedTerms ? "#4CAF50" : "#007AFF"}
-            />
-            <Text style={[styles.documentLinkText, hasOpenedTerms && { color: '#4CAF50' }]}>
-              Termini di Utilizzo
-            </Text>
-          </View>
-          <Ionicons name="open-outline" size={18} color="#999" />
-        </TouchableOpacity>
+        <Text style={styles.welcomeAcceptText}>
+          Continuando, accetti i Termini di utilizzo e l'Informativa sulla Privacy.
+        </Text>
 
         {!canContinueFromWelcome && (
           <Text style={styles.welcomeHint}>
@@ -997,9 +1035,36 @@ const styles = StyleSheet.create({
   welcomeHint: {
     fontSize: 12,
     color: '#FF9500',
-    textAlign: 'center',
+    textAlign: 'center' as const,
     marginTop: 8,
     marginBottom: 8,
+  },
+  welcomeInfoBlock: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  welcomeInfoTitle: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: '#333',
+    marginBottom: 2,
+  },
+  welcomeInfoText: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 17,
+  },
+  welcomeAcceptText: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center' as const,
+    marginTop: 12,
+    marginBottom: 4,
+    fontStyle: 'italic' as const,
   },
   loginLink: {
     alignItems: 'center',
