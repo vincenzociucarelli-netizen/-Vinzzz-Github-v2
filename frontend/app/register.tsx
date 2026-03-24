@@ -20,8 +20,8 @@ export default function Register() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   
-  // Step management: 'role' -> 'invite' -> 'form'
-  const [step, setStep] = useState<'role' | 'invite' | 'form'>('role');
+  // Step management: 'role' -> 'welcome' -> 'invite' -> 'form'
+  const [step, setStep] = useState<'role' | 'welcome' | 'invite' | 'form'>('role');
   
   // Form fields
   const [lastName, setLastName] = useState('');
@@ -38,6 +38,8 @@ export default function Register() {
   const [showPasswords, setShowPasswords] = useState(true);
   const [validatingCode, setValidatingCode] = useState(false);
   const [societyName, setSocietyName] = useState('');
+  const [hasOpenedPrivacy, setHasOpenedPrivacy] = useState(false);
+  const [hasOpenedTerms, setHasOpenedTerms] = useState(false);
 
   // Refs
   const firstNameRef = useRef<TextInput>(null);
@@ -217,7 +219,7 @@ export default function Register() {
         style={styles.roleCard}
         onPress={() => {
           setRole('parent');
-          setStep('form'); // Parent goes directly to form
+          setStep('welcome');
         }}
         data-testid="role-parent-btn"
       >
@@ -235,7 +237,7 @@ export default function Register() {
         style={styles.roleCard}
         onPress={() => {
           setRole('athlete');
-          setStep('form'); // Adult athlete goes directly to form
+          setStep('welcome');
         }}
         data-testid="role-adult-athlete-btn"
       >
@@ -253,7 +255,7 @@ export default function Register() {
         style={styles.roleCard}
         onPress={() => {
           setRole('coach');
-          setStep('form'); // Coach goes directly to form
+          setStep('welcome');
         }}
         data-testid="role-coach-btn"
       >
@@ -271,7 +273,7 @@ export default function Register() {
         style={styles.roleCard}
         onPress={() => {
           setRole('viewer');
-          setStep('form'); // Dirigente goes directly to form
+          setStep('welcome');
         }}
         data-testid="role-dirigente-btn"
       >
@@ -289,7 +291,7 @@ export default function Register() {
         style={styles.roleCard}
         onPress={() => {
           setRole('collaboratore');
-          setStep('form'); // Collaboratore goes directly to form
+          setStep('welcome');
         }}
         data-testid="role-collaboratore-btn"
       >

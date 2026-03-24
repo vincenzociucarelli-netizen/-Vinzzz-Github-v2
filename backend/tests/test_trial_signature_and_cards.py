@@ -13,7 +13,7 @@ import jwt
 import os
 from datetime import datetime, timedelta
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://season-enroll.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://squad-mgmt-preview.preview.emergentagent.com').rstrip('/')
 JWT_SECRET = "Bsh0AAbKSGo6piMgc4B1rx4o0ilbA5bKWAf9Joem62A"
 ADMIN_USER_ID = "697fdba0d218717959e73eec"
 TEST_ATHLETE_ID_LAURA = "69ba6a5538c980c04288ef17"  # Minor with trial_document_generated=False
