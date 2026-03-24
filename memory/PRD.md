@@ -16,49 +16,44 @@ Comprehensive sports team management application for Italian volleyball societie
 
 ### Session 2026-03-24 (Latest)
 - **NEW: Welcome Screen in Registration Flow**:
-  - New "Benvenuto in RegistraTEAM!" step added between role selection and registration form
+  - New "Benvenuto in RegistraTEAM!" step between role selection and registration form
   - Mandatory viewing of Privacy Policy and Terms of Use before proceeding
-  - Documents open in new browser tabs
-  - Green checkmarks appear after each document is visited
-  - "Continua" button disabled until both documents are viewed
-  - Back button resets document tracking state
-  - Works for all 5 roles (parent, athlete, coach, dirigente, collaboratore)
-  - Tested and verified with 100% pass rate (13/13 tests)
+  - Documents open in new browser tabs, green checkmarks after visit
+  - Works for all 5 roles. Tested 100% (13/13 tests)
 
-- **Fixed**: Frontend static build using old backend URL
-- **Fixed**: Login and forgot-password not working due to stale Metro cache
-- **Fixed**: Team creation not saving `society_id`
-- **Fixed**: `Alert.alert` not working on web
-- **Removed**: "Prima Squadra" checkbox from team creation form
-- **Changed**: Venue fields -> dropdown selectable from "Altre Impostazioni"
-- **Changed**: Installments -> dynamic (1-12 rates), first rate named "Iscrizione"
-- **Changed**: Team list shows only total quota, no installment breakdown
-- **Changed**: Coach/Dirigenti photos -> initials-based avatars (privacy compliance)
-- **GDPR Privacy System (Major Feature)**:
-  - 4 granular consent checkboxes for all roles
-  - Full consent tracking: value, timestamp, user_id, document_version, IP
-  - Audit trail (consent_history) in DB
-  - PDF snapshot includes "CONSENSI ESPRESSI" section
+- **NEW: User Profile Consent Management (GDPR)**:
+  - Reusable `ConsentManager` component (`src/components/ConsentManager.tsx`)
+  - Shows 4 consent types: privacy_viewed, data_treatment, images_internal, images_promo
+  - Toggle switches for modifiable consents (images_internal, images_promo)
+  - Full change history with expand/collapse
+  - Added to Parent, Coach, and Athlete profile pages
+  - Parent profile shows consent cards for each minor athlete child
+  - Backend endpoints: GET/PATCH `/api/users/me/consents`, GET/PATCH `/api/athletes/{id}/consents`
+  - Tested 100% (13/13 backend + all frontend verified)
 
-### Previous Sessions
-- Dynamic pre-season form with conditional logic
-- Automated pre-season reminders (APScheduler)
-- "Missing parents" counter on admin dashboard
-- Configurable "Nome Sport" in settings
-- Athlete Timeline (Cronologia Atleta)
-- End of trial period workflow
-- Data deletion flow with admin approval
-- Email notification system (Brevo)
-- Certificate management
-- Payment tracking with installments
-- QR code attendance system
+- **NEW: Admin Consent Audit Trail**:
+  - New page at `/admin/settings/consent-audit`
+  - Card in admin settings menu linking to it
+  - Shows all users/athletes with consent data
+  - Badges showing consent status (green/red)
+  - Detail modal with full history, IP addresses, timestamps
+  - Backend endpoints: GET `/api/admin/all-consents`, GET `/api/admin/consent-history/{type}/{id}`
+
+### Previous Work
+- Critical bug fixes (login, registration, team creation)
+- GDPR consent tracking system (4 granular checkboxes, audit trail, PDF snapshots)
+- Dynamic team creation form (installments, venues)
+- Privacy-first avatars (initials instead of photos)
+- Team photo visibility on Admin and Coach views
+- Pre-season campaigns and automated reminders
+- Athlete timeline, certificate management, payment tracking
 
 ## Architecture
 - **Backend**: FastAPI (Python) on port 8001
 - **Frontend**: Expo React Native (Web) - served via expo tunnel
 - **Database**: MongoDB (test_database)
 - **Email**: Brevo (Sendinblue)
-- **Background Jobs**: APScheduler (certificate expiry + pre-season reminders)
+- **Background Jobs**: APScheduler
 
 ## Pending / Backlog
 
@@ -66,19 +61,32 @@ Comprehensive sports team management application for Italian volleyball societie
 - Support user manual testing and fix bugs as reported
 
 ### P1 - Upcoming
-- User consent modification page (change consents from profile)
-- Consent audit trail admin view
-- Verify team photo visibility across Admin and Coach views
+- Verify team photo visibility across Admin and Coach views (minor verification task)
 
 ### P2 - Future
 - UI per atleti con contratto (summer)
-- Refactor server.py (monolithic)
+- Refactor server.py (monolithic, 21000+ lines)
 - Re-implement Stripe payments
-- DB cleanup: viewer -> dirigente role migration
+- Refactor large frontend components (teams.tsx, etc.)
 - Publication assistance (domain + App Store)
-- Refactor large frontend components
 
 ## Key Credentials
 - Admin: pallavoloperugia@gmail.com / Test1234
 - Parent: perla@test.com / Test1234
 - Adult Athlete: luna@18piu.com / Test1234
+
+## Key API Endpoints (Consent)
+- `GET /api/users/me/consents` - Get user's consents
+- `PATCH /api/users/me/consents` - Update user consents (images only)
+- `GET /api/athletes/{id}/consents` - Get athlete consents (parent/admin)
+- `PATCH /api/athletes/{id}/consents` - Update athlete consents (parent/admin)
+- `GET /api/admin/all-consents` - All entities with consents (admin)
+- `GET /api/admin/consent-history/{type}/{id}` - Full audit trail (admin)
+
+## Key Files (Consent)
+- `backend/server.py` (~lines 20946-21200) - Consent endpoints
+- `frontend/src/components/ConsentManager.tsx` - Reusable consent card
+- `frontend/app/admin/settings/consent-audit.tsx` - Admin audit page
+- `frontend/app/parent/profile.tsx` - Parent profile with consent cards
+- `frontend/app/coach/profile.tsx` - Coach profile with consent card
+- `frontend/app/athlete/profile.tsx` - Athlete profile with consent card
