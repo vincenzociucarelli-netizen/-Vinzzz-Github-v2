@@ -40,11 +40,9 @@ export default function TeamsScreen() {
   const [description, setDescription] = useState('');
   const [isPrimaSquadra, setIsPrimaSquadra] = useState(false);
   const [totalAmount, setTotalAmount] = useState('');
-  const [installment1, setInstallment1] = useState('');
-  const [installment2, setInstallment2] = useState('');
-  const [installment2Date, setInstallment2Date] = useState('');
-  const [installment3, setInstallment3] = useState('');
-  const [installment3Date, setInstallment3Date] = useState('');
+  const [installments, setInstallments] = useState<{name: string, amount: string, due_date: string}[]>([
+    { name: 'Rata 1', amount: '', due_date: '' },
+  ]);
   const [bankInfo, setBankInfo] = useState('');
   const [paypalEmail, setPaypalEmail] = useState('');
   const [championships, setChampionships] = useState('');
@@ -267,11 +265,7 @@ export default function TeamsScreen() {
     setDescription('');
     setIsPrimaSquadra(false);
     setTotalAmount('');
-    setInstallment1('');
-    setInstallment2('');
-    setInstallment2Date('');
-    setInstallment3('');
-    setInstallment3Date('');
+    setInstallments([{ name: 'Rata 1', amount: '', due_date: '' }]);
     setBankInfo('');
     setPaypalEmail('');
     setTrainings([
@@ -307,14 +301,23 @@ export default function TeamsScreen() {
 
     // Solo per squadre NON prime squadre: valida i pagamenti
     if (!isPrimaSquadra) {
-      if (!totalAmount || !installment1 || !installment2 || !installment3) {
-        Alert.alert('Errore', 'Inserisci tutti gli importi delle rate');
+      if (!totalAmount) {
+        Alert.alert('Errore', 'Inserisci la quota totale annuale');
         return;
       }
 
-      if (!installment2Date || !installment3Date) {
-        Alert.alert('Errore', 'Inserisci le date di scadenza');
+      const validInstallments = installments.filter(inst => inst.amount && parseFloat(inst.amount) > 0);
+      if (validInstallments.length === 0) {
+        Alert.alert('Errore', 'Inserisci almeno una rata');
         return;
+      }
+
+      // Check that installments from the 2nd onward have a due date
+      for (let i = 1; i < validInstallments.length; i++) {
+        if (!validInstallments[i].due_date) {
+          Alert.alert('Errore', `Inserisci la scadenza per ${validInstallments[i].name}`);
+          return;
+        }
       }
 
       if (!bankInfo || !paypalEmail) {
@@ -354,16 +357,21 @@ export default function TeamsScreen() {
 
     setLoading(true);
     try {
-      await api.post('/teams', {
+      // Build installments for saving
+      const validInstallments = installments
+        .filter(inst => inst.amount && parseFloat(inst.amount) > 0)
+        .map(inst => ({
+          name: inst.name,
+          amount: parseFloat(inst.amount),
+          due_date: inst.due_date ? convertDate(inst.due_date) : null,
+        }));
+
+      const teamData: any = {
         name,
         description,
         is_prima_squadra: isPrimaSquadra,
         total_amount: isPrimaSquadra ? 0 : parseFloat(totalAmount),
-        installment_1_amount: isPrimaSquadra ? 0 : parseFloat(installment1),
-        installment_2_amount: isPrimaSquadra ? 0 : parseFloat(installment2),
-        installment_2_due_date: isPrimaSquadra ? null : convertDate(installment2Date),
-        installment_3_amount: isPrimaSquadra ? 0 : parseFloat(installment3),
-        installment_3_due_date: isPrimaSquadra ? null : convertDate(installment3Date),
+        installments: isPrimaSquadra ? [] : validInstallments,
         bank_info: isPrimaSquadra ? null : bankInfo,
         paypal_email: isPrimaSquadra ? null : paypalEmail,
         training_schedule: trainingScheduleStr,
@@ -372,7 +380,22 @@ export default function TeamsScreen() {
         rifinitura: hasRifinitura ? { timeStart: rifinitura.timeStart, timeEnd: rifinitura.timeEnd, venue: rifinitura.venue } : null,
         championships: championships || null,
         calendar_link: calendarLink || null,
-      });
+      };
+
+      // Legacy compatibility fields
+      if (!isPrimaSquadra && validInstallments.length >= 1) {
+        teamData.installment_1_amount = validInstallments[0].amount;
+      }
+      if (!isPrimaSquadra && validInstallments.length >= 2) {
+        teamData.installment_2_amount = validInstallments[1].amount;
+        teamData.installment_2_due_date = validInstallments[1].due_date;
+      }
+      if (!isPrimaSquadra && validInstallments.length >= 3) {
+        teamData.installment_3_amount = validInstallments[2].amount;
+        teamData.installment_3_due_date = validInstallments[2].due_date;
+      }
+
+      await api.post('/teams', teamData);
       
       setModalVisible(false);
       resetForm();
@@ -793,75 +816,68 @@ export default function TeamsScreen() {
                     keyboardType="decimal-pad"
                   />
 
-                  <Text style={styles.label}>Rata 1 - Dopo 7 giorni di prova (€) *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Es: 250"
-                    placeholderTextColor="#999"
-                    value={installment1}
-                    onChangeText={setInstallment1}
-                    keyboardType="decimal-pad"
-                  />
+                  <Text style={styles.sectionTitle}>📋 Rate</Text>
+                  
+                  {installments.map((inst, index) => (
+                    <View key={index} style={{marginBottom: 12, backgroundColor: '#f8f9fa', borderRadius: 8, padding: 12}}>
+                      <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
+                        <Text style={{fontSize: 14, fontWeight: '600', color: '#333'}}>{inst.name}</Text>
+                        {index > 0 && (
+                          <TouchableOpacity onPress={() => {
+                            const newInstallments = installments.filter((_, i) => i !== index);
+                            // Rename remaining
+                            setInstallments(newInstallments.map((inst, i) => ({ ...inst, name: `Rata ${i + 1}` })));
+                          }}>
+                            <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      <Text style={styles.miniLabel}>Importo (€) *</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Es: 250"
+                        placeholderTextColor="#999"
+                        value={inst.amount}
+                        onChangeText={(v) => {
+                          const newInstallments = [...installments];
+                          newInstallments[index] = { ...newInstallments[index], amount: v };
+                          setInstallments(newInstallments);
+                        }}
+                        keyboardType="decimal-pad"
+                      />
+                      {index > 0 && (
+                        <>
+                          <Text style={styles.miniLabel}>Scadenza *</Text>
+                          <TextInput
+                            style={styles.input}
+                            placeholder="GG/MM/AAAA"
+                            placeholderTextColor="#999"
+                            value={inst.due_date}
+                            onChangeText={(text) => {
+                              let formatted = text.replace(/[^0-9]/g, '');
+                              if (formatted.length > 2) formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
+                              if (formatted.length > 5) formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
+                              const newInstallments = [...installments];
+                              newInstallments[index] = { ...newInstallments[index], due_date: formatted };
+                              setInstallments(newInstallments);
+                            }}
+                            keyboardType="numbers-and-punctuation"
+                            maxLength={10}
+                          />
+                        </>
+                      )}
+                    </View>
+                  ))}
 
-                  <Text style={styles.label}>Rata 2 (€) *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Es: 150"
-                    placeholderTextColor="#999"
-                    value={installment2}
-                    onChangeText={setInstallment2}
-                    keyboardType="decimal-pad"
-                  />
-
-                  <Text style={styles.label}>Scadenza Rata 2 *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="GG/MM/AAAA"
-                    placeholderTextColor="#999"
-                    value={installment2Date}
-                    onChangeText={(text) => {
-                      let formatted = text.replace(/[^0-9]/g, '');
-                      if (formatted.length > 2) {
-                        formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
-                      }
-                      if (formatted.length > 5) {
-                        formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
-                      }
-                      setInstallment2Date(formatted);
-                    }}
-                    keyboardType="numbers-and-punctuation"
-                    maxLength={10}
-                  />
-
-                  <Text style={styles.label}>Rata 3 (€) *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Es: 200"
-                    placeholderTextColor="#999"
-                    value={installment3}
-                    onChangeText={setInstallment3}
-                    keyboardType="decimal-pad"
-                  />
-
-                  <Text style={styles.label}>Scadenza Rata 3 *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="GG/MM/AAAA"
-                    placeholderTextColor="#999"
-                    value={installment3Date}
-                    onChangeText={(text) => {
-                      let formatted = text.replace(/[^0-9]/g, '');
-                      if (formatted.length > 2) {
-                        formatted = formatted.slice(0, 2) + '/' + formatted.slice(2);
-                      }
-                      if (formatted.length > 5) {
-                        formatted = formatted.slice(0, 5) + '/' + formatted.slice(5, 9);
-                      }
-                      setInstallment3Date(formatted);
-                    }}
-                    keyboardType="numbers-and-punctuation"
-                    maxLength={10}
-                  />
+                  {installments.length < 12 && (
+                    <TouchableOpacity
+                      style={[styles.addButton, {marginBottom: 16}]}
+                      onPress={() => setInstallments([...installments, { name: `Rata ${installments.length + 1}`, amount: '', due_date: '' }])}
+                    >
+                      <Ionicons name="add-circle-outline" size={20} color="#007AFF" />
+                      <Text style={styles.addButtonText}>Aggiungi Rata ({installments.length}/12)</Text>
+                    </TouchableOpacity>
+                  )}
 
                   <Text style={styles.sectionTitle}>🏦 Info Pagamento</Text>
 
