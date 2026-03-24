@@ -73,6 +73,10 @@ interface CoachInfo {
 
 const DAYS_OF_WEEK = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
 
+const getInitials = (name: string) => {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+};
+
 export default function TeamDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
@@ -583,16 +587,9 @@ export default function TeamDetail() {
                         }
                       }}
                     >
-                      {coach.profile_photo_artistic || coach.profile_photo ? (
-                        <Image 
-                          source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
-                          style={styles.coachSelectionPhoto}
-                        />
-                      ) : (
-                        <View style={styles.coachSelectionPhotoPlaceholder}>
-                          <Ionicons name="person" size={18} color="#999" />
-                        </View>
-                      )}
+                      <View style={[styles.coachSelectionPhotoPlaceholder, {backgroundColor: '#007AFF'}]}>
+                        <Text style={{color: '#fff', fontSize: 12, fontWeight: '700'}}>{getInitials(coach.full_name)}</Text>
+                      </View>
                       <Text style={[
                         styles.coachSelectionName,
                         selectedCoachIds.includes(coach.id) && styles.coachSelectionNameSelected
@@ -633,16 +630,9 @@ export default function TeamDetail() {
                         }
                       }}
                     >
-                      {dirigente.profile_photo_artistic || dirigente.profile_photo ? (
-                        <Image 
-                          source={{ uri: `data:image/jpeg;base64,${dirigente.profile_photo_artistic || dirigente.profile_photo}` }}
-                          style={styles.coachSelectionPhoto}
-                        />
-                      ) : (
-                        <View style={styles.coachSelectionPhotoPlaceholder}>
-                          <Ionicons name="person" size={18} color="#999" />
-                        </View>
-                      )}
+                      <View style={[styles.coachSelectionPhotoPlaceholder, {backgroundColor: '#FF9500'}]}>
+                        <Text style={{color: '#fff', fontSize: 12, fontWeight: '700'}}>{getInitials(dirigente.full_name)}</Text>
+                      </View>
                       <Text style={[
                         styles.coachSelectionName,
                         selectedDirigenteIds.includes(dirigente.id) && styles.coachSelectionNameSelected
@@ -1083,28 +1073,9 @@ export default function TeamDetail() {
               {coachInfo.length > 0 ? (
                 coachInfo.map((coach, index) => (
                   <View key={coach.id || index} style={styles.coachCard}>
-                    <TouchableOpacity 
-                      onPress={() => {
-                        const photo = coach.profile_photo_artistic || coach.profile_photo;
-                        if (photo) {
-                          setSelectedCoachPhoto(photo);
-                          setSelectedCoachName(coach.full_name);
-                          setCoachPhotoModal(true);
-                        }
-                      }}
-                    >
-                      {coach.profile_photo_artistic || coach.profile_photo ? (
-                        <Image 
-                          source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }}
-                          style={styles.coachPhotoSmall}
-                        />
-                      ) : (
-                        <View style={styles.coachPhotoPlaceholderWithText}>
-                          <Ionicons name="camera-outline" size={20} color="#999" />
-                          <Text style={styles.noPhotoText}>Foto non{'\n'}caricata</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
+                    <View style={[styles.coachPhotoPlaceholderWithText, {backgroundColor: '#007AFF'}]}>
+                      <Text style={{color: '#fff', fontSize: 18, fontWeight: '700'}}>{getInitials(coach.full_name)}</Text>
+                    </View>
                     <View style={styles.coachInfo}>
                       <Text style={styles.coachName}>{coach.full_name}</Text>
                       {coach.phone && (
@@ -1138,28 +1109,9 @@ export default function TeamDetail() {
               {dirigentiInfo.length > 0 ? (
                 dirigentiInfo.map((dirigente, index) => (
                   <View key={dirigente.id || index} style={styles.coachCard}>
-                    <TouchableOpacity 
-                      onPress={() => {
-                        const photo = dirigente.profile_photo_artistic || dirigente.profile_photo;
-                        if (photo) {
-                          setSelectedCoachPhoto(photo);
-                          setSelectedCoachName(dirigente.full_name);
-                          setCoachPhotoModal(true);
-                        }
-                      }}
-                    >
-                      {dirigente.profile_photo_artistic || dirigente.profile_photo ? (
-                        <Image 
-                          source={{ uri: `data:image/jpeg;base64,${dirigente.profile_photo_artistic || dirigente.profile_photo}` }}
-                          style={styles.coachPhotoSmall}
-                        />
-                      ) : (
-                        <View style={styles.coachPhotoPlaceholderWithText}>
-                          <Ionicons name="camera-outline" size={20} color="#999" />
-                          <Text style={styles.noPhotoText}>Foto non{'\n'}caricata</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
+                    <View style={[styles.coachPhotoPlaceholderWithText, {backgroundColor: '#FF9500'}]}>
+                      <Text style={{color: '#fff', fontSize: 18, fontWeight: '700'}}>{getInitials(dirigente.full_name)}</Text>
+                    </View>
                     <View style={styles.coachInfo}>
                       <Text style={styles.coachName}>{dirigente.full_name}</Text>
                       {dirigente.qualification && (
