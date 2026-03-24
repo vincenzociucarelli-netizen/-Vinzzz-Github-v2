@@ -771,6 +771,10 @@ class Athlete(BaseModel):
     consent_images_internal: bool = False
     consent_images_promo: bool = False
     image_consent: bool = False
+    # Consensi granulari tracciati (GDPR compliant)
+    consents: Optional[dict] = None  # {type: {value, timestamp, user_id, document_version, ip}}
+    consent_history: Optional[list] = []  # Audit trail: [{type, old_value, new_value, timestamp, user_id, ip}]
+    privacy_pdf_snapshot: Optional[str] = None  # document_id del PDF snapshot dell'informativa accettata
     status: str = "pending"  # pending, trial, active, blocked
     # Approvazione
     approved_at: Optional[datetime] = None
@@ -875,6 +879,8 @@ class AthleteCreate(BaseModel):
     privacy_accepted: bool = False
     consent_images_internal: bool = False
     consent_images_promo: bool = False
+    consent_privacy_viewed: bool = False
+    consent_data_treatment: bool = False
     data_password: Optional[str] = None  # Password protezione dati sensibili
     
 class AthleteUpdate(BaseModel):
@@ -5838,6 +5844,27 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
     is_trial = getattr(athlete_data, 'is_trial', True)
     privacy_accepted = getattr(athlete_data, 'privacy_accepted', False)
     
+    # Build granular consent tracking (GDPR compliant)
+    now = datetime.utcnow()
+    document_version = "1.0-2026"
+    consent_privacy_viewed = getattr(athlete_data, 'consent_privacy_viewed', False)
+    consent_data_treatment = getattr(athlete_data, 'consent_data_treatment', False)
+    consent_img_internal = getattr(athlete_data, 'consent_images_internal', False)
+    consent_img_promo = getattr(athlete_data, 'consent_images_promo', False)
+    
+    consents = {
+        "privacy_viewed": {"value": consent_privacy_viewed, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version},
+        "data_treatment": {"value": consent_data_treatment, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version},
+        "images_internal": {"value": consent_img_internal, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version},
+        "images_promo": {"value": consent_img_promo, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version},
+    }
+    consent_history = [
+        {"type": "privacy_viewed", "old_value": None, "new_value": consent_privacy_viewed, "timestamp": now.isoformat(), "user_id": current_user["id"]},
+        {"type": "data_treatment", "old_value": None, "new_value": consent_data_treatment, "timestamp": now.isoformat(), "user_id": current_user["id"]},
+        {"type": "images_internal", "old_value": None, "new_value": consent_img_internal, "timestamp": now.isoformat(), "user_id": current_user["id"]},
+        {"type": "images_promo", "old_value": None, "new_value": consent_img_promo, "timestamp": now.isoformat(), "user_id": current_user["id"]},
+    ]
+    
     # Hash data password if provided (for minors - protects sensitive data)
     data_password_hash = None
     if athlete_data.data_password and is_minor:
@@ -5875,8 +5902,10 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
             "team_id": athlete_data.team_id,
             "privacy_accepted": privacy_accepted,
             "privacy_accepted_date": datetime.utcnow() if privacy_accepted else None,
-            "consent_images_internal": getattr(athlete_data, 'consent_images_internal', False),
-            "consent_images_promo": getattr(athlete_data, 'consent_images_promo', False),
+            "consent_images_internal": consent_img_internal,
+            "consent_images_promo": consent_img_promo,
+            "consents": consents,
+            "consent_history": consent_history,
         }
         if athlete_data.first_name:
             reactivate_data["first_name"] = athlete_data.first_name
@@ -5939,8 +5968,10 @@ async def create_athlete(athlete_data: AthleteCreate, current_user = Depends(get
         status=AthleteStatus.PENDING,  # ALL athletes start as PENDING
         privacy_accepted=privacy_accepted,
         privacy_accepted_date=datetime.utcnow() if privacy_accepted else None,
-        consent_images_internal=getattr(athlete_data, 'consent_images_internal', False),
-        consent_images_promo=getattr(athlete_data, 'consent_images_promo', False),
+        consent_images_internal=consent_img_internal,
+        consent_images_promo=consent_img_promo,
+        consents=consents,
+        consent_history=consent_history,
         data_password_hash=data_password_hash,
     )
     
@@ -13816,11 +13847,15 @@ def generate_privacy_consent_pdf(
     address: str,
     city: str,
     province: str,
-    signature_base64: str
+    signature_base64: str,
+    consent_data: dict = None
 ) -> bytes:
     """Generate privacy consent PDF with professional formatting like receipt"""
     if not HAS_PDF_GENERATION:
         raise HTTPException(status_code=500, detail="PDF generation not available")
+    
+    if consent_data is None:
+        consent_data = {"privacy_viewed": True, "data_treatment": True, "images_internal": False, "images_promo": False}
     
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -13909,28 +13944,50 @@ def generate_privacy_consent_pdf(
     # Consent section
     y -= 0.8*cm
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "ACCONSENTE")
+    c.drawString(2*cm, y, "CONSENSI ESPRESSI")
     
     y -= 0.8*cm
     c.setFont("Helvetica", 10)
-    declaration2 = f"al trattamento dei propri dati personali per le finalità connesse alla propria attività di {role_label} presso la società sportiva, inclusa la comunicazione a terzi per finalità strettamente connesse all'attività sportiva."
     
-    words = declaration2.split(' ')
-    lines = []
-    current_line = ""
-    for word in words:
-        test_line = current_line + " " + word if current_line else word
-        if c.stringWidth(test_line, "Helvetica", 10) < max_width:
-            current_line = test_line
-        else:
-            lines.append(current_line)
-            current_line = word
-    if current_line:
-        lines.append(current_line)
+    # 1. Presa visione informativa (obbligatorio)
+    check_privacy = "X" if consent_data.get("privacy_viewed", True) else " "
+    c.drawString(2*cm, y, f"[{check_privacy}] Presa visione dell'informativa sulla privacy (obbligatorio)")
+    y -= 0.5*cm
     
-    for line in lines:
-        c.drawString(2*cm, y, line)
-        y -= 0.5*cm
+    # 2. Autorizzazione trattamento dati (obbligatorio)
+    check_data = "X" if consent_data.get("data_treatment", True) else " "
+    c.drawString(2*cm, y, f"[{check_data}] Autorizzazione trattamento dati per attività sportiva (obbligatorio)")
+    y -= 0.5*cm
+    
+    # 3. Immagini uso interno (facoltativo)
+    check_img_internal = "X" if consent_data.get("images_internal", False) else " "
+    c.drawString(2*cm, y, f"[{check_img_internal}] Utilizzo immagini per uso interno (facoltativo)")
+    c.setFont("Helvetica", 8)
+    y -= 0.4*cm
+    c.drawString(2.5*cm, y, "Documentazione attività, comunicazioni alle famiglie")
+    y -= 0.5*cm
+    
+    # 4. Immagini uso promozionale (facoltativo)
+    c.setFont("Helvetica", 10)
+    check_img_promo = "X" if consent_data.get("images_promo", False) else " "
+    c.drawString(2*cm, y, f"[{check_img_promo}] Utilizzo immagini per finalità promozionali (facoltativo)")
+    c.setFont("Helvetica", 8)
+    y -= 0.4*cm
+    c.drawString(2.5*cm, y, "Sito web, social network, materiale informativo della società")
+    y -= 0.5*cm
+    
+    # Consent metadata
+    y -= 0.5*cm
+    c.setFont("Courier", 7)
+    c.setFillColor(colors.HexColor("#666666"))
+    c.drawString(2*cm, y, f"Versione documento: {consent_data.get('document_version', '1.0-2026')}")
+    y -= 0.3*cm
+    c.drawString(2*cm, y, f"Data consenso: {consent_data.get('timestamp', timestamp)}")
+    y -= 0.3*cm
+    c.drawString(2*cm, y, f"User ID: {consent_data.get('user_id', 'N/A')}")
+    y -= 0.3*cm
+    c.drawString(2*cm, y, f"IP: {consent_data.get('ip_address', 'N/A')}")
+    c.setFillColor(colors.black)
     
     # Signature section
     y -= 2*cm

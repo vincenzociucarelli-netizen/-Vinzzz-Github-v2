@@ -23,6 +23,8 @@ export default function RegisterAthlete() {
   const [loading, setLoading] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
   const [calculatingCF, setCalculatingCF] = useState(false);
+  const [consentPrivacyViewed, setConsentPrivacyViewed] = useState(false);
+  const [consentDataTreatment, setConsentDataTreatment] = useState(false);
   const [consentImagesInternal, setConsentImagesInternal] = useState(false);
   const [consentImagesPromo, setConsentImagesPromo] = useState(false);
   
@@ -233,6 +235,18 @@ export default function RegisterAthlete() {
       return;
     }
 
+    // Validazione consensi obbligatori (solo se non periodo di prova)
+    if (!isTrialPeriod) {
+      if (!consentPrivacyViewed) {
+        showAlert('Errore', 'Devi confermare la presa visione dell\'informativa sulla privacy');
+        return;
+      }
+      if (!consentDataTreatment) {
+        showAlert('Errore', 'Devi autorizzare il trattamento dei dati per l\'attività sportiva');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const fullName = `${lastName} ${firstName}`;
@@ -263,6 +277,8 @@ export default function RegisterAthlete() {
         team_id_2: null,
         is_trial: isTrialPeriod,
         privacy_accepted: !isTrialPeriod,  // Se non è prova, accetta privacy
+        consent_privacy_viewed: !isTrialPeriod ? consentPrivacyViewed : false,
+        consent_data_treatment: !isTrialPeriod ? consentDataTreatment : false,
         consent_images_internal: !isTrialPeriod ? consentImagesInternal : false,
         consent_images_promo: !isTrialPeriod ? consentImagesPromo : false,
         data_password: dataPassword || null,
@@ -644,12 +660,47 @@ export default function RegisterAthlete() {
             </TouchableOpacity>
           )}
 
-          {/* Consensi immagini separati */}
+          {/* Consensi granulari GDPR */}
           {!isTrialPeriod && (
             <View style={{marginTop: 8}}>
-              <Text style={{fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8}}>
-                Consenso utilizzo immagini (art. 7)
+              <Text style={{fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 12}}>
+                Consensi Privacy (GDPR)
               </Text>
+
+              {/* 1. Presa visione informativa - OBBLIGATORIA */}
+              <TouchableOpacity 
+                style={styles.checkboxRow}
+                onPress={() => setConsentPrivacyViewed(!consentPrivacyViewed)}
+              >
+                <View style={[styles.checkbox, consentPrivacyViewed && styles.checkboxChecked]}>
+                  {consentPrivacyViewed && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+                <View style={styles.checkboxTextContainer}>
+                  <Text style={styles.checkboxLabel}>Presa visione dell'informativa sulla privacy *</Text>
+                  <Text style={styles.checkboxSubtext}>Dichiaro di aver letto e compreso l'informativa (obbligatorio)</Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* 2. Autorizzazione trattamento dati - OBBLIGATORIA */}
+              <TouchableOpacity 
+                style={styles.checkboxRow}
+                onPress={() => setConsentDataTreatment(!consentDataTreatment)}
+              >
+                <View style={[styles.checkbox, consentDataTreatment && styles.checkboxChecked]}>
+                  {consentDataTreatment && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+                <View style={styles.checkboxTextContainer}>
+                  <Text style={styles.checkboxLabel}>Autorizzazione trattamento dati per attività sportiva *</Text>
+                  <Text style={styles.checkboxSubtext}>Iscrizione, tesseramento, gestione amministrativa (obbligatorio)</Text>
+                </View>
+              </TouchableOpacity>
+
+              <View style={{height: 1, backgroundColor: '#e0e0e0', marginVertical: 12}} />
+              <Text style={{fontSize: 13, color: '#666', marginBottom: 8, fontStyle: 'italic'}}>
+                Consensi facoltativi - utilizzo immagini/video
+              </Text>
+
+              {/* 3. Immagini uso interno - FACOLTATIVA */}
               <TouchableOpacity 
                 style={styles.checkboxRow}
                 onPress={() => setConsentImagesInternal(!consentImagesInternal)}
@@ -658,11 +709,12 @@ export default function RegisterAthlete() {
                   {consentImagesInternal && <Ionicons name="checkmark" size={16} color="#fff" />}
                 </View>
                 <View style={styles.checkboxTextContainer}>
-                  <Text style={styles.checkboxLabel}>Autorizzo l'utilizzo delle immagini per finalità interne</Text>
+                  <Text style={styles.checkboxLabel}>Utilizzo immagini per uso interno</Text>
                   <Text style={styles.checkboxSubtext}>Documentazione attività, comunicazioni alle famiglie</Text>
                 </View>
               </TouchableOpacity>
 
+              {/* 4. Immagini uso promozionale - FACOLTATIVA */}
               <TouchableOpacity 
                 style={styles.checkboxRow}
                 onPress={() => setConsentImagesPromo(!consentImagesPromo)}
@@ -671,8 +723,8 @@ export default function RegisterAthlete() {
                   {consentImagesPromo && <Ionicons name="checkmark" size={16} color="#fff" />}
                 </View>
                 <View style={styles.checkboxTextContainer}>
-                  <Text style={styles.checkboxLabel}>Autorizzo l'utilizzo delle immagini per finalità promozionali</Text>
-                  <Text style={styles.checkboxSubtext}>Sito web, social network, materiale informativo</Text>
+                  <Text style={styles.checkboxLabel}>Utilizzo immagini per finalità promozionali</Text>
+                  <Text style={styles.checkboxSubtext}>Sito web, social network, materiale informativo della società</Text>
                 </View>
               </TouchableOpacity>
             </View>
