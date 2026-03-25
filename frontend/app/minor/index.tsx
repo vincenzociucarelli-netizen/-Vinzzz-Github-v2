@@ -85,7 +85,7 @@ interface DashboardData {
   };
   recent_attendances: Array<{ id: string; date: string; check_in_time: string; training_slot?: string; team_name?: string }>;
   upcoming_matches: Array<{ id: string; date: string; time?: string; opponent?: string; venue?: string; home_away?: string }>;
-  trial_info: { is_trial: boolean; trial_start_date?: string; trial_end_date?: string; trial_days_remaining?: number } | null;
+  trial_info: { is_trial: boolean; trial_start_date?: string; trial_end_date?: string; trial_days_remaining?: number; waiting_first_attendance?: boolean } | null;
 }
 
 // Helper: get avatar URL from lite_emoji (supports both old emoji and new avatar IDs)
@@ -321,7 +321,11 @@ export default function MinorDashboard() {
           <View style={[styles.statusBanner, styles.trialBanner]} data-testid="minor-trial-banner">
             <Ionicons name="time" size={20} color="#FF9500" />
             <View style={{ flex: 1, marginLeft: 8 }}>
-              <Text style={styles.trialTitle}>Periodo di Prova</Text>
+              <Text style={styles.trialTitle}>
+                {data.trial_info.waiting_first_attendance
+                  ? 'In Attesa Periodo di Prova'
+                  : 'Periodo di Prova'}
+              </Text>
               {data.trial_info.trial_days_remaining !== null && data.trial_info.trial_days_remaining !== undefined && (
                 <Text style={styles.trialDays}>
                   {data.trial_info.trial_days_remaining > 0

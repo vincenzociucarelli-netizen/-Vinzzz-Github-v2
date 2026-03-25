@@ -19525,6 +19525,7 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
             "trial_start_date": athlete.get("trial_start_date"),
             "trial_end_date": athlete.get("trial_end_date"),
             "trial_days_remaining": None,
+            "waiting_first_attendance": athlete.get("trial_start_date") is None,
         }
         if athlete.get("trial_end_date"):
             try:
