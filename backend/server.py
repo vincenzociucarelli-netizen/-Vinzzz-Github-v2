@@ -6006,6 +6006,42 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     
     await db.athletes.insert_one(athlete.dict())
     
+    # === CROSS-LINKING AUTOMATICO DEI GENITORI ===
+    # Se questo genitore è già indicato come second_parent di un altro atleta,
+    # allora il parent_id di quell'atleta è il partner → auto-link come second_parent qui
+    partner_athlete = await db.athletes.find_one({
+        "second_parent_id": current_user["id"],
+        "id": {"$ne": athlete_id},  # esclude l'atleta appena creato
+    })
+    if partner_athlete and partner_athlete.get("parent_id"):
+        partner_id = partner_athlete["parent_id"]
+        partner_user = await db.users.find_one({"id": partner_id})
+        if partner_user:
+            await db.athletes.update_one(
+                {"id": athlete_id},
+                {"$set": {
+                    "second_parent_email": partner_user["email"],
+                    "second_parent_id": partner_id,
+                }}
+            )
+    else:
+        # Prova il contrario: cerca atleti dove il partner ha indicato questo genitore come second_parent_email
+        partner_athlete2 = await db.athletes.find_one({
+            "second_parent_email": current_user.get("email", "").lower(),
+            "parent_id": {"$ne": current_user["id"]},
+        })
+        if partner_athlete2 and partner_athlete2.get("parent_id"):
+            partner_id = partner_athlete2["parent_id"]
+            partner_user = await db.users.find_one({"id": partner_id})
+            if partner_user:
+                await db.athletes.update_one(
+                    {"id": athlete_id},
+                    {"$set": {
+                        "second_parent_email": partner_user["email"],
+                        "second_parent_id": partner_id,
+                    }}
+                )
+    
     # Payment records are created when admin approves the athlete
     # This ensures payments are only created for approved athletes
     
