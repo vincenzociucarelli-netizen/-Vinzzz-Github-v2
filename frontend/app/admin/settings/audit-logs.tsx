@@ -44,6 +44,7 @@ const ACTION_LABELS: Record<string, { label: string; icon: string; color: string
   qr_codes_regenerated: { label: 'QR Rigenerati', icon: 'qr-code', color: '#FF9500' },
   stripe_settings_updated: { label: 'Impostazioni Stripe', icon: 'card', color: '#6772E5' },
   stripe_keys_deleted: { label: 'Chiavi Stripe Eliminate', icon: 'card', color: '#FF3B30' },
+  trial_document_signed: { label: 'Firma Dichiarazione Prova', icon: 'pencil', color: '#7B1FA2' },
 };
 
 const ACTION_FILTERS = [
@@ -55,6 +56,7 @@ const ACTION_FILTERS = [
   { key: 'compensation_modified', label: 'Compensi' },
   { key: 'deletion_requested', label: 'Cancellazioni' },
   { key: 'document_accepted', label: 'Documenti' },
+  { key: 'trial_document_signed', label: 'Firme Prova' },
   { key: 'user_deleted', label: 'Eliminazioni' },
 ];
 
@@ -169,6 +171,8 @@ export default function AuditLogsPage() {
       case 'document_signed':
       case 'document_accepted':
         return details.document_type || log.target_user_name || '';
+      case 'trial_document_signed':
+        return details.athlete_name || log.target_user_name || '';
       case 'login':
         return '';
       case 'compensation_modified':
@@ -199,6 +203,8 @@ export default function AuditLogsPage() {
         return '';
       case 'document_signed':
         return details.signer_name || '';
+      case 'trial_document_signed':
+        return details.signer_name ? `Firmato da: ${details.signer_name}` : '';
       default:
         return '';
     }

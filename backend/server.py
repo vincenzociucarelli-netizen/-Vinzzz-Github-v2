@@ -19152,6 +19152,23 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     }
     await db.signed_documents.insert_one(signed_doc_record)
     
+    # Log nell'audit trail
+    await log_audit(
+        action="trial_document_signed",
+        user_id=current_user["id"],
+        user_email=current_user.get("email", ""),
+        society_id=athlete.get("society_id", ""),
+        target_user_id=athlete_id,
+        target_user_name=athlete.get("full_name", ""),
+        ip_address=get_real_ip(request),
+        details={
+            "document_type": "trial_declaration",
+            "athlete_name": athlete.get("full_name", ""),
+            "signer_name": parent_name,
+            "signed_at": now.isoformat()
+        }
+    )
+    
     # Send email with signed PDF to signing parent
     try:
         pdf_bytes = buffer.getvalue()
