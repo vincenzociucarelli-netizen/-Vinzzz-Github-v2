@@ -1533,17 +1533,17 @@ export default function AthleteDetail() {
               )}
             </View>
             <View style={{ 
-              backgroundColor: athlete.status === 'active' ? '#E8F5E9' : athlete.status === 'trial' ? '#FFF3E0' : athlete.status === 'deletion_requested' ? '#FFEBEE' : '#E3F2FD',
+              backgroundColor: athlete.status === 'active' ? '#E8F5E9' : athlete.status === 'trial' ? (athlete.trial_start_date ? '#FFF3E0' : '#F3E5F5') : athlete.status === 'deletion_requested' ? '#FFEBEE' : '#E3F2FD',
               paddingHorizontal: 10, 
               paddingVertical: 5, 
               borderRadius: 12
             }}>
               <Text style={{ 
-                color: athlete.status === 'active' ? '#4CAF50' : athlete.status === 'trial' ? '#FF9800' : athlete.status === 'deletion_requested' ? '#F44336' : '#1976D2',
+                color: athlete.status === 'active' ? '#4CAF50' : athlete.status === 'trial' ? (athlete.trial_start_date ? '#FF9800' : '#7B1FA2') : athlete.status === 'deletion_requested' ? '#F44336' : '#1976D2',
                 fontWeight: '600',
                 fontSize: 12
               }} data-testid="athlete-status-badge">
-                {athlete.status === 'active' ? 'Attivo' : athlete.status === 'trial' ? 'In Prova' : athlete.status === 'deletion_requested' ? 'Cancellazione' : athlete.status || ''}
+                {athlete.status === 'active' ? 'Attivo' : athlete.status === 'trial' ? (athlete.trial_start_date ? 'In Prova' : 'Attesa Prova') : athlete.status === 'deletion_requested' ? 'Cancellazione' : athlete.status || ''}
               </Text>
             </View>
           </View>
