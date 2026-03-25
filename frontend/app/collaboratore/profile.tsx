@@ -29,7 +29,7 @@ import { OnboardingTutorial, COLLABORATORE_STEPS } from '../../src/components/On
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://squad-mgmt-preview.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://consent-audit-test.preview.emergentagent.com';
 
 export default function CollaboratoreProfile() {
   const router = useRouter();

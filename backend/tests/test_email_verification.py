@@ -16,7 +16,7 @@ import os
 import uuid
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://squad-mgmt-preview.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://consent-audit-test.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 ADMIN_EMAIL = "pallavoloperugia@gmail.com"

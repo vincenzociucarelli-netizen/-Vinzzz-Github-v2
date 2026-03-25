@@ -12,7 +12,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://squad-mgmt-preview.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://consent-audit-test.preview.emergentagent.com').rstrip('/')
 
 
 class TestCodiceFiscaleCalculation:
