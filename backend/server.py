@@ -5866,7 +5866,7 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     qr_code = generate_qr_code(athlete_id)
     
     # All athletes start as PENDING and need Admin approval
-    # is_trial is preserved to know what status to set after approval
+    # EXCEPT: minors registered by their parent go directly to trial
     is_trial = getattr(athlete_data, 'is_trial', True)
     privacy_accepted = getattr(athlete_data, 'privacy_accepted', False)
     
@@ -5925,7 +5925,7 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
             "is_withdrawn": False,
             "withdrawn_date": None,
             "withdrawn_reason": None,
-            "status": AthleteStatus.PENDING,
+            "status": AthleteStatus.TRIAL if is_minor else AthleteStatus.PENDING,
             "trial_end_date": datetime.utcnow() + timedelta(days=7) if is_trial else datetime.utcnow(),
             "is_minor": is_minor,
             "team_id": athlete_data.team_id,
@@ -5994,7 +5994,7 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
         qr_code=qr_code,
         qr_identifier=qr_id,
         trial_end_date=datetime.utcnow() + timedelta(days=7) if is_trial else datetime.utcnow(),
-        status=AthleteStatus.PENDING,  # ALL athletes start as PENDING
+        status=AthleteStatus.TRIAL if is_minor else AthleteStatus.PENDING,  # Minors auto-approved to trial
         privacy_accepted=privacy_accepted,
         privacy_accepted_date=datetime.utcnow() if privacy_accepted else None,
         consent_images_internal=consent_img_internal,
