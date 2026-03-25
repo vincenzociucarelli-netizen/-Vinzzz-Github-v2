@@ -362,33 +362,38 @@ export default function RegisterAthlete() {
             data-testid="country-of-birth-input"
           />
 
-          {countryOfBirth.toUpperCase() === 'ITALIA' && (
-          <View style={styles.row}>
-            <View style={styles.flex2}>
-              <Text style={styles.label}>Luogo di Nascita *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="es: Roma"
-                placeholderTextColor="#aaa"
-                value={birthPlace}
-                onChangeText={(text) => setBirthPlace(text.toUpperCase())}
-                autoCapitalize="characters"
-              />
-            </View>
-            <View style={styles.flex1}>
-              <Text style={styles.label}>Prov. *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="RM"
-                placeholderTextColor="#aaa"
-                value={birthProvince}
-                onChangeText={(text) => setBirthProvince(text.toUpperCase())}
-                maxLength={2}
-                autoCapitalize="characters"
-              />
-            </View>
-          </View>
-          )}
+          {(() => {
+            const isItalia = countryOfBirth.toUpperCase() === 'ITALIA';
+            return (
+              <View style={styles.row}>
+                <View style={isItalia ? styles.flex2 : { flex: 1 }}>
+                  <Text style={styles.label}>Luogo di Nascita *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={isItalia ? "es: Roma" : "es: Berlino"}
+                    placeholderTextColor="#aaa"
+                    value={birthPlace}
+                    onChangeText={(text) => setBirthPlace(text.toUpperCase())}
+                    autoCapitalize="characters"
+                  />
+                </View>
+                {isItalia && (
+                  <View style={styles.flex1}>
+                    <Text style={styles.label}>Prov. *</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="RM"
+                      placeholderTextColor="#aaa"
+                      value={birthProvince}
+                      onChangeText={(text) => setBirthProvince(text.toUpperCase())}
+                      maxLength={2}
+                      autoCapitalize="characters"
+                    />
+                  </View>
+                )}
+              </View>
+            );
+          })()}
 
           <Text style={styles.label}>Sesso *</Text>
           <View style={styles.genderRow}>
