@@ -1785,12 +1785,12 @@ export default function AthleteDetail() {
           {/* Divider between sections */}
           <View style={{ height: 1, backgroundColor: '#E5E5E5', marginVertical: 8 }} />
 
-          {/* Dati Fiscali Genitore */}
+          {/* Dati del genitore che porterà in detrazione la spesa */}
           <TouchableOpacity 
             style={styles.collapsibleHeader}
             onPress={() => toggleSection('fiscali')}
           >
-            <Text style={styles.cardTitle}>Dati Fiscali Genitore</Text>
+            <Text style={styles.cardTitle}>Dati del genitore che porta in detrazione la spesa</Text>
             <Ionicons 
               name={sectionsExpanded.fiscali ? "chevron-up" : "chevron-down"} 
               size={24} 
