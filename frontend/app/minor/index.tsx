@@ -318,13 +318,13 @@ export default function MinorDashboard() {
       {/* Status Banners Row */}
       <View style={styles.statusBannersRow}>
         {data.trial_info?.is_trial && (
-          <View style={[styles.statusBanner, styles.trialBanner]} data-testid="minor-trial-banner">
-            <Ionicons name="time" size={20} color="#FF9500" />
+          <View style={[styles.statusBanner, data.trial_info.waiting_first_attendance ? styles.waitingBanner : styles.trialBanner]} data-testid="minor-trial-banner">
+            <Ionicons name={data.trial_info.waiting_first_attendance ? "hourglass" : "time"} size={20} color={data.trial_info.waiting_first_attendance ? "#7B1FA2" : "#FF9500"} />
             <View style={{ flex: 1, marginLeft: 8 }}>
-              <Text style={styles.trialTitle}>
+              <Text style={data.trial_info.waiting_first_attendance ? styles.waitingTitle : styles.trialTitle}>
                 {data.trial_info.waiting_first_attendance
                   ? 'In Attesa Periodo di Prova'
-                  : 'Periodo di Prova'}
+                  : 'In Prova'}
               </Text>
               {data.trial_info.trial_days_remaining !== null && data.trial_info.trial_days_remaining !== undefined && (
                 <Text style={styles.trialDays}>
@@ -333,6 +333,14 @@ export default function MinorDashboard() {
                     : 'Periodo terminato'}
                 </Text>
               )}
+            </View>
+          </View>
+        )}
+        {!data.trial_info?.is_trial && (
+          <View style={[styles.statusBanner, styles.activeBanner]} data-testid="minor-active-banner">
+            <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={styles.activeTitle}>In Attività</Text>
             </View>
           </View>
         )}
@@ -631,6 +639,10 @@ const styles = StyleSheet.create({
   trialBanner: { backgroundColor: '#FFF3E0', borderLeftColor: '#FF9500' },
   trialTitle: { fontSize: 13, fontWeight: '700', color: '#E65100' },
   trialDays: { fontSize: 11, color: '#FF6D00', marginTop: 2 },
+  waitingBanner: { backgroundColor: '#F3E5F5', borderLeftColor: '#7B1FA2' },
+  waitingTitle: { fontSize: 13, fontWeight: '700', color: '#7B1FA2' },
+  activeBanner: { backgroundColor: '#E8F5E9', borderLeftColor: '#2E7D32' },
+  activeTitle: { fontSize: 13, fontWeight: '700', color: '#2E7D32' },
   certBannerOk: { backgroundColor: '#E8F5E9', borderLeftColor: '#34C759' },
   certBannerWarning: { backgroundColor: '#FFF3E0', borderLeftColor: '#FF9500' },
   certBannerExpired: { backgroundColor: '#FFEBEE', borderLeftColor: '#FF3B30' },
