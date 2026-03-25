@@ -10299,7 +10299,7 @@ def get_current_training_slot(team: dict) -> Optional[dict]:
     return None
 
 @api_router.post("/attendance/check")
-async def check_attendance(attendance_data: AttendanceCreate, current_user = Depends(get_current_user)):
+async def check_attendance(attendance_data: AttendanceCreate, request: Request, current_user = Depends(get_current_user)):
     """
     Registra presenza atleta con nuova logica:
     - Verifica atleta attivo
@@ -10483,6 +10483,23 @@ async def check_attendance(attendance_data: AttendanceCreate, current_user = Dep
     # 9. Save attendance
     await db.attendances.insert_one(attendance_dict)
     
+    # 9a. Audit log for attendance
+    await log_audit(
+        action="attendance_recorded",
+        user_id=current_user["id"],
+        user_email=current_user.get("email", ""),
+        society_id=current_user.get("society_id", ""),
+        target_user_id=athlete_id,
+        target_user_name=athlete_name,
+        ip_address=get_real_ip(request),
+        details={
+            "team_name": team.get("name", ""),
+            "training_slot": training_slot or "",
+            "date": today,
+            "forced": bool(attendance_data.force),
+        }
+    )
+    
     # 9b. Trial period: if first attendance, set trial start date
     if athlete.get("is_trial") and not athlete.get("trial_start_date"):
         # Get trial settings from society
@@ -10497,6 +10514,22 @@ async def check_attendance(attendance_data: AttendanceCreate, current_user = Dep
                 "trial_end_date": trial_end.isoformat(),
                 "trial_sessions_count": 1,
             }}
+        )
+        # Audit log for trial start
+        await log_audit(
+            action="trial_started",
+            user_id=current_user["id"],
+            user_email=current_user.get("email", ""),
+            society_id=current_user.get("society_id", ""),
+            target_user_id=athlete_id,
+            target_user_name=athlete_name,
+            ip_address=get_real_ip(request),
+            details={
+                "trial_start_date": trial_start.isoformat(),
+                "trial_end_date": trial_end.isoformat(),
+                "max_days": max_days,
+                "team_name": team.get("name", ""),
+            }
         )
     elif athlete.get("is_trial") and athlete.get("trial_start_date"):
         # Increment trial sessions count

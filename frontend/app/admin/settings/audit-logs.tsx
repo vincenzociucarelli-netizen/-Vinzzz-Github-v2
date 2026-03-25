@@ -45,6 +45,8 @@ const ACTION_LABELS: Record<string, { label: string; icon: string; color: string
   stripe_settings_updated: { label: 'Impostazioni Stripe', icon: 'card', color: '#6772E5' },
   stripe_keys_deleted: { label: 'Chiavi Stripe Eliminate', icon: 'card', color: '#FF3B30' },
   trial_document_signed: { label: 'Firma Dichiarazione Prova', icon: 'pencil', color: '#7B1FA2' },
+  attendance_recorded: { label: 'Presenza Registrata', icon: 'checkmark-circle', color: '#34C759' },
+  trial_started: { label: 'Inizio Periodo di Prova', icon: 'play-circle', color: '#FF9500' },
 };
 
 const ACTION_FILTERS = [
@@ -55,8 +57,10 @@ const ACTION_FILTERS = [
   { key: 'certificate_block_changed', label: 'Blocco Cert.' },
   { key: 'compensation_modified', label: 'Compensi' },
   { key: 'deletion_requested', label: 'Cancellazioni' },
-  { key: 'document_accepted', label: 'Documenti' },
+  { key: 'document_signed', label: 'Documenti' },
   { key: 'trial_document_signed', label: 'Firme Prova' },
+  { key: 'attendance_recorded', label: 'Presenze' },
+  { key: 'trial_started', label: 'Inizio Prova' },
   { key: 'user_deleted', label: 'Eliminazioni' },
 ];
 
@@ -173,6 +177,10 @@ export default function AuditLogsPage() {
         return details.document_type || log.target_user_name || '';
       case 'trial_document_signed':
         return details.athlete_name || log.target_user_name || '';
+      case 'attendance_recorded':
+        return log.target_user_name || '';
+      case 'trial_started':
+        return log.target_user_name || '';
       case 'login':
         return '';
       case 'compensation_modified':
@@ -205,6 +213,10 @@ export default function AuditLogsPage() {
         return details.signer_name || '';
       case 'trial_document_signed':
         return details.signer_name ? `Firmato da: ${details.signer_name}` : '';
+      case 'attendance_recorded':
+        return details.team_name ? `Squadra: ${details.team_name}` : '';
+      case 'trial_started':
+        return details.team_name ? `Squadra: ${details.team_name}` : '';
       default:
         return '';
     }
@@ -306,12 +318,12 @@ export default function AuditLogsPage() {
         <View style={styles.logContent}>
           <View style={styles.logHeader}>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: 4 }}>
                 <Text style={[styles.logAction, { color: actionInfo.color }]}>
                   {actionInfo.label}
                 </Text>
                 {title ? (
-                  <Text style={{ fontSize: 12, color: '#333', fontWeight: '500' }} numberOfLines={1}>
+                  <Text style={{ fontSize: 12, color: '#333', fontWeight: '500', flexShrink: 1 }}>
                     - {title}
                   </Text>
                 ) : null}

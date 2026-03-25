@@ -30,6 +30,10 @@ Comprehensive sports team management application for Italian volleyball societie
 - **Bug Fix**: Fixed "Luogo di Nascita" field hidden for foreign-born athletes. The birth place input was only shown when country was "Italia", preventing users from entering a foreign city. Now the field is always visible; only the province field is hidden for non-Italian countries. Fixed in both `athlete/[id].tsx` edit modal and `register-athlete.tsx` form.
 - **Fix**: Corrected stale frontend build URL (was pointing to old `season-enroll` domain). Cleared Expo cache and rebuilt.
 - **Feature**: Added audit log entry for trial document signing (`trial_document_signed` action). Includes signer name, athlete name, document type and timestamp. Added corresponding filter "Firme Prova" in admin audit log UI.
+- **Feature**: Added audit logging for QR check-in attendance (`attendance_recorded`) and trial period start (`trial_started`). Created retroactive entries for ISA and PIA.
+- **Fix**: Fixed "Documenti" filter using wrong action type (`document_accepted` → `document_signed`)
+- **Fix**: Fixed name truncation in audit log cards — names now wrap instead of being cut off with "..."
+- **Improvement**: Added new audit log filter tabs: "Presenze", "Inizio Prova"
 
 ## Pending / Backlog
 - (P0) Support user manual testing
