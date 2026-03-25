@@ -25,9 +25,12 @@ Comprehensive sports team management application for Italian volleyball societie
 ## Architecture
 - Backend: FastAPI on port 8001 | Frontend: Expo React Native Web | DB: MongoDB | Email: Brevo
 
+### Session 2026-03-25
+- **Bug Fix**: Fixed "Stato di Nascita" (Country of Birth) not saving. Added missing `country_of_birth` field handling in `PATCH /api/athletes/{athlete_id}` endpoint (server.py line ~7341).
+
 ## Pending / Backlog
 - (P0) Support user manual testing
-- (P2) UI per atleti con contratto
+- (P1) UI per atleti con contratto formale (programmato per l'estate, post-pubblicazione)
 - (P2) Refactor server.py (21000+ lines)
 - (P2) Re-implement Stripe payments
 - (P2) Refactor large frontend components

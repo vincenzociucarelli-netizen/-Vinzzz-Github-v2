@@ -7337,6 +7337,8 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
         update_dict["birth_place"] = update_data.birth_place
     if update_data.birth_province is not None:
         update_dict["birth_province"] = update_data.birth_province
+    if update_data.country_of_birth is not None:
+        update_dict["country_of_birth"] = update_data.country_of_birth
     if update_data.gender is not None:
         update_dict["gender"] = update_data.gender.upper()  # Store as uppercase M/F
     if update_data.fiscal_code is not None:
