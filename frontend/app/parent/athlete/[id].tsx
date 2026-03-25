@@ -1880,7 +1880,7 @@ export default function AthleteDetail() {
               {profileCheck.athlete_missing?.length > 0 && (
                 <TouchableOpacity 
                   style={{ flex: 1, backgroundColor: '#FF6F00', borderRadius: 8, paddingVertical: 10, alignItems: 'center' }}
-                  onPress={() => setEditModalVisible(true)}
+                  onPress={() => openEditModal()}
                   data-testid="go-to-athlete-profile-btn"
                 >
                   <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Completa Dati Atleta</Text>
