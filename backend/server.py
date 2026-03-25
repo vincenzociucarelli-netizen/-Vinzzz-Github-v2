@@ -7463,6 +7463,22 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
                 })
                 if second_parent:
                     update_dict["second_parent_id"] = second_parent["id"]
+                    
+                    # === CROSS-LINKING BIDIREZIONALE ===
+                    # Se il partner (second_parent) ha atleti dove second_parent_email = email del genitore corrente,
+                    # collega anche quelli
+                    current_parent = await db.users.find_one({"id": current_user["id"]})
+                    if current_parent:
+                        current_email = current_parent.get("email", "").lower()
+                        if current_email:
+                            await db.athletes.update_many(
+                                {
+                                    "parent_id": second_parent["id"],
+                                    "second_parent_email": current_email,
+                                    "second_parent_id": {"$in": [None, ""]},
+                                },
+                                {"$set": {"second_parent_id": current_user["id"]}}
+                            )
                 else:
                     # Nessun utente trovato, rimuovi l'ID precedente
                     update_dict["second_parent_id"] = None

@@ -24,7 +24,7 @@ import { ConsentManager } from '../../src/components/ConsentManager';
 
 export default function ParentProfile() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateUser } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -163,6 +163,13 @@ export default function ParentProfile() {
       
       showAlert('Successo', 'Profilo aggiornato con successo');
       setEditing(false);
+      // Aggiorna lo store locale per riflettere il nuovo nome nella dashboard
+      await updateUser({
+        full_name: `${editData.last_name} ${editData.first_name}`.trim(),
+        first_name: editData.first_name,
+        last_name: editData.last_name,
+        phone: editData.phone,
+      });
       await loadProfile();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
