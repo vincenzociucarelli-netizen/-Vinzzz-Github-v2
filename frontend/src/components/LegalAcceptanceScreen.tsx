@@ -63,32 +63,52 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
         {/* Logo / Header */}
         <View style={styles.logoContainer}>
           <View style={styles.logoCircle}>
-            <Ionicons name="shield-checkmark" size={40} color="#1565C0" />
+            <Ionicons name="trophy" size={40} color="#1565C0" />
           </View>
         </View>
 
-        <Text style={styles.title}>Benvenuto in RegistraTEAM</Text>
+        <Text style={styles.title}>Benvenuto in RegistraTEAM!</Text>
 
         <View style={styles.descriptionBox}>
           <Text style={styles.description}>
-            RegistraTEAM è un'applicazione pensata per supportare associazioni sportive dilettantistiche nella gestione delle squadre e nella registrazione delle presenze agli allenamenti.
-          </Text>
-
-          <Text style={styles.description}>
-            Utilizzando l'app accetti i{' '}
-            <Text style={styles.link} onPress={() => openLink('/terms-of-use')}>
-              Termini di utilizzo
-            </Text>
-            {' '}e confermi di aver preso visione della{' '}
-            <Text style={styles.link} onPress={() => openLink('/privacy-policy')}>
-              Informativa sulla Privacy
-            </Text>.
-          </Text>
-
-          <Text style={styles.description}>
-            L'app è destinata esclusivamente all'uso da parte di associazioni sportive e dei loro tesserati.
+            RegistraTEAM ti aiuta a gestire in modo semplice la tua attivita sportiva: presenze, comunicazioni e organizzazione della tua squadra.
           </Text>
         </View>
+
+        {/* Info blocks */}
+        <View style={styles.infoBlock}>
+          <Ionicons name="lock-closed" size={18} color="#1565C0" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.infoBlockTitle}>I tuoi dati</Text>
+            <Text style={styles.infoBlockText}>
+              I dati di tutti gli iscritti sono gestiti dalla tua associazione sportiva. RegistraTEAM fornisce la tecnologia, ma non decide come vengono utilizzati.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.infoBlock}>
+          <Ionicons name="clipboard" size={18} color="#1565C0" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.infoBlockTitle}>Cosa utilizziamo</Text>
+            <Text style={styles.infoBlockText}>
+              Utilizziamo solo le informazioni necessarie per la gestione sportiva e amministrativa (presenze, certificati, quote).
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.infoBlock}>
+          <Ionicons name="shield-checkmark" size={18} color="#1565C0" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.infoBlockTitle}>Sicurezza</Text>
+            <Text style={styles.infoBlockText}>
+              I dati sono archiviati in modo sicuro su server situati nell'Unione Europea.
+            </Text>
+          </View>
+        </View>
+
+        <Text style={[styles.description, { textAlign: 'center', marginTop: 16 }]}>
+          Per maggiori dettagli consulta:
+        </Text>
 
         {/* Links */}
         <View style={styles.linksContainer}>
@@ -121,20 +141,12 @@ export const LegalAcceptanceScreen: React.FC<LegalAcceptanceScreenProps> = ({ on
           </TouchableOpacity>
         </View>
 
-        {/* GDPR note */}
-        <View style={styles.gdprNote}>
-          <Ionicons name="information-circle-outline" size={16} color="#666" />
-          <Text style={styles.gdprNoteText}>
-            I dati degli atleti sono gestiti dall'associazione sportiva di appartenenza. Gli account sono creati dall'associazione sportiva o tramite invito dell'amministratore.
-          </Text>
-        </View>
-
         {/* Hint: must open both documents */}
         {!bothOpened && (
           <View style={styles.openDocsHint}>
-            <Ionicons name="alert-circle-outline" size={16} color="#E65100" />
+            <Ionicons name="alert-circle" size={16} color="#E65100" />
             <Text style={styles.openDocsHintText}>
-              Per continuare, devi prima aprire e leggere entrambi i documenti sopra.
+              Devi aprire, leggere e comprendere entrambi i documenti prima di poter continuare
             </Text>
           </View>
         )}
@@ -212,6 +224,25 @@ const styles = StyleSheet.create({
     color: '#444',
     lineHeight: 23,
     marginBottom: 12,
+  },
+  infoBlock: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  infoBlockTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 2,
+  },
+  infoBlockText: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
   },
   link: {
     color: '#1565C0',
