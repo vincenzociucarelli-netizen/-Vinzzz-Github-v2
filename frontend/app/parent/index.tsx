@@ -702,7 +702,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
               <Text style={{ fontSize: 14, fontWeight: '700', color: n.status === 'expired' ? '#C62828' : '#E65100', flex: 1 }}>
                 {n.status === 'expired'
                   ? `Prova terminata per ${n.athlete_name}`
-                  : `Il periodo di prova sta per terminare`
+                  : `Il periodo di prova di ${n.athlete_name} sta per terminare`
                 }
               </Text>
             </View>
