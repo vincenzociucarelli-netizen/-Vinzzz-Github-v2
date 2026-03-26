@@ -5,42 +5,22 @@ Comprehensive sports team management application for Italian volleyball societie
 
 ## What's Been Implemented
 
-### Session 2026-03-26 (Latest - Fork 2)
-- **Bug Fix (P0)**: Added missing "Presa visione Informativa Privacy" checkbox to registration welcome screen (`register.tsx`). Now all 4 GDPR consent checkboxes are present: privacy_viewed, data_processing, images_internal, images_promo.
-- **Bug Fix (P0)**: Fixed consent key mapping mismatch between frontend and backend. Frontend now sends keys matching DB schema directly (`images_internal`, `images_promo` instead of `internal_images`, `promotional_images`).
-- **Bug Fix**: Backend no longer hardcodes `privacy_viewed` to `True` - it reads the actual value from the frontend payload.
-- **UX**: The `privacy_viewed` checkbox auto-checks when user opens the Privacy Policy document.
+### Session 2026-03-26 (Fork 3 - Current)
+- **Feature: Documenti Personali Genitore** - Aggiunta cartella "Documenti di [NOME GENITORE]" nella pagina "I Miei Documenti", separata dalle cartelle dei figli. Mostra 3 documenti di accettazione privacy con metadati (data, fonte, versione). Backend genera "documenti virtuali" dai consensi in `users.consents`.
+- **Bug Fix (P0): Checkbox "Informativa Privacy visionata"** - Aggiunta la checkbox mancante nella registrazione. Ora 4 checkbox: privacy_viewed, data_processing, images_internal, images_promo.
+- **Bug Fix (P0): Mapping chiavi consensi** - Frontend ora invia chiavi allineate al DB (`images_internal`, `images_promo`). Backend non hardcoda più `privacy_viewed`.
 
-### Session 2026-03-26 (Fork 1)
-- **Bug Fix (P0 CRITICO)**: Corretto `GDPRPrivacyModal` che mostrava i dati della famiglia sbagliata nel PDF di anteprima.
-- **Security Fix**: Aggiunta validazione di ownership nell'endpoint `POST /api/documents/sign-gdpr-privacy`.
-- **UI Enhancement**: Ampliato contenuto notifiche Admin con dettagli strutturati.
-- **Refactoring GDPR/Secondo Genitore**: Rimosso cross-linking automatico. Secondo genitore gestito per-atleta.
-- **Logic**: Blocco firma GDPR solo se 2° genitore registrato nel sistema.
-- **Onboarding**: Consensi GDPR spostati nella registrazione iniziale per tutti i ruoli.
-
-### Session 2026-03-25
-- **Bug Fix**: Fixed "Stato di Nascita" (Country of Birth) not saving.
-- **Bug Fix**: Fixed "Luogo di Nascita" field hidden for foreign-born athletes.
-- **Feature**: GDPR signing limit per parent.
-- **Feature**: Audit log entries for trial document signing, QR check-in, trial period start.
-
-### Session 2026-03-24
-- **Welcome Screen Registration Flow**: Mandatory Privacy Policy + Terms viewing before registration
-- **User Profile Consent Management**: Reusable ConsentManager for all roles
-- **Admin Consent Audit Trail**: Full audit page at /admin/settings/consent-audit
-- **PhotoViewer Rewrite**: Pinch-to-zoom, auto-rotation, double-tap zoom
-- **Coach Team Photo**: Clickable photo in team detail opens full PhotoViewer
-- **Parent Profile Buttons**: Renamed and color-coded
+### Session 2026-03-26 (Fork 2)
+- Bug Fix P0 CRITICO: GDPR Modal data leak + ownership validation
+- UI Enhancement: Notifiche Admin con dettagli completi
+- Refactoring: Secondo genitore per-atleta, blocco firma GDPR condizionale
+- Onboarding: Consensi GDPR spostati nella registrazione
 
 ### Previous Sessions
-- GDPR consent tracking system (4 granular checkboxes, audit trail, PDF snapshots)
-- Dynamic team creation form (installments, venues)
-- Privacy-first avatars (initials instead of photos)
-- Team photo visibility on Admin and Coach views
-- Pre-season campaigns and automated reminders
+- GDPR consent tracking, audit trail, ConsentManager
+- Dynamic team creation, privacy-first avatars
+- Pre-season campaigns, automated reminders
 - Athlete timeline, certificate management, payment tracking
-- Critical bug fixes (login, registration, team creation, SPA routing)
 
 ## Architecture
 - Backend: FastAPI on port 8001 | Frontend: Expo React Native Web (static build) | DB: MongoDB | Email: Brevo
@@ -48,14 +28,21 @@ Comprehensive sports team management application for Italian volleyball societie
 ## Key DB Schema
 - `users.consents`: Keys = `privacy_viewed`, `data_processing`, `images_internal`, `images_promo`
 - `athletes`: `second_parent_email`, `second_parent_id`
+- `signed_documents`: Physical signed PDFs (GDPR, trial docs, receipts)
+
+## Key API Endpoints
+- `GET /api/documents/my-documents`: Returns `grouped.personal` (with consent virtual docs), `grouped.minors`, `grouped.parent_name`
+- `POST /api/auth/register`: Accepts `consents` dict with 4 keys
+- `GET /api/users/me/consents`: Returns user's consent data
+- `PATCH /api/users/consents/me`: Update consents
 
 ## Pending / Backlog
 - (P0) Supporto testing manuale attivo utente
-- (P2) Fix validazione numero di telefono per minori (issue ricorrente)
+- (P2) Fix validazione numero di telefono per minori
 - (P1) UI per atleti con contratto formale (programmato per l'estate)
 - (P2) Refactor server.py (21000+ lines)
 - (P2) Re-implement Stripe payments
-- (P2) Refactor large frontend components
+- (P2) Pubblicazione App Store e dominio
 
 ## Key Credentials
 - Admin: pallavoloperugia@gmail.com / Test1234
@@ -63,16 +50,16 @@ Comprehensive sports team management application for Italian volleyball societie
 - Parent (Marco): marco@test.com / Test1234
 
 ## Key Files
-- `app/register.tsx` - Registration with 4 GDPR consent checkboxes
-- `src/components/ConsentManager.tsx` - Reusable consent card (source of truth for keys)
-- `src/components/GDPRPrivacyModal.tsx` - GDPR privacy signing modal
-- `app/admin/settings/consent-audit.tsx` - Admin audit page
-- `app/parent/athlete/[id].tsx` - Parent athlete detail (GDPR blocking UI)
-- `app/parent/profile.tsx` - Parent profile (consent display)
+- `frontend/app/parent/documents.tsx` - Documenti page with personal + children sections
+- `frontend/app/register.tsx` - Registration with 4 GDPR consent checkboxes
+- `frontend/src/components/ConsentManager.tsx` - Consent card (keys source of truth)
+- `backend/server.py` - Monolithic backend (21000+ lines)
 
 ## Test Reports
+- `/app/test_reports/iteration_61.json` - Personal documents + consent docs (100% passed)
 - `/app/test_reports/iteration_60.json` - GDPR blocking tests (8/8 passed)
 
 ## Critical Notes
 - **Frontend Build**: Must use `npx expo export -p web` + `serve -s dist -l 3000`. Hot reload/tunnel does NOT work.
 - **Consent Keys**: Frontend, Backend, and ConsentManager must ALL use: `privacy_viewed`, `data_processing`, `images_internal`, `images_promo`
+- **User Language**: Always respond in Italian
