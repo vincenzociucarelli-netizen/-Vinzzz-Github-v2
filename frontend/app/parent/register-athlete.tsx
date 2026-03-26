@@ -51,6 +51,7 @@ export default function RegisterAthlete() {
   const [phoneFather, setPhoneFather] = useState('');
   const [phoneMother, setPhoneMother] = useState('');
   const [email, setEmail] = useState('');
+  const [secondParentEmail, setSecondParentEmail] = useState('');
   
   // Dati Attestato di Versamento
   const [taxPayerLastName, setTaxPayerLastName] = useState('');
@@ -278,6 +279,7 @@ export default function RegisterAthlete() {
         team_id: null,
         team_id_2: null,
         is_trial: isTrialPeriod,
+        second_parent_email: secondParentEmail || null,
         privacy_accepted: !isTrialPeriod,  // Se non è prova, accetta privacy
         consent_privacy_viewed: !isTrialPeriod ? consentPrivacyViewed : false,
         consent_data_treatment: !isTrialPeriod ? consentDataTreatment : false,
@@ -501,6 +503,21 @@ export default function RegisterAthlete() {
           </View>
 
           <Text style={styles.sectionTitle}>Contatti</Text>
+
+          <Text style={styles.label}>Email 2° Genitore (opzionale)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="es: padre@email.com"
+            placeholderTextColor="#aaa"
+            value={secondParentEmail}
+            onChangeText={(text) => setSecondParentEmail(text.toLowerCase())}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            data-testid="second-parent-email-input"
+          />
+          <Text style={{ fontSize: 11, color: '#888', marginTop: -8, marginBottom: 12, paddingHorizontal: 4 }}>
+            Se presente, inserisci l'email dell'altro genitore per la gestione privacy
+          </Text>
 
           <Text style={styles.label}>Sei il padre o la madre? *</Text>
           <View style={styles.genderRow}>
