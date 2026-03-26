@@ -2216,7 +2216,7 @@ class InviteRegisterRequest(BaseModel):
     password: str
     first_name: str
     last_name: str
-    phone: str
+    phone: Optional[str] = None
     date_of_birth: Optional[str] = None
     gender: Optional[str] = None
     fiscal_code: Optional[str] = None

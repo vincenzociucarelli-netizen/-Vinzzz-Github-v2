@@ -15,7 +15,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://consent-audit-test.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://italian-sports-qa.preview.emergentagent.com')
 
 class TestConsentDocuments:
     """Test consent documents feature for parent's personal documents section"""

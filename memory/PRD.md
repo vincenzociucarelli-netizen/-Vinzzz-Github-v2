@@ -5,7 +5,10 @@ Comprehensive sports team management application for Italian volleyball societie
 
 ## What's Been Implemented
 
-### Session 2026-03-26 (Fork 3 - Current)
+### Session 2026-03-27 (Fork 4 - Current)
+- **Bug Fix: Validazione telefono minori** - Corretto in `invite-register.tsx` e `backend/server.py`: il numero di telefono dell'atleta ora è opzionale per i minori nel flusso di registrazione via invito. Il campo `phone` nel modello `InviteRegisterRequest` è ora `Optional[str]`. Il label UI diventa "Telefono Atleta (opzionale)" per i minori.
+
+### Session 2026-03-26 (Fork 3)
 - **Feature: Documenti Personali Genitore con PDF** - Cartella "Documenti di [NOME]" nel profilo, cliccabili con PDF multi-pagina: Pag.1 = testo completo documento, Pag.2 = attestazione accettazione con dati società, dati genitore, accettazione digitale e metadati di firma (IP, version, hash, timestamp).
 - **Feature: Endpoint PDF Consensi** - `GET /api/documents/consent-pdf/{consent_type}` genera PDF per privacy_viewed, data_processing, terms.
 - **Feature: Checkbox "Informativa Privacy"** - Aggiunta alla registrazione (4 checkbox totali).
@@ -45,7 +48,6 @@ Comprehensive sports team management application for Italian volleyball societie
 
 ## Pending / Backlog
 - (P0) Supporto testing manuale attivo - simulazione 3 genitori + 3 figli condivisi
-- (P2) Fix validazione telefono minori
 - (P2) Funzionalità "Collegati a un atleta esistente" (per casi particolari)
 - (P1) UI atleti con contratto formale
 - (P2) Refactor server.py (22000+ lines)

@@ -146,7 +146,7 @@ export default function InviteRegister() {
       showAlert('Errore', 'Le password non corrispondono');
       return;
     }
-    if (!form.phone) {
+    if (!form.phone && !inviteInfo?.is_minor) {
       showAlert('Errore', 'Numero di telefono obbligatorio');
       return;
     }
@@ -318,10 +318,10 @@ export default function InviteRegister() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>Telefono *</Text>
+        <Text style={styles.label}>{inviteInfo?.is_minor ? 'Telefono Atleta' : 'Telefono *'}</Text>
         <TextInput
           style={styles.input}
-          placeholder={invitePlaceholders.phone || "Numero di telefono"}
+          placeholder={invitePlaceholders.phone || (inviteInfo?.is_minor ? "Telefono atleta (opzionale)" : "Numero di telefono")}
           placeholderTextColor="#999"
           value={form.phone}
           onChangeText={(v) => setForm({...form, phone: v})}

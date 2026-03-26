@@ -1,102 +1,79 @@
 <analysis>**original_problem_statement**:
-The user wants to build a comprehensive sports team management application. The project is in an iterative testing and refinement phase. The user is actively testing the application and providing feedback, bug reports, and new feature requests.
-
-Recent requests have focused on:
-1.  Fixing critical bugs related to login, registration, team creation, and data persistence.
-2.  Refactoring the team creation form to be more dynamic.
-3.  A major overhaul of the application's privacy features to be fully GDPR compliant, including a granular consent tracking system and user-facing consent management.
-4.  Updating legal documents (Privacy Policy, Terms of Use) and the associated user registration/onboarding flows.
-5.  Continuously addressing UI/UX bugs, text corrections, and feature enhancements based on active user testing.
+The user is building a comprehensive sports team management application for Italian volleyball societies. The project is in an active iterative testing phase. The user's main focus is on robust GDPR compliance, role-specific onboarding flows (especially for parents of minors), dynamic legal document generation (PDFs), and ensuring that blended families or multi-parent setups link correctly to athlete profiles. 
 
 **PRODUCT REQUIREMENTS**:
-*   **Robust GDPR Compliance**: The application must have a detailed, granular consent management system. For every user, it must track specific consents (e.g., data processing, internal image use, promotional image use) including the consent value (true/false), timestamp, user ID, document version, and client IP address. This system must provide a full audit trail and allow users to modify their consents.
-*   **Stable User Flows**: Core user journeys like registration, login, data completion, and team management must be bug-free and intuitive.
-*   **Data Integrity**: All user and athlete data, especially personal and legal information (like country of birth), must be saved and displayed correctly.
-*   **Role-Specific Dashboards**: Each user role (Admin, Coach, Parent, Athlete) should see relevant information. For example, both parents should see all their children, regardless of who registered them.
+*   **Robust GDPR Compliance**: Users must accept specific privacy consents during registration. 
+*   **Dynamic Legal Documents**: The system must generate professional, multi-page PDFs for both minors and adults, showing the full legal text on Page 1 and the digital acceptance metadata (IP, timestamp, document version, hash) on Page 2.
+*   **Multi-Parent Linking**: Parents must be seamlessly linked to their children. If Parent A registers an athlete and provides Parent B's email, Parent B must be automatically linked to that athlete upon registration.
+*   **Data Completeness**: Core legal data (like Fiscal Code) should be captured early to ensure legally binding documents are complete.
 
 **User's preferred language**: italiano
+*(INSTRUCT NEXT AGENT: You MUST automatically detect the user's primary language from their messages and respond ONLY in the user's preferred language. For this job: **Rispondi sempre e solo in Italiano**).*
 
-**what currently exists?**
-The application is a full-stack sports team management platform with a FastAPI backend and a React/Expo frontend. Due to Expo tunnel instability, the frontend is deployed as a static web application (env: load .env
+**what currently exists?** 
+A full-stack sports team management app (FastAPI backend + React/Expo frontend + MongoDB). It features complex GDPR consent tracking integrated directly into the registration flow. The parent dashboard features a robust I Miei Documenti (My Documents) section that generates dynamic, multi-page PDFs for personal and dependent consents on the fly. Cross-linking between parents is handled via a  field on the athlete profile.
+*Note: Due to Expo tunnel instability, the frontend is exclusively deployed as a static web application (env: load .env
 env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT EXPO_DEVTOOLS_LISTEN_ADDRESS REACT_NATIVE_PACKAGER_HOSTNAME EXPO_PACKAGER_PROXY_URL
 Fast resolver is enabled.
 Starting Metro Bundler
-Web Bundling failed 723ms node_modules/expo-router/entry.js (642 modules) served by ).
-
-The application has undergone significant iterative development, including:
-- A complete, user-modifiable GDPR consent management system with an admin audit trail.
-- Critical bug fixes for parent cross-linking (ensuring both parents see all their children), data persistence in user profiles, and correct status assignment for new athletes.
-- Numerous UI/UX improvements, including a rewritten mobile-friendly photo viewer, updated legal screens, and many small text/style corrections based on direct user feedback.
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓░░░░░░░░░░ 43.4% ( 942/1577)
+Web Bundling failed 4375ms node_modules/expo-router/entry.js (1860 modules)).*
 
 **Last working item**:
-- **Last item agent was working**: Debugging a critical data persistence bug where the Stato di Nascita (Country of Birth) for an athlete is not being saved to the database. The agent confirmed the frontend sends the data, but the backend PATCH endpoint () is not writing it to MongoDB. The issue is located in .
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: N
-- **Which testing method agent to use?**: backend testing agent
+- **Last item agent was working**: Clarifying the bidirectional parent-to-athlete linking logic for the user and exposing the Email 2° Genitore field in the read-only view of the athlete profile. The user then explicitly stated they are pausing development to conduct a comprehensive manual test of the onboarding flow with 3 new parents and 3 shared children.
+- **Status**: USER VERIFICATION PENDING
+- **Agent Testing Done**: Y
+- **Which testing method agent to use?**: NA (Testing was completed via backend execution and screenshot tool for the UI additions).
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-
-- **Issue 1: Stato di Nascita (Country of Birth) Not Saving (P0)**
-  - **Description**: When editing an athlete's profile, setting the Stato di Nascita to a non-default value (e.g., Francia) and saving does not persist the change. When the edit modal is reopened, the field reverts to Italia.
-  - **Attempted fixes**: The agent confirmed the frontend sends the  field in the PATCH request. A database check revealed the  field is completely absent from the athlete's document, confirming the issue is in the backend's update logic.
-  - **Next debug checklist**:
-      1.  Thoroughly inspect the  endpoint logic in .
-      2.  Identify why the  field from the request payload is not being added to the  dictionary that is passed to the database  command.
-      3.  Ensure the field is correctly processed and included in the  operation.
-      4.  After applying the fix, use  to query MongoDB and confirm the  field is correctly set.
-      5.  Use the  to log in as the parent, open the edit modal for the athlete, and verify the UI correctly shows the saved value.
-  - **Why fix this issue and what will be achieved with the fix?**: This is a critical data integrity bug blocking the user. Failing to save personal data is a functional and potential legal (GDPR) issue.
-  - **Status**: IN PROGRESS
-  - **Is recurring issue?**: N
-  - **Should Test frontend/backend/both after fix?**: Both.
-  - **Blocked on other issue**: None.
+- **Issue 1: Phone Number Validation for Minors (P2)**
+     - **Attempted fixes**: None in this session. Mentioned in earlier histories.
+     - **Next debug checklist**: Check  in  and  to see why leaving a minor's phone number blank triggers a NUMERO DI TELEFONO ATLETA OBBLIGATORIO error.
+     - **Why fix this issue and what will be achieved with the fix?**: Blocks registration for young athletes who do not possess a smartphone.
+     - **Status**: NOT STARTED
+     - **Is recurring issue?**: Y
+     - **Should Test frontend/backend/both after fix?**: Backend
+     - **Blocked on other issue**: None
 
 **In progress Task List**:
-- None.
+*None*
 
 **Upcoming and Future Tasks**
-
 *   **Upcoming Tasks**:
-    *   (P0) **Support Manual Testing**: The user is actively testing the app. The top priority, after fixing the current bug, is to be on standby to receive and address any new bug reports or feedback.
-
-*   **Future Tasks (from backlog)**:
-    *   (P1) UI for athletes with formal contracts.
-    *   (P2) Refactor the monolithic  file.
+    *   (P0) **Support Active Manual Testing**: The user is about to test a complex parent onboarding flow (3 parents, 3 shared kids). Wait for their feedback and fix any reported bugs immediately.
+    *   (P2) **Manual Parent Linkage Feature**: Build a feature allowing a newly registered parent to manually request linkage to an existing athlete (via Fiscal Code or name search) if the first parent forgot to input their email.
+*   **Future Tasks**:
+    *   (P1) UI for athletes with formal contracts (planned for Summer post-launch).
+    *   (P2) Refactor the monolithic  file (>22,000 lines) into separate routers/models.
     *   (P2) Re-implement Stripe for payments.
     *   (P2) Assist with final domain and App Store publication steps.
-    *   (P2) Refactor large frontend components like .
 
 **Completed work in this session**
-- **Feature**: Implemented user-facing profile sections to view and modify privacy consents.
-- **Feature**: Implemented an admin-facing audit trail page for user consents.
-- **Feature**: Rewrote  component to support mobile-native pinch-to-zoom and auto-rotation.
-- **Bug Fix**: Corrected critical parent cross-linking logic, ensuring both parents see all their children.
-- **Bug Fix**: Fixed a data-caching issue where a user's name would not update on the dashboard after being changed.
-- **Bug Fix**: Fixed a bug where the Complete Athlete Data modal opened with empty fields instead of pre-populating.
-- **Bug Fix**: Corrected athlete status logic and UI badges (Attesa Prova vs. In Prova).
-- **Content**: Updated Welcome screen, Legal Acceptance screen, and legal document pages with new user-provided content.
+- Added Informativa privacy visionata checkbox to the registration welcome screen (DONE)
+- Created a personal Documenti di [Nome] folder for parents in the Documents dashboard, styled with dynamic colors (DONE)
+- Created a new backend PDF generator for personal consents that creates a 2-page PDF (Page 1: Full legal text, Page 2: Metadata and acceptance signature) (DONE)
+- Added  input directly into the user registration flow payload (DONE)
+- Added a dynamic orange warning banner to the Parent Dashboard prompting users to complete their profile if  is missing (DONE)
+- Added the  field to the read-only view of the Athlete Profile to improve visibility of parent links (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-- **Issue 1: Phone Number Validation for Minors**
-  - **Description**: The user reported an error NUMERO DI TELEFONO ATLETA OBBLIGATORIO when trying to register a minor without a phone number. The agent could not reproduce it or find the error string in the codebase, suspecting a user-side cache issue. The issue was not definitively resolved.
-  - **Debug checklist**:
-      1. Attempt to reproduce by registering a new minor athlete and leaving the phone field blank.
-      2. If the error appears,  the entire  directory for the exact error string.
-      3. Check the  function in  and the  function in  for validation logic.
-  - **Why to solve this issue and what will be achieved with this?**: It can block the registration of young athletes who do not own a mobile phone.
-  - **Should Test frontend/backend/both after fix**: Backend.
-  - **Is recurring issue?**: Y (Potentially)
+- **Issue 1: Minor Phone Number Validation** 
+  - **Debug checklist**: Attempt to register a minor without a phone number. Trace the NUMERO DI TELEFONO ATLETA OBBLIGATORIO error in frontend validation or backend .
+  - **Why to solve**: Unblocks minor registration.
+  - **Should Test**: Backend/Frontend
+  - **Is recurring issue?**: Y
 
 **Known issue recurrence from previous fork**
-- **Expo Tunnel Instability**: The default [08:45:19] Starting project at /app/frontend command is unreliable. The established workaround is to generate a static build (env: load .env
+  - **Issue recurrence in previous fork**: Expo Tunnel Instability ([23:41:15] Starting project at /app/frontend throws errors and fails).
+  - **Recurrence count**: 6+
+  - **Status**: BLOCKED (Workaround required).
+  - **Note**: You MUST generate a static build (env: load .env
 env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT EXPO_DEVTOOLS_LISTEN_ADDRESS REACT_NATIVE_PACKAGER_HOSTNAME EXPO_PACKAGER_PROXY_URL
 Fast resolver is enabled.
 Starting Metro Bundler
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% ( 769/1181)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1830/1843)
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1879/1880)
-Web Bundled 9255ms node_modules/expo-router/entry.js (1883 modules)
+Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 85.1% (1589/1722)
+Web Bundled 3017ms node_modules/expo-router/entry.js (1881 modules)
 
 › Assets (38):
 assets/fonts/Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf (390 kB)
@@ -133,104 +110,50 @@ node_modules/expo-router/assets/sitemap.412dd9275b6b48ad28f5e3d81bb1f626.png (46
 node_modules/expo-router/assets/unmatched.20e71bdf79e3a97bf55fd9e164041578.png (4.75 kB)
 
 › web bundles (2):
-_expo/static/js/web/entry-7630cb494085e0622993878bfae11622.js (6 MB)
-_expo/static/js/web/fiscalReceipt-3c6d17f86586b5519ea8ab184e989b1a.js (9.96 kB)
+_expo/static/js/web/entry-e5d0dc724142bebc1b6f35d7e146bb8b.js (6 MB)
+_expo/static/js/web/fiscalReceipt-2eceed8be9d9eaa85ff268e28766eeb1.js (9.96 kB)
 
 › Files (3):
 favicon.ico (14.5 kB)
 index.html (1.21 kB)
 metadata.json (49 B)
 
-Exported: dist) and serve it with . The next agent must continue to use this workflow.
+Exported: dist) and serve it with . If you make frontend changes, you must rebuild the static files for them to take effect.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Zustand State Hydration**: A bug where a user's name didn't update was caused by the local Zustand store not being refreshed after a successful backend update. The fix involved explicitly calling the state update action.
-- **Bi-directional Data Linking**: The parent cross-linking bug was fixed by adding backend logic to automatically establish the  relationship in both directions, ensuring data consistency.
-- **Static Site Generation (Expo)**: The project relies on env: load .env
-env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT EXPO_DEVTOOLS_LISTEN_ADDRESS REACT_NATIVE_PACKAGER_HOSTNAME EXPO_PACKAGER_PROXY_URL
-Fast resolver is enabled.
-Starting Metro Bundler
-Web Bundled 1433ms node_modules/expo-router/entry.js (1883 modules)
-
-› Assets (38):
-assets/fonts/Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf (390 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.3f78af31cca60105799838a1a7a59fbd.ttf (130 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Entypo.31b5ffea3daddc69dd01a1f3d6cf63c5.ttf (66.2 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/EvilIcons.140c53a7643ea949007aa9a282153849.ttf (13.5 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf (55.6 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome.b06871f281fee6b241d60582ae9369b9.ttf (166 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Brands.3b89dd103490708d19a95adcae52210e.ttf (134 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Regular.1f77739ca9ff2188b539c36f30ffa2be.ttf (33.7 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Solid.605ed7926cf39a2ad5ec2d1f9d391d3d.ttf (203 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Brands.56c8d80832e37783f12c05db7c8849e2.ttf (209 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Regular.370dd5af19f8364907b6e2c41f45dbbf.ttf (68 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Solid.adec7d6f310bc577f05e8fe06a5daccf.ttf (424 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Fontisto.b49ae8ab2dbccb02c4d11caaacf09eab.ttf (314 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Foundation.e20945d7c929279ef7a6f1db184a4470.ttf (57 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf (390 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf (1.31 MB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf (357 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Octicons.871378c6eab492a3e689a9385dc45a12.ttf (69.4 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/SimpleLineIcons.d2285965fe34b05465047401b8595dd0.ttf (54.1 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Zocial.1681f34aaca71b8dfb70756bca331eb2.ttf (25.8 kB)
-node_modules/@react-navigation/elements/lib/module/assets/back-icon-mask.0a328cd9c1afd0afe8e3b1ec5165b1b4.png (653 B)
-node_modules/@react-navigation/elements/lib/module/assets/back-icon.35ba0eaec5a4f5ed12ca16fabeae451d.png (207 B)
-node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55.png (4 variations | 425 B)
-node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7.png (4 variations | 235 B)
-node_modules/@react-navigation/elements/lib/module/assets/search-icon.286d67d3f74808a60a78d3ebf1a5fb57.png (928 B)
-node_modules/expo-router/assets/arrow_down.017bc6ba3fc25503e5eb5e53826d48a8.png (9.46 kB)
-node_modules/expo-router/assets/error.d1ea1496f9057eb392d5bbf3732a61b7.png (469 B)
-node_modules/expo-router/assets/file.19eeb73b9593a38f8e9f418337fc7d10.png (138 B)
-node_modules/expo-router/assets/forward.d8b800c443b8972542883e0b9de2bdc6.png (188 B)
-node_modules/expo-router/assets/pkg.ab19f4cbc543357183a20571f68380a3.png (364 B)
-node_modules/expo-router/assets/sitemap.412dd9275b6b48ad28f5e3d81bb1f626.png (465 B)
-node_modules/expo-router/assets/unmatched.20e71bdf79e3a97bf55fd9e164041578.png (4.75 kB)
-
-› web bundles (2):
-_expo/static/js/web/entry-7630cb494085e0622993878bfae11622.js (6 MB)
-_expo/static/js/web/fiscalReceipt-3c6d17f86586b5519ea8ab184e989b1a.js (9.96 kB)
-
-› Files (3):
-favicon.ico (14.5 kB)
-index.html (1.21 kB)
-metadata.json (49 B)
-
-Exported: dist to create a static build, which is the only stable way to run the frontend.
+- **Dynamic PDF Generation**: PDFs for GDPR consents are not stored as static files. They are generated on-the-fly when requested, pulling the most recent  and society settings from the database. 
+- **Bidirectional Parent Linking**: Handled during user registration. If an athlete has a  matching the newly registering user's email, the backend automatically sets  linking the new parent to the athlete.
 
 **key DB schema**
-- No recent schema changes. The current focus is on debugging the update logic for existing fields within the ** collection**, specifically , , , , and .
+  - : Includes  (dict of privacy acceptances),  (now captured at registration).
+  - : Includes  and .
 
 **changes in tech stack**
-- None.
+  - None.
 
-**All files of reference**
--  (Location of the current P0 bug)
--  (Frontend component related to the bug)
-- 
-- 
-- 
+**All files of reference** 
+  -  (Modified for privacy checkboxes and fiscal code)
+  -  (Modified for personal document UI)
+  -  (Modified for profile completion banner)
+  -  (Modified to add  and )
 
 **Areas that need refactoring**:
--  is monolithic and a primary candidate for being broken down into separate modules (routes, models, services).
-- The  and the welcome view in  share almost identical UI and logic. This should be extracted into a single reusable component to prevent inconsistencies.
+  -  is massively bloated (>22,000 lines). It desperately needs to be split into separate FastAPI routers.
 
 **key api endpoints**
-- ****: **(CURRENTLY BUGGED)** This endpoint is failing to save the  field.
-- ****: (NEW) An endpoint for admins to get a complete audit trail of all user consents.
-- ** & **: (NEW) Endpoints to allow users and parents to update their privacy consents.
-- ****: Logic was added to this endpoint to facilitate bi-directional parent linking.
+  - : (NEW) Generates the 2-page PDF for personal user consents.
+  - : Now accepts  and full  dictionary.
 
 **Critical Info for New Agent**
-- **User Communication**: Respond in **Italiano**. The user has explicitly requested to be kept informed if a requested task is not fully completed. Over-communicate your actions.
-- **Current Bug**: The immediate priority is to fix the Stato di Nascita bug. The problem is in the backend  endpoint in .
-- **Frontend Workflow**: Remember to use the static build workflow: make changes, run env: load .env
+  - **Language Check**: **Respond strictly in Italian**. 
+  - **Workflow**: Rely solely on static builds for frontend testing (env: load .env
 env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT EXPO_DEVTOOLS_LISTEN_ADDRESS REACT_NATIVE_PACKAGER_HOSTNAME EXPO_PACKAGER_PROXY_URL
 Fast resolver is enabled.
 Starting Metro Bundler
-Web Bundled 1431ms node_modules/expo-router/entry.js (1883 modules)
+Web Bundled 1035ms node_modules/expo-router/entry.js (1881 modules)
 
 › Assets (38):
 assets/fonts/Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf (390 kB)
@@ -267,107 +190,52 @@ node_modules/expo-router/assets/sitemap.412dd9275b6b48ad28f5e3d81bb1f626.png (46
 node_modules/expo-router/assets/unmatched.20e71bdf79e3a97bf55fd9e164041578.png (4.75 kB)
 
 › web bundles (2):
-_expo/static/js/web/entry-7630cb494085e0622993878bfae11622.js (6 MB)
-_expo/static/js/web/fiscalReceipt-3c6d17f86586b5519ea8ab184e989b1a.js (9.96 kB)
+_expo/static/js/web/entry-e5d0dc724142bebc1b6f35d7e146bb8b.js (6 MB)
+_expo/static/js/web/fiscalReceipt-2eceed8be9d9eaa85ff268e28766eeb1.js (9.96 kB)
 
 › Files (3):
 favicon.ico (14.5 kB)
 index.html (1.21 kB)
 metadata.json (49 B)
 
-Exported: dist, and let  serve the  folder. Do not use [08:45:51] Starting project at /app/frontend.
-- **Cache**: The user has experienced issues with stale content. Be prepared to instruct them to perform a hard refresh or clear their browser cache.
+Exported: dist). Do NOT attempt to use Expo Go or hot-reloading tunnels.
+  - **User Context**: The user is about to run a massive manual QA test on the onboarding flow. Your first response should acknowledge this and offer standby support to immediately patch any issues they find during their simulation.
 
 **documents and test reports created in this job**
-- 
-- 
-- 
+  -  (Updated)
+  -  (Passed 11/11 backend tests for document API changes)
 
-**Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Requests a fix for the Stato di Nascita bug and states they will fork the job afterward. (IN PROGRESS)
-2.  **User**: Reports a parent's profile data (name) is not updating correctly and they cannot see all their children. (RESOLVED)
-3.  **User**: Reports that Completa Dati Atleta opens an empty form instead of pre-populating it. (RESOLVED)
-4.  **User**: Reports that new minor athletes have the wrong status. (RESOLVED)
-5.  **User**: Asks for a text label change. (RESOLVED)
-6.  **User**: Confirms second parent email invitation works. (COMPLETED)
-7.  **User**: Reports two major bugs: athlete status and parent cross-linking. (RESOLVED)
-8.  **User**: Reports the post-login legal screen has outdated text. (RESOLVED)
-9.  **User**: Reports mandatory document opening logic was missed in an update. (RESOLVED)
-10. **User**: Asks for several minor UI/text corrections. (RESOLVED)
-
-**Awaiting User Response**: The previous agent used the  tool. The next agent should check for the user's response before proceeding with a new plan.
+**Last 10 User Messages and any pending HUMAN messages** 
+ 1. **User**: Asked if Pallavolo Perugia in the PDF is dynamic. (Answered: Yes, pulls from DB).
+ 2. **User**: Pointed out a hardcoded text figli in the UI, asked to change it to something generic. (RESOLVED).
+ 3. **User**: Noted that if users accept privacy at registration, the Fiscal Code is missing from the PDF since it's filled out later. Suggested moving Privacy acceptance *after* profile completion.
+ 4. **Agent**: Explained PDFs are generated dynamically, so they update automatically once the Fiscal Code is filled. Offered to add Fiscal Code to registration instead.
+ 5. **User**: Agreed to add Fiscal Code to the registration screen and asked for a banner if the user skips it. (RESOLVED).
+ 6. **User**: Asked where the Email 2° Genitore field is located currently. 
+ 7. **Agent**: Pointed out it's in the athlete registration and edit profile screens.
+ 8. **User**: Requested the field be visible in the read-only view of the athlete profile. (RESOLVED).
+ 9. **User**: Asked how Mario connects to his daughter if Sofia registered her.
+ 10. **User**: Stated they need to pause, organize their thoughts, and run a manual simulation with 3 new parents and 3 shared children to test the onboarding flow from scratch. (PENDING - Awaiting user test results).
 
 **Project Health Check:**
-*   **Broken**: The default Expo hot-reload/tunnel development workflow is non-functional. The static build (env: load .env
-env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT EXPO_DEVTOOLS_LISTEN_ADDRESS REACT_NATIVE_PACKAGER_HOSTNAME EXPO_PACKAGER_PROXY_URL
-Fast resolver is enabled.
-Starting Metro Bundler
-Web Bundled 1519ms node_modules/expo-router/entry.js (1883 modules)
-
-› Assets (38):
-assets/fonts/Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf (390 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.3f78af31cca60105799838a1a7a59fbd.ttf (130 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Entypo.31b5ffea3daddc69dd01a1f3d6cf63c5.ttf (66.2 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/EvilIcons.140c53a7643ea949007aa9a282153849.ttf (13.5 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf (55.6 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome.b06871f281fee6b241d60582ae9369b9.ttf (166 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Brands.3b89dd103490708d19a95adcae52210e.ttf (134 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Regular.1f77739ca9ff2188b539c36f30ffa2be.ttf (33.7 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Solid.605ed7926cf39a2ad5ec2d1f9d391d3d.ttf (203 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Brands.56c8d80832e37783f12c05db7c8849e2.ttf (209 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Regular.370dd5af19f8364907b6e2c41f45dbbf.ttf (68 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Solid.adec7d6f310bc577f05e8fe06a5daccf.ttf (424 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Fontisto.b49ae8ab2dbccb02c4d11caaacf09eab.ttf (314 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Foundation.e20945d7c929279ef7a6f1db184a4470.ttf (57 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf (390 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf (1.31 MB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf (357 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Octicons.871378c6eab492a3e689a9385dc45a12.ttf (69.4 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/SimpleLineIcons.d2285965fe34b05465047401b8595dd0.ttf (54.1 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Zocial.1681f34aaca71b8dfb70756bca331eb2.ttf (25.8 kB)
-node_modules/@react-navigation/elements/lib/module/assets/back-icon-mask.0a328cd9c1afd0afe8e3b1ec5165b1b4.png (653 B)
-node_modules/@react-navigation/elements/lib/module/assets/back-icon.35ba0eaec5a4f5ed12ca16fabeae451d.png (207 B)
-node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55.png (4 variations | 425 B)
-node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7.png (4 variations | 235 B)
-node_modules/@react-navigation/elements/lib/module/assets/search-icon.286d67d3f74808a60a78d3ebf1a5fb57.png (928 B)
-node_modules/expo-router/assets/arrow_down.017bc6ba3fc25503e5eb5e53826d48a8.png (9.46 kB)
-node_modules/expo-router/assets/error.d1ea1496f9057eb392d5bbf3732a61b7.png (469 B)
-node_modules/expo-router/assets/file.19eeb73b9593a38f8e9f418337fc7d10.png (138 B)
-node_modules/expo-router/assets/forward.d8b800c443b8972542883e0b9de2bdc6.png (188 B)
-node_modules/expo-router/assets/pkg.ab19f4cbc543357183a20571f68380a3.png (364 B)
-node_modules/expo-router/assets/sitemap.412dd9275b6b48ad28f5e3d81bb1f626.png (465 B)
-node_modules/expo-router/assets/unmatched.20e71bdf79e3a97bf55fd9e164041578.png (4.75 kB)
-
-› web bundles (2):
-_expo/static/js/web/entry-7630cb494085e0622993878bfae11622.js (6 MB)
-_expo/static/js/web/fiscalReceipt-3c6d17f86586b5519ea8ab184e989b1a.js (9.96 kB)
-
-› Files (3):
-favicon.ico (14.5 kB)
-index.html (1.21 kB)
-metadata.json (49 B)
-
-Exported: dist + ) is the only reliable method.
-*   **Mocked**: None.
+  - **Broken**: Expo Tunnel. 
+  - **Mocked**: None.
 
 **3rd Party Integrations**
-*   **Brevo (Sendinblue)**: Used for all transactional emails.
-*   **APScheduler**: Used for background jobs.
-*   **reportlab**: Used for backend PDF generation.
+  - Brevo (Sendinblue) - Email transactional
+  - APScheduler - Background tasks
+  - Reportlab - Backend PDF generation
 
 **Testing status**
-- **Testing agent used after significant changes**: YES
-- **Troubleshoot agent used after agent stuck in loop**: NO
-- **Test files created**: None.
-- **Known regressions**: None.
+  - **Testing agent used after significant changes**: YES (iteration_61.json)
+  - **Troubleshoot agent used after agent stuck in loop**: NO
+  - **Test files created**: None
+  - **Known regressions**: None observed.
 
 **Credentials to test flow:**
-*   **Admin**:  / 
-*   **Parent (Ugo)**:  / 
-*   **Parent (Piera)**:  / 
-*   **Parent (Sofia)**:  / 
-*   **Adult Athlete**:  / 
+  - **Admin**:  / 
+  - **Parent (Sofia)**:  / 
+  - **Parent (Mario)**:  / 
 
 **What agent forgot to execute**
-- The agent initially forgot to update  with new content after updating , requiring a follow-up fix. This highlights the importance of identifying and updating reused/duplicated components.
-- The root cause of a phone number required error for minors was never found, as the agent could not reproduce it. This remains a potential lingering issue.</analysis>
+  - No specific tasks were forgotten; the agent successfully implemented all requested changes before the user voluntarily paused the session to perform their manual E2E testing. The minor's phone number validation bug remains pending in the backlog.</analysis>
