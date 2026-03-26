@@ -183,6 +183,18 @@ export default function ParentDocuments() {
     return 'document';
   };
 
+  const openConsentDocument = (docType: string) => {
+    let url = '';
+    if (docType.includes('privacy')) url = '/privacy-policy';
+    else if (docType.includes('data_processing')) url = '/privacy-policy';
+    else if (docType.includes('terms')) url = '/terms-of-use';
+    if (url && Platform.OS === 'web') {
+      window.open(url, '_blank');
+    } else if (url) {
+      Linking.openURL(url);
+    }
+  };
+
   const renderDocumentItem = (doc: Document) => {
     const isConsent = doc.is_consent_record;
     
@@ -190,8 +202,7 @@ export default function ParentDocuments() {
       <TouchableOpacity
         key={doc.id}
         style={styles.documentItem}
-        onPress={isConsent ? undefined : () => openDocument(doc.id, doc.document_title || doc.document_type)}
-        activeOpacity={isConsent ? 1 : 0.7}
+        onPress={isConsent ? () => openConsentDocument(doc.document_type) : () => openDocument(doc.id, doc.document_title || doc.document_type)}
         data-testid={`doc-item-${doc.id}`}
       >
         <View style={[styles.documentIcon, isConsent && { backgroundColor: '#E8F5E9' }]}>
@@ -229,7 +240,7 @@ export default function ParentDocuments() {
             </View>
           )}
         </View>
-        {!isConsent && <Ionicons name="open-outline" size={20} color="#999" />}
+        <Ionicons name="open-outline" size={20} color="#999" />
       </TouchableOpacity>
     );
   };
