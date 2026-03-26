@@ -14039,137 +14039,233 @@ def generate_personal_consent_pdf(
     society_id: str,
     source: str = "registration",
 ) -> bytes:
-    """Generate a PDF for parent's personal consent acceptance with metadata"""
+    """Generate a multi-page PDF: Page 1+ = full document text, Last page = acceptance & metadata"""
     if not HAS_PDF_GENERATION:
         raise HTTPException(status_code=500, detail="PDF generation not available")
 
     nome_legale = ragione_sociale if ragione_sociale else society_name
 
+    # Document titles and full texts
     titles = {
-        "privacy_viewed": "INFORMATIVA PRIVACY - PRESA VISIONE",
-        "data_processing": "CONSENSO TRATTAMENTO DATI PERSONALI",
-        "terms": "TERMINI DI UTILIZZO - ACCETTAZIONE",
+        "privacy_viewed": "INFORMATIVA SULLA PRIVACY",
+        "data_processing": "CONSENSO AL TRATTAMENTO DEI DATI PERSONALI",
+        "terms": "TERMINI DI UTILIZZO",
     }
-    descriptions = {
-        "privacy_viewed": f"Il/La sottoscritto/a dichiara di aver preso visione dell'Informativa sulla Privacy della societa sportiva {nome_legale}, ai sensi del Regolamento UE 2016/679 (GDPR).",
-        "data_processing": f"Il/La sottoscritto/a acconsente al trattamento dei propri dati personali da parte della societa sportiva {nome_legale}, per le finalita descritte nell'Informativa sulla Privacy, ai sensi del Regolamento UE 2016/679 (GDPR).",
-        "terms": f"Il/La sottoscritto/a dichiara di aver letto e accettato i Termini di Utilizzo della piattaforma della societa sportiva {nome_legale}.",
+
+    privacy_sections = [
+        ("1. Introduzione", "RegistraTEAM e un'applicazione progettata per supportare associazioni sportive dilettantistiche nella gestione delle squadre, delle presenze e delle attivita amministrative."),
+        ("2. Titolare del trattamento", "Il titolare del trattamento e l'associazione sportiva che utilizza l'applicazione."),
+        ("3. Responsabile del trattamento", "RegistraTEAM fornisce l'infrastruttura tecnica e puo operare come responsabile del trattamento per attivita tecniche e manutenzione."),
+        ("4. Dati trattati", "- Nome e cognome\n- Squadra di appartenenza\n- Presenze agli allenamenti\n- Email\n- Numero di telefono\n- Identificativo QR\n- Dati relativi ai pagamenti (importo, data, numero rata, stato pagamento)\n- Informazioni relative all'idoneita sportiva (tipologia certificato, data emissione, validita, scadenza)\n- Log tecnici"),
+        ("5. Finalita", "- Gestione atleti e squadre\n- Registrazione presenze\n- Accesso all'app (login)\n- Comunicazioni tra utenti\n- Invio notifiche\n- Gestione quote associative\n- Generazione attestati per uso amministrativo/fiscale"),
+        ("6. Infrastruttura", "I dati sono archiviati su server situati nell'Unione Europea."),
+        ("7. Conservazione", "I dati sono conservati per il tempo necessario alle attivita sportive e amministrative."),
+        ("8. Sicurezza", "Sono adottate misure tecniche adeguate per proteggere i dati."),
+        ("9. Condivisione dei dati", "I dati non vengono venduti e sono accessibili solo a personale autorizzato e amministratori tecnici."),
+        ("10. Diritti", "Gli utenti possono esercitare i diritti GDPR rivolgendosi all'associazione."),
+        ("11. Modifiche", "La policy puo essere aggiornata nel tempo."),
+        ("12. Contatti", "Contattare l'associazione sportiva o il servizio RegistraTEAM."),
+    ]
+
+    terms_sections = [
+        ("1. Oggetto", "RegistraTEAM e un software gestionale per associazioni sportive dilettantistiche."),
+        ("2. Natura del servizio", "Il software e fornito nello stato in cui si trova, senza garanzia di assenza totale di errori o interruzioni."),
+        ("3. Utilizzo", "L'app e utilizzata sotto la responsabilita dell'associazione sportiva."),
+        ("4. Dati e responsabilita", "L'associazione e responsabile della correttezza dei dati e del rispetto delle normative."),
+        ("5. Presenze", "Le presenze hanno valore organizzativo e statistico."),
+        ("6. Pagamenti", "I dati relativi ai pagamenti sono inseriti e gestiti dall'associazione. RegistraTEAM non e responsabile per errori nei dati, anche per usi amministrativi o fiscali."),
+        ("7. Limitazione di responsabilita", "Il fornitore non e responsabile per perdite di dati o danni indiretti."),
+        ("8. Backup", "La gestione dei dati e responsabilita dell'associazione."),
+        ("9. Condizioni economiche", "RegistraTEAM e disponibile gratuitamente e senza limiti di funzionalita:\n\n- fino al 30 settembre 2026 con un limite massimo di 150 utenti registrati (atleti, staff, genitori) per societa;\n- successivamente con limite massimo di 30 utenti registrati per societa nella versione gratuita.\n\nSuperati i limiti indicati, sara necessario sottoscrivere un piano a pagamento. Prezzi e condizioni saranno comunicati tramite l'app o il sito ufficiale."),
+        ("10. Modifiche", "Il servizio puo essere aggiornato nel tempo."),
+        ("11. Accettazione", "L'utilizzo dell'app implica l'accettazione dei presenti termini."),
+    ]
+
+    data_processing_sections = [
+        ("Premessa", f"Il/La sottoscritto/a {parent_name}, in qualita di utente della piattaforma RegistraTEAM della societa sportiva {nome_legale}, dichiara quanto segue."),
+        ("Oggetto del consenso", "Il presente consenso riguarda il trattamento dei dati personali come descritto nell'Informativa sulla Privacy della societa sportiva, ai sensi del Regolamento UE 2016/679 (GDPR)."),
+        ("Dati oggetto del trattamento", "- Nome e cognome\n- Email e numero di telefono\n- Codice fiscale\n- Dati relativi alle presenze\n- Dati relativi ai pagamenti\n- Informazioni sull'idoneita sportiva\n- Eventuali immagini (solo se specificamente autorizzate)"),
+        ("Finalita del trattamento", "I dati saranno trattati esclusivamente per:\n- Gestione dell'iscrizione e della partecipazione alle attivita sportive\n- Comunicazioni tra societa, allenatori e famiglie\n- Adempimenti amministrativi e fiscali\n- Gestione delle presenze e delle quote associative"),
+        ("Durata del trattamento", "I dati saranno conservati per il tempo strettamente necessario alle finalita sopra indicate e comunque non oltre i termini previsti dalla normativa vigente."),
+        ("Diritti dell'interessato", "In qualsiasi momento e possibile esercitare i diritti previsti dagli artt. 15-22 del GDPR (accesso, rettifica, cancellazione, limitazione, portabilita, opposizione) contattando l'associazione sportiva."),
+    ]
+
+    sections_map = {
+        "privacy_viewed": privacy_sections,
+        "data_processing": data_processing_sections,
+        "terms": terms_sections,
     }
 
     doc_title = titles.get(consent_type, "CONSENSO PERSONALE")
-    doc_description = descriptions.get(consent_type, "")
+    sections = sections_map.get(consent_type, [])
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     w, h = A4
-    max_w = w - 4*cm
+    margin_left = 2*cm
+    margin_right = 2*cm
+    max_w = w - margin_left - margin_right
+    footer_y = 1.5*cm
+
+    def draw_footer(canvas_obj, page_num):
+        canvas_obj.setFont("Helvetica", 8)
+        canvas_obj.setFillColor(colors.grey)
+        canvas_obj.drawCentredString(w/2, footer_y, f"{nome_legale} - {doc_title} - Pagina {page_num}")
+        canvas_obj.setFillColor(colors.black)
+
+    def wrap_text(text, font_name, font_size, max_width):
+        """Split text into lines that fit within max_width"""
+        result_lines = []
+        for raw_line in text.split('\n'):
+            if not raw_line.strip():
+                result_lines.append('')
+                continue
+            words = raw_line.split(' ')
+            current = ""
+            for word in words:
+                test = current + " " + word if current else word
+                if c.stringWidth(test, font_name, font_size) < max_width:
+                    current = test
+                else:
+                    if current:
+                        result_lines.append(current)
+                    current = word
+            if current:
+                result_lines.append(current)
+        return result_lines
+
+    # ========== PAGE 1+: FULL DOCUMENT TEXT ==========
+    page_num = 1
 
     # Header
-    c.setFont("Helvetica-Bold", 14)
+    c.setFont("Helvetica-Bold", 16)
     c.drawCentredString(w/2, h - 2*cm, doc_title)
     c.setFont("Helvetica", 10)
-    c.drawCentredString(w/2, h - 2.6*cm, "(Regolamento UE 2016/679 - GDPR)")
+    c.drawCentredString(w/2, h - 2.7*cm, f"(Regolamento UE 2016/679 - GDPR)")
+    c.setFont("Helvetica", 9)
+    c.drawCentredString(w/2, h - 3.2*cm, f"Societa: {nome_legale}")
+    c.drawCentredString(w/2, h - 3.6*cm, f"Ultimo aggiornamento: Marzo 2026 - Versione {document_version}")
 
-    y = h - 3.5*cm
+    y = h - 4.5*cm
 
-    # Box Dati Societari
+    for sec_title, sec_text in sections:
+        # Check if we need a new page
+        if y < 4*cm:
+            draw_footer(c, page_num)
+            c.showPage()
+            page_num += 1
+            y = h - 2*cm
+
+        # Section title
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(margin_left, y, sec_title)
+        y -= 0.5*cm
+
+        # Section text
+        c.setFont("Helvetica", 10)
+        lines = wrap_text(sec_text, "Helvetica", 10, max_w)
+        for line in lines:
+            if y < 3*cm:
+                draw_footer(c, page_num)
+                c.showPage()
+                page_num += 1
+                y = h - 2*cm
+                c.setFont("Helvetica", 10)
+            c.drawString(margin_left, y, line)
+            y -= 0.38*cm
+
+        y -= 0.4*cm  # Space between sections
+
+    draw_footer(c, page_num)
+
+    # ========== LAST PAGE: ACCEPTANCE DATA & METADATA ==========
+    c.showPage()
+    page_num += 1
+    y = h - 2*cm
+
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(w/2, y, "ATTESTAZIONE DI ACCETTAZIONE")
+    y -= 0.7*cm
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(w/2, y, f"Riferito a: {doc_title}")
+    y -= 1.2*cm
+
+    # Society data box
     c.setStrokeColor(colors.HexColor("#1565C0"))
     c.setFillColor(colors.HexColor("#E3F2FD"))
-    c.roundRect(2*cm, y - 2.6*cm, max_w, 2.4*cm, 5, stroke=1, fill=1)
+    c.roundRect(margin_left, y - 2.6*cm, max_w, 2.4*cm, 5, stroke=1, fill=1)
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(2.3*cm, y - 0.6*cm, f"Societa: {nome_legale}")
+    c.drawString(margin_left + 0.3*cm, y - 0.6*cm, f"Societa: {nome_legale}")
     c.setFont("Helvetica", 9)
-    c.drawString(2.3*cm, y - 1.15*cm, f"Sede: {society_address}")
-    c.drawString(2.3*cm, y - 1.65*cm, f"C.F./P.IVA: {society_cf_piva}  |  Email: {society_email}")
+    c.drawString(margin_left + 0.3*cm, y - 1.15*cm, f"Sede: {society_address}")
+    c.drawString(margin_left + 0.3*cm, y - 1.65*cm, f"C.F./P.IVA: {society_cf_piva}  |  Email: {society_email}")
     y -= 3.2*cm
 
-    # Box Dati del Genitore/Tutore
+    # Parent data box
     c.setStrokeColor(colors.HexColor("#2E7D32"))
     c.setFillColor(colors.HexColor("#E8F5E9"))
-    box_h = 1.8*cm
-    c.roundRect(2*cm, y - box_h, max_w, box_h, 5, stroke=1, fill=1)
+    c.roundRect(margin_left, y - 1.8*cm, max_w, 1.8*cm, 5, stroke=1, fill=1)
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(2.3*cm, y - 0.5*cm, "DATI DEL GENITORE/TUTORE")
+    c.drawString(margin_left + 0.3*cm, y - 0.5*cm, "DATI DEL GENITORE/TUTORE")
     c.setFont("Helvetica", 9)
-    c.drawString(2.3*cm, y - 1.05*cm, f"Genitore/Tutore: {parent_name}")
-    c.drawString(2.3*cm, y - 1.55*cm, f"Codice Fiscale: {parent_fiscal_code}")
-    y -= (box_h + 1*cm)
+    c.drawString(margin_left + 0.3*cm, y - 1.05*cm, f"Genitore/Tutore: {parent_name}")
+    c.drawString(margin_left + 0.3*cm, y - 1.55*cm, f"Codice Fiscale: {parent_fiscal_code}")
+    y -= 2.8*cm
 
-    # Descrizione
-    c.setFont("Helvetica", 10)
-    words = doc_description.split(' ')
-    lines = []
-    current_line = ""
-    for word in words:
-        test = current_line + " " + word if current_line else word
-        if c.stringWidth(test, "Helvetica", 10) < max_w:
-            current_line = test
-        else:
-            if current_line:
-                lines.append(current_line)
-            current_line = word
-    if current_line:
-        lines.append(current_line)
-    for line in lines:
-        c.drawString(2*cm, y, line)
-        y -= 0.45*cm
-
-    y -= 1*cm
-
-    # Accettazione digitale section
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(2*cm, y, "Accettazione digitale:")
+    # Digital acceptance box
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(margin_left, y, "Accettazione digitale:")
     y -= 0.8*cm
 
     c.setStrokeColor(colors.HexColor("#4CAF50"))
     c.setLineWidth(1.5)
-    c.roundRect(2*cm, y - 2.2*cm, max_w, 2.2*cm, 5, stroke=1, fill=0)
+    c.roundRect(margin_left, y - 2.5*cm, max_w, 2.5*cm, 5, stroke=1, fill=0)
 
     c.setFont("Helvetica", 10)
-    c.drawString(2.5*cm, y - 0.5*cm, f"Consenso espresso da: {parent_name}")
-    c.drawString(2.5*cm, y - 1.0*cm, f"Data: {timestamp}")
+    c.drawString(margin_left + 0.5*cm, y - 0.5*cm, f"Consenso espresso da: {parent_name}")
+    c.drawString(margin_left + 0.5*cm, y - 1.0*cm, f"Data: {timestamp}")
     method_label = "Accettazione alla registrazione" if source == "registration" else "Accettazione manuale da profilo"
-    c.drawString(2.5*cm, y - 1.5*cm, f"Modalita: {method_label}")
-    c.drawString(2.5*cm, y - 2.0*cm, f"Indirizzo IP: {ip_address}")
-    y -= 3.5*cm
+    c.drawString(margin_left + 0.5*cm, y - 1.5*cm, f"Modalita: {method_label}")
+    c.drawString(margin_left + 0.5*cm, y - 2.0*cm, f"Indirizzo IP: {ip_address}")
+    y -= 3.8*cm
 
     # Metadata box
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(2*cm, y, "METADATI DI FIRMA (validita probatoria)")
+    c.drawString(margin_left, y, "METADATI DI FIRMA (validita probatoria)")
     y -= 0.4*cm
 
     c.setStrokeColor(colors.HexColor("#2C3E50"))
     c.setFillColor(colors.HexColor("#ECF0F1"))
-    c.roundRect(2*cm, y - 3*cm, max_w, 3*cm, 3, fill=1, stroke=1)
+    c.roundRect(margin_left, y - 3*cm, max_w, 3*cm, 3, fill=1, stroke=1)
 
     c.setFillColor(colors.black)
     c.setFont("Courier", 8)
     ym = y - 0.4*cm
-    c.drawString(2.3*cm, ym, f"document_version: {document_version}")
-    ym -= 0.35*cm
-    c.drawString(2.3*cm, ym, f"timestamp: {timestamp}")
-    ym -= 0.35*cm
-    c.drawString(2.3*cm, ym, f"user_id: {user_id}")
-    ym -= 0.35*cm
-    c.drawString(2.3*cm, ym, f"society_id: {society_id}")
-    ym -= 0.35*cm
-    # Generate a hash for document integrity
     import hashlib
     hash_input = f"{consent_type}:{user_id}:{timestamp}:{document_version}"
     doc_hash = hashlib.sha256(hash_input.encode()).hexdigest()
-    c.drawString(2.3*cm, ym, f"hash_document: {doc_hash}")
-    ym -= 0.35*cm
-    c.drawString(2.3*cm, ym, f"consent_type: {consent_type}")
-    ym -= 0.35*cm
-    c.drawString(2.3*cm, ym, f"ip_address: {ip_address}")
+    meta_lines = [
+        f"document_version: {document_version}",
+        f"timestamp: {timestamp}",
+        f"user_id: {user_id}",
+        f"society_id: {society_id}",
+        f"hash_document: {doc_hash}",
+        f"consent_type: {consent_type}",
+        f"ip_address: {ip_address}",
+    ]
+    for ml in meta_lines:
+        c.drawString(margin_left + 0.3*cm, ym, ml)
+        ym -= 0.35*cm
+
+    draw_footer(c, page_num)
 
     # Footer
     c.setFont("Helvetica", 8)
     c.setFillColor(colors.grey)
-    c.drawCentredString(w/2, 1.5*cm, "Documento generato automaticamente con validita probatoria ai sensi del GDPR.")
-    c.drawCentredString(w/2, 1*cm, f"Generato il {datetime.now(timezone.utc).strftime('%d/%m/%Y alle %H:%M:%S UTC')}")
+    c.drawCentredString(w/2, 1*cm, "Documento generato automaticamente con validita probatoria ai sensi del GDPR.")
+    c.drawCentredString(w/2, 0.6*cm, f"Generato il {datetime.now(timezone.utc).strftime('%d/%m/%Y alle %H:%M:%S UTC')}")
 
     c.save()
     buffer.seek(0)
