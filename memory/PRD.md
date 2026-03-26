@@ -34,6 +34,15 @@ Comprehensive sports team management application for Italian volleyball societie
 
 - **UI Enhancement**: Ampliato il contenuto delle notifiche Admin: rimosso il troncamento `numberOfLines={2}`, aggiunto il campo `data` strutturato con icone (Atleta, Nuova scadenza, Emissione, Aggiornato da) per allinearle al livello di dettaglio dell'Audit Log.
 
+- **Refactoring Critico GDPR/Secondo Genitore**: 
+  - Rimosso cross-linking automatico dei genitori nella registrazione atleta. Ora il secondo genitore è gestito per-atleta tramite campo "Email 2° Genitore".
+  - Campo aggiunto nella registrazione atleta (`register-athlete.tsx`), già presente in modifica (`[id].tsx`)
+  - Rimossa sezione "I Miei Figli" dal profilo genitore (`profile.tsx`)
+  - Aggiornata logica GDPR: il blocco "un genitore per figlio" scatta SOLO se il 2° genitore è effettivamente registrato nel sistema. Se il 2° genitore non è ancora iscritto, il primo genitore firma liberamente.
+  - Regola A: Genitore unico → firma per tutti i figli
+  - Regola B: Entrambi iscritti → alternanza obbligatoria
+  - Regola C: 2° genitore si iscrive dopo → firma i propri consensi personali alla registrazione
+
 ### Session 2026-03-25
 - **Bug Fix**: Fixed "Stato di Nascita" (Country of Birth) not saving. Added missing `country_of_birth` field handling in `PATCH /api/athletes/{athlete_id}` endpoint (server.py line ~7341).
 - **Bug Fix**: Fixed "Luogo di Nascita" field hidden for foreign-born athletes. The birth place input was only shown when country was "Italia", preventing users from entering a foreign city. Now the field is always visible; only the province field is hidden for non-Italian countries. Fixed in both `athlete/[id].tsx` edit modal and `register-athlete.tsx` form.

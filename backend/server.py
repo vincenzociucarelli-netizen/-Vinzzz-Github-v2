@@ -882,6 +882,7 @@ class AthleteCreate(BaseModel):
     consent_privacy_viewed: bool = False
     consent_data_treatment: bool = False
     data_password: Optional[str] = None  # Password protezione dati sensibili
+    second_parent_email: Optional[str] = None  # Email del secondo genitore (per-atleta)
     
 class AthleteUpdate(BaseModel):
     # Tesseramento (gestito da Admin)
@@ -6006,41 +6007,18 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     
     await db.athletes.insert_one(athlete.dict())
     
-    # === CROSS-LINKING AUTOMATICO DEI GENITORI ===
-    # Se questo genitore è già indicato come second_parent di un altro atleta,
-    # allora il parent_id di quell'atleta è il partner → auto-link come second_parent qui
-    partner_athlete = await db.athletes.find_one({
-        "second_parent_id": current_user["id"],
-        "id": {"$ne": athlete_id},  # esclude l'atleta appena creato
-    })
-    if partner_athlete and partner_athlete.get("parent_id"):
-        partner_id = partner_athlete["parent_id"]
-        partner_user = await db.users.find_one({"id": partner_id})
-        if partner_user:
-            await db.athletes.update_one(
-                {"id": athlete_id},
-                {"$set": {
-                    "second_parent_email": partner_user["email"],
-                    "second_parent_id": partner_id,
-                }}
-            )
-    else:
-        # Prova il contrario: cerca atleti dove il partner ha indicato questo genitore come second_parent_email
-        partner_athlete2 = await db.athletes.find_one({
-            "second_parent_email": current_user.get("email", "").lower(),
-            "parent_id": {"$ne": current_user["id"]},
-        })
-        if partner_athlete2 and partner_athlete2.get("parent_id"):
-            partner_id = partner_athlete2["parent_id"]
-            partner_user = await db.users.find_one({"id": partner_id})
-            if partner_user:
-                await db.athletes.update_one(
-                    {"id": athlete_id},
-                    {"$set": {
-                        "second_parent_email": partner_user["email"],
-                        "second_parent_id": partner_id,
-                    }}
-                )
+    # === LINKING SECONDO GENITORE (solo se email specificata) ===
+    if athlete_data.second_parent_email:
+        second_email = athlete_data.second_parent_email.lower().strip()
+        # Cerca se il secondo genitore è già registrato
+        second_parent_user = await db.users.find_one({"email": second_email})
+        update_fields = {"second_parent_email": second_email}
+        if second_parent_user:
+            update_fields["second_parent_id"] = second_parent_user["id"]
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": update_fields}
+        )
     
     # Payment records are created when admin approves the athlete
     # This ensures payments are only created for approved athletes
@@ -15180,33 +15158,35 @@ async def sign_gdpr_privacy_document(
                 raise HTTPException(status_code=403, detail="Non sei autorizzato a firmare per questo atleta")
             
             # --- Limit: force both parents to sign at least once ---
+            # Rule A: If only one parent is registered, they can sign freely
+            # Rule B: If both parents are registered AND child's privacy is unsigned, enforce alternation
+            # Rule C: Second parent signs their own consents during profile completion
             has_second_parent = bool(minor.get("second_parent_id"))
             if has_second_parent:
                 parent_id = current_user["id"]
-                
-                # Check if the OTHER parent has signed at least one GDPR
                 other_parent_id = minor.get("second_parent_id") if minor.get("parent_id") == parent_id else minor.get("parent_id")
                 
-                # Count how many GDPR docs THIS parent has signed
-                my_signed_count = await db.signed_documents.count_documents({
-                    "signer_id": parent_id,
-                    "document_type": {"$regex": "gdpr_minor", "$options": "i"}
-                })
+                # Check if the other parent is actually registered in the system
+                other_parent = await db.users.find_one({"id": other_parent_id})
                 
-                # Count how many GDPR docs the OTHER parent has signed
-                other_signed_count = await db.signed_documents.count_documents({
-                    "signer_id": other_parent_id,
-                    "document_type": {"$regex": "gdpr_minor", "$options": "i"}
-                })
-                
-                # Block if: I already signed at least 1, but the other parent hasn't signed any yet
-                if my_signed_count >= 1 and other_signed_count == 0:
-                    other_parent = await db.users.find_one({"id": other_parent_id})
-                    other_name = other_parent.get("full_name", "l'altro genitore") if other_parent else "l'altro genitore"
-                    raise HTTPException(
-                        status_code=403, 
-                        detail=f"Per la privacy di {minor.get('full_name', 'questo atleta')}, è necessario che {other_name} acceda e firmi dalla propria area personale. Dopo che entrambi i genitori avranno firmato almeno una privacy, potrete firmare liberamente."
-                    )
+                if other_parent:
+                    # Both parents are registered - apply Rule B
+                    my_signed_count = await db.signed_documents.count_documents({
+                        "signer_id": parent_id,
+                        "document_type": {"$regex": "gdpr_minor", "$options": "i"}
+                    })
+                    other_signed_count = await db.signed_documents.count_documents({
+                        "signer_id": other_parent_id,
+                        "document_type": {"$regex": "gdpr_minor", "$options": "i"}
+                    })
+                    
+                    if my_signed_count >= 1 and other_signed_count == 0:
+                        other_name = other_parent.get("full_name", "l'altro genitore")
+                        raise HTTPException(
+                            status_code=403, 
+                            detail=f"Per la privacy di {minor.get('full_name', 'questo atleta')}, è necessario che {other_name} acceda e firmi dalla propria area personale. Dopo che entrambi i genitori avranno firmato almeno una privacy, potrete firmare liberamente."
+                        )
+                # If other parent is NOT registered yet → Rule A: sign freely (no blocking)
             
             # Validate parent and athlete profiles before generating document
             # Fetch full parent record (current_user has limited fields)
@@ -19543,6 +19523,8 @@ async def get_end_trial_status(athlete_id: str, current_user = Depends(get_curre
     all_complete = has_certificate and cert_verified and privacy_signed
     
     # Check if GDPR signing is blocked for this parent (one parent per child rule)
+    # Rule A: Single registered parent → can sign freely
+    # Rule B: Both parents registered → enforce alternation
     gdpr_signing_blocked = False
     gdpr_signing_blocked_message = ""
     if current_user["role"] == UserRole.PARENT:
@@ -19550,19 +19532,25 @@ async def get_end_trial_status(athlete_id: str, current_user = Depends(get_curre
         if has_second_parent:
             parent_id = current_user["id"]
             other_parent_id = athlete.get("second_parent_id") if athlete.get("parent_id") == parent_id else athlete.get("parent_id")
-            my_signed_count = await db.signed_documents.count_documents({
-                "signer_id": parent_id,
-                "document_type": {"$regex": "gdpr_minor", "$options": "i"}
-            })
-            other_signed_count = await db.signed_documents.count_documents({
-                "signer_id": other_parent_id,
-                "document_type": {"$regex": "gdpr_minor", "$options": "i"}
-            })
-            if my_signed_count >= 1 and other_signed_count == 0:
-                other_parent = await db.users.find_one({"id": other_parent_id})
-                other_name = other_parent.get("full_name", "l'altro genitore") if other_parent else "l'altro genitore"
-                gdpr_signing_blocked = True
-                gdpr_signing_blocked_message = f"Per la privacy di {athlete.get('full_name', 'questo atleta')}, è necessario che {other_name} acceda e firmi dalla propria area personale."
+            
+            # Check if the other parent is actually registered
+            other_parent = await db.users.find_one({"id": other_parent_id})
+            
+            if other_parent:
+                # Both parents registered → apply Rule B
+                my_signed_count = await db.signed_documents.count_documents({
+                    "signer_id": parent_id,
+                    "document_type": {"$regex": "gdpr_minor", "$options": "i"}
+                })
+                other_signed_count = await db.signed_documents.count_documents({
+                    "signer_id": other_parent_id,
+                    "document_type": {"$regex": "gdpr_minor", "$options": "i"}
+                })
+                if my_signed_count >= 1 and other_signed_count == 0:
+                    other_name = other_parent.get("full_name", "l'altro genitore")
+                    gdpr_signing_blocked = True
+                    gdpr_signing_blocked_message = f"Per la privacy di {athlete.get('full_name', 'questo atleta')}, è necessario che {other_name} acceda e firmi dalla propria area personale."
+            # If other parent NOT registered → Rule A: sign freely
     
     return {
         "end_trial_requested": athlete.get("end_trial_requested", False),
