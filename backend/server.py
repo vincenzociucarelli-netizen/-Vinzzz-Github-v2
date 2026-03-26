@@ -18343,6 +18343,54 @@ async def get_my_documents(
         else:
             grouped["personal"].append(doc)
     
+    # Add consent-based virtual documents for the parent's personal section
+    target_user = await db.users.find_one(
+        {"id": target_user_id},
+        {"_id": 0, "consents": 1, "legal_accepted_at": 1, "full_name": 1}
+    )
+    parent_name = target_user.get("full_name", "") if target_user else ""
+    consent_docs = []
+    if target_user and target_user.get("consents"):
+        consents = target_user["consents"]
+        consent_label_map = {
+            "privacy_viewed": "Informativa Privacy - Presa visione",
+            "data_processing": "Consenso Trattamento Dati Personali",
+        }
+        for ckey, clabel in consent_label_map.items():
+            c = consents.get(ckey)
+            if c and c.get("value"):
+                consent_docs.append({
+                    "id": f"consent_{ckey}_{target_user_id}",
+                    "document_type": f"consent_{ckey}",
+                    "document_title": clabel,
+                    "signed_at": c.get("timestamp"),
+                    "created_at": c.get("timestamp"),
+                    "is_consent_record": True,
+                    "consent_metadata": {
+                        "source": c.get("source", "registration"),
+                        "ip_address": c.get("ip_address"),
+                        "document_version": c.get("document_version"),
+                        "user_id": c.get("user_id"),
+                    }
+                })
+        # Add Terms of Use acceptance if legal_accepted_at is present
+        legal_at = target_user.get("legal_accepted_at")
+        if legal_at:
+            consent_docs.append({
+                "id": f"consent_terms_{target_user_id}",
+                "document_type": "consent_terms",
+                "document_title": "Termini di Utilizzo - Accettati",
+                "signed_at": legal_at if isinstance(legal_at, str) else legal_at.isoformat() if hasattr(legal_at, 'isoformat') else str(legal_at),
+                "created_at": legal_at if isinstance(legal_at, str) else legal_at.isoformat() if hasattr(legal_at, 'isoformat') else str(legal_at),
+                "is_consent_record": True,
+                "consent_metadata": {
+                    "source": "registration",
+                }
+            })
+    
+    # Prepend consent docs to personal section
+    grouped["personal"] = consent_docs + grouped["personal"]
+    
     # Convert minors dict to list for easier frontend handling
     minors_list = list(grouped["minors"].values())
     
@@ -18350,9 +18398,10 @@ async def get_my_documents(
         "documents": documents,  # Flat list for backwards compatibility
         "grouped": {
             "personal": grouped["personal"],
-            "minors": minors_list
+            "minors": minors_list,
+            "parent_name": parent_name,
         },
-        "total": len(documents)
+        "total": len(documents) + len(consent_docs)
     }
 
 # ==================== GDPR DATA DELETION ENDPOINT ====================

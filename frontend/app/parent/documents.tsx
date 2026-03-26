@@ -23,6 +23,13 @@ interface Document {
   minor_name?: string;
   created_at?: string;
   signed_at?: string;
+  is_consent_record?: boolean;
+  consent_metadata?: {
+    source?: string;
+    ip_address?: string;
+    document_version?: string;
+    user_id?: string;
+  };
   gdpr_metadata?: {
     document_version: string;
     timestamp: string;
@@ -56,6 +63,7 @@ export default function ParentDocuments() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [grouped, setGrouped] = useState<GroupedDocuments>({ personal: [], minors: [] });
+  const [parentName, setParentName] = useState('');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['personal']));
 
   useEffect(() => {
@@ -67,6 +75,7 @@ export default function ParentDocuments() {
       const response = await api.get('/documents/my-documents');
       if (response.data.grouped) {
         setGrouped(response.data.grouped);
+        setParentName(response.data.grouped.parent_name || '');
         // Auto-expand all sections with documents
         const sections = new Set<string>();
         if (response.data.grouped.personal?.length > 0) {
@@ -174,32 +183,56 @@ export default function ParentDocuments() {
     return 'document';
   };
 
-  const renderDocumentItem = (doc: Document) => (
-    <TouchableOpacity
-      key={doc.id}
-      style={styles.documentItem}
-      onPress={() => openDocument(doc.id, doc.document_title || doc.document_type)}
-    >
-      <View style={styles.documentIcon}>
-        <Ionicons name={getDocumentIcon(doc.document_type)} size={24} color="#8E44AD" />
-      </View>
-      <View style={styles.documentInfo}>
-        <Text style={styles.documentTitle} numberOfLines={2}>
-          {doc.document_title || doc.document_type}
-        </Text>
-        <Text style={styles.documentDate}>
-          {formatDate(doc.created_at || doc.signed_at)}
-        </Text>
-        {doc.gdpr_metadata && (
-          <View style={styles.gdprBadge}>
-            <Ionicons name="shield" size={10} color="#27AE60" />
-            <Text style={styles.gdprText}>GDPR v{doc.gdpr_metadata.document_version}</Text>
-          </View>
-        )}
-      </View>
-      <Ionicons name="open-outline" size={20} color="#999" />
-    </TouchableOpacity>
-  );
+  const renderDocumentItem = (doc: Document) => {
+    const isConsent = doc.is_consent_record;
+    
+    return (
+      <TouchableOpacity
+        key={doc.id}
+        style={styles.documentItem}
+        onPress={isConsent ? undefined : () => openDocument(doc.id, doc.document_title || doc.document_type)}
+        activeOpacity={isConsent ? 1 : 0.7}
+        data-testid={`doc-item-${doc.id}`}
+      >
+        <View style={[styles.documentIcon, isConsent && { backgroundColor: '#E8F5E9' }]}>
+          <Ionicons
+            name={isConsent ? 'checkmark-circle' : getDocumentIcon(doc.document_type)}
+            size={24}
+            color={isConsent ? '#4CAF50' : '#8E44AD'}
+          />
+        </View>
+        <View style={styles.documentInfo}>
+          <Text style={styles.documentTitle} numberOfLines={2}>
+            {doc.document_title || doc.document_type}
+          </Text>
+          <Text style={styles.documentDate}>
+            {formatDate(doc.created_at || doc.signed_at)}
+          </Text>
+          {isConsent && doc.consent_metadata?.source && (
+            <View style={styles.consentBadge}>
+              <Ionicons name="finger-print" size={10} color="#2196F3" />
+              <Text style={styles.consentBadgeText}>
+                {doc.consent_metadata.source === 'registration' ? 'Accettato alla registrazione' : 'Accettato'}
+              </Text>
+            </View>
+          )}
+          {isConsent && doc.consent_metadata?.document_version && (
+            <View style={styles.gdprBadge}>
+              <Ionicons name="shield" size={10} color="#27AE60" />
+              <Text style={styles.gdprText}>v{doc.consent_metadata.document_version}</Text>
+            </View>
+          )}
+          {!isConsent && doc.gdpr_metadata && (
+            <View style={styles.gdprBadge}>
+              <Ionicons name="shield" size={10} color="#27AE60" />
+              <Text style={styles.gdprText}>GDPR v{doc.gdpr_metadata.document_version}</Text>
+            </View>
+          )}
+        </View>
+        {!isConsent && <Ionicons name="open-outline" size={20} color="#999" />}
+      </TouchableOpacity>
+    );
+  };
 
   const renderSection = (
     title: string,
@@ -294,7 +327,7 @@ export default function ParentDocuments() {
 
             {/* Personal Documents Section */}
             {grouped.personal.length > 0 && renderSection(
-              'I Miei Documenti',
+              parentName ? `Documenti di ${parentName}` : 'I Miei Documenti',
               'personal',
               grouped.personal,
               '#8E44AD',
@@ -452,6 +485,17 @@ const styles = StyleSheet.create({
   gdprText: {
     fontSize: 10,
     color: '#27AE60',
+    fontWeight: '500',
+  },
+  consentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  consentBadgeText: {
+    fontSize: 10,
+    color: '#2196F3',
     fontWeight: '500',
   },
   emptyContainer: {
