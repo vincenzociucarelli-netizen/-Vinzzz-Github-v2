@@ -20,6 +20,16 @@ interface Notification {
   type: string;
   title: string;
   message: string;
+  data?: {
+    athlete_id?: string;
+    athlete_name?: string;
+    parent_name?: string;
+    changed_by?: string;
+    changed_by_role?: string;
+    issue_date?: string;
+    expiry_date?: string;
+    [key: string]: any;
+  };
   related_user_id?: string;
   related_user_name?: string;
   read: boolean;
@@ -187,12 +197,36 @@ export default function AdminNotifications() {
                 </View>
                 <View style={styles.notificationContent}>
                   <View style={styles.notificationHeader}>
-                    <Text style={styles.notificationTitle} numberOfLines={1}>{notification.title}</Text>
+                    <Text style={styles.notificationTitle}>{notification.title}</Text>
                     {!notification.read && <View style={styles.unreadDot} />}
                   </View>
-                  <Text style={styles.notificationMessage} numberOfLines={2}>{notification.message}</Text>
+                  <Text style={styles.notificationMessage}>{notification.message}</Text>
+                  {notification.data?.athlete_name && (
+                    <View style={styles.detailRow}>
+                      <Ionicons name="person" size={12} color="#1565C0" />
+                      <Text style={styles.detailText}>Atleta: {notification.data.athlete_name}</Text>
+                    </View>
+                  )}
+                  {notification.data?.expiry_date && (
+                    <View style={styles.detailRow}>
+                      <Ionicons name="calendar" size={12} color="#E65100" />
+                      <Text style={styles.detailText}>Nuova scadenza: {notification.data.expiry_date}</Text>
+                    </View>
+                  )}
+                  {notification.data?.issue_date && (
+                    <View style={styles.detailRow}>
+                      <Ionicons name="document-text" size={12} color="#2E7D32" />
+                      <Text style={styles.detailText}>Emissione: {notification.data.issue_date}</Text>
+                    </View>
+                  )}
+                  {notification.data?.changed_by && (
+                    <View style={styles.detailRow}>
+                      <Ionicons name="create" size={12} color="#7B1FA2" />
+                      <Text style={styles.detailText}>Aggiornato da: {notification.data.changed_by} ({notification.data.changed_by_role || ''})</Text>
+                    </View>
+                  )}
                   {notification.related_user_name && (
-                    <Text style={styles.relatedUser} numberOfLines={1}>
+                    <Text style={styles.relatedUser}>
                       {notification.related_user_name}
                     </Text>
                   )}
@@ -326,8 +360,20 @@ const styles = StyleSheet.create({
   notificationMessage: {
     fontSize: 13,
     color: '#666',
-    lineHeight: 17,
-    marginBottom: 3,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  detailRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 5,
+    marginTop: 3,
+    paddingLeft: 2,
+  },
+  detailText: {
+    fontSize: 12,
+    color: '#444',
+    fontWeight: '500' as const,
   },
   relatedUser: {
     fontSize: 12,

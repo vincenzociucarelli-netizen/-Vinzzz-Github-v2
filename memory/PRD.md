@@ -32,6 +32,8 @@ Comprehensive sports team management application for Italian volleyball societie
 - **Backend**: Aggiunto campo `gdpr_signing_blocked` e `gdpr_signing_blocked_message` all'endpoint `GET /api/athletes/{id}/end-trial-status`.
 - **UI**: Il bottone "Rimani e Firma Privacy" viene nascosto quando il genitore è bloccato, mantenendo visibile solo il bottone "Lascia la Società".
 
+- **UI Enhancement**: Ampliato il contenuto delle notifiche Admin: rimosso il troncamento `numberOfLines={2}`, aggiunto il campo `data` strutturato con icone (Atleta, Nuova scadenza, Emissione, Aggiornato da) per allinearle al livello di dettaglio dell'Audit Log.
+
 ### Session 2026-03-25
 - **Bug Fix**: Fixed "Stato di Nascita" (Country of Birth) not saving. Added missing `country_of_birth` field handling in `PATCH /api/athletes/{athlete_id}` endpoint (server.py line ~7341).
 - **Bug Fix**: Fixed "Luogo di Nascita" field hidden for foreign-born athletes. The birth place input was only shown when country was "Italia", preventing users from entering a foreign city. Now the field is always visible; only the province field is hidden for non-Italian countries. Fixed in both `athlete/[id].tsx` edit modal and `register-athlete.tsx` form.
