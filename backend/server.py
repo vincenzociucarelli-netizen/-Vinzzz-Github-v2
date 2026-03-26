@@ -15175,34 +15175,33 @@ async def sign_gdpr_privacy_document(
             if not minor:
                 raise HTTPException(status_code=404, detail="Atleta minore non trovato")
             
-            # --- Limit: each parent can sign GDPR for only one child if second parent exists ---
+            # --- Limit: force both parents to sign at least once ---
             has_second_parent = bool(minor.get("second_parent_id"))
             if has_second_parent:
                 parent_id = current_user["id"]
-                all_children = await db.athletes.find({
-                    "$or": [{"parent_id": parent_id}, {"second_parent_id": parent_id}],
-                    "is_minor": True
-                }).to_list(100)
                 
-                children_signed_by_me = []
-                for child in all_children:
-                    if child.get("privacy_accepted"):
-                        signed_doc = await db.signed_documents.find_one({
-                            "related_entity_id": child["id"],
-                            "document_type": {"$regex": "gdpr_minor", "$options": "i"},
-                            "signer_id": parent_id
-                        })
-                        if signed_doc:
-                            children_signed_by_me.append(child)
+                # Check if the OTHER parent has signed at least one GDPR
+                other_parent_id = minor.get("second_parent_id") if minor.get("parent_id") == parent_id else minor.get("parent_id")
                 
-                if len(children_signed_by_me) >= 1 and request.minor_id not in [c["id"] for c in children_signed_by_me]:
-                    other_parent_id = minor.get("second_parent_id") if minor.get("parent_id") == parent_id else minor.get("parent_id")
+                # Count how many GDPR docs THIS parent has signed
+                my_signed_count = await db.signed_documents.count_documents({
+                    "signer_id": parent_id,
+                    "document_type": {"$regex": "gdpr_minor", "$options": "i"}
+                })
+                
+                # Count how many GDPR docs the OTHER parent has signed
+                other_signed_count = await db.signed_documents.count_documents({
+                    "signer_id": other_parent_id,
+                    "document_type": {"$regex": "gdpr_minor", "$options": "i"}
+                })
+                
+                # Block if: I already signed at least 1, but the other parent hasn't signed any yet
+                if my_signed_count >= 1 and other_signed_count == 0:
                     other_parent = await db.users.find_one({"id": other_parent_id})
                     other_name = other_parent.get("full_name", "l'altro genitore") if other_parent else "l'altro genitore"
-                    signed_names = ", ".join([c.get("full_name", "") for c in children_signed_by_me])
                     raise HTTPException(
                         status_code=403, 
-                        detail=f"Hai già firmato la privacy per {signed_names}. Per la privacy di {minor.get('full_name', 'questo atleta')}, è necessario che {other_name} acceda e firmi dalla propria area personale."
+                        detail=f"Per la privacy di {minor.get('full_name', 'questo atleta')}, è necessario che {other_name} acceda e firmi dalla propria area personale. Dopo che entrambi i genitori avranno firmato almeno una privacy, potrete firmare liberamente."
                     )
             
             # Validate parent and athlete profiles before generating document
