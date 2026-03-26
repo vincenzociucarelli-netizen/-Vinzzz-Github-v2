@@ -1779,6 +1779,11 @@ export default function AthleteDetail() {
                 <Text style={styles.dataLabel}>Email</Text>
                 <Text style={styles.dataValue}>{maskData(athlete.email)}</Text>
               </View>
+              
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Email 2° Genitore</Text>
+                <Text style={styles.dataValue}>{athlete.second_parent_email || '-'}</Text>
+              </View>
             </View>
           )}
 
