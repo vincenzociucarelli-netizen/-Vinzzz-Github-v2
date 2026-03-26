@@ -1530,7 +1530,7 @@ async def get_terms_status(current_user = Depends(get_current_user)):
 # ==================== AUTH ENDPOINTS ====================
 
 @api_router.post("/auth/register", response_model=TokenResponse)
-async def register(user_data: UserCreate):
+async def register(user_data: UserCreate, request: Request):
     # Check if user exists
     existing = await db.users.find_one({"email": user_data.email})
     if existing:
@@ -1588,26 +1588,33 @@ async def register(user_data: UserCreate):
     now = datetime.now(timezone.utc)
     consent_update = {"legal_accepted_at": now.isoformat()}
     if user_data.consents:
+        client_ip = request.headers.get("x-forwarded-for", request.headers.get("x-real-ip", request.client.host if request.client else "unknown"))
+        if client_ip and "," in client_ip:
+            client_ip = client_ip.split(",")[0].strip()
+        doc_version = "1.0-2026"
+        consent_base = {
+            "timestamp": now.isoformat(),
+            "source": "registration",
+            "ip_address": client_ip,
+            "document_version": doc_version,
+            "user_id": user.id,
+        }
         consent_update["consents"] = {
             "privacy_viewed": {
                 "value": user_data.consents.get("privacy_viewed", True),
-                "timestamp": now.isoformat(),
-                "source": "registration"
+                **consent_base
             },
             "data_processing": {
                 "value": user_data.consents.get("data_processing", False),
-                "timestamp": now.isoformat(),
-                "source": "registration"
+                **consent_base
             },
             "images_internal": {
                 "value": user_data.consents.get("images_internal", False),
-                "timestamp": now.isoformat(),
-                "source": "registration"
+                **consent_base
             },
             "images_promo": {
                 "value": user_data.consents.get("images_promo", False),
-                "timestamp": now.isoformat(),
-                "source": "registration"
+                **consent_base
             }
         }
     await db.users.update_one({"id": user.id}, {"$set": consent_update})

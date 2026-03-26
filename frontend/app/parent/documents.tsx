@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -65,6 +66,7 @@ export default function ParentDocuments() {
   const [grouped, setGrouped] = useState<GroupedDocuments>({ personal: [], minors: [] });
   const [parentName, setParentName] = useState('');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['personal']));
+  const [selectedConsent, setSelectedConsent] = useState<Document | null>(null);
 
   useEffect(() => {
     loadDocuments();
@@ -202,7 +204,7 @@ export default function ParentDocuments() {
       <TouchableOpacity
         key={doc.id}
         style={styles.documentItem}
-        onPress={isConsent ? () => openConsentDocument(doc.document_type) : () => openDocument(doc.id, doc.document_title || doc.document_type)}
+        onPress={isConsent ? () => setSelectedConsent(doc) : () => openDocument(doc.id, doc.document_title || doc.document_type)}
         data-testid={`doc-item-${doc.id}`}
       >
         <View style={[styles.documentIcon, isConsent && { backgroundColor: '#E8F5E9' }]}>
@@ -358,6 +360,74 @@ export default function ParentDocuments() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Consent Detail Modal */}
+      <Modal
+        visible={!!selectedConsent}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedConsent(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="shield-checkmark" size={28} color="#4CAF50" />
+              <Text style={styles.modalTitle}>{selectedConsent?.document_title}</Text>
+            </View>
+
+            <View style={styles.metadataSection}>
+              <View style={styles.metadataRow}>
+                <Ionicons name="person" size={16} color="#666" />
+                <Text style={styles.metadataLabel}>Titolare:</Text>
+                <Text style={styles.metadataValue}>{parentName}</Text>
+              </View>
+              <View style={styles.metadataRow}>
+                <Ionicons name="calendar" size={16} color="#666" />
+                <Text style={styles.metadataLabel}>Data accettazione:</Text>
+                <Text style={styles.metadataValue}>{formatDate(selectedConsent?.signed_at)}</Text>
+              </View>
+              <View style={styles.metadataRow}>
+                <Ionicons name="finger-print" size={16} color="#666" />
+                <Text style={styles.metadataLabel}>Modalita:</Text>
+                <Text style={styles.metadataValue}>
+                  {selectedConsent?.consent_metadata?.source === 'registration' ? 'Accettazione alla registrazione' : selectedConsent?.consent_metadata?.source || '-'}
+                </Text>
+              </View>
+              {selectedConsent?.consent_metadata?.ip_address && (
+                <View style={styles.metadataRow}>
+                  <Ionicons name="globe" size={16} color="#666" />
+                  <Text style={styles.metadataLabel}>Indirizzo IP:</Text>
+                  <Text style={styles.metadataValue}>{selectedConsent.consent_metadata.ip_address}</Text>
+                </View>
+              )}
+              {selectedConsent?.consent_metadata?.document_version && (
+                <View style={styles.metadataRow}>
+                  <Ionicons name="document-text" size={16} color="#666" />
+                  <Text style={styles.metadataLabel}>Versione documento:</Text>
+                  <Text style={styles.metadataValue}>v{selectedConsent.consent_metadata.document_version}</Text>
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={styles.viewDocButton}
+              onPress={() => {
+                if (selectedConsent) openConsentDocument(selectedConsent.document_type);
+              }}
+            >
+              <Ionicons name="open-outline" size={18} color="#fff" />
+              <Text style={styles.viewDocButtonText}>Visualizza Documento Completo</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setSelectedConsent(null)}
+            >
+              <Text style={styles.closeButtonText}>Chiudi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -532,5 +602,77 @@ const styles = StyleSheet.create({
     color: '#999',
     padding: 20,
     fontStyle: 'italic',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+  },
+  metadataSection: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  metadataRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  metadataLabel: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
+  },
+  metadataValue: {
+    flex: 1,
+    fontSize: 13,
+    color: '#333',
+    fontWeight: '600',
+  },
+  viewDocButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8E44AD',
+    borderRadius: 10,
+    paddingVertical: 12,
+    gap: 8,
+    marginBottom: 10,
+  },
+  viewDocButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  closeButton: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  closeButtonText: {
+    color: '#999',
+    fontSize: 14,
   },
 });
