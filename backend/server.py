@@ -15326,6 +15326,19 @@ async def sign_gdpr_privacy_document(
                 **consent_sync
             }}
         )
+        # Also update the signing parent's own consents
+        parent_consent_sync = {
+            "consents.privacy_viewed": {"value": True, "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
+            "consents.data_processing": {"value": True, "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
+        }
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": {
+                "privacy_accepted": True,
+                "privacy_accepted_date": timestamp,
+                **parent_consent_sync
+            }}
+        )
     elif request.document_type == "gdpr_adult":
         # Update user record for adult
         await db.users.update_one(
