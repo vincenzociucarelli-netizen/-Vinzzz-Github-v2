@@ -287,8 +287,8 @@ export default function RegisterAthlete() {
       });
       
       const successMsg = isTrialPeriod 
-        ? 'Atleta registrato! In attesa di approvazione da parte dell\'amministratore.'
-        : 'Atleta registrato con privacy accettata! In attesa di approvazione.';
+        ? 'Atleta registrato per il periodo di prova! Troverai il nuovo atleta nella tua area personale.'
+        : 'Atleta registrato con successo! Troverai il nuovo atleta nella tua area personale.';
       
       showAlert('Successo', successMsg, () => router.replace('/parent'));
     } catch (error: any) {
