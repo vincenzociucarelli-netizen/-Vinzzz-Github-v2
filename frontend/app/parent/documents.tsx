@@ -358,7 +358,7 @@ export default function ParentDocuments() {
             <View style={styles.infoBanner}>
               <Ionicons name="information-circle" size={20} color="#3498DB" />
               <Text style={styles.infoBannerText}>
-                I documenti sono organizzati per figlio. Tocca per espandere o comprimere le sezioni.
+                I documenti sono organizzati per sezione. Tocca per espandere o comprimere le sezioni.
               </Text>
             </View>
 
