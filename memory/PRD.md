@@ -25,6 +25,13 @@ Comprehensive sports team management application for Italian volleyball societie
 ## Architecture
 - Backend: FastAPI on port 8001 | Frontend: Expo React Native Web | DB: MongoDB | Email: Brevo
 
+### Session 2026-03-26
+- **Bug Fix (P0 CRITICO)**: Corretto `GDPRPrivacyModal` che mostrava i dati della famiglia sbagliata nel PDF di anteprima. Rimossi props duplicati (`signerInfo`, `minorInfo`) in `[id].tsx` e mantenuti quelli corretti basati su `parentProfile` da `/auth/me`.
+- **Security Fix**: Aggiunta validazione di ownership (`parent_id`/`second_parent_id`) nell'endpoint `POST /api/documents/sign-gdpr-privacy` per prevenire firma non autorizzata.
+- **Feature UI**: Implementato blocco visivo "Firma Privacy non disponibile" nella pagina atleta quando la regola "un genitore per figlio" impedisce la firma. Messaggio arancione con icona informativa e nome dell'altro genitore che deve firmare.
+- **Backend**: Aggiunto campo `gdpr_signing_blocked` e `gdpr_signing_blocked_message` all'endpoint `GET /api/athletes/{id}/end-trial-status`.
+- **UI**: Il bottone "Rimani e Firma Privacy" viene nascosto quando il genitore è bloccato, mantenendo visibile solo il bottone "Lascia la Società".
+
 ### Session 2026-03-25
 - **Bug Fix**: Fixed "Stato di Nascita" (Country of Birth) not saving. Added missing `country_of_birth` field handling in `PATCH /api/athletes/{athlete_id}` endpoint (server.py line ~7341).
 - **Bug Fix**: Fixed "Luogo di Nascita" field hidden for foreign-born athletes. The birth place input was only shown when country was "Italia", preventing users from entering a foreign city. Now the field is always visible; only the province field is hidden for non-Italian countries. Fixed in both `athlete/[id].tsx` edit modal and `register-athlete.tsx` form.
@@ -37,7 +44,8 @@ Comprehensive sports team management application for Italian volleyball societie
 - **Improvement**: Added new audit log filter tabs: "Presenze", "Inizio Prova"
 
 ## Pending / Backlog
-- (P0) Support user manual testing
+- (P0) Supporto testing manuale attivo utente
+- (P2) Fix validazione numero di telefono per minori (issue ricorrente)
 - (P1) UI per atleti con contratto formale (programmato per l'estate, post-pubblicazione)
 - (P2) Refactor server.py (21000+ lines)
 - (P2) Re-implement Stripe payments
@@ -45,12 +53,18 @@ Comprehensive sports team management application for Italian volleyball societie
 
 ## Key Credentials
 - Admin: pallavoloperugia@gmail.com / Test1234
-- Parent: perla@test.com / Test1234
+- Parent (Sofia): sofia@test.com / Test1234
+- Parent (Beppe): beppe@test.com / Test1234
 - Adult Athlete: luna@18piu.com / Test1234
 
 ## Key Files
 - `src/components/PhotoViewer.tsx` - Gesture-based photo viewer
 - `src/components/ConsentManager.tsx` - Reusable consent card
+- `src/components/GDPRPrivacyModal.tsx` - GDPR privacy signing modal (fixed props)
 - `app/admin/settings/consent-audit.tsx` - Admin audit page
+- `app/parent/athlete/[id].tsx` - Parent athlete detail (GDPR blocking UI)
 - `app/parent/profile.tsx` - Parent profile (3-color buttons)
 - `app/coach/team/[id]/index.tsx` - Coach team detail with photo viewer
+
+## Test Reports
+- `/app/test_reports/iteration_60.json` - GDPR blocking tests (8/8 passed)
