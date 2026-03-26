@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
-  Modal,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -66,7 +66,6 @@ export default function ParentDocuments() {
   const [grouped, setGrouped] = useState<GroupedDocuments>({ personal: [], minors: [] });
   const [parentName, setParentName] = useState('');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['personal']));
-  const [selectedConsent, setSelectedConsent] = useState<Document | null>(null);
 
   useEffect(() => {
     loadDocuments();
@@ -185,15 +184,40 @@ export default function ParentDocuments() {
     return 'document';
   };
 
-  const openConsentDocument = (docType: string) => {
-    let url = '';
-    if (docType.includes('privacy')) url = '/privacy-policy';
-    else if (docType.includes('data_processing')) url = '/privacy-policy';
-    else if (docType.includes('terms')) url = '/terms-of-use';
-    if (url && Platform.OS === 'web') {
-      window.open(url, '_blank');
-    } else if (url) {
-      Linking.openURL(url);
+  const openConsentDocument = async (doc: Document) => {
+    const consentTypeMap: Record<string, string> = {
+      'consent_privacy_viewed': 'privacy_viewed',
+      'consent_data_processing': 'data_processing',
+      'consent_terms': 'terms',
+    };
+    const consentType = consentTypeMap[doc.document_type] || '';
+    if (!consentType) return;
+    
+    try {
+      if (Platform.OS === 'web') {
+        const token = localStorage.getItem('token') || '';
+        const baseUrl = api.defaults.baseURL || '';
+        const response = await fetch(`${baseUrl}/documents/consent-pdf/${consentType}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          Alert.alert('Errore', `Impossibile generare il documento: ${response.status}`);
+          return;
+        }
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const newWindow = window.open(blobUrl, '_blank');
+        if (!newWindow) {
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `${doc.document_title || 'documento'}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+      }
+    } catch (err) {
+      Alert.alert('Errore', 'Impossibile aprire il documento');
     }
   };
 
@@ -204,7 +228,7 @@ export default function ParentDocuments() {
       <TouchableOpacity
         key={doc.id}
         style={styles.documentItem}
-        onPress={isConsent ? () => setSelectedConsent(doc) : () => openDocument(doc.id, doc.document_title || doc.document_type)}
+        onPress={isConsent ? () => openConsentDocument(doc) : () => openDocument(doc.id, doc.document_title || doc.document_type)}
         data-testid={`doc-item-${doc.id}`}
       >
         <View style={[styles.documentIcon, isConsent && { backgroundColor: '#E8F5E9' }]}>
@@ -360,74 +384,6 @@ export default function ParentDocuments() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* Consent Detail Modal */}
-      <Modal
-        visible={!!selectedConsent}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedConsent(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Ionicons name="shield-checkmark" size={28} color="#4CAF50" />
-              <Text style={styles.modalTitle}>{selectedConsent?.document_title}</Text>
-            </View>
-
-            <View style={styles.metadataSection}>
-              <View style={styles.metadataRow}>
-                <Ionicons name="person" size={16} color="#666" />
-                <Text style={styles.metadataLabel}>Titolare:</Text>
-                <Text style={styles.metadataValue}>{parentName}</Text>
-              </View>
-              <View style={styles.metadataRow}>
-                <Ionicons name="calendar" size={16} color="#666" />
-                <Text style={styles.metadataLabel}>Data accettazione:</Text>
-                <Text style={styles.metadataValue}>{formatDate(selectedConsent?.signed_at)}</Text>
-              </View>
-              <View style={styles.metadataRow}>
-                <Ionicons name="finger-print" size={16} color="#666" />
-                <Text style={styles.metadataLabel}>Modalita:</Text>
-                <Text style={styles.metadataValue}>
-                  {selectedConsent?.consent_metadata?.source === 'registration' ? 'Accettazione alla registrazione' : selectedConsent?.consent_metadata?.source || '-'}
-                </Text>
-              </View>
-              {selectedConsent?.consent_metadata?.ip_address && (
-                <View style={styles.metadataRow}>
-                  <Ionicons name="globe" size={16} color="#666" />
-                  <Text style={styles.metadataLabel}>Indirizzo IP:</Text>
-                  <Text style={styles.metadataValue}>{selectedConsent.consent_metadata.ip_address}</Text>
-                </View>
-              )}
-              {selectedConsent?.consent_metadata?.document_version && (
-                <View style={styles.metadataRow}>
-                  <Ionicons name="document-text" size={16} color="#666" />
-                  <Text style={styles.metadataLabel}>Versione documento:</Text>
-                  <Text style={styles.metadataValue}>v{selectedConsent.consent_metadata.document_version}</Text>
-                </View>
-              )}
-            </View>
-
-            <TouchableOpacity
-              style={styles.viewDocButton}
-              onPress={() => {
-                if (selectedConsent) openConsentDocument(selectedConsent.document_type);
-              }}
-            >
-              <Ionicons name="open-outline" size={18} color="#fff" />
-              <Text style={styles.viewDocButtonText}>Visualizza Documento Completo</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setSelectedConsent(null)}
-            >
-              <Text style={styles.closeButtonText}>Chiudi</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }

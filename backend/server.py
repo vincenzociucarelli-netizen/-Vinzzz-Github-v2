@@ -1,6 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Depends, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse, Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -14022,6 +14022,161 @@ def generate_gdpr_minor_privacy_pdf(
     return buffer.getvalue()
 
 
+
+def generate_personal_consent_pdf(
+    consent_type: str,
+    society_name: str,
+    ragione_sociale: str,
+    society_address: str,
+    society_cf_piva: str,
+    society_email: str,
+    parent_name: str,
+    parent_fiscal_code: str,
+    timestamp: str,
+    ip_address: str,
+    document_version: str,
+    user_id: str,
+    society_id: str,
+    source: str = "registration",
+) -> bytes:
+    """Generate a PDF for parent's personal consent acceptance with metadata"""
+    if not HAS_PDF_GENERATION:
+        raise HTTPException(status_code=500, detail="PDF generation not available")
+
+    nome_legale = ragione_sociale if ragione_sociale else society_name
+
+    titles = {
+        "privacy_viewed": "INFORMATIVA PRIVACY - PRESA VISIONE",
+        "data_processing": "CONSENSO TRATTAMENTO DATI PERSONALI",
+        "terms": "TERMINI DI UTILIZZO - ACCETTAZIONE",
+    }
+    descriptions = {
+        "privacy_viewed": f"Il/La sottoscritto/a dichiara di aver preso visione dell'Informativa sulla Privacy della societa sportiva {nome_legale}, ai sensi del Regolamento UE 2016/679 (GDPR).",
+        "data_processing": f"Il/La sottoscritto/a acconsente al trattamento dei propri dati personali da parte della societa sportiva {nome_legale}, per le finalita descritte nell'Informativa sulla Privacy, ai sensi del Regolamento UE 2016/679 (GDPR).",
+        "terms": f"Il/La sottoscritto/a dichiara di aver letto e accettato i Termini di Utilizzo della piattaforma della societa sportiva {nome_legale}.",
+    }
+
+    doc_title = titles.get(consent_type, "CONSENSO PERSONALE")
+    doc_description = descriptions.get(consent_type, "")
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    w, h = A4
+    max_w = w - 4*cm
+
+    # Header
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(w/2, h - 2*cm, doc_title)
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(w/2, h - 2.6*cm, "(Regolamento UE 2016/679 - GDPR)")
+
+    y = h - 3.5*cm
+
+    # Box Dati Societari
+    c.setStrokeColor(colors.HexColor("#1565C0"))
+    c.setFillColor(colors.HexColor("#E3F2FD"))
+    c.roundRect(2*cm, y - 2.6*cm, max_w, 2.4*cm, 5, stroke=1, fill=1)
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2.3*cm, y - 0.6*cm, f"Societa: {nome_legale}")
+    c.setFont("Helvetica", 9)
+    c.drawString(2.3*cm, y - 1.15*cm, f"Sede: {society_address}")
+    c.drawString(2.3*cm, y - 1.65*cm, f"C.F./P.IVA: {society_cf_piva}  |  Email: {society_email}")
+    y -= 3.2*cm
+
+    # Box Dati del Genitore/Tutore
+    c.setStrokeColor(colors.HexColor("#2E7D32"))
+    c.setFillColor(colors.HexColor("#E8F5E9"))
+    box_h = 1.8*cm
+    c.roundRect(2*cm, y - box_h, max_w, box_h, 5, stroke=1, fill=1)
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2.3*cm, y - 0.5*cm, "DATI DEL GENITORE/TUTORE")
+    c.setFont("Helvetica", 9)
+    c.drawString(2.3*cm, y - 1.05*cm, f"Genitore/Tutore: {parent_name}")
+    c.drawString(2.3*cm, y - 1.55*cm, f"Codice Fiscale: {parent_fiscal_code}")
+    y -= (box_h + 1*cm)
+
+    # Descrizione
+    c.setFont("Helvetica", 10)
+    words = doc_description.split(' ')
+    lines = []
+    current_line = ""
+    for word in words:
+        test = current_line + " " + word if current_line else word
+        if c.stringWidth(test, "Helvetica", 10) < max_w:
+            current_line = test
+        else:
+            if current_line:
+                lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    for line in lines:
+        c.drawString(2*cm, y, line)
+        y -= 0.45*cm
+
+    y -= 1*cm
+
+    # Accettazione digitale section
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2*cm, y, "Accettazione digitale:")
+    y -= 0.8*cm
+
+    c.setStrokeColor(colors.HexColor("#4CAF50"))
+    c.setLineWidth(1.5)
+    c.roundRect(2*cm, y - 2.2*cm, max_w, 2.2*cm, 5, stroke=1, fill=0)
+
+    c.setFont("Helvetica", 10)
+    c.drawString(2.5*cm, y - 0.5*cm, f"Consenso espresso da: {parent_name}")
+    c.drawString(2.5*cm, y - 1.0*cm, f"Data: {timestamp}")
+    method_label = "Accettazione alla registrazione" if source == "registration" else "Accettazione manuale da profilo"
+    c.drawString(2.5*cm, y - 1.5*cm, f"Modalita: {method_label}")
+    c.drawString(2.5*cm, y - 2.0*cm, f"Indirizzo IP: {ip_address}")
+    y -= 3.5*cm
+
+    # Metadata box
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(2*cm, y, "METADATI DI FIRMA (validita probatoria)")
+    y -= 0.4*cm
+
+    c.setStrokeColor(colors.HexColor("#2C3E50"))
+    c.setFillColor(colors.HexColor("#ECF0F1"))
+    c.roundRect(2*cm, y - 3*cm, max_w, 3*cm, 3, fill=1, stroke=1)
+
+    c.setFillColor(colors.black)
+    c.setFont("Courier", 8)
+    ym = y - 0.4*cm
+    c.drawString(2.3*cm, ym, f"document_version: {document_version}")
+    ym -= 0.35*cm
+    c.drawString(2.3*cm, ym, f"timestamp: {timestamp}")
+    ym -= 0.35*cm
+    c.drawString(2.3*cm, ym, f"user_id: {user_id}")
+    ym -= 0.35*cm
+    c.drawString(2.3*cm, ym, f"society_id: {society_id}")
+    ym -= 0.35*cm
+    # Generate a hash for document integrity
+    import hashlib
+    hash_input = f"{consent_type}:{user_id}:{timestamp}:{document_version}"
+    doc_hash = hashlib.sha256(hash_input.encode()).hexdigest()
+    c.drawString(2.3*cm, ym, f"hash_document: {doc_hash}")
+    ym -= 0.35*cm
+    c.drawString(2.3*cm, ym, f"consent_type: {consent_type}")
+    ym -= 0.35*cm
+    c.drawString(2.3*cm, ym, f"ip_address: {ip_address}")
+
+    # Footer
+    c.setFont("Helvetica", 8)
+    c.setFillColor(colors.grey)
+    c.drawCentredString(w/2, 1.5*cm, "Documento generato automaticamente con validita probatoria ai sensi del GDPR.")
+    c.drawCentredString(w/2, 1*cm, f"Generato il {datetime.now(timezone.utc).strftime('%d/%m/%Y alle %H:%M:%S UTC')}")
+
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+
 def generate_privacy_consent_pdf(
     society_name: str,
     signer_name: str,
@@ -15033,6 +15188,73 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=documento_firmato_{document_id}.pdf"}
     )
+
+
+@api_router.get("/documents/consent-pdf/{consent_type}")
+async def get_consent_pdf(consent_type: str, current_user = Depends(get_current_user)):
+    """Generate and return a PDF for the parent's personal consent acceptance"""
+    valid_types = ["privacy_viewed", "data_processing", "terms"]
+    if consent_type not in valid_types:
+        raise HTTPException(status_code=400, detail=f"Tipo consenso non valido. Valori ammessi: {valid_types}")
+    
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    consents = user.get("consents", {})
+    
+    if consent_type == "terms":
+        legal_at = user.get("legal_accepted_at")
+        if not legal_at:
+            raise HTTPException(status_code=404, detail="Termini non ancora accettati")
+        ts = legal_at if isinstance(legal_at, str) else legal_at.isoformat() if hasattr(legal_at, 'isoformat') else str(legal_at)
+        consent_data = {"timestamp": ts, "source": "registration", "ip_address": consents.get("privacy_viewed", {}).get("ip_address", "N/D"), "document_version": consents.get("privacy_viewed", {}).get("document_version", "1.0-2026"), "user_id": current_user["id"]}
+    else:
+        consent_data = consents.get(consent_type)
+        if not consent_data or not consent_data.get("value"):
+            raise HTTPException(status_code=404, detail="Consenso non ancora espresso")
+    
+    society_settings = await db.settings.find_one({"type": "society"})
+    society_name = (society_settings.get("ragione_sociale") if society_settings else None) or "ASD/SSD"
+    ragione_sociale = society_settings.get("ragione_sociale", "") if society_settings else ""
+    society_address = society_settings.get("address", "") if society_settings else ""
+    society_cf_piva = society_settings.get("cf_piva", "") if society_settings else ""
+    society_email = society_settings.get("email", "") if society_settings else ""
+    society_id = str(society_settings.get("id", "")) if society_settings else ""
+    
+    ts_raw = consent_data.get("timestamp", "")
+    try:
+        dt = datetime.fromisoformat(ts_raw.replace('Z', '+00:00')) if isinstance(ts_raw, str) else ts_raw
+        ts_formatted = dt.strftime("%d/%m/%Y %H:%M:%S UTC") if hasattr(dt, 'strftime') else str(ts_raw)
+    except:
+        ts_formatted = str(ts_raw)
+    
+    pdf_bytes = generate_personal_consent_pdf(
+        consent_type=consent_type,
+        society_name=society_name,
+        ragione_sociale=ragione_sociale,
+        society_address=society_address,
+        society_cf_piva=society_cf_piva,
+        society_email=society_email,
+        parent_name=user.get("full_name", ""),
+        parent_fiscal_code=user.get("fiscal_code", "N/D"),
+        timestamp=ts_formatted,
+        ip_address=consent_data.get("ip_address", "N/D"),
+        document_version=consent_data.get("document_version", "1.0-2026"),
+        user_id=consent_data.get("user_id", current_user["id"]),
+        society_id=society_id,
+        source=consent_data.get("source", "registration"),
+    )
+    
+    title_map = {"privacy_viewed": "Informativa_Privacy", "data_processing": "Consenso_Dati", "terms": "Termini_Utilizzo"}
+    filename = f"{title_map.get(consent_type, consent_type)}_{user.get('full_name', 'utente').replace(' ', '_')}.pdf"
+    
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=\"{filename}\""}
+    )
+
 
 @api_router.get("/documents/signed")
 async def list_signed_documents(
