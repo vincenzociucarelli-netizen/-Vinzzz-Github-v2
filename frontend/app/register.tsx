@@ -41,6 +41,11 @@ export default function Register() {
   const [societyName, setSocietyName] = useState('');
   const [hasOpenedPrivacy, setHasOpenedPrivacy] = useState(false);
   const [hasOpenedTerms, setHasOpenedTerms] = useState(false);
+  
+  // GDPR consent states
+  const [consentDataProcessing, setConsentDataProcessing] = useState(false);
+  const [consentInternalImages, setConsentInternalImages] = useState(false);
+  const [consentPromotionalImages, setConsentPromotionalImages] = useState(false);
 
   // Refs
   const firstNameRef = useRef<TextInput>(null);
@@ -179,6 +184,11 @@ export default function Register() {
           role: role,
           invite_code: inviteCode.trim().toUpperCase(),
           ...(role === 'parent' && dataPassword ? { data_password: dataPassword } : {}),
+          consents: {
+            data_processing: consentDataProcessing,
+            internal_images: consentInternalImages,
+            promotional_images: consentPromotionalImages,
+          },
         });
       }
 
@@ -326,7 +336,7 @@ export default function Register() {
     if (type === 'terms') setHasOpenedTerms(true);
   };
 
-  const canContinueFromWelcome = hasOpenedPrivacy && hasOpenedTerms;
+  const canContinueFromWelcome = hasOpenedPrivacy && hasOpenedTerms && consentDataProcessing;
 
   // After welcome, decide next step
   const proceedFromWelcome = () => {
@@ -432,11 +442,53 @@ export default function Register() {
           Continuando, accetti i Termini di utilizzo e l'Informativa sulla Privacy.
         </Text>
 
+        {/* GDPR Consent Checkboxes */}
+        {hasOpenedPrivacy && hasOpenedTerms && (
+          <View style={{ marginTop: 12, marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>I tuoi consensi personali:</Text>
+            
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 10 }}
+              onPress={() => setConsentDataProcessing(!consentDataProcessing)}
+              data-testid="consent-data-processing"
+            >
+              <Ionicons name={consentDataProcessing ? "checkbox" : "square-outline"} size={22} color={consentDataProcessing ? "#4CAF50" : "#999"} />
+              <Text style={{ flex: 1, fontSize: 13, color: '#333', lineHeight: 18 }}>
+                <Text style={{ fontWeight: '600' }}>Acconsento al trattamento dei miei dati personali</Text> per le finalità descritte nell'informativa sulla privacy <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 10 }}
+              onPress={() => setConsentInternalImages(!consentInternalImages)}
+              data-testid="consent-internal-images"
+            >
+              <Ionicons name={consentInternalImages ? "checkbox" : "square-outline"} size={22} color={consentInternalImages ? "#4CAF50" : "#999"} />
+              <Text style={{ flex: 1, fontSize: 13, color: '#555', lineHeight: 18 }}>
+                Acconsento all'uso delle mie immagini per comunicazioni interne alla società
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 10 }}
+              onPress={() => setConsentPromotionalImages(!consentPromotionalImages)}
+              data-testid="consent-promotional-images"
+            >
+              <Ionicons name={consentPromotionalImages ? "checkbox" : "square-outline"} size={22} color={consentPromotionalImages ? "#4CAF50" : "#999"} />
+              <Text style={{ flex: 1, fontSize: 13, color: '#555', lineHeight: 18 }}>
+                Acconsento all'uso delle mie immagini a scopi promozionali
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {!canContinueFromWelcome && (
           <View style={styles.welcomeHintBox}>
             <Ionicons name="alert-circle" size={16} color="#E65100" />
             <Text style={styles.welcomeHintText}>
-              Devi aprire, leggere e comprendere entrambi i documenti prima di poter continuare
+              {!hasOpenedTerms || !hasOpenedPrivacy 
+                ? 'Devi aprire e leggere entrambi i documenti prima di poter continuare'
+                : 'Devi acconsentire al trattamento dei dati personali per continuare'}
             </Text>
           </View>
         )}

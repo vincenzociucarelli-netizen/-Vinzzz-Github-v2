@@ -2,15 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
-import { useLegalCheck } from '../../src/hooks/useLegalCheck';
-import { LegalAcceptanceScreen } from '../../src/components/LegalAcceptanceScreen';
 
 export default function CollaboratoreLayout() {
   const router = useRouter();
   const { user, isLoading, loadAuth } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
   const isAuthenticated = !isChecking && !isLoading && !!user && user.role === 'collaboratore';
-  const { legalAccepted, legalChecking, markLegalAccepted } = useLegalCheck(isAuthenticated);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -28,7 +25,7 @@ export default function CollaboratoreLayout() {
     }
   }, [user, isLoading, isChecking]);
 
-  if (isChecking || isLoading || legalChecking) {
+  if (isChecking || isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2196F3" />
@@ -44,9 +41,6 @@ export default function CollaboratoreLayout() {
     );
   }
 
-  if (legalAccepted === false) {
-    return <LegalAcceptanceScreen onAccepted={markLegalAccepted} userName={user.full_name} />;
-  }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>

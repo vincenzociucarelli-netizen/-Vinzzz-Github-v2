@@ -576,6 +576,7 @@ class UserCreate(BaseModel):
     phone: Optional[str] = None
     coach_license_number: Optional[str] = None
     data_password: Optional[str] = None  # Password protezione dati per genitori
+    consents: Optional[dict] = None  # GDPR consents from registration
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -1582,6 +1583,29 @@ async def register(user_data: UserCreate):
         user_dict["athlete_id"] = athlete_id
     
     await db.users.insert_one(user_dict)
+    
+    # Save GDPR consents and legal acceptance from registration
+    now = datetime.now(timezone.utc)
+    consent_update = {"legal_accepted_at": now.isoformat()}
+    if user_data.consents:
+        consent_update["consents"] = {
+            "data_processing": {
+                "value": user_data.consents.get("data_processing", False),
+                "timestamp": now.isoformat(),
+                "source": "registration"
+            },
+            "internal_images": {
+                "value": user_data.consents.get("internal_images", False),
+                "timestamp": now.isoformat(),
+                "source": "registration"
+            },
+            "promotional_images": {
+                "value": user_data.consents.get("promotional_images", False),
+                "timestamp": now.isoformat(),
+                "source": "registration"
+            }
+        }
+    await db.users.update_one({"id": user.id}, {"$set": consent_update})
     
     # Crea notifica per admin se l'utente richiede approvazione (coach, viewer, collaboratore)
     if initial_status == UserStatus.PENDING and society_id:
@@ -15157,36 +15181,9 @@ async def sign_gdpr_privacy_document(
             if current_user["id"] not in [minor.get("parent_id"), minor.get("second_parent_id")]:
                 raise HTTPException(status_code=403, detail="Non sei autorizzato a firmare per questo atleta")
             
-            # --- Limit: force both parents to sign at least once ---
-            # Rule A: If only one parent is registered, they can sign freely
-            # Rule B: If both parents are registered AND child's privacy is unsigned, enforce alternation
-            # Rule C: Second parent signs their own consents during profile completion
-            has_second_parent = bool(minor.get("second_parent_id"))
-            if has_second_parent:
-                parent_id = current_user["id"]
-                other_parent_id = minor.get("second_parent_id") if minor.get("parent_id") == parent_id else minor.get("parent_id")
-                
-                # Check if the other parent is actually registered in the system
-                other_parent = await db.users.find_one({"id": other_parent_id})
-                
-                if other_parent:
-                    # Both parents are registered - apply Rule B
-                    my_signed_count = await db.signed_documents.count_documents({
-                        "signer_id": parent_id,
-                        "document_type": {"$regex": "gdpr_minor", "$options": "i"}
-                    })
-                    other_signed_count = await db.signed_documents.count_documents({
-                        "signer_id": other_parent_id,
-                        "document_type": {"$regex": "gdpr_minor", "$options": "i"}
-                    })
-                    
-                    if my_signed_count >= 1 and other_signed_count == 0:
-                        other_name = other_parent.get("full_name", "l'altro genitore")
-                        raise HTTPException(
-                            status_code=403, 
-                            detail=f"Per la privacy di {minor.get('full_name', 'questo atleta')}, è necessario che {other_name} acceda e firmi dalla propria area personale. Dopo che entrambi i genitori avranno firmato almeno una privacy, potrete firmare liberamente."
-                        )
-                # If other parent is NOT registered yet → Rule A: sign freely (no blocking)
+            # Note: "one parent per child" blocking removed - personal GDPR consents 
+            # are now captured at registration for ALL users. Any authorized parent
+            # can sign the child's privacy document.
             
             # Validate parent and athlete profiles before generating document
             # Fetch full parent record (current_user has limited fields)
@@ -19522,35 +19519,10 @@ async def get_end_trial_status(athlete_id: str, current_user = Depends(get_curre
     privacy_signed = bool(athlete.get("privacy_accepted"))
     all_complete = has_certificate and cert_verified and privacy_signed
     
-    # Check if GDPR signing is blocked for this parent (one parent per child rule)
-    # Rule A: Single registered parent → can sign freely
-    # Rule B: Both parents registered → enforce alternation
+    # GDPR signing is no longer blocked per-parent since personal consents
+    # are captured at registration. Any authorized parent can sign.
     gdpr_signing_blocked = False
     gdpr_signing_blocked_message = ""
-    if current_user["role"] == UserRole.PARENT:
-        has_second_parent = bool(athlete.get("second_parent_id"))
-        if has_second_parent:
-            parent_id = current_user["id"]
-            other_parent_id = athlete.get("second_parent_id") if athlete.get("parent_id") == parent_id else athlete.get("parent_id")
-            
-            # Check if the other parent is actually registered
-            other_parent = await db.users.find_one({"id": other_parent_id})
-            
-            if other_parent:
-                # Both parents registered → apply Rule B
-                my_signed_count = await db.signed_documents.count_documents({
-                    "signer_id": parent_id,
-                    "document_type": {"$regex": "gdpr_minor", "$options": "i"}
-                })
-                other_signed_count = await db.signed_documents.count_documents({
-                    "signer_id": other_parent_id,
-                    "document_type": {"$regex": "gdpr_minor", "$options": "i"}
-                })
-                if my_signed_count >= 1 and other_signed_count == 0:
-                    other_name = other_parent.get("full_name", "l'altro genitore")
-                    gdpr_signing_blocked = True
-                    gdpr_signing_blocked_message = f"Per la privacy di {athlete.get('full_name', 'questo atleta')}, è necessario che {other_name} acceda e firmi dalla propria area personale."
-            # If other parent NOT registered → Rule A: sign freely
     
     return {
         "end_trial_requested": athlete.get("end_trial_requested", False),
