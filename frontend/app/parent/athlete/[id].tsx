@@ -1989,7 +1989,17 @@ export default function AthleteDetail() {
                   <Text style={{ fontSize: 13, color: '#333', textAlign: 'center', marginBottom: 8, fontWeight: '500' }}>
                     Vuoi terminare il periodo di prova?
                   </Text>
+                  {endTrialStatus?.gdpr_signing_blocked && (
+                    <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#FFB74D', marginBottom: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <Ionicons name="information-circle" size={18} color="#E65100" />
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: '#E65100' }}>Firma Privacy non disponibile</Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18 }}>{endTrialStatus.gdpr_signing_blocked_message}</Text>
+                    </View>
+                  )}
                   <View style={{ flexDirection: 'row', gap: 10 }}>
+                    {!endTrialStatus?.gdpr_signing_blocked && (
                     <TouchableOpacity
                       style={{ flex: 1, borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#fff' }}
                       onPress={() => handleRequestEndTrial()}
@@ -2000,6 +2010,7 @@ export default function AthleteDetail() {
                         {requestingEndTrial ? 'Invio...' : 'Rimani e Firma\nPrivacy'}
                       </Text>
                     </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                       style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#FFEBEE' }}
                       onPress={() => handleShowDeletionOption()}
@@ -2045,7 +2056,17 @@ export default function AthleteDetail() {
                   <Text style={{ fontSize: 13, color: '#333', textAlign: 'center', marginBottom: 8, fontWeight: '500' }}>
                     Vuoi terminare il periodo di prova?
                   </Text>
+                  {endTrialStatus?.gdpr_signing_blocked && (
+                    <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#FFB74D', marginBottom: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <Ionicons name="information-circle" size={18} color="#E65100" />
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: '#E65100' }}>Firma Privacy non disponibile</Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18 }}>{endTrialStatus.gdpr_signing_blocked_message}</Text>
+                    </View>
+                  )}
                   <View style={{ flexDirection: 'row', gap: 10 }}>
+                    {!endTrialStatus?.gdpr_signing_blocked && (
                     <TouchableOpacity
                       style={{ flex: 1, borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#fff' }}
                       onPress={() => handleRequestEndTrial()}
@@ -2056,6 +2077,7 @@ export default function AthleteDetail() {
                         {requestingEndTrial ? 'Invio...' : 'Rimani e Firma\nPrivacy'}
                       </Text>
                     </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                       style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#FFEBEE' }}
                       onPress={() => handleShowDeletionOption()}
@@ -2082,7 +2104,17 @@ export default function AthleteDetail() {
               <Text style={{ fontSize: 13, color: '#333', textAlign: 'center', marginBottom: 8, fontWeight: '500' }}>
                 Vuoi terminare il periodo di prova?
               </Text>
+              {endTrialStatus?.gdpr_signing_blocked && (
+                <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#FFB74D', marginBottom: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <Ionicons name="information-circle" size={18} color="#E65100" />
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#E65100' }}>Firma Privacy non disponibile</Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18 }}>{endTrialStatus.gdpr_signing_blocked_message}</Text>
+                </View>
+              )}
               <View style={{ flexDirection: 'row', gap: 10 }}>
+                {!endTrialStatus?.gdpr_signing_blocked && (
                 <TouchableOpacity
                   style={{ flex: 1, borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#fff' }}
                   onPress={() => handleRequestEndTrial()}
@@ -2093,6 +2125,7 @@ export default function AthleteDetail() {
                     {requestingEndTrial ? 'Invio...' : 'Rimani e Firma\nPrivacy'}
                   </Text>
                 </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#FFEBEE' }}
                   onPress={() => handleShowDeletionOption()}
@@ -2107,6 +2140,15 @@ export default function AthleteDetail() {
           {/* Bottoni quando end_trial_requested - mostra solo Rimani/Firma Privacy */}
           {athlete.status === 'trial' && endTrialStatus?.end_trial_requested && !athlete.deletion_requested && (
             <View style={{ backgroundColor: '#F5F5F5', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E0E0E0' }} data-testid="end-trial-stepper">
+              {endTrialStatus?.gdpr_signing_blocked && !endTrialStatus.steps.privacy_signed ? (
+                <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#FFB74D' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <Ionicons name="information-circle" size={18} color="#E65100" />
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#E65100' }}>Firma Privacy non disponibile</Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18 }}>{endTrialStatus.gdpr_signing_blocked_message}</Text>
+                </View>
+              ) : (
               <TouchableOpacity
                 style={{ borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 13, alignItems: 'center', backgroundColor: endTrialStatus.steps.privacy_signed ? '#E8F5E9' : '#E3F2FD' }}
                 onPress={() => {
@@ -2121,6 +2163,7 @@ export default function AthleteDetail() {
                   {endTrialStatus.steps.privacy_signed ? 'Privacy Firmata' : 'Rimani e Firma Privacy'}
                 </Text>
               </TouchableOpacity>
+              )}
 
               {/* All complete message */}
               {endTrialStatus.all_complete && athlete.status === 'trial' && (
@@ -2970,22 +3013,22 @@ export default function AthleteDetail() {
           onSign={handleGDPRPrivacySigned}
           documentType="gdpr_minor"
           signerInfo={{
-            name: user?.first_name || user?.full_name?.split(' ').pop() || '',
-            surname: user?.last_name || user?.full_name?.split(' ').shift() || '',
-            fiscal_code: user?.fiscal_code || '',
-            birth_date: user?.birth_date || '',
-            birth_place: user?.birth_place || '',
-            address: user?.address || '',
-            city: user?.city || '',
-            province: user?.province || '',
+            name: parentProfile.first_name || (parentProfile.full_name?.split(' ').slice(1).join(' ') || ''),
+            surname: parentProfile.last_name || (parentProfile.full_name?.split(' ')[0] || ''),
+            fiscal_code: parentProfile.fiscal_code || '',
+            birth_date: parentProfile.date_of_birth || '',
+            birth_place: parentProfile.birth_place || parentProfile.place_of_birth || '',
+            address: parentProfile.address || '',
+            city: parentProfile.city || '',
+            province: parentProfile.province || '',
           }}
           minorInfo={{
-            id: athlete?.id || '',
-            name: athlete?.first_name || '',
-            surname: athlete?.last_name || '',
-            fiscal_code: athlete?.fiscal_code || '',
-            birth_date: athlete?.birth_date || '',
-            birth_place: athlete?.birth_place || '',
+            id: athlete.id,
+            name: athlete.first_name || '',
+            surname: athlete.last_name || '',
+            fiscal_code: athlete.fiscal_code || '',
+            birth_date: athlete.date_of_birth || '',
+            birth_place: athlete.birth_place || '',
           }}
           showDeleteOption={athlete.status === 'trial' && !endTrialStatus?.end_trial_requested}
           onDeleteRequest={() => {
@@ -3026,24 +3069,6 @@ export default function AthleteDetail() {
                 ]
               );
             }
-          }}
-          signerInfo={{
-            name: parentProfile.first_name || (parentProfile.full_name?.split(' ').slice(1).join(' ') || ''),
-            surname: parentProfile.last_name || (parentProfile.full_name?.split(' ')[0] || ''),
-            fiscal_code: parentProfile.fiscal_code || '',
-            birth_date: parentProfile.date_of_birth || '',
-            birth_place: parentProfile.birth_place || parentProfile.place_of_birth || '',
-            address: parentProfile.address || '',
-            city: parentProfile.city || '',
-            province: parentProfile.province || '',
-          }}
-          minorInfo={{
-            id: athlete.id,
-            name: athlete.first_name || '',
-            surname: athlete.last_name || '',
-            fiscal_code: athlete.fiscal_code || '',
-            birth_date: athlete.date_of_birth || '',
-            birth_place: athlete.birth_place || '',
           }}
         />
       )}

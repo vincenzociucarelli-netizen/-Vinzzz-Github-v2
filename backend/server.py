@@ -15175,6 +15175,10 @@ async def sign_gdpr_privacy_document(
             if not minor:
                 raise HTTPException(status_code=404, detail="Atleta minore non trovato")
             
+            # SECURITY: Validate that this minor belongs to the current user
+            if current_user["id"] not in [minor.get("parent_id"), minor.get("second_parent_id")]:
+                raise HTTPException(status_code=403, detail="Non sei autorizzato a firmare per questo atleta")
+            
             # --- Limit: force both parents to sign at least once ---
             has_second_parent = bool(minor.get("second_parent_id"))
             if has_second_parent:
@@ -19538,6 +19542,28 @@ async def get_end_trial_status(athlete_id: str, current_user = Depends(get_curre
     privacy_signed = bool(athlete.get("privacy_accepted"))
     all_complete = has_certificate and cert_verified and privacy_signed
     
+    # Check if GDPR signing is blocked for this parent (one parent per child rule)
+    gdpr_signing_blocked = False
+    gdpr_signing_blocked_message = ""
+    if current_user["role"] == UserRole.PARENT:
+        has_second_parent = bool(athlete.get("second_parent_id"))
+        if has_second_parent:
+            parent_id = current_user["id"]
+            other_parent_id = athlete.get("second_parent_id") if athlete.get("parent_id") == parent_id else athlete.get("parent_id")
+            my_signed_count = await db.signed_documents.count_documents({
+                "signer_id": parent_id,
+                "document_type": {"$regex": "gdpr_minor", "$options": "i"}
+            })
+            other_signed_count = await db.signed_documents.count_documents({
+                "signer_id": other_parent_id,
+                "document_type": {"$regex": "gdpr_minor", "$options": "i"}
+            })
+            if my_signed_count >= 1 and other_signed_count == 0:
+                other_parent = await db.users.find_one({"id": other_parent_id})
+                other_name = other_parent.get("full_name", "l'altro genitore") if other_parent else "l'altro genitore"
+                gdpr_signing_blocked = True
+                gdpr_signing_blocked_message = f"Per la privacy di {athlete.get('full_name', 'questo atleta')}, è necessario che {other_name} acceda e firmi dalla propria area personale."
+    
     return {
         "end_trial_requested": athlete.get("end_trial_requested", False),
         "end_trial_requested_date": athlete.get("end_trial_requested_date"),
@@ -19552,6 +19578,8 @@ async def get_end_trial_status(athlete_id: str, current_user = Depends(get_curre
         },
         "all_complete": all_complete,
         "athlete_status": athlete.get("status"),
+        "gdpr_signing_blocked": gdpr_signing_blocked,
+        "gdpr_signing_blocked_message": gdpr_signing_blocked_message,
     }
 
 
