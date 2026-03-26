@@ -5,13 +5,33 @@ Comprehensive sports team management application for Italian volleyball societie
 
 ## What's Been Implemented
 
-### Session 2026-03-24 (Latest)
+### Session 2026-03-26 (Latest - Fork 2)
+- **Bug Fix (P0)**: Added missing "Presa visione Informativa Privacy" checkbox to registration welcome screen (`register.tsx`). Now all 4 GDPR consent checkboxes are present: privacy_viewed, data_processing, images_internal, images_promo.
+- **Bug Fix (P0)**: Fixed consent key mapping mismatch between frontend and backend. Frontend now sends keys matching DB schema directly (`images_internal`, `images_promo` instead of `internal_images`, `promotional_images`).
+- **Bug Fix**: Backend no longer hardcodes `privacy_viewed` to `True` - it reads the actual value from the frontend payload.
+- **UX**: The `privacy_viewed` checkbox auto-checks when user opens the Privacy Policy document.
+
+### Session 2026-03-26 (Fork 1)
+- **Bug Fix (P0 CRITICO)**: Corretto `GDPRPrivacyModal` che mostrava i dati della famiglia sbagliata nel PDF di anteprima.
+- **Security Fix**: Aggiunta validazione di ownership nell'endpoint `POST /api/documents/sign-gdpr-privacy`.
+- **UI Enhancement**: Ampliato contenuto notifiche Admin con dettagli strutturati.
+- **Refactoring GDPR/Secondo Genitore**: Rimosso cross-linking automatico. Secondo genitore gestito per-atleta.
+- **Logic**: Blocco firma GDPR solo se 2° genitore registrato nel sistema.
+- **Onboarding**: Consensi GDPR spostati nella registrazione iniziale per tutti i ruoli.
+
+### Session 2026-03-25
+- **Bug Fix**: Fixed "Stato di Nascita" (Country of Birth) not saving.
+- **Bug Fix**: Fixed "Luogo di Nascita" field hidden for foreign-born athletes.
+- **Feature**: GDPR signing limit per parent.
+- **Feature**: Audit log entries for trial document signing, QR check-in, trial period start.
+
+### Session 2026-03-24
 - **Welcome Screen Registration Flow**: Mandatory Privacy Policy + Terms viewing before registration
-- **User Profile Consent Management**: Reusable ConsentManager for all roles (parent, coach, athlete)
+- **User Profile Consent Management**: Reusable ConsentManager for all roles
 - **Admin Consent Audit Trail**: Full audit page at /admin/settings/consent-audit
-- **PhotoViewer Rewrite**: Pinch-to-zoom, auto-rotation, double-tap zoom, pan when zoomed, download
+- **PhotoViewer Rewrite**: Pinch-to-zoom, auto-rotation, double-tap zoom
 - **Coach Team Photo**: Clickable photo in team detail opens full PhotoViewer
-- **Parent Profile Buttons**: Renamed "Password" → "Pw d'accesso", 3 distinct colors (blue/orange/purple)
+- **Parent Profile Buttons**: Renamed and color-coded
 
 ### Previous Sessions
 - GDPR consent tracking system (4 granular checkboxes, audit trail, PDF snapshots)
@@ -23,41 +43,16 @@ Comprehensive sports team management application for Italian volleyball societie
 - Critical bug fixes (login, registration, team creation, SPA routing)
 
 ## Architecture
-- Backend: FastAPI on port 8001 | Frontend: Expo React Native Web | DB: MongoDB | Email: Brevo
+- Backend: FastAPI on port 8001 | Frontend: Expo React Native Web (static build) | DB: MongoDB | Email: Brevo
 
-### Session 2026-03-26
-- **Bug Fix (P0 CRITICO)**: Corretto `GDPRPrivacyModal` che mostrava i dati della famiglia sbagliata nel PDF di anteprima. Rimossi props duplicati (`signerInfo`, `minorInfo`) in `[id].tsx` e mantenuti quelli corretti basati su `parentProfile` da `/auth/me`.
-- **Security Fix**: Aggiunta validazione di ownership (`parent_id`/`second_parent_id`) nell'endpoint `POST /api/documents/sign-gdpr-privacy` per prevenire firma non autorizzata.
-- **Feature UI**: Implementato blocco visivo "Firma Privacy non disponibile" nella pagina atleta quando la regola "un genitore per figlio" impedisce la firma. Messaggio arancione con icona informativa e nome dell'altro genitore che deve firmare.
-- **Backend**: Aggiunto campo `gdpr_signing_blocked` e `gdpr_signing_blocked_message` all'endpoint `GET /api/athletes/{id}/end-trial-status`.
-- **UI**: Il bottone "Rimani e Firma Privacy" viene nascosto quando il genitore è bloccato, mantenendo visibile solo il bottone "Lascia la Società".
-
-- **UI Enhancement**: Ampliato il contenuto delle notifiche Admin: rimosso il troncamento `numberOfLines={2}`, aggiunto il campo `data` strutturato con icone (Atleta, Nuova scadenza, Emissione, Aggiornato da) per allinearle al livello di dettaglio dell'Audit Log.
-
-- **Refactoring Critico GDPR/Secondo Genitore**: 
-  - Rimosso cross-linking automatico dei genitori nella registrazione atleta. Ora il secondo genitore è gestito per-atleta tramite campo "Email 2° Genitore".
-  - Campo aggiunto nella registrazione atleta (`register-athlete.tsx`), già presente in modifica (`[id].tsx`)
-  - Rimossa sezione "I Miei Figli" dal profilo genitore (`profile.tsx`)
-  - Aggiornata logica GDPR: il blocco "un genitore per figlio" scatta SOLO se il 2° genitore è effettivamente registrato nel sistema. Se il 2° genitore non è ancora iscritto, il primo genitore firma liberamente.
-  - Regola A: Genitore unico → firma per tutti i figli
-  - Regola B: Entrambi iscritti → alternanza obbligatoria
-  - Regola C: 2° genitore si iscrive dopo → firma i propri consensi personali alla registrazione
-
-### Session 2026-03-25
-- **Bug Fix**: Fixed "Stato di Nascita" (Country of Birth) not saving. Added missing `country_of_birth` field handling in `PATCH /api/athletes/{athlete_id}` endpoint (server.py line ~7341).
-- **Bug Fix**: Fixed "Luogo di Nascita" field hidden for foreign-born athletes. The birth place input was only shown when country was "Italia", preventing users from entering a foreign city. Now the field is always visible; only the province field is hidden for non-Italian countries. Fixed in both `athlete/[id].tsx` edit modal and `register-athlete.tsx` form.
-- **Feature**: GDPR signing limit — each parent can sign privacy for only ONE child when a second parent exists. The second parent is forced to login and sign for the other child(ren), which auto-activates their own consents. Single parents can sign for all children.
-- **Fix**: Parent's own consents now sync when signing GDPR for a minor (mandatory + image consents). Retroactively synced Sofia's consents.
-- **Feature**: Added audit log entry for trial document signing (`trial_document_signed` action). Includes signer name, athlete name, document type and timestamp. Added corresponding filter "Firme Prova" in admin audit log UI.
-- **Feature**: Added audit logging for QR check-in attendance (`attendance_recorded`) and trial period start (`trial_started`). Created retroactive entries for ISA and PIA.
-- **Fix**: Fixed "Documenti" filter using wrong action type (`document_accepted` → `document_signed`)
-- **Fix**: Fixed name truncation in audit log cards — names now wrap instead of being cut off with "..."
-- **Improvement**: Added new audit log filter tabs: "Presenze", "Inizio Prova"
+## Key DB Schema
+- `users.consents`: Keys = `privacy_viewed`, `data_processing`, `images_internal`, `images_promo`
+- `athletes`: `second_parent_email`, `second_parent_id`
 
 ## Pending / Backlog
 - (P0) Supporto testing manuale attivo utente
 - (P2) Fix validazione numero di telefono per minori (issue ricorrente)
-- (P1) UI per atleti con contratto formale (programmato per l'estate, post-pubblicazione)
+- (P1) UI per atleti con contratto formale (programmato per l'estate)
 - (P2) Refactor server.py (21000+ lines)
 - (P2) Re-implement Stripe payments
 - (P2) Refactor large frontend components
@@ -65,17 +60,19 @@ Comprehensive sports team management application for Italian volleyball societie
 ## Key Credentials
 - Admin: pallavoloperugia@gmail.com / Test1234
 - Parent (Sofia): sofia@test.com / Test1234
-- Parent (Beppe): beppe@test.com / Test1234
-- Adult Athlete: luna@18piu.com / Test1234
+- Parent (Marco): marco@test.com / Test1234
 
 ## Key Files
-- `src/components/PhotoViewer.tsx` - Gesture-based photo viewer
-- `src/components/ConsentManager.tsx` - Reusable consent card
-- `src/components/GDPRPrivacyModal.tsx` - GDPR privacy signing modal (fixed props)
+- `app/register.tsx` - Registration with 4 GDPR consent checkboxes
+- `src/components/ConsentManager.tsx` - Reusable consent card (source of truth for keys)
+- `src/components/GDPRPrivacyModal.tsx` - GDPR privacy signing modal
 - `app/admin/settings/consent-audit.tsx` - Admin audit page
 - `app/parent/athlete/[id].tsx` - Parent athlete detail (GDPR blocking UI)
-- `app/parent/profile.tsx` - Parent profile (3-color buttons)
-- `app/coach/team/[id]/index.tsx` - Coach team detail with photo viewer
+- `app/parent/profile.tsx` - Parent profile (consent display)
 
 ## Test Reports
 - `/app/test_reports/iteration_60.json` - GDPR blocking tests (8/8 passed)
+
+## Critical Notes
+- **Frontend Build**: Must use `npx expo export -p web` + `serve -s dist -l 3000`. Hot reload/tunnel does NOT work.
+- **Consent Keys**: Frontend, Backend, and ConsentManager must ALL use: `privacy_viewed`, `data_processing`, `images_internal`, `images_promo`

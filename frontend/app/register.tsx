@@ -43,6 +43,7 @@ export default function Register() {
   const [hasOpenedTerms, setHasOpenedTerms] = useState(false);
   
   // GDPR consent states
+  const [consentPrivacyViewed, setConsentPrivacyViewed] = useState(false);
   const [consentDataProcessing, setConsentDataProcessing] = useState(false);
   const [consentInternalImages, setConsentInternalImages] = useState(false);
   const [consentPromotionalImages, setConsentPromotionalImages] = useState(false);
@@ -185,9 +186,10 @@ export default function Register() {
           invite_code: inviteCode.trim().toUpperCase(),
           ...(role === 'parent' && dataPassword ? { data_password: dataPassword } : {}),
           consents: {
+            privacy_viewed: consentPrivacyViewed,
             data_processing: consentDataProcessing,
-            internal_images: consentInternalImages,
-            promotional_images: consentPromotionalImages,
+            images_internal: consentInternalImages,
+            images_promo: consentPromotionalImages,
           },
         });
       }
@@ -332,11 +334,11 @@ export default function Register() {
     } else {
       Linking.openURL(url);
     }
-    if (type === 'privacy') setHasOpenedPrivacy(true);
+    if (type === 'privacy') { setHasOpenedPrivacy(true); setConsentPrivacyViewed(true); }
     if (type === 'terms') setHasOpenedTerms(true);
   };
 
-  const canContinueFromWelcome = hasOpenedPrivacy && hasOpenedTerms && consentDataProcessing;
+  const canContinueFromWelcome = hasOpenedPrivacy && hasOpenedTerms && consentPrivacyViewed && consentDataProcessing;
 
   // After welcome, decide next step
   const proceedFromWelcome = () => {
@@ -449,12 +451,23 @@ export default function Register() {
             
             <TouchableOpacity
               style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 10 }}
+              onPress={() => setConsentPrivacyViewed(!consentPrivacyViewed)}
+              data-testid="consent-privacy-viewed"
+            >
+              <Ionicons name={consentPrivacyViewed ? "checkbox" : "square-outline"} size={22} color={consentPrivacyViewed ? "#4CAF50" : "#999"} />
+              <Text style={{ flex: 1, fontSize: 13, color: '#333', lineHeight: 18 }}>
+                <Text style={{ fontWeight: '600' }}>Dichiaro di aver preso visione dell'Informativa sulla Privacy</Text> <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 10 }}
               onPress={() => setConsentDataProcessing(!consentDataProcessing)}
               data-testid="consent-data-processing"
             >
               <Ionicons name={consentDataProcessing ? "checkbox" : "square-outline"} size={22} color={consentDataProcessing ? "#4CAF50" : "#999"} />
               <Text style={{ flex: 1, fontSize: 13, color: '#333', lineHeight: 18 }}>
-                <Text style={{ fontWeight: '600' }}>Acconsento al trattamento dei miei dati personali</Text> per le finalità descritte nell'informativa sulla privacy <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
+                <Text style={{ fontWeight: '600' }}>Acconsento al trattamento dei miei dati personali</Text> per le finalita descritte nell'informativa sulla privacy <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
               </Text>
             </TouchableOpacity>
 
@@ -465,7 +478,7 @@ export default function Register() {
             >
               <Ionicons name={consentInternalImages ? "checkbox" : "square-outline"} size={22} color={consentInternalImages ? "#4CAF50" : "#999"} />
               <Text style={{ flex: 1, fontSize: 13, color: '#555', lineHeight: 18 }}>
-                Acconsento all'uso delle mie immagini per comunicazioni interne alla società
+                Acconsento all'uso delle mie immagini per comunicazioni interne alla societa
               </Text>
             </TouchableOpacity>
 
@@ -488,7 +501,7 @@ export default function Register() {
             <Text style={styles.welcomeHintText}>
               {!hasOpenedTerms || !hasOpenedPrivacy 
                 ? 'Devi aprire e leggere entrambi i documenti prima di poter continuare'
-                : 'Devi acconsentire al trattamento dei dati personali per continuare'}
+                : 'Devi acconsentire alla presa visione della privacy e al trattamento dati per continuare'}
             </Text>
           </View>
         )}

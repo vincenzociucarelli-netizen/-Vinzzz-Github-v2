@@ -1590,7 +1590,7 @@ async def register(user_data: UserCreate):
     if user_data.consents:
         consent_update["consents"] = {
             "privacy_viewed": {
-                "value": True,
+                "value": user_data.consents.get("privacy_viewed", True),
                 "timestamp": now.isoformat(),
                 "source": "registration"
             },
@@ -1600,12 +1600,12 @@ async def register(user_data: UserCreate):
                 "source": "registration"
             },
             "images_internal": {
-                "value": user_data.consents.get("internal_images", False),
+                "value": user_data.consents.get("images_internal", False),
                 "timestamp": now.isoformat(),
                 "source": "registration"
             },
             "images_promo": {
-                "value": user_data.consents.get("promotional_images", False),
+                "value": user_data.consents.get("images_promo", False),
                 "timestamp": now.isoformat(),
                 "source": "registration"
             }
