@@ -1874,7 +1874,11 @@ export default function AthleteDetail() {
                   onPress={() => router.push('/parent/profile')}
                   data-testid="go-to-parent-profile-btn"
                 >
-                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Completa Profilo Genitore</Text>
+                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>
+                    {profileCheck.parent_missing.length === 1 && profileCheck.parent_missing[0] === 'Password protezione dati'
+                      ? 'Imposta Password Protezione Dati'
+                      : 'Completa Profilo Genitore'}
+                  </Text>
                 </TouchableOpacity>
               )}
               {profileCheck.athlete_missing?.length > 0 && (

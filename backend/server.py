@@ -18710,6 +18710,13 @@ async def check_athlete_profile_completeness(athlete_id: str, current_user = Dep
     parent_missing = validate_parent_profile(parent) if parent else ["Account genitore non trovato"]
     athlete_missing = validate_athlete_profile(athlete)
     
+    # Check if parent has set data protection password for this athlete
+    if parent and current_user["role"] == UserRole.PARENT:
+        is_second = athlete.get("second_parent_id") == current_user["id"]
+        pw_field = "second_parent_data_password_hash" if is_second else "data_password_hash"
+        if not athlete.get(pw_field):
+            parent_missing.append("Password protezione dati")
+    
     is_complete = len(parent_missing) == 0 and len(athlete_missing) == 0
     
     return {
