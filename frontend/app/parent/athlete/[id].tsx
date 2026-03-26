@@ -1976,7 +1976,7 @@ export default function AthleteDetail() {
                     <Text style={{ fontWeight: '700' }}>{trialStatus.days_remaining}</Text> giorni rimanenti
                   </Text>
                 </View>
-                {athlete.trial_document_generated && (
+                {athlete.trial_document_generated && !(endTrialStatus?.end_trial_requested && endTrialStatus?.gdpr_signing_blocked) && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                     <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
                     <Text style={{ fontSize: 13, color: '#4CAF50', fontWeight: '600' }}>Dichiarazione di prova firmata</Text>
@@ -2141,12 +2141,18 @@ export default function AthleteDetail() {
           {athlete.status === 'trial' && endTrialStatus?.end_trial_requested && !athlete.deletion_requested && (
             <View style={{ backgroundColor: '#F5F5F5', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E0E0E0' }} data-testid="end-trial-stepper">
               {endTrialStatus?.gdpr_signing_blocked && !endTrialStatus.steps.privacy_signed ? (
-                <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#FFB74D' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <Ionicons name="information-circle" size={18} color="#E65100" />
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#E65100' }}>Firma Privacy non disponibile</Text>
+                <View style={{ backgroundColor: '#E3F2FD', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#90CAF9' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#2E7D32' }}>Dichiarazione di prova completata</Text>
                   </View>
-                  <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18 }}>{endTrialStatus.gdpr_signing_blocked_message}</Text>
+                  <View style={{ backgroundColor: '#FFF3E0', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#FFB74D' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <Ionicons name="time" size={16} color="#E65100" />
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#E65100' }}>In attesa della firma privacy</Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#795548', lineHeight: 18 }}>{endTrialStatus.gdpr_signing_blocked_message}{'\n'}Una volta firmata, l'atleta verrà attivato automaticamente.</Text>
+                  </View>
                 </View>
               ) : (
               <TouchableOpacity
