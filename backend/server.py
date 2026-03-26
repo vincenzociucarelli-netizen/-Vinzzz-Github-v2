@@ -15313,6 +15313,48 @@ async def sign_gdpr_privacy_document(
     
     await db.signed_documents.insert_one(document_record)
     
+    # Sync mandatory consents to athlete/user record
+    consent_sync = {
+        "consents.privacy_viewed": {"value": True, "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
+        "consents.data_processing": {"value": True, "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
+    }
+    # Also sync image consents from the signing form
+    if consent_data.get("images_internal") is not None:
+        consent_sync["consents.images_internal"] = {"value": bool(consent_data.get("images_internal")), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip}
+    if consent_data.get("images_promo") is not None:
+        consent_sync["consents.images_promo"] = {"value": bool(consent_data.get("images_promo")), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip}
+    
+    if request.document_type == "gdpr_minor" and related_entity_id:
+        # Update athlete record for minor
+        await db.athletes.update_one(
+            {"id": related_entity_id},
+            {"$set": {
+                "privacy_accepted": True,
+                "privacy_accepted_date": timestamp,
+                **consent_sync
+            }}
+        )
+    elif request.document_type == "gdpr_adult":
+        # Update user record for adult
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": {
+                "privacy_accepted": True,
+                "privacy_accepted_date": timestamp,
+                **consent_sync
+            }}
+        )
+        # Also update athlete record if exists
+        if current_user.get("athlete_id"):
+            await db.athletes.update_one(
+                {"id": current_user["athlete_id"]},
+                {"$set": {
+                    "privacy_accepted": True,
+                    "privacy_accepted_date": timestamp,
+                    **consent_sync
+                }}
+            )
+    
     # Update athlete record with privacy_pdf_url if this is an athlete signing
     if current_user.get("role") == "athlete" and current_user.get("athlete_id"):
         privacy_pdf_url = f"/api/documents/signed/{document_id}/pdf"
