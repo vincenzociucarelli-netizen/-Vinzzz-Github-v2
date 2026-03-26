@@ -254,7 +254,7 @@ export default function ParentDocuments() {
             <Ionicons name={icon as any} size={24} color={color} />
           </View>
           <View style={styles.sectionTitleContainer}>
-            <Text style={styles.sectionTitle}>{title}</Text>
+            <Text style={[styles.sectionTitle, { color }]}>{title}</Text>
             <Text style={styles.sectionCount}>
               {docCount} document{docCount !== 1 ? 'i' : 'o'}
             </Text>
