@@ -15175,6 +15175,36 @@ async def sign_gdpr_privacy_document(
             if not minor:
                 raise HTTPException(status_code=404, detail="Atleta minore non trovato")
             
+            # --- Limit: each parent can sign GDPR for only one child if second parent exists ---
+            has_second_parent = bool(minor.get("second_parent_id"))
+            if has_second_parent:
+                parent_id = current_user["id"]
+                all_children = await db.athletes.find({
+                    "$or": [{"parent_id": parent_id}, {"second_parent_id": parent_id}],
+                    "is_minor": True
+                }).to_list(100)
+                
+                children_signed_by_me = []
+                for child in all_children:
+                    if child.get("privacy_accepted"):
+                        signed_doc = await db.signed_documents.find_one({
+                            "related_entity_id": child["id"],
+                            "document_type": {"$regex": "gdpr_minor", "$options": "i"},
+                            "signer_id": parent_id
+                        })
+                        if signed_doc:
+                            children_signed_by_me.append(child)
+                
+                if len(children_signed_by_me) >= 1 and request.minor_id not in [c["id"] for c in children_signed_by_me]:
+                    other_parent_id = minor.get("second_parent_id") if minor.get("parent_id") == parent_id else minor.get("parent_id")
+                    other_parent = await db.users.find_one({"id": other_parent_id})
+                    other_name = other_parent.get("full_name", "l'altro genitore") if other_parent else "l'altro genitore"
+                    signed_names = ", ".join([c.get("full_name", "") for c in children_signed_by_me])
+                    raise HTTPException(
+                        status_code=403, 
+                        detail=f"Hai già firmato la privacy per {signed_names}. Per la privacy di {minor.get('full_name', 'questo atleta')}, è necessario che {other_name} acceda e firmi dalla propria area personale."
+                    )
+            
             # Validate parent and athlete profiles before generating document
             # Fetch full parent record (current_user has limited fields)
             full_parent = await db.users.find_one({"id": current_user["id"]})

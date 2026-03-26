@@ -28,7 +28,8 @@ Comprehensive sports team management application for Italian volleyball societie
 ### Session 2026-03-25
 - **Bug Fix**: Fixed "Stato di Nascita" (Country of Birth) not saving. Added missing `country_of_birth` field handling in `PATCH /api/athletes/{athlete_id}` endpoint (server.py line ~7341).
 - **Bug Fix**: Fixed "Luogo di Nascita" field hidden for foreign-born athletes. The birth place input was only shown when country was "Italia", preventing users from entering a foreign city. Now the field is always visible; only the province field is hidden for non-Italian countries. Fixed in both `athlete/[id].tsx` edit modal and `register-athlete.tsx` form.
-- **Fix**: Corrected stale frontend build URL (was pointing to old `season-enroll` domain). Cleared Expo cache and rebuilt.
+- **Feature**: GDPR signing limit — each parent can sign privacy for only ONE child when a second parent exists. The second parent is forced to login and sign for the other child(ren), which auto-activates their own consents. Single parents can sign for all children.
+- **Fix**: Parent's own consents now sync when signing GDPR for a minor (mandatory + image consents). Retroactively synced Sofia's consents.
 - **Feature**: Added audit log entry for trial document signing (`trial_document_signed` action). Includes signer name, athlete name, document type and timestamp. Added corresponding filter "Firme Prova" in admin audit log UI.
 - **Feature**: Added audit logging for QR check-in attendance (`attendance_recorded`) and trial period start (`trial_started`). Created retroactive entries for ISA and PIA.
 - **Fix**: Fixed "Documenti" filter using wrong action type (`document_accepted` → `document_signed`)
