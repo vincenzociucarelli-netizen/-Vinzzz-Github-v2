@@ -112,6 +112,7 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
 
   const consentTypes = ['privacy_viewed', 'data_processing', 'images_internal', 'images_promo'] as const;
   const editableTypes = ['images_internal', 'images_promo'];
+  const privacySigned = consents?.privacy_viewed?.value === true && consents?.data_processing?.value === true;
 
   return (
     <View style={[s.card, { borderTopColor: accentColor }]} data-testid={`consent-card-${entityType}-${entityId || 'me'}`}>
@@ -146,7 +147,9 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
             </View>
             {isEditable ? (
               <View style={s.consentRight}>
-                {saving === type ? (
+                {!privacySigned ? (
+                  <Text style={{ fontSize: 11, color: '#999' }}>-</Text>
+                ) : saving === type ? (
                   <ActivityIndicator size="small" color={accentColor} />
                 ) : (
                   <Switch
@@ -170,7 +173,9 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
       })}
 
       <Text style={s.consentHint}>
-        Solo i consensi relativi alle immagini sono modificabili. I consensi obbligatori non possono essere revocati.
+        {privacySigned 
+          ? 'Solo i consensi relativi alle immagini sono modificabili. I consensi obbligatori non possono essere revocati.'
+          : 'Per attivare i consensi è necessario prima firmare la privacy.'}
       </Text>
 
       {/* History toggle */}

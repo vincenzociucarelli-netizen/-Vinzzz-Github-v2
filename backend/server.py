@@ -21283,6 +21283,10 @@ async def update_athlete_consents(
     if current_user["role"] not in ["admin"] and not is_parent:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     
+    # Block image consent changes if privacy has not been signed for this athlete
+    if not athlete.get("privacy_accepted") and current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Per modificare i consensi è necessario prima firmare la privacy.")
+    
     now = datetime.now(timezone.utc)
     existing_consents = athlete.get("consents") or {}
     existing_history = athlete.get("consent_history") or []
