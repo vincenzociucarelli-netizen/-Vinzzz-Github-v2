@@ -992,7 +992,7 @@ export default function AdminAthleteDetail() {
 
   const handleVerifyCertificate = async () => {
     if (!certificate) return;
-    const newVerified = !certificate.verified;
+    const newVerified = !athlete?.medical_certificate_verified;
     try {
       await api.post('/certificates/simple', {
         athlete_id: id,
@@ -1000,8 +1000,9 @@ export default function AdminAthleteDetail() {
         expiry_date: certificate.expiry_date,
         verified: newVerified,
       });
-      setCertificate({ ...certificate, verified: newVerified });
+      setAthlete((prev: any) => prev ? { ...prev, medical_certificate_verified: newVerified } : prev);
       showAlert('Successo', newVerified ? 'Certificato verificato' : 'Verifica rimossa');
+      loadData();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante la verifica');
     }
@@ -1100,7 +1101,7 @@ export default function AdminAthleteDetail() {
   const getCertificateColor = () => {
     if (isCertificateExpired) return '#FF3B30'; // Red
     if (isCertificateExpiringSoon) return '#FF9500'; // Orange
-    if (!certificate?.verified) return '#FF9500'; // Orange - not yet verified
+    if (!athlete?.medical_certificate_verified) return '#FF9500'; // Orange - not yet verified
     return '#34C759'; // Green - valid and verified
   };
 
@@ -2483,12 +2484,12 @@ export default function AdminAthleteDetail() {
                   )}
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
                     <Ionicons
-                      name={certificate.verified ? 'shield-checkmark' : 'shield-outline'}
+                      name={athlete?.medical_certificate_verified ? 'shield-checkmark' : 'shield-outline'}
                       size={18}
-                      color={certificate.verified ? '#4CAF50' : '#FF9500'}
+                      color={athlete?.medical_certificate_verified ? '#4CAF50' : '#FF9500'}
                     />
-                    <Text style={{ marginLeft: 8, fontSize: 13, color: certificate.verified ? '#4CAF50' : '#FF9500', fontWeight: '600' }}>
-                      {certificate.verified ? 'Verificato dall\'admin' : 'Non ancora verificato dall\'admin'}
+                    <Text style={{ marginLeft: 8, fontSize: 13, color: athlete?.medical_certificate_verified ? '#4CAF50' : '#FF9500', fontWeight: '600' }}>
+                      {athlete?.medical_certificate_verified ? 'Verificato dall\'admin' : 'Non ancora verificato dall\'admin'}
                     </Text>
                   </View>
                   {/* Metadati tracciabilità */}
@@ -2536,16 +2537,16 @@ export default function AdminAthleteDetail() {
               {certificate && (
                 <TouchableOpacity
                   style={{ 
-                    backgroundColor: certificate.verified ? '#E8F5E9' : '#FFF8E1', 
+                    backgroundColor: athlete?.medical_certificate_verified ? '#E8F5E9' : '#FFF8E1', 
                     borderRadius: 10, padding: 12, marginTop: 8, 
                     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    borderWidth: 1, borderColor: certificate.verified ? '#66BB6A' : '#FFB74D',
+                    borderWidth: 1, borderColor: athlete?.medical_certificate_verified ? '#66BB6A' : '#FFB74D',
                   }}
                   onPress={handleVerifyCertificate}
                 >
-                  <Ionicons name={certificate.verified ? "shield-checkmark" : "shield-outline"} size={18} color={certificate.verified ? '#2E7D32' : '#E65100'} />
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: certificate.verified ? '#2E7D32' : '#E65100' }}>
-                    {certificate.verified ? 'Certificato verificato ✓' : 'Segna come verificato'}
+                  <Ionicons name={athlete?.medical_certificate_verified ? "shield-checkmark" : "shield-outline"} size={18} color={athlete?.medical_certificate_verified ? '#2E7D32' : '#E65100'} />
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: athlete?.medical_certificate_verified ? '#2E7D32' : '#E65100' }}>
+                    {athlete?.medical_certificate_verified ? 'Certificato verificato ✓' : 'Segna come verificato'}
                   </Text>
                 </TouchableOpacity>
               )}
