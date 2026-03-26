@@ -16,6 +16,8 @@ import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import { useAuthStore } from '../../src/store/authStore';
+import { Picker } from '@react-native-picker/picker';
+import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
 export default function RegisterAthlete() {
   const router = useRouter();
@@ -352,15 +354,24 @@ export default function RegisterAthlete() {
           />
 
           <Text style={styles.label}>Stato di Nascita</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="es: ITALIA"
-            placeholderTextColor="#aaa"
-            value={countryOfBirth}
-            onChangeText={(text) => setCountryOfBirth(text.toUpperCase())}
-            autoCapitalize="characters"
-            data-testid="country-of-birth-input"
-          />
+          <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, marginBottom: 12, overflow: 'hidden', backgroundColor: '#fff' }}>
+            <Picker
+              selectedValue={countryOfBirth}
+              onValueChange={(value) => {
+                setCountryOfBirth(value);
+                if (value !== 'Italia') {
+                  setBirthPlace('');
+                  setBirthProvince('');
+                }
+              }}
+              style={{ height: 50 }}
+              data-testid="country-of-birth-picker"
+            >
+              {COUNTRIES.map((country: string) => (
+                <Picker.Item key={country} label={country} value={country} />
+              ))}
+            </Picker>
+          </View>
 
           {(() => {
             const isItalia = countryOfBirth.toUpperCase() === 'ITALIA';
