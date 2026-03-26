@@ -489,6 +489,26 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           </Text>
         </View>
 
+        {/* Banner: Completa anagrafica se manca il codice fiscale */}
+        {user && !user.fiscal_code && (
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, marginHorizontal: 16, marginBottom: 12,
+              borderLeftWidth: 4, borderLeftColor: '#FF9800',
+            }}
+            onPress={() => router.push('/parent/profile')}
+            data-testid="complete-profile-banner"
+          >
+            <Ionicons name="alert-circle" size={24} color="#FF9800" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#E65100' }}>Completa la tua anagrafica</Text>
+              <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Inserisci il Codice Fiscale nel tuo profilo per completare i documenti privacy.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#FF9800" />
+          </TouchableOpacity>
+        )}
+
         {/* IMPEGNI Section */}
         <View style={styles.commitmentsSection}>
           <Text style={styles.commitmentsSectionTitle}>📅 Impegni</Text>

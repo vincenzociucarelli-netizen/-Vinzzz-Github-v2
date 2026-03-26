@@ -28,6 +28,7 @@ export default function Register() {
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [phone, setPhone] = useState('');
+  const [fiscalCode, setFiscalCode] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -50,6 +51,7 @@ export default function Register() {
 
   // Refs
   const firstNameRef = useRef<TextInput>(null);
+  const fiscalCodeRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -182,6 +184,7 @@ export default function Register() {
           first_name: firstName.trim(),
           last_name: lastName.trim().toUpperCase(),
           phone: phone.trim(),
+          fiscal_code: fiscalCode.trim().toUpperCase() || undefined,
           role: role,
           invite_code: inviteCode.trim().toUpperCase(),
           ...(role === 'parent' && dataPassword ? { data_password: dataPassword } : {}),
@@ -628,10 +631,25 @@ export default function Register() {
         onChangeText={(text) => setFirstName(text.toUpperCase())}
         autoCapitalize="characters"
         returnKeyType="next"
-        onSubmitEditing={() => phoneRef.current?.focus()}
+        onSubmitEditing={() => fiscalCodeRef.current?.focus()}
       />
 
-      <Text style={styles.inputLabel}>📱 Telefono * (per contatti urgenti)</Text>
+      <Text style={styles.inputLabel}>Codice Fiscale</Text>
+      <TextInput
+        ref={fiscalCodeRef}
+        style={styles.input}
+        placeholder="es: RSSMRA85M01G478L"
+        placeholderTextColor="#aaa"
+        value={fiscalCode}
+        onChangeText={(text) => setFiscalCode(text.toUpperCase())}
+        autoCapitalize="characters"
+        maxLength={16}
+        returnKeyType="next"
+        onSubmitEditing={() => phoneRef.current?.focus()}
+        data-testid="fiscal-code-input"
+      />
+
+      <Text style={styles.inputLabel}>Telefono * (per contatti urgenti)</Text>
       <TextInput
         ref={phoneRef}
         style={styles.input}

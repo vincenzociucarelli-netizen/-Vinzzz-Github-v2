@@ -1581,6 +1581,8 @@ async def register(user_data: UserCreate, request: Request):
     user_dict = user.dict()
     if athlete_id:
         user_dict["athlete_id"] = athlete_id
+    if user_data.fiscal_code:
+        user_dict["fiscal_code"] = user_data.fiscal_code.upper().strip()
     
     await db.users.insert_one(user_dict)
     
