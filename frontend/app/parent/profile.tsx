@@ -260,12 +260,7 @@ export default function ParentProfile() {
 
   const handleSaveDataPassword = async () => {
     if (!selectedAthleteId) return;
-    const hasExisting = athletePasswordStatus[selectedAthleteId];
     
-    if (hasExisting && !dataOldPassword) {
-      showAlert('Errore', 'Inserisci la password attuale');
-      return;
-    }
     if (!dataNewPassword) {
       showAlert('Errore', 'Inserisci la nuova password');
       return;
@@ -282,11 +277,10 @@ export default function ParentProfile() {
     setSavingDataPassword(true);
     try {
       await api.post(`/athletes/${selectedAthleteId}/change-password`, {
-        old_password: hasExisting ? dataOldPassword : null,
+        old_password: null,
         new_password: dataNewPassword,
       });
       showAlert('Successo', 'Password protezione dati aggiornata!');
-      setDataOldPassword('');
       setDataNewPassword('');
       setDataConfirmPassword('');
       setAthletePasswordStatus(prev => ({ ...prev, [selectedAthleteId!]: true }));
@@ -574,19 +568,6 @@ export default function ParentProfile() {
 
                   {selectedAthleteId && (
                     <View style={styles.changePasswordForm}>
-                      {athletePasswordStatus[selectedAthleteId] && (
-                        <View style={styles.fieldContainer}>
-                          <Text style={styles.fieldLabel}>Password Attuale</Text>
-                          <TextInput
-                            style={styles.input}
-                            value={dataOldPassword}
-                            onChangeText={setDataOldPassword}
-                            secureTextEntry
-                            placeholder="Password attuale"
-                            placeholderTextColor="#999"
-                          />
-                        </View>
-                      )}
                       <View style={styles.fieldContainer}>
                         <Text style={styles.fieldLabel}>{athletePasswordStatus[selectedAthleteId] ? 'Nuova Password' : 'Imposta Password'}</Text>
                         <TextInput
@@ -614,7 +595,6 @@ export default function ParentProfile() {
                           style={styles.cancelPasswordButton}
                           onPress={() => {
                             setShowDataPassword(false);
-                            setDataOldPassword('');
                             setDataNewPassword('');
                             setDataConfirmPassword('');
                           }}

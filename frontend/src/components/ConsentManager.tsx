@@ -20,7 +20,7 @@ interface ConsentManagerProps {
 
 const CONSENT_LABELS: Record<string, string> = {
   privacy_viewed: 'Presa visione Informativa Privacy',
-  data_treatment: 'Trattamento dati personali',
+  data_processing: 'Trattamento dati personali',
   images_internal: 'Utilizzo immagini ad uso interno',
   images_promo: 'Utilizzo immagini a scopo promozionale',
 };
@@ -110,7 +110,7 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
     );
   }
 
-  const consentTypes = ['privacy_viewed', 'data_treatment', 'images_internal', 'images_promo'] as const;
+  const consentTypes = ['privacy_viewed', 'data_processing', 'images_internal', 'images_promo'] as const;
   const editableTypes = ['images_internal', 'images_promo'];
 
   return (

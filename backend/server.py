@@ -7596,16 +7596,8 @@ async def change_data_password(athlete_id: str, data: ChangeDataPassword, curren
     
     # Determine which password field to use
     pw_field = "second_parent_data_password_hash" if is_second else "data_password_hash"
-    current_hash = athlete.get(pw_field)
     
-    # If password exists, verify old password
-    if current_hash:
-        if not data.old_password:
-            raise HTTPException(status_code=400, detail="Inserisci la password attuale")
-        if not verify_password(data.old_password, current_hash):
-            raise HTTPException(status_code=401, detail="Password attuale non corretta")
-    
-    # Hash and set new password
+    # Hash and set new password (no need to verify old password - parent is already authenticated)
     new_hash = hash_password(data.new_password)
     await db.athletes.update_one(
         {"id": athlete_id},
