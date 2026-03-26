@@ -15566,8 +15566,13 @@ async def preview_gdpr_privacy_document(
             if not minor:
                 raise HTTPException(status_code=404, detail="Atleta minore non trovato")
             
-            parent_name = request.signer_name or current_user.get("first_name", "")
-            parent_surname = request.signer_surname or current_user.get("last_name", "")
+            # SECURITY: Validate that this minor belongs to the current user
+            if current_user["id"] not in [minor.get("parent_id"), minor.get("second_parent_id")]:
+                raise HTTPException(status_code=403, detail="Non sei autorizzato a firmare per questo atleta")
+            
+            # ALWAYS use current_user data for signer (never trust frontend)
+            parent_name = current_user.get("first_name", "")
+            parent_surname = current_user.get("last_name", "")
             
             if not parent_name and current_user.get("full_name"):
                 parts = current_user.get("full_name", "").split()

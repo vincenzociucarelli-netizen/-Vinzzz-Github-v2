@@ -2969,6 +2969,24 @@ export default function AthleteDetail() {
           onClose={() => setPrivacyModalVisible(false)}
           onSign={handleGDPRPrivacySigned}
           documentType="gdpr_minor"
+          signerInfo={{
+            name: user?.first_name || user?.full_name?.split(' ').pop() || '',
+            surname: user?.last_name || user?.full_name?.split(' ').shift() || '',
+            fiscal_code: user?.fiscal_code || '',
+            birth_date: user?.birth_date || '',
+            birth_place: user?.birth_place || '',
+            address: user?.address || '',
+            city: user?.city || '',
+            province: user?.province || '',
+          }}
+          minorInfo={{
+            id: athlete?.id || '',
+            name: athlete?.first_name || '',
+            surname: athlete?.last_name || '',
+            fiscal_code: athlete?.fiscal_code || '',
+            birth_date: athlete?.birth_date || '',
+            birth_place: athlete?.birth_place || '',
+          }}
           showDeleteOption={athlete.status === 'trial' && !endTrialStatus?.end_trial_requested}
           onDeleteRequest={() => {
             setPrivacyModalVisible(false);
