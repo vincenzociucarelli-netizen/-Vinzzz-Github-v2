@@ -1589,17 +1589,22 @@ async def register(user_data: UserCreate):
     consent_update = {"legal_accepted_at": now.isoformat()}
     if user_data.consents:
         consent_update["consents"] = {
+            "privacy_viewed": {
+                "value": True,
+                "timestamp": now.isoformat(),
+                "source": "registration"
+            },
             "data_processing": {
                 "value": user_data.consents.get("data_processing", False),
                 "timestamp": now.isoformat(),
                 "source": "registration"
             },
-            "internal_images": {
+            "images_internal": {
                 "value": user_data.consents.get("internal_images", False),
                 "timestamp": now.isoformat(),
                 "source": "registration"
             },
-            "promotional_images": {
+            "images_promo": {
                 "value": user_data.consents.get("promotional_images", False),
                 "timestamp": now.isoformat(),
                 "source": "registration"
