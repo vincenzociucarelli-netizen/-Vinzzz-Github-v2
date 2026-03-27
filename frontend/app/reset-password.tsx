@@ -25,6 +25,8 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // Society branding
   const [societyName, setSocietyName] = useState('GESTIONE SOCIETÀ');
@@ -183,28 +185,48 @@ export default function ResetPassword() {
           />
 
           <Text style={styles.label}>Nuova Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Minimo 6 caratteri"
-            placeholderTextColor="#999"
-            value={newPassword}
-            onChangeText={setNewPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            editable={!loading}
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Minimo 6 caratteri"
+              placeholderTextColor="#999"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              editable={!loading}
+              data-testid="reset-new-password"
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(!showPassword)}
+              data-testid="toggle-new-password"
+            >
+              <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.label}>Conferma Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ripeti la password"
-            placeholderTextColor="#999"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            editable={!loading}
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Ripeti la password"
+              placeholderTextColor="#999"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showConfirmPassword}
+              autoCapitalize="none"
+              editable={!loading}
+              data-testid="reset-confirm-password"
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              data-testid="toggle-confirm-password"
+            >
+              <Text style={styles.eyeIcon}>{showConfirmPassword ? '🙈' : '👁️'}</Text>
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -296,6 +318,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 4,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  eyeIcon: {
+    fontSize: 20,
   },
   button: {
     backgroundColor: '#007AFF',
