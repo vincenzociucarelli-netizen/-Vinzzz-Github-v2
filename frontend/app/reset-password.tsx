@@ -94,7 +94,15 @@ export default function ResetPassword() {
       });
       setSuccess(true);
     } catch (error: any) {
-      showAlert('Errore', error.response?.data?.detail || 'Errore durante il reset');
+      const detail = error.response?.data?.detail;
+      const status = error.response?.status;
+      let msg = 'Errore di connessione al server. Riprova.';
+      if (detail) {
+        msg = typeof detail === 'string' ? detail : JSON.stringify(detail);
+      } else if (status) {
+        msg = `Errore dal server (${status}). Riprova.`;
+      }
+      showAlert('Errore', msg);
     } finally {
       setLoading(false);
     }
@@ -232,6 +240,7 @@ export default function ResetPassword() {
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleResetPassword}
             disabled={loading}
+            data-testid="reset-submit-btn"
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
