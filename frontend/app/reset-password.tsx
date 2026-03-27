@@ -283,9 +283,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 120,
+    height: 120,
+    borderRadius: 16,
     backgroundColor: '#fff',
   },
   title: {
