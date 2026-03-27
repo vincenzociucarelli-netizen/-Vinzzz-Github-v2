@@ -3017,6 +3017,21 @@ async def send_password_reset_email(to_email: str, reset_token: str, user_name: 
     # Create reset code (first 8 chars of token for easier communication)
     reset_code = reset_token[:8].upper()
     
+    # Build reset link
+    base_url = os.environ.get("EXPO_PUBLIC_BACKEND_URL", os.environ.get("FRONTEND_URL", ""))
+    reset_link = f"{base_url}/reset-password?email={to_email}" if base_url else ""
+    
+    reset_button_html = ""
+    if reset_link:
+        reset_button_html = f"""
+                <p style="text-align: center; margin: 24px 0 8px 0;">
+                    <a href="{reset_link}" style="display: inline-block; background-color: #007AFF; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                        Reimposta la Password
+                    </a>
+                </p>
+                <p style="text-align: center; font-size: 12px; color: #999;">Oppure apri l'app e inserisci il codice manualmente</p>
+        """
+    
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -3045,16 +3060,16 @@ async def send_password_reset_email(to_email: str, reset_token: str, user_name: 
                 
                 <div class="code">{reset_code}</div>
                 
-                <p>Inserisci questo codice nella pagina di reset password dell'app.</p>
+                {reset_button_html}
                 
                 <p class="warning">
-                    ⚠️ Il codice scade tra <strong>1 ora</strong>.<br>
+                    Il codice scade tra <strong>1 ora</strong>.<br>
                     Se non hai richiesto tu il reset della password, ignora questa email.
                 </p>
             </div>
             <div class="footer">
                 <p>Questa è un'email automatica, non rispondere.</p>
-                <p>© {datetime.now().year} {society_name}</p>
+                <p>&copy; {datetime.now().year} {society_name}</p>
             </div>
         </div>
     </body>
