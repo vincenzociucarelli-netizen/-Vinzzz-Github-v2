@@ -285,8 +285,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 120,
     height: 120,
-    borderRadius: 16,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 24,
