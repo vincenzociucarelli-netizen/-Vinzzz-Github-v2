@@ -2072,12 +2072,12 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
     subject = f"{society.get('name', '')} - Tutto sullo sport dei tuoi figli, in un click"
     store_footer = _get_email_store_footer()
     
-    # Get society logo for email header
-    society_settings = await db.settings.find_one({"type": "society"}, {"_id": 0, "logo": 1})
-    logo_b64 = society_settings.get("logo", "") if society_settings else ""
+    # Get society logo URL for email header
+    base_url = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "")
+    logo_url = f"{base_url}/api/settings/society/logo.png" if base_url else ""
     logo_html = ""
-    if logo_b64:
-        logo_html = f'<img src="data:image/png;base64,{logo_b64}" alt="{society.get("name", "")}" style="width: 80px; height: 80px; object-fit: contain;" />'
+    if logo_url:
+        logo_html = f'<img src="{logo_url}" alt="{society.get("name", "")}" style="width: 80px; height: 80px; object-fit: contain;" />'
     
     html_content = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -3057,6 +3057,10 @@ async def send_password_reset_email(to_email: str, reset_token: str, user_name: 
                 <p style="text-align: center; font-size: 12px; color: #999;">Oppure apri l'app e inserisci il codice manualmente</p>
         """
     
+    # Build logo URL
+    logo_url = f"{base_url}/api/settings/society/logo.png" if base_url else ""
+    logo_html = f'<img src="{logo_url}" alt="{society_name}" style="width: 60px; height: 60px; object-fit: contain; margin-bottom: 8px;" /><br>' if logo_url else ""
+    
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -3065,7 +3069,8 @@ async def send_password_reset_email(to_email: str, reset_token: str, user_name: 
         <style>
             body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
             .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-            .header {{ background-color: #007AFF; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+            .header {{ padding: 24px 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+            .header h1 {{ color: #007AFF; margin: 0; font-size: 20px; }}
             .content {{ background-color: #f9f9f9; padding: 30px; border: 1px solid #ddd; }}
             .code {{ background-color: #007AFF; color: white; font-size: 28px; font-weight: bold; 
                      padding: 15px 30px; text-align: center; border-radius: 8px; margin: 20px 0;
@@ -3077,6 +3082,7 @@ async def send_password_reset_email(to_email: str, reset_token: str, user_name: 
     <body>
         <div class="container">
             <div class="header">
+                {logo_html}
                 <h1>{society_name}</h1>
             </div>
             <div class="content">
@@ -3306,6 +3312,16 @@ class StripeSettingsUpdate(BaseModel):
     currency: str = "eur"  # Currency code (eur, usd, etc.)
     # Notification settings
     send_payment_emails: bool = True  # Send email confirmations
+
+@api_router.get("/settings/society/logo.png")
+async def get_society_logo_image():
+    """Serve society logo as PNG image (public, for email embedding)"""
+    settings = await db.settings.find_one({"type": "society"}, {"_id": 0, "logo": 1})
+    if not settings or not settings.get("logo"):
+        raise HTTPException(status_code=404, detail="Logo non trovato")
+    import base64
+    logo_bytes = base64.b64decode(settings["logo"])
+    return Response(content=logo_bytes, media_type="image/png")
 
 @api_router.get("/settings/society")
 async def get_society_settings():
