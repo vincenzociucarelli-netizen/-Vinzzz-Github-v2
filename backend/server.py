@@ -2077,7 +2077,7 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
     logo_url = f"{base_url}/api/settings/society/logo.png" if base_url else ""
     logo_html = ""
     if logo_url:
-        logo_html = f'<img src="{logo_url}" alt="{society.get("name", "")}" style="width: 80px; height: 80px; object-fit: contain;" />'
+        logo_html = f'<img src="{logo_url}" alt="{society.get("name", "")}" style="width: 56px; height: 56px; object-fit: contain;" />'
     
     html_content = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
