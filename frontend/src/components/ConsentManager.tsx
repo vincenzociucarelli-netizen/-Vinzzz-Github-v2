@@ -175,7 +175,7 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
       <Text style={s.consentHint}>
         {privacySigned 
           ? 'Solo i consensi relativi alle immagini sono modificabili. I consensi obbligatori non possono essere revocati.'
-          : 'Per attivare i consensi è necessario prima firmare la privacy.'}
+          : 'Per attivare i consensi è necessario prima firmare la privacy, a fine o ad interruzione anticipata del periodo di prova.'}
       </Text>
 
       {/* History toggle */}
