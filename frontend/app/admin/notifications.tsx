@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,11 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
-
 
 interface Notification {
   id: string;
@@ -36,11 +36,19 @@ interface Notification {
   created_at: string;
 }
 
+interface DateGroup {
+  label: string;
+  sortKey: string;
+  notifications: Notification[];
+}
+
 export default function AdminNotifications() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const loadNotifications = async () => {
     try {
@@ -58,7 +66,6 @@ export default function AdminNotifications() {
     loadNotifications();
   }, []);
 
-  // Auto-mark all as read when page is opened
   useEffect(() => {
     if (notifications.length > 0 && notifications.some(n => !n.read)) {
       markAllAsRead();
@@ -73,7 +80,7 @@ export default function AdminNotifications() {
   const markAsRead = async (notificationId: string) => {
     try {
       await api.patch(`/admin/notifications/${notificationId}/read`);
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       );
     } catch (error) {
@@ -94,18 +101,12 @@ export default function AdminNotifications() {
     const confirmDelete = Platform.OS === 'web'
       ? window.confirm('Eliminare questa notifica?')
       : await new Promise((resolve) => {
-          Alert.alert(
-            'Elimina Notifica',
-            'Sei sicuro di voler eliminare questa notifica?',
-            [
-              { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Elimina', style: 'destructive', onPress: () => resolve(true) },
-            ]
-          );
+          Alert.alert('Elimina Notifica', 'Sei sicuro di voler eliminare questa notifica?', [
+            { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'Elimina', style: 'destructive', onPress: () => resolve(true) },
+          ]);
         });
-
     if (!confirmDelete) return;
-
     try {
       await api.delete(`/admin/notifications/${notificationId}`);
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
@@ -117,12 +118,28 @@ export default function AdminNotifications() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('it-IT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
     });
+  };
+
+  const formatDateLabel = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const isSameDay = (a: Date, b: Date) =>
+      a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+
+    if (isSameDay(date, today)) return 'Oggi';
+    if (isSameDay(date, yesterday)) return 'Ieri';
+    return date.toLocaleDateString('it-IT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+  };
+
+  const getDateKey = (dateString: string) => {
+    const date = new Date(dateString);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   };
 
   const getNotificationIcon = (type: string) => {
@@ -144,6 +161,35 @@ export default function AdminNotifications() {
     }
   };
 
+  const toggleGroup = (key: string) => {
+    setCollapsedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Filter + group
+  const groupedNotifications = useMemo<DateGroup[]>(() => {
+    const q = searchQuery.toLowerCase().trim();
+    const filtered = q
+      ? notifications.filter(n =>
+          n.title.toLowerCase().includes(q) ||
+          n.message.toLowerCase().includes(q) ||
+          (n.data?.athlete_name || '').toLowerCase().includes(q) ||
+          (n.data?.changed_by || '').toLowerCase().includes(q) ||
+          (n.related_user_name || '').toLowerCase().includes(q)
+        )
+      : notifications;
+
+    const groups: Record<string, { label: string; sortKey: string; notifications: Notification[] }> = {};
+    for (const n of filtered) {
+      const key = getDateKey(n.created_at);
+      if (!groups[key]) {
+        groups[key] = { label: formatDateLabel(n.created_at), sortKey: key, notifications: [] };
+      }
+      groups[key].notifications.push(n);
+    }
+    return Object.values(groups).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
+  }, [notifications, searchQuery]);
+
+  const totalFiltered = groupedNotifications.reduce((sum, g) => sum + g.notifications.length, 0);
   const unreadCount = notifications.filter(n => !n.read).length;
 
   if (loading) {
@@ -159,7 +205,9 @@ export default function AdminNotifications() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
+          <View style={styles.backBtnInner}>
+            <Ionicons name="chevron-back" size={24} color="#007AFF" />
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifiche</Text>
         {unreadCount > 0 && (
@@ -169,78 +217,126 @@ export default function AdminNotifications() {
         )}
       </View>
 
+      {/* Search bar */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={18} color="#999" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Cerca notifiche..."
+          placeholderTextColor="#999"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCorrect={false}
+          data-testid="notifications-search"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} data-testid="clear-search">
+            <Ionicons name="close-circle" size={18} color="#999" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {searchQuery.length > 0 && (
+        <Text style={styles.resultCount}>
+          {totalFiltered} risultat{totalFiltered === 1 ? 'o' : 'i'} trovat{totalFiltered === 1 ? 'o' : 'i'}
+        </Text>
+      )}
+
       <ScrollView
         style={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {notifications.length === 0 ? (
+        {groupedNotifications.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="notifications-off-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>Nessuna notifica</Text>
+            <Ionicons name={searchQuery ? 'search' : 'notifications-off-outline'} size={64} color="#ccc" />
+            <Text style={styles.emptyText}>
+              {searchQuery ? 'Nessun risultato' : 'Nessuna notifica'}
+            </Text>
           </View>
         ) : (
-          notifications.map((notification) => {
-            const icon = getNotificationIcon(notification.type);
+          groupedNotifications.map((group) => {
+            const isCollapsed = collapsedGroups[group.sortKey] || false;
+            const groupUnread = group.notifications.filter(n => !n.read).length;
             return (
-              <TouchableOpacity
-                key={notification.id}
-                style={[
-                  styles.notificationCard,
-                  !notification.read && styles.unreadCard,
-                ]}
-                onPress={() => markAsRead(notification.id)}
-              >
-                <View style={styles.notificationIcon}>
-                  <Ionicons name={icon.name as any} size={20} color={icon.color} />
-                </View>
-                <View style={styles.notificationContent}>
-                  <View style={styles.notificationHeader}>
-                    <Text style={styles.notificationTitle}>{notification.title}</Text>
-                    {!notification.read && <View style={styles.unreadDot} />}
-                  </View>
-                  <Text style={styles.notificationMessage}>{notification.message}</Text>
-                  {notification.data?.athlete_name && (
-                    <View style={styles.detailRow}>
-                      <Ionicons name="person" size={12} color="#1565C0" />
-                      <Text style={styles.detailText}>Atleta: {notification.data.athlete_name}</Text>
-                    </View>
-                  )}
-                  {notification.data?.expiry_date && (
-                    <View style={styles.detailRow}>
-                      <Ionicons name="calendar" size={12} color="#E65100" />
-                      <Text style={styles.detailText}>Nuova scadenza: {notification.data.expiry_date}</Text>
-                    </View>
-                  )}
-                  {notification.data?.issue_date && (
-                    <View style={styles.detailRow}>
-                      <Ionicons name="document-text" size={12} color="#2E7D32" />
-                      <Text style={styles.detailText}>Emissione: {notification.data.issue_date}</Text>
-                    </View>
-                  )}
-                  {notification.data?.changed_by && (
-                    <View style={styles.detailRow}>
-                      <Ionicons name="create" size={12} color="#7B1FA2" />
-                      <Text style={styles.detailText}>Aggiornato da: {notification.data.changed_by} ({notification.data.changed_by_role || ''})</Text>
-                    </View>
-                  )}
-                  {notification.related_user_name && (
-                    <Text style={styles.relatedUser}>
-                      {notification.related_user_name}
-                    </Text>
-                  )}
-                  <Text style={styles.notificationDate}>
-                    {formatDate(notification.created_at)}
-                  </Text>
-                </View>
+              <View key={group.sortKey} style={styles.dateGroup}>
+                {/* Date header - collapsible */}
                 <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() => deleteNotification(notification.id)}
+                  style={styles.dateHeader}
+                  onPress={() => toggleGroup(group.sortKey)}
+                  data-testid={`date-group-${group.sortKey}`}
                 >
-                  <Ionicons name="trash-outline" size={16} color="#999" />
+                  <Ionicons
+                    name={isCollapsed ? 'chevron-forward' : 'chevron-down'}
+                    size={16}
+                    color="#666"
+                  />
+                  <Text style={styles.dateLabel}>{group.label}</Text>
+                  <View style={styles.dateBadge}>
+                    <Text style={styles.dateBadgeText}>{group.notifications.length}</Text>
+                  </View>
+                  {groupUnread > 0 && (
+                    <View style={styles.unreadBadge}>
+                      <Text style={styles.unreadBadgeText}>{groupUnread} nuove</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
-              </TouchableOpacity>
+
+                {/* Notifications list */}
+                {!isCollapsed && group.notifications.map((notification) => {
+                  const icon = getNotificationIcon(notification.type);
+                  return (
+                    <TouchableOpacity
+                      key={notification.id}
+                      style={[styles.notificationCard, !notification.read && styles.unreadCard]}
+                      onPress={() => markAsRead(notification.id)}
+                      data-testid={`notification-${notification.id}`}
+                    >
+                      <View style={styles.notificationIcon}>
+                        <Ionicons name={icon.name as any} size={20} color={icon.color} />
+                      </View>
+                      <View style={styles.notificationContent}>
+                        <View style={styles.notificationHeader}>
+                          <Text style={styles.notificationTitle}>{notification.title}</Text>
+                          {!notification.read && <View style={styles.unreadDot} />}
+                        </View>
+                        <Text style={styles.notificationMessage}>{notification.message}</Text>
+                        {notification.data?.athlete_name && (
+                          <View style={styles.detailRow}>
+                            <Ionicons name="person" size={12} color="#1565C0" />
+                            <Text style={styles.detailText}>Atleta: {notification.data.athlete_name}</Text>
+                          </View>
+                        )}
+                        {notification.data?.expiry_date && (
+                          <View style={styles.detailRow}>
+                            <Ionicons name="calendar" size={12} color="#E65100" />
+                            <Text style={styles.detailText}>Nuova scadenza: {notification.data.expiry_date}</Text>
+                          </View>
+                        )}
+                        {notification.data?.issue_date && (
+                          <View style={styles.detailRow}>
+                            <Ionicons name="document-text" size={12} color="#2E7D32" />
+                            <Text style={styles.detailText}>Emissione: {notification.data.issue_date}</Text>
+                          </View>
+                        )}
+                        {notification.data?.changed_by && (
+                          <View style={styles.detailRow}>
+                            <Ionicons name="create" size={12} color="#7B1FA2" />
+                            <Text style={styles.detailText}>Aggiornato da: {notification.data.changed_by} ({notification.data.changed_by_role || ''})</Text>
+                          </View>
+                        )}
+                        <Text style={styles.notificationDate}>{formatDate(notification.created_at)}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.deleteBtn}
+                        onPress={() => deleteNotification(notification.id)}
+                        data-testid={`delete-notification-${notification.id}`}
+                      >
+                        <Ionicons name="trash-outline" size={16} color="#999" />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             );
           })
         )}
@@ -278,6 +374,16 @@ const styles = StyleSheet.create({
     padding: 8,
     marginRight: 8,
   },
+  backBtnInner: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
   headerTitle: {
     flex: 1,
     fontSize: 20,
@@ -294,9 +400,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  // Search
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    marginLeft: 8,
+    color: '#333',
+    paddingVertical: 0,
+  },
+  resultCount: {
+    fontSize: 12,
+    color: '#888',
+    marginHorizontal: 20,
+    marginBottom: 4,
+    marginTop: 4,
+  },
+  // Content
   content: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
   },
   emptyContainer: {
     flex: 1,
@@ -309,16 +444,59 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#999',
   },
+  // Date group
+  dateGroup: {
+    marginTop: 12,
+  },
+  dateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#555',
+    marginLeft: 6,
+    flex: 1,
+    textTransform: 'capitalize',
+  },
+  dateBadge: {
+    backgroundColor: '#e0e0e0',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  dateBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#666',
+  },
+  unreadBadge: {
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 6,
+  },
+  unreadBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  // Notification card
   notificationCard: {
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 12,
-    marginBottom: 8,
+    marginBottom: 6,
     flexDirection: 'row',
     alignItems: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 2,
     elevation: 1,
   },
@@ -375,14 +553,10 @@ const styles = StyleSheet.create({
     color: '#444',
     fontWeight: '500' as const,
   },
-  relatedUser: {
-    fontSize: 12,
-    color: '#007AFF',
-    marginBottom: 2,
-  },
   notificationDate: {
     fontSize: 11,
     color: '#999',
+    marginTop: 4,
   },
   deleteBtn: {
     padding: 6,
