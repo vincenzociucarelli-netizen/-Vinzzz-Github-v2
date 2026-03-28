@@ -2233,6 +2233,7 @@ class InviteRegisterRequest(BaseModel):
     parent_last_name: Optional[str] = None
     parent_email: Optional[str] = None
     parent_phone: Optional[str] = None
+    consents: Optional[dict] = None
 
 @api_router.post("/athletes/invite-register")
 async def register_via_invite(data: InviteRegisterRequest):
@@ -2303,6 +2304,14 @@ async def register_via_invite(data: InviteRegisterRequest):
                 "status": "approved",
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }
+            if data.consents:
+                parent_user["consents"] = {
+                    k: {
+                        "accepted": v,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "ip": "invite-register",
+                    } for k, v in data.consents.items()
+                }
             await db.users.insert_one(parent_user)
         
         # Create minor athlete
@@ -2420,6 +2429,14 @@ async def register_via_invite(data: InviteRegisterRequest):
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "athlete_id": athlete_id,
             }
+            if data.consents:
+                user_dict["consents"] = {
+                    k: {
+                        "accepted": v,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "ip": "invite-register",
+                    } for k, v in data.consents.items()
+                }
             await db.users.insert_one(user_dict)
         else:
             # Link existing user to the new athlete

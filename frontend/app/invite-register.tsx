@@ -58,6 +58,12 @@ export default function InviteRegister() {
     parent_phone: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  
+  // GDPR consent states
+  const [consentPrivacyViewed, setConsentPrivacyViewed] = useState(false);
+  const [consentDataProcessing, setConsentDataProcessing] = useState(false);
+  const [consentInternalImages, setConsentInternalImages] = useState(false);
+  const [consentPromotionalImages, setConsentPromotionalImages] = useState(false);
 
   // Auto-format date as dd/mm/yyyy
   const formatDateInput = (text: string) => {
@@ -158,6 +164,16 @@ export default function InviteRegister() {
       }
     }
 
+    // GDPR validation
+    if (!consentPrivacyViewed) {
+      showAlert('Errore', 'Devi dichiarare di aver preso visione dell\'Informativa sulla Privacy');
+      return;
+    }
+    if (!consentDataProcessing) {
+      showAlert('Errore', 'Devi acconsentire al trattamento dei dati personali');
+      return;
+    }
+
     // Parse date if provided
     let dob: string | undefined;
     if (form.date_of_birth) {
@@ -189,6 +205,14 @@ export default function InviteRegister() {
         payload.parent_email = form.parent_email || form.email;
         payload.parent_phone = form.parent_phone || form.phone;
       }
+
+      // GDPR consents
+      payload.consents = {
+        privacy_viewed: consentPrivacyViewed,
+        data_processing: consentDataProcessing,
+        images_internal: consentInternalImages,
+        images_promo: consentPromotionalImages,
+      };
 
       const res = await api.post('/athletes/invite-register', payload);
       
@@ -411,6 +435,53 @@ export default function InviteRegister() {
           data-testid="register-confirm-password"
         />
 
+        {/* GDPR Consent Section */}
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Consensi Privacy</Text>
+        
+        <TouchableOpacity
+          style={styles.consentRow}
+          onPress={() => setConsentPrivacyViewed(!consentPrivacyViewed)}
+          data-testid="consent-privacy-viewed"
+        >
+          <Ionicons name={consentPrivacyViewed ? "checkbox" : "square-outline"} size={22} color={consentPrivacyViewed ? "#4CAF50" : "#999"} />
+          <Text style={styles.consentText}>
+            <Text style={{ fontWeight: '600' }}>Dichiaro di aver preso visione dell'Informativa sulla Privacy</Text> <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.consentRow}
+          onPress={() => setConsentDataProcessing(!consentDataProcessing)}
+          data-testid="consent-data-processing"
+        >
+          <Ionicons name={consentDataProcessing ? "checkbox" : "square-outline"} size={22} color={consentDataProcessing ? "#4CAF50" : "#999"} />
+          <Text style={styles.consentText}>
+            <Text style={{ fontWeight: '600' }}>Acconsento al trattamento dei miei dati personali</Text> per le finalita descritte nell'informativa <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.consentRow}
+          onPress={() => setConsentInternalImages(!consentInternalImages)}
+          data-testid="consent-internal-images"
+        >
+          <Ionicons name={consentInternalImages ? "checkbox" : "square-outline"} size={22} color={consentInternalImages ? "#4CAF50" : "#999"} />
+          <Text style={styles.consentTextOptional}>
+            Acconsento all'uso delle mie immagini per comunicazioni interne alla societa
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.consentRow}
+          onPress={() => setConsentPromotionalImages(!consentPromotionalImages)}
+          data-testid="consent-promotional-images"
+        >
+          <Ionicons name={consentPromotionalImages ? "checkbox" : "square-outline"} size={22} color={consentPromotionalImages ? "#4CAF50" : "#999"} />
+          <Text style={styles.consentTextOptional}>
+            Acconsento all'uso delle mie immagini a scopi promozionali
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.submitBtn, submitting && { opacity: 0.5 }]}
           onPress={handleRegister}
@@ -480,6 +551,24 @@ const styles = StyleSheet.create({
   submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   loginLink: { alignItems: 'center', marginTop: 16 },
   loginLinkText: { color: '#1565C0', fontSize: 14 },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 8,
+    gap: 10,
+  },
+  consentText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#333',
+    lineHeight: 18,
+  },
+  consentTextOptional: {
+    flex: 1,
+    fontSize: 13,
+    color: '#555',
+    lineHeight: 18,
+  },
   errorTitle: { fontSize: 20, fontWeight: '700', color: '#333', marginTop: 16 },
   errorText: { fontSize: 14, color: '#666', marginTop: 8, textAlign: 'center' },
   backBtn: { backgroundColor: '#1565C0', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8, marginTop: 24 },
