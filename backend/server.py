@@ -2071,12 +2071,20 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
     
     subject = f"{society.get('name', '')} - Tutto sullo sport dei tuoi figli, in un click"
     store_footer = _get_email_store_footer()
+    
+    # Get society logo for email header
+    society_settings = await db.settings.find_one({"type": "society"}, {"_id": 0, "logo": 1})
+    logo_b64 = society_settings.get("logo", "") if society_settings else ""
+    logo_html = ""
+    if logo_b64:
+        logo_html = f'<img src="data:image/png;base64,{logo_b64}" alt="{society.get("name", "")}" style="width: 80px; height: 80px; object-fit: contain;" />'
+    
     html_content = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <!-- Header -->
-        <div style="background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%); color: white; padding: 28px 24px; border-radius: 12px 12px 0 0; text-align: center;">
-            <h1 style="margin: 0; font-size: 26px; letter-spacing: 0.5px;">RegistraTEAM</h1>
-            <p style="margin: 8px 0 0; opacity: 0.85; font-size: 14px;">{society.get('name', '')}</p>
+        <div style="padding: 24px 24px 16px; border-radius: 12px 12px 0 0; text-align: center;">
+            {logo_html}
+            <h1 style="margin: 10px 0 0; font-size: 22px; letter-spacing: 0.5px; color: #1565C0;">{society.get('name', '')}</h1>
         </div>
 
         <!-- Body -->
