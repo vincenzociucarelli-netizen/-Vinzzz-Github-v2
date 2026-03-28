@@ -2305,11 +2305,15 @@ async def register_via_invite(data: InviteRegisterRequest):
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }
             if data.consents:
+                now_iso = datetime.now(timezone.utc).isoformat()
                 parent_user["consents"] = {
                     k: {
-                        "accepted": v,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "ip": "invite-register",
+                        "value": v,
+                        "timestamp": now_iso,
+                        "source": "registration",
+                        "ip_address": "invite-register",
+                        "document_version": "1.0-2026",
+                        "user_id": parent_id,
                     } for k, v in data.consents.items()
                 }
             await db.users.insert_one(parent_user)
@@ -2430,11 +2434,15 @@ async def register_via_invite(data: InviteRegisterRequest):
                 "athlete_id": athlete_id,
             }
             if data.consents:
+                now_iso = datetime.now(timezone.utc).isoformat()
                 user_dict["consents"] = {
                     k: {
-                        "accepted": v,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "ip": "invite-register",
+                        "value": v,
+                        "timestamp": now_iso,
+                        "source": "registration",
+                        "ip_address": "invite-register",
+                        "document_version": "1.0-2026",
+                        "user_id": user_id,
                     } for k, v in data.consents.items()
                 }
             await db.users.insert_one(user_dict)
