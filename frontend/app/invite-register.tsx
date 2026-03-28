@@ -60,10 +60,21 @@ export default function InviteRegister() {
   const [showPassword, setShowPassword] = useState(false);
   
   // GDPR consent states
+  const [hasOpenedPrivacy, setHasOpenedPrivacy] = useState(false);
+  const [hasOpenedTerms, setHasOpenedTerms] = useState(false);
   const [consentPrivacyViewed, setConsentPrivacyViewed] = useState(false);
   const [consentDataProcessing, setConsentDataProcessing] = useState(false);
   const [consentInternalImages, setConsentInternalImages] = useState(false);
   const [consentPromotionalImages, setConsentPromotionalImages] = useState(false);
+
+  const openDocument = (type: 'privacy' | 'terms') => {
+    const url = type === 'privacy' ? '/privacy-policy' : '/terms-of-use';
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    }
+    if (type === 'privacy') { setHasOpenedPrivacy(true); setConsentPrivacyViewed(true); }
+    if (type === 'terms') { setHasOpenedTerms(true); }
+  };
 
   // Auto-format date as dd/mm/yyyy
   const formatDateInput = (text: string) => {
@@ -165,6 +176,10 @@ export default function InviteRegister() {
     }
 
     // GDPR validation
+    if (!hasOpenedPrivacy || !hasOpenedTerms) {
+      showAlert('Errore', 'Devi aprire e leggere l\'Informativa sulla Privacy e i Termini di utilizzo');
+      return;
+    }
     if (!consentPrivacyViewed) {
       showAlert('Errore', 'Devi dichiarare di aver preso visione dell\'Informativa sulla Privacy');
       return;
@@ -438,49 +453,99 @@ export default function InviteRegister() {
         {/* GDPR Consent Section */}
         <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Consensi Privacy</Text>
         
+        {/* Document links - must open before consents appear */}
         <TouchableOpacity
-          style={styles.consentRow}
-          onPress={() => setConsentPrivacyViewed(!consentPrivacyViewed)}
-          data-testid="consent-privacy-viewed"
+          style={[styles.documentLink, hasOpenedTerms && styles.documentLinkVisited]}
+          onPress={() => openDocument('terms')}
+          data-testid="open-terms-link"
         >
-          <Ionicons name={consentPrivacyViewed ? "checkbox" : "square-outline"} size={22} color={consentPrivacyViewed ? "#4CAF50" : "#999"} />
-          <Text style={styles.consentText}>
-            <Text style={{ fontWeight: '600' }}>Dichiaro di aver preso visione dell'Informativa sulla Privacy</Text> <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
-          </Text>
+          <View style={styles.documentLinkLeft}>
+            <Ionicons
+              name={hasOpenedTerms ? "checkmark-circle" : "document-text-outline"}
+              size={22}
+              color={hasOpenedTerms ? "#4CAF50" : "#007AFF"}
+            />
+            <Text style={[styles.documentLinkText, hasOpenedTerms && { color: '#4CAF50' }]}>
+              Termini di utilizzo
+            </Text>
+          </View>
+          <Ionicons name="open-outline" size={18} color="#999" />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.consentRow}
-          onPress={() => setConsentDataProcessing(!consentDataProcessing)}
-          data-testid="consent-data-processing"
+          style={[styles.documentLink, hasOpenedPrivacy && styles.documentLinkVisited]}
+          onPress={() => openDocument('privacy')}
+          data-testid="open-privacy-link"
         >
-          <Ionicons name={consentDataProcessing ? "checkbox" : "square-outline"} size={22} color={consentDataProcessing ? "#4CAF50" : "#999"} />
-          <Text style={styles.consentText}>
-            <Text style={{ fontWeight: '600' }}>Acconsento al trattamento dei miei dati personali</Text> per le finalita descritte nell'informativa <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
-          </Text>
+          <View style={styles.documentLinkLeft}>
+            <Ionicons
+              name={hasOpenedPrivacy ? "checkmark-circle" : "document-text-outline"}
+              size={22}
+              color={hasOpenedPrivacy ? "#4CAF50" : "#007AFF"}
+            />
+            <Text style={[styles.documentLinkText, hasOpenedPrivacy && { color: '#4CAF50' }]}>
+              Informativa sulla Privacy
+            </Text>
+          </View>
+          <Ionicons name="open-outline" size={18} color="#999" />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.consentRow}
-          onPress={() => setConsentInternalImages(!consentInternalImages)}
-          data-testid="consent-internal-images"
-        >
-          <Ionicons name={consentInternalImages ? "checkbox" : "square-outline"} size={22} color={consentInternalImages ? "#4CAF50" : "#999"} />
-          <Text style={styles.consentTextOptional}>
-            Acconsento all'uso delle mie immagini per comunicazioni interne alla societa
-          </Text>
-        </TouchableOpacity>
+        {!hasOpenedPrivacy || !hasOpenedTerms ? (
+          <View style={styles.hintBox}>
+            <Ionicons name="alert-circle" size={16} color="#E65100" />
+            <Text style={styles.hintText}>
+              Devi aprire e leggere entrambi i documenti prima di poter continuare
+            </Text>
+          </View>
+        ) : (
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>I tuoi consensi personali:</Text>
 
-        <TouchableOpacity
-          style={styles.consentRow}
-          onPress={() => setConsentPromotionalImages(!consentPromotionalImages)}
-          data-testid="consent-promotional-images"
-        >
-          <Ionicons name={consentPromotionalImages ? "checkbox" : "square-outline"} size={22} color={consentPromotionalImages ? "#4CAF50" : "#999"} />
-          <Text style={styles.consentTextOptional}>
-            Acconsento all'uso delle mie immagini a scopi promozionali
-          </Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.consentRow}
+              onPress={() => setConsentPrivacyViewed(!consentPrivacyViewed)}
+              data-testid="consent-privacy-viewed"
+            >
+              <Ionicons name={consentPrivacyViewed ? "checkbox" : "square-outline"} size={22} color={consentPrivacyViewed ? "#4CAF50" : "#999"} />
+              <Text style={styles.consentText}>
+                <Text style={{ fontWeight: '600' }}>Dichiaro di aver preso visione dell'Informativa sulla Privacy</Text> <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.consentRow}
+              onPress={() => setConsentDataProcessing(!consentDataProcessing)}
+              data-testid="consent-data-processing"
+            >
+              <Ionicons name={consentDataProcessing ? "checkbox" : "square-outline"} size={22} color={consentDataProcessing ? "#4CAF50" : "#999"} />
+              <Text style={styles.consentText}>
+                <Text style={{ fontWeight: '600' }}>Acconsento al trattamento dei miei dati personali</Text> per le finalita descritte nell'informativa <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.consentRow}
+              onPress={() => setConsentInternalImages(!consentInternalImages)}
+              data-testid="consent-internal-images"
+            >
+              <Ionicons name={consentInternalImages ? "checkbox" : "square-outline"} size={22} color={consentInternalImages ? "#4CAF50" : "#999"} />
+              <Text style={styles.consentTextOptional}>
+                Acconsento all'uso delle mie immagini per comunicazioni interne alla societa
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.consentRow}
+              onPress={() => setConsentPromotionalImages(!consentPromotionalImages)}
+              data-testid="consent-promotional-images"
+            >
+              <Ionicons name={consentPromotionalImages ? "checkbox" : "square-outline"} size={22} color={consentPromotionalImages ? "#4CAF50" : "#999"} />
+              <Text style={styles.consentTextOptional}>
+                Acconsento all'uso delle mie immagini a scopi promozionali
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <TouchableOpacity
           style={[styles.submitBtn, submitting && { opacity: 0.5 }]}
@@ -568,6 +633,47 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#555',
     lineHeight: 18,
+  },
+  documentLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 8,
+  },
+  documentLinkVisited: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#f1f8e9',
+  },
+  documentLinkLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  documentLinkText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  hintBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFF3E0',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  hintText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#E65100',
+    lineHeight: 16,
   },
   errorTitle: { fontSize: 20, fontWeight: '700', color: '#333', marginTop: 16 },
   errorText: { fontSize: 14, color: '#666', marginTop: 8, textAlign: 'center' },
