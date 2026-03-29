@@ -962,7 +962,7 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
-          {/* Import Pagamenti */}
+          {/* Prima Nota Pagamenti */}
           <TouchableOpacity
             style={styles.menuCard}
             onPress={() => router.push('/admin/payments-import')}
@@ -971,8 +971,8 @@ export default function AdminDashboard() {
               <Text style={{ fontSize: 26 }}>{Icons.card}</Text>
             </View>
             <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Import Pagamenti</Text>
-              <Text style={styles.menuCardSubtitle}>Importa da Excel bonifici, POS, contanti</Text>
+              <Text style={styles.menuCardTitle}>Prima Nota Pagamenti</Text>
+              <Text style={styles.menuCardSubtitle}>Import, registro stagione e solleciti</Text>
             </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>

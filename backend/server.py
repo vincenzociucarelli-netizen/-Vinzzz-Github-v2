@@ -9605,6 +9605,172 @@ async def export_athletes_with_codes(current_user = Depends(get_current_user)):
     
     return result
 
+# ==================== REGISTRO STAGIONE & SOLLECITI ====================
+
+@api_router.get("/payments/registro-stagione")
+async def get_registro_stagione(current_user = Depends(get_current_user)):
+    """Generate registro of all payments for the current sports season with progressive receipt numbers"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    society_id = current_user.get("society_id")
+    now = datetime.utcnow()
+    
+    settings = await db.settings.find_one({"type": "society"})
+    season_start_month = settings.get("season_start_month", 7) if settings else 7
+    season_start_day = settings.get("season_start_day", 1) if settings else 1
+    season_start_this_year = datetime(now.year, season_start_month, season_start_day)
+    
+    if now >= season_start_this_year:
+        season_start = season_start_this_year
+    else:
+        season_start = datetime(now.year - 1, season_start_month, season_start_day)
+    season_end = datetime(season_start.year + 1, season_start_month, season_start_day)
+    season_str = f"{season_start.year % 100:02d}/{season_end.year % 100:02d}"
+    
+    athletes = await db.athletes.find({"society_id": society_id, "is_withdrawn": {"$ne": True}}).to_list(10000)
+    athlete_map = {a["id"]: a for a in athletes}
+    athlete_ids = list(athlete_map.keys())
+    
+    payments = await db.payments.find({
+        "athlete_id": {"$in": athlete_ids},
+        "paid": True,
+        "paid_date": {"$gte": season_start, "$lt": season_end}
+    }).sort("receipt_number", 1).to_list(50000)
+    
+    rows = []
+    for p in payments:
+        athlete = athlete_map.get(p.get("athlete_id", ""), {})
+        paid_date = p.get("paid_date", "")
+        if isinstance(paid_date, datetime):
+            paid_date = paid_date.strftime("%d/%m/%Y")
+        reg_date = p.get("registration_date", p.get("created_at", ""))
+        if isinstance(reg_date, datetime):
+            reg_date = reg_date.strftime("%d/%m/%Y")
+        amount = p.get("amount", 0)
+        rows.append({
+            "Ric. Fiscale": p.get("receipt_number", ""),
+            "Data Registrazione": reg_date,
+            "Cognome": athlete.get("last_name", ""),
+            "Nome": athlete.get("first_name", ""),
+            "Data Pagamento": paid_date,
+            "Tipo": p.get("payment_method", ""),
+            "Importo": f"{amount:.2f}".replace('.', ','),
+            "Causale": p.get("description", ""),
+        })
+    
+    return {
+        "season": season_str,
+        "total_payments": len(rows),
+        "total_amount": sum(p.get("amount", 0) for p in payments),
+        "rows": rows
+    }
+
+@api_router.get("/payments/solleciti")
+async def get_solleciti(current_user = Depends(get_current_user)):
+    """Get list of athletes with unpaid/overdue payments for the current season"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    society_id = current_user.get("society_id")
+    athletes = await db.athletes.find({"society_id": society_id, "is_withdrawn": {"$ne": True}}).to_list(10000)
+    teams = await db.teams.find({}).to_list(100)
+    team_map = {t["id"]: t.get("name", "") for t in teams}
+    
+    result = []
+    for athlete in athletes:
+        unpaid = await db.payments.find({"athlete_id": athlete["id"], "paid": False}).to_list(100)
+        if not unpaid:
+            continue
+        
+        parent_id = athlete.get("parent_id")
+        parent = None
+        if parent_id:
+            parent = await db.users.find_one({"id": parent_id}, {"_id": 0, "first_name": 1, "last_name": 1, "email": 1, "phone": 1})
+        
+        total_due = sum(p.get("amount", 0) for p in unpaid)
+        installments = []
+        for p in unpaid:
+            due_date = p.get("due_date", "")
+            if isinstance(due_date, datetime):
+                due_date = due_date.strftime("%d/%m/%Y")
+            installments.append({
+                "id": p.get("id", ""),
+                "description": p.get("description", ""),
+                "amount": p.get("amount", 0),
+                "due_date": due_date,
+            })
+        
+        result.append({
+            "athlete_id": athlete["id"],
+            "cognome": athlete.get("last_name", ""),
+            "nome": athlete.get("first_name", ""),
+            "squadra": team_map.get(athlete.get("team_id"), ""),
+            "parent_name": f"{parent.get('first_name', '')} {parent.get('last_name', '')}".strip() if parent else "",
+            "parent_email": parent.get("email", "") if parent else "",
+            "parent_phone": parent.get("phone", "") if parent else "",
+            "parent_id": parent_id or "",
+            "total_due": total_due,
+            "installments": installments,
+        })
+    
+    result.sort(key=lambda x: x.get("cognome", "").upper())
+    return result
+
+@api_router.post("/payments/solleciti/notifica")
+async def send_solleciti_notification(data: dict, current_user = Depends(get_current_user)):
+    """Send in-app notification to parents of athletes with unpaid payments"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    athlete_ids = data.get("athlete_ids", [])
+    if not athlete_ids:
+        raise HTTPException(status_code=400, detail="Nessun atleta selezionato")
+    
+    sent = 0
+    for athlete_id in athlete_ids:
+        athlete = await db.athletes.find_one({"id": athlete_id})
+        if not athlete:
+            continue
+        parent_id = athlete.get("parent_id")
+        if not parent_id:
+            continue
+        unpaid = await db.payments.find({"athlete_id": athlete_id, "paid": False}).to_list(100)
+        if not unpaid:
+            continue
+        
+        total_due = sum(p.get("amount", 0) for p in unpaid)
+        athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}".strip()
+        
+        notification = {
+            "id": str(uuid.uuid4()),
+            "user_id": parent_id,
+            "type": "payment_reminder",
+            "title": "Sollecito pagamento quote",
+            "message": f"Risultano pagamenti in sospeso per {athlete_name} per un totale di {total_due:.2f} euro. Ti preghiamo di regolarizzare la posizione.",
+            "data": {"athlete_id": athlete_id, "athlete_name": athlete_name, "total_due": total_due},
+            "read": False,
+            "created_at": datetime.now(timezone.utc)
+        }
+        await db.notifications.insert_one(notification)
+        
+        second_parent_id = athlete.get("second_parent_id")
+        if second_parent_id:
+            notification2 = {
+                "id": str(uuid.uuid4()),
+                "user_id": second_parent_id,
+                "type": "payment_reminder",
+                "title": "Sollecito pagamento quote",
+                "message": f"Risultano pagamenti in sospeso per {athlete_name} per un totale di {total_due:.2f} euro. Ti preghiamo di regolarizzare la posizione.",
+                "data": {"athlete_id": athlete_id, "athlete_name": athlete_name, "total_due": total_due},
+                "read": False,
+                "created_at": datetime.now(timezone.utc)
+            }
+            await db.notifications.insert_one(notification2)
+        sent += 1
+    
+    return {"success": True, "sent": sent, "message": f"Notifiche inviate per {sent} atleti"}
+
 @api_router.get("/payments/{athlete_id}", response_model=List[Payment])
 async def get_athlete_payments(athlete_id: str, current_user = Depends(get_current_user)):
     # Check permissions
@@ -10435,8 +10601,6 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Errore lettura file: {str(e)}")
-
-# ==================== ATTENDANCE ENDPOINTS (COACH) ====================
 
 def get_current_training_slot(team: dict) -> Optional[dict]:
     """Find the current training slot based on day and time"""
