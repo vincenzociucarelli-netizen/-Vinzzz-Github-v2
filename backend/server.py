@@ -10194,7 +10194,7 @@ async def get_attestato_number(
 
 @api_router.post("/payments/import")
 async def import_payments(file: UploadFile = File(...), current_user = Depends(get_current_user)):
-    """Import payments from Excel file. Matches athletes by athlete_code."""
+    """Import payments from Excel file. Matches athletes by Cognome+Nome or CodiceAtleta."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può importare pagamenti")
     
@@ -10203,11 +10203,18 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
     try:
         import pandas as pd
         from io import BytesIO
+        import unicodedata
         
         df = pd.read_excel(BytesIO(content))
         
-        # Required columns
-        required_cols = ['CodiceAtleta', 'DataPagamento', 'Importo', 'TipoPagamento']
+        # Detect format: new (Cognome+Nome) or legacy (CodiceAtleta)
+        has_name_cols = 'Cognome' in df.columns and 'Nome' in df.columns
+        has_code_col = 'CodiceAtleta' in df.columns
+        
+        if not has_name_cols and not has_code_col:
+            raise HTTPException(status_code=400, detail="Colonne mancanti: serve 'Cognome' + 'Nome' oppure 'CodiceAtleta'")
+        
+        required_cols = ['DataPagamento', 'Importo', 'TipoPagamento']
         missing_cols = [col for col in required_cols if col not in df.columns]
         if missing_cols:
             raise HTTPException(status_code=400, detail=f"Colonne mancanti: {', '.join(missing_cols)}")
@@ -10215,27 +10222,109 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
         society_id = current_user.get("society_id")
         imported = 0
         errors = []
-        duplicates = []  # Track duplicate payments
+        duplicates = []
+        
+        # Pre-load all athletes for name matching
+        society_query = {
+            "$or": [
+                {"society_id": society_id},
+                {"society_id": None},
+                {"society_id": "None"},
+                {"society_id": ""},
+                {"society_id": {"$exists": False}}
+            ],
+            "is_withdrawn": {"$ne": True}
+        }
+        all_athletes = await db.athletes.find(society_query).to_list(1000)
+        teams = await db.teams.find({}).to_list(100)
+        team_dict = {t["id"]: t["name"] for t in teams}
+        
+        def normalize_name(s):
+            """Normalize name for matching: uppercase, strip, remove accents"""
+            if not s or (isinstance(s, float) and pd.isna(s)):
+                return ""
+            s = str(s).strip().upper()
+            s = unicodedata.normalize('NFD', s)
+            s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+            return s
+        
+        def find_athlete_by_name(cognome_input, nome_input):
+            """Find athlete by Cognome+Nome with fuzzy matching"""
+            cn = normalize_name(cognome_input)
+            nn = normalize_name(nome_input)
+            if not cn:
+                return None, "Cognome mancante"
+            
+            # 1) Exact match last_name + first_name
+            exact = [a for a in all_athletes 
+                     if normalize_name(a.get("last_name")) == cn 
+                     and normalize_name(a.get("first_name")) == nn]
+            if len(exact) == 1:
+                return exact[0], None
+            if len(exact) > 1:
+                teams_info = ", ".join([f"{a.get('first_name')} {a.get('last_name')} ({team_dict.get(a.get('team_id'), '?')})" for a in exact])
+                return None, f"Trovati {len(exact)} omonimi: {teams_info}"
+            
+            # 2) Match only by last_name (first_name might differ slightly)
+            by_surname = [a for a in all_athletes if normalize_name(a.get("last_name")) == cn]
+            if len(by_surname) == 1 and nn:
+                # Single match by surname - accept if first name is close enough
+                db_fn = normalize_name(by_surname[0].get("first_name"))
+                if nn in db_fn or db_fn in nn or nn[:3] == db_fn[:3]:
+                    return by_surname[0], None
+                return by_surname[0], None  # Only one with that surname, likely the right one
+            if len(by_surname) == 1 and not nn:
+                return by_surname[0], None
+            if len(by_surname) > 1:
+                # Multiple with same surname - need name to disambiguate
+                if nn:
+                    partial = [a for a in by_surname 
+                               if nn in normalize_name(a.get("first_name")) 
+                               or normalize_name(a.get("first_name")) in nn
+                               or nn[:3] == normalize_name(a.get("first_name"))[:3]]
+                    if len(partial) == 1:
+                        return partial[0], None
+                teams_info = ", ".join([f"{a.get('first_name')} {a.get('last_name')} ({team_dict.get(a.get('team_id'), '?')})" for a in by_surname])
+                return None, f"Cognome '{cognome_input}' ambiguo - trovati: {teams_info}"
+            
+            # 3) No match at all
+            return None, f"Atleta '{cognome_input} {nome_input}' non trovato nel sistema"
         
         for idx, row in df.iterrows():
             try:
-                athlete_code = str(row['CodiceAtleta']).strip().upper()
+                # Find athlete - by name or by code
+                athlete = None
+                match_label = ""
                 
-                # Find athlete by code - include legacy athletes with null/None society_id
-                athlete = await db.athletes.find_one({
-                    "athlete_code": athlete_code,
-                    "$or": [
-                        {"society_id": society_id},
-                        {"society_id": None},
-                        {"society_id": "None"},
-                        {"society_id": ""},
-                        {"society_id": {"$exists": False}}
-                    ]
-                })
-                
-                if not athlete:
-                    errors.append(f"Riga {idx+2}: Atleta {athlete_code} non trovato")
-                    continue
+                if has_name_cols and not has_code_col:
+                    # New format: Cognome + Nome
+                    cognome = row.get('Cognome', '')
+                    nome = row.get('Nome', '')
+                    if pd.isna(cognome) or str(cognome).strip() == '':
+                        errors.append(f"Riga {idx+2}: Cognome mancante")
+                        continue
+                    athlete, match_error = find_athlete_by_name(cognome, nome)
+                    match_label = f"{cognome} {nome}".strip()
+                    if not athlete:
+                        errors.append(f"Riga {idx+2}: {match_error}")
+                        continue
+                elif has_code_col:
+                    # Legacy format: CodiceAtleta
+                    athlete_code = str(row['CodiceAtleta']).strip().upper()
+                    athlete = await db.athletes.find_one({
+                        "athlete_code": athlete_code,
+                        "$or": [
+                            {"society_id": society_id},
+                            {"society_id": None},
+                            {"society_id": "None"},
+                            {"society_id": ""},
+                            {"society_id": {"$exists": False}}
+                        ]
+                    })
+                    match_label = athlete_code
+                    if not athlete:
+                        errors.append(f"Riga {idx+2}: Atleta {athlete_code} non trovato")
+                        continue
                 
                 # Parse dates
                 data_pagamento = row['DataPagamento']
@@ -10278,7 +10367,7 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
                 })
                 
                 if existing_payment:
-                    athlete_name = athlete.get("full_name", athlete_code)
+                    athlete_name = athlete.get("full_name", match_label)
                     duplicates.append(f"Riga {idx+2}: {athlete_name} - €{importo:.2f} del {data_pagamento.strftime('%d/%m/%Y')} (già registrato)")
                     continue
                 # ============ END DUPLICATE CHECK ============

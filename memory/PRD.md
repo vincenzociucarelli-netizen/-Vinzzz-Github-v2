@@ -42,9 +42,11 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
 
 ### Session 2026-03-29 (Fork 7 - Current)
 - Fix codici atleta: ripristinati a formato alfanumerico 12 caratteri (qr_identifier) per privacy
-- Aggiornati esempi template Excel export pagamenti (rimossi ROSMAR-U16, BIAFED-SD)
-- Rimossa funzione generate_unique_athlete_code (name-based) dal backend
-- Aggiornato endpoint /api/payments/export-athletes-codes per usare qr_identifier come fallback
+- **NUOVO: Import pagamenti con Cognome+Nome** - eliminati i codici alfanumerici dal template
+  - Template semplificato: Cognome, Nome, DataPagamento, Importo, TipoPagamento, DataRegistrazione, Causale
+  - Matching automatico backend: normalizzazione nomi, gestione accenti, omonimi con squadra
+  - Retrocompatibilità mantenuta per vecchi template con CodiceAtleta
+  - UI aggiornata: un solo pulsante "Scarica Template", lista atleti senza codici
 
 ### Session 2026-03-28 (Fork 5-6)
 - Bug fix telefono minori: opzionale nel flusso invite-register

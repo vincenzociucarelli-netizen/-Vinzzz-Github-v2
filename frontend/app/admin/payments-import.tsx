@@ -51,14 +51,14 @@ export default function PaymentsImport() {
 
   const downloadTemplate = async () => {
     try {
-      // Create header row with instructions
-      const headerRow = ['CodiceAtleta', 'DataPagamento', 'Importo', 'TipoPagamento', 'DataRegistrazione', 'Causale'];
+      // Create header row - new format with Cognome+Nome instead of CodiceAtleta
+      const headerRow = ['Cognome', 'Nome', 'DataPagamento', 'Importo', 'TipoPagamento', 'DataRegistrazione', 'Causale'];
       
-      // Example data rows - dates as text in gg/mm/aaaa, amounts as text with €
+      // Example data rows matching Prima Nota workflow
       const dataRows = [
-        ['IJH6WDJGAICC', '15/01/2025', '150,00', 'B', '16/01/2025', 'Quota Gennaio-Febbraio'],
-        ['YU0D4IVSFOVP', '20/01/2025', '200,00', 'P', '', 'Quota Trimestrale'],
-        ['FJV6XJJMCF87', '22/01/2025', '100,00', 'C', '', ''],
+        ['ROSSI', 'GIULIA', '15/01/2025', '150,00', 'B', '16/01/2025', 'Quota Gennaio-Febbraio'],
+        ['RIGO', 'ISA', '20/01/2025', '250,00', 'P', '', 'Quota Trimestrale'],
+        ['RIGO', 'PIA', '22/01/2025', '250,00', 'C', '', ''],
       ];
       
       // Create worksheet with array of arrays
@@ -67,11 +67,12 @@ export default function PaymentsImport() {
       
       // Set column widths
       ws['!cols'] = [
-        { wch: 15 }, // CodiceAtleta
-        { wch: 14 }, // DataPagamento (gg/mm/aaaa)
+        { wch: 20 }, // Cognome
+        { wch: 20 }, // Nome
+        { wch: 14 }, // DataPagamento
         { wch: 12 }, // Importo
         { wch: 14 }, // TipoPagamento
-        { wch: 16 }, // DataRegistrazione (gg/mm/aaaa)
+        { wch: 16 }, // DataRegistrazione
         { wch: 30 }, // Causale
       ];
       
@@ -80,15 +81,21 @@ export default function PaymentsImport() {
         ['ISTRUZIONI PER LA COMPILAZIONE'],
         [''],
         ['Colonna', 'Formato', 'Esempio', 'Note'],
-        ['CodiceAtleta', 'Testo', 'IJH6WDJGAICC', 'Codice alfanumerico 12 caratteri dalla lista atleti (maiuscolo/minuscolo indifferente)'],
+        ['Cognome', 'Testo', 'ROSSI', 'Cognome dell\'atleta (il sistema abbina automaticamente)'],
+        ['Nome', 'Testo', 'GIULIA', 'Nome dell\'atleta'],
         ['DataPagamento', 'gg/mm/aaaa', '15/01/2025', 'Data del pagamento effettivo'],
-        ['Importo', 'Numero', '150,00', 'Importo in euro (senza simbolo €)'],
+        ['Importo', 'Numero', '150,00', 'Importo in euro (senza simbolo)'],
         ['TipoPagamento', 'Lettera', 'B', 'B=Bonifico, P=POS, C=Contanti, A=Assegno'],
         ['DataRegistrazione', 'gg/mm/aaaa', '16/01/2025', 'Opzionale - data registrazione contabile'],
         ['Causale', 'Testo', 'Quota mensile', 'Opzionale - descrizione del pagamento'],
+        [''],
+        ['NOTE IMPORTANTI:'],
+        ['- Il sistema abbina automaticamente Cognome+Nome all\'atleta registrato'],
+        ['- In caso di omonimi, viene segnalata l\'ambiguita con la squadra'],
+        ['- Maiuscolo/minuscolo e accenti sono ignorati nel matching'],
       ];
       const wsInstructions = XLSX.utils.aoa_to_sheet(instructionsData);
-      wsInstructions['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 15 }, { wch: 50 }];
+      wsInstructions['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 15 }, { wch: 55 }];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Pagamenti');
@@ -239,30 +246,22 @@ export default function PaymentsImport() {
       <ScrollView style={styles.content}>
         {/* Instructions */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📋 Come importare i pagamenti</Text>
-          <Text style={styles.instruction}>1. Scarica la <Text style={styles.bold}>Lista Atleti</Text> con i codici</Text>
-          <Text style={styles.instruction}>2. Scarica il <Text style={styles.bold}>Template Pagamenti</Text></Text>
-          <Text style={styles.instruction}>3. Compila il template con i dati dalla prima nota</Text>
+          <Text style={styles.cardTitle}>Come importare i pagamenti</Text>
+          <Text style={styles.instruction}>1. Scarica il <Text style={styles.bold}>Template Pagamenti</Text></Text>
+          <Text style={styles.instruction}>2. Compila con <Text style={styles.bold}>Cognome, Nome, importo e data</Text> dalla prima nota</Text>
+          <Text style={styles.instruction}>3. Il sistema abbina automaticamente i nomi agli atleti</Text>
           <Text style={styles.instruction}>4. Importa il file compilato</Text>
         </View>
 
         {/* Download Buttons */}
         <View style={styles.buttonsRow}>
           <TouchableOpacity 
-            style={[styles.downloadBtn, styles.listBtn]} 
-            onPress={downloadAthletesList}
-            disabled={loading}
-          >
-            <Ionicons name="people" size={20} color="#fff" />
-            <Text style={styles.downloadBtnText}>Lista Atleti</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.downloadBtn, styles.templateBtn]} 
+            style={[styles.downloadBtn, styles.templateBtn, { flex: 1 }]} 
             onPress={downloadTemplate}
+            data-testid="download-template-btn"
           >
             <Ionicons name="document-text" size={20} color="#fff" />
-            <Text style={styles.downloadBtnText}>Template</Text>
+            <Text style={styles.downloadBtnText}>Scarica Template</Text>
           </TouchableOpacity>
         </View>
 
@@ -323,14 +322,13 @@ export default function PaymentsImport() {
 
         {/* Athletes Preview */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>👥 Atleti con codici ({athletes.length})</Text>
+          <Text style={styles.cardTitle}>Atleti registrati ({athletes.length})</Text>
           {loading ? (
             <ActivityIndicator size="small" color="#007AFF" />
           ) : (
             <View style={styles.athletesList}>
               {athletes.slice(0, 10).map((a, idx) => (
                 <View key={idx} style={styles.athleteItem}>
-                  <Text style={styles.athleteCode}>{a.CodiceAtleta}</Text>
                   <Text style={styles.athleteName}>{a.Cognome} {a.Nome}</Text>
                   <Text style={styles.athleteTeam}>{a.Squadra}</Text>
                 </View>
@@ -344,10 +342,14 @@ export default function PaymentsImport() {
 
         {/* Template Format */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📄 Formato Template</Text>
+          <Text style={styles.cardTitle}>Formato Template</Text>
           <View style={styles.formatItem}>
-            <Text style={styles.formatLabel}>CodiceAtleta</Text>
-            <Text style={styles.formatDesc}>Es: IJH6WDJGAICC</Text>
+            <Text style={styles.formatLabel}>Cognome</Text>
+            <Text style={styles.formatDesc}>Es: ROSSI</Text>
+          </View>
+          <View style={styles.formatItem}>
+            <Text style={styles.formatLabel}>Nome</Text>
+            <Text style={styles.formatDesc}>Es: GIULIA</Text>
           </View>
           <View style={styles.formatItem}>
             <Text style={styles.formatLabel}>DataPagamento</Text>
@@ -355,22 +357,25 @@ export default function PaymentsImport() {
           </View>
           <View style={styles.formatItem}>
             <Text style={styles.formatLabel}>Importo</Text>
-            <Text style={styles.formatDesc}>Es: 150.00</Text>
+            <Text style={styles.formatDesc}>Es: 150,00</Text>
           </View>
           <View style={styles.formatItem}>
             <Text style={styles.formatLabel}>TipoPagamento</Text>
-            <Text style={styles.formatDesc}>B / P / C / A / O</Text>
+            <Text style={styles.formatDesc}>B / P / C / A</Text>
           </View>
           <View style={styles.formatHint}>
-            <Text style={styles.formatHintText}>B=Bonifico, P=POS, C=Contanti, A=Assegno, O=Online</Text>
+            <Text style={styles.formatHintText}>B=Bonifico, P=POS, C=Contanti, A=Assegno</Text>
           </View>
           <View style={styles.formatItem}>
             <Text style={styles.formatLabel}>DataRegistrazione</Text>
-            <Text style={styles.formatDesc}>(Opzionale) Data inserimento</Text>
+            <Text style={styles.formatDesc}>(Opzionale)</Text>
           </View>
           <View style={styles.formatItem}>
             <Text style={styles.formatLabel}>Causale</Text>
-            <Text style={styles.formatDesc}>(Opzionale) Descrizione</Text>
+            <Text style={styles.formatDesc}>(Opzionale)</Text>
+          </View>
+          <View style={[styles.formatHint, { backgroundColor: '#E8F5E9', marginTop: 8 }]}>
+            <Text style={[styles.formatHintText, { color: '#2E7D32' }]}>Il sistema abbina automaticamente Cognome+Nome all'atleta registrato</Text>
           </View>
         </View>
 
