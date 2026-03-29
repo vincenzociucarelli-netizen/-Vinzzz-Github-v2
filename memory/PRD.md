@@ -46,7 +46,12 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
   - Template semplificato: Cognome, Nome, DataPagamento, Importo, TipoPagamento, DataRegistrazione, Causale
   - Matching automatico backend: normalizzazione nomi, gestione accenti, omonimi con squadra
   - Retrocompatibilità mantenuta per vecchi template con CodiceAtleta
-  - UI aggiornata: un solo pulsante "Scarica Template", lista atleti senza codici
+- **NUOVO: Prima Nota Pagamenti** - Rinominata pagina e aggiunta struttura a 3 sezioni:
+  - **Import**: Template scaricabile + importazione file Excel
+  - **Registro Stagione**: Riepilogo pagamenti stagione con download Excel (Ric. Fiscale progressiva, Date, Importi)
+  - **Solleciti**: Lista atleti morosi con download Excel per stampa unione + invio notifica in-app ai genitori
+- Nuovi endpoint backend: GET /api/payments/registro-stagione, GET /api/payments/solleciti, POST /api/payments/solleciti/notifica
+- Test: 13/14 backend passed, 100% frontend UI verified (iteration_62.json)
 
 ### Session 2026-03-28 (Fork 5-6)
 - Bug fix telefono minori: opzionale nel flusso invite-register
