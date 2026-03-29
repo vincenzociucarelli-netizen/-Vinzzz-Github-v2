@@ -810,6 +810,14 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                   ]}>
                     {statusText}
                   </Text>
+                  {(athlete.other_parent_name || athlete.other_parent_email) && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
+                      <Ionicons name="people-outline" size={12} color="#888" />
+                      <Text style={{ fontSize: 11, color: '#888', marginLeft: 4 }}>
+                        Altro genitore: {athlete.other_parent_name || athlete.other_parent_email}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 {athlete.status !== 'pending' && (
                   <Ionicons name="chevron-forward" size={24} color="#999" />
