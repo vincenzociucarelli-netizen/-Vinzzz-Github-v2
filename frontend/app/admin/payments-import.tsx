@@ -56,9 +56,9 @@ export default function PaymentsImport() {
       
       // Example data rows - dates as text in gg/mm/aaaa, amounts as text with €
       const dataRows = [
-        ['ROSMAR-U16', '15/01/2025', '150,00', 'B', '16/01/2025', 'Quota Gennaio-Febbraio'],
-        ['BIAFED-SD', '20/01/2025', '200,00', 'P', '', 'Quota Trimestrale'],
-        ['VERANA-U14', '22/01/2025', '100,00', 'C', '', ''],
+        ['IJH6WDJGAICC', '15/01/2025', '150,00', 'B', '16/01/2025', 'Quota Gennaio-Febbraio'],
+        ['YU0D4IVSFOVP', '20/01/2025', '200,00', 'P', '', 'Quota Trimestrale'],
+        ['FJV6XJJMCF87', '22/01/2025', '100,00', 'C', '', ''],
       ];
       
       // Create worksheet with array of arrays
@@ -80,7 +80,7 @@ export default function PaymentsImport() {
         ['ISTRUZIONI PER LA COMPILAZIONE'],
         [''],
         ['Colonna', 'Formato', 'Esempio', 'Note'],
-        ['CodiceAtleta', 'Testo', 'ROSMAR-U16', 'Codice atleta dalla lista (maiuscolo/minuscolo indifferente)'],
+        ['CodiceAtleta', 'Testo', 'IJH6WDJGAICC', 'Codice alfanumerico 12 caratteri dalla lista atleti (maiuscolo/minuscolo indifferente)'],
         ['DataPagamento', 'gg/mm/aaaa', '15/01/2025', 'Data del pagamento effettivo'],
         ['Importo', 'Numero', '150,00', 'Importo in euro (senza simbolo €)'],
         ['TipoPagamento', 'Lettera', 'B', 'B=Bonifico, P=POS, C=Contanti, A=Assegno'],
@@ -347,7 +347,7 @@ export default function PaymentsImport() {
           <Text style={styles.cardTitle}>📄 Formato Template</Text>
           <View style={styles.formatItem}>
             <Text style={styles.formatLabel}>CodiceAtleta</Text>
-            <Text style={styles.formatDesc}>Es: ROSMAR-U16</Text>
+            <Text style={styles.formatDesc}>Es: IJH6WDJGAICC</Text>
           </View>
           <View style={styles.formatItem}>
             <Text style={styles.formatLabel}>DataPagamento</Text>

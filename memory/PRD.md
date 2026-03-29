@@ -40,13 +40,22 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
 
 ## Completed Work
 
-### Session 2026-03-28 (Fork 5 - Current)
+### Session 2026-03-29 (Fork 7 - Current)
+- Fix codici atleta: ripristinati a formato alfanumerico 12 caratteri (qr_identifier) per privacy
+- Aggiornati esempi template Excel export pagamenti (rimossi ROSMAR-U16, BIAFED-SD)
+- Rimossa funzione generate_unique_athlete_code (name-based) dal backend
+- Aggiornato endpoint /api/payments/export-athletes-codes per usare qr_identifier come fallback
+
+### Session 2026-03-28 (Fork 5-6)
 - Bug fix telefono minori: opzionale nel flusso invite-register
 - Reset password: fix URL API (cache stale), pulsante email, toggle visibilità, errori dettagliati
 - Email template: logo da URL pubblica, header pulito
 - GDPR invite-register: flusso completo con documenti + consensi formato corretto
 - Notifiche admin: raggruppamento per data, collassabili, ricerca
 - UI reset password: logo senza sfondo bianco
+- Dashboard genitore: visibilità figli condivisi con altro genitore
+- Date in formato italiano (DD/MM/YYYY) nella timeline
+- FIPAV scraper: fix estrazione venue da tooltip HTML
 
 ### Session 2026-03-27 (Fork 4)
 - Bug fix validazione telefono minori

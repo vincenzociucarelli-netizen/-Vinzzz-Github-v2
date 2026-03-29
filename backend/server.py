@@ -738,7 +738,7 @@ class Athlete(BaseModel):
     society_id: Optional[str] = None  # ID della società (multi-tenancy)
     parent_id: Optional[str] = None  # User ID of parent/guardian (None per atleti maggiorenni)
     # Codice univoco atleta (auto-generato: COGNOME3+NOME3-SQUADRA)
-    athlete_code: Optional[str] = None  # Es: ROSMAR-U16
+    athlete_code: Optional[str] = None  # Codice alfanumerico 12 caratteri (= qr_identifier)
     # QR Identifier - codice alfanumerico unico 12 caratteri (permanente per stagione)
     qr_identifier: Optional[str] = None  # Es: A7X9K2M4P1Q3
     # Tesseramento (gestito da Admin)
@@ -1209,38 +1209,8 @@ def generate_qr_code_from_identifier(qr_identifier: str) -> str:
     return f"data:image/png;base64,{img_str}"
 
 def generate_athlete_code(last_name: str, first_name: str, team_name: str) -> str:
-    """DEPRECATED: athlete_code is now the qr_identifier (12-char alphanumeric).
-    This function is kept only as fallback."""
-    import re
-    ln = re.sub(r'[^A-Za-z]', '', (last_name or '').upper())[:3]
-    fn = re.sub(r'[^A-Za-z]', '', (first_name or '').upper())[:3]
-    tn = re.sub(r'[^A-Za-z0-9]', '', (team_name or '').upper())
-    tn = tn.replace('MINIVOLLEY', 'MV').replace('STARTER', 'ST').replace('UNDER', 'U').replace('SERIE', 'S')
-    tn = tn[:5] if len(tn) > 5 else tn
-    return f"{ln}{fn}-{tn}" if tn else f"{ln}{fn}"
-
-async def generate_unique_athlete_code(last_name: str, first_name: str, team_name: str, society_id: str, exclude_athlete_id: str = None) -> str:
-    """Generate a unique human-readable athlete code like CERTIZ-SD, ROSMAR-U16"""
-    base_code = generate_athlete_code(last_name, first_name, team_name)
-    # Check uniqueness
-    existing = await db.athletes.find_one({
-        "athlete_code": base_code,
-        "society_id": society_id,
-        **({"id": {"$ne": exclude_athlete_id}} if exclude_athlete_id else {})
-    })
-    if not existing:
-        return base_code
-    # Add suffix if duplicate
-    for i in range(2, 100):
-        code = f"{base_code}{i}"
-        existing = await db.athletes.find_one({
-            "athlete_code": code,
-            "society_id": society_id,
-            **({"id": {"$ne": exclude_athlete_id}} if exclude_athlete_id else {})
-        })
-        if not existing:
-            return code
-    return base_code
+    """DEPRECATED: Non usare. athlete_code = qr_identifier (12-char alfanumerico per privacy)."""
+    return generate_qr_identifier()
 
 async def update_athlete_code(athlete_id: str):
     """Update athlete code to match qr_identifier"""
@@ -9616,18 +9586,12 @@ async def export_athletes_with_codes(current_user = Depends(get_current_user)):
     
     result = []
     for a in athletes:
-        # Generate code if missing
+        # If athlete_code is missing, use qr_identifier (12-char alphanumeric)
         if not a.get("athlete_code"):
-            team_name = team_dict.get(a.get("team_id"), "")
-            code = await generate_unique_athlete_code(
-                a.get("last_name", ""), 
-                a.get("first_name", ""), 
-                team_name,
-                society_id,
-                a["id"]
-            )
-            await db.athletes.update_one({"id": a["id"]}, {"$set": {"athlete_code": code}})
-            a["athlete_code"] = code
+            code = a.get("qr_identifier", "")
+            if code:
+                await db.athletes.update_one({"id": a["id"]}, {"$set": {"athlete_code": code}})
+                a["athlete_code"] = code
         
         result.append({
             "CodiceAtleta": a.get("athlete_code", ""),
