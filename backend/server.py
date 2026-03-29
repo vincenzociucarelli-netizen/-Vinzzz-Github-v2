@@ -9719,15 +9719,26 @@ async def get_solleciti(current_user = Depends(get_current_user)):
 
 @api_router.post("/payments/solleciti/notifica")
 async def send_solleciti_notification(data: dict, current_user = Depends(get_current_user)):
-    """Send in-app notification to parents of athletes with unpaid payments"""
+    """Send in-app notification and optionally email to parents of athletes with unpaid payments"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
     
     athlete_ids = data.get("athlete_ids", [])
+    send_email = data.get("send_email", False)
     if not athlete_ids:
         raise HTTPException(status_code=400, detail="Nessun atleta selezionato")
     
-    sent = 0
+    # Get society info for email
+    society_id = current_user.get("society_id")
+    society = await db.settings.find_one({"type": "society"}) or {}
+    society_name = society.get("name", "La tua società sportiva")
+    base_url = os.environ.get("WEB_APP_URL", "")
+    logo_url = f"{base_url}/api/settings/society/logo.png" if base_url else ""
+    
+    sent_notif = 0
+    sent_email_ok = 0
+    sent_email_fail = 0
+    
     for athlete_id in athlete_ids:
         athlete = await db.athletes.find_one({"id": athlete_id})
         if not athlete:
@@ -9742,34 +9753,108 @@ async def send_solleciti_notification(data: dict, current_user = Depends(get_cur
         total_due = sum(p.get("amount", 0) for p in unpaid)
         athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}".strip()
         
+        # Build installments detail
+        rate_detail = ""
+        for p in unpaid:
+            desc = p.get("description", "Rata")
+            amount = p.get("amount", 0)
+            due = p.get("due_date", "")
+            if isinstance(due, datetime):
+                due = due.strftime("%d/%m/%Y")
+            rate_detail += f"<li>{desc}: <strong>{amount:.2f} EUR</strong>{f' (scad. {due})' if due else ''}</li>"
+        
+        msg = f"Risultano pagamenti in sospeso per {athlete_name} per un totale di {total_due:.2f} euro. Ti preghiamo di regolarizzare la posizione."
+        
+        # In-app notification for primary parent
         notification = {
             "id": str(uuid.uuid4()),
             "user_id": parent_id,
             "type": "payment_reminder",
             "title": "Sollecito pagamento quote",
-            "message": f"Risultano pagamenti in sospeso per {athlete_name} per un totale di {total_due:.2f} euro. Ti preghiamo di regolarizzare la posizione.",
+            "message": msg,
             "data": {"athlete_id": athlete_id, "athlete_name": athlete_name, "total_due": total_due},
             "read": False,
             "created_at": datetime.now(timezone.utc)
         }
         await db.notifications.insert_one(notification)
         
+        # In-app notification for second parent
         second_parent_id = athlete.get("second_parent_id")
         if second_parent_id:
-            notification2 = {
-                "id": str(uuid.uuid4()),
-                "user_id": second_parent_id,
-                "type": "payment_reminder",
-                "title": "Sollecito pagamento quote",
-                "message": f"Risultano pagamenti in sospeso per {athlete_name} per un totale di {total_due:.2f} euro. Ti preghiamo di regolarizzare la posizione.",
-                "data": {"athlete_id": athlete_id, "athlete_name": athlete_name, "total_due": total_due},
-                "read": False,
-                "created_at": datetime.now(timezone.utc)
-            }
+            notification2 = {**notification, "id": str(uuid.uuid4()), "user_id": second_parent_id}
             await db.notifications.insert_one(notification2)
-        sent += 1
+        
+        sent_notif += 1
+        
+        # Send email if requested
+        if send_email:
+            parent = await db.users.find_one({"id": parent_id}, {"_id": 0, "email": 1, "first_name": 1, "last_name": 1})
+            parents_to_email = []
+            if parent and parent.get("email"):
+                parents_to_email.append(parent)
+            if second_parent_id:
+                parent2 = await db.users.find_one({"id": second_parent_id}, {"_id": 0, "email": 1, "first_name": 1, "last_name": 1})
+                if parent2 and parent2.get("email"):
+                    parents_to_email.append(parent2)
+            
+            logo_html = f'<img src="{logo_url}" alt="{society_name}" style="width: 56px; height: 56px; object-fit: contain;" />' if logo_url else ""
+            
+            email_html = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #E53935;">
+                    {logo_html}
+                    <h2 style="color: #333; margin: 10px 0 0;">{society_name}</h2>
+                </div>
+                <div style="padding: 24px 0;">
+                    <h3 style="color: #E53935; margin-bottom: 16px;">Sollecito pagamento quote</h3>
+                    <p style="color: #333; line-height: 1.6;">
+                        Gentile genitore,<br><br>
+                        risultano pagamenti in sospeso per <strong>{athlete_name}</strong>:
+                    </p>
+                    <ul style="color: #555; line-height: 1.8;">
+                        {rate_detail}
+                    </ul>
+                    <div style="background: #FFF3E0; border-left: 4px solid #FF9800; padding: 14px; margin: 20px 0; border-radius: 4px;">
+                        <strong style="color: #E65100;">Totale dovuto: {total_due:.2f} EUR</strong>
+                    </div>
+                    <p style="color: #333; line-height: 1.6;">
+                        Ti preghiamo di regolarizzare la posizione il prima possibile.
+                    </p>
+                </div>
+                <div style="border-top: 1px solid #eee; padding-top: 16px; text-align: center; color: #999; font-size: 12px;">
+                    <p>{society_name} - Inviato tramite RegistraTEAM</p>
+                </div>
+            </div>
+            """
+            
+            from email_service import send_transactional_email
+            for p_to_email in parents_to_email:
+                try:
+                    await send_transactional_email(
+                        to_email=p_to_email["email"],
+                        subject=f"{society_name} - Sollecito pagamento quote per {athlete_name}",
+                        html_content=email_html,
+                        to_name=f"{p_to_email.get('first_name', '')} {p_to_email.get('last_name', '')}".strip(),
+                    )
+                    sent_email_ok += 1
+                except Exception as e:
+                    logger.error(f"Email sollecito failed for {p_to_email['email']}: {e}")
+                    sent_email_fail += 1
     
-    return {"success": True, "sent": sent, "message": f"Notifiche inviate per {sent} atleti"}
+    # Build response message
+    parts = [f"Notifiche in-app inviate per {sent_notif} atleti"]
+    if send_email:
+        parts.append(f"Email inviate: {sent_email_ok}")
+        if sent_email_fail > 0:
+            parts.append(f"Email fallite: {sent_email_fail}")
+    
+    return {
+        "success": True, 
+        "sent": sent_notif, 
+        "email_sent": sent_email_ok,
+        "email_failed": sent_email_fail,
+        "message": " - ".join(parts)
+    }
 
 @api_router.get("/payments/{athlete_id}", response_model=List[Payment])
 async def get_athlete_payments(athlete_id: str, current_user = Depends(get_current_user)):

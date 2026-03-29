@@ -29,6 +29,7 @@ export default function PrimaNotaPagamenti() {
   const [loadingSolleciti, setLoadingSolleciti] = useState(false);
   const [selectedSolleciti, setSelectedSolleciti] = useState<string[]>([]);
   const [sendingNotifiche, setSendingNotifiche] = useState(false);
+  const [sendEmail, setSendEmail] = useState(false);
   const [activeSection, setActiveSection] = useState<'import' | 'registro' | 'solleciti'>('import');
 
   useEffect(() => {
@@ -236,9 +237,10 @@ export default function PrimaNotaPagamenti() {
     setSendingNotifiche(true);
     try {
       const response = await api.post('/payments/solleciti/notifica', {
-        athlete_ids: selectedSolleciti
+        athlete_ids: selectedSolleciti,
+        send_email: sendEmail,
       });
-      showAlert('Notifiche inviate', response.data.message);
+      showAlert('Solleciti inviati', response.data.message);
       setSelectedSolleciti([]);
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore invio notifiche');
@@ -554,23 +556,42 @@ export default function PrimaNotaPagamenti() {
                     </View>
 
                     {selectedSolleciti.length > 0 && (
-                      <TouchableOpacity 
-                        style={[styles.actionBtn, { backgroundColor: '#E53935', marginBottom: 16 }, sendingNotifiche && { opacity: 0.6 }]}
-                        onPress={sendNotifiche}
-                        disabled={sendingNotifiche}
-                        data-testid="send-notifiche-btn"
-                      >
-                        {sendingNotifiche ? (
-                          <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                          <>
-                            <Ionicons name="notifications" size={22} color="#fff" />
-                            <Text style={styles.actionBtnText}>
-                              Invia Sollecito via App ({selectedSolleciti.length})
-                            </Text>
-                          </>
-                        )}
-                      </TouchableOpacity>
+                      <View style={styles.sendOptionsCard}>
+                        {/* Email toggle */}
+                        <TouchableOpacity 
+                          style={styles.emailToggle} 
+                          onPress={() => setSendEmail(!sendEmail)}
+                          data-testid="toggle-email-solleciti"
+                        >
+                          <Ionicons 
+                            name={sendEmail ? "checkbox" : "square-outline"} 
+                            size={22} 
+                            color={sendEmail ? '#E53935' : '#999'} 
+                          />
+                          <Ionicons name="mail-outline" size={18} color={sendEmail ? '#E53935' : '#888'} style={{ marginLeft: 8 }} />
+                          <Text style={[styles.emailToggleText, sendEmail && { color: '#E53935', fontWeight: '700' }]}>
+                            Invia anche email sollecito
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={[styles.actionBtn, { backgroundColor: '#E53935' }, sendingNotifiche && { opacity: 0.6 }]}
+                          onPress={sendNotifiche}
+                          disabled={sendingNotifiche}
+                          data-testid="send-notifiche-btn"
+                        >
+                          {sendingNotifiche ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                          ) : (
+                            <>
+                              <Ionicons name="notifications" size={22} color="#fff" />
+                              <Text style={styles.actionBtnText}>
+                                Invia Sollecito{sendEmail ? ' + Email' : ''} ({selectedSolleciti.length})
+                              </Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      </View>
                     )}
 
                     <TouchableOpacity 
@@ -687,6 +708,17 @@ const styles = StyleSheet.create({
   sollecitoDetail: { fontSize: 12, color: '#888', marginTop: 2 },
   sollecitoRate: { fontSize: 11, color: '#E65100', marginTop: 2 },
   sollecitoAmount: { fontSize: 15, fontWeight: 'bold', color: '#E53935', marginLeft: 8 },
+  // Send options
+  sendOptionsCard: {
+    backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 16,
+    borderWidth: 1, borderColor: '#FFCDD2',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+  },
+  emailToggle: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 12,
+    marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+  },
+  emailToggleText: { fontSize: 14, color: '#666', marginLeft: 6 },
   // Empty states
   emptyCard: {
     backgroundColor: '#fff', borderRadius: 12, padding: 40, marginBottom: 16,
