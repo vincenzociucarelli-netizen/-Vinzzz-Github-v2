@@ -216,6 +216,17 @@ class FIPAVScraper:
                         if result and '-' not in result:
                             result = None
                         
+                        # Extract venue from info icon tooltip
+                        venue = None
+                        info_imgs = row.find_all('img', {'alt': 'info'})
+                        for img in info_imgs:
+                            title = img.get('title', '')
+                            if title:
+                                tooltip_soup = BeautifulSoup(title, 'html.parser')
+                                venue_text = tooltip_soup.get_text(separator=', ').strip().strip(',').strip()
+                                if venue_text:
+                                    venue = venue_text
+                        
                         # Filter by society name if provided
                         if society_name:
                             society_lower = society_name.lower()
@@ -228,7 +239,8 @@ class FIPAVScraper:
                             home_team=home_team,
                             away_team=away_team,
                             result=result,
-                            giornata=giornata
+                            giornata=giornata,
+                            venue=venue
                         )
                         matches.append(match)
                         
