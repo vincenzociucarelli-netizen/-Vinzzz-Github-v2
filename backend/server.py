@@ -6528,7 +6528,7 @@ async def detach_parents(athlete_id: str, data: DetachParentsRequest, current_us
     }
 
 
-@api_router.get("/athletes/my", response_model=List[Athlete])
+@api_router.get("/athletes/my")
 async def get_my_athletes(current_user = Depends(get_current_user)):
     if current_user["role"] == UserRole.PARENT:
         # Include both primary and second parent
@@ -6544,7 +6544,34 @@ async def get_my_athletes(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Accesso negato")
     
     clean_mongo_docs(athletes)
-    return [Athlete(**athlete) for athlete in athletes]
+    
+    # For parent role, enrich with other parent info
+    if current_user["role"] == UserRole.PARENT:
+        for athlete in athletes:
+            other_parent_id = None
+            if athlete.get("parent_id") == current_user["id"]:
+                other_parent_id = athlete.get("second_parent_id")
+                other_parent_email = athlete.get("second_parent_email")
+            elif athlete.get("second_parent_id") == current_user["id"]:
+                other_parent_id = athlete.get("parent_id")
+                other_parent_email = None
+            else:
+                other_parent_email = athlete.get("second_parent_email")
+            
+            if other_parent_id:
+                other_parent = await db.users.find_one({"id": other_parent_id}, {"_id": 0, "full_name": 1, "email": 1})
+                if other_parent:
+                    athlete["other_parent_name"] = other_parent.get("full_name", "")
+                    athlete["other_parent_email"] = other_parent.get("email", "")
+            elif other_parent_email:
+                other_parent = await db.users.find_one({"email": other_parent_email}, {"_id": 0, "full_name": 1, "email": 1})
+                if other_parent:
+                    athlete["other_parent_name"] = other_parent.get("full_name", "")
+                    athlete["other_parent_email"] = other_parent.get("email", "")
+                else:
+                    athlete["other_parent_email"] = other_parent_email
+    
+    return athletes
 
 # Athlete Compensation endpoints
 @api_router.get("/athletes/{athlete_id}/compensation")

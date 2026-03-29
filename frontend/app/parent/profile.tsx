@@ -622,13 +622,42 @@ export default function ParentProfile() {
 
           {/* Personal Data */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📋 I Miei Dati</Text>
+            <Text style={styles.cardTitle}>I Miei Dati</Text>
             {renderField('Cognome', profileData.last_name, 'last_name')}
             {renderField('Nome', profileData.first_name, 'first_name')}
             {renderField('Codice Fiscale', profileData.fiscal_code, 'fiscal_code')}
             {renderField('Telefono', profileData.phone, 'phone')}
             <Text style={styles.phoneHint}>Il telefono è necessario per comunicazioni urgenti dalla società</Text>
           </View>
+
+          {/* My Children */}
+          {children.length > 0 && (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>I Miei Figli</Text>
+              {children.map((child: any) => (
+                <View key={child.id} style={styles.childRow}>
+                  <View style={styles.childInfo}>
+                    <Ionicons name="person" size={18} color="#E91E63" />
+                    <Text style={styles.childName}>{child.full_name}</Text>
+                  </View>
+                  {(child.other_parent_name || child.other_parent_email) ? (
+                    <View style={styles.otherParentInfo}>
+                      <Ionicons name="people" size={14} color="#666" />
+                      <Text style={styles.otherParentText}>
+                        Altro genitore: <Text style={styles.otherParentName}>{child.other_parent_name || '-'}</Text>
+                        {child.other_parent_email ? ` (${child.other_parent_email})` : ''}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.otherParentInfo}>
+                      <Ionicons name="person-add-outline" size={14} color="#999" />
+                      <Text style={[styles.otherParentText, { color: '#999' }]}>Nessun altro genitore collegato</Text>
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* Privacy Consent Management */}
           <ConsentManager entityType="user" accentColor="#E91E63" />
@@ -800,6 +829,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF3E0',
     padding: 10,
     borderRadius: 8,
+  },
+  childRow: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  childInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  childName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  otherParentInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingLeft: 26,
+  },
+  otherParentText: {
+    fontSize: 13,
+    color: '#666',
+  },
+  otherParentName: {
+    fontWeight: '600',
+    color: '#444',
   },
   // Profile photo styles
   profilePhotoContainer: {
