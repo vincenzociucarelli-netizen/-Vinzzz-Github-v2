@@ -1220,8 +1220,27 @@ def generate_athlete_code(last_name: str, first_name: str, team_name: str) -> st
     return f"{ln}{fn}-{tn}" if tn else f"{ln}{fn}"
 
 async def generate_unique_athlete_code(last_name: str, first_name: str, team_name: str, society_id: str, exclude_athlete_id: str = None) -> str:
-    """athlete_code is now the qr_identifier. This returns None - code is set from qr_identifier at creation."""
-    return None
+    """Generate a unique human-readable athlete code like CERTIZ-SD, ROSMAR-U16"""
+    base_code = generate_athlete_code(last_name, first_name, team_name)
+    # Check uniqueness
+    existing = await db.athletes.find_one({
+        "athlete_code": base_code,
+        "society_id": society_id,
+        **({"id": {"$ne": exclude_athlete_id}} if exclude_athlete_id else {})
+    })
+    if not existing:
+        return base_code
+    # Add suffix if duplicate
+    for i in range(2, 100):
+        code = f"{base_code}{i}"
+        existing = await db.athletes.find_one({
+            "athlete_code": code,
+            "society_id": society_id,
+            **({"id": {"$ne": exclude_athlete_id}} if exclude_athlete_id else {})
+        })
+        if not existing:
+            return code
+    return base_code
 
 async def update_athlete_code(athlete_id: str):
     """Update athlete code to match qr_identifier"""
