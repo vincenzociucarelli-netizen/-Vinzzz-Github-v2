@@ -140,6 +140,19 @@ def validate_parent_profile(parent: dict) -> list:
         missing.append("Telefono")
     return missing
 
+
+def format_date_it(date_str) -> str:
+    """Format a date string (ISO or similar) to dd/mm/yyyy Italian format"""
+    if not date_str:
+        return ""
+    s = str(date_str)[:10]
+    try:
+        from datetime import datetime as dt
+        d = dt.strptime(s, "%Y-%m-%d")
+        return d.strftime("%d/%m/%Y")
+    except:
+        return s
+
 def validate_athlete_profile(athlete: dict) -> list:
     """Check required fields for athlete profile. Returns list of missing field names."""
     missing = []
@@ -20468,7 +20481,7 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
             "title": "Certificato Medico Caricato",
             "description": f"Certificato caricato da {inserted_by}" if inserted_by else "Certificato medico caricato",
             "date": str(athlete["medical_certificate_inserted_at"]),
-            "detail": f"Scadenza: {str(athlete.get('medical_certificate_expiry', ''))[:10]}" if athlete.get("medical_certificate_expiry") else None,
+            "detail": f"Scadenza: {format_date_it(athlete.get('medical_certificate_expiry', ''))}" if athlete.get("medical_certificate_expiry") else None,
         })
     
     # 6. Medical Certificate Verified
@@ -20635,7 +20648,7 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
                 "title": "Certificato Inserito",
                 "description": f"Inserito da {ch.get('changed_by_name', '')}",
                 "date": str(ts) if ts else "",
-                "detail": f"Scadenza: {str(ch.get('new_expiry_date', ''))[:10]}" if ch.get("new_expiry_date") else None,
+                "detail": f"Scadenza: {format_date_it(ch.get('new_expiry_date', ''))}" if ch.get("new_expiry_date") else None,
             })
         elif ch.get("action") == "update":
             if ch.get("old_verified") == False and ch.get("new_verified") == True:
