@@ -2573,8 +2573,9 @@ async def login(request: Request, credentials: UserLogin):
             "role": user["role"], 
             "full_name": user["full_name"],
             "status": user_status,
-            "athlete_status": athlete_status,  # Include athlete status for frontend
-            "profile_photo": user.get("profile_photo")
+            "athlete_status": athlete_status,
+            "profile_photo": user.get("profile_photo"),
+            "fiscal_code": user.get("fiscal_code"),
         }
     )
 

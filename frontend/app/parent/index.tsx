@@ -34,7 +34,7 @@ const ATHLETE_COLORS = [
 
 export default function ParentDashboard() {
   const router = useRouter();
-  const { user, logout, updateUser } = useAuthStore();
+  const { user, logout, updateUser, refreshUser } = useAuthStore();
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [editProfileVisible, setEditProfileVisible] = useState(false);
@@ -383,11 +383,12 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
   };
 
   useEffect(() => {
+    refreshUser();
     loadAthletes();
     loadCommitments();
     loadTeams();
     loadNotifications();
-    checkTrialPeriods(); // Check for expired trial periods
+    checkTrialPeriods();
   }, []);
 
   const onRefresh = async () => {
