@@ -49,6 +49,7 @@ export default function AdminNotifications() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [expandedNotifications, setExpandedNotifications] = useState<Record<string, boolean>>({});
 
   const loadNotifications = async () => {
     try {
@@ -66,11 +67,16 @@ export default function AdminNotifications() {
     loadNotifications();
   }, []);
 
-  useEffect(() => {
-    if (notifications.length > 0 && notifications.some(n => !n.read)) {
-      markAllAsRead();
+  const toggleNotification = (notificationId: string, isRead: boolean) => {
+    setExpandedNotifications(prev => ({
+      ...prev,
+      [notificationId]: !prev[notificationId]
+    }));
+    // Mark as read when expanding for the first time
+    if (!isRead) {
+      markAsRead(notificationId);
     }
-  }, [notifications.length]);
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -284,56 +290,78 @@ export default function AdminNotifications() {
                 {/* Notifications list */}
                 {!isCollapsed && group.notifications.map((notification) => {
                   const icon = getNotificationIcon(notification.type);
+                  const isExpanded = expandedNotifications[notification.id] || false;
                   return (
-                    <TouchableOpacity
-                      key={notification.id}
-                      style={[styles.notificationCard, !notification.read && styles.unreadCard]}
-                      onPress={() => markAsRead(notification.id)}
-                      data-testid={`notification-${notification.id}`}
-                    >
-                      <View style={styles.notificationIcon}>
-                        <Ionicons name={icon.name as any} size={20} color={icon.color} />
-                      </View>
-                      <View style={styles.notificationContent}>
-                        <View style={styles.notificationHeader}>
-                          <Text style={styles.notificationTitle}>{notification.title}</Text>
-                          {!notification.read && <View style={styles.unreadDot} />}
-                        </View>
-                        <Text style={styles.notificationMessage}>{notification.message}</Text>
-                        {notification.data?.athlete_name && (
-                          <View style={styles.detailRow}>
-                            <Ionicons name="person" size={12} color="#1565C0" />
-                            <Text style={styles.detailText}>Atleta: {notification.data.athlete_name}</Text>
-                          </View>
-                        )}
-                        {notification.data?.expiry_date && (
-                          <View style={styles.detailRow}>
-                            <Ionicons name="calendar" size={12} color="#E65100" />
-                            <Text style={styles.detailText}>Nuova scadenza: {notification.data.expiry_date}</Text>
-                          </View>
-                        )}
-                        {notification.data?.issue_date && (
-                          <View style={styles.detailRow}>
-                            <Ionicons name="document-text" size={12} color="#2E7D32" />
-                            <Text style={styles.detailText}>Emissione: {notification.data.issue_date}</Text>
-                          </View>
-                        )}
-                        {notification.data?.changed_by && (
-                          <View style={styles.detailRow}>
-                            <Ionicons name="create" size={12} color="#7B1FA2" />
-                            <Text style={styles.detailText}>Aggiornato da: {notification.data.changed_by} ({notification.data.changed_by_role || ''})</Text>
-                          </View>
-                        )}
-                        <Text style={styles.notificationDate}>{formatDate(notification.created_at)}</Text>
-                      </View>
+                    <View key={notification.id}>
                       <TouchableOpacity
-                        style={styles.deleteBtn}
-                        onPress={() => deleteNotification(notification.id)}
-                        data-testid={`delete-notification-${notification.id}`}
+                        style={[styles.notificationCard, !notification.read && styles.unreadCard]}
+                        onPress={() => toggleNotification(notification.id, notification.read)}
+                        data-testid={`notification-${notification.id}`}
                       >
-                        <Ionicons name="trash-outline" size={16} color="#999" />
+                        <View style={styles.notificationIcon}>
+                          <Ionicons name={icon.name as any} size={20} color={icon.color} />
+                        </View>
+                        <View style={styles.notificationContent}>
+                          <View style={styles.notificationHeader}>
+                            <Text style={[styles.notificationTitle, !notification.read && { fontWeight: '800' }]} numberOfLines={isExpanded ? undefined : 1}>
+                              {notification.title}
+                            </Text>
+                            <View style={styles.headerRight}>
+                              {!notification.read && <View style={styles.unreadDot} />}
+                              <Ionicons 
+                                name={isExpanded ? "chevron-up" : "chevron-down"} 
+                                size={14} 
+                                color="#999" 
+                              />
+                            </View>
+                          </View>
+                          {!isExpanded && (
+                            <Text style={styles.notificationPreview} numberOfLines={1}>
+                              {notification.message}
+                            </Text>
+                          )}
+                        </View>
                       </TouchableOpacity>
-                    </TouchableOpacity>
+                      {isExpanded && (
+                        <View style={[styles.expandedContent, !notification.read && { borderLeftColor: '#007AFF' }]}>
+                          <Text style={styles.notificationMessage}>{notification.message}</Text>
+                          {notification.data?.athlete_name && (
+                            <View style={styles.detailRow}>
+                              <Ionicons name="person" size={12} color="#1565C0" />
+                              <Text style={styles.detailText}>Atleta: {notification.data.athlete_name}</Text>
+                            </View>
+                          )}
+                          {notification.data?.expiry_date && (
+                            <View style={styles.detailRow}>
+                              <Ionicons name="calendar" size={12} color="#E65100" />
+                              <Text style={styles.detailText}>Nuova scadenza: {notification.data.expiry_date}</Text>
+                            </View>
+                          )}
+                          {notification.data?.issue_date && (
+                            <View style={styles.detailRow}>
+                              <Ionicons name="document-text" size={12} color="#2E7D32" />
+                              <Text style={styles.detailText}>Emissione: {notification.data.issue_date}</Text>
+                            </View>
+                          )}
+                          {notification.data?.changed_by && (
+                            <View style={styles.detailRow}>
+                              <Ionicons name="create" size={12} color="#7B1FA2" />
+                              <Text style={styles.detailText}>Aggiornato da: {notification.data.changed_by} ({notification.data.changed_by_role || ''})</Text>
+                            </View>
+                          )}
+                          <View style={styles.expandedFooter}>
+                            <Text style={styles.notificationDate}>{formatDate(notification.created_at)}</Text>
+                            <TouchableOpacity
+                              style={styles.deleteBtn}
+                              onPress={() => deleteNotification(notification.id)}
+                              data-testid={`delete-notification-${notification.id}`}
+                            >
+                              <Ionicons name="trash-outline" size={16} color="#E53935" />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+                    </View>
                   );
                 })}
               </View>
@@ -522,11 +550,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 2,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 8,
+  },
   notificationTitle: {
     fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
     flex: 1,
+  },
+  notificationPreview: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
+  expandedContent: {
+    backgroundColor: '#fff',
+    marginHorizontal: 12,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#e0e0e0',
+    marginTop: -8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  expandedFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
   },
   unreadDot: {
     width: 8,
