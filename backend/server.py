@@ -15402,8 +15402,10 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
     # ALWAYS use ragione_sociale for official documents
     society_name = (society_settings.get("ragione_sociale") if society_settings else None) or (society.get("ragione_sociale") if society else None) or (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
     
-    # Get user info for privacy documents
-    user_data = current_user
+    # Get user info for privacy documents - load full profile from DB
+    user_data = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+    if not user_data:
+        user_data = current_user
     
     # If related_entity_id is an athlete, get athlete data too
     athlete_data = {}
