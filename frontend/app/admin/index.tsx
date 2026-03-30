@@ -901,22 +901,6 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
-          {/* Archivio Certificati Medici */}
-          <TouchableOpacity
-            style={styles.menuCard}
-            onPress={() => router.push('/admin/medical-certificates-archive')}
-            data-testid="medical-certificates-archive-menu-card"
-          >
-            <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
-              <Text style={{ fontSize: 26 }}>🏥</Text>
-            </View>
-            <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Archivio Certificati Medici</Text>
-              <Text style={styles.menuCardSubtitle}>Conservazione 5 anni</Text>
-            </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
-          </TouchableOpacity>
-
           {/* Ricerca Avanzata Atleti */}
           <TouchableOpacity
             style={styles.menuCard}
