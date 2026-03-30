@@ -31,6 +31,8 @@ export default function PrimaNotaPagamenti() {
   const [sendingNotifiche, setSendingNotifiche] = useState(false);
   const [sendEmail, setSendEmail] = useState(false);
   const [activeSection, setActiveSection] = useState<'import' | 'registro' | 'solleciti'>('import');
+  const [resolutions, setResolutions] = useState<Record<number, string>>({});
+  const [resolvingImport, setResolvingImport] = useState(false);
 
   useEffect(() => {
     loadAthletesCodes();
@@ -162,6 +164,42 @@ export default function PrimaNotaPagamenti() {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'importazione');
     } finally {
       setImporting(false);
+    }
+  };
+
+  // === RESOLVE AMBIGUOUS ===
+  const resolveUnresolved = async () => {
+    if (!importResult?.unresolved?.length) return;
+    
+    const unresolvedItems = importResult.unresolved;
+    const resolvedList = unresolvedItems
+      .filter((_: any, idx: number) => resolutions[idx])
+      .map((item: any, idx: number) => ({
+        athlete_id: resolutions[idx],
+        row_data: item.row_data,
+      }));
+    
+    if (resolvedList.length === 0) {
+      showAlert('Attenzione', 'Seleziona almeno un atleta per ogni riga da risolvere');
+      return;
+    }
+    
+    setResolvingImport(true);
+    try {
+      const response = await api.post('/payments/import-resolve', { resolutions: resolvedList });
+      showAlert('Risoluzione completata', response.data.message);
+      // Clear resolved items from importResult
+      setImportResult((prev: any) => ({
+        ...prev,
+        imported: prev.imported + response.data.imported,
+        unresolved: prev.unresolved.filter((_: any, idx: number) => !resolutions[idx]),
+        unresolved_count: prev.unresolved.filter((_: any, idx: number) => !resolutions[idx]).length,
+      }));
+      setResolutions({});
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la risoluzione');
+    } finally {
+      setResolvingImport(false);
     }
   };
 
@@ -359,14 +397,69 @@ export default function PrimaNotaPagamenti() {
 
             {importResult && (
               <View style={[styles.resultCard, 
-                (importResult.errors?.length > 0 || importResult.duplicates_count > 0) 
+                (importResult.errors?.length > 0 || importResult.duplicates_count > 0 || importResult.unresolved_count > 0) 
                   ? styles.resultWarning : styles.resultSuccess
               ]}>
                 <Text style={styles.resultTitle}>
-                  {importResult.errors?.length > 0 || importResult.duplicates_count > 0 
-                    ? 'Importazione con avvisi' : 'Importazione completata'}
+                  {importResult.unresolved_count > 0 
+                    ? 'Importazione: scelte richieste'
+                    : importResult.errors?.length > 0 || importResult.duplicates_count > 0 
+                      ? 'Importazione con avvisi' : 'Importazione completata'}
                 </Text>
                 <Text style={styles.resultText}>Pagamenti importati: {importResult.imported}</Text>
+
+                {/* UNRESOLVED - Disambiguation UI */}
+                {importResult.unresolved?.length > 0 && (
+                  <View style={[styles.warningBox, { backgroundColor: '#E3F2FD', borderLeftWidth: 3, borderLeftColor: '#1565C0', padding: 12 }]}>
+                    <Text style={[styles.warningTitle, { color: '#1565C0', fontSize: 14, marginBottom: 8 }]}>
+                      Omonimi trovati ({importResult.unresolved.length}) - Scegli l'atleta corretto:
+                    </Text>
+                    {importResult.unresolved.map((item: any, idx: number) => (
+                      <View key={idx} style={styles.unresolvedItem}>
+                        <Text style={styles.unresolvedName}>
+                          Riga {item.row_index}: <Text style={{ fontWeight: '800' }}>{item.cognome} {item.nome}</Text>
+                          {' '}({item.row_data?.Importo || ''} EUR)
+                        </Text>
+                        {item.candidates.map((c: any) => (
+                          <TouchableOpacity
+                            key={c.id}
+                            style={[
+                              styles.candidateBtn,
+                              resolutions[idx] === c.id && styles.candidateBtnSelected
+                            ]}
+                            onPress={() => setResolutions(prev => ({ ...prev, [idx]: c.id }))}
+                            data-testid={`candidate-${idx}-${c.id}`}
+                          >
+                            <Ionicons 
+                              name={resolutions[idx] === c.id ? "radio-button-on" : "radio-button-off"} 
+                              size={20} 
+                              color={resolutions[idx] === c.id ? '#1565C0' : '#999'} 
+                            />
+                            <Text style={[styles.candidateText, resolutions[idx] === c.id && { color: '#1565C0', fontWeight: '700' }]}>
+                              {c.first_name} {c.last_name} - <Text style={{ fontStyle: 'italic' }}>{c.team}</Text>
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ))}
+                    <TouchableOpacity 
+                      style={[styles.actionBtn, { backgroundColor: '#1565C0', marginTop: 12 }, resolvingImport && { opacity: 0.6 }]}
+                      onPress={resolveUnresolved}
+                      disabled={resolvingImport}
+                      data-testid="resolve-import-btn"
+                    >
+                      {resolvingImport ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                          <Text style={styles.actionBtnText}>Conferma e importa</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 {importResult.duplicates_count > 0 && (
                   <View style={styles.warningBox}>
                     <Text style={styles.warningTitle}>Duplicati ignorati ({importResult.duplicates_count}):</Text>
@@ -676,6 +769,20 @@ const styles = StyleSheet.create({
   formatDesc: { fontSize: 13, color: '#666' },
   hintBox: { backgroundColor: '#E3F2FD', padding: 8, borderRadius: 6, marginTop: 4 },
   hintText: { fontSize: 11, color: '#1565C0', fontStyle: 'italic' },
+  // Unresolved / disambiguation
+  unresolvedItem: {
+    backgroundColor: '#fff', borderRadius: 8, padding: 12, marginBottom: 10,
+    borderWidth: 1, borderColor: '#BBDEFB',
+  },
+  unresolvedName: { fontSize: 14, color: '#333', marginBottom: 8 },
+  candidateBtn: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12,
+    borderRadius: 8, marginBottom: 4, backgroundColor: '#F5F5F5', gap: 8,
+  },
+  candidateBtnSelected: {
+    backgroundColor: '#E3F2FD', borderWidth: 1, borderColor: '#1565C0',
+  },
+  candidateText: { fontSize: 14, color: '#555' },
   // Registro
   summaryCard: {
     backgroundColor: '#fff', borderRadius: 12, padding: 20, marginBottom: 16,

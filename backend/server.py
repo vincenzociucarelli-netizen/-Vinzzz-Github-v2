@@ -10474,6 +10474,7 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
         imported = 0
         errors = []
         duplicates = []
+        unresolved = []
         
         # Pre-load all athletes for name matching
         society_query = {
@@ -10500,46 +10501,40 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
             return s
         
         def find_athlete_by_name(cognome_input, nome_input):
-            """Find athlete by Cognome+Nome with fuzzy matching"""
+            """Find athlete by Cognome+Nome with fuzzy matching.
+            Returns (athlete, error_msg, candidates) - candidates only for ambiguous matches"""
             cn = normalize_name(cognome_input)
             nn = normalize_name(nome_input)
             if not cn:
-                return None, "Cognome mancante"
+                return None, "Cognome mancante", None
             
             # 1) Exact match last_name + first_name
             exact = [a for a in all_athletes 
                      if normalize_name(a.get("last_name")) == cn 
                      and normalize_name(a.get("first_name")) == nn]
             if len(exact) == 1:
-                return exact[0], None
+                return exact[0], None, None
             if len(exact) > 1:
-                teams_info = ", ".join([f"{a.get('first_name')} {a.get('last_name')} ({team_dict.get(a.get('team_id'), '?')})" for a in exact])
-                return None, f"Trovati {len(exact)} omonimi: {teams_info}"
+                candidates = [{"id": a["id"], "first_name": a.get("first_name",""), "last_name": a.get("last_name",""), "team": team_dict.get(a.get("team_id"), "?")} for a in exact]
+                return None, f"Trovati {len(exact)} omonimi", candidates
             
-            # 2) Match only by last_name (first_name might differ slightly)
+            # 2) Match only by last_name
             by_surname = [a for a in all_athletes if normalize_name(a.get("last_name")) == cn]
-            if len(by_surname) == 1 and nn:
-                # Single match by surname - accept if first name is close enough
-                db_fn = normalize_name(by_surname[0].get("first_name"))
-                if nn in db_fn or db_fn in nn or nn[:3] == db_fn[:3]:
-                    return by_surname[0], None
-                return by_surname[0], None  # Only one with that surname, likely the right one
-            if len(by_surname) == 1 and not nn:
-                return by_surname[0], None
+            if len(by_surname) == 1:
+                return by_surname[0], None, None
             if len(by_surname) > 1:
-                # Multiple with same surname - need name to disambiguate
                 if nn:
                     partial = [a for a in by_surname 
                                if nn in normalize_name(a.get("first_name")) 
                                or normalize_name(a.get("first_name")) in nn
                                or nn[:3] == normalize_name(a.get("first_name"))[:3]]
                     if len(partial) == 1:
-                        return partial[0], None
-                teams_info = ", ".join([f"{a.get('first_name')} {a.get('last_name')} ({team_dict.get(a.get('team_id'), '?')})" for a in by_surname])
-                return None, f"Cognome '{cognome_input}' ambiguo - trovati: {teams_info}"
+                        return partial[0], None, None
+                candidates = [{"id": a["id"], "first_name": a.get("first_name",""), "last_name": a.get("last_name",""), "team": team_dict.get(a.get("team_id"), "?")} for a in by_surname]
+                return None, f"Cognome '{cognome_input}' ambiguo", candidates
             
-            # 3) No match at all
-            return None, f"Atleta '{cognome_input} {nome_input}' non trovato nel sistema"
+            # 3) No match
+            return None, f"Atleta '{cognome_input} {nome_input}' non trovato nel sistema", None
         
         for idx, row in df.iterrows():
             try:
@@ -10554,10 +10549,25 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
                     if pd.isna(cognome) or str(cognome).strip() == '':
                         errors.append(f"Riga {idx+2}: Cognome mancante")
                         continue
-                    athlete, match_error = find_athlete_by_name(cognome, nome)
+                    athlete, match_error, candidates = find_athlete_by_name(cognome, nome)
                     match_label = f"{cognome} {nome}".strip()
                     if not athlete:
-                        errors.append(f"Riga {idx+2}: {match_error}")
+                        if candidates:
+                            # Ambiguous match - save row data and candidates for frontend resolution
+                            row_data = {}
+                            for col in df.columns:
+                                val = row.get(col, '')
+                                row_data[col] = '' if (isinstance(val, float) and pd.isna(val)) else str(val)
+                            unresolved.append({
+                                "row_index": idx + 2,
+                                "cognome": str(cognome),
+                                "nome": str(nome),
+                                "row_data": row_data,
+                                "candidates": candidates,
+                                "error": match_error,
+                            })
+                        else:
+                            errors.append(f"Riga {idx+2}: {match_error}")
                         continue
                 elif has_code_col:
                     # Legacy format: CodiceAtleta
@@ -10672,6 +10682,8 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
         message_parts = [f"Importati {imported} pagamenti"]
         if duplicates:
             message_parts.append(f"{len(duplicates)} duplicati ignorati")
+        if unresolved:
+            message_parts.append(f"{len(unresolved)} da risolvere")
         if errors:
             message_parts.append(f"{len(errors)} errori")
         
@@ -10681,11 +10693,109 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
             "duplicates": duplicates,
             "duplicates_count": len(duplicates),
             "errors": errors,
+            "unresolved": unresolved,
+            "unresolved_count": len(unresolved),
             "message": " - ".join(message_parts)
         }
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Errore lettura file: {str(e)}")
+
+@api_router.post("/payments/import-resolve")
+async def import_resolve_payments(data: dict, current_user = Depends(get_current_user)):
+    """Import previously unresolved payments with admin-selected athlete IDs"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    resolutions = data.get("resolutions", [])
+    if not resolutions:
+        raise HTTPException(status_code=400, detail="Nessuna risoluzione fornita")
+    
+    society_id = current_user.get("society_id")
+    imported = 0
+    errors = []
+    
+    for res in resolutions:
+        try:
+            athlete_id = res.get("athlete_id")
+            row_data = res.get("row_data", {})
+            
+            if not athlete_id:
+                continue
+            
+            athlete = await db.athletes.find_one({"id": athlete_id})
+            if not athlete:
+                errors.append(f"{row_data.get('Cognome', '')} {row_data.get('Nome', '')}: Atleta non trovato")
+                continue
+            
+            # Parse payment data from row_data
+            import_str = row_data.get("Importo", "0")
+            importo = float(str(import_str).replace(",", ".").replace("€", "").replace(" ", "").strip())
+            
+            data_pagamento_str = row_data.get("DataPagamento", "")
+            data_pagamento = None
+            if data_pagamento_str:
+                for fmt in ["%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d", "%d/%m/%y"]:
+                    try:
+                        data_pagamento = datetime.strptime(data_pagamento_str.strip(), fmt)
+                        break
+                    except:
+                        continue
+            
+            data_reg_str = row_data.get("DataRegistrazione", "")
+            data_registrazione = None
+            if data_reg_str and str(data_reg_str).strip():
+                for fmt in ["%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d", "%d/%m/%y"]:
+                    try:
+                        data_registrazione = datetime.strptime(str(data_reg_str).strip(), fmt)
+                        break
+                    except:
+                        continue
+            
+            tipo_map = {"B": "Bonifico", "P": "POS", "C": "Contanti", "A": "Assegno"}
+            tipo_raw = str(row_data.get("TipoPagamento", "")).strip().upper()
+            payment_method = tipo_map.get(tipo_raw, tipo_raw)
+            causale = str(row_data.get("Causale", "")).strip() if row_data.get("Causale") else ""
+            
+            # Check for duplicate
+            existing = await db.payments.find_one({
+                "athlete_id": athlete_id,
+                "amount": importo,
+                "paid_date": data_pagamento,
+                "payment_method": payment_method,
+            })
+            if existing:
+                errors.append(f"{athlete.get('last_name','')} {athlete.get('first_name','')}: Duplicato, pagamento già presente")
+                continue
+            
+            receipt_number = await get_next_receipt_number(society_id)
+            
+            payment = Payment(
+                id=str(uuid.uuid4()),
+                athlete_id=athlete_id,
+                society_id=society_id,
+                amount=importo,
+                paid=True,
+                paid_date=data_pagamento or datetime.utcnow(),
+                payment_method=payment_method,
+                description=causale or "Pagamento importato",
+                receipt_number=receipt_number,
+                registration_date=data_registrazione or datetime.utcnow(),
+                created_by=current_user["id"],
+            )
+            
+            await db.payments.insert_one(payment.dict())
+            imported += 1
+            
+        except Exception as e:
+            errors.append(f"Errore: {str(e)}")
+    
+    return {
+        "success": True,
+        "imported": imported,
+        "errors": errors,
+        "message": f"Importati {imported} pagamenti risolti" + (f" - {len(errors)} errori" if errors else "")
+    }
 
 def get_current_training_slot(team: dict) -> Optional[dict]:
     """Find the current training slot based on day and time"""
