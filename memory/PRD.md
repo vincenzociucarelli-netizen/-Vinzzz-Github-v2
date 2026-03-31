@@ -50,9 +50,10 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
   - **Import**: Template scaricabile + importazione file Excel
   - **Registro Stagione**: Riepilogo pagamenti stagione con download Excel (Ric. Fiscale progressiva, Date, Importi)
   - **Solleciti**: Lista atleti morosi con download Excel per stampa unione + invio notifica in-app ai genitori + invio email sollecito via Brevo (toggle opzionale)
-- Nuovi endpoint backend: GET /api/payments/registro-stagione, GET /api/payments/solleciti, POST /api/payments/solleciti/notifica (con send_email opzionale)
-- Email sollecito: template HTML professionale con logo società, dettaglio rate scadute, importo totale dovuto
-- Test: 13/14 backend passed, 100% frontend UI verified (iteration_62.json)
+- **NUOVO: Risoluzione omonimi nell'import** - quando il matching trova più atleti con stesso Cognome+Nome, l'admin sceglie il corretto da una lista con radio button (mostra squadra per disambiguare). Nuovo endpoint POST /api/payments/import-resolve
+- **Bug fix anteprima PDF privacy**: l'anteprima mostrava dati vuoti/sbagliati (stesso bug di get_current_user con campi limitati). Ora carica profilo completo da DB anche per l'anteprima
+- **Bug fix notifiche admin**: le notifiche non si auto-cancellano più all'apertura della pagina. Restano non lette finché l'admin ci clicca sopra. Notifiche ora collassabili (solo titolo visibile, espandibili al click)
+- Rimossa voce "Archivio Certificati Medici" dalla dashboard admin
 
 ### Session 2026-03-28 (Fork 5-6)
 - Bug fix telefono minori: opzionale nel flusso invite-register
