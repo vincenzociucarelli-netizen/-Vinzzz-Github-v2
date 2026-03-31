@@ -5856,6 +5856,245 @@ async def delete_team(team_id: str, current_user = Depends(get_current_user)):
     
     return {"message": "Squadra eliminata con successo"}
 
+# ==================== PARENT LINK REQUESTS ====================
+
+@api_router.post("/parent-link/search")
+async def search_athlete_for_link(data: dict, current_user = Depends(get_current_user)):
+    """Search athlete by name for parent linking. Only for parents."""
+    if current_user["role"] != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo genitori possono cercare atleti da collegare")
+    
+    cognome = (data.get("cognome") or "").strip()
+    nome = (data.get("nome") or "").strip()
+    if not cognome:
+        raise HTTPException(status_code=400, detail="Cognome obbligatorio")
+    
+    import unicodedata
+    def norm(s):
+        s = str(s).strip().upper()
+        s = unicodedata.normalize('NFD', s)
+        return ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+    
+    cn = norm(cognome)
+    nn = norm(nome)
+    
+    society_id = current_user.get("society_id")
+    all_athletes = await db.athletes.find({
+        "society_id": society_id,
+        "is_withdrawn": {"$ne": True}
+    }).to_list(5000)
+    
+    teams = await db.teams.find({}).to_list(100)
+    team_map = {t["id"]: t.get("name", "") for t in teams}
+    
+    # Match by last_name, optionally first_name
+    matches = []
+    for a in all_athletes:
+        a_ln = norm(a.get("last_name", ""))
+        a_fn = norm(a.get("first_name", ""))
+        if a_ln == cn:
+            if not nn or nn == a_fn or nn in a_fn or a_fn in nn or (nn[:3] == a_fn[:3] if len(nn) >= 3 and len(a_fn) >= 3 else False):
+                # Don't show athletes already linked to this parent
+                if current_user["id"] in [a.get("parent_id"), a.get("second_parent_id")]:
+                    continue
+                
+                dob = a.get("date_of_birth") or a.get("birth_date") or ""
+                if hasattr(dob, 'strftime'):
+                    dob = dob.strftime("%d/%m/%Y")
+                elif isinstance(dob, str) and 'T' in dob:
+                    try:
+                        dob = datetime.fromisoformat(dob.replace('Z', '+00:00')).strftime("%d/%m/%Y")
+                    except:
+                        pass
+                
+                matches.append({
+                    "id": a["id"],
+                    "first_name": a.get("first_name", ""),
+                    "last_name": a.get("last_name", ""),
+                    "team": team_map.get(a.get("team_id"), ""),
+                    "date_of_birth": dob,
+                })
+    
+    return {"results": matches, "count": len(matches)}
+
+@api_router.post("/parent-link/request")
+async def request_parent_link(data: dict, current_user = Depends(get_current_user)):
+    """Request to be linked as second parent to an athlete."""
+    if current_user["role"] != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo genitori")
+    
+    athlete_id = data.get("athlete_id")
+    if not athlete_id:
+        raise HTTPException(status_code=400, detail="ID atleta mancante")
+    
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Check not already linked
+    if current_user["id"] in [athlete.get("parent_id"), athlete.get("second_parent_id")]:
+        raise HTTPException(status_code=400, detail="Sei già collegato a questo atleta")
+    
+    # Check no pending request
+    existing = await db.parent_link_requests.find_one({
+        "requester_id": current_user["id"],
+        "athlete_id": athlete_id,
+        "status": "pending"
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Richiesta già inviata per questo atleta")
+    
+    # Get primary parent
+    primary_parent_id = athlete.get("parent_id")
+    if not primary_parent_id:
+        raise HTTPException(status_code=400, detail="Questo atleta non ha un genitore principale registrato")
+    
+    # Get requester full name
+    requester = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "first_name": 1, "last_name": 1, "email": 1})
+    requester_name = f"{requester.get('first_name', '')} {requester.get('last_name', '')}".strip() if requester else current_user.get("full_name", "")
+    requester_email = requester.get("email", "") if requester else current_user.get("email", "")
+    
+    athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}".strip()
+    
+    # Create request
+    request_id = str(uuid.uuid4())
+    await db.parent_link_requests.insert_one({
+        "id": request_id,
+        "requester_id": current_user["id"],
+        "requester_name": requester_name,
+        "requester_email": requester_email,
+        "athlete_id": athlete_id,
+        "athlete_name": athlete_name,
+        "approver_id": primary_parent_id,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc),
+    })
+    
+    # Notify primary parent
+    await db.notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": primary_parent_id,
+        "type": "parent_link_request",
+        "title": "Richiesta collegamento genitore",
+        "message": f"{requester_name} ({requester_email}) chiede di essere collegato come genitore di {athlete_name}.",
+        "data": {
+            "request_id": request_id,
+            "requester_name": requester_name,
+            "requester_email": requester_email,
+            "athlete_name": athlete_name,
+            "athlete_id": athlete_id,
+        },
+        "read": False,
+        "created_at": datetime.now(timezone.utc),
+    })
+    
+    return {"success": True, "request_id": request_id, "message": f"Richiesta inviata al genitore di {athlete_name}"}
+
+@api_router.get("/parent-link/requests")
+async def get_parent_link_requests(current_user = Depends(get_current_user)):
+    """Get pending parent link requests for the current user (as approver or requester)."""
+    if current_user["role"] != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo genitori")
+    
+    # Requests to approve (I'm the primary parent)
+    to_approve = await db.parent_link_requests.find({
+        "approver_id": current_user["id"],
+        "status": "pending"
+    }, {"_id": 0}).to_list(50)
+    
+    # My sent requests
+    my_requests = await db.parent_link_requests.find({
+        "requester_id": current_user["id"],
+    }, {"_id": 0}).sort("created_at", -1).to_list(50)
+    
+    return {
+        "to_approve": to_approve,
+        "my_requests": my_requests,
+    }
+
+@api_router.post("/parent-link/respond")
+async def respond_parent_link(data: dict, current_user = Depends(get_current_user)):
+    """Accept or reject a parent link request."""
+    if current_user["role"] != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo genitori")
+    
+    request_id = data.get("request_id")
+    action = data.get("action")  # "accept" or "reject"
+    
+    if not request_id or action not in ["accept", "reject"]:
+        raise HTTPException(status_code=400, detail="request_id e action (accept/reject) obbligatori")
+    
+    link_request = await db.parent_link_requests.find_one({"id": request_id, "status": "pending"})
+    if not link_request:
+        raise HTTPException(status_code=404, detail="Richiesta non trovata o già gestita")
+    
+    # Only the approver can respond
+    if link_request["approver_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Non sei autorizzato a rispondere a questa richiesta")
+    
+    athlete_name = link_request.get("athlete_name", "")
+    requester_name = link_request.get("requester_name", "")
+    requester_id = link_request["requester_id"]
+    
+    if action == "accept":
+        # Link the requester as second parent
+        athlete_id = link_request["athlete_id"]
+        athlete = await db.athletes.find_one({"id": athlete_id})
+        if not athlete:
+            raise HTTPException(status_code=404, detail="Atleta non trovato")
+        
+        if athlete.get("second_parent_id"):
+            raise HTTPException(status_code=400, detail="Questo atleta ha già un secondo genitore collegato")
+        
+        # Get requester email
+        requester_user = await db.users.find_one({"id": requester_id}, {"_id": 0, "email": 1})
+        requester_email = requester_user.get("email", "") if requester_user else ""
+        
+        await db.athletes.update_one({"id": athlete_id}, {"$set": {
+            "second_parent_id": requester_id,
+            "second_parent_email": requester_email,
+        }})
+        
+        # Update request status
+        await db.parent_link_requests.update_one({"id": request_id}, {"$set": {
+            "status": "accepted",
+            "responded_at": datetime.now(timezone.utc),
+        }})
+        
+        # Notify requester
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": requester_id,
+            "type": "parent_link_accepted",
+            "title": "Collegamento approvato",
+            "message": f"La tua richiesta di collegamento a {athlete_name} è stata accettata. Ora puoi visualizzare il profilo dell'atleta.",
+            "data": {"athlete_id": athlete_id, "athlete_name": athlete_name},
+            "read": False,
+            "created_at": datetime.now(timezone.utc),
+        })
+        
+        return {"success": True, "message": f"Collegamento approvato. {requester_name} è ora collegato a {athlete_name}."}
+    
+    else:  # reject
+        await db.parent_link_requests.update_one({"id": request_id}, {"$set": {
+            "status": "rejected",
+            "responded_at": datetime.now(timezone.utc),
+        }})
+        
+        # Notify requester
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": requester_id,
+            "type": "parent_link_rejected",
+            "title": "Collegamento rifiutato",
+            "message": f"La tua richiesta di collegamento a {athlete_name} è stata rifiutata.",
+            "data": {"athlete_name": athlete_name},
+            "read": False,
+            "created_at": datetime.now(timezone.utc),
+        })
+        
+        return {"success": True, "message": f"Richiesta rifiutata."}
+
 # ==================== ATHLETE ENDPOINTS ====================
 
 @api_router.get("/athletes")

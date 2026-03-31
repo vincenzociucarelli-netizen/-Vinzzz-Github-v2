@@ -836,6 +836,17 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           <Text style={styles.addButtonText}>Registra Nuovo Atleta</Text>
         </TouchableOpacity>
 
+        {/* Link existing athlete button */}
+        <TouchableOpacity
+          style={[styles.documentsButton, { borderColor: '#1565C0', marginBottom: 12 }]}
+          onPress={() => router.push('/parent/link-athlete')}
+          data-testid="link-athlete-btn"
+        >
+          <Ionicons name="link" size={24} color="#1565C0" />
+          <Text style={[styles.documentsButtonText, { color: '#1565C0' }]}>Collega un atleta esistente</Text>
+          <Ionicons name="chevron-forward" size={20} color="#1565C0" />
+        </TouchableOpacity>
+
         {/* Documents Button */}
         <TouchableOpacity
           style={styles.documentsButton}
