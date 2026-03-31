@@ -54,6 +54,12 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
 - **Bug fix anteprima PDF privacy**: l'anteprima mostrava dati vuoti/sbagliati (stesso bug di get_current_user con campi limitati). Ora carica profilo completo da DB anche per l'anteprima
 - **Bug fix notifiche admin**: le notifiche non si auto-cancellano più all'apertura della pagina. Restano non lette finché l'admin ci clicca sopra. Notifiche ora collassabili (solo titolo visibile, espandibili al click)
 - Rimossa voce "Archivio Certificati Medici" dalla dashboard admin
+- **NUOVO: Collegamento manuale genitore-atleta** con approvazione obbligatoria:
+  - Ricerca atleta per Cognome+Nome con disambiguazione per data nascita e squadra
+  - Richiesta di collegamento con notifica in-app al genitore principale
+  - Accettazione/rifiuto con aggiornamento automatico di second_parent_id
+  - Pagina dedicata /parent/link-athlete + pulsante "Collega un atleta esistente" nella dashboard
+  - Test: 21/21 backend passed, 100% frontend UI (iteration_63.json)
 
 ### Session 2026-03-28 (Fork 5-6)
 - Bug fix telefono minori: opzionale nel flusso invite-register
