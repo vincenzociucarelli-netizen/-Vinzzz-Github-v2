@@ -61,6 +61,9 @@ export default function ParentDashboard() {
   // Notifications state
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(true);
+  
+  // Link requests state
+  const [linkRequestsToApprove, setLinkRequestsToApprove] = useState<any[]>([]);
 
   // Mappa nome atleta -> colore
   const athleteColorMap = useMemo(() => {
@@ -153,6 +156,15 @@ export default function ParentDashboard() {
       setNotifications(response.data.notifications || []);
     } catch (error) {
       console.log('Could not load notifications');
+    }
+  };
+
+  const loadLinkRequests = async () => {
+    try {
+      const response = await api.get('/parent-link/requests');
+      setLinkRequestsToApprove(response.data.to_approve || []);
+    } catch (error) {
+      console.log('Could not load link requests');
     }
   };
 
@@ -388,12 +400,13 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
     loadCommitments();
     loadTeams();
     loadNotifications();
+    loadLinkRequests();
     checkTrialPeriods();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadAthletes(), loadCommitments(), loadTeams(), loadNotifications()]);
+    await Promise.all([loadAthletes(), loadCommitments(), loadTeams(), loadNotifications(), loadLinkRequests()]);
     setRefreshing(false);
   };
 
@@ -507,6 +520,37 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
               <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Inserisci il Codice Fiscale nel tuo profilo per completare i documenti privacy.</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#FF9800" />
+          </TouchableOpacity>
+        )}
+
+        {/* Banner: Richieste di collegamento in sospeso */}
+        {linkRequestsToApprove.length > 0 && (
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              backgroundColor: '#E3F2FD', borderRadius: 10, padding: 14, marginHorizontal: 16, marginBottom: 12,
+              borderLeftWidth: 4, borderLeftColor: '#1565C0',
+            }}
+            onPress={() => router.push('/parent/link-athlete')}
+            data-testid="pending-link-requests-banner"
+          >
+            <View style={{
+              width: 32, height: 32, borderRadius: 16, backgroundColor: '#1565C0',
+              justifyContent: 'center', alignItems: 'center',
+            }}>
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{linkRequestsToApprove.length}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#0D47A1' }}>
+                {linkRequestsToApprove.length === 1
+                  ? 'Richiesta di collegamento ricevuta'
+                  : `${linkRequestsToApprove.length} richieste di collegamento ricevute`}
+              </Text>
+              <Text style={{ fontSize: 12, color: '#555', marginTop: 2 }}>
+                {linkRequestsToApprove.map((r: any) => r.requester_name).join(', ')} - Tocca per rispondere
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#1565C0" />
           </TouchableOpacity>
         )}
 

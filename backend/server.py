@@ -16704,6 +16704,8 @@ async def preview_gdpr_privacy_document(
                 except:
                     pass
             
+            minor_full_name = f"{minor_surname_val} {minor_name_val}".strip()
+            
             pdf_bytes = generate_gdpr_minor_privacy_pdf(
                 society_name=society_name,
                 ragione_sociale=society_settings.get("ragione_sociale", "") if society_settings else "",
@@ -16715,9 +16717,9 @@ async def preview_gdpr_privacy_document(
                 parent_fiscal_code=full_user.get("fiscal_code", ""),
                 minor_name=minor_name_val,
                 minor_surname=minor_surname_val,
-                minor_fiscal_code=request.minor_fiscal_code or minor.get("fiscal_code", ""),
+                minor_fiscal_code=minor.get("fiscal_code", ""),
                 minor_birth_date=minor_birth_date,
-                minor_birth_place=request.minor_birth_place or minor.get("place_of_birth", "") or minor.get("birth_place", ""),
+                minor_birth_place=minor.get("place_of_birth", "") or minor.get("birth_place", ""),
                 signature_base64="",  # No signature for preview
                 timestamp=timestamp_str,
                 ip_address="[IP REGISTRATO ALLA FIRMA]",
