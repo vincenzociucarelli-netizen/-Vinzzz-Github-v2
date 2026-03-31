@@ -16613,8 +16613,9 @@ async def preview_gdpr_privacy_document(
     
     try:
         if request.document_type == "gdpr_adult":
-            signer_name = request.signer_name or full_user.get("first_name", "")
-            signer_surname = request.signer_surname or full_user.get("last_name", "")
+            # ALWAYS use DB data for signer, never trust frontend (may be cached/stale)
+            signer_name = full_user.get("first_name", "")
+            signer_surname = full_user.get("last_name", "")
             
             if not signer_name and full_user.get("full_name"):
                 parts = full_user.get("full_name", "").split()
@@ -16626,16 +16627,17 @@ async def preview_gdpr_privacy_document(
                     signer_name = ""
             
             # Get birth date from full profile
-            signer_birth_date = request.signer_birth_date or ""
-            if not signer_birth_date:
-                bd = full_user.get("date_of_birth", "")
-                if bd and hasattr(bd, 'strftime'):
-                    signer_birth_date = bd.strftime("%d/%m/%Y")
-                elif bd and isinstance(bd, str) and 'T' in bd:
-                    try:
-                        signer_birth_date = datetime.fromisoformat(bd.replace('Z', '+00:00')).strftime("%d/%m/%Y")
-                    except:
-                        signer_birth_date = bd
+            signer_birth_date = ""
+            bd = full_user.get("date_of_birth", "")
+            if bd and hasattr(bd, 'strftime'):
+                signer_birth_date = bd.strftime("%d/%m/%Y")
+            elif bd and isinstance(bd, str) and 'T' in bd:
+                try:
+                    signer_birth_date = datetime.fromisoformat(bd.replace('Z', '+00:00')).strftime("%d/%m/%Y")
+                except:
+                    signer_birth_date = bd
+            elif bd and isinstance(bd, str):
+                signer_birth_date = bd
             
             pdf_bytes = generate_gdpr_adult_privacy_pdf(
                 society_name=society_name,
@@ -16645,12 +16647,12 @@ async def preview_gdpr_privacy_document(
                 society_email=society_email,
                 signer_name=signer_name,
                 signer_surname=signer_surname,
-                signer_fiscal_code=request.signer_fiscal_code or full_user.get("fiscal_code", ""),
+                signer_fiscal_code=full_user.get("fiscal_code", ""),
                 signer_birth_date=signer_birth_date,
-                signer_birth_place=request.signer_birth_place or full_user.get("place_of_birth", ""),
-                signer_address=request.signer_address or full_user.get("address", ""),
-                signer_city=request.signer_city or full_user.get("city", ""),
-                signer_province=request.signer_province or full_user.get("province", ""),
+                signer_birth_place=full_user.get("place_of_birth", ""),
+                signer_address=full_user.get("address", ""),
+                signer_city=full_user.get("city", ""),
+                signer_province=full_user.get("province", ""),
                 signature_base64="",  # No signature for preview
                 timestamp=timestamp_str,
                 ip_address="[IP REGISTRATO ALLA FIRMA]",
@@ -16675,7 +16677,7 @@ async def preview_gdpr_privacy_document(
             if current_user["id"] not in [minor.get("parent_id"), minor.get("second_parent_id")]:
                 raise HTTPException(status_code=403, detail="Non sei autorizzato a firmare per questo atleta")
             
-            # ALWAYS use full_user data for signer (never trust frontend)
+            # ALWAYS use DB data for signer (never trust frontend cache)
             parent_name = full_user.get("first_name", "")
             parent_surname = full_user.get("last_name", "")
             
@@ -16685,12 +16687,15 @@ async def preview_gdpr_privacy_document(
                     parent_surname = parts[0]
                     parent_name = " ".join(parts[1:])
             
-            minor_full_name = minor.get("full_name", "")
-            minor_parts = minor_full_name.split() if minor_full_name else []
-            minor_surname_val = request.minor_surname or (minor_parts[0] if minor_parts else "")
-            minor_name_val = request.minor_name or (" ".join(minor_parts[1:]) if len(minor_parts) > 1 else "")
+            # ALWAYS use DB data for minor (never trust frontend cache)
+            minor_surname_val = minor.get("last_name", "")
+            minor_name_val = minor.get("first_name", "")
+            if not minor_name_val and minor.get("full_name"):
+                minor_parts = minor.get("full_name", "").split()
+                minor_surname_val = minor_parts[0] if minor_parts else ""
+                minor_name_val = " ".join(minor_parts[1:]) if len(minor_parts) > 1 else ""
             
-            minor_birth_date = request.minor_birth_date or minor.get("birth_date", "") or minor.get("date_of_birth", "")
+            minor_birth_date = minor.get("date_of_birth") or minor.get("birth_date") or ""
             if minor_birth_date and hasattr(minor_birth_date, 'strftime'):
                 minor_birth_date = minor_birth_date.strftime("%d/%m/%Y")
             elif minor_birth_date and isinstance(minor_birth_date, str) and 'T' in minor_birth_date:
@@ -16707,7 +16712,7 @@ async def preview_gdpr_privacy_document(
                 society_email=society_email,
                 parent_name=parent_name,
                 parent_surname=parent_surname,
-                parent_fiscal_code=request.signer_fiscal_code or full_user.get("fiscal_code", ""),
+                parent_fiscal_code=full_user.get("fiscal_code", ""),
                 minor_name=minor_name_val,
                 minor_surname=minor_surname_val,
                 minor_fiscal_code=request.minor_fiscal_code or minor.get("fiscal_code", ""),
