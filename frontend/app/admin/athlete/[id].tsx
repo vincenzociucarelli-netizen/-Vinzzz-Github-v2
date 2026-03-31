@@ -181,6 +181,10 @@ export default function AdminAthleteDetail() {
   const [withdrawReason, setWithdrawReason] = useState('');
   const [withdrawing, setWithdrawing] = useState(false);
   
+  // Collapsible team sections
+  const [showPrimaryTeam, setShowPrimaryTeam] = useState(false);
+  const [showSecondaryTeam, setShowSecondaryTeam] = useState(false);
+  
   // Reactivate modal with team selection
   const [reactivateModalVisible, setReactivateModalVisible] = useState(false);
   const [allTeams, setAllTeams] = useState<Team[]>([]);
@@ -1984,70 +1988,110 @@ export default function AdminAthleteDetail() {
               </View>
               {editing ? (
                 <>
-                  <Text style={styles.inputLabel}>Squadra Principale (per Quote e Codice)</Text>
-                  <View style={styles.teamSelector}>
-                    {allTeams.map((t) => (
-                      <TouchableOpacity
-                        key={t.id}
-                        style={[
-                          styles.teamOption,
-                          editData.team_id === t.id && styles.teamOptionSelected
-                        ]}
-                        onPress={() => setEditData({...editData, team_id: t.id})}
-                      >
-                        <Ionicons 
-                          name={editData.team_id === t.id ? "radio-button-on" : "radio-button-off"} 
-                          size={20} 
-                          color={editData.team_id === t.id ? "#007AFF" : "#999"} 
-                        />
-                        <Text style={[
-                          styles.teamOptionText,
-                          editData.team_id === t.id && styles.teamOptionTextSelected
-                        ]}>{t.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                  {/* Squadra Principale - collassabile */}
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                      backgroundColor: '#F0F7FF', borderRadius: 10, padding: 12, marginBottom: 8,
+                    }}
+                    onPress={() => setShowPrimaryTeam(!showPrimaryTeam)}
+                    data-testid="toggle-primary-team"
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#007AFF' }}>Squadra Principale</Text>
+                      {!showPrimaryTeam && editData.team_id && (
+                        <Text style={{ fontSize: 13, color: '#333', marginTop: 2 }}>
+                          {allTeams.find(t => t.id === editData.team_id)?.name || ''}
+                        </Text>
+                      )}
+                    </View>
+                    <Ionicons name={showPrimaryTeam ? "chevron-up" : "chevron-down"} size={20} color="#007AFF" />
+                  </TouchableOpacity>
+                  {showPrimaryTeam && (
+                    <View style={styles.teamSelector}>
+                      {allTeams.map((t) => (
+                        <TouchableOpacity
+                          key={t.id}
+                          style={[
+                            styles.teamOption,
+                            editData.team_id === t.id && styles.teamOptionSelected
+                          ]}
+                          onPress={() => setEditData({...editData, team_id: t.id})}
+                        >
+                          <Ionicons 
+                            name={editData.team_id === t.id ? "radio-button-on" : "radio-button-off"} 
+                            size={20} 
+                            color={editData.team_id === t.id ? "#007AFF" : "#999"} 
+                          />
+                          <Text style={[
+                            styles.teamOptionText,
+                            editData.team_id === t.id && styles.teamOptionTextSelected
+                          ]}>{t.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                   
-                  <Text style={[styles.inputLabel, { marginTop: 16 }]}>Squadra Secondaria (opzionale)</Text>
-                  <View style={styles.teamSelector}>
-                    <TouchableOpacity
-                      style={[
-                        styles.teamOption,
-                        !editData.team_id_2 && styles.teamOptionSelected
-                      ]}
-                      onPress={() => setEditData({...editData, team_id_2: ''})}
-                    >
-                      <Ionicons 
-                        name={!editData.team_id_2 ? "radio-button-on" : "radio-button-off"} 
-                        size={20} 
-                        color={!editData.team_id_2 ? "#007AFF" : "#999"} 
-                      />
-                      <Text style={[
-                        styles.teamOptionText,
-                        !editData.team_id_2 && styles.teamOptionTextSelected
-                      ]}>Nessuna</Text>
-                    </TouchableOpacity>
-                    {allTeams.filter(t => t.id !== editData.team_id).map((t) => (
+                  {/* Squadra Secondaria - collassabile */}
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                      backgroundColor: '#F5F5F5', borderRadius: 10, padding: 12, marginTop: 8, marginBottom: 8,
+                    }}
+                    onPress={() => setShowSecondaryTeam(!showSecondaryTeam)}
+                    data-testid="toggle-secondary-team"
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#666' }}>Squadra Secondaria (opzionale)</Text>
+                      {!showSecondaryTeam && (
+                        <Text style={{ fontSize: 13, color: '#333', marginTop: 2 }}>
+                          {editData.team_id_2 ? (allTeams.find(t => t.id === editData.team_id_2)?.name || '') : 'Nessuna'}
+                        </Text>
+                      )}
+                    </View>
+                    <Ionicons name={showSecondaryTeam ? "chevron-up" : "chevron-down"} size={20} color="#666" />
+                  </TouchableOpacity>
+                  {showSecondaryTeam && (
+                    <View style={styles.teamSelector}>
                       <TouchableOpacity
-                        key={t.id}
                         style={[
                           styles.teamOption,
-                          editData.team_id_2 === t.id && styles.teamOptionSelected
+                          !editData.team_id_2 && styles.teamOptionSelected
                         ]}
-                        onPress={() => setEditData({...editData, team_id_2: t.id})}
+                        onPress={() => setEditData({...editData, team_id_2: ''})}
                       >
                         <Ionicons 
-                          name={editData.team_id_2 === t.id ? "radio-button-on" : "radio-button-off"} 
+                          name={!editData.team_id_2 ? "radio-button-on" : "radio-button-off"} 
                           size={20} 
-                          color={editData.team_id_2 === t.id ? "#007AFF" : "#999"} 
+                          color={!editData.team_id_2 ? "#007AFF" : "#999"} 
                         />
                         <Text style={[
                           styles.teamOptionText,
-                          editData.team_id_2 === t.id && styles.teamOptionTextSelected
-                        ]}>{t.name}</Text>
+                          !editData.team_id_2 && styles.teamOptionTextSelected
+                        ]}>Nessuna</Text>
                       </TouchableOpacity>
-                    ))}
-                  </View>
+                      {allTeams.filter(t => t.id !== editData.team_id).map((t) => (
+                        <TouchableOpacity
+                          key={t.id}
+                          style={[
+                            styles.teamOption,
+                            editData.team_id_2 === t.id && styles.teamOptionSelected
+                          ]}
+                          onPress={() => setEditData({...editData, team_id_2: t.id})}
+                        >
+                          <Ionicons 
+                            name={editData.team_id_2 === t.id ? "radio-button-on" : "radio-button-off"} 
+                            size={20} 
+                            color={editData.team_id_2 === t.id ? "#007AFF" : "#999"} 
+                          />
+                          <Text style={[
+                            styles.teamOptionText,
+                            editData.team_id_2 === t.id && styles.teamOptionTextSelected
+                          ]}>{t.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                   
                   <Text style={[styles.inputLabel, { marginTop: 16 }]}>Codice Atleta (per Import Pagamenti)</Text>
                   <TextInput
