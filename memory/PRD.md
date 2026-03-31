@@ -61,6 +61,11 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
   - Pagina dedicata /parent/link-athlete + pulsante "Collega un atleta esistente" nella dashboard
   - Test: 21/21 backend passed, 100% frontend UI (iteration_63.json)
 
+### Session 2026-03-31 (Fork 9 - Current)
+- **Bug fix: Banner richieste collegamento** - Sofia ora vede un banner blu nella dashboard quando ha richieste pendenti da altri genitori. Banner con data-testid='pending-link-requests-banner', mostra nome richiedente e atleta.
+- **Bug fix: Anteprima PDF GDPR** - L'endpoint preview ora ignora TUTTI i dati del payload frontend (signer_name, minor_fiscal_code, minor_birth_place) e usa esclusivamente i dati dal DB. Risolto anche crash per variabile `minor_full_name` non definita.
+- Test: iteration_64.json - 100% backend, 100% frontend
+
 ### Session 2026-03-28 (Fork 5-6)
 - Bug fix telefono minori: opzionale nel flusso invite-register
 - Reset password: fix URL API (cache stale), pulsante email, toggle visibilità, errori dettagliati
@@ -84,15 +89,14 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
 - Campo "Email 2° Genitore" visibile nel profilo atleta
 
 ## Pending / Backlog
-- (P0) Test manuale utente: 3 genitori + 3 figli condivisi
-- (P2) Collegamento manuale genitore-atleta (ricerca per CF/nome)
+- (P2) Validazione telefono minori: rimuovere obbligo per atleti minorenni
 - (P1) UI atleti con contratto formale (estate post-lancio)
 - (P2) Refactoring server.py in router separati
 - (P2) Re-implementazione Stripe
 - (P2) Pubblicazione dominio e App Store
 
 ## Credentials
-- Admin: `pallavoloperugia@gmail.com` / `Test1234`
+- Admin: `vincenzo.ciucarelli@gmail.com`
 - Parent (Sofia): `sofia@test.com` / `Test1234`
 - Parent (Mario): `mario@test.com` / `Test1234`
 
