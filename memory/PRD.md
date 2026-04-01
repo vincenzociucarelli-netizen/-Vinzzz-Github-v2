@@ -61,10 +61,20 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
   - Pagina dedicata /parent/link-athlete + pulsante "Collega un atleta esistente" nella dashboard
   - Test: 21/21 backend passed, 100% frontend UI (iteration_63.json)
 
-### Session 2026-03-31 (Fork 9 - Current)
-- **Bug fix: Banner richieste collegamento** - Sofia ora vede un banner blu nella dashboard quando ha richieste pendenti da altri genitori. Banner con data-testid='pending-link-requests-banner', mostra nome richiedente e atleta.
-- **Bug fix: Anteprima PDF GDPR** - L'endpoint preview ora ignora TUTTI i dati del payload frontend (signer_name, minor_fiscal_code, minor_birth_place) e usa esclusivamente i dati dal DB. Risolto anche crash per variabile `minor_full_name` non definita.
-- Test: iteration_64.json - 100% backend, 100% frontend
+### Session 2026-03-31 (Fork 9)
+- Bug fix: Banner richieste collegamento - Sofia vede richieste pendenti nella dashboard
+- Bug fix: Anteprima PDF GDPR - usa solo dati dal DB
+- Test: iteration_64.json - 100%
+
+### Session 2026-04-01 (Fork 10 - Current)
+- **Aggiornamento GDPR completo (raccomandazioni ChatGPT)**:
+  - Rimossa checkbox "Acconsento al trattamento dati" da registrazione e invite-register (non necessaria per base giuridica contrattuale)
+  - Terminologia aggiornata ovunque: "Presa Visione Privacy" al posto di "Consenso Privacy"
+  - PDF Adulti: sezione 7 cambiata da "FIRMA DIGITALE" a "PRESA VISIONE DEL DOCUMENTO", "DATI DEL FIRMATARIO" → "DATI DELL'INTERESSATO"
+  - PDF Minori: rimossa sezione "CERTIFICATO MEDICO SPORTIVO", rinumerate sezioni, da 3 pagine a 2
+  - Entrambi i PDF: "CONSENSI ESPRESSI" → "PRESA VISIONE", "METADATI DI FIRMA" → "METADATI PRESA VISIONE", rimossa riga "Autorizzazione trattamento dati"
+- Sezioni squadra collassabili nella scheda atleta admin (toggle 1ª/2ª squadra)
+- Test: iteration_65.json - 14/14 passed (100%)
 
 ### Session 2026-03-28 (Fork 5-6)
 - Bug fix telefono minori: opzionale nel flusso invite-register
