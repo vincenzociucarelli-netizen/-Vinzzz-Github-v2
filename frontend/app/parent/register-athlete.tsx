@@ -26,7 +26,7 @@ export default function RegisterAthlete() {
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
   const [calculatingCF, setCalculatingCF] = useState(false);
   const [consentPrivacyViewed, setConsentPrivacyViewed] = useState(false);
-  const [consentDataTreatment, setConsentDataTreatment] = useState(false);
+  const [consentDataTreatment, setConsentDataTreatment] = useState(false); // legacy - unused
   const [consentImagesInternal, setConsentImagesInternal] = useState(false);
   const [consentImagesPromo, setConsentImagesPromo] = useState(false);
   
@@ -244,10 +244,6 @@ export default function RegisterAthlete() {
         showAlert('Errore', 'Devi confermare la presa visione dell\'informativa sulla privacy');
         return;
       }
-      if (!consentDataTreatment) {
-        showAlert('Errore', 'Devi autorizzare il trattamento dei dati per l\'attività sportiva');
-        return;
-      }
     }
 
     setLoading(true);
@@ -282,9 +278,8 @@ export default function RegisterAthlete() {
         second_parent_email: secondParentEmail || null,
         privacy_accepted: !isTrialPeriod,  // Se non è prova, accetta privacy
         consent_privacy_viewed: !isTrialPeriod ? consentPrivacyViewed : false,
-        consent_data_treatment: !isTrialPeriod ? consentDataTreatment : false,
-        consent_images_internal: !isTrialPeriod ? consentImagesInternal : false,
-        consent_images_promo: !isTrialPeriod ? consentImagesPromo : false,
+        consent_images_internal: !isTrialPeriod ? consentImagesInternal : null,
+        consent_images_promo: !isTrialPeriod ? consentImagesPromo : null,
         data_password: dataPassword || null,
       });
       
@@ -711,20 +706,6 @@ export default function RegisterAthlete() {
                 <View style={styles.checkboxTextContainer}>
                   <Text style={styles.checkboxLabel}>Presa visione dell'informativa sulla privacy *</Text>
                   <Text style={styles.checkboxSubtext}>Dichiaro di aver letto e compreso l'informativa (obbligatorio)</Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* 2. Autorizzazione trattamento dati - OBBLIGATORIA */}
-              <TouchableOpacity 
-                style={styles.checkboxRow}
-                onPress={() => setConsentDataTreatment(!consentDataTreatment)}
-              >
-                <View style={[styles.checkbox, consentDataTreatment && styles.checkboxChecked]}>
-                  {consentDataTreatment && <Ionicons name="checkmark" size={16} color="#fff" />}
-                </View>
-                <View style={styles.checkboxTextContainer}>
-                  <Text style={styles.checkboxLabel}>Autorizzazione trattamento dati per attività sportiva *</Text>
-                  <Text style={styles.checkboxSubtext}>Iscrizione, tesseramento, gestione amministrativa (obbligatorio)</Text>
                 </View>
               </TouchableOpacity>
 

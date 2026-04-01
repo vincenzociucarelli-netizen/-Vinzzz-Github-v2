@@ -495,28 +495,6 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                   </View>
                 </TouchableOpacity>
 
-                {/* 2. Autorizzazione trattamento dati - OBBLIGATORIA */}
-                <TouchableOpacity 
-                  style={consentStyles.checkboxRow}
-                  onPress={() => setConsentDataTreatment(!consentDataTreatment)}
-                >
-                  <View style={[consentStyles.checkbox, consentDataTreatment && (isMinor ? consentStyles.checkboxCheckedMinor : consentStyles.checkboxChecked)]}>
-                    {consentDataTreatment && <Ionicons name="checkmark" size={14} color="#fff" />}
-                  </View>
-                  <View style={consentStyles.checkboxTextContainer}>
-                    <Text style={consentStyles.checkboxLabel}>
-                      {isMinor 
-                        ? 'Autorizzazione trattamento dati per attività sportiva *'
-                        : 'Autorizzazione trattamento dati per gestione rapporto *'}
-                    </Text>
-                    <Text style={consentStyles.checkboxSubtext}>
-                      {isMinor 
-                        ? 'Iscrizione, tesseramento, gestione amministrativa (obbligatorio)'
-                        : 'Gestione rapporto collaborativo e adempimenti normativi (obbligatorio)'}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
                 <View style={consentStyles.separator} />
                 <Text style={consentStyles.optionalLabel}>Consensi facoltativi - immagini/video</Text>
 
@@ -566,10 +544,10 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.nextButton, isMinor && styles.nextButtonMinor, (!consentPrivacyViewed || !consentDataTreatment) && { backgroundColor: '#ccc' }]}
+                style={[styles.nextButton, isMinor && styles.nextButtonMinor, !consentPrivacyViewed && { backgroundColor: '#ccc' }]}
                 onPress={() => {
-                  if (!consentPrivacyViewed || !consentDataTreatment) {
-                    alert('Devi confermare la presa visione dell\'informativa e autorizzare il trattamento dati per procedere.');
+                  if (!consentPrivacyViewed) {
+                    alert('Devi confermare la presa visione dell\'informativa per procedere.');
                     return;
                   }
                   setStep(2);

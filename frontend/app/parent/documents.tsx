@@ -187,7 +187,7 @@ export default function ParentDocuments() {
   const openConsentDocument = async (doc: Document) => {
     const consentTypeMap: Record<string, string> = {
       'consent_privacy_viewed': 'privacy_viewed',
-      'consent_data_processing': 'data_processing',
+      'consent_privacy_viewed': 'privacy_viewed',
       'consent_terms': 'terms',
     };
     const consentType = consentTypeMap[doc.document_type] || '';
