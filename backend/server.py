@@ -14674,7 +14674,14 @@ def generate_gdpr_minor_privacy_pdf(
         c.drawString(2.3*cm, y, d)
         y -= 0.4*cm
     
-    y -= 0.3*cm
+    # Footer page 1
+    c.setFont("Helvetica", 8)
+    c.drawCentredString(width/2, 1.5*cm, "Pagina 1 di 3")
+    
+    c.showPage()
+    
+    # ==================== PAGE 2 ====================
+    y = height - 2*cm
     
     # Section 6 - Immagini e Video
     c.setFont("Helvetica-Bold", 11)
@@ -14694,13 +14701,13 @@ def generate_gdpr_minor_privacy_pdf(
     firma_text = "La presa visione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla società. Il sistema registra metadati tecnici della presa visione, tra cui data, ora e identificativo dell'utente, ai fini della tracciabilità e della sicurezza del sistema."
     y = draw_wrapped_text(c, firma_text, 2*cm, y, max_w)
     
-    # Footer page 1
+    # Footer page 2
     c.setFont("Helvetica", 8)
-    c.drawCentredString(width/2, 1.5*cm, "Pagina 1 di 2")
+    c.drawCentredString(width/2, 1.5*cm, "Pagina 2 di 3")
     
     c.showPage()
     
-    # ==================== PAGE 2 ====================
+    # ==================== PAGE 3 ====================
     y = height - 2*cm
     
     # DICHIARAZIONE
@@ -14840,10 +14847,10 @@ def generate_gdpr_minor_privacy_pdf(
     y_meta -= 0.35*cm
     c.drawString(2.3*cm, y_meta, f"ip_address: {ip_address}")
     
-    # Footer bottom of page 2
+    # Footer bottom of page 3
     c.setFont("Helvetica", 8)
     c.setFillColor(colors.black)
-    c.drawCentredString(width/2, 1.5*cm, "Pagina 2 di 2")
+    c.drawCentredString(width/2, 1.5*cm, "Pagina 3 di 3")
     
     c.save()
     return buffer.getvalue()
