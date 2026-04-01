@@ -552,30 +552,32 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
         {linkRequestsToApprove.length > 0 && (
           <TouchableOpacity
             style={{
-              flexDirection: 'row', alignItems: 'center', gap: 10,
-              backgroundColor: '#E3F2FD', borderRadius: 10, padding: 14, marginHorizontal: 16, marginBottom: 12,
-              borderLeftWidth: 4, borderLeftColor: '#1565C0',
+              flexDirection: 'row', alignItems: 'center', gap: 12,
+              backgroundColor: '#FFF3E0', borderRadius: 12, padding: 16, marginHorizontal: 16, marginBottom: 12,
+              borderWidth: 2, borderColor: '#FF9800',
+              shadowColor: '#FF9800', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6,
+              elevation: 4,
             }}
             onPress={() => router.push('/parent/link-athlete')}
             data-testid="pending-link-requests-banner"
           >
             <View style={{
-              width: 32, height: 32, borderRadius: 16, backgroundColor: '#1565C0',
+              width: 36, height: 36, borderRadius: 18, backgroundColor: '#FF9800',
               justifyContent: 'center', alignItems: 'center',
             }}>
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{linkRequestsToApprove.length}</Text>
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{linkRequestsToApprove.length}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#0D47A1' }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#E65100' }}>
                 {linkRequestsToApprove.length === 1
                   ? 'Richiesta di collegamento ricevuta'
                   : `${linkRequestsToApprove.length} richieste di collegamento ricevute`}
               </Text>
-              <Text style={{ fontSize: 12, color: '#555', marginTop: 2 }}>
+              <Text style={{ fontSize: 12, color: '#BF360C', marginTop: 3, fontWeight: '600' }}>
                 {linkRequestsToApprove.map((r: any) => r.requester_name).join(', ')} - Tocca per rispondere
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#1565C0" />
+            <Ionicons name="chevron-forward" size={20} color="#FF9800" />
           </TouchableOpacity>
         )}
 
