@@ -14749,7 +14749,7 @@ def generate_gdpr_minor_privacy_pdf(
     # Nota revoca
     c.setFont("Helvetica-Oblique", 8)
     c.setFillColor(colors.HexColor("#666666"))
-    c.drawString(2*cm, y, "La revoca del consenso ha effetto solo per utilizzi futuri.")
+    c.drawString(2*cm, y, "La revoca dei consensi relativi alle immagini ha effetto solo per utilizzi futuri.")
     c.setFillColor(colors.black)
     y -= 0.4*cm
     
@@ -15259,7 +15259,7 @@ def generate_privacy_consent_pdf(
     # Nota revoca
     c.setFont("Helvetica-Oblique", 8)
     c.setFillColor(colors.HexColor("#666666"))
-    c.drawString(2*cm, y, "La revoca del consenso ha effetto solo per utilizzi futuri.")
+    c.drawString(2*cm, y, "La revoca dei consensi relativi alle immagini ha effetto solo per utilizzi futuri.")
     c.setFillColor(colors.black)
     y -= 0.5*cm
     

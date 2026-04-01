@@ -1151,7 +1151,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                 {/* Note about consent revocation */}
                 <View style={{ backgroundColor: '#FFF8E1', borderRadius: 8, padding: 12, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: '#FFA000' }}>
                   <Text style={{ fontSize: 11, color: '#795548', fontStyle: 'italic', lineHeight: 16 }}>
-                    I consensi facoltativi possono essere modificati in qualsiasi momento dal profilo dell'atleta. La revoca del consenso ha effetto solo per utilizzi futuri.
+                    I consensi facoltativi possono essere modificati in qualsiasi momento dal profilo dell'atleta. La revoca dei consensi relativi alle immagini ha effetto solo per utilizzi futuri.
                   </Text>
                 </View>
 
