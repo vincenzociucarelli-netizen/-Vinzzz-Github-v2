@@ -1608,16 +1608,12 @@ async def register(user_data: UserCreate, request: Request):
                 "value": user_data.consents.get("privacy_viewed", True),
                 **consent_base
             },
-            "data_processing": {
-                "value": user_data.consents.get("data_processing", False),
-                **consent_base
-            },
             "images_internal": {
-                "value": user_data.consents.get("images_internal", False),
+                "value": user_data.consents.get("images_internal", None),
                 **consent_base
             },
             "images_promo": {
-                "value": user_data.consents.get("images_promo", False),
+                "value": user_data.consents.get("images_promo", None),
                 **consent_base
             }
         }
@@ -6230,22 +6226,19 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     now = datetime.utcnow()
     document_version = "1.0-2026"
     consent_privacy_viewed = getattr(athlete_data, 'consent_privacy_viewed', False)
-    consent_data_treatment = getattr(athlete_data, 'consent_data_treatment', False)
-    consent_img_internal = getattr(athlete_data, 'consent_images_internal', False)
-    consent_img_promo = getattr(athlete_data, 'consent_images_promo', False)
+    consent_img_internal = getattr(athlete_data, 'consent_images_internal', None)
+    consent_img_promo = getattr(athlete_data, 'consent_images_promo', None)
     
     # Get client IP
     client_ip = request_obj.headers.get("x-forwarded-for", request_obj.client.host if request_obj.client else "unknown")
     
     consents = {
         "privacy_viewed": {"value": consent_privacy_viewed, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
-        "data_treatment": {"value": consent_data_treatment, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
         "images_internal": {"value": consent_img_internal, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
         "images_promo": {"value": consent_img_promo, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
     }
     consent_history = [
         {"type": "privacy_viewed", "old_value": None, "new_value": consent_privacy_viewed, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
-        {"type": "data_treatment", "old_value": None, "new_value": consent_data_treatment, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
         {"type": "images_internal", "old_value": None, "new_value": consent_img_internal, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
         {"type": "images_promo", "old_value": None, "new_value": consent_img_promo, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
     ]
@@ -15188,7 +15181,7 @@ def generate_privacy_consent_pdf(
         raise HTTPException(status_code=500, detail="PDF generation not available")
     
     if consent_data is None:
-        consent_data = {"privacy_viewed": True, "data_treatment": True, "images_internal": False, "images_promo": False}
+        consent_data = {"privacy_viewed": True, "images_internal": None, "images_promo": None}
     
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -16194,7 +16187,7 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
 @api_router.get("/documents/consent-pdf/{consent_type}")
 async def get_consent_pdf(consent_type: str, current_user = Depends(get_current_user)):
     """Generate and return a PDF for the parent's personal consent acceptance"""
-    valid_types = ["privacy_viewed", "data_processing", "terms"]
+    valid_types = ["privacy_viewed", "terms"]
     if consent_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"Tipo consenso non valido. Valori ammessi: {valid_types}")
     
@@ -16252,7 +16245,7 @@ async def get_consent_pdf(consent_type: str, current_user = Depends(get_current_
         source=consent_data.get("source", "registration"),
     )
     
-    title_map = {"privacy_viewed": "Informativa_Privacy", "data_processing": "Consenso_Dati", "terms": "Termini_Utilizzo"}
+    title_map = {"privacy_viewed": "Informativa_Privacy", "terms": "Termini_Utilizzo"}
     filename = f"{title_map.get(consent_type, consent_type)}_{user.get('full_name', 'utente').replace(' ', '_')}.pdf"
     
     return Response(
@@ -16538,9 +16531,8 @@ async def sign_gdpr_privacy_document(
         # Granular consent tracking (GDPR compliant)
         "consents": {
             "privacy_viewed": {"value": consent_data.get("privacy_viewed", True), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": consent_data.get("document_version", document_version), "ip_address": client_ip},
-            "data_treatment": {"value": consent_data.get("data_treatment", True), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": consent_data.get("document_version", document_version), "ip_address": client_ip},
-            "images_internal": {"value": consent_data.get("images_internal", False), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": consent_data.get("document_version", document_version), "ip_address": client_ip},
-            "images_promo": {"value": consent_data.get("images_promo", False), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": consent_data.get("document_version", document_version), "ip_address": client_ip},
+            "images_internal": {"value": consent_data.get("images_internal", None), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": consent_data.get("document_version", document_version), "ip_address": client_ip},
+            "images_promo": {"value": consent_data.get("images_promo", None), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": consent_data.get("document_version", document_version), "ip_address": client_ip},
         },
         # Minor data if applicable
         **minor_data,
@@ -16558,7 +16550,6 @@ async def sign_gdpr_privacy_document(
     # Sync mandatory consents to athlete/user record
     consent_sync = {
         "consents.privacy_viewed": {"value": True, "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
-        "consents.data_processing": {"value": True, "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
     }
     # Also sync image consents from the signing form
     if consent_data.get("images_internal") is not None:
@@ -16579,7 +16570,6 @@ async def sign_gdpr_privacy_document(
         # Also update the signing parent's own consents (mandatory + image consents)
         parent_consent_sync = {
             "consents.privacy_viewed": {"value": True, "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
-            "consents.data_processing": {"value": True, "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
         }
         if consent_data.get("images_internal") is not None:
             parent_consent_sync["consents.images_internal"] = {"value": bool(consent_data.get("images_internal")), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip}
@@ -19611,7 +19601,6 @@ async def get_my_documents(
         consents = target_user["consents"]
         consent_label_map = {
             "privacy_viewed": "Informativa Privacy - Presa visione",
-            "data_processing": "Consenso Trattamento Dati Personali",
         }
         for ckey, clabel in consent_label_map.items():
             c = consents.get(ckey)

@@ -1091,17 +1091,6 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                     Obbligatorio - Non disattivabile
                   </Text>
                 </View>
-                <View style={{ backgroundColor: '#F1F8E9', borderRadius: 10, padding: 14, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: '#4CAF50' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Ionicons name="checkbox" size={22} color="#4CAF50" />
-                    <Text style={{ flex: 1, fontSize: 13, color: '#333', fontWeight: '600' }}>
-                      Trattamento dati per attività sportiva
-                    </Text>
-                  </View>
-                  <Text style={{ fontSize: 11, color: '#666', marginTop: 4, marginLeft: 32, fontStyle: 'italic' }}>
-                    Il trattamento dei dati è necessario per l'esecuzione dell'attività sportiva e per obblighi di legge
-                  </Text>
-                </View>
 
                 {/* Section B - Facoltativi (toggle) */}
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }} data-testid="consent-section-b-title">
@@ -1201,7 +1190,6 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
 
 Presa visione:
 - Informativa privacy presa visione
-- Trattamento dati per attività sportiva e obblighi di legge
 
 Consensi facoltativi:
 - Immagini uso interno: ${consentImgInternal ? 'SI' : 'NO'}

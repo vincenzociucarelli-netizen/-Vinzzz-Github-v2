@@ -14,7 +14,6 @@ import api from '../../../src/services/api';
 
 const CONSENT_LABELS: Record<string, string> = {
   privacy_viewed: 'Presa visione Privacy',
-  data_treatment: 'Trattamento dati',
   images_internal: 'Immagini uso interno',
   images_promo: 'Immagini promozionali',
 };
@@ -141,7 +140,6 @@ export default function ConsentAuditPage() {
               </View>
               <View style={s.badgeRow}>
                 {getConsentBadge(e.consents, 'privacy_viewed')}
-                {getConsentBadge(e.consents, 'data_treatment')}
                 {getConsentBadge(e.consents, 'images_internal')}
                 {getConsentBadge(e.consents, 'images_promo')}
               </View>
@@ -176,7 +174,7 @@ export default function ConsentAuditPage() {
               <ScrollView style={s.modalScroll}>
                 {/* Current consents */}
                 <Text style={s.sectionTitle}>Stato Attuale</Text>
-                {['privacy_viewed', 'data_treatment', 'images_internal', 'images_promo'].map((type) => {
+                {['privacy_viewed', 'images_internal', 'images_promo'].map((type) => {
                   const c = detailData.consents?.[type];
                   return (
                     <View key={type} style={s.consentDetailRow}>
