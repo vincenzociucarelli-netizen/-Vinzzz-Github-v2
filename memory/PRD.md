@@ -118,11 +118,13 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
 - Campo "Email 2° Genitore" visibile nel profilo atleta
 
 ## Pending / Backlog
-- (P2) Validazione telefono minori: rimuovere obbligo per atleti minorenni
 - (P1) UI atleti con contratto formale (estate post-lancio)
 - (P2) Refactoring server.py in router separati
 - (P2) Re-implementazione Stripe
 - (P2) Pubblicazione dominio e App Store
+
+## Issues Risolte (verificate)
+- Telefono minori: già opzionale sia backend (`Optional[str] = None`) che frontend (skip validazione per `is_minor`)
 
 ## Credentials
 - Admin: `vincenzo.ciucarelli@gmail.com`
