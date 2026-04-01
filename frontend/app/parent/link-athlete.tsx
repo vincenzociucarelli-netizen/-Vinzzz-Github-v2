@@ -19,6 +19,7 @@ export default function ParentLinkPage() {
   const [toApprove, setToApprove] = useState<any[]>([]);
   const [responding, setResponding] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => { loadRequests(); }, []);
 
@@ -151,9 +152,25 @@ export default function ParentLinkPage() {
           </View>
         )}
 
-        {/* Search section */}
+        {/* Search section - nascosta di default, visibile solo su richiesta manuale */}
+        {!showSearch && (
+          <TouchableOpacity
+            style={{ backgroundColor: '#E3F2FD', borderRadius: 12, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#90CAF9' }}
+            onPress={() => setShowSearch(true)}
+            data-testid="show-search-btn"
+          >
+            <Ionicons name="search" size={20} color="#1565C0" />
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#1565C0' }}>Cerca un atleta da collegare manualmente</Text>
+          </TouchableOpacity>
+        )}
+        {showSearch && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Cerca atleta</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={styles.cardTitle}>Cerca atleta</Text>
+            <TouchableOpacity onPress={() => { setShowSearch(false); setSearched(false); setResults([]); }}>
+              <Ionicons name="close" size={22} color="#999" />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.cardSubtitle}>Inserisci cognome e nome dell'atleta che vuoi collegare al tuo profilo</Text>
           <View style={styles.inputRow}>
             <TextInput
@@ -188,10 +205,11 @@ export default function ParentLinkPage() {
               </>
             )}
           </TouchableOpacity>
-        </View>
+          </View>
+        )}
 
         {/* Search results */}
-        {searched && (
+        {showSearch && searched && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>
               {results.length > 0 ? `Risultati (${results.length})` : 'Nessun risultato'}
