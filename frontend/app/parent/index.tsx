@@ -290,7 +290,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
 
       await api.post('/documents/sign', {
         document_type: 'privacy_consent',
-        document_title: `Consenso Privacy - ${athleteName}`,
+        document_title: `Presa Visione Privacy - ${athleteName}`,
         document_text: privacyText,
         signer_name: user.full_name,
         signer_email: user.email,
@@ -299,7 +299,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
         additional_data: {
           'Atleta': athleteName,
           'Genitore/Tutore': user.full_name,
-          'Tipo documento': 'Consenso Privacy e Liberatoria'
+          'Tipo documento': 'Presa Visione Privacy e Liberatoria'
         }
       });
       
@@ -1034,7 +1034,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
             setSigningAthlete(null);
           }}
           onSign={handleSignPrivacy}
-          documentTitle={`Consenso Privacy - ${signingAthlete.full_name || signingAthlete.athleteName}`}
+          documentTitle={`Presa Visione Privacy - ${signingAthlete.full_name || signingAthlete.athleteName}`}
           documentText={`Il/La sottoscritto/a ${user.full_name}, in qualità di genitore/tutore dell'atleta minorenne ${signingAthlete.full_name || signingAthlete.athleteName}, dichiara di aver letto e compreso l'informativa sulla privacy (GDPR) e presta il proprio consenso a:
 
 • Trattamento dati per attività sportiva

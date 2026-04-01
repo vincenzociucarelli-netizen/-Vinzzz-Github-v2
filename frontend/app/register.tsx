@@ -190,7 +190,6 @@ export default function Register() {
           ...(role === 'parent' && dataPassword ? { data_password: dataPassword } : {}),
           consents: {
             privacy_viewed: consentPrivacyViewed,
-            data_processing: consentDataProcessing,
             images_internal: consentInternalImages,
             images_promo: consentPromotionalImages,
           },
@@ -341,7 +340,7 @@ export default function Register() {
     if (type === 'terms') setHasOpenedTerms(true);
   };
 
-  const canContinueFromWelcome = hasOpenedPrivacy && hasOpenedTerms && consentPrivacyViewed && consentDataProcessing;
+  const canContinueFromWelcome = hasOpenedPrivacy && hasOpenedTerms && consentPrivacyViewed;
 
   // After welcome, decide next step
   const proceedFromWelcome = () => {
@@ -465,17 +464,6 @@ export default function Register() {
 
             <TouchableOpacity
               style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 10 }}
-              onPress={() => setConsentDataProcessing(!consentDataProcessing)}
-              data-testid="consent-data-processing"
-            >
-              <Ionicons name={consentDataProcessing ? "checkbox" : "square-outline"} size={22} color={consentDataProcessing ? "#4CAF50" : "#999"} />
-              <Text style={{ flex: 1, fontSize: 13, color: '#333', lineHeight: 18 }}>
-                <Text style={{ fontWeight: '600' }}>Acconsento al trattamento dei miei dati personali</Text> per le finalita descritte nell'informativa sulla privacy <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 10 }}
               onPress={() => setConsentInternalImages(!consentInternalImages)}
               data-testid="consent-internal-images"
             >
@@ -504,7 +492,7 @@ export default function Register() {
             <Text style={styles.welcomeHintText}>
               {!hasOpenedTerms || !hasOpenedPrivacy 
                 ? 'Devi aprire e leggere entrambi i documenti prima di poter continuare'
-                : 'Devi acconsentire alla presa visione della privacy e al trattamento dati per continuare'}
+                : 'Devi confermare la presa visione della privacy per continuare'}
             </Text>
           </View>
         )}

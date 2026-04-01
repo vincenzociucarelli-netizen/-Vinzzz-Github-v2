@@ -14266,12 +14266,12 @@ def generate_gdpr_adult_privacy_pdf(
     # ==================== PAGE 2 ====================
     y = height - 2*cm
     
-    # Section 7 - Firma Digitale
+    # Section 7 - Presa visione digitale
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "7. FIRMA DIGITALE DEL DOCUMENTO")
+    c.drawString(2*cm, y, "7. PRESA VISIONE DEL DOCUMENTO")
     y -= 0.6*cm
     c.setFont("Helvetica", 10)
-    firma_text = "La sottoscrizione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla Società. Il sistema può registrare metadati tecnici della firma digitale, tra cui: data e ora della sottoscrizione; identificativo dell'utente; dispositivo utilizzato per la firma. Tali informazioni sono raccolte esclusivamente ai fini della tracciabilità e della sicurezza del sistema."
+    firma_text = "La presa visione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla Società. Il sistema registra metadati tecnici della presa visione, tra cui: data e ora della conferma; identificativo dell'utente; dispositivo utilizzato. Tali informazioni sono raccolte esclusivamente ai fini della tracciabilità e della sicurezza del sistema."
     y = draw_wrapped_text(c, firma_text, 2*cm, y, max_w)
     
     y -= 0.5*cm
@@ -14281,24 +14281,20 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2*cm, y, "DICHIARAZIONE")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    dichiarazione_text = "Il sottoscritto dichiara di aver letto e compreso la presente informativa e prende atto del trattamento dei dati personali per le finalità indicate."
+    dichiarazione_text = "Il sottoscritto dichiara di aver letto e compreso la presente informativa sulla privacy ai sensi del Regolamento UE 2016/679."
     y = draw_wrapped_text(c, dichiarazione_text, 2*cm, y, max_w)
     
     y -= 0.8*cm
     
-    # CONSENSI ESPRESSI
+    # PRESA VISIONE
     cd = consent_data or {}
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "CONSENSI ESPRESSI")
+    c.drawString(2*cm, y, "PRESA VISIONE")
     y -= 0.5*cm
     c.setFont("Helvetica", 9)
     
     check_pv = "X" if cd.get("privacy_viewed", True) else " "
-    c.drawString(2*cm, y, f"[{check_pv}] Presa visione dell'informativa sulla privacy (obbligatorio)")
-    y -= 0.4*cm
-    
-    check_dt = "X" if cd.get("data_treatment", True) else " "
-    c.drawString(2*cm, y, f"[{check_dt}] Autorizzazione trattamento dati per gestione rapporto (obbligatorio)")
+    c.drawString(2*cm, y, f"[{check_pv}] Informativa privacy presa visione (obbligatorio)")
     y -= 0.4*cm
     
     check_ii = "X" if cd.get("images_internal", False) else " "
@@ -14323,7 +14319,7 @@ def generate_gdpr_adult_privacy_pdf(
     
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(2.5*cm, y - 0.4*cm, "DATI DEL FIRMATARIO")
+    c.drawString(2.5*cm, y - 0.4*cm, "DATI DELL'INTERESSATO")
     
     c.setFont("Helvetica", 10)
     y_box = y - 0.9*cm
@@ -14379,7 +14375,7 @@ def generate_gdpr_adult_privacy_pdf(
     
     # Technical metadata box (very important for legal validity)
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(2*cm, y, "METADATI DI FIRMA (validità probatoria)")
+    c.drawString(2*cm, y, "METADATI PRESA VISIONE (validità probatoria)")
     y -= 0.4*cm
     
     c.setStrokeColor(colors.HexColor("#2C3E50"))
@@ -14566,26 +14562,9 @@ def generate_gdpr_minor_privacy_pdf(
     
     y -= 0.3*cm
     
-    # Section 3 - Certificato medico
+    # Section 3 - Modalità (was Section 4)
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "3. CERTIFICATO MEDICO SPORTIVO")
-    y -= 0.5*cm
-    c.setFont("Helvetica", 10)
-    cert_text = "La società acquisisce e conserva presso la propria sede la documentazione relativa al certificato medico sportivo del minore. Ai fini della gestione organizzativa delle attività sportive può essere registrata nel sistema gestionale esclusivamente la data di emissione e la data di scadenza del certificato medico. L'applicativo gestionale utilizzato dalla società non consente il caricamento o la conservazione di certificati medici o altri documenti sanitari."
-    y = draw_wrapped_text(c, cert_text, 2*cm, y, max_w)
-    
-    # Footer page 1
-    c.setFont("Helvetica", 8)
-    c.drawCentredString(width/2, 1.5*cm, "Pagina 1 di 3")
-    
-    c.showPage()
-    
-    # ==================== PAGE 2 ====================
-    y = height - 2*cm
-    
-    # Section 4 - Modalità
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "4. MODALITÀ DI TRATTAMENTO")
+    c.drawString(2*cm, y, "3. MODALITÀ DI TRATTAMENTO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
     modalita_text = "Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei con modalità idonee a garantire la sicurezza e la riservatezza dei dati personali. La società può utilizzare applicativi gestionali informatici per l'organizzazione delle attività sportive e amministrative. L'accesso ai dati è consentito esclusivamente ai soggetti autorizzati dalla società."
@@ -14593,9 +14572,9 @@ def generate_gdpr_minor_privacy_pdf(
     
     y -= 0.3*cm
     
-    # Section 5 - Conservazione
+    # Section 4 - Conservazione
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "5. PERIODO DI CONSERVAZIONE")
+    c.drawString(2*cm, y, "4. PERIODO DI CONSERVAZIONE")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
     conservazione_text = "I dati saranno conservati per tutta la durata del rapporto sportivo con la società e successivamente per il periodo necessario all'adempimento degli obblighi legali, amministrativi e sportivi previsti dalla normativa vigente."
@@ -14603,9 +14582,9 @@ def generate_gdpr_minor_privacy_pdf(
     
     y -= 0.3*cm
     
-    # Section 6 - Diritti
+    # Section 5 - Diritti
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "6. DIRITTI DELL'INTERESSATO")
+    c.drawString(2*cm, y, "5. DIRITTI DELL'INTERESSATO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
     c.drawString(2*cm, y, "Il genitore/tutore può esercitare i diritti previsti dagli articoli 15-22 del GDPR, tra cui:")
@@ -14624,9 +14603,9 @@ def generate_gdpr_minor_privacy_pdf(
     
     y -= 0.3*cm
     
-    # Section 7 - Immagini e Video
+    # Section 6 - Immagini e Video
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "7. UTILIZZO DI IMMAGINI E VIDEO")
+    c.drawString(2*cm, y, "6. UTILIZZO DI IMMAGINI E VIDEO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
     immagini_text = "Durante le attività sportive potranno essere realizzate fotografie o riprese video degli atleti per finalità documentative, informative e promozionali della società sportiva."
@@ -14634,39 +14613,42 @@ def generate_gdpr_minor_privacy_pdf(
     
     y -= 0.3*cm
     
-    # Section 8 - Firma digitale
+    # Section 7 - Firma digitale
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "8. FIRMA DIGITALE DEL DOCUMENTO")
+    c.drawString(2*cm, y, "7. PRESA VISIONE DEL DOCUMENTO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    firma_text = "La sottoscrizione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla società. Il sistema può registrare metadati tecnici della firma, tra cui data, ora e identificativo dell'utente, ai fini della tracciabilità e della sicurezza del sistema."
+    firma_text = "La presa visione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla società. Il sistema registra metadati tecnici della presa visione, tra cui data, ora e identificativo dell'utente, ai fini della tracciabilità e della sicurezza del sistema."
     y = draw_wrapped_text(c, firma_text, 2*cm, y, max_w)
     
-    y -= 0.5*cm
+    # Footer page 1
+    c.setFont("Helvetica", 8)
+    c.drawCentredString(width/2, 1.5*cm, "Pagina 1 di 2")
+    
+    c.showPage()
+    
+    # ==================== PAGE 2 ====================
+    y = height - 2*cm
     
     # DICHIARAZIONE
     c.setFont("Helvetica-Bold", 11)
     c.drawString(2*cm, y, "DICHIARAZIONE")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    dichiarazione_text = "Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente informativa e autorizza il trattamento dei dati personali del minore per le finalità indicate."
+    dichiarazione_text = "Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente informativa sulla privacy ai sensi del Regolamento UE 2016/679 relativa al trattamento dei dati del minore."
     y = draw_wrapped_text(c, dichiarazione_text, 2*cm, y, max_w)
     
     y -= 0.8*cm
     
-    # CONSENSI ESPRESSI (minori)
+    # PRESA VISIONE (minori)
     cd = consent_data or {}
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "CONSENSI ESPRESSI")
+    c.drawString(2*cm, y, "PRESA VISIONE")
     y -= 0.5*cm
     c.setFont("Helvetica", 9)
     
     check_pv = "X" if cd.get("privacy_viewed", True) else " "
-    c.drawString(2*cm, y, f"[{check_pv}] Presa visione dell'informativa sulla privacy (obbligatorio)")
-    y -= 0.4*cm
-    
-    check_dt = "X" if cd.get("data_treatment", True) else " "
-    c.drawString(2*cm, y, f"[{check_dt}] Autorizzazione trattamento dati per attivita' sportiva (obbligatorio)")
+    c.drawString(2*cm, y, f"[{check_pv}] Informativa privacy presa visione (obbligatorio)")
     y -= 0.4*cm
     
     check_ii = "X" if cd.get("images_internal", False) else " "
@@ -14682,14 +14664,9 @@ def generate_gdpr_minor_privacy_pdf(
     c.drawString(2*cm, y, f"Versione doc: {cd.get('document_version', document_version)} | Timestamp: {timestamp} | IP: {ip_address}")
     c.setFillColor(colors.black)
     
-    # Footer page 2
-    c.setFont("Helvetica", 8)
-    c.drawCentredString(width/2, 1.5*cm, "Pagina 2 di 3")
+    y -= 1*cm
     
-    c.showPage()
-    
-    # ==================== PAGE 3 ====================
-    y = height - 2*cm
+    # Dati del genitore/tutore
     c.setStrokeColor(colors.HexColor("#27AE60"))
     c.setFillColor(colors.HexColor("#E8F8F5"))
     c.roundRect(2*cm, y - 2*cm, width - 4*cm, 2.5*cm, 5, fill=1, stroke=1)
@@ -14766,7 +14743,7 @@ def generate_gdpr_minor_privacy_pdf(
     
     # Technical metadata box
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(2*cm, y, "METADATI DI FIRMA (validità probatoria)")
+    c.drawString(2*cm, y, "METADATI PRESA VISIONE (validità probatoria)")
     y -= 0.4*cm
     
     c.setStrokeColor(colors.HexColor("#2C3E50"))
@@ -14790,10 +14767,10 @@ def generate_gdpr_minor_privacy_pdf(
     y_meta -= 0.35*cm
     c.drawString(2.3*cm, y_meta, f"ip_address: {ip_address}")
     
-    # Footer page 3
+    # Footer bottom of page 2
     c.setFont("Helvetica", 8)
     c.setFillColor(colors.black)
-    c.drawCentredString(width/2, 1.5*cm, "Pagina 3 di 3")
+    c.drawCentredString(width/2, 1.5*cm, "Pagina 2 di 2")
     
     c.save()
     return buffer.getvalue()

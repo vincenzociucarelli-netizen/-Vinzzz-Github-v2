@@ -184,10 +184,6 @@ export default function InviteRegister() {
       showAlert('Errore', 'Devi dichiarare di aver preso visione dell\'Informativa sulla Privacy');
       return;
     }
-    if (!consentDataProcessing) {
-      showAlert('Errore', 'Devi acconsentire al trattamento dei dati personali');
-      return;
-    }
 
     // Parse date if provided
     let dob: string | undefined;
@@ -224,7 +220,6 @@ export default function InviteRegister() {
       // GDPR consents
       payload.consents = {
         privacy_viewed: consentPrivacyViewed,
-        data_processing: consentDataProcessing,
         images_internal: consentInternalImages,
         images_promo: consentPromotionalImages,
       };
@@ -509,17 +504,6 @@ export default function InviteRegister() {
               <Ionicons name={consentPrivacyViewed ? "checkbox" : "square-outline"} size={22} color={consentPrivacyViewed ? "#4CAF50" : "#999"} />
               <Text style={styles.consentText}>
                 <Text style={{ fontWeight: '600' }}>Dichiaro di aver preso visione dell'Informativa sulla Privacy</Text> <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.consentRow}
-              onPress={() => setConsentDataProcessing(!consentDataProcessing)}
-              data-testid="consent-data-processing"
-            >
-              <Ionicons name={consentDataProcessing ? "checkbox" : "square-outline"} size={22} color={consentDataProcessing ? "#4CAF50" : "#999"} />
-              <Text style={styles.consentText}>
-                <Text style={{ fontWeight: '600' }}>Acconsento al trattamento dei miei dati personali</Text> per le finalita descritte nell'informativa <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
               </Text>
             </TouchableOpacity>
 
