@@ -766,7 +766,7 @@ export default function TeamDetail() {
                     ]);
                   }}
                 >
-                  <Ionicons name="add-circle-outline" size={20} color="#007AFF" />
+                  <Ionicons name="add" size={20} color="#007AFF" />
                   <Text style={styles.addInstallmentText}>Aggiungi Rata</Text>
                 </TouchableOpacity>
               )}
@@ -882,7 +882,7 @@ export default function TeamDetail() {
               
               {trainingSessions.length < 10 && (
                 <TouchableOpacity style={styles.addTrainingBtn} onPress={addTrainingSession}>
-                  <Ionicons name="add-circle" size={20} color="#007AFF" />
+                  <Ionicons name="add" size={20} color="#007AFF" />
                   <Text style={styles.addTrainingText}>Aggiungi Allenamento</Text>
                 </TouchableOpacity>
               )}
@@ -1417,7 +1417,7 @@ export default function TeamDetail() {
               
               {trainingSessions.length < 10 && (
                 <TouchableOpacity style={styles.addTrainingBtn} onPress={addTrainingSession}>
-                  <Ionicons name="add-circle" size={20} color="#007AFF" />
+                  <Ionicons name="add" size={20} color="#007AFF" />
                   <Text style={styles.addTrainingText}>Aggiungi Allenamento</Text>
                 </TouchableOpacity>
               )}

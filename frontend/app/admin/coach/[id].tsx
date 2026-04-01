@@ -1331,7 +1331,7 @@ export default function AdminCoachDetail() {
               setCreateReceiptModalVisible(true);
             }}
           >
-            <Ionicons name="add-circle" size={20} color="#fff" />
+            <Ionicons name="add" size={20} color="#fff" />
             <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 8 }}>
               Genera Quietanza Personalizzata
             </Text>

@@ -817,7 +817,7 @@ export default function AdminDirigenteDetail() {
                 style={styles.addQualificationBtn}
                 onPress={() => setQualificationModalVisible(true)}
               >
-                <Ionicons name="add-circle" size={20} color="#34C759" />
+                <Ionicons name="add" size={20} color="#34C759" />
                 <Text style={styles.addQualificationText}>Aggiungi carica...</Text>
               </TouchableOpacity>
             </View>
@@ -1245,7 +1245,7 @@ export default function AdminDirigenteDetail() {
               setCreateReceiptModalVisible(true);
             }}
           >
-            <Ionicons name="add-circle" size={20} color="#fff" />
+            <Ionicons name="add" size={20} color="#fff" />
             <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 8 }}>
               Genera Quietanza Personalizzata
             </Text>
@@ -1418,7 +1418,7 @@ export default function AdminDirigenteDetail() {
                       }
                     }}
                   >
-                    <Ionicons name="add-circle-outline" size={22} color="#34C759" />
+                    <Ionicons name="add" size={22} color="#34C759" />
                     <Text style={styles.qualificationModalItemText}>{q}</Text>
                   </TouchableOpacity>
                 ))

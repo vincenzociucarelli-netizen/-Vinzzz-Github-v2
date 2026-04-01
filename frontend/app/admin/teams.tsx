@@ -676,7 +676,7 @@ export default function TeamsScreen() {
 
               {trainings.length < 10 && (
                 <TouchableOpacity style={styles.addButton} onPress={addTraining}>
-                  <Ionicons name="add-circle" size={20} color="#007AFF" />
+                  <Ionicons name="add" size={20} color="#007AFF" />
                   <Text style={styles.addButtonText}>Aggiungi Allenamento</Text>
                 </TouchableOpacity>
               )}
@@ -889,7 +889,7 @@ export default function TeamsScreen() {
                       style={[styles.addButton, {marginBottom: 16}]}
                       onPress={() => setInstallments([...installments, { name: `Rata ${installments.length + 1}`, amount: '', due_date: '' }])}
                     >
-                      <Ionicons name="add-circle-outline" size={20} color="#007AFF" />
+                      <Ionicons name="add" size={20} color="#007AFF" />
                       <Text style={styles.addButtonText}>Aggiungi Rata ({installments.length}/12)</Text>
                     </TouchableOpacity>
                   )}

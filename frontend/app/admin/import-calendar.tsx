@@ -478,7 +478,7 @@ export default function ImportCalendarScreen() {
             ))}
             
             <TouchableOpacity style={styles.addMappingBtn} onPress={addTeamMapping}>
-              <Ionicons name="add-circle" size={20} color="#007AFF" />
+              <Ionicons name="add" size={20} color="#007AFF" />
               <Text style={styles.addMappingText}>Aggiungi mapping</Text>
             </TouchableOpacity>
           </View>

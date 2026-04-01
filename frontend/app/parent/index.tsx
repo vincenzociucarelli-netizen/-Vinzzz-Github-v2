@@ -901,7 +901,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           style={styles.addButton}
           onPress={() => router.push('/parent/register-athlete')}
         >
-          <Ionicons name="add-circle" size={24} color="#fff" />
+          <Ionicons name="add" size={24} color="#fff" />
           <Text style={styles.addButtonText}>Registra Nuovo Atleta</Text>
         </TouchableOpacity>
 

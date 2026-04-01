@@ -2535,7 +2535,7 @@ export default function AthleteDetail() {
             onPress={() => { setMinorNewPin(''); setMinorConfirmPin(''); setMinorPinModalVisible(true); }}
             data-testid="minor-set-pin-button"
           >
-            <Ionicons name={minorHasPin ? "key" : "add-circle"} size={18} color={minorHasPin ? '#2E7D32' : '#1565C0'} />
+            <Ionicons name={minorHasPin ? "key" : "add"} size={18} color={minorHasPin ? '#2E7D32' : '#1565C0'} />
             <Text style={{ fontWeight: '600', color: minorHasPin ? '#2E7D32' : '#1565C0', fontSize: 14 }}>
               {minorHasPin ? 'Modifica PIN' : 'Imposta PIN'}
             </Text>
