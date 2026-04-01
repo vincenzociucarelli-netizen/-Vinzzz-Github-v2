@@ -14212,6 +14212,7 @@ def generate_gdpr_adult_privacy_pdf(
     society_name: str,
     ragione_sociale: str,
     society_address: str,
+    society_fiscal_code: str,
     society_email: str,
     signer_name: str,
     signer_surname: str,
@@ -14277,16 +14278,17 @@ def generate_gdpr_adult_privacy_pdf(
     # Box Dati Societari
     c.setStrokeColor(colors.HexColor("#1565C0"))
     c.setFillColor(colors.HexColor("#E3F2FD"))
-    c.roundRect(2*cm, y - 2.6*cm, max_w, 2.4*cm, 5, stroke=1, fill=1)
+    c.roundRect(2*cm, y - 3.0*cm, max_w, 2.8*cm, 5, stroke=1, fill=1)
     c.setFillColor(colors.black)
     
     c.setFont("Helvetica-Bold", 10)
     c.drawString(2.3*cm, y - 0.6*cm, f"Società: {nome_legale}")
     c.setFont("Helvetica", 9)
     c.drawString(2.3*cm, y - 1.15*cm, f"Sede: {society_address}")
-    c.drawString(2.3*cm, y - 1.65*cm, f"Email: {society_email}")
+    c.drawString(2.3*cm, y - 1.65*cm, f"C.F.: {society_fiscal_code}")
+    c.drawString(2.3*cm, y - 2.15*cm, f"Email: {society_email}")
     
-    y -= 3.2*cm
+    y -= 3.6*cm
     
     # Intro
     c.setFont("Helvetica", 10)
@@ -14529,6 +14531,7 @@ def generate_gdpr_minor_privacy_pdf(
     society_name: str,
     ragione_sociale: str,
     society_address: str,
+    society_fiscal_code: str,
     society_email: str,
     parent_name: str,
     parent_surname: str,
@@ -14593,16 +14596,17 @@ def generate_gdpr_minor_privacy_pdf(
     # Box Dati Societari
     c.setStrokeColor(colors.HexColor("#1565C0"))
     c.setFillColor(colors.HexColor("#E3F2FD"))
-    c.roundRect(2*cm, y - 2.6*cm, max_w, 2.4*cm, 5, stroke=1, fill=1)
+    c.roundRect(2*cm, y - 3.0*cm, max_w, 2.8*cm, 5, stroke=1, fill=1)
     c.setFillColor(colors.black)
     
     c.setFont("Helvetica-Bold", 10)
     c.drawString(2.3*cm, y - 0.6*cm, f"Società: {nome_legale}")
     c.setFont("Helvetica", 9)
     c.drawString(2.3*cm, y - 1.15*cm, f"Sede: {society_address}")
-    c.drawString(2.3*cm, y - 1.65*cm, f"Email: {society_email}")
+    c.drawString(2.3*cm, y - 1.65*cm, f"C.F.: {society_fiscal_code}")
+    c.drawString(2.3*cm, y - 2.15*cm, f"Email: {society_email}")
     
-    y -= 3.2*cm
+    y -= 3.6*cm
     
     # Intro
     c.setFont("Helvetica", 10)
@@ -14920,6 +14924,7 @@ def generate_personal_consent_pdf(
     society_name: str,
     ragione_sociale: str,
     society_address: str,
+    society_fiscal_code: str,
     society_email: str,
     parent_name: str,
     parent_fiscal_code: str,
@@ -15084,14 +15089,15 @@ def generate_personal_consent_pdf(
     # Society data box
     c.setStrokeColor(colors.HexColor("#1565C0"))
     c.setFillColor(colors.HexColor("#E3F2FD"))
-    c.roundRect(margin_left, y - 2.6*cm, max_w, 2.4*cm, 5, stroke=1, fill=1)
+    c.roundRect(margin_left, y - 3.0*cm, max_w, 2.8*cm, 5, stroke=1, fill=1)
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 10)
     c.drawString(margin_left + 0.3*cm, y - 0.6*cm, f"Societa: {nome_legale}")
     c.setFont("Helvetica", 9)
     c.drawString(margin_left + 0.3*cm, y - 1.15*cm, f"Sede: {society_address}")
-    c.drawString(margin_left + 0.3*cm, y - 1.65*cm, f"Email: {society_email}")
-    y -= 3.2*cm
+    c.drawString(margin_left + 0.3*cm, y - 1.65*cm, f"C.F.: {society_fiscal_code}")
+    c.drawString(margin_left + 0.3*cm, y - 2.15*cm, f"Email: {society_email}")
+    y -= 3.6*cm
 
     # Parent data box
     c.setStrokeColor(colors.HexColor("#2E7D32"))
@@ -15920,6 +15926,7 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
             if society_province:
                 society_full_address += f" ({society_province})"
             society_email_addr = society.get("email", "") if society else ""
+            society_fiscal_code = society.get("fiscal_code", "") if society else ""
             ragione_sociale = society.get("ragione_sociale", "") if society else ""
             
             # Split signer name into name and surname
@@ -15939,6 +15946,7 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
                 society_name=society_name,
                 ragione_sociale=ragione_sociale,
                 society_address=society_full_address,
+                society_fiscal_code=society_fiscal_code,
                 society_email=society_email_addr,
                 signer_name=signer_first_name,
                 signer_surname=signer_surname,
@@ -16217,6 +16225,7 @@ async def get_consent_pdf(consent_type: str, current_user = Depends(get_current_
     if society_province:
         society_full_address += f" ({society_province})"
     society_email = society_settings.get("email", "") if society_settings else ""
+    society_fiscal_code = society_settings.get("fiscal_code", "") if society_settings else ""
     society_id = str(society_settings.get("id", "")) if society_settings else ""
     
     ts_raw = consent_data.get("timestamp", "")
@@ -16231,6 +16240,7 @@ async def get_consent_pdf(consent_type: str, current_user = Depends(get_current_
         society_name=society_name,
         ragione_sociale=ragione_sociale,
         society_address=society_full_address,
+        society_fiscal_code=society_fiscal_code,
         society_email=society_email,
         parent_name=user.get("full_name", ""),
         parent_fiscal_code=user.get("fiscal_code", "N/D"),
@@ -16329,6 +16339,7 @@ async def sign_gdpr_privacy_document(
     if society_province:
         society_full_address += f" ({society_province})"
     society_email = (society_settings.get("email", "") if society_settings else "") or (society.get("email", "") if society else "") or ""
+    society_fiscal_code = (society_settings.get("fiscal_code", "") if society_settings else "") or (society.get("fiscal_code", "") if society else "") or ""
     
     # Generate timestamp
     timestamp = datetime.now(timezone.utc)
@@ -16368,6 +16379,7 @@ async def sign_gdpr_privacy_document(
                 society_name=society_name,
                 ragione_sociale=society_settings.get("ragione_sociale", "") if society_settings else "",
                 society_address=society_full_address,
+                society_fiscal_code=society_fiscal_code,
                 society_email=society_email,
                 signer_name=signer_name,
                 signer_surname=signer_surname,
@@ -16451,6 +16463,7 @@ async def sign_gdpr_privacy_document(
                 society_name=society_name,
                 ragione_sociale=society_settings.get("ragione_sociale", "") if society_settings else "",
                 society_address=society_full_address,
+                society_fiscal_code=society_fiscal_code,
                 society_email=society_email,
                 parent_name=parent_name,
                 parent_surname=parent_surname,
@@ -16719,6 +16732,7 @@ async def preview_gdpr_privacy_document(
     if society_province:
         society_full_address += f" ({society_province})"
     society_email = (society_settings.get("email", "") if society_settings else "") or (society.get("email", "") if society else "") or ""
+    society_fiscal_code = (society_settings.get("fiscal_code", "") if society_settings else "") or (society.get("fiscal_code", "") if society else "") or ""
     
     # Preview timestamp and metadata
     timestamp_str = "[DATA FIRMA]"
@@ -16760,6 +16774,7 @@ async def preview_gdpr_privacy_document(
                 society_name=society_name,
                 ragione_sociale=society_settings.get("ragione_sociale", "") if society_settings else "",
                 society_address=society_full_address,
+                society_fiscal_code=society_fiscal_code,
                 society_email=society_email,
                 signer_name=signer_name,
                 signer_surname=signer_surname,
@@ -16826,6 +16841,7 @@ async def preview_gdpr_privacy_document(
                 society_name=society_name,
                 ragione_sociale=society_settings.get("ragione_sociale", "") if society_settings else "",
                 society_address=society_full_address,
+                society_fiscal_code=society_fiscal_code,
                 society_email=society_email,
                 parent_name=parent_name,
                 parent_surname=parent_surname,
