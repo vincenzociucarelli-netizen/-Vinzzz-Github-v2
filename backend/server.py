@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Depends, status, Request
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Depends, status, Request, Body
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from dotenv import load_dotenv
@@ -13789,8 +13789,8 @@ async def get_trial_status(athlete_id: str, current_user = Depends(get_current_u
     }
 
 @api_router.post("/trial/accept-privacy/{athlete_id}")
-async def accept_privacy_and_continue(athlete_id: str, current_user = Depends(get_current_user)):
-    """Accept privacy and confirm to continue after trial period"""
+async def accept_privacy_and_continue(athlete_id: str, req: Request, data: dict = Body(default={}), current_user = Depends(get_current_user)):
+    """Accept privacy and confirm to continue after trial period. Saves image consents."""
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
@@ -13807,13 +13807,81 @@ async def accept_privacy_and_continue(athlete_id: str, current_user = Depends(ge
     elif current_user["role"] not in ["admin"]:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     
-    # Update athlete with privacy accepted
+    # Get client IP
+    client_ip = req.client.host if req.client else "unknown"
+    forwarded_for = req.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+    
+    now = datetime.now(timezone.utc)
+    
+    # Build consents object
+    images_internal = data.get("images_internal", False)
+    images_promo = data.get("images_promo", False)
+    document_version = data.get("document_version", "1.0")
+    
+    consents = {
+        "privacy_viewed": {
+            "value": True,
+            "timestamp": now.isoformat(),
+            "user_id": current_user["id"],
+            "child_id": athlete_id,
+            "document_version": document_version,
+            "document_name": f"privacy_minore_v{document_version}",
+            "ip_address": client_ip,
+        },
+        "data_processing_sports": {
+            "value": True,
+            "timestamp": now.isoformat(),
+            "user_id": current_user["id"],
+            "child_id": athlete_id,
+            "document_version": document_version,
+            "document_name": f"privacy_minore_v{document_version}",
+            "ip_address": client_ip,
+        },
+        "images_internal": {
+            "value": images_internal,
+            "timestamp": now.isoformat(),
+            "user_id": current_user["id"],
+            "child_id": athlete_id,
+            "document_version": document_version,
+            "ip_address": client_ip,
+        },
+        "images_promo": {
+            "value": images_promo,
+            "timestamp": now.isoformat(),
+            "user_id": current_user["id"],
+            "child_id": athlete_id,
+            "document_version": document_version,
+            "ip_address": client_ip,
+        },
+    }
+    
+    # Build consent history entry
+    consent_history = [{
+        "action": "initial_acceptance",
+        "timestamp": now.isoformat(),
+        "user_id": current_user["id"],
+        "child_id": athlete_id,
+        "ip_address": client_ip,
+        "document_version": document_version,
+        "consents_given": {
+            "privacy_viewed": True,
+            "data_processing_sports": True,
+            "images_internal": images_internal,
+            "images_promo": images_promo,
+        }
+    }]
+    
+    # Update athlete with privacy accepted + consents
     await db.athletes.update_one(
         {"id": athlete_id},
         {"$set": {
             "privacy_accepted": True,
-            "privacy_accepted_date": datetime.utcnow(),
-            "status": "active"
+            "privacy_accepted_date": now,
+            "status": "active",
+            "consents": consents,
+            "consent_history": consent_history,
         }}
     )
     
@@ -13825,7 +13893,12 @@ async def accept_privacy_and_continue(athlete_id: str, current_user = Depends(ge
         society_id=current_user.get("society_id", ""),
         target_user_id=athlete_id,
         target_user_name=athlete.get("full_name"),
-        details={"document_type": "privacy", "accepted_by_role": current_user["role"]}
+        details={
+            "document_type": "privacy",
+            "accepted_by_role": current_user["role"],
+            "images_internal": images_internal,
+            "images_promo": images_promo,
+        }
     )
     
     return {
@@ -22446,38 +22519,50 @@ async def update_athlete_consents(
     if data.images_internal is not None:
         old_val = existing_consents.get("images_internal", {}).get("value") if existing_consents.get("images_internal") else None
         if old_val != data.images_internal:
-            existing_consents["images_internal"] = {
+            entry = {
                 "value": data.images_internal,
                 "timestamp": now.isoformat(),
                 "user_id": current_user["id"],
+                "child_id": athlete_id,
                 "document_version": "1.0",
                 "ip_address": client_ip,
             }
+            if old_val is True and data.images_internal is False:
+                entry["revoked_at"] = now.isoformat()
+            existing_consents["images_internal"] = entry
             new_history_entries.append({
                 "type": "images_internal",
+                "action": "revoked" if (old_val is True and data.images_internal is False) else "granted" if data.images_internal else "updated",
                 "old_value": old_val,
                 "new_value": data.images_internal,
                 "timestamp": now.isoformat(),
                 "user_id": current_user["id"],
+                "child_id": athlete_id,
                 "ip_address": client_ip,
             })
     
     if data.images_promo is not None:
         old_val = existing_consents.get("images_promo", {}).get("value") if existing_consents.get("images_promo") else None
         if old_val != data.images_promo:
-            existing_consents["images_promo"] = {
+            entry = {
                 "value": data.images_promo,
                 "timestamp": now.isoformat(),
                 "user_id": current_user["id"],
+                "child_id": athlete_id,
                 "document_version": "1.0",
                 "ip_address": client_ip,
             }
+            if old_val is True and data.images_promo is False:
+                entry["revoked_at"] = now.isoformat()
+            existing_consents["images_promo"] = entry
             new_history_entries.append({
                 "type": "images_promo",
+                "action": "revoked" if (old_val is True and data.images_promo is False) else "granted" if data.images_promo else "updated",
                 "old_value": old_val,
                 "new_value": data.images_promo,
                 "timestamp": now.isoformat(),
                 "user_id": current_user["id"],
+                "child_id": athlete_id,
                 "ip_address": client_ip,
             })
     

@@ -58,6 +58,11 @@ export default function ParentDashboard() {
   const [signatureVisible, setSignatureVisible] = useState(false);
   const [signingAthlete, setSigningAthlete] = useState<any | null>(null);
   
+  // Consent selection state (pre-signature modal)
+  const [consentModalVisible, setConsentModalVisible] = useState(false);
+  const [consentImgInternal, setConsentImgInternal] = useState(false);
+  const [consentImgPromo, setConsentImgPromo] = useState(false);
+
   // Notifications state
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(true);
@@ -233,7 +238,10 @@ export default function ParentDashboard() {
       }
       
       setSigningAthlete({ ...athlete, athleteName });
-      setSignatureVisible(true);
+      // Reset consent toggles and open consent selection modal
+      setConsentImgInternal(false);
+      setConsentImgPromo(false);
+      setConsentModalVisible(true);
     }
   };
   
@@ -246,12 +254,17 @@ export default function ParentDashboard() {
     
     setProcessingTrial(true);
     try {
-      // First, sign the document digitally
+      // Build the privacy text with correct GDPR terminology
       const privacyText = `INFORMATIVA PRIVACY PER MINORI
 (Regolamento UE 2016/679 - GDPR)
 
+Il sottoscritto ${user.full_name}
+in qualità di genitore/tutore del minore ${athleteName}
+
 Gentile Genitore/Tutore,
 la presente informativa descrive le modalità di trattamento dei dati personali del minore da parte della società sportiva.
+
+Il trattamento dei dati è necessario per l'esecuzione dell'attività sportiva e per obblighi di legge.
 
 1. FINALITÀ DEL TRATTAMENTO
 I dati personali del minore e del genitore/tutore saranno trattati per:
@@ -267,26 +280,26 @@ Dati del minore: nome e cognome, data di nascita, codice fiscale, recapito telef
 Dati del genitore/tutore: nome e cognome, codice fiscale, telefono, email, indirizzo.
 Il codice fiscale del genitore/tutore può essere utilizzato anche ai fini della detrazione fiscale delle spese sportive prevista dalla normativa vigente.
 
-3. CERTIFICATO MEDICO SPORTIVO
-La società acquisisce e conserva presso la propria sede la documentazione relativa al certificato medico sportivo del minore. Nel sistema gestionale vengono registrate esclusivamente la data di emissione e la data di scadenza del certificato medico.
-
-4. MODALITÀ DI TRATTAMENTO
+3. MODALITÀ DI TRATTAMENTO
 Il trattamento dei dati avviene mediante strumenti informatici e/o cartacei con modalità idonee a garantire la sicurezza e la riservatezza dei dati personali.
 
-5. PERIODO DI CONSERVAZIONE
+4. PERIODO DI CONSERVAZIONE
 I dati saranno conservati per tutta la durata del rapporto sportivo con la società e successivamente per il periodo necessario all'adempimento degli obblighi legali.
 
-6. DIRITTI DELL'INTERESSATO
-Il genitore/tutore può esercitare i diritti previsti dagli articoli 15–22 del GDPR.
+5. DIRITTI DELL'INTERESSATO
+Il genitore/tutore può esercitare i diritti previsti dagli articoli 15-22 del GDPR.
 
-7. UTILIZZO DI IMMAGINI E VIDEO
+6. UTILIZZO DI IMMAGINI E VIDEO
 Durante le attività sportive potranno essere realizzate fotografie o riprese video degli atleti per finalità documentative, informative e promozionali della società sportiva.
 
-8. FIRMA DIGITALE DEL DOCUMENTO
-La sottoscrizione del presente documento avviene in forma digitale tramite l'applicativo gestionale utilizzato dalla società.
+PRESA VISIONE:
+[X] Informativa privacy presa visione (obbligatorio)
+[X] Il trattamento dei dati è necessario per l'esecuzione dell'attività sportiva e per obblighi di legge (obbligatorio)
+[${consentImgInternal ? 'X' : ' '}] Utilizzo immagini ad uso interno (facoltativo)
+[${consentImgPromo ? 'X' : ' '}] Utilizzo immagini a scopo promozionale (facoltativo)
 
 DICHIARAZIONE
-Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compreso la presente informativa e autorizza il trattamento dei dati personali del minore ${athleteName} per le finalità indicate.`;
+Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compreso la presente informativa sulla privacy ai sensi del Regolamento UE 2016/679 relativa al trattamento dei dati del minore ${athleteName}.`;
 
       await api.post('/documents/sign', {
         document_type: 'privacy_consent',
@@ -299,15 +312,21 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
         additional_data: {
           'Atleta': athleteName,
           'Genitore/Tutore': user.full_name,
-          'Tipo documento': 'Presa Visione Privacy e Liberatoria'
+          'Tipo documento': 'Presa Visione Privacy e Liberatoria',
+          'Consenso immagini uso interno': consentImgInternal ? 'SI' : 'NO',
+          'Consenso immagini uso promozionale': consentImgPromo ? 'SI' : 'NO',
         }
       });
       
-      // Then update the athlete's privacy status
-      await api.post(`/trial/accept-privacy/${athleteId}`);
+      // Then update the athlete's privacy status with consent choices
+      await api.post(`/trial/accept-privacy/${athleteId}`, {
+        images_internal: consentImgInternal,
+        images_promo: consentImgPromo,
+        document_version: '1.0',
+      });
       
       Alert.alert(
-        '✅ Documento Firmato', 
+        'Documento Firmato', 
         `La privacy per ${athleteName} è stata accettata e firmata.\n\nUna copia del documento è stata inviata alla tua email.`
       );
       
@@ -325,6 +344,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
     } finally {
       setProcessingTrial(false);
       setSigningAthlete(null);
+      setConsentModalVisible(false);
     }
   };
 
@@ -1025,6 +1045,143 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
         </View>
       </Modal>
 
+      {/* Consent Selection Modal - Before Signature */}
+      {signingAthlete && user && consentModalVisible && (
+        <Modal
+          visible={consentModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => {
+            setConsentModalVisible(false);
+            setSigningAthlete(null);
+          }}
+        >
+          <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 16 }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, maxHeight: '85%' }}>
+              <ScrollView style={{ padding: 20 }}>
+                {/* Header with parent/minor names */}
+                <View style={{ backgroundColor: '#E3F2FD', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#0D47A1', textAlign: 'center' }}>
+                    PRESA VISIONE INFORMATIVA PRIVACY
+                  </Text>
+                  <Text style={{ fontSize: 13, color: '#1565C0', textAlign: 'center', marginTop: 8, lineHeight: 20 }}>
+                    Il sottoscritto <Text style={{ fontWeight: '700' }}>{user.full_name}</Text>{'\n'}
+                    in qualità di genitore/tutore del minore{'\n'}
+                    <Text style={{ fontWeight: '700' }}>{signingAthlete.full_name || signingAthlete.athleteName}</Text>
+                  </Text>
+                </View>
+
+                {/* Section A - Obbligatori (non modificabili) */}
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }} data-testid="consent-section-a-title">
+                  A) OBBLIGATORI - Non modificabili
+                </Text>
+                <View style={{ backgroundColor: '#F1F8E9', borderRadius: 10, padding: 14, marginBottom: 6, borderLeftWidth: 4, borderLeftColor: '#4CAF50' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Ionicons name="checkbox" size={22} color="#4CAF50" />
+                    <Text style={{ flex: 1, fontSize: 13, color: '#333', fontWeight: '600' }}>
+                      Presa visione dell'informativa privacy
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 11, color: '#666', marginTop: 4, marginLeft: 32, fontStyle: 'italic' }}>
+                    Obbligatorio - Non disattivabile
+                  </Text>
+                </View>
+                <View style={{ backgroundColor: '#F1F8E9', borderRadius: 10, padding: 14, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: '#4CAF50' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Ionicons name="checkbox" size={22} color="#4CAF50" />
+                    <Text style={{ flex: 1, fontSize: 13, color: '#333', fontWeight: '600' }}>
+                      Trattamento dati per attività sportiva
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 11, color: '#666', marginTop: 4, marginLeft: 32, fontStyle: 'italic' }}>
+                    Il trattamento dei dati è necessario per l'esecuzione dell'attività sportiva e per obblighi di legge
+                  </Text>
+                </View>
+
+                {/* Section B - Facoltativi (toggle) */}
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }} data-testid="consent-section-b-title">
+                  B) FACOLTATIVI - Modificabili nel tempo
+                </Text>
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 12,
+                    backgroundColor: consentImgInternal ? '#E8F5E9' : '#FAFAFA',
+                    borderRadius: 10, padding: 14, marginBottom: 8,
+                    borderWidth: 1, borderColor: consentImgInternal ? '#4CAF50' : '#E0E0E0',
+                  }}
+                  onPress={() => setConsentImgInternal(!consentImgInternal)}
+                  data-testid="consent-toggle-images-internal"
+                >
+                  <Ionicons name={consentImgInternal ? "checkbox" : "square-outline"} size={22} color={consentImgInternal ? "#4CAF50" : "#999"} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>
+                      Utilizzo immagini ad uso interno
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
+                      Es. comunicazioni, gruppi, attività della società
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 12,
+                    backgroundColor: consentImgPromo ? '#E8F5E9' : '#FAFAFA',
+                    borderRadius: 10, padding: 14, marginBottom: 16,
+                    borderWidth: 1, borderColor: consentImgPromo ? '#4CAF50' : '#E0E0E0',
+                  }}
+                  onPress={() => setConsentImgPromo(!consentImgPromo)}
+                  data-testid="consent-toggle-images-promo"
+                >
+                  <Ionicons name={consentImgPromo ? "checkbox" : "square-outline"} size={22} color={consentImgPromo ? "#4CAF50" : "#999"} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>
+                      Utilizzo immagini a scopo promozionale
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
+                      Sito web, social media, materiale pubblicitario
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Note about consent revocation */}
+                <View style={{ backgroundColor: '#FFF8E1', borderRadius: 8, padding: 12, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: '#FFA000' }}>
+                  <Text style={{ fontSize: 11, color: '#795548', fontStyle: 'italic', lineHeight: 16 }}>
+                    I consensi facoltativi possono essere modificati in qualsiasi momento dal profilo dell'atleta. La revoca del consenso ha effetto solo per utilizzi futuri.
+                  </Text>
+                </View>
+
+                {/* Proceed to signature button */}
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#007AFF', borderRadius: 12, padding: 16,
+                    alignItems: 'center', marginBottom: 8,
+                  }}
+                  onPress={() => {
+                    setConsentModalVisible(false);
+                    setSignatureVisible(true);
+                  }}
+                  data-testid="proceed-to-signature-btn"
+                >
+                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                    Prosegui alla firma
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ padding: 12, alignItems: 'center', marginBottom: 8 }}
+                  onPress={() => {
+                    setConsentModalVisible(false);
+                    setSigningAthlete(null);
+                  }}
+                  data-testid="cancel-consent-btn"
+                >
+                  <Text style={{ color: '#999', fontSize: 14 }}>Annulla</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+
       {/* Digital Signature Modal */}
       {signingAthlete && user && (
         <SignaturePad
@@ -1035,12 +1192,15 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           }}
           onSign={handleSignPrivacy}
           documentTitle={`Presa Visione Privacy - ${signingAthlete.full_name || signingAthlete.athleteName}`}
-          documentText={`Il/La sottoscritto/a ${user.full_name}, in qualità di genitore/tutore dell'atleta minorenne ${signingAthlete.full_name || signingAthlete.athleteName}, dichiara di aver letto e compreso l'informativa sulla privacy (GDPR) e presta il proprio consenso a:
+          documentText={`Il sottoscritto ${user.full_name}, in qualità di genitore/tutore del minore ${signingAthlete.full_name || signingAthlete.athleteName}, dichiara di aver preso visione dell'informativa sulla privacy (GDPR).
 
-• Trattamento dati per attività sportiva
-• Comunicazione dati a Federazioni/EPS per tesseramento
-• Utilizzo immagini/video sui social e materiale promozionale
-• Comunicazione dati ad assicurazioni ed enti sanitari
+Presa visione:
+- Informativa privacy presa visione
+- Trattamento dati per attività sportiva e obblighi di legge
+
+Consensi facoltativi:
+- Immagini uso interno: ${consentImgInternal ? 'SI' : 'NO'}
+- Immagini uso promozionale: ${consentImgPromo ? 'SI' : 'NO'}
 
 Firma qui sotto per confermare.`}
           signerName={user.full_name}
