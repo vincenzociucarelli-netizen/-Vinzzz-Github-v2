@@ -22656,7 +22656,35 @@ async def update_athlete_consents(
             {"$set": {"consents": existing_consents, "consent_history": updated_history}}
         )
     
-    return {"success": True, "consents": existing_consents}
+    # Ricalcola final_consents IMMEDIATAMENTE dopo l'aggiornamento
+    athlete_updated = await db.athletes.find_one({"id": athlete_id}, {"_id": 0, "parent_id": 1, "second_parent_id": 1, "consents": 1})
+    updated_consents = athlete_updated.get("consents") or {}
+    parent_ids = [pid for pid in [athlete_updated.get("parent_id"), athlete_updated.get("second_parent_id")] if pid]
+    
+    final_consents = {}
+    for ct in ["images_internal", "images_promo"]:
+        parent_states = {}
+        for pid in parent_ids:
+            key = f"{ct}__{pid}"
+            if key in updated_consents:
+                parent_states[pid] = updated_consents[key].get("value", False)
+            elif pid == athlete_updated.get("parent_id") and ct in updated_consents:
+                parent_states[pid] = updated_consents[ct].get("value", False)
+        
+        if parent_states:
+            final_consents[ct] = {
+                "final_value": all(parent_states.values()),
+                "per_parent": parent_states,
+                "denied_by": [pid for pid, v in parent_states.items() if not v] or None,
+            }
+        else:
+            final_consents[ct] = {
+                "final_value": updated_consents.get(ct, {}).get("value", False) if updated_consents.get(ct) else False,
+                "per_parent": {},
+                "denied_by": None,
+            }
+    
+    return {"success": True, "consents": updated_consents, "final_consents": final_consents}
 
 @api_router.get("/admin/consent-history/{entity_type}/{entity_id}")
 async def get_consent_history_admin(
