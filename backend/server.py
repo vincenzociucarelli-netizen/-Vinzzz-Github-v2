@@ -14340,12 +14340,12 @@ def generate_gdpr_adult_privacy_pdf(
     # ==================== PAGE 2 ====================
     y = height - 2*cm
     
-    # Section 7 - Presa visione digitale
+    # Section 7 - Accettazione digitale
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "7. PRESA VISIONE DEL DOCUMENTO")
+    c.drawString(2*cm, y, "7. ACCETTAZIONE DIGITALE DEL DOCUMENTO")
     y -= 0.6*cm
     c.setFont("Helvetica", 10)
-    firma_text = "La presa visione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla Società. Il sistema registra metadati tecnici della presa visione, tra cui: data e ora della conferma; identificativo dell'utente; dispositivo utilizzato. Tali informazioni sono raccolte esclusivamente ai fini della tracciabilità e della sicurezza del sistema."
+    firma_text = "L'accettazione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla Società. Il sistema registra metadati tecnici dell'accettazione, tra cui: data e ora della conferma; identificativo dell'utente; dispositivo utilizzato. Tali informazioni sono raccolte esclusivamente ai fini della tracciabilità e della sicurezza del sistema."
     y = draw_wrapped_text(c, firma_text, 2*cm, y, max_w)
     
     y -= 0.5*cm
@@ -14355,28 +14355,46 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2*cm, y, "DICHIARAZIONE")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    dichiarazione_text = "Il sottoscritto dichiara di aver letto e compreso la presente informativa sulla privacy ai sensi del Regolamento UE 2016/679."
+    dichiarazione_text = "Il sottoscritto dichiara di aver preso visione dell'informativa sulla privacy ai sensi del Regolamento UE 2016/679 e prende atto del trattamento dei propri dati personali."
     y = draw_wrapped_text(c, dichiarazione_text, 2*cm, y, max_w)
     
     y -= 0.8*cm
     
-    # PRESA VISIONE
+    # PRESA VISIONE (obbligatoria)
     cd = consent_data or {}
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "PRESA VISIONE")
+    c.drawString(2*cm, y, "PRESA VISIONE (obbligatoria)")
     y -= 0.5*cm
     c.setFont("Helvetica", 9)
     
     check_pv = "X" if cd.get("privacy_viewed", True) else " "
-    c.drawString(2*cm, y, f"[{check_pv}] Informativa privacy presa visione (obbligatorio)")
+    c.drawString(2*cm, y, f"[{check_pv}] Ho preso visione dell'informativa privacy")
+    y -= 0.6*cm
+    
+    # CONSENSI FACOLTATIVI
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "CONSENSI FACOLTATIVI")
+    y -= 0.4*cm
+    c.setFont("Helvetica-Oblique", 8)
+    c.setFillColor(colors.HexColor("#555555"))
+    c.drawString(2*cm, y, "Il trattamento delle immagini è basato sul consenso dell'interessato.")
+    c.setFillColor(colors.black)
     y -= 0.4*cm
     
+    c.setFont("Helvetica", 9)
     check_ii = "X" if cd.get("images_internal", False) else " "
-    c.drawString(2*cm, y, f"[{check_ii}] Utilizzo immagini per uso interno (facoltativo)")
+    c.drawString(2*cm, y, f"[{check_ii}] Utilizzo immagini ad uso interno (es. comunicazioni, gruppi, attivita')")
     y -= 0.4*cm
     
     check_ip = "X" if cd.get("images_promo", False) else " "
-    c.drawString(2*cm, y, f"[{check_ip}] Utilizzo immagini per finalita' promozionali - sito/social (facoltativo)")
+    c.drawString(2*cm, y, f"[{check_ip}] Utilizzo immagini a scopo promozionale (sito, social, materiale pubblicitario)")
+    y -= 0.4*cm
+    
+    # Nota revoca
+    c.setFont("Helvetica-Oblique", 8)
+    c.setFillColor(colors.HexColor("#666666"))
+    c.drawString(2*cm, y, "La revoca dei consensi relativi alle immagini ha effetto solo per utilizzi futuri.")
+    c.setFillColor(colors.black)
     y -= 0.4*cm
     
     c.setFont("Courier", 7)
@@ -14411,7 +14429,7 @@ def generate_gdpr_adult_privacy_pdf(
     
     # Signature
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(2*cm, y, "Firma digitale:")
+    c.drawString(2*cm, y, "Accettazione digitale:")
     
     y -= 0.5*cm
     
