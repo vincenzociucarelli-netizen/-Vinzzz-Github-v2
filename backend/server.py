@@ -14898,7 +14898,7 @@ def generate_personal_consent_pdf(
     # Document titles and full texts
     titles = {
         "privacy_viewed": "INFORMATIVA SULLA PRIVACY",
-        "data_processing": "CONSENSO AL TRATTAMENTO DEI DATI PERSONALI",
+        "data_processing": "PRESA VISIONE TRATTAMENTO DATI PERSONALI",
         "terms": "TERMINI DI UTILIZZO",
     }
 
@@ -15074,7 +15074,7 @@ def generate_personal_consent_pdf(
     c.roundRect(margin_left, y - 2.5*cm, max_w, 2.5*cm, 5, stroke=1, fill=0)
 
     c.setFont("Helvetica", 10)
-    c.drawString(margin_left + 0.5*cm, y - 0.5*cm, f"Consenso espresso da: {parent_name}")
+    c.drawString(margin_left + 0.5*cm, y - 0.5*cm, f"Presa visione da: {parent_name}")
     c.drawString(margin_left + 0.5*cm, y - 1.0*cm, f"Data: {timestamp}")
     method_label = "Accettazione alla registrazione" if source == "registration" else "Accettazione manuale da profilo"
     c.drawString(margin_left + 0.5*cm, y - 1.5*cm, f"Modalita: {method_label}")
@@ -15083,7 +15083,7 @@ def generate_personal_consent_pdf(
 
     # Metadata box
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(margin_left, y, "METADATI DI FIRMA (validita probatoria)")
+    c.drawString(margin_left, y, "METADATI PRESA VISIONE (validita probatoria)")
     y -= 0.4*cm
 
     c.setStrokeColor(colors.HexColor("#2C3E50"))
@@ -15151,7 +15151,7 @@ def generate_privacy_consent_pdf(
     
     # Title - centered, bold
     c.setFont("Helvetica-Bold", 14)
-    title = "CONSENSO AL TRATTAMENTO DEI DATI PERSONALI"
+    title = "PRESA VISIONE INFORMATIVA PRIVACY"
     c.drawCentredString(width/2, height - 3*cm, title)
     
     c.setFont("Helvetica", 9)
@@ -15230,36 +15230,37 @@ def generate_privacy_consent_pdf(
     # Consent section
     y -= 0.8*cm
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "CONSENSI ESPRESSI")
+    c.drawString(2*cm, y, "PRESA VISIONE (obbligatoria)")
     
     y -= 0.8*cm
     c.setFont("Helvetica", 10)
     
     # 1. Presa visione informativa (obbligatorio)
     check_privacy = "X" if consent_data.get("privacy_viewed", True) else " "
-    c.drawString(2*cm, y, f"[{check_privacy}] Presa visione dell'informativa sulla privacy (obbligatorio)")
-    y -= 0.5*cm
+    c.drawString(2*cm, y, f"[{check_privacy}] Ho preso visione dell'informativa privacy")
+    y -= 0.8*cm
     
-    # 2. Autorizzazione trattamento dati (obbligatorio)
-    check_data = "X" if consent_data.get("data_treatment", True) else " "
-    c.drawString(2*cm, y, f"[{check_data}] Autorizzazione trattamento dati per attività sportiva (obbligatorio)")
-    y -= 0.5*cm
+    # Consensi facoltativi
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "CONSENSI FACOLTATIVI")
+    y -= 0.8*cm
     
-    # 3. Immagini uso interno (facoltativo)
-    check_img_internal = "X" if consent_data.get("images_internal", False) else " "
-    c.drawString(2*cm, y, f"[{check_img_internal}] Utilizzo immagini per uso interno (facoltativo)")
-    c.setFont("Helvetica", 8)
-    y -= 0.4*cm
-    c.drawString(2.5*cm, y, "Documentazione attività, comunicazioni alle famiglie")
-    y -= 0.5*cm
-    
-    # 4. Immagini uso promozionale (facoltativo)
+    # 2. Immagini uso interno (facoltativo)
     c.setFont("Helvetica", 10)
+    check_img_internal = "X" if consent_data.get("images_internal", False) else " "
+    c.drawString(2*cm, y, f"[{check_img_internal}] Utilizzo immagini ad uso interno (es. comunicazioni, gruppi, attivita')")
+    y -= 0.5*cm
+    
+    # 3. Immagini uso promozionale (facoltativo)
     check_img_promo = "X" if consent_data.get("images_promo", False) else " "
-    c.drawString(2*cm, y, f"[{check_img_promo}] Utilizzo immagini per finalità promozionali (facoltativo)")
-    c.setFont("Helvetica", 8)
-    y -= 0.4*cm
-    c.drawString(2.5*cm, y, "Sito web, social network, materiale informativo della società")
+    c.drawString(2*cm, y, f"[{check_img_promo}] Utilizzo immagini a scopo promozionale (sito, social, materiale pubblicitario)")
+    y -= 0.5*cm
+    
+    # Nota revoca
+    c.setFont("Helvetica-Oblique", 8)
+    c.setFillColor(colors.HexColor("#666666"))
+    c.drawString(2*cm, y, "La revoca del consenso ha effetto solo per utilizzi futuri.")
+    c.setFillColor(colors.black)
     y -= 0.5*cm
     
     # Consent metadata
