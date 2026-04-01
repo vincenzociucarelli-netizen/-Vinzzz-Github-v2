@@ -14467,7 +14467,7 @@ def generate_gdpr_adult_privacy_pdf(
     
     # Technical metadata box (very important for legal validity)
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(2*cm, y, "METADATI PRESA VISIONE (validità probatoria)")
+    c.drawString(2*cm, y, "METADATI ACCETTAZIONE (validità probatoria)")
     y -= 0.4*cm
     
     c.setStrokeColor(colors.HexColor("#2C3E50"))
@@ -14855,7 +14855,7 @@ def generate_gdpr_minor_privacy_pdf(
     
     # Technical metadata box
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(2*cm, y, "METADATI PRESA VISIONE (validità probatoria)")
+    c.drawString(2*cm, y, "METADATI ACCETTAZIONE (validità probatoria)")
     y -= 0.4*cm
     
     c.setStrokeColor(colors.HexColor("#2C3E50"))
@@ -15101,7 +15101,7 @@ def generate_personal_consent_pdf(
 
     # Metadata box
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(margin_left, y, "METADATI PRESA VISIONE (validita probatoria)")
+    c.drawString(margin_left, y, "METADATI ACCETTAZIONE (validita probatoria)")
     y -= 0.4*cm
 
     c.setStrokeColor(colors.HexColor("#2C3E50"))
