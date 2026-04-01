@@ -16223,7 +16223,8 @@ async def get_consent_pdf(consent_type: str, current_user = Depends(get_current_
     ts_raw = consent_data.get("timestamp", "")
     try:
         dt = datetime.fromisoformat(ts_raw.replace('Z', '+00:00')) if isinstance(ts_raw, str) else ts_raw
-        ts_formatted = dt.strftime("%d/%m/%Y %H:%M:%S UTC") if hasattr(dt, 'strftime') else str(ts_raw)
+        rome_dt = to_rome_time(dt) if hasattr(dt, 'strftime') else dt
+        ts_formatted = rome_dt.strftime("%d/%m/%Y %H:%M:%S") if hasattr(rome_dt, 'strftime') else str(ts_raw)
     except:
         ts_formatted = str(ts_raw)
     
@@ -16336,7 +16337,7 @@ async def sign_gdpr_privacy_document(
     # Generate timestamp
     timestamp = datetime.now(timezone.utc)
     timestamp_str = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-    timestamp_display = timestamp.strftime("%d/%m/%Y %H:%M:%S UTC")
+    timestamp_display = to_rome_time(timestamp).strftime("%d/%m/%Y %H:%M:%S")
     
     # Document version
     document_version = "2.0.0-GDPR"
@@ -20507,7 +20508,8 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     elements.append(Spacer(1, 10))
     
     now = datetime.now(timezone.utc)
-    sign_date_str = now.strftime("%d/%m/%Y alle ore %H:%M")
+    rome_now = to_rome_time(now)
+    sign_date_str = rome_now.strftime("%d/%m/%Y alle ore %H:%M")
     
     elements.append(Paragraph(f"<b>Firmato digitalmente il {sign_date_str}</b>", ParagraphStyle('SignDate', parent=styles['Normal'], fontSize=9, textColor=text_muted, fontName='Helvetica')))
     elements.append(Spacer(1, 6))
@@ -20535,7 +20537,7 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     import hashlib
     ip_address = get_real_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
-    timestamp_rome = now.strftime("%Y-%m-%d %H:%M:%S")
+    timestamp_rome = to_rome_time(now).strftime("%Y-%m-%d %H:%M:%S")
     
     hash_content = f"{parent_name}|{athlete_name}|{athlete_cf}|{now.isoformat()}|{society_name}"
     document_hash = hashlib.sha256(hash_content.encode()).hexdigest()[:20] + "..."
