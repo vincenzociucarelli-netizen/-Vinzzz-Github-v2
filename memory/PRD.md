@@ -80,6 +80,12 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
   - Revoca consensi immagini: salva revoked_at timestamp + action:"revoked" nella history
   - Nota visibile: "La revoca del consenso ha effetto solo per utilizzi futuri"
 - Sezioni squadra collassabili nella scheda atleta admin
+- **Gestione genitori/minori GDPR**:
+  - Rimosso auto-link: email match ora crea richiesta con conferma esplicita (no collegamento automatico)
+  - Consensi separati per genitore: chiave `consent_type__parent_id` (non più a livello atleta)
+  - Regola consenso finale: un NO da qualsiasi genitore = NEGATO per il minore
+  - Sicurezza: parent_id verificato su ogni endpoint, nessun genitore vede figli non collegati
+  - History con parent_id + child_id per ogni modifica
 - Test: iteration_65.json (14/14), iteration_66.json (12/12)
 
 ### Session 2026-03-28 (Fork 5-6)

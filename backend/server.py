@@ -1656,24 +1656,35 @@ async def register(user_data: UserCreate, request: Request):
             }
             await db.notifications.insert_one(notification)
     
-    # Se l'utente è un genitore, collega automaticamente gli atleti dove è secondo genitore
+    # Se l'utente è un genitore, crea RICHIESTE DI COLLEGAMENTO (non auto-link)
+    # per gli atleti dove è registrato come secondo genitore
     if user.role == UserRole.PARENT and society_id:
         # Cerca atleti nella stessa società dove l'email è registrata come second_parent_email
         athletes_to_link = await db.athletes.find({
             "society_id": society_id,
-            "second_parent_email": user.email.lower()
+            "second_parent_email": user.email.lower(),
+            "second_parent_id": {"$exists": False}  # Solo se non già collegato
         }).to_list(100)
         
-        # Per ogni atleta trovato, aggiungi l'ID del nuovo genitore come second_parent_id
-        # e imposta la password dati se fornita
+        # Per ogni atleta trovato, crea una richiesta di collegamento pendente
         for athlete in athletes_to_link:
-            update_data = {"second_parent_id": user.id}
-            if user_data.data_password:
-                update_data["second_parent_data_password_hash"] = hash_password(user_data.data_password)
-            await db.athletes.update_one(
-                {"id": athlete["id"]},
-                {"$set": update_data}
-            )
+            primary_parent_id = athlete.get("parent_id")
+            if primary_parent_id:
+                # Crea richiesta di collegamento che il primo genitore deve approvare
+                link_request = {
+                    "id": str(uuid.uuid4()),
+                    "requester_id": user.id,
+                    "requester_name": user.full_name,
+                    "requester_email": user.email,
+                    "athlete_id": athlete["id"],
+                    "athlete_name": athlete.get("full_name", ""),
+                    "approver_id": primary_parent_id,
+                    "society_id": society_id,
+                    "status": "pending",
+                    "source": "email_match",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
+                await db.parent_link_requests.insert_one(link_request)
     
     token = create_token(user.id, final_role)
     
@@ -6351,14 +6362,29 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     
     await db.athletes.insert_one(athlete.dict())
     
-    # === LINKING SECONDO GENITORE (solo se email specificata) ===
+    # === LINKING SECONDO GENITORE (solo salva email, richiesta creata quando B si registra) ===
     if athlete_data.second_parent_email:
         second_email = athlete_data.second_parent_email.lower().strip()
-        # Cerca se il secondo genitore è già registrato
-        second_parent_user = await db.users.find_one({"email": second_email})
         update_fields = {"second_parent_email": second_email}
+        # NON collegare automaticamente, anche se l'utente esiste già.
+        # Creare una richiesta che il secondo genitore deve accettare.
+        second_parent_user = await db.users.find_one({"email": second_email})
         if second_parent_user:
-            update_fields["second_parent_id"] = second_parent_user["id"]
+            # Il secondo genitore è già registrato: crea richiesta di collegamento
+            link_request = {
+                "id": str(uuid.uuid4()),
+                "requester_id": current_user["id"],
+                "requester_name": current_user.get("full_name", ""),
+                "requester_email": current_user["email"],
+                "athlete_id": athlete_id,
+                "athlete_name": f"{athlete_data.last_name} {athlete_data.first_name}".upper(),
+                "approver_id": second_parent_user["id"],
+                "society_id": current_user.get("society_id", ""),
+                "status": "pending",
+                "source": "athlete_registration",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            await db.parent_link_requests.insert_one(link_request)
         await db.athletes.update_one(
             {"id": athlete_id},
             {"$set": update_fields}
@@ -13824,7 +13850,7 @@ async def accept_privacy_and_continue(athlete_id: str, req: Request, data: dict 
         "privacy_viewed": {
             "value": True,
             "timestamp": now.isoformat(),
-            "user_id": current_user["id"],
+            "parent_id": current_user["id"],
             "child_id": athlete_id,
             "document_version": document_version,
             "document_name": f"privacy_minore_v{document_version}",
@@ -13833,24 +13859,24 @@ async def accept_privacy_and_continue(athlete_id: str, req: Request, data: dict 
         "data_processing_sports": {
             "value": True,
             "timestamp": now.isoformat(),
-            "user_id": current_user["id"],
+            "parent_id": current_user["id"],
             "child_id": athlete_id,
             "document_version": document_version,
             "document_name": f"privacy_minore_v{document_version}",
             "ip_address": client_ip,
         },
-        "images_internal": {
+        f"images_internal__{current_user['id']}": {
             "value": images_internal,
             "timestamp": now.isoformat(),
-            "user_id": current_user["id"],
+            "parent_id": current_user["id"],
             "child_id": athlete_id,
             "document_version": document_version,
             "ip_address": client_ip,
         },
-        "images_promo": {
+        f"images_promo__{current_user['id']}": {
             "value": images_promo,
             "timestamp": now.isoformat(),
-            "user_id": current_user["id"],
+            "parent_id": current_user["id"],
             "child_id": athlete_id,
             "document_version": document_version,
             "ip_address": client_ip,
@@ -22513,7 +22539,7 @@ async def update_my_consents(
 
 @api_router.get("/athletes/{athlete_id}/consents")
 async def get_athlete_consents(athlete_id: str, current_user = Depends(get_current_user)):
-    """Get an athlete's consent status. Accessible by parent of the athlete or admin."""
+    """Get an athlete's consent status with per-parent breakdown and final state."""
     athlete = await db.athletes.find_one({"id": athlete_id}, {"_id": 0, "consents": 1, "consent_history": 1, "parent_id": 1, "second_parent_id": 1})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
@@ -22522,8 +22548,39 @@ async def get_athlete_consents(athlete_id: str, current_user = Depends(get_curre
     if current_user["role"] not in ["admin"] and not is_parent:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     
+    consents = athlete.get("consents") or {}
+    
+    # Calcola lo stato finale per i consensi immagini (regola: un NO = NEGATO)
+    parent_ids = [pid for pid in [athlete.get("parent_id"), athlete.get("second_parent_id")] if pid]
+    
+    final_consents = {}
+    for consent_type in ["images_internal", "images_promo"]:
+        parent_states = {}
+        for pid in parent_ids:
+            key = f"{consent_type}__{pid}"
+            if key in consents:
+                parent_states[pid] = consents[key].get("value", False)
+            elif pid == athlete.get("parent_id") and consent_type in consents:
+                # Retrocompatibilità: consenso senza parent_id specifico
+                parent_states[pid] = consents[consent_type].get("value", False)
+        
+        # Regola: se almeno un genitore nega → NEGATO. Solo se TUTTI accettano → ACCETTATO
+        if parent_states:
+            final_consents[consent_type] = {
+                "final_value": all(parent_states.values()),
+                "per_parent": parent_states,
+                "denied_by": [pid for pid, v in parent_states.items() if not v] or None,
+            }
+        else:
+            final_consents[consent_type] = {
+                "final_value": consents.get(consent_type, {}).get("value", False) if consents.get(consent_type) else False,
+                "per_parent": {},
+                "denied_by": None,
+            }
+    
     return {
-        "consents": athlete.get("consents"),
+        "consents": consents,
+        "final_consents": final_consents,
         "consent_history": athlete.get("consent_history", []),
     }
 
@@ -22534,7 +22591,7 @@ async def update_athlete_consents(
     req: Request,
     current_user = Depends(get_current_user)
 ):
-    """Update optional consents for an athlete. Only parent or admin can do this."""
+    """Update optional consents for an athlete. Saves per parent_id + child_id."""
     client_ip = req.client.host if req.client else "unknown"
     forwarded_for = req.headers.get("X-Forwarded-For")
     if forwarded_for:
@@ -22555,58 +22612,42 @@ async def update_athlete_consents(
     now = datetime.now(timezone.utc)
     existing_consents = athlete.get("consents") or {}
     existing_history = athlete.get("consent_history") or []
+    parent_id = current_user["id"]
     
     new_history_entries = []
     
-    if data.images_internal is not None:
-        old_val = existing_consents.get("images_internal", {}).get("value") if existing_consents.get("images_internal") else None
-        if old_val != data.images_internal:
-            entry = {
-                "value": data.images_internal,
-                "timestamp": now.isoformat(),
-                "user_id": current_user["id"],
-                "child_id": athlete_id,
-                "document_version": "1.0",
-                "ip_address": client_ip,
-            }
-            if old_val is True and data.images_internal is False:
-                entry["revoked_at"] = now.isoformat()
-            existing_consents["images_internal"] = entry
-            new_history_entries.append({
-                "type": "images_internal",
-                "action": "revoked" if (old_val is True and data.images_internal is False) else "granted" if data.images_internal else "updated",
-                "old_value": old_val,
-                "new_value": data.images_internal,
-                "timestamp": now.isoformat(),
-                "user_id": current_user["id"],
-                "child_id": athlete_id,
-                "ip_address": client_ip,
-            })
-    
-    if data.images_promo is not None:
-        old_val = existing_consents.get("images_promo", {}).get("value") if existing_consents.get("images_promo") else None
-        if old_val != data.images_promo:
-            entry = {
-                "value": data.images_promo,
-                "timestamp": now.isoformat(),
-                "user_id": current_user["id"],
-                "child_id": athlete_id,
-                "document_version": "1.0",
-                "ip_address": client_ip,
-            }
-            if old_val is True and data.images_promo is False:
-                entry["revoked_at"] = now.isoformat()
-            existing_consents["images_promo"] = entry
-            new_history_entries.append({
-                "type": "images_promo",
-                "action": "revoked" if (old_val is True and data.images_promo is False) else "granted" if data.images_promo else "updated",
-                "old_value": old_val,
-                "new_value": data.images_promo,
-                "timestamp": now.isoformat(),
-                "user_id": current_user["id"],
-                "child_id": athlete_id,
-                "ip_address": client_ip,
-            })
+    for consent_type_name, consent_value in [("images_internal", data.images_internal), ("images_promo", data.images_promo)]:
+        if consent_value is not None:
+            # Chiave per-genitore: consent_type__parent_id
+            per_parent_key = f"{consent_type_name}__{parent_id}"
+            old_entry = existing_consents.get(per_parent_key) or existing_consents.get(consent_type_name) or {}
+            old_val = old_entry.get("value") if old_entry else None
+            
+            if old_val != consent_value:
+                entry = {
+                    "value": consent_value,
+                    "timestamp": now.isoformat(),
+                    "parent_id": parent_id,
+                    "child_id": athlete_id,
+                    "document_version": "1.0",
+                    "ip_address": client_ip,
+                }
+                if old_val is True and consent_value is False:
+                    entry["revoked_at"] = now.isoformat()
+                
+                # Salva con chiave per-genitore
+                existing_consents[per_parent_key] = entry
+                
+                new_history_entries.append({
+                    "type": consent_type_name,
+                    "action": "revoked" if (old_val is True and consent_value is False) else "granted" if consent_value else "updated",
+                    "old_value": old_val,
+                    "new_value": consent_value,
+                    "timestamp": now.isoformat(),
+                    "parent_id": parent_id,
+                    "child_id": athlete_id,
+                    "ip_address": client_ip,
+                })
     
     if new_history_entries:
         updated_history = existing_history + new_history_entries
