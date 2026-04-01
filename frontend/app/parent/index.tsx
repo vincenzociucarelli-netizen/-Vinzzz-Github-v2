@@ -309,6 +309,11 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
         signer_email: user.email,
         signature_base64: signatureBase64,
         related_entity_id: athleteId,
+        consent_data: {
+          privacy_viewed: true,
+          images_internal: consentImgInternal,
+          images_promo: consentImgPromo,
+        },
         additional_data: {
           'Atleta': athleteName,
           'Genitore/Tutore': user.full_name,

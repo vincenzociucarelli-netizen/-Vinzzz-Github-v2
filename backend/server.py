@@ -14031,6 +14031,7 @@ class SignatureDocumentRequest(BaseModel):
     signature_base64: str  # Base64 encoded signature image
     related_entity_id: Optional[str] = None  # athlete_id, coach_id, etc.
     additional_data: Optional[dict] = None  # Any extra data to include
+    consent_data: Optional[dict] = None  # Granular consent choices (GDPR)
 
 
 class GDPRPrivacySignRequest(BaseModel):
@@ -14743,6 +14744,13 @@ def generate_gdpr_minor_privacy_pdf(
     
     check_ip = "X" if cd.get("images_promo", False) else " "
     c.drawString(2*cm, y, f"[{check_ip}] Utilizzo immagini a scopo promozionale (sito, social, materiale pubblicitario)")
+    y -= 0.5*cm
+    
+    # Nota revoca
+    c.setFont("Helvetica-Oblique", 8)
+    c.setFillColor(colors.HexColor("#666666"))
+    c.drawString(2*cm, y, "La revoca del consenso ha effetto solo per utilizzi futuri.")
+    c.setFillColor(colors.black)
     y -= 0.4*cm
     
     c.setFont("Courier", 7)
