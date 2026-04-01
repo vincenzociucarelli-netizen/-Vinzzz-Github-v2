@@ -6377,6 +6377,22 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }
             await db.parent_link_requests.insert_one(link_request)
+            
+            # Notifica al secondo genitore
+            await db.notifications.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": second_parent_user["id"],
+                "type": "parent_link_request",
+                "title": "Richiesta collegamento genitore",
+                "message": f"{current_user.get('full_name', '')} ti ha indicato come secondo genitore di {athlete_data.last_name} {athlete_data.first_name}. Accetta o rifiuta dalla tua dashboard.",
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "data": {
+                    "athlete_id": athlete_id,
+                    "athlete_name": f"{athlete_data.last_name} {athlete_data.first_name}".upper(),
+                    "requester_name": current_user.get("full_name", ""),
+                }
+            })
         await db.athletes.update_one(
             {"id": athlete_id},
             {"$set": update_fields}
@@ -6631,17 +6647,10 @@ async def create_minor_athlete(data: MinorAthleteCreate, current_user = Depends(
             if data.phone:
                 reactivate_data["phone_athlete"] = data.phone
             
-            # Cross-linking automatico per riattivazione
+            # NON auto-linking per riattivazione - creare richiesta di approvazione
             if data.second_parent_email:
                 sp_email = data.second_parent_email.lower().strip()
                 reactivate_data["second_parent_email"] = sp_email
-                second_parent = await db.users.find_one({
-                    "email": sp_email,
-                    "society_id": society_id,
-                    "role": UserRole.PARENT
-                })
-                if second_parent:
-                    reactivate_data["second_parent_id"] = second_parent["id"]
             
             await db.athletes.update_one({"id": existing_athlete["id"]}, {"$set": reactivate_data})
             return {"message": "Atleta minorenne riattivato", "athlete_id": existing_athlete["id"], "parent_id": parent_id, "reactivated": True}
@@ -6682,7 +6691,9 @@ async def create_minor_athlete(data: MinorAthleteCreate, current_user = Depends(
         "is_trial": False,
     }
     
-    # Cross-linking automatico: se second_parent_email è fornita, cerca l'utente e collega
+    await db.athletes.insert_one(athlete_dict)
+    
+    # Se second_parent_email è fornita, crea richiesta di collegamento (MAI auto-link)
     if athlete_dict.get("second_parent_email"):
         second_parent = await db.users.find_one({
             "email": athlete_dict["second_parent_email"],
@@ -6690,9 +6701,39 @@ async def create_minor_athlete(data: MinorAthleteCreate, current_user = Depends(
             "role": UserRole.PARENT
         })
         if second_parent:
-            athlete_dict["second_parent_id"] = second_parent["id"]
-    
-    await db.athletes.insert_one(athlete_dict)
+            # Crea richiesta pendente per il secondo genitore
+            link_request = {
+                "id": str(uuid.uuid4()),
+                "requester_id": current_user["id"],
+                "requester_name": current_user.get("full_name", ""),
+                "requester_email": current_user.get("email", ""),
+                "athlete_id": athlete_id,
+                "athlete_name": data.full_name,
+                "approver_id": second_parent["id"],
+                "approver_name": second_parent.get("full_name", ""),
+                "approver_email": second_parent.get("email", ""),
+                "society_id": society_id,
+                "status": "pending",
+                "source": "athlete_creation",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            await db.parent_link_requests.insert_one(link_request)
+            
+            # Crea notifica per il secondo genitore
+            await db.notifications.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": second_parent["id"],
+                "type": "parent_link_request",
+                "title": "Richiesta collegamento genitore",
+                "message": f"{current_user.get('full_name', '')} ti ha indicato come secondo genitore di {data.full_name}. Accetta o rifiuta dalla tua dashboard.",
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "data": {
+                    "athlete_id": athlete_id,
+                    "athlete_name": data.full_name,
+                    "requester_name": current_user.get("full_name", ""),
+                }
+            })
     
     # Create payment records if team has installments
     if team and team.get("total_amount", 0) > 0:
