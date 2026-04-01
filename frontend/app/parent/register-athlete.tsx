@@ -26,7 +26,6 @@ export default function RegisterAthlete() {
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
   const [calculatingCF, setCalculatingCF] = useState(false);
   const [consentPrivacyViewed, setConsentPrivacyViewed] = useState(false);
-  const [consentDataTreatment, setConsentDataTreatment] = useState(false); // legacy - unused
   const [consentImagesInternal, setConsentImagesInternal] = useState(false);
   const [consentImagesPromo, setConsentImagesPromo] = useState(false);
   

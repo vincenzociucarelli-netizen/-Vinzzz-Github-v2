@@ -891,10 +891,9 @@ class AthleteCreate(BaseModel):
     team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
     is_trial: bool = True  # Default: periodo di prova
     privacy_accepted: bool = False
-    consent_images_internal: bool = False
-    consent_images_promo: bool = False
+    consent_images_internal: Optional[bool] = None
+    consent_images_promo: Optional[bool] = None
     consent_privacy_viewed: bool = False
-    consent_data_treatment: bool = False
     data_password: Optional[str] = None  # Password protezione dati sensibili
     second_parent_email: Optional[str] = None  # Email del secondo genitore (per-atleta)
     

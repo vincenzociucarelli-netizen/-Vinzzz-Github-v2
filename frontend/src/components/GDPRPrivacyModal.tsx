@@ -81,7 +81,6 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
   
   // Consensi granulari GDPR
   const [consentPrivacyViewed, setConsentPrivacyViewed] = useState(false);
-  const [consentDataTreatment, setConsentDataTreatment] = useState(false);
   const [consentImagesInternal, setConsentImagesInternal] = useState(false);
   const [consentImagesPromo, setConsentImagesPromo] = useState(false);
 
@@ -196,7 +195,6 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
         signer_province: signerInfo.province,
         consent_data: {
           privacy_viewed: consentPrivacyViewed,
-          data_treatment: consentDataTreatment,
           images_internal: consentImagesInternal,
           images_promo: consentImagesPromo,
           document_version: '1.0-2026',
