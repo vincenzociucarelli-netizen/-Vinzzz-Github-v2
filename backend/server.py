@@ -20172,7 +20172,17 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     elements.append(sh2)
     
     athlete_name = athlete.get("full_name", "")
-    athlete_dob = athlete.get("date_of_birth", "")
+    athlete_dob_raw = athlete.get("date_of_birth", "")
+    athlete_dob = ""
+    if athlete_dob_raw:
+        if isinstance(athlete_dob_raw, str):
+            try:
+                dob_dt = datetime.fromisoformat(athlete_dob_raw.replace('Z', '+00:00'))
+                athlete_dob = dob_dt.strftime("%d/%m/%Y")
+            except:
+                athlete_dob = athlete_dob_raw
+        elif isinstance(athlete_dob_raw, datetime):
+            athlete_dob = athlete_dob_raw.strftime("%d/%m/%Y")
     athlete_cf = athlete.get("codice_fiscale", "") or athlete.get("fiscal_code", "")
     
     md = Table([
@@ -20237,6 +20247,16 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     elements.append(dur_table)
     elements.append(Spacer(1, 10))
     
+    # === PAGE BREAK - Accettazione su Pagina 2 ===
+    from reportlab.platypus import PageBreak
+    elements.append(PageBreak())
+    
+    # Ripeti header su pagina 2
+    elements.append(Paragraph(society_name.upper(), title_style))
+    elements.append(Spacer(1, 3))
+    elements.append(HRFlowable(width="100%", thickness=2, color=primary))
+    elements.append(Spacer(1, 10))
+    
     # === ACCETTAZIONE ===
     sh6 = Table([["ACCETTAZIONE"]], colWidths=[16*cm])
     sh6.setStyle(section_header_style)
@@ -20275,7 +20295,15 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
         footer_style
     ))
     
-    doc.build(elements)
+    def _trial_preview_footer(canvas_obj, doc_obj):
+        canvas_obj.saveState()
+        page_num = doc_obj.page
+        canvas_obj.setFont('Helvetica', 8)
+        canvas_obj.setFillColor(HexColor('#999999'))
+        canvas_obj.drawCentredString(A4[0]/2, 1.5*cm, f"Pagina {page_num} di 2")
+        canvas_obj.restoreState()
+    
+    doc.build(elements, onFirstPage=_trial_preview_footer, onLaterPages=_trial_preview_footer)
     buffer.seek(0)
     
     # GET endpoint is preview only - does NOT mark as generated/signed
@@ -20451,6 +20479,16 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     elements.append(Paragraph("Al termine del periodo di prova, l'atleta potra essere tesserato con il consenso del genitore/tutore.", bullet_style))
     elements.append(Spacer(1, 10))
     
+    # === PAGE BREAK - Accettazione e Firma su Pagina 2 ===
+    from reportlab.platypus import PageBreak
+    elements.append(PageBreak())
+    
+    # Ripeti header su pagina 2
+    elements.append(Paragraph(society_name.upper(), title_style))
+    elements.append(Spacer(1, 3))
+    elements.append(HRFlowable(width="100%", thickness=2, color=primary))
+    elements.append(Spacer(1, 10))
+    
     # === ACCETTAZIONE ===
     sh6 = Table([["ACCETTAZIONE"]], colWidths=[16*cm])
     sh6.setStyle(section_header_style_tbl)
@@ -20517,7 +20555,15 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
         footer_style
     ))
     
-    doc.build(elements)
+    def _trial_signed_footer(canvas_obj, doc_obj):
+        canvas_obj.saveState()
+        page_num = doc_obj.page
+        canvas_obj.setFont('Helvetica', 8)
+        canvas_obj.setFillColor(HexColor('#999999'))
+        canvas_obj.drawCentredString(A4[0]/2, 1.5*cm, f"Pagina {page_num} di 2")
+        canvas_obj.restoreState()
+    
+    doc.build(elements, onFirstPage=_trial_signed_footer, onLaterPages=_trial_signed_footer)
     buffer.seek(0)
     
     # Mark as signed with signature data and timestamp

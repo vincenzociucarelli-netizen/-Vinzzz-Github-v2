@@ -88,6 +88,13 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
   - History con parent_id + child_id per ogni modifica
 - Test: iteration_65.json (14/14), iteration_66.json (12/12)
 
+### Session 2026-04-01 (Fork 11 - Current)
+- **PDF Autorizzazione alla Prova**: page break aggiunto - Accettazione e Firma spostati su Pagina 2
+  - Aggiornato sia `generate_trial_document` (preview) che `sign_trial_document` (firmato)
+  - Header società ripetuto su Pagina 2
+  - Footer dinamici "Pagina 1 di 2" / "Pagina 2 di 2"
+  - Fix formato data nascita (DD/MM/YYYY) nella preview
+
 ### Session 2026-03-28 (Fork 5-6)
 - Bug fix telefono minori: opzionale nel flusso invite-register
 - Reset password: fix URL API (cache stale), pulsante email, toggle visibilità, errori dettagliati
