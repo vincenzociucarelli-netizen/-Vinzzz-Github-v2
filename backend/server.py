@@ -14688,14 +14688,14 @@ def generate_gdpr_minor_privacy_pdf(
     c.drawString(2*cm, y, "6. UTILIZZO DI IMMAGINI E VIDEO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    immagini_text = "Durante le attività sportive potranno essere realizzate fotografie o riprese video degli atleti per finalità documentative, informative e promozionali della società sportiva."
+    immagini_text = "Le immagini potranno essere utilizzate solo previo consenso specifico del genitore/tutore."
     y = draw_wrapped_text(c, immagini_text, 2*cm, y, max_w)
     
     y -= 0.3*cm
     
-    # Section 7 - Firma digitale
+    # Section 7 - Attestazione
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "7. PRESA VISIONE DEL DOCUMENTO")
+    c.drawString(2*cm, y, "7. ATTESTAZIONE DI PRESA VISIONE E CONSENSI")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
     firma_text = "La presa visione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla società. Il sistema registra metadati tecnici della presa visione, tra cui data, ora e identificativo dell'utente, ai fini della tracciabilità e della sicurezza del sistema."
@@ -14715,28 +14715,34 @@ def generate_gdpr_minor_privacy_pdf(
     c.drawString(2*cm, y, "DICHIARAZIONE")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    dichiarazione_text = "Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente informativa sulla privacy ai sensi del Regolamento UE 2016/679 relativa al trattamento dei dati del minore."
+    dichiarazione_text = "Il sottoscritto genitore/tutore dichiara di aver preso visione dell'informativa e prende atto del trattamento dei dati del minore ai sensi del Regolamento UE 2016/679."
     y = draw_wrapped_text(c, dichiarazione_text, 2*cm, y, max_w)
     
     y -= 0.8*cm
     
-    # PRESA VISIONE (minori)
+    # PRESA VISIONE (obbligatoria)
     cd = consent_data or {}
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "PRESA VISIONE")
+    c.drawString(2*cm, y, "PRESA VISIONE (obbligatoria)")
     y -= 0.5*cm
     c.setFont("Helvetica", 9)
     
     check_pv = "X" if cd.get("privacy_viewed", True) else " "
-    c.drawString(2*cm, y, f"[{check_pv}] Informativa privacy presa visione (obbligatorio)")
-    y -= 0.4*cm
+    c.drawString(2*cm, y, f"[{check_pv}] Ho preso visione dell'informativa privacy")
+    y -= 0.6*cm
+    
+    # CONSENSI FACOLTATIVI
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(2*cm, y, "CONSENSI FACOLTATIVI")
+    y -= 0.5*cm
+    c.setFont("Helvetica", 9)
     
     check_ii = "X" if cd.get("images_internal", False) else " "
-    c.drawString(2*cm, y, f"[{check_ii}] Utilizzo immagini per uso interno (facoltativo)")
+    c.drawString(2*cm, y, f"[{check_ii}] Utilizzo immagini ad uso interno (es. comunicazioni, gruppi, attivita')")
     y -= 0.4*cm
     
     check_ip = "X" if cd.get("images_promo", False) else " "
-    c.drawString(2*cm, y, f"[{check_ip}] Utilizzo immagini per finalita' promozionali - sito/social (facoltativo)")
+    c.drawString(2*cm, y, f"[{check_ip}] Utilizzo immagini a scopo promozionale (sito, social, materiale pubblicitario)")
     y -= 0.4*cm
     
     c.setFont("Courier", 7)
@@ -14828,12 +14834,14 @@ def generate_gdpr_minor_privacy_pdf(
     
     c.setStrokeColor(colors.HexColor("#2C3E50"))
     c.setFillColor(colors.HexColor("#ECF0F1"))
-    c.roundRect(2*cm, y - 3*cm, width - 4*cm, 3*cm, 3, fill=1, stroke=1)
+    c.roundRect(2*cm, y - 3.5*cm, width - 4*cm, 3.5*cm, 3, fill=1, stroke=1)
     
     c.setFillColor(colors.black)
     c.setFont("Courier", 8)
     y_meta = y - 0.4*cm
     c.drawString(2.3*cm, y_meta, f"document_version: {document_version}")
+    y_meta -= 0.35*cm
+    c.drawString(2.3*cm, y_meta, f"document_name: privacy_minore_v{document_version}")
     y_meta -= 0.35*cm
     c.drawString(2.3*cm, y_meta, f"timestamp: {timestamp}")
     y_meta -= 0.35*cm
