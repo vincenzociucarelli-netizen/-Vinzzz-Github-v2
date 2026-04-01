@@ -68,13 +68,19 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
 
 ### Session 2026-04-01 (Fork 10 - Current)
 - **Aggiornamento GDPR completo (raccomandazioni ChatGPT)**:
-  - Rimossa checkbox "Acconsento al trattamento dati" da registrazione e invite-register (non necessaria per base giuridica contrattuale)
-  - Terminologia aggiornata ovunque: "Presa Visione Privacy" al posto di "Consenso Privacy"
-  - PDF Adulti: sezione 7 cambiata da "FIRMA DIGITALE" a "PRESA VISIONE DEL DOCUMENTO", "DATI DEL FIRMATARIO" → "DATI DELL'INTERESSATO"
-  - PDF Minori: rimossa sezione "CERTIFICATO MEDICO SPORTIVO", rinumerate sezioni, da 3 pagine a 2
-  - Entrambi i PDF: "CONSENSI ESPRESSI" → "PRESA VISIONE", "METADATI DI FIRMA" → "METADATI PRESA VISIONE", rimossa riga "Autorizzazione trattamento dati"
-- Sezioni squadra collassabili nella scheda atleta admin (toggle 1ª/2ª squadra)
-- Test: iteration_65.json - 14/14 passed (100%)
+  - Rimossa checkbox "Acconsento al trattamento dati" da registrazione e invite-register
+  - Terminologia aggiornata: "Presa Visione Privacy" al posto di "Consenso Privacy"
+  - PDF Adulti: sezione 7 "PRESA VISIONE DEL DOCUMENTO", "DATI DELL'INTERESSATO"
+  - PDF Minori: rimossa sezione "CERTIFICATO MEDICO SPORTIVO", da 3 a 2 pagine
+  - Entrambi i PDF: "PRESA VISIONE" al posto di "CONSENSI ESPRESSI", "METADATI PRESA VISIONE" al posto di "METADATI DI FIRMA"
+- **Flusso GDPR Minori - Conferma Iscrizione Post Prova**:
+  - Nuovo modal intermedio consensi: intestazione con nomi genitore/minore, sezione A obbligatoria non modificabile, sezione B facoltativa con toggle (immagini interno/promozionale) OFF di default
+  - Firma grafica mantenuta (SignaturePad) con associazione metadati (timestamp, IP, user_id, child_id, document_version, hash)
+  - Backend salva consensi strutturati per ogni singolo minore con storicizzazione
+  - Revoca consensi immagini: salva revoked_at timestamp + action:"revoked" nella history
+  - Nota visibile: "La revoca del consenso ha effetto solo per utilizzi futuri"
+- Sezioni squadra collassabili nella scheda atleta admin
+- Test: iteration_65.json (14/14), iteration_66.json (12/12)
 
 ### Session 2026-03-28 (Fork 5-6)
 - Bug fix telefono minori: opzionale nel flusso invite-register
