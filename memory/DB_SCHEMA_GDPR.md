@@ -25,7 +25,7 @@ Ogni modifica di consenso genera un **nuovo record**. Non si aggiornano mai reco
 
   // Riferimento documento
   "document_id": "id_del_documento_firmato (nullable)",
-  "document_version": "2.0",
+  "document_version": "2.0",                          // OBBLIGATORIO: versione del documento al momento del consenso
   "document_name": "privacy_minore_v2.0",
   "document_hash": "sha256_del_pdf_generato",
 
@@ -101,12 +101,37 @@ Ogni documento firmato o preso in visione viene registrato con hash per integrit
   "signer_email": "sofia@test.com",
   "signer_fiscal_code": "LRISFX80A01H501Z",
 
-  // Dati del minore (snapshot al momento della firma)
+  // Dati del minore (snapshot COMPLETO al momento della firma)
   "minor_data_snapshot": {
     "full_name": "RIGO PIA",
+    "first_name": "PIA",
+    "last_name": "RIGO",
     "fiscal_code": "RGOPAI12E29Z112X",
     "date_of_birth": "2012-05-29",
-    "place_of_birth": "BERLINO"
+    "place_of_birth": "BERLINO",
+    "phone": "3331234567",
+    "team_name": "U14 Femminile",
+    "athlete_code": "A7K2M9P4X1Q3"
+  },
+
+  // Dati del firmatario (snapshot al momento della firma)
+  "signer_data_snapshot": {
+    "full_name": "LAURI SOFIA",
+    "fiscal_code": "LRISFX80A01H501Z",
+    "email": "sofia@test.com",
+    "phone": "3209876543",
+    "address": "Via Roma 1, 06121 Perugia (PG)",
+    "date_of_birth": "1980-01-01",
+    "place_of_birth": "PERUGIA"
+  },
+
+  // Dati societa (snapshot al momento della firma)
+  "society_data_snapshot": {
+    "name": "ASD Pallavolo Perugia",
+    "ragione_sociale": "ASD Pallavolo Perugia",
+    "cf_piva": "03123456789",
+    "address": "Via dello Sport 10, 06121 Perugia (PG)",
+    "email": "info@pallavoloperugia.it"
   },
 
   // Consensi associati al documento
@@ -165,13 +190,15 @@ Registro immutabile di ogni azione rilevante nel sistema.
   "target_user_id": "id_soggetto_interessato (atleta/coach)",
   "child_id": "id_minore (null se non applicabile)",
 
+  // Documento collegato (top-level per query dirette)
+  "document_id": "id_documento_collegato (nullable)",
+
   // Cosa
   "event_type": "document_signed | consent_granted | consent_revoked | profile_updated | document_generated | document_downloaded | login | privacy_viewed",
   "event_category": "gdpr | auth | admin | document",
 
   // Dettagli
   "details": {
-    "document_id": "id_documento_collegato",
     "document_type": "privacy_consent",
     "consent_type": "images_promo",
     "old_value": true,
@@ -196,7 +223,7 @@ db.events.createIndex({ "user_id": 1, "timestamp": -1 })
 db.events.createIndex({ "child_id": 1, "event_type": 1, "timestamp": -1 })
 db.events.createIndex({ "society_id": 1, "event_category": 1, "timestamp": -1 })
 db.events.createIndex({ "event_type": 1, "timestamp": -1 })
-db.events.createIndex({ "document_id": 1 })  // Per trovare tutti gli eventi di un documento
+db.events.createIndex({ "document_id": 1 })                   // Tutti gli eventi legati a un documento
 ```
 
 ### Query utili
