@@ -6052,13 +6052,12 @@ async def respond_parent_link(data: dict, current_user = Depends(get_current_use
         if athlete.get("second_parent_id"):
             raise HTTPException(status_code=400, detail="Questo atleta ha già un secondo genitore collegato")
         
-        # Get requester email
-        requester_user = await db.users.find_one({"id": requester_id}, {"_id": 0, "email": 1})
-        requester_email = requester_user.get("email", "") if requester_user else ""
+        # Get approver email (the one accepting IS the second parent)
+        approver_email = current_user.get("email", "")
         
         await db.athletes.update_one({"id": athlete_id}, {"$set": {
-            "second_parent_id": requester_id,
-            "second_parent_email": requester_email,
+            "second_parent_id": current_user["id"],
+            "second_parent_email": approver_email,
         }})
         
         # Update request status
