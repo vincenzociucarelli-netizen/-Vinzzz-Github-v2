@@ -132,9 +132,9 @@ export default function Register() {
     }
 
 
-    // Invite code required for coach, viewer, and athlete
-    if (!inviteCode && (role !== 'parent')) {
-      showAlert('Errore', 'Inserisci il codice invito');
+    // Invite code required for ALL roles
+    if (!inviteCode) {
+      showAlert('Errore', 'Inserisci il codice invito della tua società sportiva');
       return;
     }
 

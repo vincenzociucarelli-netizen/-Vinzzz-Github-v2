@@ -1546,6 +1546,8 @@ async def register(user_data: UserCreate, request: Request):
         if not society.get("is_active", True):
             raise HTTPException(status_code=400, detail="Questa società non è più attiva")
         society_id = society["id"]
+    else:
+        raise HTTPException(status_code=400, detail="Il codice invito della società è obbligatorio")
     
     # Check if there's a compensated athlete with this email - auto-link
     athlete_id = None
