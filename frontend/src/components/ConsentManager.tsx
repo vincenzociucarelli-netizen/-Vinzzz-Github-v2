@@ -51,6 +51,7 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
   const [saving, setSaving] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
+  const [requestingSent, setRequestingSent] = useState(false);
 
   const fetchConsents = async () => {
     try {
@@ -109,9 +110,29 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
     );
   }
 
-  const consentTypes = ['privacy_viewed', 'images_internal', 'images_promo'] as const;
-  const editableTypes = ['images_internal', 'images_promo'];
+  // For users (parents/staff), hide images_internal - covered by legitimate interest
+  const consentTypes = entityType === 'user' 
+    ? ['privacy_viewed', 'images_promo'] as const
+    : ['privacy_viewed', 'images_internal', 'images_promo'] as const;
+  const editableTypes = entityType === 'user'
+    ? ['images_promo']
+    : ['images_internal', 'images_promo'];
   const privacySigned = consents?.privacy_viewed?.value === true;
+
+  const handlePhotoRemovalRequest = async () => {
+    try {
+      await api.post('/notifications/photo-removal-request');
+      setRequestingSent(true);
+      if (Platform.OS === 'web') {
+        window.alert('Richiesta inviata! L\'admin riceverà la tua richiesta di rimozione immagini.');
+      }
+    } catch (e) {
+      console.error('Error sending photo removal request:', e);
+      if (Platform.OS === 'web') {
+        window.alert('Errore nell\'invio della richiesta');
+      }
+    }
+  };
 
   return (
     <View style={[s.card, { borderTopColor: accentColor }]} data-testid={`consent-card-${entityType}-${entityId || 'me'}`}>
@@ -176,6 +197,21 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
           ? 'Solo i consensi relativi alle immagini sono modificabili. I consensi obbligatori non possono essere revocati.'
           : 'Per attivare i consensi è necessario prima firmare la privacy, a fine o ad interruzione anticipata del periodo di prova.'}
       </Text>
+
+      {/* Photo removal request button - only for users (parents/staff) */}
+      {entityType === 'user' && (
+        <TouchableOpacity
+          style={[s.photoRemovalBtn, requestingSent && { opacity: 0.6 }]}
+          onPress={handlePhotoRemovalRequest}
+          disabled={requestingSent}
+          data-testid="photo-removal-request-btn"
+        >
+          <Ionicons name={requestingSent ? "checkmark-circle" : "trash-outline"} size={18} color={requestingSent ? "#4CAF50" : "#D32F2F"} />
+          <Text style={[s.photoRemovalText, requestingSent && { color: '#4CAF50' }]}>
+            {requestingSent ? 'Richiesta inviata' : 'Richiedi rimozione mie immagini'}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* History toggle */}
       {history.length > 0 && (
@@ -319,5 +355,23 @@ const s = StyleSheet.create({
     fontSize: 11,
     color: '#999',
     marginTop: 2,
+  },
+  photoRemovalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFF5F5',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+  },
+  photoRemovalText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#D32F2F',
   },
 });

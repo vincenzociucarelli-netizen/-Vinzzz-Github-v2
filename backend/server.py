@@ -3738,6 +3738,29 @@ async def delete_notification(notification_id: str, current_user = Depends(get_c
     
     return {"message": "Notifica eliminata"}
 
+@api_router.post("/notifications/photo-removal-request")
+async def request_photo_removal(current_user = Depends(get_current_user)):
+    """Parent/staff requests removal of their photos from society publications"""
+    user_name = f"{current_user.get('first_name', '')} {current_user.get('last_name', '')}".strip()
+    
+    notification = {
+        "id": str(uuid.uuid4()),
+        "society_id": current_user.get("society_id"),
+        "type": "photo_removal_request",
+        "title": "Richiesta rimozione immagini",
+        "message": f"{user_name} ({current_user.get('email', '')}) ha richiesto la rimozione delle proprie immagini da tutte le pubblicazioni della società.",
+        "priority": "high",
+        "read": False,
+        "created_at": datetime.utcnow().isoformat(),
+        "user_id": current_user["id"],
+    }
+    
+    await db.admin_notifications.insert_one(notification)
+    
+    return {"message": "Richiesta di rimozione immagini inviata all'amministratore"}
+
+
+
 # ==================== USER MANAGEMENT ENDPOINTS (ADMIN) ====================
 
 class UserUpdateRole(BaseModel):
