@@ -8130,7 +8130,7 @@ async def verify_data_password(athlete_id: str, data: VerifyDataPassword, curren
     
     # Select the correct password hash based on which parent
     if is_second:
-        pw_hash = athlete.get("second_parent_data_password_hash")
+        pw_hash = athlete.get("second_parent_data_password_hash") or athlete.get("data_password_hash")
     else:
         pw_hash = athlete.get("data_password_hash")
     
@@ -8178,7 +8178,8 @@ async def check_has_password(athlete_id: str, current_user = Depends(get_current
     is_second = athlete.get("second_parent_id") == current_user["id"]
     
     if is_second:
-        has_pw = bool(athlete.get("second_parent_data_password_hash"))
+        # Check second parent's own field first, fallback to shared field
+        has_pw = bool(athlete.get("second_parent_data_password_hash") or athlete.get("data_password_hash"))
     else:
         has_pw = bool(athlete.get("data_password_hash"))
     
