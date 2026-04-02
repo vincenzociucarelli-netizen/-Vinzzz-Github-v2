@@ -58,8 +58,24 @@ export default function ImportCalendarScreen() {
   const [selectedChampionships, setSelectedChampionships] = useState<string[]>([]);
   
   // Date filter
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState('__/__/____');
+  const [dateTo, setDateTo] = useState('__/__/____');
+
+  const handleDateMask = (text: string, setter: (val: string) => void) => {
+    // Strip everything except digits
+    const digits = text.replace(/\D/g, '');
+    let masked = '';
+    for (let i = 0; i < Math.min(digits.length, 8); i++) {
+      if (i === 2 || i === 4) masked += '/';
+      masked += digits[i];
+    }
+    // Pad with mask placeholders
+    const template = '__/__/____';
+    if (masked.length < template.length) {
+      masked += template.slice(masked.length);
+    }
+    setter(masked);
+  };
   
   // Match selection
   const [selectedMatches, setSelectedMatches] = useState<Set<number>>(new Set());
@@ -537,11 +553,11 @@ export default function ImportCalendarScreen() {
   const getFilteredMatches = () => {
     return previewMatches.filter(match => {
       const matchDate = new Date(match.date);
-      if (dateFrom) {
+      if (dateFrom && !dateFrom.includes('_')) {
         const from = parseItalianDate(dateFrom);
         if (from && matchDate < from) return false;
       }
-      if (dateTo) {
+      if (dateTo && !dateTo.includes('_')) {
         const to = parseItalianDate(dateTo);
         if (to) {
           to.setHours(23, 59, 59);
@@ -598,9 +614,11 @@ export default function ImportCalendarScreen() {
             <TextInput
               style={styles.dateInput}
               value={dateFrom}
-              onChangeText={setDateFrom}
-              placeholder="gg/mm/aaaa"
+              onChangeText={(text) => handleDateMask(text, setDateFrom)}
+              placeholder="__/__/____"
               placeholderTextColor="#999"
+              keyboardType="numeric"
+              maxLength={10}
             />
           </View>
           <View style={styles.dateInputGroup}>
@@ -608,9 +626,11 @@ export default function ImportCalendarScreen() {
             <TextInput
               style={styles.dateInput}
               value={dateTo}
-              onChangeText={setDateTo}
-              placeholder="gg/mm/aaaa"
+              onChangeText={(text) => handleDateMask(text, setDateTo)}
+              placeholder="__/__/____"
               placeholderTextColor="#999"
+              keyboardType="numeric"
+              maxLength={10}
             />
           </View>
         </View>
