@@ -20233,8 +20233,11 @@ async def check_athlete_profile_completeness(athlete_id: str, current_user = Dep
     # Check if parent has set data protection password for this athlete
     if parent and current_user["role"] == UserRole.PARENT:
         is_second = athlete.get("second_parent_id") == current_user["id"]
-        pw_field = "second_parent_data_password_hash" if is_second else "data_password_hash"
-        if not athlete.get(pw_field):
+        if is_second:
+            has_pw = bool(athlete.get("second_parent_data_password_hash") or athlete.get("data_password_hash"))
+        else:
+            has_pw = bool(athlete.get("data_password_hash"))
+        if not has_pw:
             parent_missing.append("Password protezione dati")
     
     is_complete = len(parent_missing) == 0 and len(athlete_missing) == 0
