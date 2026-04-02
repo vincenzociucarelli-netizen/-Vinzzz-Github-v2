@@ -2475,22 +2475,6 @@ export default function AdminAthleteDetail() {
               )}
             </View>
 
-            {/* Squadra e Certificato */}
-            <View style={styles.card}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <SportIcon size={20} />
-                <Text style={[styles.cardTitle, { marginLeft: 6 }]}>Squadra</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Squadra</Text>
-                <Text style={styles.value}>{team?.name || '-'}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Iscrizione</Text>
-                <Text style={styles.value}>{formatDate(athlete.registration_date)}</Text>
-              </View>
-            </View>
-
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Certificato Medico</Text>
               {certificate ? (
