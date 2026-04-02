@@ -190,7 +190,6 @@ export default function Register() {
           ...(role === 'parent' && dataPassword ? { data_password: dataPassword } : {}),
           consents: {
             privacy_viewed: consentPrivacyViewed,
-            images_internal: consentInternalImages,
             images_promo: consentPromotionalImages,
           },
         });
@@ -459,17 +458,6 @@ export default function Register() {
               <Ionicons name={consentPrivacyViewed ? "checkbox" : "square-outline"} size={22} color={consentPrivacyViewed ? "#4CAF50" : "#999"} />
               <Text style={{ flex: 1, fontSize: 13, color: '#333', lineHeight: 18 }}>
                 <Text style={{ fontWeight: '600' }}>Dichiaro di aver preso visione dell'Informativa sulla Privacy</Text> <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 10 }}
-              onPress={() => setConsentInternalImages(!consentInternalImages)}
-              data-testid="consent-internal-images"
-            >
-              <Ionicons name={consentInternalImages ? "checkbox" : "square-outline"} size={22} color={consentInternalImages ? "#4CAF50" : "#999"} />
-              <Text style={{ flex: 1, fontSize: 13, color: '#555', lineHeight: 18 }}>
-                Acconsento all'uso delle mie immagini per comunicazioni interne alla societa
               </Text>
             </TouchableOpacity>
 

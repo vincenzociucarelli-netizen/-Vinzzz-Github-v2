@@ -195,7 +195,7 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
         signer_province: signerInfo.province,
         consent_data: {
           privacy_viewed: consentPrivacyViewed,
-          images_internal: consentImagesInternal,
+          ...(isMinor ? { images_internal: consentImagesInternal } : {}),
           images_promo: consentImagesPromo,
           document_version: '1.0-2026',
         },
@@ -283,7 +283,10 @@ I dati personali saranno conservati per tutta la durata del rapporto con la Soci
 6. DIRITTI DELL'INTERESSATO
 L'interessato può esercitare i diritti previsti dagli articoli 15–22 del GDPR, tra cui: accesso ai dati personali; rettifica o aggiornamento dei dati; cancellazione dei dati nei casi previsti dalla legge; limitazione o opposizione al trattamento; portabilità dei dati. Le richieste possono essere rivolte al Titolare del trattamento tramite i recapiti indicati dalla Società.
 
-7. FIRMA DIGITALE DEL DOCUMENTO
+7. RIPRESE FOTOGRAFICHE E VIDEO
+Durante eventi, gare, allenamenti e manifestazioni sportive potranno essere effettuate riprese fotografiche e video a fini documentativi e informativi. La presenza in tali contesti comporta la possibilità di essere ripresi sullo sfondo delle immagini. Tale trattamento si fonda sul legittimo interesse della Società alla documentazione delle proprie attività. Per eventuali utilizzi promozionali specifici (es. pubblicazione su sito web o social network), sarà richiesto apposito consenso. L'interessato ha in ogni momento il diritto di richiedere la rimozione di immagini in cui appare, contattando la Società ai recapiti indicati.
+
+8. FIRMA DIGITALE DEL DOCUMENTO
 La sottoscrizione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla Società. Il sistema può registrare metadati tecnici della firma digitale, tra cui: data e ora della sottoscrizione; identificativo dell'utente; dispositivo utilizzato per la firma. Tali informazioni sono raccolte esclusivamente ai fini della tracciabilità e della sicurezza del sistema.
 
 DICHIARAZIONE
@@ -496,7 +499,8 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                 <View style={consentStyles.separator} />
                 <Text style={consentStyles.optionalLabel}>Consensi facoltativi - immagini/video</Text>
 
-                {/* 3. Immagini uso interno - FACOLTATIVA */}
+                {/* Immagini uso interno - SOLO per minori (per adulti coperto da legittimo interesse) */}
+                {isMinor && (
                 <TouchableOpacity 
                   style={consentStyles.checkboxRow}
                   onPress={() => setConsentImagesInternal(!consentImagesInternal)}
@@ -509,8 +513,9 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                     <Text style={consentStyles.checkboxSubtext}>Documentazione attività, comunicazioni alle famiglie</Text>
                   </View>
                 </TouchableOpacity>
+                )}
 
-                {/* 4. Immagini uso promozionale - FACOLTATIVA */}
+                {/* Immagini uso promozionale - FACOLTATIVA per tutti */}
                 <TouchableOpacity 
                   style={consentStyles.checkboxRow}
                   onPress={() => setConsentImagesPromo(!consentImagesPromo)}

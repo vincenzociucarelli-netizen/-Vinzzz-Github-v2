@@ -14592,17 +14592,22 @@ def generate_gdpr_adult_privacy_pdf(
     y -= 0.4*cm
     c.setFont("Helvetica-Oblique", 8)
     c.setFillColor(colors.HexColor("#555555"))
-    c.drawString(2*cm, y, "Il trattamento delle immagini è basato sul consenso dell'interessato.")
+    c.drawString(2*cm, y, "Il trattamento delle immagini promozionali è basato sul consenso dell'interessato.")
     c.setFillColor(colors.black)
     y -= 0.4*cm
     
     c.setFont("Helvetica", 9)
-    check_ii = "X" if cd.get("images_internal", False) else " "
-    c.drawString(2*cm, y, f"[{check_ii}] Utilizzo immagini ad uso interno (es. comunicazioni, gruppi, attivita')")
-    y -= 0.4*cm
-    
     check_ip = "X" if cd.get("images_promo", False) else " "
     c.drawString(2*cm, y, f"[{check_ip}] Utilizzo immagini a scopo promozionale (sito, social, materiale pubblicitario)")
+    y -= 0.4*cm
+    
+    # Nota riprese di contesto
+    c.setFont("Helvetica-Oblique", 8)
+    c.setFillColor(colors.HexColor("#666666"))
+    c.drawString(2*cm, y, "Nota: durante eventi e manifestazioni sportive potranno essere effettuate riprese a fini documentativi.")
+    y -= 0.3*cm
+    c.drawString(2*cm, y, "Per utilizzi promozionali specifici sara' richiesto apposito consenso.")
+    c.setFillColor(colors.black)
     y -= 0.4*cm
     
     # Nota revoca
@@ -15146,9 +15151,10 @@ def generate_personal_consent_pdf(
         ("7. Conservazione", "I dati sono conservati per il tempo necessario alle attivita sportive e amministrative."),
         ("8. Sicurezza", "Sono adottate misure tecniche adeguate per proteggere i dati."),
         ("9. Condivisione dei dati", "I dati non vengono venduti e sono accessibili solo a personale autorizzato e amministratori tecnici."),
-        ("10. Diritti", "Gli utenti possono esercitare i diritti GDPR rivolgendosi all'associazione."),
-        ("11. Modifiche", "La policy puo essere aggiornata nel tempo."),
-        ("12. Contatti", "Contattare l'associazione sportiva o il servizio RegistraTEAM."),
+        ("10. Riprese fotografiche e video", "Durante eventi, gare, allenamenti e manifestazioni sportive potranno essere effettuate riprese fotografiche e video a fini documentativi e informativi. La presenza in tali contesti comporta la possibilita di essere ripresi sullo sfondo delle immagini. Tale trattamento si fonda sul legittimo interesse della Societa. Per eventuali utilizzi promozionali specifici (es. pubblicazione su sito web o social network), sara richiesto apposito consenso. L'interessato ha il diritto di richiedere la rimozione di immagini in cui appare, contattando la Societa."),
+        ("11. Diritti", "Gli utenti possono esercitare i diritti GDPR rivolgendosi all'associazione."),
+        ("12. Modifiche", "La policy puo essere aggiornata nel tempo."),
+        ("13. Contatti", "Contattare l'associazione sportiva o il servizio RegistraTEAM."),
     ]
 
     terms_sections = [
@@ -15480,15 +15486,21 @@ def generate_privacy_consent_pdf(
     c.drawString(2*cm, y, "CONSENSI FACOLTATIVI")
     y -= 0.8*cm
     
-    # 2. Immagini uso interno (facoltativo)
+    # Immagini uso promozionale (facoltativo)
     c.setFont("Helvetica", 10)
-    check_img_internal = "X" if consent_data.get("images_internal", False) else " "
-    c.drawString(2*cm, y, f"[{check_img_internal}] Utilizzo immagini ad uso interno (es. comunicazioni, gruppi, attivita')")
-    y -= 0.5*cm
-    
-    # 3. Immagini uso promozionale (facoltativo)
     check_img_promo = "X" if consent_data.get("images_promo", False) else " "
     c.drawString(2*cm, y, f"[{check_img_promo}] Utilizzo immagini a scopo promozionale (sito, social, materiale pubblicitario)")
+    y -= 0.5*cm
+    
+    # Nota riprese di contesto
+    c.setFont("Helvetica-Oblique", 9)
+    c.setFillColor(colors.HexColor("#333333"))
+    c.drawString(2*cm, y, "Nota: durante eventi, gare e manifestazioni sportive potranno essere effettuate")
+    y -= 0.4*cm
+    c.drawString(2*cm, y, "riprese fotografiche e video a fini documentativi. Per utilizzi promozionali specifici")
+    y -= 0.4*cm
+    c.drawString(2*cm, y, "sara' richiesto apposito consenso.")
+    c.setFillColor(colors.black)
     y -= 0.5*cm
     
     # Nota revoca
