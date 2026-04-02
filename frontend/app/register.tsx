@@ -462,12 +462,12 @@ export default function Register() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 10 }}
+              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 10, backgroundColor: '#FFF3E0', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#FFB74D' }}
               onPress={() => setConsentPromotionalImages(!consentPromotionalImages)}
               data-testid="consent-promotional-images"
             >
-              <Ionicons name={consentPromotionalImages ? "checkbox" : "square-outline"} size={22} color={consentPromotionalImages ? "#4CAF50" : "#999"} />
-              <Text style={{ flex: 1, fontSize: 13, color: '#555', lineHeight: 18 }}>
+              <Ionicons name={consentPromotionalImages ? "checkbox" : "square-outline"} size={26} color={consentPromotionalImages ? "#FF6F00" : "#FF9800"} />
+              <Text style={{ flex: 1, fontSize: 14, color: '#333', lineHeight: 20, fontWeight: '500' }}>
                 Acconsento all'uso delle mie immagini a scopi promozionali
               </Text>
             </TouchableOpacity>
