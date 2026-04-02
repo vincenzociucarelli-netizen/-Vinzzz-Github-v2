@@ -98,6 +98,12 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
   - Modale risultati sync con diff visuale (date barrate + nuove)
   - Scraper aggiornato: cattura nome campionato da `<caption>` HTML
   - Test: iteration_67.json (7/7 backend, 100%)
+- **Filtro Calendario Gare**: 3 tab nell'admin matches:
+  - "Da disputare" (default): gare future senza risultato
+  - "Giocate": solo gare con risultato, ordinate dalla più recente
+  - "Tutte": tutte le gare
+  - Badge risultato verde nelle card delle gare giocate
+  - Messaggio vuoto personalizzato per ogni filtro
 
 ### Session 2026-04-01 (Fork 11)
 - **PDF Autorizzazione alla Prova**: page break aggiunto - Accettazione e Firma spostati su Pagina 2

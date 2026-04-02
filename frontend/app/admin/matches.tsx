@@ -66,6 +66,9 @@ export default function AdminMatches() {
   const [syncResultVisible, setSyncResultVisible] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
 
+  // Filter state
+  const [filterMode, setFilterMode] = useState<'upcoming' | 'played' | 'all'>('upcoming');
+
   // Form state
   const [formData, setFormData] = useState({
     team_id: '',
@@ -565,20 +568,30 @@ export default function AdminMatches() {
   const groupMatchesByMonth = () => {
     const grouped: { [key: string]: Match[] } = {};
     
-    // Get today at midnight for comparison
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Filter only future matches (from today onwards)
-    const futureMatches = matches.filter(match => {
+    const filtered = matches.filter(match => {
       const matchDate = new Date(match.date);
       matchDate.setHours(0, 0, 0, 0);
-      return matchDate >= today;
+      const hasResult = match.result && match.result.trim() !== '' && match.result !== '-';
+      
+      if (filterMode === 'upcoming') {
+        return matchDate >= today && !hasResult;
+      } else if (filterMode === 'played') {
+        return hasResult;
+      }
+      return true;
     });
     
-    futureMatches.forEach(match => {
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return filterMode === 'played' ? dateB - dateA : dateA - dateB;
+    });
+    
+    filtered.forEach(match => {
       const date = new Date(match.date);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       const monthName = date.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
       if (!grouped[monthName]) {
         grouped[monthName] = [];
@@ -640,6 +653,27 @@ export default function AdminMatches() {
         </TouchableOpacity>
       </View>
 
+      {/* Filter Tabs */}
+      <View style={styles.filterBar} data-testid="match-filter-bar">
+        {([
+          { key: 'upcoming', label: 'Da disputare', icon: 'time-outline' },
+          { key: 'played', label: 'Giocate', icon: 'trophy-outline' },
+          { key: 'all', label: 'Tutte', icon: 'list-outline' },
+        ] as const).map(tab => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.filterTab, filterMode === tab.key && styles.filterTabActive]}
+            onPress={() => setFilterMode(tab.key)}
+            data-testid={`filter-${tab.key}`}
+          >
+            <Ionicons name={tab.icon as any} size={16} color={filterMode === tab.key ? '#fff' : '#666'} />
+            <Text style={[styles.filterTabText, filterMode === tab.key && styles.filterTabTextActive]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <ScrollView
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -649,6 +683,16 @@ export default function AdminMatches() {
             <Ionicons name="calendar-outline" size={64} color="#ccc" />
             <Text style={styles.emptyText}>Nessuna gara in calendario</Text>
             <Text style={styles.emptySubtext}>Aggiungi gare manualmente o importa da Excel</Text>
+          </View>
+        ) : Object.keys(groupedMatches).length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name={filterMode === 'played' ? 'trophy-outline' : 'time-outline'} size={64} color="#ccc" />
+            <Text style={styles.emptyText}>
+              {filterMode === 'played' ? 'Nessuna gara giocata' : 'Nessuna gara da disputare'}
+            </Text>
+            <Text style={styles.emptySubtext}>
+              {filterMode === 'played' ? 'I risultati appariranno dopo le partite' : 'Tutte le gare hanno già un risultato'}
+            </Text>
           </View>
         ) : (
           Object.entries(groupedMatches).map(([month, monthMatches]) => (
@@ -715,6 +759,12 @@ export default function AdminMatches() {
                   </View>
                   {match.notes && (
                     <Text style={styles.matchNotes}>📝 {match.notes}</Text>
+                  )}
+                  {match.result && match.result !== '-' && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 6, backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start' }}>
+                      <Ionicons name="trophy" size={14} color="#2E7D32" />
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#2E7D32' }}>{match.result}</Text>
+                    </View>
                   )}
                 </TouchableOpacity>
               );
@@ -1077,6 +1127,37 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 8,
+  },
+  filterBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  filterTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  filterTabActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  filterTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+  },
+  filterTabTextActive: {
+    color: '#fff',
   },
   instructionCard: {
     flexDirection: 'row',
