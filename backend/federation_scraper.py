@@ -167,10 +167,20 @@ class FIPAVScraper:
             response = await client.get(self.base_url, params=params, headers=self.HEADERS)
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Find all tables - the first table usually contains match data
-            tables = soup.find_all('table')
+            # Find all tables with class 'tbl-risultati'
+            tables = soup.find_all('table', class_='tbl-risultati')
+            if not tables:
+                tables = soup.find_all('table')
             
             for table in tables:
+                # Extract championship name from caption
+                caption = table.find('caption')
+                championship_name = caption.get_text(strip=True) if caption else None
+                # Clean up classification link text from caption
+                if championship_name:
+                    # Remove trailing "classifica" text
+                    championship_name = championship_name.replace('classifica', '').strip()
+                
                 rows = table.find_all('tr')
                 
                 # Check if this is a match table by looking at the header
@@ -240,7 +250,8 @@ class FIPAVScraper:
                             away_team=away_team,
                             result=result,
                             giornata=giornata,
-                            venue=venue
+                            venue=venue,
+                            championship=championship_name
                         )
                         matches.append(match)
                         

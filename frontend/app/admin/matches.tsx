@@ -61,6 +61,11 @@ export default function AdminMatches() {
   const [homeTeamName, setHomeTeamName] = useState('');
   const [pendingImportData, setPendingImportData] = useState<any[]>([]);
 
+  // FIPAV sync state
+  const [syncing, setSyncing] = useState(false);
+  const [syncResultVisible, setSyncResultVisible] = useState(false);
+  const [syncResult, setSyncResult] = useState<any>(null);
+
   // Form state
   const [formData, setFormData] = useState({
     team_id: '',
@@ -98,6 +103,20 @@ export default function AdminMatches() {
   const onRefresh = () => {
     setRefreshing(true);
     loadData();
+  };
+
+  const handleSyncFipav = async () => {
+    setSyncing(true);
+    try {
+      const response = await api.post('/matches/sync-fipav');
+      setSyncResult(response.data);
+      setSyncResultVisible(true);
+      loadData(); // Reload matches after sync
+    } catch (error: any) {
+      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la sincronizzazione FIPAV');
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const resetForm = () => {
@@ -587,6 +606,18 @@ export default function AdminMatches() {
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Calendario Gare</Text>
+        <TouchableOpacity
+          onPress={handleSyncFipav}
+          style={[styles.syncBtn, syncing && { opacity: 0.6 }]}
+          disabled={syncing}
+          data-testid="sync-fipav-btn"
+        >
+          {syncing ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="sync-outline" size={18} color="#fff" />
+          )}
+        </TouchableOpacity>
         <TouchableOpacity onPress={handleImportExcel} style={styles.importBtn}>
           <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
         </TouchableOpacity>
@@ -929,6 +960,70 @@ export default function AdminMatches() {
           </View>
         </View>
       </Modal>
+
+      {/* FIPAV Sync Result Modal */}
+      <Modal visible={syncResultVisible} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Sincronizzazione FIPAV</Text>
+              <TouchableOpacity onPress={() => setSyncResultVisible(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: 16 }}>
+              {syncResult && (
+                <>
+                  <View style={{ backgroundColor: '#E8F5E9', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#2E7D32', marginBottom: 4 }} data-testid="sync-result-message">
+                      {syncResult.message}
+                    </Text>
+                    <Text style={{ fontSize: 13, color: '#666' }}>
+                      Gare trovate sul portale: {syncResult.scraped_total} | Presenti in archivio: {syncResult.existing_matched}
+                    </Text>
+                  </View>
+                  {syncResult.changes && syncResult.changes.length > 0 ? (
+                    syncResult.changes.map((change: any, idx: number) => (
+                      <View key={idx} style={{ backgroundColor: '#fff', borderRadius: 10, padding: 14, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: change.date_new ? '#FF6F00' : '#4CAF50' }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 6 }}>
+                          Gara {change.match_number}
+                        </Text>
+                        {change.date_old && change.date_new && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                            <Ionicons name="calendar-outline" size={14} color="#FF6F00" />
+                            <Text style={{ fontSize: 13, color: '#E65100', textDecorationLine: 'line-through' }}>{change.date_old}</Text>
+                            <Ionicons name="arrow-forward" size={12} color="#666" />
+                            <Text style={{ fontSize: 13, color: '#2E7D32', fontWeight: '600' }}>{change.date_new}</Text>
+                          </View>
+                        )}
+                        {change.result_new && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="trophy-outline" size={14} color="#4CAF50" />
+                            <Text style={{ fontSize: 13, color: '#333' }}>Risultato: {change.result_new}</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))
+                  ) : (
+                    <View style={{ alignItems: 'center', padding: 24 }}>
+                      <Ionicons name="checkmark-circle" size={48} color="#4CAF50" />
+                      <Text style={{ fontSize: 15, color: '#666', marginTop: 8 }}>Calendario aggiornato, nessuna modifica necessaria</Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Syncing overlay */}
+      {syncing && (
+        <View style={styles.importOverlay}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.importText}>Sincronizzazione FIPAV in corso...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -969,6 +1064,12 @@ const styles = StyleSheet.create({
   importBtn: {
     padding: 8,
     backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  syncBtn: {
+    padding: 8,
+    backgroundColor: '#FF6F00',
     borderRadius: 8,
     marginRight: 8,
   },

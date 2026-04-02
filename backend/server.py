@@ -4626,6 +4626,118 @@ async def delete_match(match_id: str, current_user = Depends(get_current_user)):
     
     return {"message": "Gara eliminata"}
 
+
+@api_router.post("/matches/sync-fipav")
+async def sync_fipav_matches(current_user = Depends(get_current_user)):
+    """Sync matches from FIPAV portal - updates dates/results for existing matches"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può sincronizzare")
+    
+    try:
+        society_id_local = current_user.get("society_id")
+        
+        # Get federation config or use defaults for Pallavolo Perugia
+        fed_config = await db.federation_configs.find_one({"society_id": society_id_local, "federation": "fipav"})
+        
+        federation_society_id = "3477"  # Default Pallavolo Perugia
+        region = "umbria"
+        
+        if fed_config:
+            federation_society_id = fed_config.get("federation_society_id", federation_society_id)
+            region = fed_config.get("region", region)
+        
+        scraper = FIPAVScraper(region=region)
+        scraped_matches = await scraper.scrape_matches(society_id=federation_society_id)
+        
+        logging.info(f"FIPAV sync: scraped {len(scraped_matches)} matches")
+        
+        # Get all existing matches for this society
+        existing_matches = await db.matches.find(
+            {"society_id": society_id_local, "match_number": {"$ne": None}}
+        ).to_list(500)
+        
+        # Build lookup by match_number
+        existing_by_number = {}
+        for m in existing_matches:
+            if m.get("match_number"):
+                existing_by_number[str(m["match_number"])] = m
+        
+        updated_count = 0
+        changes = []
+        
+        for scraped in scraped_matches:
+            if not scraped.match_number:
+                continue
+            
+            match_num = str(scraped.match_number)
+            existing = existing_by_number.get(match_num)
+            
+            if not existing:
+                continue
+            
+            update_fields = {}
+            change_details = {"match_number": match_num}
+            
+            # Compare dates
+            existing_date = existing.get("date")
+            if existing_date:
+                if isinstance(existing_date, str):
+                    try:
+                        existing_date = datetime.fromisoformat(existing_date.replace("Z", "+00:00"))
+                    except:
+                        existing_date = None
+                
+                if existing_date and scraped.date:
+                    # Compare without timezone (both are naive)
+                    existing_naive = existing_date.replace(tzinfo=None) if existing_date.tzinfo else existing_date
+                    scraped_naive = scraped.date.replace(tzinfo=None) if scraped.date.tzinfo else scraped.date
+                    
+                    if existing_naive != scraped_naive:
+                        update_fields["date"] = scraped.date
+                        change_details["date_old"] = existing_naive.strftime("%d/%m/%Y %H:%M")
+                        change_details["date_new"] = scraped_naive.strftime("%d/%m/%Y %H:%M")
+            
+            # Compare results
+            existing_result = existing.get("result")
+            scraped_result = scraped.result
+            if scraped_result and scraped_result != "-" and scraped_result != existing_result:
+                update_fields["result"] = scraped_result
+                change_details["result_old"] = existing_result or "—"
+                change_details["result_new"] = scraped_result
+            
+            # Compare opponent name (might have changed)
+            is_home = "pallavolo perugia" in scraped.home_team.lower()
+            new_opponent = scraped.away_team if is_home else scraped.home_team
+            if new_opponent and new_opponent != existing.get("opponent"):
+                update_fields["opponent"] = new_opponent
+            
+            # Update home/away
+            new_home_away = "home" if is_home else "away"
+            if new_home_away != existing.get("home_away"):
+                update_fields["home_away"] = new_home_away
+            
+            if update_fields:
+                update_fields["updated_at"] = datetime.utcnow()
+                await db.matches.update_one(
+                    {"id": existing["id"]},
+                    {"$set": update_fields}
+                )
+                updated_count += 1
+                changes.append(change_details)
+        
+        return {
+            "message": f"Sincronizzazione completata. {updated_count} gare aggiornate su {len(scraped_matches)} trovate.",
+            "scraped_total": len(scraped_matches),
+            "updated": updated_count,
+            "existing_matched": len(existing_by_number),
+            "changes": changes
+        }
+    
+    except Exception as e:
+        logging.error(f"Error syncing FIPAV: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore sincronizzazione FIPAV: {str(e)}")
+
+
 @api_router.post("/matches/import")
 async def import_matches_from_excel(file_data: dict, current_user = Depends(get_current_user)):
     """Import matches from Excel data (parsed on frontend)"""
