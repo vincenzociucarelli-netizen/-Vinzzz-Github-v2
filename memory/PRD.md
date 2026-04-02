@@ -104,7 +104,7 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
   - "Tutte": tutte le gare
   - Badge risultato verde nelle card delle gare giocate
   - Messaggio vuoto personalizzato per ogni filtro
-- **Maschera data italiana**: Campi data import calendario con formato `__/__/____` predisposto
+- **Fix fuso orario partite**: Corretto bug +2h su tutti i file frontend. Aggiunto `timeZone: 'UTC'` a tutte le funzioni formatDate/formatTime per partite (7 file corretti: matches, import-calendar, coach, minor, 3 timeline)
 - **Preferenze federazione persistenti**: Salvataggio automatico delle ultime scelte (Federazione, Regione, Stagione) nel DB per società
   - `GET /PUT /api/federation/preferences` - Collection `federation_preferences` per società
   - Pre-compilazione automatica al rientro nella pagina

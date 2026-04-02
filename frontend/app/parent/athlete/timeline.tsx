@@ -27,7 +27,7 @@ const formatDate = (dateStr: string) => {
   try {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr.substring(0, 10);
-    return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' });
+    return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' });
   } catch {
     return dateStr.substring(0, 10);
   }
@@ -38,7 +38,7 @@ const formatTime = (dateStr: string) => {
   try {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return '';
-    return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
   } catch {
     return '';
   }

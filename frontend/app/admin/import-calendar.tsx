@@ -383,7 +383,8 @@ export default function ImportCalendarScreen() {
       month: '2-digit',
       year: '2-digit',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'UTC',
     });
   };
 

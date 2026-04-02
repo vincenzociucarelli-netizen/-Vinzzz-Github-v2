@@ -155,7 +155,7 @@ export default function AdminMatches() {
     setFormData({
       team_id: match.team_id,
       date: formattedDate,
-      time: matchDate.toTimeString().slice(0, 5),
+      time: `${matchDate.getUTCHours().toString().padStart(2, '0')}:${matchDate.getUTCMinutes().toString().padStart(2, '0')}`,
       opponent: match.opponent,
       venue: match.venue,
       address: match.address || '',
@@ -562,6 +562,7 @@ export default function AdminMatches() {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'UTC',
     });
   };
 
@@ -592,7 +593,7 @@ export default function AdminMatches() {
     
     filtered.forEach(match => {
       const date = new Date(match.date);
-      const monthName = date.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+      const monthName = date.toLocaleDateString('it-IT', { month: 'long', year: 'numeric', timeZone: 'UTC' });
       if (!grouped[monthName]) {
         grouped[monthName] = [];
       }

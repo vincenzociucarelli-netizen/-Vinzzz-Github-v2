@@ -667,7 +667,7 @@ export default function AdminCoachDetail() {
                 const declarationDate = coach.over_5000_limit[latestDateKey];
                 if (!declarationDate) return null;
                 const d = new Date(declarationDate);
-                const formattedDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} alle ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                const formattedDate = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()} alle ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
                 return (
                   <Text style={styles.declarationDateAdmin}>
                     📅 Dichiarato il: {formattedDate}

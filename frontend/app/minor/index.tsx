@@ -184,7 +184,7 @@ export default function MinorDashboard() {
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return '';
-      return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
     } catch { return ''; }
   };
 
