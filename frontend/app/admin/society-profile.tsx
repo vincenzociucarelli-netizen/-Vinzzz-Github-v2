@@ -191,7 +191,7 @@ export default function SocietyProfile() {
     if (phone2) lines.push(`Tel: ${phone2}`);
     if (societyEmail) lines.push(`Email: ${societyEmail}`);
     if (societyPec) lines.push(`PEC: ${societyPec}`);
-    if (fiscalCode) lines.push(`CF/P.IVA: ${fiscalCode}`);
+    if (fiscalCode) lines.push(`C.F.: ${fiscalCode}`);
     if (presidentName) lines.push(`Presidente: ${presidentName}`);
     return lines.join('\n');
   };
@@ -400,7 +400,7 @@ export default function SocietyProfile() {
                   <Text style={{ fontSize: 12, fontWeight: '600', color: '#1565C0' }}>JPG</Text>
                 </TouchableOpacity>
               </View>
-              <InfoRow icon="card" label="Codice Fiscale / P.IVA" value={fiscalCode} />
+              <InfoRow icon="card" label="Codice Fiscale" value={fiscalCode} />
               <InfoRow icon="person" label="Presidente" value={presidentName} />
             </View>
 
@@ -512,7 +512,7 @@ export default function SocietyProfile() {
             {/* Dati Fiscali */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Dati Fiscali</Text>
-              <Text style={styles.inputLabel}>Codice Fiscale / P.IVA</Text>
+              <Text style={styles.inputLabel}>Codice Fiscale</Text>
               <TextInput style={styles.input} value={fiscalCode} onChangeText={setFiscalCode} placeholder="12345678901" placeholderTextColor="#999" autoCapitalize="characters" />
               <Text style={styles.inputLabel}>Presidente</Text>
               <TextInput style={styles.input} value={presidentName} onChangeText={setPresidentName} placeholder="Mario Rossi" placeholderTextColor="#999" />

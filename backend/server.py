@@ -13504,7 +13504,7 @@ Codice Fiscale: {coach.get('fiscal_code', 'N/D')}
 
 in relazione al rapporto di collaborazione sportiva dilettantistica con
 ASD/SSD: {society_name}
-{f"C.F./P.IVA: {fiscal_code_society}" if fiscal_code_society else ""}
+{f"C.F.: {fiscal_code_society}" if fiscal_code_society else ""}
 
 COMUNICA
 
@@ -20047,7 +20047,7 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
         draw.text((x, y + 15), str(value), fill=MID_TEXT, font=font_value)
         return y + line_h
     
-    # Left column: Sede, CF/P.IVA, Presidente
+    # Left column: Sede, C.F., Presidente
     y_left = info_y
     addr_parts = []
     if society.get("address"):
@@ -20062,7 +20062,7 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     if loc_parts:
         addr_parts.append(" ".join(loc_parts))
     y_left = draw_info(col_left_x, y_left, "Sede", " - ".join(addr_parts) if addr_parts else "")
-    y_left = draw_info(col_left_x, y_left, "CF / P.IVA", society.get("fiscal_code", ""))
+    y_left = draw_info(col_left_x, y_left, "C.F.", society.get("fiscal_code", ""))
     y_left = draw_info(col_left_x, y_left, "Presidente", society.get("president_name", ""))
     
     # Right column: Email, PEC (NO cellulare)

@@ -260,7 +260,7 @@ Gentile Collaboratore / Membro dello Staff,
 la presente informativa descrive le modalità di trattamento dei dati personali da parte della società sportiva:
 ${societyName}
 Sede: ${societyAddress}
-C.F./P.IVA: ${societyCfPiva}
+C.F.: ${societyCfPiva}
 Email: ${societyEmail}
 
 Il Titolare del trattamento dei dati personali è la società sportiva sopra indicata nella persona del proprio legale rappresentante pro tempore.
@@ -298,7 +298,7 @@ Gentile Genitore/Tutore,
 la presente informativa descrive le modalità di trattamento dei dati personali del minore da parte della società sportiva:
 ${societyName}
 Sede: ${societyAddress}
-C.F./P.IVA: ${societyCfPiva}
+C.F.: ${societyCfPiva}
 Email: ${societyEmail}
 
 Il Titolare del trattamento dei dati personali è la società sportiva sopra indicata nella persona del proprio legale rappresentante pro tempore.
