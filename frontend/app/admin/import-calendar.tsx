@@ -104,6 +104,7 @@ export default function ImportCalendarScreen() {
   const [loadingChampionships, setLoadingChampionships] = useState(false);
   const [loadingSocieties, setLoadingSocieties] = useState(false);
   const [loadingTeams, setLoadingTeams] = useState(false);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
 
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
@@ -113,18 +114,46 @@ export default function ImportCalendarScreen() {
     }
   };
 
-  // Load regions on mount
+  // Load saved preferences on mount
   useEffect(() => {
-    loadRegions();
+    const loadPrefs = async () => {
+      try {
+        const res = await api.get('/federation/preferences');
+        const prefs = res.data;
+        if (prefs && prefs.federation) {
+          setFederation(prefs.federation);
+        }
+        if (prefs && prefs.region) {
+          setSelectedRegion(prefs.region);
+        }
+        // Season will be set after seasons load
+        if (prefs && prefs.season_id) {
+          // Store temporarily to apply after seasons load
+          (window as any).__savedSeasonId = prefs.season_id;
+        }
+      } catch (e) {
+        // No saved prefs, use defaults
+      } finally {
+        setPrefsLoaded(true);
+      }
+    };
+    loadPrefs();
     loadLocalTeams();
   }, []);
 
-  // Load seasons when region changes
+  // Load regions after prefs are loaded
   useEffect(() => {
-    if (selectedRegion) {
+    if (prefsLoaded) {
+      loadRegions();
+    }
+  }, [prefsLoaded]);
+
+  // Load seasons when region changes (after prefs are loaded)
+  useEffect(() => {
+    if (selectedRegion && prefsLoaded) {
       loadSeasons();
     }
-  }, [selectedRegion, federation]);
+  }, [selectedRegion, federation, prefsLoaded]);
 
   // Load championships and societies when season changes
   useEffect(() => {
@@ -133,6 +162,23 @@ export default function ImportCalendarScreen() {
       loadSocieties();
     }
   }, [selectedSeason]);
+
+  // Auto-save preferences when selections change
+  useEffect(() => {
+    if (!prefsLoaded || !selectedRegion || !selectedSeason) return;
+    const savePrefs = async () => {
+      try {
+        await api.put('/federation/preferences', {
+          federation,
+          region: selectedRegion,
+          season_id: selectedSeason,
+        });
+      } catch (e) {
+        // Silent fail
+      }
+    };
+    savePrefs();
+  }, [federation, selectedRegion, selectedSeason]);
 
   const loadRegions = async () => {
     setLoadingRegions(true);
@@ -153,7 +199,12 @@ export default function ImportCalendarScreen() {
         params: { federation, region: selectedRegion }
       });
       setSeasons(response.data);
-      if (response.data.length > 0) {
+      // Apply saved season_id if available, otherwise use first
+      const savedSeasonId = (window as any).__savedSeasonId;
+      if (savedSeasonId && response.data.some((s: any) => s.id === savedSeasonId)) {
+        setSelectedSeason(savedSeasonId);
+        delete (window as any).__savedSeasonId;
+      } else if (response.data.length > 0) {
         setSelectedSeason(response.data[0].id);
       }
     } catch (error) {

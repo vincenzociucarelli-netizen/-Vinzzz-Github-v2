@@ -5431,6 +5431,49 @@ async def delete_federation_config(current_user = Depends(get_current_user)):
     
     return {"message": "Configurazione eliminata"}
 
+@api_router.get("/federation/preferences")
+async def get_federation_preferences(current_user = Depends(get_current_user)):
+    """Get saved federation selection preferences for current society"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    society_id = current_user.get("society_id")
+    if not society_id:
+        return {}
+    
+    prefs = await db.federation_preferences.find_one(
+        {"society_id": society_id}, {"_id": 0}
+    )
+    return prefs or {}
+
+@api_router.put("/federation/preferences")
+async def save_federation_preferences(data: dict, current_user = Depends(get_current_user)):
+    """Save federation selection preferences for current society"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    society_id = current_user.get("society_id")
+    if not society_id:
+        raise HTTPException(status_code=400, detail="Nessuna società associata")
+    
+    prefs = {
+        "society_id": society_id,
+        "federation": data.get("federation"),
+        "region": data.get("region"),
+        "season_id": data.get("season_id"),
+        "updated_at": datetime.utcnow().isoformat()
+    }
+    
+    await db.federation_preferences.update_one(
+        {"society_id": society_id},
+        {"$set": prefs},
+        upsert=True
+    )
+    
+    return {"message": "Preferenze salvate"}
+
+
+
 
 
 @api_router.get("/parent/commitments")
