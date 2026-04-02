@@ -88,7 +88,18 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
   - History con parent_id + child_id per ogni modifica
 - Test: iteration_65.json (14/14), iteration_66.json (12/12)
 
-### Session 2026-04-01 (Fork 11 - Current)
+### Session 2026-04-02 (Fork 12 - Current)
+- **Sincronizzazione Calendario FIPAV**: Nuovo endpoint `POST /api/matches/sync-fipav`
+  - Scraping automatico dal portale FIPAV Umbria (`umbria.portalefipav.net`, SId=3477)
+  - Confronta per `match_number`: aggiorna date/orari/risultati se differenti
+  - Report modifiche dettagliato (date vecchie → nuove, risultati aggiunti)
+  - Solo admin (403 per non-admin), idempotente
+  - Pulsante arancione "Sincronizza FIPAV" nella header di admin/matches
+  - Modale risultati sync con diff visuale (date barrate + nuove)
+  - Scraper aggiornato: cattura nome campionato da `<caption>` HTML
+  - Test: iteration_67.json (7/7 backend, 100%)
+
+### Session 2026-04-01 (Fork 11)
 - **PDF Autorizzazione alla Prova**: page break aggiunto - Accettazione e Firma spostati su Pagina 2
   - Aggiornato sia `generate_trial_document` (preview) che `sign_trial_document` (firmato)
   - Header società ripetuto su Pagina 2
@@ -118,8 +129,9 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
 - Campo "Email 2° Genitore" visibile nel profilo atleta
 
 ## Pending / Backlog
+- (P1) Re-import Excel calendario con aggiornamento differenziale
 - (P1) UI atleti con contratto formale (estate post-lancio)
-- (P2) Refactoring server.py in router separati
+- (P2) Refactoring server.py in router separati (>23K righe)
 - (P2) Re-implementazione Stripe
 - (P2) Pubblicazione dominio e App Store
 
