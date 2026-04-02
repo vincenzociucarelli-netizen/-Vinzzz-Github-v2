@@ -131,21 +131,6 @@ export default function Register() {
       return;
     }
 
-    // Data password validation for parents
-    if (role === 'parent') {
-      if (!dataPassword) {
-        showAlert('Errore', 'Inserisci la Password Dati per proteggere i dati sensibili del minore');
-        return;
-      }
-      if (dataPassword.length < 6) {
-        showAlert('Errore', 'La Password Dati deve essere di almeno 6 caratteri');
-        return;
-      }
-      if (dataPassword !== confirmDataPassword) {
-        showAlert('Errore', 'Le Password Dati non coincidono');
-        return;
-      }
-    }
 
     // Invite code required for coach, viewer, and athlete
     if (!inviteCode && (role !== 'parent')) {
@@ -685,49 +670,6 @@ export default function Register() {
       />
 
       {/* Data Password for Parents */}
-      {role === 'parent' && (
-        <>
-          <View style={[styles.dataPasswordSection, { marginTop: 20 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <Ionicons name="shield-checkmark" size={20} color="#FF9500" />
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#333' }}>Password Dati (protezione dati sensibili)</Text>
-            </View>
-            <Text style={{ fontSize: 12, color: '#666', lineHeight: 18, marginBottom: 12 }}>
-              Questa password separata protegge i dati personali del minore (codice fiscale, indirizzo, ecc.). 
-              Ogni genitore avrà la propria password dati. L'admin potrà resettarla se necessario.
-            </Text>
-
-            <Text style={styles.inputLabel}>Password Dati *</Text>
-            <TextInput
-              ref={dataPasswordRef}
-              style={styles.input}
-              placeholder="Minimo 6 caratteri"
-              placeholderTextColor="#aaa"
-              value={dataPassword}
-              onChangeText={setDataPassword}
-              secureTextEntry={!showPasswords}
-              returnKeyType="next"
-              onSubmitEditing={() => confirmDataPasswordRef.current?.focus()}
-              data-testid="data-password-input"
-            />
-
-            <Text style={styles.inputLabel}>Conferma Password Dati *</Text>
-            <TextInput
-              ref={confirmDataPasswordRef}
-              style={styles.input}
-              placeholder="Ripeti la password dati"
-              placeholderTextColor="#aaa"
-              value={confirmDataPassword}
-              onChangeText={setConfirmDataPassword}
-              secureTextEntry={!showPasswords}
-              returnKeyType="done"
-              onSubmitEditing={handleRegister}
-              data-testid="confirm-data-password-input"
-            />
-          </View>
-        </>
-      )}
-
       {/* Warning for Coach/Dirigente */}
       {(role === 'coach' || role === 'viewer') && (
         <View style={styles.warningBox}>
