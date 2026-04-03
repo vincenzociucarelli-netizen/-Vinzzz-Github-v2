@@ -88,12 +88,7 @@ export default function Register() {
         showAlert('Errore', 'Codice invito non valido');
       }
     } catch (error: any) {
-      // If endpoint doesn't exist, just proceed
-      if (error.response?.status === 404) {
-        setStep('form');
-      } else {
-        showAlert('Errore', error.response?.data?.detail || 'Codice invito non valido');
-      }
+      showAlert('Errore', error.response?.data?.detail || 'Codice invito non valido. Verifica e riprova.');
     } finally {
       setValidatingCode(false);
     }
@@ -326,14 +321,9 @@ export default function Register() {
 
   const canContinueFromWelcome = hasOpenedPrivacy && hasOpenedTerms && consentPrivacyViewed;
 
-  // After welcome, decide next step
+  // After welcome, decide next step - ALWAYS go to invite code step
   const proceedFromWelcome = () => {
-    if (role === 'parent') {
-      setStep('form');
-    } else {
-      // coach, viewer, athlete, collaboratore need invite code in the form
-      setStep('form');
-    }
+    setStep('invite');
   };
 
   // STEP 2: Welcome Screen
@@ -488,13 +478,13 @@ export default function Register() {
   // STEP 3: Invite Code (for Coach/Dirigente)
   const renderInviteCode = () => (
     <View style={styles.stepContainer}>
-      <TouchableOpacity style={styles.backBtn} onPress={() => setStep('role')}>
+      <TouchableOpacity style={styles.backBtn} onPress={() => setStep('welcome')}>
         <View style={{ backgroundColor: "rgba(0,122,255,0.15)", borderRadius: 20, padding: 6 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
       </TouchableOpacity>
 
-      <Text style={styles.stepTitle}>Codice Invito</Text>
+      <Text style={styles.stepTitle}>Codice Invito Società</Text>
       <Text style={styles.stepSubtitle}>
-        Inserisci il codice che ti è stato fornito dalla tua società sportiva
+        Inserisci il codice che ti è stato fornito dalla tua società sportiva. Senza questo codice non è possibile procedere con la registrazione.
       </Text>
 
       <View style={styles.inviteCodeBox}>
@@ -504,30 +494,39 @@ export default function Register() {
           placeholder="ES: ABCD1234"
           placeholderTextColor="#999"
           value={inviteCode}
-          onChangeText={(text) => setInviteCode(text.toUpperCase())}
+          onChangeText={(text) => { setInviteCode(text.toUpperCase()); setSocietyName(''); }}
           autoCapitalize="characters"
           maxLength={8}
           autoFocus
+          data-testid="invite-code-step-input"
         />
       </View>
 
+      {societyName ? (
+        <View style={[styles.societyBadge, { marginBottom: 16 }]}>
+          <Ionicons name="shield-checkmark" size={16} color="#4CAF50" />
+          <Text style={styles.societyBadgeText}>{societyName}</Text>
+        </View>
+      ) : null}
+
       <TouchableOpacity
-        style={[styles.continueBtn, validatingCode && styles.btnDisabled]}
-        onPress={() => setStep('form')} // Skip validation, go directly to form
-        disabled={validatingCode}
+        style={[styles.continueBtn, (validatingCode || !inviteCode.trim()) && styles.btnDisabled]}
+        onPress={validateInviteCode}
+        disabled={validatingCode || !inviteCode.trim()}
+        data-testid="validate-invite-btn"
       >
         {validatingCode ? (
           <ActivityIndicator color="#fff" />
         ) : (
           <>
-            <Text style={styles.continueBtnText}>Continua</Text>
+            <Text style={styles.continueBtnText}>Verifica e Continua</Text>
             <Ionicons name="arrow-forward" size={20} color="#fff" />
           </>
         )}
       </TouchableOpacity>
 
       <Text style={styles.inviteHint}>
-        💡 Non hai il codice? Contatta l'amministratore della tua società sportiva.
+        Non hai il codice? Contatta l'amministratore della tua società sportiva.
       </Text>
     </View>
   );
@@ -537,7 +536,7 @@ export default function Register() {
     <View style={styles.form}>
       <TouchableOpacity 
         style={styles.backBtn} 
-        onPress={() => setStep('role')}
+        onPress={() => setStep('invite')}
       >
         <View style={{ backgroundColor: "rgba(0,122,255,0.15)", borderRadius: 20, padding: 6 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
       </TouchableOpacity>
@@ -546,24 +545,9 @@ export default function Register() {
         Registrazione {role === 'parent' ? 'Genitore' : role === 'coach' ? 'Coach' : role === 'athlete' ? 'Atleta Maggiorenne' : role === 'collaboratore' ? 'Collaboratore' : 'Dirigente'}
       </Text>
 
-      {/* Invite code for all roles (inline) */}
-      <View style={styles.inviteCodeSection}>
-        <Text style={styles.inviteCodeLabel}>🎟️ Codice Invito Società</Text>
-        <TextInput
-          style={styles.inviteCodeInputSmall}
-          placeholder="Es: ABCD1234"
-          placeholderTextColor="#999"
-          value={inviteCode}
-          onChangeText={(text) => setInviteCode(text.toUpperCase())}
-          autoCapitalize="characters"
-          maxLength={8}
-          data-testid="invite-code-input"
-        />
-      </View>
-
-      {/* Show society name if validated */}
+      {/* Show validated society */}
       {societyName && (
-        <View style={styles.societyBadge}>
+        <View style={[styles.societyBadge, { marginBottom: 12 }]}>
           <Ionicons name="shield-checkmark" size={16} color="#4CAF50" />
           <Text style={styles.societyBadgeText}>{societyName}</Text>
         </View>

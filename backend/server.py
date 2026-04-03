@@ -1530,6 +1530,28 @@ async def get_terms_status(current_user = Depends(get_current_user)):
 
 # ==================== AUTH ENDPOINTS ====================
 
+
+@api_router.post("/auth/validate-invite-code")
+async def validate_invite_code(data: dict):
+    """Validate a society invite code before proceeding with registration."""
+    invite_code = (data.get("invite_code") or "").strip().upper()
+    if not invite_code:
+        raise HTTPException(status_code=400, detail="Codice invito obbligatorio")
+    
+    society = await db.societies.find_one({"invite_code": invite_code}, {"_id": 0})
+    if not society:
+        raise HTTPException(status_code=400, detail="Codice invito non valido. Verifica il codice e riprova.")
+    
+    if not society.get("is_active", True):
+        raise HTTPException(status_code=400, detail="Questa società non è più attiva")
+    
+    return {
+        "valid": True,
+        "society_name": society.get("name", ""),
+        "society_id": society.get("id", "")
+    }
+
+
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate, request: Request):
     # Check if user exists
