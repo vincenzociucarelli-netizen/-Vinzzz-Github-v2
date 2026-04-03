@@ -4546,6 +4546,19 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
     if "onboarding_date" in data:
         update_data["onboarding_date"] = data["onboarding_date"]
     
+    # Allow admin to fix society_id for users who registered without it
+    if "society_id" in data:
+        if data["society_id"]:
+            soc = await db.societies.find_one({"id": data["society_id"]})
+            if not soc:
+                raise HTTPException(status_code=400, detail="Società non trovata")
+            update_data["society_id"] = data["society_id"]
+    
+    # Allow admin to fix user names and profile data
+    for field in ["first_name", "last_name", "full_name", "phone", "fiscal_code", "email"]:
+        if field in data and data[field] is not None:
+            update_data[field] = data[field]
+    
     if update_data:
         await db.users.update_one(
             {"id": user_id},
