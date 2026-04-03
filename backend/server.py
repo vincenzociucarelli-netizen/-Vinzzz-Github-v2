@@ -782,8 +782,8 @@ class Athlete(BaseModel):
     trial_document_generated: bool = False  # True se il documento di prova è stato generato/firmato
     privacy_accepted: bool = False
     privacy_accepted_date: Optional[datetime] = None
-    consent_images_internal: bool = False
-    consent_images_promo: bool = False
+    consent_images_internal: Optional[bool] = None
+    consent_images_promo: Optional[bool] = None
     image_consent: bool = False
     # Consensi granulari tracciati (GDPR compliant)
     consents: Optional[dict] = None  # {type: {value, timestamp, user_id, document_version, ip}}

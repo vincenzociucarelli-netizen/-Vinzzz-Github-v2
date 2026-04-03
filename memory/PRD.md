@@ -91,24 +91,25 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
 ### Session 2026-04-02 (Fork 12 - Current)
 - **Sincronizzazione Calendario FIPAV**: Nuovo endpoint `POST /api/matches/sync-fipav`
   - Scraping automatico dal portale FIPAV Umbria (`umbria.portalefipav.net`, SId=3477)
-  - Confronta per `match_number`: aggiorna date/orari/risultati se differenti
-  - Report modifiche dettagliato (date vecchie → nuove, risultati aggiunti)
-  - Solo admin (403 per non-admin), idempotente
   - Pulsante arancione "Sincronizza FIPAV" nella header di admin/matches
-  - Modale risultati sync con diff visuale (date barrate + nuove)
-  - Scraper aggiornato: cattura nome campionato da `<caption>` HTML
+  - Modale risultati sync con diff visuale
   - Test: iteration_67.json (7/7 backend, 100%)
-- **Filtro Calendario Gare**: 3 tab nell'admin matches:
-  - "Da disputare" (default): gare future senza risultato
-  - "Giocate": solo gare con risultato, ordinate dalla più recente
-  - "Tutte": tutte le gare
-  - Badge risultato verde nelle card delle gare giocate
-  - Messaggio vuoto personalizzato per ogni filtro
-- **Fix fuso orario partite**: Corretto bug +2h su tutti i file frontend. Aggiunto `timeZone: 'UTC'` a tutte le funzioni formatDate/formatTime per partite (7 file corretti: matches, import-calendar, coach, minor, 3 timeline)
-- **Preferenze federazione persistenti**: Salvataggio automatico delle ultime scelte (Federazione, Regione, Stagione) nel DB per società
-  - `GET /PUT /api/federation/preferences` - Collection `federation_preferences` per società
-  - Pre-compilazione automatica al rientro nella pagina
-  - Pronto per multi-sport (basket, calcio, rugby etc.)
+- **Filtro Calendario Gare**: 3 tab (Da disputare / Giocate / Tutte) + badge risultato verde
+- **Fix fuso orario partite**: Corretto bug +2h su 7 file frontend (`timeZone: 'UTC'`)
+- **Preferenze federazione persistenti**: Salvataggio Federazione/Regione/Stagione per società nel DB
+- **Maschera data italiana**: Campi data import calendario con formato `__/__/____`
+- **Rimozione P.IVA**: Sostituito ovunque con solo "C.F." (frontend + backend PDF)
+- **Fix password protezione dati secondo genitore**: `has-password` e `profile-check` ora controllano entrambi i campi
+- **GDPR Consensi genitori semplificati** (suggerimento Gemini):
+  - Rimosso checkbox "Immagini uso interno" per genitori (coperto da legittimo interesse)
+  - Mantenuto solo "Immagini promozionali" (facoltativo, stile evidenziato arancione)
+  - Aggiunta clausola "Riprese di contesto" nell'informativa privacy (frontend + backend PDF)
+  - ConsentManager: nasconde `images_internal` per `entityType === 'user'`
+- **Pulsante "Richiedi rimozione mie immagini"**: Nella sezione Consensi del profilo genitore
+  - Invia notifica prioritaria all'admin (`POST /api/notifications/photo-removal-request`)
+- **Password protezione dati**: Rimossa dalla registrazione genitore (resta solo alla registrazione atleta)
+- **Codice invito obbligatorio**: Ora richiesto per TUTTI i ruoli inclusi genitori (frontend + backend)
+- **Fix RINA PASSE**: Associata manualmente alla società Pallavolo Perugia
 
 ### Session 2026-04-01 (Fork 11)
 - **PDF Autorizzazione alla Prova**: page break aggiunto - Accettazione e Firma spostati su Pagina 2
