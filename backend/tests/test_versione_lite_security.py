@@ -12,7 +12,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://italian-sports-qa.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://registrateam-vol.preview.emergentagent.com')
 
 # Test data from context
 MARTINA_ID = "3d7df7a283444a2c83483d33"

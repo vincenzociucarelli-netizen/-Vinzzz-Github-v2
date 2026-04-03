@@ -36,7 +36,7 @@ App completa per la gestione di società sportive di pallavolo italiana. Focus s
 ## IMPORTANT: Build Process
 - Frontend: `npx expo export -p web` + `sudo supervisorctl restart expo`
 - SEMPRE pulire cache: `rm -rf .metro-cache dist`
-- SEMPRE settare: `EXPO_PUBLIC_BACKEND_URL=https://italian-sports-qa.preview.emergentagent.com`
+- SEMPRE settare: `EXPO_PUBLIC_BACKEND_URL=https://registrateam-vol.preview.emergentagent.com`
 
 ## Completed Work
 

@@ -6055,53 +6055,76 @@ async def search_athlete_for_link(data: dict, current_user = Depends(get_current
     if not cognome:
         raise HTTPException(status_code=400, detail="Cognome obbligatorio")
     
-    import unicodedata
-    def norm(s):
-        s = str(s).strip().upper()
-        s = unicodedata.normalize('NFD', s)
-        return ''.join(c for c in s if unicodedata.category(c) != 'Mn')
-    
-    cn = norm(cognome)
-    nn = norm(nome)
-    
-    society_id = current_user.get("society_id")
-    all_athletes = await db.athletes.find({
-        "society_id": society_id,
-        "is_withdrawn": {"$ne": True}
-    }).to_list(5000)
-    
-    teams = await db.teams.find({}).to_list(100)
-    team_map = {t["id"]: t.get("name", "") for t in teams}
-    
-    # Match by last_name, optionally first_name
-    matches = []
-    for a in all_athletes:
-        a_ln = norm(a.get("last_name", ""))
-        a_fn = norm(a.get("first_name", ""))
-        if a_ln == cn:
-            if not nn or nn == a_fn or nn in a_fn or a_fn in nn or (nn[:3] == a_fn[:3] if len(nn) >= 3 and len(a_fn) >= 3 else False):
-                # Don't show athletes already linked to this parent
-                if current_user["id"] in [a.get("parent_id"), a.get("second_parent_id")]:
+    try:
+        import unicodedata
+        def norm(s):
+            s = str(s).strip().upper()
+            s = unicodedata.normalize('NFD', s)
+            return ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+        
+        cn = norm(cognome)
+        nn = norm(nome)
+        
+        society_id = current_user.get("society_id")
+        if not society_id:
+            raise HTTPException(status_code=400, detail="Società non associata al tuo profilo. Contatta l'amministratore.")
+        
+        all_athletes = await db.athletes.find({
+            "society_id": society_id,
+            "is_withdrawn": {"$ne": True}
+        }, {"_id": 0}).to_list(5000)
+        
+        teams = await db.teams.find({}, {"_id": 0}).to_list(100)
+        team_map = {t.get("id", ""): t.get("name", "") for t in teams if t.get("id")}
+        
+        # Match by last_name (exact or contains), optionally first_name
+        matches = []
+        for a in all_athletes:
+            athlete_id = a.get("id", "")
+            if not athlete_id:
+                continue
+            a_ln = norm(a.get("last_name", ""))
+            a_fn = norm(a.get("first_name", ""))
+            
+            # Match: exact last_name OR last_name contains search OR search contains last_name
+            ln_match = (a_ln == cn) or (cn in a_ln and len(cn) >= 3) or (a_ln in cn and len(a_ln) >= 3)
+            if not ln_match:
+                continue
+            
+            # If nome is provided, check first_name match
+            if nn:
+                fn_match = (nn == a_fn or nn in a_fn or a_fn in nn or 
+                           (len(nn) >= 3 and len(a_fn) >= 3 and nn[:3] == a_fn[:3]))
+                if not fn_match:
                     continue
-                
-                dob = a.get("date_of_birth") or a.get("birth_date") or ""
-                if hasattr(dob, 'strftime'):
-                    dob = dob.strftime("%d/%m/%Y")
-                elif isinstance(dob, str) and 'T' in dob:
-                    try:
-                        dob = datetime.fromisoformat(dob.replace('Z', '+00:00')).strftime("%d/%m/%Y")
-                    except:
-                        pass
-                
-                matches.append({
-                    "id": a["id"],
-                    "first_name": a.get("first_name", ""),
-                    "last_name": a.get("last_name", ""),
-                    "team": team_map.get(a.get("team_id"), ""),
-                    "date_of_birth": dob,
-                })
-    
-    return {"results": matches, "count": len(matches)}
+            
+            # Don't show athletes already linked to this parent
+            if current_user.get("id") in [a.get("parent_id"), a.get("second_parent_id")]:
+                continue
+            
+            dob = a.get("date_of_birth") or a.get("birth_date") or ""
+            if hasattr(dob, 'strftime'):
+                dob = dob.strftime("%d/%m/%Y")
+            elif isinstance(dob, str) and 'T' in dob:
+                try:
+                    dob = datetime.fromisoformat(dob.replace('Z', '+00:00')).strftime("%d/%m/%Y")
+                except:
+                    pass
+            
+            matches.append({
+                "id": athlete_id,
+                "first_name": a.get("first_name", ""),
+                "last_name": a.get("last_name", ""),
+                "team": team_map.get(a.get("team_id", ""), ""),
+                "date_of_birth": str(dob) if dob else "",
+            })
+        
+        return {"results": matches, "count": len(matches)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Errore nella ricerca atleta: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Errore interno durante la ricerca: {str(e)}")
 
 @api_router.post("/parent-link/request")
 async def request_parent_link(data: dict, current_user = Depends(get_current_user)):

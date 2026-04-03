@@ -174,7 +174,7 @@ export default function ParentLinkPage() {
           <Text style={styles.cardSubtitle}>Inserisci cognome e nome dell'atleta che vuoi collegare al tuo profilo</Text>
           <View style={styles.inputRow}>
             <TextInput
-              style={[styles.input, { flex: 1 }]}
+              style={[styles.input, styles.inputHalf]}
               placeholder="Cognome *"
               value={cognome}
               onChangeText={setCognome}
@@ -182,7 +182,7 @@ export default function ParentLinkPage() {
               data-testid="search-cognome-input"
             />
             <TextInput
-              style={[styles.input, { flex: 1 }]}
+              style={[styles.input, styles.inputHalf]}
               placeholder="Nome"
               value={nome}
               onChangeText={setNome}
@@ -291,11 +291,12 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 4 },
   cardSubtitle: { fontSize: 13, color: '#888', marginBottom: 12, lineHeight: 18 },
-  inputRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  inputRow: { flexDirection: 'row', marginBottom: 12 },
   input: {
     backgroundColor: '#F5F5F5', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12,
     fontSize: 15, borderWidth: 1, borderColor: '#E0E0E0',
   },
+  inputHalf: { width: '48%', marginRight: '1%', marginLeft: '1%' },
   searchBtn: {
     backgroundColor: '#007AFF', borderRadius: 10, paddingVertical: 14,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
