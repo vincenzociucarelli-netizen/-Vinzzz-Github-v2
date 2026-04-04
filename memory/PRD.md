@@ -50,6 +50,7 @@ npx expo export -p web --clear
 
 ### Sessione 05/04/2026
 12. Build frontend per rendere visibili: icona occhio password, submit bloccato senza apertura documenti privacy nella registrazione via invito
+13. Uniformato flusso registrazione su tutti i canali: aggiunta lettura `?code=` da URL in `register.tsx`, auto-validazione codice invito dal link condiviso dall'admin
 
 ## Backlog Prioritizzato
 

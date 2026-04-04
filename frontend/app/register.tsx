@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,13 +12,14 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import api from '../src/services/api';
 import { Ionicons } from '../src/components/Icon';
 
 export default function Register() {
   const router = useRouter();
+  const { code: urlCode } = useLocalSearchParams<{ code?: string }>();
   const setUser = useAuthStore((state) => state.setUser);
   
   // Step management: 'role' -> 'welcome' -> 'invite' -> 'form' -> 'child-check' (parents only)
@@ -42,6 +43,15 @@ export default function Register() {
   const [societyName, setSocietyName] = useState('');
   const [hasOpenedPrivacy, setHasOpenedPrivacy] = useState(false);
   const [hasOpenedTerms, setHasOpenedTerms] = useState(false);
+  const [codeFromUrl, setCodeFromUrl] = useState(false);
+
+  // Auto-fill invite code from URL parameter (?code=XXXX)
+  useEffect(() => {
+    if (urlCode && !inviteCode) {
+      setInviteCode(urlCode.toUpperCase());
+      setCodeFromUrl(true);
+    }
+  }, [urlCode]);
   
   // Child-check step states (for parents)
   const [childAlreadyRegistered, setChildAlreadyRegistered] = useState<boolean | null>(null);
@@ -514,6 +524,13 @@ export default function Register() {
     </View>
   );
 
+  // Auto-validate invite code when it comes from URL
+  useEffect(() => {
+    if (codeFromUrl && inviteCode && step === 'invite' && !societyName) {
+      validateInviteCode();
+    }
+  }, [step, codeFromUrl]);
+
   // STEP 3: Invite Code (for Coach/Dirigente)
   const renderInviteCode = () => (
     <View style={styles.stepContainer}>
@@ -523,7 +540,9 @@ export default function Register() {
 
       <Text style={styles.stepTitle}>Codice Invito Società</Text>
       <Text style={styles.stepSubtitle}>
-        Inserisci il codice che ti è stato fornito dalla tua società sportiva. Senza questo codice non è possibile procedere con la registrazione.
+        {codeFromUrl 
+          ? 'Il codice è stato precompilato dal link ricevuto. Verifica e continua.'
+          : 'Inserisci il codice che ti è stato fornito dalla tua società sportiva. Senza questo codice non è possibile procedere con la registrazione.'}
       </Text>
 
       <View style={styles.inviteCodeBox}>
