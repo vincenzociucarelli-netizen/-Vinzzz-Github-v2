@@ -220,7 +220,6 @@ export default function InviteRegister() {
       // GDPR consents
       payload.consents = {
         privacy_viewed: consentPrivacyViewed,
-        images_internal: consentInternalImages,
         images_promo: consentPromotionalImages,
       };
 
@@ -508,23 +507,18 @@ export default function InviteRegister() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.consentRow}
-              onPress={() => setConsentInternalImages(!consentInternalImages)}
-              data-testid="consent-internal-images"
-            >
-              <Ionicons name={consentInternalImages ? "checkbox" : "square-outline"} size={22} color={consentInternalImages ? "#4CAF50" : "#999"} />
-              <Text style={styles.consentTextOptional}>
-                Acconsento all'uso delle mie immagini per comunicazioni interne alla societa
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.consentRow}
+              style={[styles.consentRow, {
+                backgroundColor: '#FFF8E1',
+                borderWidth: 2,
+                borderColor: '#FF9800',
+                borderRadius: 12,
+                padding: 14,
+              }]}
               onPress={() => setConsentPromotionalImages(!consentPromotionalImages)}
               data-testid="consent-promotional-images"
             >
-              <Ionicons name={consentPromotionalImages ? "checkbox" : "square-outline"} size={22} color={consentPromotionalImages ? "#4CAF50" : "#999"} />
-              <Text style={styles.consentTextOptional}>
+              <Ionicons name={consentPromotionalImages ? "checkbox" : "square-outline"} size={28} color={consentPromotionalImages ? "#FF9800" : "#FF9800"} />
+              <Text style={[styles.consentTextOptional, { fontSize: 15, fontWeight: '600', color: '#E65100' }]}>
                 Acconsento all'uso delle mie immagini a scopi promozionali
               </Text>
             </TouchableOpacity>

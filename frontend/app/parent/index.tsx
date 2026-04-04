@@ -295,7 +295,6 @@ Durante le attività sportive potranno essere realizzate fotografie o riprese vi
 PRESA VISIONE:
 [X] Informativa privacy presa visione (obbligatorio)
 [X] Il trattamento dei dati è necessario per l'esecuzione dell'attività sportiva e per obblighi di legge (obbligatorio)
-[${consentImgInternal ? 'X' : ' '}] Utilizzo immagini ad uso interno (facoltativo)
 [${consentImgPromo ? 'X' : ' '}] Utilizzo immagini a scopo promozionale (facoltativo)
 
 DICHIARAZIONE
@@ -311,21 +310,18 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
         related_entity_id: athleteId,
         consent_data: {
           privacy_viewed: true,
-          images_internal: consentImgInternal,
           images_promo: consentImgPromo,
         },
         additional_data: {
           'Atleta': athleteName,
           'Genitore/Tutore': user.full_name,
           'Tipo documento': 'Presa Visione Privacy e Liberatoria',
-          'Consenso immagini uso interno': consentImgInternal ? 'SI' : 'NO',
           'Consenso immagini uso promozionale': consentImgPromo ? 'SI' : 'NO',
         }
       });
       
       // Then update the athlete's privacy status with consent choices
       await api.post(`/trial/accept-privacy/${athleteId}`, {
-        images_internal: consentImgInternal,
         images_promo: consentImgPromo,
         document_version: '1.0',
       });
@@ -1101,36 +1097,16 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                 <TouchableOpacity
                   style={{
                     flexDirection: 'row', alignItems: 'center', gap: 12,
-                    backgroundColor: consentImgInternal ? '#E8F5E9' : '#FAFAFA',
-                    borderRadius: 10, padding: 14, marginBottom: 8,
-                    borderWidth: 1, borderColor: consentImgInternal ? '#4CAF50' : '#E0E0E0',
-                  }}
-                  onPress={() => setConsentImgInternal(!consentImgInternal)}
-                  data-testid="consent-toggle-images-internal"
-                >
-                  <Ionicons name={consentImgInternal ? "checkbox" : "square-outline"} size={22} color={consentImgInternal ? "#4CAF50" : "#999"} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>
-                      Utilizzo immagini ad uso interno
-                    </Text>
-                    <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
-                      Es. comunicazioni, gruppi, attività della società
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 12,
-                    backgroundColor: consentImgPromo ? '#E8F5E9' : '#FAFAFA',
-                    borderRadius: 10, padding: 14, marginBottom: 16,
-                    borderWidth: 1, borderColor: consentImgPromo ? '#4CAF50' : '#E0E0E0',
+                    backgroundColor: '#FFF8E1',
+                    borderRadius: 12, padding: 16, marginBottom: 16,
+                    borderWidth: 2, borderColor: '#FF9800',
                   }}
                   onPress={() => setConsentImgPromo(!consentImgPromo)}
                   data-testid="consent-toggle-images-promo"
                 >
-                  <Ionicons name={consentImgPromo ? "checkbox" : "square-outline"} size={22} color={consentImgPromo ? "#4CAF50" : "#999"} />
+                  <Ionicons name={consentImgPromo ? "checkbox" : "square-outline"} size={28} color="#FF9800" />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100' }}>
                       Utilizzo immagini a scopo promozionale
                     </Text>
                     <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
