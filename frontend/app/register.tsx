@@ -21,8 +21,8 @@ export default function Register() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   
-  // Step management: 'role' -> 'welcome' -> 'invite' -> 'form'
-  const [step, setStep] = useState<'role' | 'welcome' | 'invite' | 'form'>('role');
+  // Step management: 'role' -> 'welcome' -> 'invite' -> 'form' -> 'child-check' (parents only)
+  const [step, setStep] = useState<'role' | 'welcome' | 'invite' | 'form' | 'child-check'>('role');
   
   // Form fields
   const [lastName, setLastName] = useState('');
@@ -42,6 +42,15 @@ export default function Register() {
   const [societyName, setSocietyName] = useState('');
   const [hasOpenedPrivacy, setHasOpenedPrivacy] = useState(false);
   const [hasOpenedTerms, setHasOpenedTerms] = useState(false);
+  
+  // Child-check step states (for parents)
+  const [childAlreadyRegistered, setChildAlreadyRegistered] = useState<boolean | null>(null);
+  const [searchCognome, setSearchCognome] = useState('');
+  const [searchNome, setSearchNome] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchDone, setSearchDone] = useState(false);
+  const [linkRequestSent, setLinkRequestSent] = useState(false);
   
   // GDPR consent states
   const [consentPrivacyViewed, setConsentPrivacyViewed] = useState(false);
@@ -186,13 +195,9 @@ export default function Register() {
             () => router.replace('/login')
           );
         } else {
-          // Parent can login immediately
+          // Parent can login immediately, then show child-check step
           await setUser(response.data.user, response.data.token);
-          showAlert(
-            '✅ Registrazione completata!',
-            'Benvenuto! Completa il tuo profilo nella sezione dedicata.',
-            () => router.replace('/parent')
-          );
+          setStep('child-check');
         }
       }
     } catch (error: any) {
@@ -200,6 +205,40 @@ export default function Register() {
       showAlert('Errore', message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // === Child-check step functions ===
+  const searchChild = async () => {
+    if (!searchCognome.trim()) {
+      showAlert('Attenzione', 'Inserisci almeno il cognome');
+      return;
+    }
+    setSearching(true);
+    setSearchDone(true);
+    try {
+      const response = await api.post('/parent-link/search', {
+        cognome: searchCognome.trim(),
+        nome: searchNome.trim(),
+      });
+      setSearchResults(response.data.results || []);
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la ricerca');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const requestLink = async (athleteId: string) => {
+    try {
+      await api.post('/parent-link/request', { athlete_id: athleteId });
+      setLinkRequestSent(true);
+      showAlert(
+        'Richiesta inviata!',
+        'La tua richiesta di collegamento è stata inviata. L\'altro genitore dovrà approvarla.',
+      );
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore nell\'invio della richiesta');
     }
   };
 
@@ -708,6 +747,184 @@ export default function Register() {
     </View>
   );
 
+  // STEP: Child already registered? (after parent registration)
+  const renderChildCheck = () => (
+    <View style={styles.stepContainer}>
+      <View style={{ alignItems: 'center', marginBottom: 24 }}>
+        <View style={{ backgroundColor: '#E8F5E9', borderRadius: 50, width: 64, height: 64, justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+          <Ionicons name="checkmark-circle" size={40} color="#4CAF50" />
+        </View>
+        <Text style={styles.stepTitle}>Registrazione completata!</Text>
+        <Text style={[styles.stepSubtitle, { textAlign: 'center' }]}>
+          Benvenuto/a nella società {societyName || ''}
+        </Text>
+      </View>
+
+      <Text style={{ fontSize: 17, fontWeight: '700', color: '#333', marginBottom: 16, textAlign: 'center' }}>
+        Il tuo figlio/a è già registrato nella società?
+      </Text>
+
+      {childAlreadyRegistered === null && (
+        <View style={{ gap: 12 }}>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#E3F2FD', borderRadius: 14, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 14,
+              borderWidth: 2, borderColor: '#007AFF',
+            }}
+            onPress={() => setChildAlreadyRegistered(true)}
+            data-testid="child-already-yes"
+          >
+            <View style={{ backgroundColor: '#007AFF', borderRadius: 24, width: 48, height: 48, justifyContent: 'center', alignItems: 'center' }}>
+              <Ionicons name="search" size={24} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#007AFF' }}>Sì, è già registrato</Text>
+              <Text style={{ fontSize: 13, color: '#666', marginTop: 2 }}>Cerca il figlio/a per cognome e richiedi il collegamento</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#FFF3E0', borderRadius: 14, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 14,
+              borderWidth: 2, borderColor: '#FF9800',
+            }}
+            onPress={() => router.replace('/parent/register-athlete')}
+            data-testid="child-already-no"
+          >
+            <View style={{ backgroundColor: '#FF9800', borderRadius: 24, width: 48, height: 48, justifyContent: 'center', alignItems: 'center' }}>
+              <Ionicons name="person-add" size={24} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#E65100' }}>No, devo registrarlo</Text>
+              <Text style={{ fontSize: 13, color: '#666', marginTop: 2 }}>Compila il modulo di iscrizione per il tuo figlio/a</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ alignItems: 'center', marginTop: 8, padding: 12 }}
+            onPress={() => router.replace('/parent')}
+            data-testid="skip-child-check"
+          >
+            <Text style={{ fontSize: 14, color: '#999' }}>Lo farò più tardi</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {childAlreadyRegistered === true && !linkRequestSent && (
+        <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#E0E0E0' }}>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 12 }}>
+            Cerca il tuo figlio/a per cognome
+          </Text>
+
+          <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+            <TextInput
+              style={{ flex: 1, backgroundColor: '#F5F5F5', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, borderWidth: 1, borderColor: '#E0E0E0', marginRight: 6 }}
+              placeholder="Cognome *"
+              value={searchCognome}
+              onChangeText={setSearchCognome}
+              autoCapitalize="characters"
+              data-testid="child-search-cognome"
+            />
+            <TextInput
+              style={{ flex: 1, backgroundColor: '#F5F5F5', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, borderWidth: 1, borderColor: '#E0E0E0', marginLeft: 6 }}
+              placeholder="Nome"
+              value={searchNome}
+              onChangeText={setSearchNome}
+              autoCapitalize="characters"
+              data-testid="child-search-nome"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.continueBtn, (searching || !searchCognome.trim()) && styles.btnDisabled]}
+            onPress={searchChild}
+            disabled={searching || !searchCognome.trim()}
+            data-testid="child-search-btn"
+          >
+            {searching ? <ActivityIndicator color="#fff" /> : (
+              <>
+                <Ionicons name="search" size={18} color="#fff" />
+                <Text style={styles.continueBtnText}> Cerca</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {searchDone && searchResults.length === 0 && !searching && (
+            <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, marginTop: 12, alignItems: 'center' }}>
+              <Text style={{ fontSize: 14, color: '#E65100', fontWeight: '600' }}>Nessun risultato trovato</Text>
+              <Text style={{ fontSize: 12, color: '#999', marginTop: 4, textAlign: 'center' }}>
+                Verifica il cognome o registra il figlio/a come nuovo atleta
+              </Text>
+              <TouchableOpacity
+                style={{ marginTop: 10, backgroundColor: '#FF9800', borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 }}
+                onPress={() => router.replace('/parent/register-athlete')}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>Registra nuovo atleta</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {searchResults.length > 0 && (
+            <View style={{ marginTop: 12 }}>
+              <Text style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
+                {searchResults.length} risultat{searchResults.length === 1 ? 'o' : 'i'} trovato/i:
+              </Text>
+              {searchResults.map((athlete: any) => (
+                <View key={athlete.id} style={{ backgroundColor: '#F5F5F5', borderRadius: 12, padding: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#333' }}>
+                      {athlete.last_name} {athlete.first_name}
+                    </Text>
+                    {athlete.date_of_birth ? (
+                      <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Nato/a il {athlete.date_of_birth}</Text>
+                    ) : null}
+                    {athlete.team ? (
+                      <Text style={{ fontSize: 12, color: '#007AFF', marginTop: 2 }}>{athlete.team}</Text>
+                    ) : null}
+                  </View>
+                  <TouchableOpacity
+                    style={{ backgroundColor: '#007AFF', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 }}
+                    onPress={() => requestLink(athlete.id)}
+                    data-testid={`link-athlete-${athlete.id}`}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Collega</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={{ alignItems: 'center', marginTop: 12, padding: 8 }}
+            onPress={() => setChildAlreadyRegistered(null)}
+          >
+            <Text style={{ fontSize: 13, color: '#007AFF' }}>Indietro</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {linkRequestSent && (
+        <View style={{ backgroundColor: '#E8F5E9', borderRadius: 14, padding: 20, alignItems: 'center' }}>
+          <Ionicons name="checkmark-circle" size={48} color="#4CAF50" />
+          <Text style={{ fontSize: 17, fontWeight: '700', color: '#2E7D32', marginTop: 12, textAlign: 'center' }}>
+            Richiesta di collegamento inviata!
+          </Text>
+          <Text style={{ fontSize: 14, color: '#666', marginTop: 8, textAlign: 'center' }}>
+            L'altro genitore riceverà una notifica e dovrà approvare il collegamento.
+          </Text>
+          <TouchableOpacity
+            style={[styles.continueBtn, { marginTop: 20 }]}
+            onPress={() => router.replace('/parent')}
+            data-testid="go-to-parent-dashboard"
+          >
+            <Text style={styles.continueBtnText}>Vai alla Dashboard</Text>
+            <Ionicons name="arrow-forward" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -722,6 +939,7 @@ export default function Register() {
         {step === 'welcome' && renderWelcome()}
         {step === 'invite' && renderInviteCode()}
         {step === 'form' && renderForm()}
+        {step === 'child-check' && renderChildCheck()}
       </ScrollView>
     </KeyboardAvoidingView>
   );
