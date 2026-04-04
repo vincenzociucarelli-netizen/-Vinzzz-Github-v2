@@ -24,24 +24,24 @@ const DAYS_IT: { [key: string]: string } = {
   'sunday': 'Domenica',
 };
 
-// Sport avatar options with image URLs
-const AVATAR_OPTIONS: { id: string; label: string; url: string }[] = [
-  { id: 'calcio', label: 'Calcio', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/0adaebd663c95bc47b31433529b418b94b99365d8666be05c2c16d7ac13f09e6.png' },
-  { id: 'pallavolo', label: 'Pallavolo', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/6b707e9ad1e5c0507635ba16adb3a04ddff03e49664effccb7c240796ee1d7a8.png' },
-  { id: 'basket', label: 'Basket', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/08e7e37215505ce8dd5cd2e6335b937d0b145670bca2e1c81f73b8167450c075.png' },
-  { id: 'baseball', label: 'Baseball', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/02959162b8d23fa6e402b8a4899cd0d44ee582a422f17c0789eb4780ba32a6a3.png' },
-  { id: 'tennis', label: 'Tennis', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/d53dd0726506b462a19ed495d8ec73c0e02e1461b787f66206e407b5f12c95fe.png' },
-  { id: 'nuoto', label: 'Nuoto', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/085e2f2f62b0eab003c850a336624a2ffc6243f6817dd6d23e416b548e99bdef.png' },
-  { id: 'atletica', label: 'Atletica', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/d022ad7db40f74a11a42e79f964b6f88846f0133103899deadcaa76907d58f46.png' },
-  { id: 'rugby', label: 'Rugby', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/2f784ec96431295bb13f62108742ecb6916513e23213923337c4e5d2bea6df9b.png' },
-  { id: 'ciclismo', label: 'Ciclismo', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/3187f90cd83f8f09522e1bdfd95d76c1e4169ef3a15b80d77a0bfde18f6f86dd.png' },
-  { id: 'ginnastica', label: 'Ginnastica', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/c9054efa432c0d992b0d0365d9c69c16634fdbc422050b20148adbd1dcf32dd2.png' },
-  { id: 'arti_marziali', label: 'Arti Marziali', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/444ee332e9481eb6f3a0242e020c9ccaf1a8b213d868f061746d609334fa0c7e.png' },
-  { id: 'hockey', label: 'Hockey', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/e8642f2a89d8485b9d19b28fb44b430ce4e79e1bfb407d244e70e5944968b55e.png' },
-  { id: 'sci', label: 'Sci', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/0fe5c4656c823c45ef2c171d0acae1109323145709f60efa868eb76fbb474820.png' },
-  { id: 'danza', label: 'Danza', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/250b48de6eb85003f2b8b5efcaee6f1616ec344d82287c89cad814d09c974bcc.png' },
-  { id: 'scherma', label: 'Scherma', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/b9bf5de10b378d54cc995f65eefe8d073a40283448dc14b3d3bf8aa4794eec8a.png' },
-  { id: 'pallanuoto', label: 'Pallanuoto', url: 'https://static.prod-images.emergentagent.com/jobs/f093d578-f9e7-471f-903b-d42fff393ae6/images/8464e869ffc4a3420a7982077c944dd72067de6052fe88713d28ace23a88aeb6.png' },
+// Cute avatar options with emoji for teenage girls
+const AVATAR_OPTIONS: { id: string; label: string; emoji: string }[] = [
+  { id: 'farfalla', label: 'Farfalla', emoji: '\uD83E\uDD8B' },
+  { id: 'unicorno', label: 'Unicorno', emoji: '\uD83E\uDD84' },
+  { id: 'gattina', label: 'Gattina', emoji: '\uD83D\uDC31' },
+  { id: 'coniglietta', label: 'Coniglietta', emoji: '\uD83D\uDC30' },
+  { id: 'stella', label: 'Stella', emoji: '\u2B50' },
+  { id: 'delfino', label: 'Delfino', emoji: '\uD83D\uDC2C' },
+  { id: 'volpina', label: 'Volpina', emoji: '\uD83E\uDD8A' },
+  { id: 'fiocco', label: 'Fiocco', emoji: '\uD83C\uDF80' },
+  { id: 'arcobaleno', label: 'Arcobaleno', emoji: '\uD83C\uDF08' },
+  { id: 'diamante', label: 'Diamante', emoji: '\uD83D\uDC8E' },
+  { id: 'fiore', label: 'Fiore', emoji: '\uD83C\uDF38' },
+  { id: 'luna', label: 'Luna', emoji: '\uD83C\uDF19' },
+  { id: 'zampina', label: 'Zampina', emoji: '\uD83D\uDC3E' },
+  { id: 'ape', label: 'Ape', emoji: '\uD83D\uDC1D' },
+  { id: 'quadrifoglio', label: 'Quadrifoglio', emoji: '\uD83C\uDF40' },
+  { id: 'cuore', label: 'Cuore', emoji: '\uD83D\uDC96' },
 ];
 
 const COLOR_OPTIONS = ['#E91E63', '#9C27B0', '#3F51B5', '#2196F3', '#00BCD4', '#009688', '#4CAF50', '#FF9800', '#FF5722', '#795548', '#607D8B', '#F44336'];
@@ -88,11 +88,14 @@ interface DashboardData {
   trial_info: { is_trial: boolean; trial_start_date?: string; trial_end_date?: string; trial_days_remaining?: number; waiting_first_attendance?: boolean } | null;
 }
 
-// Helper: get avatar URL from lite_emoji (supports both old emoji and new avatar IDs)
-function getAvatarUrl(lite_emoji?: string): string | null {
+// Helper: get avatar emoji from lite_emoji (supports both old emoji and new avatar IDs)
+function getAvatarEmoji(lite_emoji?: string): string | null {
   if (!lite_emoji) return null;
   const found = AVATAR_OPTIONS.find(a => a.id === lite_emoji);
-  return found ? found.url : null;
+  if (found) return found.emoji;
+  // Backward compat: if it's a single emoji character, return it directly
+  if (lite_emoji.length <= 2 || /\p{Emoji}/u.test(lite_emoji)) return lite_emoji;
+  return null;
 }
 
 export default function MinorDashboard() {
@@ -188,7 +191,7 @@ export default function MinorDashboard() {
     } catch { return ''; }
   };
 
-  const avatarUrl = getAvatarUrl(data.athlete.lite_emoji);
+  const avatarEmoji = getAvatarEmoji(data.athlete.lite_emoji);
   const accentColor = data.athlete.lite_color || '#007AFF';
 
   return (
@@ -223,8 +226,8 @@ export default function MinorDashboard() {
             activeOpacity={0.8}
             data-testid="avatar-center"
           >
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} resizeMode="contain" />
+            {avatarEmoji ? (
+              <Text style={{ fontSize: 44, textAlign: 'center' }}>{avatarEmoji}</Text>
             ) : (
               <Ionicons name="person" size={40} color={accentColor} />
             )}
@@ -305,7 +308,7 @@ export default function MinorDashboard() {
                     ]}
                     data-testid={`avatar-${av.id}`}
                   >
-                    <Image source={{ uri: av.url }} style={styles.avatarOptionImage} resizeMode="contain" />
+                    <Text style={{ fontSize: 32, textAlign: 'center' }}>{av.emoji}</Text>
                     <Text style={[styles.avatarOptionLabel, isSelected && { color: accentColor, fontWeight: '700' }]}>{av.label}</Text>
                   </TouchableOpacity>
                 );
