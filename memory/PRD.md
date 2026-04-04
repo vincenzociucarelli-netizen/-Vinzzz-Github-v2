@@ -36,37 +36,25 @@ npx expo export -p web --clear
 - Tasto "Richiesta rimozione foto" nel profilo genitore
 
 ### Sessione 04/04/2026
-1. **Fix "Collega un atleta"**:
-   - Backend: error handling robusto, accesso sicuro campi, controllo society_id, ricerca parziale
-   - Frontend: layout input width 48% per mobile
-2. **Codice Invito Società - Step obbligatorio con validazione**:
-   - Nuovo endpoint `POST /auth/validate-invite-code`
-   - Step dedicato nel flusso registrazione (role → welcome → **invite** → form)
-   - Validazione backend PRIMA di mostrare il form
-   - Rimosso fallback 404 che saltava la validazione
-3. **Migrazione email ROSI Giulio**: giulia@test.com → giulio@test.com
-4. **Admin può modificare profili utenti**: society_id, nome, cognome, email, telefono via PATCH /users/{id}
-5. **Avatar Accesso Lite**: Sostituiti sport icons con emoji carine (farfalla, unicorno, gattina, ecc.)
-6. **Dimensione icone laterali**: Uniformate a 64x64px
-7. **Rimosso consenso "immagini interne" per genitori** da:
-   - invite-register.tsx (checkbox + payload)
-   - parent/index.tsx (checkbox + PDF + consent_data)
-8. **Checkbox "immagini promozionali" in arancio** (bordo 2px, sfondo giallo, testo bold)
-9. **Step "Figlio già registrato?" nel flusso registrazione genitore**:
-   - Dopo registrazione parent: scelta SI/NO
-   - SI → ricerca figlio inline + richiesta collegamento
-   - NO → vai a registra atleta
-   - "Lo farò più tardi" → dashboard
-10. **Step "Figlio già registrato?" anche su invite-register**:
-    - Per atleti minori: scelta SI/NO prima del form
-    - SI → form solo dati genitore + Privacy + ricerca figlio
-    - NO → form completo come prima
-11. **Fix URL backend in build statica**: Pulita cache Expo, rimosso URL vecchio (italian-sports-qa)
+1. Fix "Collega un atleta": error handling robusto, controllo society_id, ricerca parziale
+2. Codice Invito Società - Step obbligatorio con validazione (`POST /auth/validate-invite-code`)
+3. Migrazione email ROSI Giulio: giulia@test.com → giulio@test.com
+4. Admin può modificare profili utenti via PATCH /users/{id}
+5. Avatar Accesso Lite: emoji carine per minori
+6. Dimensione icone laterali: 64x64px
+7. Rimosso consenso "immagini interne" per genitori (invite-register + parent/index)
+8. Checkbox "immagini promozionali" in arancio
+9. Step "Figlio già registrato?" nel flusso registrazione genitore
+10. Step "Figlio già registrato?" anche su invite-register
+11. Fix URL backend in build statica
+
+### Sessione 05/04/2026
+12. Build frontend per rendere visibili: icona occhio password, submit bloccato senza apertura documenti privacy nella registrazione via invito
 
 ## Backlog Prioritizzato
 
 ### P0 (Critici)
-- Attendere feedback test utente sulle modifiche della sessione corrente
+- Attendere feedback test utente sulle modifiche
 
 ### P1 (Alta priorità)
 - Re-importazione file Excel calendario (aggiornamento differenziale)
