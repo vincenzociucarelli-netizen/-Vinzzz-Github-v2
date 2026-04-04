@@ -476,19 +476,29 @@ export default function InviteRegister() {
               keyboardType="phone-pad" data-testid="invite-parent-phone"
             />
             <Text style={styles.label}>Password *</Text>
-            <TextInput
-              style={styles.input} placeholder="Minimo 6 caratteri" placeholderTextColor="#999"
-              value={form.password} secureTextEntry={!showPassword}
-              onChangeText={(v) => setForm({...form, password: v})}
-              data-testid="invite-parent-password"
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]} placeholder="Minimo 6 caratteri" placeholderTextColor="#999"
+                value={form.password} secureTextEntry={!showPassword}
+                onChangeText={(v) => setForm({...form, password: v})}
+                data-testid="invite-parent-password"
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: 14, padding: 4 }}>
+                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#999" />
+              </TouchableOpacity>
+            </View>
             <Text style={styles.label}>Conferma Password *</Text>
-            <TextInput
-              style={styles.input} placeholder="Ripeti la password" placeholderTextColor="#999"
-              value={form.confirmPassword} secureTextEntry={!showPassword}
-              onChangeText={(v) => setForm({...form, confirmPassword: v})}
-              data-testid="invite-parent-confirm-password"
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]} placeholder="Ripeti la password" placeholderTextColor="#999"
+                value={form.confirmPassword} secureTextEntry={!showPassword}
+                onChangeText={(v) => setForm({...form, confirmPassword: v})}
+                data-testid="invite-parent-confirm-password"
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: 14, padding: 4 }}>
+                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#999" />
+              </TouchableOpacity>
+            </View>
 
             {/* GDPR section */}
             <View style={{ backgroundColor: '#F5F5F5', borderRadius: 14, padding: 16, marginTop: 16, marginBottom: 16 }}>
@@ -517,16 +527,21 @@ export default function InviteRegister() {
             </View>
 
             {/* Register parent account then search child */}
-            <TouchableOpacity
-              style={[styles.submitBtn, submitting && { opacity: 0.6 }]}
-              onPress={handleRegisterAndLink}
-              disabled={submitting}
-              data-testid="register-and-link-btn"
-            >
-              {submitting ? <ActivityIndicator color="#fff" /> : (
-                <Text style={styles.submitBtnText}>Registrati e Cerca Figlio/a</Text>
-              )}
-            </TouchableOpacity>
+            {(() => {
+              const canSubmit = hasOpenedTerms && hasOpenedPrivacy && consentPrivacyViewed && !submitting;
+              return (
+                <TouchableOpacity
+                  style={[styles.submitBtn, !canSubmit && { opacity: 0.4 }]}
+                  onPress={handleRegisterAndLink}
+                  disabled={!canSubmit}
+                  data-testid="register-and-link-btn"
+                >
+                  {submitting ? <ActivityIndicator color="#fff" /> : (
+                    <Text style={styles.submitBtnText}>Registrati e Cerca Figlio/a</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })()}
 
             {/* Search child section (visible after parent account is created) */}
             {searchDone !== undefined && (
