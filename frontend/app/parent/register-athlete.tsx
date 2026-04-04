@@ -120,7 +120,8 @@ export default function RegisterAthlete() {
         showAlert('Errore', response.data.error || 'Impossibile calcolare il CF. Verifica il luogo di nascita.');
       }
     } catch (error: any) {
-      showAlert('Errore', 'Errore nel calcolo del Codice Fiscale');
+      const detail = error.response?.data?.error || error.response?.data?.detail || 'Errore nel calcolo del Codice Fiscale. Verifica i dati inseriti.';
+      showAlert('Errore', detail);
     } finally {
       setCalculatingCF(false);
     }
