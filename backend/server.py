@@ -23472,3 +23472,14 @@ async def start_certificate_scheduler():
     logger.info("Certificate expiry notification scheduler started.")
     _asyncio.create_task(preseason_reminder_scheduler())
     logger.info("Pre-season reminder scheduler started.")
+
+@app.on_event("startup")
+async def run_data_migrations():
+    """One-time data fixes applied at startup."""
+    # Fix ROSI Giulio email: giulia@test.com -> giulio@test.com
+    result = await db.users.update_one(
+        {"email": "giulia@test.com"},
+        {"$set": {"email": "giulio@test.com"}}
+    )
+    if result.modified_count > 0:
+        logger.info("Migration: email giulia@test.com -> giulio@test.com applicata")
