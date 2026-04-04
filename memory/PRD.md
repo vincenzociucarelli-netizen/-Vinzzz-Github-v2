@@ -1,160 +1,91 @@
-# RegistraTEAM - Product Requirements Document
+# RegistraTEAM - PRD (Product Requirements Document)
 
-## Original Problem Statement
-App completa per la gestione di società sportive di pallavolo italiana. Focus su conformità GDPR, flussi di onboarding per genitori di minori, generazione documenti legali (PDF), e collegamento genitori-atleti in famiglie allargate.
+## Problema Originale
+App per la gestione di società sportive italiane di pallavolo (RegistraTEAM). Focus su: conformità GDPR, flussi di onboarding per ruolo, collegamento manuale genitori-atleti con approvazione, generazione PDF documenti legali, sincronizzazione calendario gare FIPAV.
 
-## Core Requirements
-- **GDPR Compliance**: Consensi privacy obbligatori alla registrazione con testo legale completo
-- **Documenti Legali Dinamici**: PDF 2 pagine (testo legale + metadati accettazione)
-- **Multi-Parent Linking**: Collegamento bidirezionale genitori-figli tramite `second_parent_email`
-- **Completezza Dati**: Codice Fiscale catturato alla registrazione
-
-## Architecture
-- **Backend**: FastAPI (`/app/backend/server.py` - monolitico >22K righe)
-- **Frontend**: React/Expo (build statica via `npx expo export -p web`)
-- **Database**: MongoDB (`test_database`)
-- **Email**: Brevo (Sendinblue)
+## Architettura
+- **Frontend**: React/Expo (static web build via `npx expo export -p web` + `serve -s dist -l 3000`)
+- **Backend**: FastAPI (Python) su porta 8001
+- **Database**: MongoDB (via `MONGO_URL` e `DB_NAME` da .env)
+- **Email**: Brevo (transactional)
 - **PDF**: ReportLab
+- **Scraping**: BeautifulSoup (FIPAV)
 
-## Key Files
-- `frontend/app/register.tsx` - Registrazione con GDPR
-- `frontend/app/invite-register.tsx` - Registrazione via invito con GDPR
-- `frontend/app/reset-password.tsx` - Reset password con toggle visibilità
-- `frontend/app/parent/documents.tsx` - Documenti personali
-- `frontend/app/admin/notifications.tsx` - Notifiche raggruppate/collassabili
-- `backend/server.py` - Monolite backend
-- `backend/email_service.py` - Servizio email Brevo
+## IMPORTANTE: Build Frontend
+Qualsiasi modifica frontend richiede:
+```bash
+export EXPO_PUBLIC_BACKEND_URL="https://registrateam-vol.preview.emergentagent.com"
+rm -rf dist .expo
+npx expo export -p web --clear
+```
 
-## Key API Endpoints
-- `GET /api/settings/society/logo.png` - Logo società come PNG (per email)
-- `GET /api/documents/consent-pdf/{consent_type}` - PDF consensi personali
-- `POST /api/auth/register` - Registrazione con fiscal_code e consents
-- `POST /api/athletes/invite-register` - Registrazione via invito con GDPR
-- `POST /api/auth/forgot-password` - Reset password
-- `POST /api/auth/reset-password` - Conferma reset password
+## Funzionalità Completate
 
-## IMPORTANT: Build Process
-- Frontend: `npx expo export -p web` + `sudo supervisorctl restart expo`
-- SEMPRE pulire cache: `rm -rf .metro-cache dist`
-- SEMPRE settare: `EXPO_PUBLIC_BACKEND_URL=https://registrateam-vol.preview.emergentagent.com`
+### Sessioni Precedenti
+- Dashboard admin con gestione atleti, genitori, coach, dirigenti, collaboratori
+- Generazione PDF GDPR (adulti vs minori)
+- Sistema multi-parent con approvazione (Collega un atleta)
+- Sincronizzazione calendario FIPAV con scraper + UI
+- Filtri Tab calendario (Da disputare, Giocate, Tutte)
+- Persistenza preferenze FIPAV nel DB
+- Fix timezone partite (forzato UTC nel frontend)
+- Solo "Codice Fiscale" (rimosso P.IVA)
+- Fix password secondo genitore
+- Clausola "Riprese di contesto" in informativa GDPR
+- Codice Invito obbligatorio per tutti i ruoli
+- Tasto "Richiesta rimozione foto" nel profilo genitore
 
-## Completed Work
+### Sessione 04/04/2026
+1. **Fix "Collega un atleta"**:
+   - Backend: error handling robusto, accesso sicuro campi, controllo society_id, ricerca parziale
+   - Frontend: layout input width 48% per mobile
+2. **Codice Invito Società - Step obbligatorio con validazione**:
+   - Nuovo endpoint `POST /auth/validate-invite-code`
+   - Step dedicato nel flusso registrazione (role → welcome → **invite** → form)
+   - Validazione backend PRIMA di mostrare il form
+   - Rimosso fallback 404 che saltava la validazione
+3. **Migrazione email ROSI Giulio**: giulia@test.com → giulio@test.com
+4. **Admin può modificare profili utenti**: society_id, nome, cognome, email, telefono via PATCH /users/{id}
+5. **Avatar Accesso Lite**: Sostituiti sport icons con emoji carine (farfalla, unicorno, gattina, ecc.)
+6. **Dimensione icone laterali**: Uniformate a 64x64px
+7. **Rimosso consenso "immagini interne" per genitori** da:
+   - invite-register.tsx (checkbox + payload)
+   - parent/index.tsx (checkbox + PDF + consent_data)
+8. **Checkbox "immagini promozionali" in arancio** (bordo 2px, sfondo giallo, testo bold)
+9. **Step "Figlio già registrato?" nel flusso registrazione genitore**:
+   - Dopo registrazione parent: scelta SI/NO
+   - SI → ricerca figlio inline + richiesta collegamento
+   - NO → vai a registra atleta
+   - "Lo farò più tardi" → dashboard
+10. **Step "Figlio già registrato?" anche su invite-register**:
+    - Per atleti minori: scelta SI/NO prima del form
+    - SI → form solo dati genitore + Privacy + ricerca figlio
+    - NO → form completo come prima
+11. **Fix URL backend in build statica**: Pulita cache Expo, rimosso URL vecchio (italian-sports-qa)
 
-### Session 2026-03-29 (Fork 7 - Current)
-- Fix codici atleta: ripristinati a formato alfanumerico 12 caratteri (qr_identifier) per privacy
-- **NUOVO: Import pagamenti con Cognome+Nome** - eliminati i codici alfanumerici dal template
-  - Template semplificato: Cognome, Nome, DataPagamento, Importo, TipoPagamento, DataRegistrazione, Causale
-  - Matching automatico backend: normalizzazione nomi, gestione accenti, omonimi con squadra
-  - Retrocompatibilità mantenuta per vecchi template con CodiceAtleta
-- **NUOVO: Prima Nota Pagamenti** - Rinominata pagina e aggiunta struttura a 3 sezioni:
-  - **Import**: Template scaricabile + importazione file Excel
-  - **Registro Stagione**: Riepilogo pagamenti stagione con download Excel (Ric. Fiscale progressiva, Date, Importi)
-  - **Solleciti**: Lista atleti morosi con download Excel per stampa unione + invio notifica in-app ai genitori + invio email sollecito via Brevo (toggle opzionale)
-- **NUOVO: Risoluzione omonimi nell'import** - quando il matching trova più atleti con stesso Cognome+Nome, l'admin sceglie il corretto da una lista con radio button (mostra squadra per disambiguare). Nuovo endpoint POST /api/payments/import-resolve
-- **Bug fix anteprima PDF privacy**: l'anteprima mostrava dati vuoti/sbagliati (stesso bug di get_current_user con campi limitati). Ora carica profilo completo da DB anche per l'anteprima
-- **Bug fix notifiche admin**: le notifiche non si auto-cancellano più all'apertura della pagina. Restano non lette finché l'admin ci clicca sopra. Notifiche ora collassabili (solo titolo visibile, espandibili al click)
-- Rimossa voce "Archivio Certificati Medici" dalla dashboard admin
-- **NUOVO: Collegamento manuale genitore-atleta** con approvazione obbligatoria:
-  - Ricerca atleta per Cognome+Nome con disambiguazione per data nascita e squadra
-  - Richiesta di collegamento con notifica in-app al genitore principale
-  - Accettazione/rifiuto con aggiornamento automatico di second_parent_id
-  - Pagina dedicata /parent/link-athlete + pulsante "Collega un atleta esistente" nella dashboard
-  - Test: 21/21 backend passed, 100% frontend UI (iteration_63.json)
+## Backlog Prioritizzato
 
-### Session 2026-03-31 (Fork 9)
-- Bug fix: Banner richieste collegamento - Sofia vede richieste pendenti nella dashboard
-- Bug fix: Anteprima PDF GDPR - usa solo dati dal DB
-- Test: iteration_64.json - 100%
+### P0 (Critici)
+- Attendere feedback test utente sulle modifiche della sessione corrente
 
-### Session 2026-04-01 (Fork 10 - Current)
-- **Aggiornamento GDPR completo (raccomandazioni ChatGPT)**:
-  - Rimossa checkbox "Acconsento al trattamento dati" da registrazione e invite-register
-  - Terminologia aggiornata: "Presa Visione Privacy" al posto di "Consenso Privacy"
-  - PDF Adulti: sezione 7 "PRESA VISIONE DEL DOCUMENTO", "DATI DELL'INTERESSATO"
-  - PDF Minori: rimossa sezione "CERTIFICATO MEDICO SPORTIVO", da 3 a 2 pagine
-  - Entrambi i PDF: "PRESA VISIONE" al posto di "CONSENSI ESPRESSI", "METADATI PRESA VISIONE" al posto di "METADATI DI FIRMA"
-- **Flusso GDPR Minori - Conferma Iscrizione Post Prova**:
-  - Nuovo modal intermedio consensi: intestazione con nomi genitore/minore, sezione A obbligatoria non modificabile, sezione B facoltativa con toggle (immagini interno/promozionale) OFF di default
-  - Firma grafica mantenuta (SignaturePad) con associazione metadati (timestamp, IP, user_id, child_id, document_version, hash)
-  - Backend salva consensi strutturati per ogni singolo minore con storicizzazione
-  - Revoca consensi immagini: salva revoked_at timestamp + action:"revoked" nella history
-  - Nota visibile: "La revoca del consenso ha effetto solo per utilizzi futuri"
-- Sezioni squadra collassabili nella scheda atleta admin
-- **Gestione genitori/minori GDPR**:
-  - Rimosso auto-link: email match ora crea richiesta con conferma esplicita (no collegamento automatico)
-  - Consensi separati per genitore: chiave `consent_type__parent_id` (non più a livello atleta)
-  - Regola consenso finale: un NO da qualsiasi genitore = NEGATO per il minore
-  - Sicurezza: parent_id verificato su ogni endpoint, nessun genitore vede figli non collegati
-  - History con parent_id + child_id per ogni modifica
-- Test: iteration_65.json (14/14), iteration_66.json (12/12)
+### P1 (Alta priorità)
+- Re-importazione file Excel calendario (aggiornamento differenziale)
+- UI per atleti con contratti formali (post-lancio)
 
-### Session 2026-04-02 (Fork 12 - Current)
-- **Sincronizzazione Calendario FIPAV**: Nuovo endpoint `POST /api/matches/sync-fipav`
-  - Scraping automatico dal portale FIPAV Umbria (`umbria.portalefipav.net`, SId=3477)
-  - Pulsante arancione "Sincronizza FIPAV" nella header di admin/matches
-  - Modale risultati sync con diff visuale
-  - Test: iteration_67.json (7/7 backend, 100%)
-- **Filtro Calendario Gare**: 3 tab (Da disputare / Giocate / Tutte) + badge risultato verde
-- **Fix fuso orario partite**: Corretto bug +2h su 7 file frontend (`timeZone: 'UTC'`)
-- **Preferenze federazione persistenti**: Salvataggio Federazione/Regione/Stagione per società nel DB
-- **Maschera data italiana**: Campi data import calendario con formato `__/__/____`
-- **Rimozione P.IVA**: Sostituito ovunque con solo "C.F." (frontend + backend PDF)
-- **Fix password protezione dati secondo genitore**: `has-password` e `profile-check` ora controllano entrambi i campi
-- **GDPR Consensi genitori semplificati** (suggerimento Gemini):
-  - Rimosso checkbox "Immagini uso interno" per genitori (coperto da legittimo interesse)
-  - Mantenuto solo "Immagini promozionali" (facoltativo, stile evidenziato arancione)
-  - Aggiunta clausola "Riprese di contesto" nell'informativa privacy (frontend + backend PDF)
-  - ConsentManager: nasconde `images_internal` per `entityType === 'user'`
-- **Pulsante "Richiedi rimozione mie immagini"**: Nella sezione Consensi del profilo genitore
-  - Invia notifica prioritaria all'admin (`POST /api/notifications/photo-removal-request`)
-- **Password protezione dati**: Rimossa dalla registrazione genitore (resta solo alla registrazione atleta)
-- **Codice invito obbligatorio**: Ora richiesto per TUTTI i ruoli inclusi genitori (frontend + backend)
-- **Fix RINA PASSE**: Associata manualmente alla società Pallavolo Perugia
+### P2 (Media priorità)
+- **Refactoring server.py** (>23.000 righe → routers/models separati) - DEBITO TECNICO CRITICO
+- Re-implementazione Stripe per pagamenti
+- Assistenza pubblicazione dominio e App Store
 
-### Session 2026-04-01 (Fork 11)
-- **PDF Autorizzazione alla Prova**: page break aggiunto - Accettazione e Firma spostati su Pagina 2
-  - Aggiornato sia `generate_trial_document` (preview) che `sign_trial_document` (firmato)
-  - Header società ripetuto su Pagina 2
-  - Footer dinamici "Pagina 1 di 2" / "Pagina 2 di 2"
-  - Fix formato data nascita (DD/MM/YYYY) nella preview
+### P3 (Bassa priorità)
+- Upload screenshot nella richiesta rimozione foto
 
-### Session 2026-03-28 (Fork 5-6)
-- Bug fix telefono minori: opzionale nel flusso invite-register
-- Reset password: fix URL API (cache stale), pulsante email, toggle visibilità, errori dettagliati
-- Email template: logo da URL pubblica, header pulito
-- GDPR invite-register: flusso completo con documenti + consensi formato corretto
-- Notifiche admin: raggruppamento per data, collassabili, ricerca
-- UI reset password: logo senza sfondo bianco
-- Dashboard genitore: visibilità figli condivisi con altro genitore
-- Date in formato italiano (DD/MM/YYYY) nella timeline
-- FIPAV scraper: fix estrazione venue da tooltip HTML
+## Credenziali Test
+Vedi `/app/memory/test_credentials.md`
 
-### Session 2026-03-27 (Fork 4)
-- Bug fix validazione telefono minori
-
-### Session 2026-03-26 (Fork 3)
-- Checkbox "Informativa privacy visionata" alla registrazione
-- Cartella documenti personali per genitori
-- Generatore PDF 2 pagine per consensi personali
-- Input codice fiscale alla registrazione
-- Banner completamento profilo (codice fiscale mancante)
-- Campo "Email 2° Genitore" visibile nel profilo atleta
-
-## Pending / Backlog
-- (P1) Re-import Excel calendario con aggiornamento differenziale
-- (P1) UI atleti con contratto formale (estate post-lancio)
-- (P2) Refactoring server.py in router separati (>23K righe)
-- (P2) Re-implementazione Stripe
-- (P2) Pubblicazione dominio e App Store
-
-## Issues Risolte (verificate)
-- Telefono minori: già opzionale sia backend (`Optional[str] = None`) che frontend (skip validazione per `is_minor`)
-
-## Credentials
-- Admin: `vincenzo.ciucarelli@gmail.com`
-- Parent (Sofia): `sofia@test.com` / `Test1234`
-- Parent (Mario): `mario@test.com` / `Test1234`
-
-## Known Issues
-- Expo Tunnel instabile (workaround: build statica)
-- server.py >22K righe necessita refactoring
+## Note Tecniche Critiche
+- **Date/Timezone**: Match FIPAV salvati come "locali" ma taggati UTC. Frontend usa `timeZone: 'UTC'` per visualizzare
+- **GDPR**: Genitori hanno solo checkbox "immagini promozionali" (no "interne"). Minori hanno entrambi
+- **Password fallback**: Backend controlla `second_parent_data_password_hash` E `data_password_hash`
+- **Expo Tunnel**: NON funziona. OBBLIGATORIO usare build statica
+- **Build URL**: Esportare SEMPRE `EXPO_PUBLIC_BACKEND_URL` prima della build

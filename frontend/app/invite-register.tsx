@@ -67,6 +67,15 @@ export default function InviteRegister() {
   const [consentInternalImages, setConsentInternalImages] = useState(false);
   const [consentPromotionalImages, setConsentPromotionalImages] = useState(false);
 
+  // Child already registered? (for second parent linking)
+  const [childAlreadyRegistered, setChildAlreadyRegistered] = useState<boolean | null>(null);
+  const [searchCognome, setSearchCognome] = useState('');
+  const [searchNome, setSearchNome] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchDone, setSearchDone] = useState(false);
+  const [linkRequestSent, setLinkRequestSent] = useState(false);
+
   const openDocument = (type: 'privacy' | 'terms') => {
     const url = type === 'privacy' ? '/privacy-policy' : '/terms-of-use';
     if (typeof window !== 'undefined') {
@@ -96,6 +105,100 @@ export default function InviteRegister() {
       window.alert(`${title}\n\n${message}`);
     } else {
       Alert.alert(title, message);
+    }
+  };
+
+  // Handle "Yes, child already registered" path: register parent account, then search/link
+  const handleRegisterAndLink = async () => {
+    // Validate parent data
+    if (!form.parent_first_name || !form.parent_last_name) {
+      showAlert('Errore', 'Nome e cognome del genitore sono obbligatori');
+      return;
+    }
+    if (!form.email) {
+      showAlert('Errore', 'Email obbligatoria');
+      return;
+    }
+    if (!form.password || form.password.length < 6) {
+      showAlert('Errore', 'La password deve essere di almeno 6 caratteri');
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      showAlert('Errore', 'Le password non corrispondono');
+      return;
+    }
+    if (!hasOpenedPrivacy || !hasOpenedTerms) {
+      showAlert('Errore', 'Devi aprire e leggere l\'Informativa sulla Privacy e i Termini di utilizzo');
+      return;
+    }
+    if (!consentPrivacyViewed) {
+      showAlert('Errore', 'Devi dichiarare di aver preso visione dell\'Informativa sulla Privacy');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Register parent account using standard registration endpoint
+      const societyId = inviteInfo?.society_id;
+      const registerPayload = {
+        email: form.email,
+        password: form.password,
+        first_name: form.parent_first_name.toUpperCase(),
+        last_name: form.parent_last_name.toUpperCase(),
+        phone: form.parent_phone,
+        role: 'parent',
+        invite_code: inviteInfo?.invite_code || '',
+        consents: {
+          privacy_viewed: consentPrivacyViewed,
+          images_promo: consentPromotionalImages,
+        },
+      };
+
+      const res = await api.post('/auth/register', registerPayload);
+      
+      if (res.data.token) {
+        await setUser(res.data.user, res.data.token);
+        // Now show search form to find and link the child
+        setChildAlreadyRegistered(true);
+        setSearching(false);
+        setSearchDone(false);
+        setSearchResults([]);
+        showAlert('Account creato!', 'Ora cerca il tuo figlio/a per cognome per richiedere il collegamento.');
+      }
+    } catch (err: any) {
+      showAlert('Errore', err.response?.data?.detail || 'Errore nella registrazione');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const searchChild = async () => {
+    if (!searchCognome.trim()) {
+      showAlert('Attenzione', 'Inserisci almeno il cognome');
+      return;
+    }
+    setSearching(true);
+    setSearchDone(true);
+    try {
+      const response = await api.post('/parent-link/search', {
+        cognome: searchCognome.trim(),
+        nome: searchNome.trim(),
+      });
+      setSearchResults(response.data.results || []);
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la ricerca');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const requestLink = async (athleteId: string) => {
+    try {
+      await api.post('/parent-link/request', { athlete_id: athleteId });
+      setLinkRequestSent(true);
+      showAlert('Richiesta inviata!', 'L\'altro genitore dovrà approvare il collegamento.');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore nell\'invio della richiesta');
     }
   };
 
@@ -297,6 +400,231 @@ export default function InviteRegister() {
       </View>
 
       <View style={styles.formContainer}>
+        {/* For minors: Ask if child is already registered */}
+        {inviteInfo?.is_minor && childAlreadyRegistered === null && (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#333', marginBottom: 16, textAlign: 'center' }}>
+              Il tuo figlio/a è già registrato nella società?
+            </Text>
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#E3F2FD', borderRadius: 14, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14,
+                borderWidth: 2, borderColor: '#007AFF', marginBottom: 12,
+              }}
+              onPress={() => setChildAlreadyRegistered(true)}
+              data-testid="invite-child-already-yes"
+            >
+              <View style={{ backgroundColor: '#007AFF', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="search" size={22} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#007AFF' }}>Sì, è già registrato</Text>
+                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Cerca il figlio/a e richiedi il collegamento</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#FFF3E0', borderRadius: 14, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14,
+                borderWidth: 2, borderColor: '#FF9800',
+              }}
+              onPress={() => setChildAlreadyRegistered(false)}
+              data-testid="invite-child-already-no"
+            >
+              <View style={{ backgroundColor: '#FF9800', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="person-add" size={22} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100' }}>No, devo registrarlo</Text>
+                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Compila tutti i dati dell'atleta</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* "YES" path: Second parent registers + links to existing child */}
+        {inviteInfo?.is_minor && childAlreadyRegistered === true && !linkRequestSent && (
+          <View style={{ marginBottom: 20 }}>
+            {/* Parent data section */}
+            <Text style={styles.sectionTitle}>I tuoi dati (Genitore/Tutore)</Text>
+
+            <Text style={styles.label}>Cognome Genitore *</Text>
+            <TextInput
+              style={styles.input} placeholder="Cognome" placeholderTextColor="#999"
+              value={form.parent_last_name}
+              onChangeText={(v) => setForm({...form, parent_last_name: v})}
+              autoCapitalize="characters" data-testid="invite-parent-last-name"
+            />
+            <Text style={styles.label}>Nome Genitore *</Text>
+            <TextInput
+              style={styles.input} placeholder="Nome" placeholderTextColor="#999"
+              value={form.parent_first_name}
+              onChangeText={(v) => setForm({...form, parent_first_name: v})}
+              autoCapitalize="characters" data-testid="invite-parent-first-name"
+            />
+            <Text style={styles.label}>Email *</Text>
+            <TextInput
+              style={styles.input} placeholder="email@esempio.com" placeholderTextColor="#999"
+              value={form.email}
+              onChangeText={(v) => setForm({...form, email: v})}
+              keyboardType="email-address" autoCapitalize="none" data-testid="invite-parent-email"
+            />
+            <Text style={styles.label}>Telefono *</Text>
+            <TextInput
+              style={styles.input} placeholder="Numero di telefono" placeholderTextColor="#999"
+              value={form.parent_phone}
+              onChangeText={(v) => setForm({...form, parent_phone: v})}
+              keyboardType="phone-pad" data-testid="invite-parent-phone"
+            />
+            <Text style={styles.label}>Password *</Text>
+            <TextInput
+              style={styles.input} placeholder="Minimo 6 caratteri" placeholderTextColor="#999"
+              value={form.password} secureTextEntry={!showPassword}
+              onChangeText={(v) => setForm({...form, password: v})}
+              data-testid="invite-parent-password"
+            />
+            <Text style={styles.label}>Conferma Password *</Text>
+            <TextInput
+              style={styles.input} placeholder="Ripeti la password" placeholderTextColor="#999"
+              value={form.confirmPassword} secureTextEntry={!showPassword}
+              onChangeText={(v) => setForm({...form, confirmPassword: v})}
+              data-testid="invite-parent-confirm-password"
+            />
+
+            {/* GDPR section */}
+            <View style={{ backgroundColor: '#F5F5F5', borderRadius: 14, padding: 16, marginTop: 16, marginBottom: 16 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 12 }}>Privacy e Consensi</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                <TouchableOpacity onPress={() => openDocument('terms')} style={{ flex: 1, backgroundColor: hasOpenedTerms ? '#E8F5E9' : '#fff', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: hasOpenedTerms ? '#4CAF50' : '#E0E0E0', alignItems: 'center' }}>
+                  <Ionicons name={hasOpenedTerms ? "checkmark-circle" : "document-text-outline"} size={20} color={hasOpenedTerms ? "#4CAF50" : "#666"} />
+                  <Text style={{ fontSize: 11, color: hasOpenedTerms ? '#2E7D32' : '#666', marginTop: 4, textAlign: 'center' }}>Termini di utilizzo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => openDocument('privacy')} style={{ flex: 1, backgroundColor: hasOpenedPrivacy ? '#E8F5E9' : '#fff', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: hasOpenedPrivacy ? '#4CAF50' : '#E0E0E0', alignItems: 'center' }}>
+                  <Ionicons name={hasOpenedPrivacy ? "checkmark-circle" : "shield-outline"} size={20} color={hasOpenedPrivacy ? "#4CAF50" : "#666"} />
+                  <Text style={{ fontSize: 11, color: hasOpenedPrivacy ? '#2E7D32' : '#666', marginTop: 4, textAlign: 'center' }}>Informativa Privacy</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 8 }} onPress={() => { setConsentPrivacyViewed(!consentPrivacyViewed); }}>
+                <Ionicons name={consentPrivacyViewed ? "checkbox" : "square-outline"} size={22} color={consentPrivacyViewed ? "#4CAF50" : "#999"} />
+                <Text style={{ fontSize: 13, color: '#333', flex: 1 }}>Dichiaro di aver preso visione dell'Informativa sulla Privacy *</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, backgroundColor: '#FFF8E1', borderRadius: 12, borderWidth: 2, borderColor: '#FF9800', marginTop: 8 }}
+                onPress={() => setConsentPromotionalImages(!consentPromotionalImages)}
+              >
+                <Ionicons name={consentPromotionalImages ? "checkbox" : "square-outline"} size={28} color="#FF9800" />
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#E65100', flex: 1 }}>Acconsento all'uso delle mie immagini a scopi promozionali</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Register parent account then search child */}
+            <TouchableOpacity
+              style={[styles.submitBtn, submitting && { opacity: 0.6 }]}
+              onPress={handleRegisterAndLink}
+              disabled={submitting}
+              data-testid="register-and-link-btn"
+            >
+              {submitting ? <ActivityIndicator color="#fff" /> : (
+                <Text style={styles.submitBtnText}>Registrati e Cerca Figlio/a</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Search child section (visible after parent account is created) */}
+            {searchDone !== undefined && (
+              <View style={{ marginTop: 20, backgroundColor: '#F0F4FF', borderRadius: 14, padding: 16 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 12 }}>
+                  Cerca il tuo figlio/a
+                </Text>
+                <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+                  <TextInput
+                    style={{ flex: 1, backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, borderWidth: 1, borderColor: '#E0E0E0', marginRight: 6 }}
+                    placeholder="Cognome *"
+                    value={searchCognome}
+                    onChangeText={setSearchCognome}
+                    autoCapitalize="characters"
+                    data-testid="invite-search-cognome"
+                  />
+                  <TextInput
+                    style={{ flex: 1, backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, borderWidth: 1, borderColor: '#E0E0E0', marginLeft: 6 }}
+                    placeholder="Nome"
+                    value={searchNome}
+                    onChangeText={setSearchNome}
+                    autoCapitalize="characters"
+                    data-testid="invite-search-nome"
+                  />
+                </View>
+                <TouchableOpacity
+                  style={[styles.submitBtn, (searching || !searchCognome.trim()) && { opacity: 0.5 }]}
+                  onPress={searchChild}
+                  disabled={searching || !searchCognome.trim()}
+                  data-testid="invite-search-btn"
+                >
+                  {searching ? <ActivityIndicator color="#fff" /> : (
+                    <Text style={styles.submitBtnText}>Cerca</Text>
+                  )}
+                </TouchableOpacity>
+
+                {searchDone && searchResults.length === 0 && !searching && (
+                  <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, marginTop: 12, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 14, color: '#E65100', fontWeight: '600' }}>Nessun risultato</Text>
+                    <TouchableOpacity
+                      style={{ marginTop: 10, backgroundColor: '#FF9800', borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 }}
+                      onPress={() => router.replace('/parent/register-athlete')}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: '600' }}>Registra nuovo atleta</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {searchResults.length > 0 && (
+                  <View style={{ marginTop: 12 }}>
+                    {searchResults.map((athlete: any) => (
+                      <View key={athlete.id} style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 15, fontWeight: '700', color: '#333' }}>{athlete.last_name} {athlete.first_name}</Text>
+                          {athlete.date_of_birth && <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Nato/a il {athlete.date_of_birth}</Text>}
+                          {athlete.team && <Text style={{ fontSize: 12, color: '#007AFF', marginTop: 2 }}>{athlete.team}</Text>}
+                        </View>
+                        <TouchableOpacity
+                          style={{ backgroundColor: '#007AFF', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 }}
+                          onPress={() => requestLink(athlete.id)}
+                        >
+                          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Collega</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+
+            <TouchableOpacity style={{ alignItems: 'center', marginTop: 12, padding: 8 }} onPress={() => setChildAlreadyRegistered(null)}>
+              <Text style={{ fontSize: 13, color: '#007AFF' }}>Indietro</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Link request sent confirmation */}
+        {linkRequestSent && (
+          <View style={{ backgroundColor: '#E8F5E9', borderRadius: 14, padding: 20, alignItems: 'center', marginBottom: 20 }}>
+            <Ionicons name="checkmark-circle" size={48} color="#4CAF50" />
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#2E7D32', marginTop: 12, textAlign: 'center' }}>
+              Richiesta di collegamento inviata!
+            </Text>
+            <Text style={{ fontSize: 14, color: '#666', marginTop: 8, textAlign: 'center' }}>
+              L'altro genitore riceverà una notifica e dovrà approvare il collegamento.
+            </Text>
+            <TouchableOpacity
+              style={[styles.submitBtn, { marginTop: 20 }]}
+              onPress={() => router.replace('/parent')}
+            >
+              <Text style={styles.submitBtnText}>Vai alla Dashboard</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* "NO" path or non-minor: show original form */}
+        {(!inviteInfo?.is_minor || childAlreadyRegistered === false) && !linkRequestSent && (
+        <>
         <Text style={styles.sectionTitle}>
           {inviteInfo?.is_minor ? 'Dati Atleta' : 'I tuoi dati'}
         </Text>
@@ -544,6 +872,8 @@ export default function InviteRegister() {
         >
           <Text style={styles.loginLinkText}>Hai già un account? Accedi</Text>
         </TouchableOpacity>
+        </>
+        )}
       </View>
     </ScrollView>
   );
