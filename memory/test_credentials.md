@@ -1,26 +1,18 @@
-# Test Credentials for RegistraTEAM
+# Test Credentials
 
-## Production Data (test_database)
-- **Society**: Pallavolo Perugia SSD a RL
-- **Invite Code**: BUZHB0WT
+## Admin
+- Email: vincenzo.ciucarelli@gmail.com
+- Password: Test123
 
-## Admin/Owner
-- Email: `vincenzo.ciucarelli@gmail.com` / Password: `Test123`
+## Admin 2
+- Email: pallavoloperugia@gmail.com
+- Password: Test1234
 
-## Test Parent Accounts
-- **Stefy Graff (2nd Parent)**: stefy@test.com / Test1234
-- **Renzo Repi (1st Parent)**: renzo@test.com / Test1234
-- **Rina Passe**: rina@test.com / Test1234
-- **Mauro Mauri**: mauro@test.com / (created during session)
-- **ROSI Giulio**: giulio@test.com (migrated from giulia@test.com) / Test1234
-- **ERICA ROSI**: erica@test.com / (created during session)
+## Parent (Paula)
+- Email: paula@test.com
+- Password: Test1234
+- Has athlete: Federica Mauri (born in Brazil)
 
-## Other Test Users (from DB)
-- vincenzo.ciucarelli@gmail.com - Admin
-- armida.raschi@gmail.com - Real user
-- Various test accounts in test_database
-
-## Seed Data (registrateam database - NOT used by server)
-- Admin: admin@test.com
-- Parent: genitore1@test.com
-- Invite Code: TEST1234
+## Parent (Mauro)
+- Email: mauro@test.com
+- Password: Test1234

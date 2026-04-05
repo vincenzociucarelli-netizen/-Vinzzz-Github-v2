@@ -1,86 +1,63 @@
-# RegistraTEAM - PRD (Product Requirements Document)
+# RegistraTEAM - Product Requirements Document
 
-## Problema Originale
-App per la gestione di società sportive italiane di pallavolo (RegistraTEAM). Focus su: conformità GDPR, flussi di onboarding per ruolo, collegamento manuale genitori-atleti con approvazione, generazione PDF documenti legali, sincronizzazione calendario gare FIPAV.
+## Problem Statement
+Comprehensive sports team management application for Italian volleyball societies with strict GDPR compliance, role-specific onboarding flows, manual parent-athlete linking workflows, dynamic legal document generation (PDFs), and automated calendar/match syncing with the official FIPAV regional website.
 
-## Architettura
-- **Frontend**: React/Expo (static web build via `npx expo export -p web` + `serve -s dist -l 3000`)
-- **Backend**: FastAPI (Python) su porta 8001
-- **Database**: MongoDB (via `MONGO_URL` e `DB_NAME` da .env)
-- **Email**: Brevo (transactional)
-- **PDF**: ReportLab
-- **Scraping**: BeautifulSoup (FIPAV)
+## Core Features
 
-## IMPORTANTE: Build Frontend
-Qualsiasi modifica frontend richiede:
-```bash
-export EXPO_PUBLIC_BACKEND_URL="https://registrateam-vol.preview.emergentagent.com"
-rm -rf dist .expo
-npx expo export -p web --clear
-```
+### Authentication & Registration
+- Multi-role registration (Admin, Parent, Coach, Collaborator, Dirigente, Athlete)
+- Unified registration flow via register.tsx
+- Society invite code required for all roles
+- Email invites with token-based auto-fill
 
-## Funzionalità Completate
+### GDPR & Privacy
+- Dynamic multi-page PDF generation for adults vs minors
+- Live preview of GDPR documents with current consent data
+- Explicit consent checkmarks ([X] ACCONSENTO / [ ] NON ACCONSENTO)
+- Image usage consent (promotional only for parents, internal+promotional for minors)
+- "Riprese di contesto" clause in privacy text
+- Image removal request button for parents
 
-### Sessioni Precedenti
-- Dashboard admin con gestione atleti, genitori, coach, dirigenti, collaboratori
-- Generazione PDF GDPR (adulti vs minori)
-- Sistema multi-parent con approvazione (Collega un atleta)
-- Sincronizzazione calendario FIPAV con scraper + UI
-- Filtri Tab calendario (Da disputare, Giocate, Tutte)
-- Persistenza preferenze FIPAV nel DB
-- Fix timezone partite (forzato UTC nel frontend)
-- Solo "Codice Fiscale" (rimosso P.IVA)
-- Fix password secondo genitore
-- Clausola "Riprese di contesto" in informativa GDPR
-- Codice Invito obbligatorio per tutti i ruoli
-- Tasto "Richiesta rimozione foto" nel profilo genitore
+### Parent-Athlete Management
+- Multi-parent linking with approval workflow
+- Data protection password system with shared fallback
+- Profile completeness validation before GDPR signing
 
-### Sessione 04/04/2026
-1. Fix "Collega un atleta": error handling robusto, controllo society_id, ricerca parziale
-2. Codice Invito Società - Step obbligatorio con validazione (`POST /auth/validate-invite-code`)
-3. Migrazione email ROSI Giulio: giulia@test.com → giulio@test.com
-4. Admin può modificare profili utenti via PATCH /users/{id}
-5. Avatar Accesso Lite: emoji carine per minori
-6. Dimensione icone laterali: 64x64px
-7. Rimosso consenso "immagini interne" per genitori (invite-register + parent/index)
-8. Checkbox "immagini promozionali" in arancio
-9. Step "Figlio già registrato?" nel flusso registrazione genitore
-10. Step "Figlio già registrato?" anche su invite-register
-11. Fix URL backend in build statica
+### Calendar & Matches
+- FIPAV web scraper for automatic match synchronization
+- Persistent FIPAV preferences (federation, region, season)
+- Tab filters (upcoming, played, all)
+- UTC timezone handling for match times
 
-### Sessione 05/04/2026
-12. Build frontend per rendere visibili: icona occhio password, submit bloccato senza apertura documenti privacy nella registrazione via invito
-13. Uniformato flusso registrazione su tutti i canali: aggiunta lettura `?code=` da URL in `register.tsx`, auto-validazione codice invito dal link condiviso dall'admin
-14. Fix bug "Collega" 400 Bad Request: se atleta senza parent_id, assegnazione diretta. Errori inline su mobile. Redirect automatico al profilo dopo collegamento
-15. Fix layout ricerca figlio su mobile: campi Cognome/Nome in colonna, bottone Collega non sovrapposto. Applicato a register.tsx, invite-register.tsx E link-athlete.tsx
-16. Fix backend parent-link/request: se atleta senza parent_id, assegnazione diretta come genitore principale senza approvazione
-17. Fix errore `[object Object]` in invite-register: aggiunto `full_name` al payload + error handling robusto per errori Pydantic (array)
-18. Login automatico se email già registrata nel flusso invite-register (fallback da 422 → login)
-19. FLUSSO REGISTRAZIONE UNIFICATO: invite-register.tsx ora è un redirect a register.tsx?code=XXX. Un solo flusso per tutti i canali (email, WhatsApp, login). Privacy+Consensi integrati nel form (Fig. 3). Codice invito precaricato da URL.
+### Payments & Receipts
+- Fiscal receipt (Attestato di Versamento) generation
+- Foreign-born athlete support: shows "Stato di nascita" instead of "Comune di nascita"
+- Season-based receipt numbering (RIC-24/25-0001)
 
-## Backlog Prioritizzato
+### Excel Export
+- Athlete data export includes "Stato Nascita" column
 
-### P0 (Critici)
-- Attendere feedback test utente sulle modifiche
+## Completed Features (Latest)
+- [2026-04-05] Foreign-born athlete logic: Receipt shows "Stato di nascita" for non-Italian athletes, hides "Comune di nascita" and province. Backend API returns country_of_birth. Validation skips birth_place for foreign athletes. GDPR PDFs fall back to country_of_birth when birth_place is empty.
 
-### P1 (Alta priorità)
-- Re-importazione file Excel calendario (aggiornamento differenziale)
-- UI per atleti con contratti formali (post-lancio)
+## Tech Stack
+- Frontend: React Native / Expo (web static builds)
+- Backend: FastAPI (Python)
+- Database: MongoDB
+- PDF: ReportLab
+- Email: Brevo
+- Scraping: BeautifulSoup
 
-### P2 (Media priorità)
-- **Refactoring server.py** (>23.000 righe → routers/models separati) - DEBITO TECNICO CRITICO
-- Re-implementazione Stripe per pagamenti
-- Assistenza pubblicazione dominio e App Store
+## Architecture
+- Frontend served as static build: `npx expo export -p web` + `serve -s dist -l 3000`
+- Backend: Monolithic server.py (>23k lines - needs refactoring)
+- MongoDB collections: users, athletes, teams, payments, settings, matches, etc.
 
-### P3 (Bassa priorità)
-- Upload screenshot nella richiesta rimozione foto
-
-## Credenziali Test
-Vedi `/app/memory/test_credentials.md`
-
-## Note Tecniche Critiche
-- **Date/Timezone**: Match FIPAV salvati come "locali" ma taggati UTC. Frontend usa `timeZone: 'UTC'` per visualizzare
-- **GDPR**: Genitori hanno solo checkbox "immagini promozionali" (no "interne"). Minori hanno entrambi
-- **Password fallback**: Backend controlla `second_parent_data_password_hash` E `data_password_hash`
-- **Expo Tunnel**: NON funziona. OBBLIGATORIO usare build statica
-- **Build URL**: Esportare SEMPRE `EXPO_PUBLIC_BACKEND_URL` prima della build
+## Upcoming Tasks (Priority Order)
+1. (P1) Re-import Excel calendar for match date updates (differential update)
+2. (P1) UI for athletes with formal contracts
+3. (P2) Refactoring server.py into separate routers/models
+4. (P2) Stripe payment re-implementation
+5. (P2) Domain/App Store publishing assistance
+6. (P3) Screenshot upload for photo removal requests
