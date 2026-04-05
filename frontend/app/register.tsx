@@ -763,8 +763,10 @@ export default function Register() {
         <TouchableOpacity
           style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 }}
           onPress={() => { 
-            if (typeof window !== 'undefined') window.open('https://www.iubenda.com/termini-e-condizioni/63104250', '_blank');
+            const base = typeof window !== 'undefined' ? window.location.origin : '';
+            if (typeof window !== 'undefined') window.open(base + '/terms-of-use', '_blank');
             setHasOpenedTerms(true);
+            if (hasOpenedPrivacy) setConsentPrivacyViewed(true);
           }}
           data-testid="open-terms-link"
         >
@@ -777,8 +779,10 @@ export default function Register() {
         <TouchableOpacity
           style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 }}
           onPress={() => { 
-            if (typeof window !== 'undefined') window.open('https://www.iubenda.com/privacy-policy/63104250', '_blank');
+            const base = typeof window !== 'undefined' ? window.location.origin : '';
+            if (typeof window !== 'undefined') window.open(base + '/privacy-policy', '_blank');
             setHasOpenedPrivacy(true);
+            if (hasOpenedTerms) setConsentPrivacyViewed(true);
           }}
           data-testid="open-privacy-policy-link"
         >
@@ -787,19 +791,15 @@ export default function Register() {
           {hasOpenedPrivacy && <Text style={{ fontSize: 11, color: '#4CAF50' }}>Letto</Text>}
         </TouchableOpacity>
 
-        {/* Consent checkbox */}
+        {/* Auto-checked consent when both docs opened */}
         {hasOpenedPrivacy && hasOpenedTerms && (
           <>
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 10, gap: 10 }}
-              onPress={() => setConsentPrivacyViewed(!consentPrivacyViewed)}
-              data-testid="consent-privacy-viewed"
-            >
-              <Ionicons name={consentPrivacyViewed ? "checkbox" : "square-outline"} size={22} color={consentPrivacyViewed ? "#4CAF50" : "#999"} />
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 10, gap: 10 }}>
+              <Ionicons name="checkbox" size={22} color="#4CAF50" />
               <Text style={{ flex: 1, fontSize: 13, color: '#333' }}>
-                Dichiaro di aver preso visione dell'Informativa sulla Privacy *
+                Dichiaro di aver preso visione dell'Informativa sulla Privacy e dei Termini di utilizzo *
               </Text>
-            </TouchableOpacity>
+            </View>
 
             {/* Promotional images consent */}
             <TouchableOpacity
