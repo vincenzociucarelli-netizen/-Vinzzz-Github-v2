@@ -6191,7 +6191,17 @@ async def request_parent_link(data: dict, current_user = Depends(get_current_use
     # Get primary parent
     primary_parent_id = athlete.get("parent_id")
     if not primary_parent_id:
-        raise HTTPException(status_code=400, detail="Questo atleta non ha un genitore principale registrato")
+        # No primary parent yet — assign requester directly as primary parent
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {"parent_id": current_user["id"]}}
+        )
+        # Also update athlete list in user
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$addToSet": {"athlete_ids": athlete_id}}
+        )
+        return {"message": "Sei stato collegato come genitore principale", "direct_link": True}
     
     # Get requester full name
     requester = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "first_name": 1, "last_name": 1, "email": 1})

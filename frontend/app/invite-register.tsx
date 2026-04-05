@@ -75,6 +75,7 @@ export default function InviteRegister() {
   const [searching, setSearching] = useState(false);
   const [searchDone, setSearchDone] = useState(false);
   const [linkRequestSent, setLinkRequestSent] = useState(false);
+  const [linkError, setLinkError] = useState('');
 
   const openDocument = (type: 'privacy' | 'terms') => {
     const url = type === 'privacy' ? '/privacy-policy' : '/terms-of-use';
@@ -193,12 +194,17 @@ export default function InviteRegister() {
   };
 
   const requestLink = async (athleteId: string) => {
+    setLinkError('');
     try {
       await api.post('/parent-link/request', { athlete_id: athleteId });
       setLinkRequestSent(true);
-      showAlert('Richiesta inviata!', 'L\'altro genitore dovrà approvare il collegamento.');
+      // Auto-redirect to parent dashboard
+      setTimeout(() => {
+        router.replace('/parent');
+      }, 2500);
     } catch (error: any) {
-      showAlert('Errore', error.response?.data?.detail || 'Errore nell\'invio della richiesta');
+      const msg = error.response?.data?.detail || 'Errore nell\'invio della richiesta';
+      setLinkError(msg);
     }
   };
 
@@ -549,24 +555,22 @@ export default function InviteRegister() {
                 <Text style={{ fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 12 }}>
                   Cerca il tuo figlio/a
                 </Text>
-                <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-                  <TextInput
-                    style={{ flex: 1, backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, borderWidth: 1, borderColor: '#E0E0E0', marginRight: 6 }}
-                    placeholder="Cognome *"
-                    value={searchCognome}
-                    onChangeText={setSearchCognome}
-                    autoCapitalize="characters"
-                    data-testid="invite-search-cognome"
-                  />
-                  <TextInput
-                    style={{ flex: 1, backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, borderWidth: 1, borderColor: '#E0E0E0', marginLeft: 6 }}
-                    placeholder="Nome"
-                    value={searchNome}
-                    onChangeText={setSearchNome}
-                    autoCapitalize="characters"
-                    data-testid="invite-search-nome"
-                  />
-                </View>
+                <TextInput
+                  style={{ backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, borderWidth: 1, borderColor: '#E0E0E0', marginBottom: 8 }}
+                  placeholder="Cognome *"
+                  value={searchCognome}
+                  onChangeText={setSearchCognome}
+                  autoCapitalize="characters"
+                  data-testid="invite-search-cognome"
+                />
+                <TextInput
+                  style={{ backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, borderWidth: 1, borderColor: '#E0E0E0', marginBottom: 12 }}
+                  placeholder="Nome (opzionale)"
+                  value={searchNome}
+                  onChangeText={setSearchNome}
+                  autoCapitalize="characters"
+                  data-testid="invite-search-nome"
+                />
                 <TouchableOpacity
                   style={[styles.submitBtn, (searching || !searchCognome.trim()) && { opacity: 0.5 }]}
                   onPress={searchChild}
@@ -593,20 +597,28 @@ export default function InviteRegister() {
                 {searchResults.length > 0 && (
                   <View style={{ marginTop: 12 }}>
                     {searchResults.map((athlete: any) => (
-                      <View key={athlete.id} style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 15, fontWeight: '700', color: '#333' }}>{athlete.last_name} {athlete.first_name}</Text>
-                          {athlete.date_of_birth && <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Nato/a il {athlete.date_of_birth}</Text>}
-                          {athlete.team && <Text style={{ fontSize: 12, color: '#007AFF', marginTop: 2 }}>{athlete.team}</Text>}
+                      <View key={athlete.id} style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <View style={{ flex: 1, marginRight: 10 }}>
+                            <Text style={{ fontSize: 15, fontWeight: '700', color: '#333' }}>{athlete.last_name} {athlete.first_name}</Text>
+                            {athlete.date_of_birth && <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Nato/a il {athlete.date_of_birth}</Text>}
+                            {athlete.team && <Text style={{ fontSize: 12, color: '#007AFF', marginTop: 2 }}>{athlete.team}</Text>}
+                          </View>
+                          <TouchableOpacity
+                            style={{ backgroundColor: '#007AFF', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 }}
+                            onPress={() => requestLink(athlete.id)}
+                          >
+                            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Collega</Text>
+                          </TouchableOpacity>
                         </View>
-                        <TouchableOpacity
-                          style={{ backgroundColor: '#007AFF', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 }}
-                          onPress={() => requestLink(athlete.id)}
-                        >
-                          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Collega</Text>
-                        </TouchableOpacity>
                       </View>
                     ))}
+                    {linkError ? (
+                      <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 12, marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="alert-circle" size={20} color="#C62828" />
+                        <Text style={{ flex: 1, fontSize: 13, color: '#C62828', fontWeight: '600' }}>{linkError}</Text>
+                      </View>
+                    ) : null}
                   </View>
                 )}
               </View>
@@ -628,11 +640,14 @@ export default function InviteRegister() {
             <Text style={{ fontSize: 14, color: '#666', marginTop: 8, textAlign: 'center' }}>
               L'altro genitore riceverà una notifica e dovrà approvare il collegamento.
             </Text>
+            <Text style={{ fontSize: 13, color: '#999', marginTop: 8, textAlign: 'center' }}>
+              Verrai reindirizzato al tuo profilo...
+            </Text>
             <TouchableOpacity
-              style={[styles.submitBtn, { marginTop: 20 }]}
+              style={[styles.submitBtn, { marginTop: 16 }]}
               onPress={() => router.replace('/parent')}
             >
-              <Text style={styles.submitBtnText}>Vai alla Dashboard</Text>
+              <Text style={styles.submitBtnText}>Vai al Profilo</Text>
             </TouchableOpacity>
           </View>
         )}
