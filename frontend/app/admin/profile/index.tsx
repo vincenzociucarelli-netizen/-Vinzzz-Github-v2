@@ -546,7 +546,7 @@ export default function AdminProfile() {
             )}
           </View>
           
-          {renderField('Luogo di Nascita', profileData.place_of_birth, 'place_of_birth')}
+          {(editing ? (editData.country_of_birth === DEFAULT_COUNTRY || !editData.country_of_birth) : (!profileData.country_of_birth || profileData.country_of_birth === DEFAULT_COUNTRY)) && renderField('Luogo di Nascita', profileData.place_of_birth, 'place_of_birth')}
           {renderField('Indirizzo', profileData.address, 'address')}
           {renderField('Città', profileData.city, 'city')}
           
