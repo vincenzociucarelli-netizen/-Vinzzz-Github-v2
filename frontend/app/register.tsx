@@ -726,7 +726,7 @@ export default function Register() {
 
       {/* Data Password for Parents */}
       {/* Warning for Coach/Dirigente */}
-      {(role === 'coach' || role === 'viewer') && (
+      {(role === 'coach' || role === 'viewer' || role === 'collaboratore') && (
         <View style={styles.warningBox}>
           <Ionicons name="information-circle" size={20} color="#FF9500" />
           <Text style={styles.warningText}>
