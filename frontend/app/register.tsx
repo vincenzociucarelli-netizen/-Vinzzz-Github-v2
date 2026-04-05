@@ -1068,8 +1068,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 20,
+    paddingHorizontal: 24,
     paddingTop: 60,
+    paddingBottom: 40,
     justifyContent: 'center',
     maxWidth: 500,
     width: '100%',
