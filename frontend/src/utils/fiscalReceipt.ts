@@ -21,6 +21,7 @@ interface AthleteData {
   date_of_birth?: string;
   birth_place?: string;
   birth_province?: string;
+  country_of_birth?: string;
 }
 
 interface ParentData {
@@ -235,8 +236,16 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
         </div>
         <div class="box-row" style="margin-top: 3px;">
           <span><b>Data di nascita:</b> ${formatDateIT(data.athlete.date_of_birth || '')}</span>
-          <span><b>Comune di nascita:</b> ${data.athlete.birth_place || ''}</span>
-          <span><b>Prov.:</b> ${data.athlete.birth_province || ''}</span>
+          ${(() => {
+            const country = (data.athlete.country_of_birth || 'Italia').toUpperCase();
+            const isItalia = country === 'ITALIA' || country === '';
+            if (isItalia) {
+              return `<span><b>Comune di nascita:</b> ${data.athlete.birth_place || ''}</span>
+          <span><b>Prov.:</b> ${data.athlete.birth_province || ''}</span>`;
+            } else {
+              return `<span><b>Stato di nascita:</b> ${data.athlete.country_of_birth || ''}</span>`;
+            }
+          })()}
         </div>
       </div>
 

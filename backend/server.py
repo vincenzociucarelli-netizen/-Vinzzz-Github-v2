@@ -162,9 +162,12 @@ def validate_athlete_profile(athlete: dict) -> list:
         missing.append("Data di nascita")
     if not (athlete.get("fiscal_code") or "").strip():
         missing.append("Codice Fiscale")
-    place = athlete.get("place_of_birth") or athlete.get("birth_place") or ""
-    if not place.strip():
-        missing.append("Luogo di nascita")
+    country = (athlete.get("country_of_birth") or "Italia").strip().upper()
+    is_foreign = country not in ("ITALIA", "")
+    if not is_foreign:
+        place = athlete.get("place_of_birth") or athlete.get("birth_place") or ""
+        if not place.strip():
+            missing.append("Luogo di nascita")
     return missing
 
 def check_profiles_for_document(parent: dict = None, athlete: dict = None):
@@ -10813,6 +10816,7 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
             "date_of_birth": athlete.get("date_of_birth"),
             "birth_place": athlete.get("birth_place", ""),
             "birth_province": athlete.get("birth_province", ""),
+            "country_of_birth": athlete.get("country_of_birth", "Italia"),
         },
         "parent": {
             "first_name": parent.get("first_name", "") if parent else current_user.get("first_name", ""),
@@ -12273,6 +12277,7 @@ async def export_athletes(current_user = Depends(get_current_user)):
             "Nome Completo": athlete.get("full_name", ""),
             "Data Nascita": birth_date_str,
             "Luogo Nascita": athlete.get("birth_place", ""),
+            "Stato Nascita": athlete.get("country_of_birth", "Italia"),
             "Codice Fiscale": athlete.get("fiscal_code", ""),
             "Codice Federale": athlete.get("federal_code", ""),
             "Tesserato": "Sì" if athlete.get("is_registered") else "No",
@@ -16827,7 +16832,7 @@ async def sign_gdpr_privacy_document(
                 minor_surname=minor_surname_val,
                 minor_fiscal_code=request.minor_fiscal_code or minor.get("fiscal_code", ""),
                 minor_birth_date=minor_birth_date,
-                minor_birth_place=request.minor_birth_place or minor.get("place_of_birth", "") or minor.get("birth_place", ""),
+                minor_birth_place=request.minor_birth_place or minor.get("place_of_birth", "") or minor.get("birth_place", "") or minor.get("country_of_birth", "") or "",
                 signature_base64=request.signature_base64,
                 timestamp=timestamp_display,
                 ip_address=client_ip,
@@ -17134,7 +17139,7 @@ async def preview_gdpr_privacy_document(
                 signer_surname=signer_surname,
                 signer_fiscal_code=full_user.get("fiscal_code", ""),
                 signer_birth_date=signer_birth_date,
-                signer_birth_place=full_user.get("place_of_birth", ""),
+                signer_birth_place=full_user.get("place_of_birth", "") or full_user.get("country_of_birth", "") or "",
                 signer_address=full_user.get("address", ""),
                 signer_city=full_user.get("city", ""),
                 signer_province=full_user.get("province", ""),
@@ -17204,7 +17209,7 @@ async def preview_gdpr_privacy_document(
                 minor_surname=minor_surname_val,
                 minor_fiscal_code=minor.get("fiscal_code", ""),
                 minor_birth_date=minor_birth_date,
-                minor_birth_place=minor.get("place_of_birth", "") or minor.get("birth_place", ""),
+                minor_birth_place=minor.get("place_of_birth", "") or minor.get("birth_place", "") or minor.get("country_of_birth", "") or "",
                 signature_base64="",  # No signature for preview
                 timestamp=timestamp_str,
                 ip_address="[IP REGISTRATO ALLA FIRMA]",

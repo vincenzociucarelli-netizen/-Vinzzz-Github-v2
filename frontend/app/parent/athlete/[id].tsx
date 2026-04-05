@@ -1729,7 +1729,14 @@ export default function AthleteDetail() {
               </View>
               
               <View style={styles.dataRow}>
-                <Text style={styles.dataLabel}>Luogo di Nascita</Text>
+                <Text style={styles.dataLabel}>Stato di Nascita</Text>
+                <Text style={styles.dataValue}>{athlete.country_of_birth || 'Italia'}</Text>
+              </View>
+              
+              {(!athlete.country_of_birth || athlete.country_of_birth.toUpperCase() === 'ITALIA') && (
+              <>
+              <View style={styles.dataRow}>
+                <Text style={styles.dataLabel}>Comune di Nascita</Text>
                 <Text style={styles.dataValue}>{maskData(athlete.birth_place)}</Text>
               </View>
               
@@ -1737,11 +1744,8 @@ export default function AthleteDetail() {
                 <Text style={styles.dataLabel}>Prov. Nascita</Text>
                 <Text style={styles.dataValue}>{maskData(athlete.birth_province)}</Text>
               </View>
-              
-              <View style={styles.dataRow}>
-                <Text style={styles.dataLabel}>Stato di Nascita</Text>
-                <Text style={styles.dataValue}>{athlete.country_of_birth || 'Italia'}</Text>
-              </View>
+              </>
+              )}
               
               <View style={styles.dataRow}>
                 <Text style={styles.dataLabel}>Codice Fiscale</Text>

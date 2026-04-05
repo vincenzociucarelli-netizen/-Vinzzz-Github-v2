@@ -219,7 +219,8 @@ export default function ParentDashboard() {
       const missingFields = [];
       if (!athlete.fiscal_code) missingFields.push('Codice Fiscale');
       if (!athlete.date_of_birth) missingFields.push('Data di nascita');
-      if (!athlete.birth_place && !athlete.place_of_birth) missingFields.push('Luogo di nascita');
+      const isItalianBorn = !athlete.country_of_birth || athlete.country_of_birth.toUpperCase() === 'ITALIA';
+      if (isItalianBorn && !athlete.birth_place && !athlete.place_of_birth) missingFields.push('Luogo di nascita');
       if (!athlete.gender) missingFields.push('Sesso');
       
       if (missingFields.length > 0) {
