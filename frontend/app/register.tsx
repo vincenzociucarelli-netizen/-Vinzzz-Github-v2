@@ -212,8 +212,11 @@ export default function Register() {
         }
       }
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Errore durante la registrazione';
-      showAlert('Errore', message);
+      const detail = error.response?.data?.detail;
+      let msg = 'Errore durante la registrazione';
+      if (typeof detail === 'string') msg = detail;
+      else if (Array.isArray(detail)) msg = detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+      showAlert('Errore', msg);
     } finally {
       setLoading(false);
     }

@@ -144,6 +144,7 @@ export default function InviteRegister() {
       const registerPayload = {
         email: form.email,
         password: form.password,
+        full_name: `${form.parent_first_name.toUpperCase()} ${form.parent_last_name.toUpperCase()}`.trim(),
         first_name: form.parent_first_name.toUpperCase(),
         last_name: form.parent_last_name.toUpperCase(),
         phone: form.parent_phone,
@@ -155,19 +156,48 @@ export default function InviteRegister() {
         },
       };
 
-      const res = await api.post('/auth/register', registerPayload);
+      let token = null;
+      let userData = null;
       
-      if (res.data.token) {
-        await setUser(res.data.user, res.data.token);
+      try {
+        const res = await api.post('/auth/register', registerPayload);
+        token = res.data.token;
+        userData = res.data.user;
+      } catch (regErr: any) {
+        // If email already exists, try to login instead
+        const detail = regErr.response?.data?.detail;
+        const isEmailExists = regErr.response?.status === 400 && 
+          (typeof detail === 'string' && (detail.toLowerCase().includes('email') || detail.toLowerCase().includes('già')));
+        
+        if (isEmailExists) {
+          try {
+            const loginRes = await api.post('/auth/login', { email: form.email, password: form.password });
+            token = loginRes.data.token;
+            userData = loginRes.data.user;
+          } catch (loginErr: any) {
+            showAlert('Errore', 'Email già registrata. Verifica la password o accedi dalla pagina di login.');
+            return;
+          }
+        } else {
+          throw regErr;
+        }
+      }
+      
+      if (token && userData) {
+        await setUser(userData, token);
         // Now show search form to find and link the child
         setChildAlreadyRegistered(true);
         setSearching(false);
         setSearchDone(false);
         setSearchResults([]);
-        showAlert('Account creato!', 'Ora cerca il tuo figlio/a per cognome per richiedere il collegamento.');
+        showAlert('Accesso riuscito!', 'Ora cerca il tuo figlio/a per cognome per richiedere il collegamento.');
       }
     } catch (err: any) {
-      showAlert('Errore', err.response?.data?.detail || 'Errore nella registrazione');
+      const detail = err.response?.data?.detail;
+      let msg = 'Errore nella registrazione';
+      if (typeof detail === 'string') msg = detail;
+      else if (Array.isArray(detail)) msg = detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+      showAlert('Errore', msg);
     } finally {
       setSubmitting(false);
     }
@@ -352,7 +382,11 @@ export default function InviteRegister() {
         setSuccess(true);
       }
     } catch (err: any) {
-      showAlert('Errore', err.response?.data?.detail || 'Errore nella registrazione');
+      const detail = err.response?.data?.detail;
+      let msg = 'Errore nella registrazione';
+      if (typeof detail === 'string') msg = detail;
+      else if (Array.isArray(detail)) msg = detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+      showAlert('Errore', msg);
     } finally {
       setSubmitting(false);
     }

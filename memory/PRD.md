@@ -54,6 +54,8 @@ npx expo export -p web --clear
 14. Fix bug "Collega" 400 Bad Request: se atleta senza parent_id, assegnazione diretta. Errori inline su mobile. Redirect automatico al profilo dopo collegamento
 15. Fix layout ricerca figlio su mobile: campi Cognome/Nome in colonna, bottone Collega non sovrapposto. Applicato a register.tsx, invite-register.tsx E link-athlete.tsx
 16. Fix backend parent-link/request: se atleta senza parent_id, assegnazione diretta come genitore principale senza approvazione
+17. Fix errore `[object Object]` in invite-register: aggiunto `full_name` al payload + error handling robusto per errori Pydantic (array)
+18. Login automatico se email già registrata nel flusso invite-register (fallback da 422 → login)
 
 ## Backlog Prioritizzato
 
