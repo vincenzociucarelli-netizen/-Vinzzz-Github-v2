@@ -19,11 +19,11 @@ import { Ionicons } from '../src/components/Icon';
 
 export default function Register() {
   const router = useRouter();
-  const { code: urlCode } = useLocalSearchParams<{ code?: string }>();
+  const { code: urlCode, invite_token: urlInviteToken } = useLocalSearchParams<{ code?: string; invite_token?: string }>();
   const setUser = useAuthStore((state) => state.setUser);
   
-  // Step management: 'role' -> 'welcome' -> 'invite' -> 'form' -> 'child-check' (parents only)
-  const [step, setStep] = useState<'role' | 'welcome' | 'invite' | 'form' | 'child-check'>('role');
+  // Step management: 'role' -> 'invite' -> 'form' -> 'child-check' (parents only)
+  const [step, setStep] = useState<'role' | 'invite' | 'form' | 'child-check'>('role');
   
   // Form fields
   const [lastName, setLastName] = useState('');
@@ -196,6 +196,13 @@ export default function Register() {
       }
 
       if (response.data.token) {
+        // Mark invite as completed if coming from email invite
+        if (urlInviteToken) {
+          try {
+            await api.post('/athletes/invite-complete', { token: urlInviteToken });
+          } catch (e) { /* ignore - non-critical */ }
+        }
+        
         // Different behavior based on role
         if (role === 'coach' || role === 'viewer' || role === 'collaboratore') {
           // Coach, Collaboratore and Viewer need approval - do NOT login automatically
@@ -268,7 +275,7 @@ export default function Register() {
         style={styles.roleCard}
         onPress={() => {
           setRole('parent');
-          setStep('welcome');
+          setStep('invite');
         }}
         data-testid="role-parent-btn"
       >
@@ -286,7 +293,7 @@ export default function Register() {
         style={styles.roleCard}
         onPress={() => {
           setRole('athlete');
-          setStep('welcome');
+          setStep('invite');
         }}
         data-testid="role-adult-athlete-btn"
       >
@@ -304,7 +311,7 @@ export default function Register() {
         style={styles.roleCard}
         onPress={() => {
           setRole('coach');
-          setStep('welcome');
+          setStep('invite');
         }}
         data-testid="role-coach-btn"
       >
@@ -322,7 +329,7 @@ export default function Register() {
         style={styles.roleCard}
         onPress={() => {
           setRole('viewer');
-          setStep('welcome');
+          setStep('invite');
         }}
         data-testid="role-dirigente-btn"
       >
@@ -340,7 +347,7 @@ export default function Register() {
         style={styles.roleCard}
         onPress={() => {
           setRole('collaboratore');
-          setStep('welcome');
+          setStep('invite');
         }}
         data-testid="role-collaboratore-btn"
       >
@@ -540,7 +547,7 @@ export default function Register() {
   // STEP 3: Invite Code (for Coach/Dirigente)
   const renderInviteCode = () => (
     <View style={styles.stepContainer}>
-      <TouchableOpacity style={styles.backBtn} onPress={() => setStep('welcome')}>
+      <TouchableOpacity style={styles.backBtn} onPress={() => setStep('role')}>
         <View style={{ backgroundColor: "rgba(0,122,255,0.15)", borderRadius: 20, padding: 6 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
       </TouchableOpacity>
 
@@ -743,26 +750,98 @@ export default function Register() {
         <View style={[styles.infoBox, { backgroundColor: '#FFF8E1', borderColor: '#FF9800', borderWidth: 1 }]}>
           <Ionicons name="fitness" size={20} color="#FF9800" />
           <Text style={styles.infoText}>
-            🏃 Come atleta maggiorenne, avrai 7 giorni di prova. Verrai assegnato a una squadra dall'amministratore.
+            Come atleta maggiorenne, avrai 7 giorni di prova. Verrai assegnato a una squadra dall'amministratore.
           </Text>
         </View>
       )}
 
-      {/* Submit Button */}
-      <TouchableOpacity
-        style={[styles.registerButton, loading && styles.btnDisabled]}
-        onPress={handleRegister}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
+      {/* Privacy e Consensi Section */}
+      <View style={{ backgroundColor: '#F5F5F5', borderRadius: 14, padding: 16, marginTop: 16, marginBottom: 16 }}>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 12 }}>Privacy e Consensi</Text>
+        
+        {/* Open Terms */}
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 }}
+          onPress={() => { 
+            if (typeof window !== 'undefined') window.open('https://www.iubenda.com/termini-e-condizioni/63104250', '_blank');
+            setHasOpenedTerms(true);
+          }}
+          data-testid="open-terms-link"
+        >
+          <Ionicons name={hasOpenedTerms ? "checkmark-circle" : "document-text-outline"} size={22} color={hasOpenedTerms ? "#4CAF50" : "#007AFF"} />
+          <Text style={{ flex: 1, fontSize: 14, color: '#007AFF', textDecorationLine: 'underline' }}>Termini di utilizzo</Text>
+          {hasOpenedTerms && <Text style={{ fontSize: 11, color: '#4CAF50' }}>Letto</Text>}
+        </TouchableOpacity>
+
+        {/* Open Privacy */}
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 }}
+          onPress={() => { 
+            if (typeof window !== 'undefined') window.open('https://www.iubenda.com/privacy-policy/63104250', '_blank');
+            setHasOpenedPrivacy(true);
+          }}
+          data-testid="open-privacy-policy-link"
+        >
+          <Ionicons name={hasOpenedPrivacy ? "checkmark-circle" : "shield-outline"} size={22} color={hasOpenedPrivacy ? "#4CAF50" : "#007AFF"} />
+          <Text style={{ flex: 1, fontSize: 14, color: '#007AFF', textDecorationLine: 'underline' }}>Informativa sulla Privacy</Text>
+          {hasOpenedPrivacy && <Text style={{ fontSize: 11, color: '#4CAF50' }}>Letto</Text>}
+        </TouchableOpacity>
+
+        {/* Consent checkbox */}
+        {hasOpenedPrivacy && hasOpenedTerms && (
           <>
-            <Ionicons name="person-add" size={20} color="#fff" />
-            <Text style={styles.registerButtonText}>Registrati</Text>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 10, gap: 10 }}
+              onPress={() => setConsentPrivacyViewed(!consentPrivacyViewed)}
+              data-testid="consent-privacy-viewed"
+            >
+              <Ionicons name={consentPrivacyViewed ? "checkbox" : "square-outline"} size={22} color={consentPrivacyViewed ? "#4CAF50" : "#999"} />
+              <Text style={{ flex: 1, fontSize: 13, color: '#333' }}>
+                Dichiaro di aver preso visione dell'Informativa sulla Privacy *
+              </Text>
+            </TouchableOpacity>
+
+            {/* Promotional images consent */}
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 10, gap: 10, backgroundColor: '#FFF3E0', borderRadius: 10, padding: 12, marginTop: 4 }}
+              onPress={() => setConsentPromotionalImages(!consentPromotionalImages)}
+              data-testid="consent-promo-images"
+            >
+              <Ionicons name={consentPromotionalImages ? "checkbox" : "square-outline"} size={22} color={consentPromotionalImages ? "#FF9800" : "#999"} />
+              <Text style={{ flex: 1, fontSize: 13, color: '#333' }}>
+                Acconsento all'uso delle mie immagini a scopi promozionali (facoltativo)
+              </Text>
+            </TouchableOpacity>
           </>
         )}
-      </TouchableOpacity>
+
+        {!hasOpenedPrivacy || !hasOpenedTerms ? (
+          <Text style={{ fontSize: 12, color: '#999', marginTop: 8, fontStyle: 'italic' }}>
+            Apri entrambi i documenti per procedere
+          </Text>
+        ) : null}
+      </View>
+
+      {/* Submit Button */}
+      {(() => {
+        const canSubmit = hasOpenedTerms && hasOpenedPrivacy && consentPrivacyViewed && !loading;
+        return (
+          <TouchableOpacity
+            style={[styles.registerButton, !canSubmit && { opacity: 0.4 }]}
+            onPress={handleRegister}
+            disabled={!canSubmit}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="person-add" size={20} color="#fff" />
+                <Text style={styles.registerButtonText}>Registrati</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        );
+      })()}
 
       <TouchableOpacity style={styles.loginLink} onPress={() => router.push('/login')}>
         <Text style={styles.loginLinkText}>
@@ -970,7 +1049,6 @@ export default function Register() {
         showsVerticalScrollIndicator={false}
       >
         {step === 'role' && renderRoleSelection()}
-        {step === 'welcome' && renderWelcome()}
         {step === 'invite' && renderInviteCode()}
         {step === 'form' && renderForm()}
         {step === 'child-check' && renderChildCheck()}

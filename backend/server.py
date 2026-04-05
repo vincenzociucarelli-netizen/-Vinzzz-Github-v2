@@ -2241,6 +2241,10 @@ async def get_invite_info(token: str):
     if expires_at and expires_at < datetime.now(timezone.utc).isoformat():
         raise HTTPException(status_code=400, detail="Questo invito è scaduto")
     
+    # Get society invite code
+    society = await db.societies.find_one({"id": invitation.get("society_id")}, {"_id": 0, "invite_code": 1})
+    invite_code = society.get("invite_code", "") if society else ""
+    
     return {
         "email": invitation["email"],
         "first_name": invitation.get("first_name"),
@@ -2248,7 +2252,21 @@ async def get_invite_info(token: str):
         "is_minor": invitation.get("is_minor", False),
         "society_name": invitation.get("society_name", ""),
         "team_id": invitation.get("team_id"),
+        "invite_code": invite_code,
+        "society_id": invitation.get("society_id"),
     }
+
+@api_router.post("/athletes/invite-complete")
+async def complete_invite(data: dict):
+    """Mark an invitation as completed (called after successful registration)"""
+    token = data.get("token")
+    if token:
+        await db.athlete_invitations.update_one(
+            {"token": token, "status": "pending"},
+            {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    return {"ok": True}
+
 
 class InviteRegisterRequest(BaseModel):
     token: str

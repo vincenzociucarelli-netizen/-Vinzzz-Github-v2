@@ -56,6 +56,7 @@ npx expo export -p web --clear
 16. Fix backend parent-link/request: se atleta senza parent_id, assegnazione diretta come genitore principale senza approvazione
 17. Fix errore `[object Object]` in invite-register: aggiunto `full_name` al payload + error handling robusto per errori Pydantic (array)
 18. Login automatico se email già registrata nel flusso invite-register (fallback da 422 → login)
+19. FLUSSO REGISTRAZIONE UNIFICATO: invite-register.tsx ora è un redirect a register.tsx?code=XXX. Un solo flusso per tutti i canali (email, WhatsApp, login). Privacy+Consensi integrati nel form (Fig. 3). Codice invito precaricato da URL.
 
 ## Backlog Prioritizzato
 
