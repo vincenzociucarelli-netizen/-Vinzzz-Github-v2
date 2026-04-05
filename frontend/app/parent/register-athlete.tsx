@@ -372,33 +372,32 @@ export default function RegisterAthlete() {
 
           {(() => {
             const isItalia = countryOfBirth.toUpperCase() === 'ITALIA';
+            if (!isItalia) return null;
             return (
               <View style={styles.row}>
-                <View style={isItalia ? styles.flex2 : { flex: 1 }}>
+                <View style={styles.flex2}>
                   <Text style={styles.label}>Luogo di Nascita *</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder={isItalia ? "es: Roma" : "es: Berlino"}
+                    placeholder="es: Roma"
                     placeholderTextColor="#aaa"
                     value={birthPlace}
                     onChangeText={(text) => setBirthPlace(text.toUpperCase())}
                     autoCapitalize="characters"
                   />
                 </View>
-                {isItalia && (
-                  <View style={styles.flex1}>
-                    <Text style={styles.label}>Prov. *</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="RM"
-                      placeholderTextColor="#aaa"
-                      value={birthProvince}
-                      onChangeText={(text) => setBirthProvince(text.toUpperCase())}
-                      maxLength={2}
-                      autoCapitalize="characters"
-                    />
-                  </View>
-                )}
+                <View style={styles.flex1}>
+                  <Text style={styles.label}>Prov. *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="RM"
+                    placeholderTextColor="#aaa"
+                    value={birthProvince}
+                    onChangeText={(text) => setBirthProvince(text.toUpperCase())}
+                    maxLength={2}
+                    autoCapitalize="characters"
+                  />
+                </View>
               </View>
             );
           })()}

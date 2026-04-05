@@ -6564,6 +6564,12 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
             reactivate_data["first_name"] = athlete_data.first_name
             reactivate_data["last_name"] = athlete_data.last_name
             reactivate_data["full_name"] = athlete_data.full_name
+        if athlete_data.country_of_birth:
+            reactivate_data["country_of_birth"] = athlete_data.country_of_birth
+        if athlete_data.birth_place:
+            reactivate_data["birth_place"] = athlete_data.birth_place
+        if athlete_data.birth_province:
+            reactivate_data["birth_province"] = athlete_data.birth_province
         if athlete_data.email:
             reactivate_data["email"] = athlete_data.email
         if athlete_data.phone_athlete:
@@ -6598,6 +6604,7 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
         date_of_birth=dob,
         birth_place=athlete_data.birth_place,
         birth_province=athlete_data.birth_province,
+        country_of_birth=athlete_data.country_of_birth or "Italia",
         gender=athlete_data.gender,
         is_minor=is_minor,
         fiscal_code=athlete_data.fiscal_code,

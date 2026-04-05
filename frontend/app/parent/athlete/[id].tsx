@@ -3216,35 +3216,34 @@ export default function AthleteDetail() {
 
               {(() => {
                 const isItalia = !editData.country_of_birth || editData.country_of_birth === 'Italia' || editData.country_of_birth === 'ITALIA';
+                if (!isItalia) return null;
                 return (
                   <View style={styles.rowInputs}>
-                    <View style={isItalia ? styles.halfInputContainer : { flex: 1 }}>
+                    <View style={styles.halfInputContainer}>
                       <Text style={styles.inputLabel}>Luogo di Nascita</Text>
                       <TextInput
                         style={styles.textInput}
                         value={editData.birth_place}
                         onChangeText={(text) => setEditData({...editData, birth_place: text.toUpperCase()})}
                         autoCapitalize="characters"
-                        placeholder={isItalia ? "es: PERUGIA" : "es: BERLINO"}
+                        placeholder="es: PERUGIA"
                         placeholderTextColor="#aaa"
                         returnKeyType="next"
                       />
                     </View>
-                    {isItalia && (
-                      <View style={styles.halfInputContainer}>
-                        <Text style={styles.inputLabel}>Prov. Nascita</Text>
-                        <TextInput
-                          style={styles.textInput}
-                          value={editData.birth_province}
-                          onChangeText={(text) => setEditData({...editData, birth_province: text.toUpperCase()})}
-                          autoCapitalize="characters"
-                          maxLength={2}
-                          placeholder="es: PG"
-                          placeholderTextColor="#aaa"
-                          returnKeyType="next"
-                        />
-                      </View>
-                    )}
+                    <View style={styles.halfInputContainer}>
+                      <Text style={styles.inputLabel}>Prov. Nascita</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={editData.birth_province}
+                        onChangeText={(text) => setEditData({...editData, birth_province: text.toUpperCase()})}
+                        autoCapitalize="characters"
+                        maxLength={2}
+                        placeholder="es: PG"
+                        placeholderTextColor="#aaa"
+                        returnKeyType="next"
+                      />
+                    </View>
                   </View>
                 );
               })()}
