@@ -15,6 +15,8 @@ export default function ParentLinkPage() {
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState('');
+  const [linkSuccess, setLinkSuccess] = useState('');
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [toApprove, setToApprove] = useState<any[]>([]);
   const [responding, setResponding] = useState<string | null>(null);
@@ -63,13 +65,23 @@ export default function ParentLinkPage() {
 
   const sendRequest = async (athleteId: string, athleteName: string) => {
     setSending(athleteId);
+    setLinkError('');
+    setLinkSuccess('');
     try {
       const response = await api.post('/parent-link/request', { athlete_id: athleteId });
-      showAlert('Richiesta inviata', response.data.message);
+      const msg = response.data.direct_link 
+        ? `Sei stato collegato direttamente come genitore di ${athleteName}!`
+        : response.data.message || `Richiesta inviata per ${athleteName}`;
+      setLinkSuccess(msg);
       setResults(prev => prev.filter(r => r.id !== athleteId));
       loadRequests();
+      // Auto-redirect after success
+      setTimeout(() => {
+        router.replace('/parent');
+      }, 2500);
     } catch (error: any) {
-      showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'invio');
+      const msg = error.response?.data?.detail || 'Errore durante l\'invio';
+      setLinkError(msg);
     } finally {
       setSending(null);
     }
@@ -172,24 +184,22 @@ export default function ParentLinkPage() {
             </TouchableOpacity>
           </View>
           <Text style={styles.cardSubtitle}>Inserisci cognome e nome dell'atleta che vuoi collegare al tuo profilo</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={[styles.input, styles.inputHalf]}
-              placeholder="Cognome *"
-              value={cognome}
-              onChangeText={setCognome}
-              autoCapitalize="characters"
-              data-testid="search-cognome-input"
-            />
-            <TextInput
-              style={[styles.input, styles.inputHalf]}
-              placeholder="Nome"
-              value={nome}
-              onChangeText={setNome}
-              autoCapitalize="characters"
-              data-testid="search-nome-input"
-            />
-          </View>
+          <TextInput
+            style={[styles.input, { marginBottom: 8 }]}
+            placeholder="Cognome *"
+            value={cognome}
+            onChangeText={setCognome}
+            autoCapitalize="characters"
+            data-testid="search-cognome-input"
+          />
+          <TextInput
+            style={[styles.input, { marginBottom: 12 }]}
+            placeholder="Nome (opzionale)"
+            value={nome}
+            onChangeText={setNome}
+            autoCapitalize="characters"
+            data-testid="search-nome-input"
+          />
           <TouchableOpacity
             style={[styles.searchBtn, searching && { opacity: 0.6 }]}
             onPress={searchAthlete}
@@ -207,6 +217,23 @@ export default function ParentLinkPage() {
           </TouchableOpacity>
           </View>
         )}
+
+        {/* Inline success/error messages */}
+        {linkSuccess ? (
+          <View style={{ backgroundColor: '#E8F5E9', borderRadius: 12, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#2E7D32' }}>{linkSuccess}</Text>
+              <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>Verrai reindirizzato al profilo...</Text>
+            </View>
+          </View>
+        ) : null}
+        {linkError ? (
+          <View style={{ backgroundColor: '#FFEBEE', borderRadius: 12, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="alert-circle" size={24} color="#C62828" />
+            <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#C62828' }}>{linkError}</Text>
+          </View>
+        ) : null}
 
         {/* Search results */}
         {showSearch && searched && (

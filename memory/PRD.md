@@ -52,7 +52,8 @@ npx expo export -p web --clear
 12. Build frontend per rendere visibili: icona occhio password, submit bloccato senza apertura documenti privacy nella registrazione via invito
 13. Uniformato flusso registrazione su tutti i canali: aggiunta lettura `?code=` da URL in `register.tsx`, auto-validazione codice invito dal link condiviso dall'admin
 14. Fix bug "Collega" 400 Bad Request: se atleta senza parent_id, assegnazione diretta. Errori inline su mobile. Redirect automatico al profilo dopo collegamento
-15. Fix layout ricerca figlio su mobile: campi Cognome/Nome in colonna, bottone Collega non sovrapposto. Applicato a register.tsx e invite-register.tsx
+15. Fix layout ricerca figlio su mobile: campi Cognome/Nome in colonna, bottone Collega non sovrapposto. Applicato a register.tsx, invite-register.tsx E link-athlete.tsx
+16. Fix backend parent-link/request: se atleta senza parent_id, assegnazione diretta come genitore principale senza approvazione
 
 ## Backlog Prioritizzato
 
