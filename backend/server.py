@@ -15047,8 +15047,41 @@ def generate_gdpr_minor_privacy_pdf(
     c.drawString(2*cm, y, "6. UTILIZZO DI IMMAGINI E VIDEO")
     y -= 0.5*cm
     c.setFont("Helvetica", 10)
-    immagini_text = "Le immagini potranno essere utilizzate solo previo consenso specifico del genitore/tutore."
+    immagini_text = "Durante le attività sportive potranno essere realizzate fotografie o riprese video degli atleti. Le immagini potranno essere utilizzate solo previo consenso specifico del genitore/tutore per le seguenti finalità:"
     y = draw_wrapped_text(c, immagini_text, 2*cm, y, max_w)
+    
+    y -= 0.3*cm
+    c.setFont("Helvetica", 10)
+    y = draw_wrapped_text(c, "a) Uso interno: documentazione delle attività, comunicazioni alle famiglie, archivio della società.", 2.3*cm, y, max_w - 0.3*cm)
+    y -= 0.15*cm
+    y = draw_wrapped_text(c, "b) Uso promozionale: sito web, social network, materiale informativo della società.", 2.3*cm, y, max_w - 0.3*cm)
+    
+    y -= 0.4*cm
+    riprese_ctx = "Eventuali riprese di contesto durante eventi, gare o manifestazioni sportive che includano il minore come parte del gruppo non richiedono consenso specifico, in quanto necessarie alla documentazione dell'attività sportiva."
+    y = draw_wrapped_text(c, riprese_ctx, 2*cm, y, max_w)
+    
+    # Show expressed consents in the image section
+    y -= 0.5*cm
+    cd = consent_data or {}
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2*cm, y, "Consensi espressi dal genitore/tutore:")
+    y -= 0.45*cm
+    c.setFont("Helvetica", 10)
+    
+    check_ii = "X" if cd.get("images_internal", False) else " "
+    consent_ii_text = "ACCONSENTO" if cd.get("images_internal", False) else "NON ACCONSENTO"
+    c.drawString(2.3*cm, y, f"[{check_ii}] Utilizzo immagini per uso interno: {consent_ii_text}")
+    y -= 0.45*cm
+    
+    check_ip = "X" if cd.get("images_promo", False) else " "
+    consent_ip_text = "ACCONSENTO" if cd.get("images_promo", False) else "NON ACCONSENTO"
+    c.drawString(2.3*cm, y, f"[{check_ip}] Utilizzo immagini per finalità promozionali: {consent_ip_text}")
+    y -= 0.45*cm
+    
+    c.setFont("Helvetica", 9)
+    c.setFillColor(colors.HexColor("#666666"))
+    y = draw_wrapped_text(c, "I consensi sopra indicati sono facoltativi e possono essere revocati in qualsiasi momento.", 2*cm, y, max_w, font_size=9)
+    c.setFillColor(colors.black)
     
     y -= 0.3*cm
     
@@ -15090,18 +15123,20 @@ def generate_gdpr_minor_privacy_pdf(
     c.drawString(2*cm, y, f"[{check_pv}] Ho preso visione dell'informativa privacy")
     y -= 0.6*cm
     
-    # CONSENSI FACOLTATIVI
+    # CONSENSI FACOLTATIVI (riepilogo - dettaglio in sezione 6)
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "CONSENSI FACOLTATIVI")
+    c.drawString(2*cm, y, "CONSENSI FACOLTATIVI (cfr. Sezione 6)")
     y -= 0.5*cm
     c.setFont("Helvetica", 9)
     
     check_ii = "X" if cd.get("images_internal", False) else " "
-    c.drawString(2*cm, y, f"[{check_ii}] Utilizzo immagini ad uso interno (es. comunicazioni, gruppi, attivita')")
+    consent_ii_label = "ACCONSENTO" if cd.get("images_internal", False) else "NON ACCONSENTO"
+    c.drawString(2*cm, y, f"[{check_ii}] Utilizzo immagini per uso interno: {consent_ii_label}")
     y -= 0.4*cm
     
     check_ip = "X" if cd.get("images_promo", False) else " "
-    c.drawString(2*cm, y, f"[{check_ip}] Utilizzo immagini a scopo promozionale (sito, social, materiale pubblicitario)")
+    consent_ip_label = "ACCONSENTO" if cd.get("images_promo", False) else "NON ACCONSENTO"
+    c.drawString(2*cm, y, f"[{check_ip}] Utilizzo immagini per finalità promozionali: {consent_ip_label}")
     y -= 0.5*cm
     
     # Nota revoca
@@ -17018,6 +17053,8 @@ class GDPRPreviewRequest(BaseModel):
     minor_fiscal_code: Optional[str] = None
     minor_birth_date: Optional[str] = None
     minor_birth_place: Optional[str] = None
+    # Consent data (passed to show expressed consents in preview)
+    consent_data: Optional[dict] = None
 
 
 @api_router.post("/documents/preview-gdpr-privacy")
@@ -17109,7 +17146,7 @@ async def preview_gdpr_privacy_document(
                 document_hash=document_hash,
                 user_id=current_user["id"],
                 society_id=society_id,
-                consent_data=None  # Preview - no consent data yet
+                consent_data=request.consent_data if request.consent_data else None
             )
             doc_title = "ANTEPRIMA - Informativa Privacy GDPR - Staff"
             
@@ -17176,7 +17213,7 @@ async def preview_gdpr_privacy_document(
                 document_hash=document_hash,
                 user_id=current_user["id"],
                 society_id=society_id,
-                consent_data=None  # Preview - no consent data yet
+                consent_data=request.consent_data if request.consent_data else None
             )
             doc_title = f"ANTEPRIMA - Informativa Privacy GDPR - Minore {minor_full_name}"
         else:
