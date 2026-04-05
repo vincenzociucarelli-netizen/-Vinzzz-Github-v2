@@ -109,6 +109,13 @@ export default function InviteRegister() {
     }
   };
 
+  // For minor invites: always show parent form first (no YES/NO choice)
+  useEffect(() => {
+    if (inviteInfo?.is_minor && childAlreadyRegistered === null) {
+      setChildAlreadyRegistered(true);
+    }
+  }, [inviteInfo]);
+
   // Handle "Yes, child already registered" path: register parent account, then search/link
   const handleRegisterAndLink = async () => {
     // Validate parent data
@@ -440,48 +447,8 @@ export default function InviteRegister() {
       </View>
 
       <View style={styles.formContainer}>
-        {/* For minors: Ask if child is already registered */}
-        {inviteInfo?.is_minor && childAlreadyRegistered === null && (
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 17, fontWeight: '700', color: '#333', marginBottom: 16, textAlign: 'center' }}>
-              Il tuo figlio/a è già registrato nella società?
-            </Text>
-            <TouchableOpacity
-              style={{
-                backgroundColor: '#E3F2FD', borderRadius: 14, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14,
-                borderWidth: 2, borderColor: '#007AFF', marginBottom: 12,
-              }}
-              onPress={() => setChildAlreadyRegistered(true)}
-              data-testid="invite-child-already-yes"
-            >
-              <View style={{ backgroundColor: '#007AFF', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="search" size={22} color="#fff" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#007AFF' }}>Sì, è già registrato</Text>
-                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Cerca il figlio/a e richiedi il collegamento</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{
-                backgroundColor: '#FFF3E0', borderRadius: 14, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14,
-                borderWidth: 2, borderColor: '#FF9800',
-              }}
-              onPress={() => setChildAlreadyRegistered(false)}
-              data-testid="invite-child-already-no"
-            >
-              <View style={{ backgroundColor: '#FF9800', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="person-add" size={22} color="#fff" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100' }}>No, devo registrarlo</Text>
-                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Compila tutti i dati dell'atleta</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* "YES" path: Second parent registers + links to existing child */}
+        {/* For minors: ALWAYS show parent form first */}
+        {/* "YES" path: Parent registers + links to existing child */}
         {inviteInfo?.is_minor && childAlreadyRegistered === true && !linkRequestSent && (
           <View style={{ marginBottom: 20 }}>
             {/* Parent data section */}
@@ -658,8 +625,8 @@ export default function InviteRegister() {
               </View>
             )}
 
-            <TouchableOpacity style={{ alignItems: 'center', marginTop: 12, padding: 8 }} onPress={() => setChildAlreadyRegistered(null)}>
-              <Text style={{ fontSize: 13, color: '#007AFF' }}>Indietro</Text>
+            <TouchableOpacity style={{ alignItems: 'center', marginTop: 12, padding: 8 }} onPress={() => router.replace('/login')}>
+              <Text style={{ fontSize: 13, color: '#007AFF' }}>Torna al Login</Text>
             </TouchableOpacity>
           </View>
         )}
