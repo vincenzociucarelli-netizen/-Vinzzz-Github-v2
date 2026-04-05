@@ -76,6 +76,7 @@ export default function InviteRegister() {
   const [searchDone, setSearchDone] = useState(false);
   const [linkRequestSent, setLinkRequestSent] = useState(false);
   const [linkError, setLinkError] = useState('');
+  const [parentRegistered, setParentRegistered] = useState(false);
 
   const openDocument = (type: 'privacy' | 'terms') => {
     const url = type === 'privacy' ? '/privacy-policy' : '/terms-of-use';
@@ -109,15 +110,8 @@ export default function InviteRegister() {
     }
   };
 
-  // For minor invites: always show parent form first (no YES/NO choice)
-  useEffect(() => {
-    if (inviteInfo?.is_minor && childAlreadyRegistered === null) {
-      setChildAlreadyRegistered(true);
-    }
-  }, [inviteInfo]);
-
-  // Handle "Yes, child already registered" path: register parent account, then search/link
-  const handleRegisterAndLink = async () => {
+  // Handle parent registration for both YES and NO paths
+  const handleRegisterParent = async () => {
     // Validate parent data
     if (!form.parent_first_name || !form.parent_last_name) {
       showAlert('Errore', 'Nome e cognome del genitore sono obbligatori');
@@ -192,12 +186,20 @@ export default function InviteRegister() {
       
       if (token && userData) {
         await setUser(userData, token);
-        // Now show search form to find and link the child
-        setChildAlreadyRegistered(true);
-        setSearching(false);
-        setSearchDone(false);
-        setSearchResults([]);
-        showAlert('Accesso riuscito!', 'Ora cerca il tuo figlio/a per cognome per richiedere il collegamento.');
+        setParentRegistered(true);
+        
+        if (childAlreadyRegistered === true) {
+          // Show search form to find and link existing child
+          setSearching(false);
+          setSearchDone(false);
+          setSearchResults([]);
+        } else {
+          // Child needs to be registered - redirect to athlete registration
+          showAlert('Registrazione completata!', 'Ora potrai registrare il tuo figlio/a.');
+          setTimeout(() => {
+            router.replace('/parent/register-athlete');
+          }, 2000);
+        }
       }
     } catch (err: any) {
       const detail = err.response?.data?.detail;
@@ -447,9 +449,49 @@ export default function InviteRegister() {
       </View>
 
       <View style={styles.formContainer}>
-        {/* For minors: ALWAYS show parent form first */}
-        {/* "YES" path: Parent registers + links to existing child */}
-        {inviteInfo?.is_minor && childAlreadyRegistered === true && !linkRequestSent && (
+        {/* For minors: Ask if child is already registered */}
+        {inviteInfo?.is_minor && childAlreadyRegistered === null && (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#333', marginBottom: 16, textAlign: 'center' }}>
+              Il tuo figlio/a è già registrato nella società?
+            </Text>
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#E3F2FD', borderRadius: 14, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14,
+                borderWidth: 2, borderColor: '#007AFF', marginBottom: 12,
+              }}
+              onPress={() => setChildAlreadyRegistered(true)}
+              data-testid="invite-child-already-yes"
+            >
+              <View style={{ backgroundColor: '#007AFF', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="search" size={22} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#007AFF' }}>Sì, è già registrato</Text>
+                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Registrati e cerca il figlio/a per collegarlo</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#FFF3E0', borderRadius: 14, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14,
+                borderWidth: 2, borderColor: '#FF9800',
+              }}
+              onPress={() => setChildAlreadyRegistered(false)}
+              data-testid="invite-child-already-no"
+            >
+              <View style={{ backgroundColor: '#FF9800', borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="person-add" size={22} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100' }}>No, devo registrarlo</Text>
+                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Registrati e poi inserisci i dati dell'atleta</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* BOTH YES and NO paths: show SAME parent form first */}
+        {inviteInfo?.is_minor && childAlreadyRegistered !== null && !linkRequestSent && !parentRegistered && (
           <View style={{ marginBottom: 20 }}>
             {/* Parent data section */}
             <Text style={styles.sectionTitle}>I tuoi dati (Genitore/Tutore)</Text>
@@ -533,25 +575,27 @@ export default function InviteRegister() {
               </TouchableOpacity>
             </View>
 
-            {/* Register parent account then search child */}
+            {/* Register parent account */}
             {(() => {
               const canSubmit = hasOpenedTerms && hasOpenedPrivacy && consentPrivacyViewed && !submitting;
               return (
                 <TouchableOpacity
                   style={[styles.submitBtn, !canSubmit && { opacity: 0.4 }]}
-                  onPress={handleRegisterAndLink}
+                  onPress={handleRegisterParent}
                   disabled={!canSubmit}
                   data-testid="register-and-link-btn"
                 >
                   {submitting ? <ActivityIndicator color="#fff" /> : (
-                    <Text style={styles.submitBtnText}>Registrati e Cerca Figlio/a</Text>
+                    <Text style={styles.submitBtnText}>
+                      {childAlreadyRegistered ? 'Registrati e Cerca Figlio/a' : 'Registrati e Inserisci Atleta'}
+                    </Text>
                   )}
                 </TouchableOpacity>
               );
             })()}
 
-            {/* Search child section (visible after parent account is created) */}
-            {searchDone !== undefined && (
+            {/* Search child section (visible after parent account is created, only for YES path) */}
+            {parentRegistered && childAlreadyRegistered === true && (
               <View style={{ marginTop: 20, backgroundColor: '#F0F4FF', borderRadius: 14, padding: 16 }}>
                 <Text style={{ fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 12 }}>
                   Cerca il tuo figlio/a
@@ -653,8 +697,8 @@ export default function InviteRegister() {
           </View>
         )}
 
-        {/* "NO" path or non-minor: show original form */}
-        {(!inviteInfo?.is_minor || childAlreadyRegistered === false) && !linkRequestSent && (
+        {/* Non-minor: show original form */}
+        {!inviteInfo?.is_minor && !linkRequestSent && (
         <>
         <Text style={styles.sectionTitle}>
           {inviteInfo?.is_minor ? 'Dati Atleta' : 'I tuoi dati'}
