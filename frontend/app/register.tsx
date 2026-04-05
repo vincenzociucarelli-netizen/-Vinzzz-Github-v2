@@ -255,13 +255,17 @@ export default function Register() {
     try {
       const res = await api.post('/parent-link/request', { athlete_id: athleteId });
       setLinkRequestSent(true);
-      // Auto-redirect to parent dashboard
-      setTimeout(() => {
-        router.replace('/parent');
-      }, 2500);
+      setTimeout(() => { router.replace('/parent'); }, 2500);
     } catch (error: any) {
       const msg = error.response?.data?.detail || 'Errore nell\'invio della richiesta';
-      setLinkError(msg);
+      // If request already sent or already linked, redirect to profile anyway
+      const isAlreadyHandled = msg.toLowerCase().includes('già inviata') || msg.toLowerCase().includes('già collegato');
+      if (isAlreadyHandled) {
+        setLinkRequestSent(true);
+        setTimeout(() => { router.replace('/parent'); }, 2500);
+      } else {
+        setLinkError(msg);
+      }
     }
   };
 
