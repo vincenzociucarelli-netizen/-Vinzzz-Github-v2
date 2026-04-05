@@ -84,6 +84,14 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
   const [consentImagesInternal, setConsentImagesInternal] = useState(false);
   const [consentImagesPromo, setConsentImagesPromo] = useState(false);
 
+  // Reset preview when modal opens or minor changes
+  useEffect(() => {
+    if (visible) {
+      setPreviewUrl(null);
+      setShowPdfViewer(false);
+    }
+  }, [visible, minorInfo?.id]);
+
   // Load society info if not provided
   useEffect(() => {
     if (!societyInfo && visible) {
@@ -123,6 +131,13 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
         payload.minor_birth_date = minorInfo.birth_date;
         payload.minor_birth_place = minorInfo.birth_place;
       }
+
+      // Always include current consent choices in preview
+      payload.consent_data = {
+        privacy_viewed: consentPrivacyViewed,
+        images_internal: consentImagesInternal,
+        images_promo: consentImagesPromo,
+      };
 
       const response = await api.post('/documents/preview-gdpr-privacy', payload);
       
