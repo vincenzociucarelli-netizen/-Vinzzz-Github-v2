@@ -21136,6 +21136,9 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
         t1.setStyle(data_table_style)
         elements.append(t1)
         elements.append(Spacer(1, 10))
+    else:
+        # For adult athletes, signer_name is used instead of parent_name
+        parent_name = signing_parent.get("full_name", "") if signing_parent else athlete.get("full_name", "")
     
     # === DATI ATLETA ===
     sh2 = Table([["DATI DELL'ATLETA" + (" MINORE" if is_minor else "")]], colWidths=[16*cm])
