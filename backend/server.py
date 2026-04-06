@@ -14685,7 +14685,7 @@ def generate_gdpr_adult_privacy_pdf(
     # ==================== PAGE 1 ====================
     # Header
     c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(width/2, height - 2*cm, "INFORMATIVA PRIVACY PER STAFF")
+    c.drawCentredString(width/2, height - 2*cm, "INFORMATIVA PRIVACY PER ATLETI MAGGIORENNI")
     c.setFont("Helvetica", 10)
     c.drawCentredString(width/2, height - 2.6*cm, "(ai sensi del Regolamento UE 2016/679 - GDPR)")
     
@@ -14709,7 +14709,7 @@ def generate_gdpr_adult_privacy_pdf(
     
     # Intro
     c.setFont("Helvetica", 10)
-    intro_text = f"Gentile Collaboratore / Membro dello Staff, la presente informativa descrive le modalità di trattamento dei dati personali da parte della società sportiva {nome_legale}."
+    intro_text = f"Gentile Atleta, la presente informativa descrive le modalità di trattamento dei dati personali da parte della società sportiva {nome_legale}."
     y = draw_wrapped_text(c, intro_text, 2*cm, y, max_w)
     y -= 0.3*cm
     titolare_intro = "Il Titolare del trattamento dei dati personali è la società sportiva sopra indicata nella persona del proprio legale rappresentante pro tempore."
@@ -16652,6 +16652,15 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
             signer = await db.users.find_one({"id": document.get("signer_id")})
             athlete = await db.athletes.find_one({"id": document.get("related_entity_id")})
             society = await db.societies.find_one({"id": document.get("society_id")})
+            # Get society settings (address, fiscal_code, email are stored here)
+            society_settings = await db.settings.find_one({"type": "society"})
+            
+            # Society data: prefer settings over societies collection
+            soc_name = (society_settings.get("name") if society_settings else None) or (society.get("name", "") if society else "")
+            soc_ragione = (society_settings.get("ragione_sociale") if society_settings else None) or (society.get("ragione_sociale", "") if society else "")
+            soc_address = (society_settings.get("address") if society_settings else None) or (society.get("address", "") if society else "")
+            soc_fiscal = (society_settings.get("fiscal_code") if society_settings else None) or (society.get("fiscal_code", "") if society else "")
+            soc_email = (society_settings.get("email") if society_settings else None) or (society.get("email", "") if society else "")
             
             # Check profile completeness before generating PDF (adult athletes)
             if document.get("document_type") == "gdpr_privacy_adult" and signer:
@@ -16700,11 +16709,11 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
                 doc_hash = hashlib.sha256(f"{document.get('id', '')}{ts_str}".encode()).hexdigest()[:16]
                 
                 pdf_bytes = generate_gdpr_adult_privacy_pdf(
-                    society_name=society.get("name", "") if society else "",
-                    ragione_sociale=society.get("ragione_sociale", "") if society else "",
-                    society_address=society.get("address", "") if society else "",
-                    society_fiscal_code=society.get("fiscal_code", "") if society else "",
-                    society_email=society.get("email", "") if society else "",
+                    society_name=soc_name,
+                    ragione_sociale=soc_ragione,
+                    society_address=soc_address,
+                    society_fiscal_code=soc_fiscal,
+                    society_email=soc_email,
                     signer_name=signer_first,
                     signer_surname=signer_last,
                     signer_fiscal_code=signer_cf,
@@ -16730,11 +16739,11 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
                 doc_hash_m = hashlib.sha256(f"{document.get('id', '')}{ts_str}".encode()).hexdigest()[:16]
                 
                 pdf_bytes = generate_gdpr_minor_privacy_pdf(
-                    society_name=society.get("name", "") if society else "",
-                    ragione_sociale=society.get("ragione_sociale", "") if society else "",
-                    society_address=society.get("address", "") if society else "",
-                    society_fiscal_code=society.get("fiscal_code", "") if society else "",
-                    society_email=society.get("email", "") if society else "",
+                    society_name=soc_name,
+                    ragione_sociale=soc_ragione,
+                    society_address=soc_address,
+                    society_fiscal_code=soc_fiscal,
+                    society_email=soc_email,
                     parent_name=parent.get("first_name", "") if parent else "",
                     parent_surname=parent.get("last_name", "") if parent else "",
                     parent_fiscal_code=parent.get("fiscal_code", "") if parent else "",
