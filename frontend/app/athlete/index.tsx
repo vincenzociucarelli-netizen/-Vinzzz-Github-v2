@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { Ionicons } from '../../src/components/Icon';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { SportIcon } from '../../src/components/SportIcon';
 import { OnboardingTutorial, ATHLETE_STEPS } from '../../src/components/OnboardingTutorial';
+import SignaturePadInline, { SignaturePadInlineRef } from '../../src/components/SignaturePadInline';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 const MONTH_NAMES = [
@@ -100,6 +101,12 @@ export default function AthleteScreen() {
   // Notifications state
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(true);
+  
+  // Trial document signing
+  const [showTrialSignModal, setShowTrialSignModal] = useState(false);
+  const [trialSignature, setTrialSignature] = useState<string | null>(null);
+  const [signingTrialDoc, setSigningTrialDoc] = useState(false);
+  const trialSignatureRef = useRef<SignaturePadInlineRef>(null);
 
   // Helper function to format date strings correctly
   const formatDateIT = (dateStr: string | undefined) => {
@@ -407,11 +414,11 @@ export default function AthleteScreen() {
               borderRadius: 12
             }}>
               <Text style={{ 
-                color: isMinor ? '#FF9800' : profile?.status === 'trial' ? '#FF9800' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#1976D2' : '#4CAF50',
+                color: isMinor ? '#FF9800' : profile?.status === 'trial' ? '#FF9800' : profile?.status === 'pending_trial' ? '#1976D2' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#1976D2' : '#4CAF50',
                 fontWeight: '600',
                 fontSize: 12
               }} data-testid="athlete-status">
-                {isMinor ? 'Minorenne' : profile?.status === 'trial' ? 'Periodo di Prova' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? 'Firma Privacy' : 'Attivo'}
+                {isMinor ? 'Minorenne' : profile?.status === 'trial' ? 'Periodo di Prova' : profile?.status === 'pending_trial' ? 'In Attesa Prova' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? 'Firma Privacy' : 'Attivo'}
               </Text>
             </View>
           </View>
@@ -437,6 +444,36 @@ export default function AthleteScreen() {
             </TouchableOpacity>
           )}
           
+          {/* Pending Trial - Dichiarazione di prova */}
+          {!isMinor && (profile?.status === 'pending_trial' || (profile?.status === 'trial' && !(profile as any)?.trial_document_generated)) && (
+            <View style={{ marginTop: 10 }}>
+              <View style={{ backgroundColor: '#E3F2FD', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#1976D2' }}>
+                <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 14, textAlign: 'center', marginBottom: 4 }}>
+                  In attesa di inizio prova
+                </Text>
+                <Text style={{ color: '#1976D2', fontSize: 12, textAlign: 'center', marginBottom: 10 }}>
+                  Per iniziare il periodo di prova devi firmare la dichiarazione.{'\n'}La prova inizier{'à'} al primo rilevamento QR da parte del coach.
+                </Text>
+                
+                {(profile as any)?.trial_document_generated ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8 }}>
+                    <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                    <Text style={{ color: '#2E7D32', fontWeight: '600', fontSize: 13 }}>Dichiarazione di prova firmata</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={{ backgroundColor: '#1976D2', paddingVertical: 12, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                    onPress={() => setShowTrialSignModal(true)}
+                    data-testid="sign-trial-doc-btn"
+                  >
+                    <Ionicons name="document-text" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Firma Dichiarazione di Prova</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* Trial info + actions */}
           {!isMinor && profile?.status === 'trial' && (
             <View style={{ marginTop: 10 }}>
@@ -1386,6 +1423,90 @@ export default function AthleteScreen() {
 
       <View style={{ height: 40 }} />
     </ScrollView>
+
+    {/* Trial Document Sign Modal */}
+    <Modal visible={showTrialSignModal} animationType="slide" transparent={true}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '85%' }}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#1565C0' }}>Dichiarazione Periodo di Prova</Text>
+              <TouchableOpacity onPress={() => { setShowTrialSignModal(false); setTrialSignature(null); }}>
+                <Ionicons name="close-circle" size={28} color="#999" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Info */}
+            <View style={{ backgroundColor: '#E3F2FD', borderRadius: 10, padding: 14, marginBottom: 16 }}>
+              <Text style={{ fontSize: 13, color: '#1565C0', lineHeight: 20 }}>
+                Firmando questo documento dichiari di voler partecipare al periodo di prova.
+                {'\n'}La tua firma verr{'à'} incorporata nel documento PDF ufficiale.
+              </Text>
+            </View>
+
+            {/* Signature Pad */}
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 }}>Disegna la tua firma qui sotto:</Text>
+            <SignaturePadInline
+              ref={trialSignatureRef}
+              height={180}
+              penColor="#1a237e"
+              backgroundColor="#fafafa"
+              onSave={(sig) => setTrialSignature(sig)}
+              onClear={() => setTrialSignature(null)}
+            />
+
+            {/* Confirm Button */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: trialSignature ? '#1976D2' : '#ccc',
+                paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 16,
+                flexDirection: 'row', justifyContent: 'center', gap: 8,
+                opacity: signingTrialDoc ? 0.6 : 1,
+              }}
+              disabled={!trialSignature || signingTrialDoc}
+              onPress={async () => {
+                if (!trialSignature) return;
+                setSigningTrialDoc(true);
+                try {
+                  const athleteId = (profile as any)?.athlete_id || (profile as any)?.id;
+                  const res = await api.post(`/athletes/${athleteId}/sign-trial-document`, {
+                    signature_base64: trialSignature,
+                  }, { responseType: 'blob' });
+                  const blob = new Blob([res.data], { type: 'application/pdf' });
+                  const url = URL.createObjectURL(blob);
+                  window.open(url, '_blank');
+                  // Reload profile
+                  await loadProfile();
+                  setShowTrialSignModal(false);
+                  setTrialSignature(null);
+                  Alert.alert('Successo', 'Dichiarazione di prova firmata con successo!');
+                } catch (e: any) {
+                  let msg = 'Errore nella firma del documento';
+                  if (e.response?.data instanceof Blob) {
+                    try { const text = await e.response.data.text(); const json = JSON.parse(text); msg = json.detail || msg; } catch {}
+                  } else if (e.response?.data?.detail) { msg = e.response.data.detail; }
+                  Alert.alert('Errore', msg);
+                } finally {
+                  setSigningTrialDoc(false);
+                }
+              }}
+              data-testid="confirm-trial-sign-btn"
+            >
+              {signingTrialDoc ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Conferma e Firma</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+
     </View>
   );
 }

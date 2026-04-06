@@ -1896,7 +1896,11 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     
     await db.users.insert_one(user_dict)
     
-    # Send verification email
+    # Link athlete to user
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {"user_id": user_dict["id"]}}
+    )
     await _send_verification_email(data.email.lower(), email_verification_token, full_name, society.get("name", ""))
     
     # Save signed privacy/terms documents if consents provided
@@ -20497,20 +20501,22 @@ async def check_athlete_profile_completeness(athlete_id: str, current_user = Dep
 @api_router.get("/athletes/{athlete_id}/trial-document")
 async def generate_trial_document(athlete_id: str, current_user = Depends(get_current_user)):
     """Genera il PDF della dichiarazione per il periodo di prova"""
-    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN, UserRole.ATHLETE]:
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    if not athlete.get("is_minor"):
-        raise HTTPException(status_code=400, detail="Il documento di prova e disponibile solo per atleti minorenni")
+    is_minor = athlete.get("is_minor", False)
     
-    # Verify parent ownership
+    # Verify ownership
     if current_user["role"] == UserRole.PARENT:
         if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
             raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    elif current_user["role"] == UserRole.ATHLETE:
+        if athlete.get("user_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non sei autorizzato")
     
     # Get parent info
     parent = await db.users.find_one({"id": athlete.get("parent_id")})
@@ -20768,7 +20774,7 @@ class TrialSignRequest(BaseModel):
 @api_router.post("/athletes/{athlete_id}/sign-trial-document")
 async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: Request, current_user = Depends(get_current_user)):
     """Firma digitale della dichiarazione periodo di prova e genera PDF firmato"""
-    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN]:
+    if current_user["role"] not in [UserRole.PARENT, UserRole.ADMIN, UserRole.ATHLETE]:
         raise HTTPException(status_code=403, detail="Accesso non autorizzato")
     
     if not body.signature_base64 or len(body.signature_base64) < 100:
@@ -20778,14 +20784,16 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    if not athlete.get("is_minor"):
-        raise HTTPException(status_code=400, detail="Il documento di prova e disponibile solo per atleti minorenni")
+    is_minor = athlete.get("is_minor", False)
     
     if current_user["role"] == UserRole.PARENT:
         if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
             raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    elif current_user["role"] == UserRole.ATHLETE:
+        if athlete.get("user_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non sei autorizzato")
     
-    # Usa i dati di chi sta firmando (current_user), NON del parent_id dell'atleta
+    # Usa i dati di chi sta firmando (current_user)
     signing_parent = await db.users.find_one({"id": current_user["id"]})
     check_profiles_for_document(parent=signing_parent, athlete=athlete)
     
@@ -20851,29 +20859,30 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     elements.append(Spacer(1, 3))
     elements.append(HRFlowable(width="100%", thickness=2, color=primary))
     elements.append(Spacer(1, 10))
-    elements.append(Paragraph("DICHIARAZIONE PER PERIODO DI PROVA ATLETA MINORE", doc_title_style))
+    elements.append(Paragraph("DICHIARAZIONE PER PERIODO DI PROVA ATLETA" + (" MINORE" if is_minor else ""), doc_title_style))
     
-    # === DATI GENITORE ===
-    sh1 = Table([["DATI DEL GENITORE/TUTORE"]], colWidths=[16*cm])
-    sh1.setStyle(section_header_style_tbl)
-    elements.append(sh1)
-    parent_name = signing_parent.get("full_name", "") if signing_parent else ""
-    parent_cf = signing_parent.get("fiscal_code", "") if signing_parent else ""
-    parent_phone = signing_parent.get("phone", "") if signing_parent else ""
-    parent_email = signing_parent.get("email", "") if signing_parent else ""
-    data1 = [
-        ["Nome e Cognome:", parent_name],
-        ["Codice Fiscale:", parent_cf],
-        ["Telefono:", parent_phone],
-        ["Email:", parent_email],
-    ]
-    t1 = Table(data1, colWidths=[5*cm, 11*cm])
-    t1.setStyle(data_table_style)
-    elements.append(t1)
-    elements.append(Spacer(1, 10))
+    if is_minor:
+        # === DATI GENITORE ===
+        sh1 = Table([["DATI DEL GENITORE/TUTORE"]], colWidths=[16*cm])
+        sh1.setStyle(section_header_style_tbl)
+        elements.append(sh1)
+        parent_name = signing_parent.get("full_name", "") if signing_parent else ""
+        parent_cf = signing_parent.get("fiscal_code", "") if signing_parent else ""
+        parent_phone = signing_parent.get("phone", "") if signing_parent else ""
+        parent_email = signing_parent.get("email", "") if signing_parent else ""
+        data1 = [
+            ["Nome e Cognome:", parent_name],
+            ["Codice Fiscale:", parent_cf],
+            ["Telefono:", parent_phone],
+            ["Email:", parent_email],
+        ]
+        t1 = Table(data1, colWidths=[5*cm, 11*cm])
+        t1.setStyle(data_table_style)
+        elements.append(t1)
+        elements.append(Spacer(1, 10))
     
     # === DATI ATLETA ===
-    sh2 = Table([["DATI DELL'ATLETA MINORE"]], colWidths=[16*cm])
+    sh2 = Table([["DATI DELL'ATLETA" + (" MINORE" if is_minor else "")]], colWidths=[16*cm])
     sh2.setStyle(section_header_style_tbl)
     elements.append(sh2)
     athlete_name = athlete.get("full_name", "")
@@ -20905,12 +20914,20 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     sh3.setStyle(section_header_style_tbl)
     elements.append(sh3)
     elements.append(Spacer(1, 6))
-    elements.append(Paragraph(
-        f"Il/La sottoscritto/a <b>{parent_name}</b>, in qualita di genitore/tutore legale "
-        f"dell'atleta minore <b>{athlete_name}</b>, dichiara di autorizzare la partecipazione "
-        f"del minore al periodo di prova presso <b>{society_name}</b> alle seguenti condizioni:",
-        body_justify
-    ))
+    if is_minor:
+        elements.append(Paragraph(
+            f"Il/La sottoscritto/a <b>{parent_name}</b>, in qualita di genitore/tutore legale "
+            f"dell'atleta minore <b>{athlete_name}</b>, dichiara di autorizzare la partecipazione "
+            f"del minore al periodo di prova presso <b>{society_name}</b> alle seguenti condizioni:",
+            body_justify
+        ))
+    else:
+        signer_name = signing_parent.get("full_name", "") if signing_parent else athlete_name
+        elements.append(Paragraph(
+            f"Il/La sottoscritto/a <b>{signer_name}</b>, dichiara di voler partecipare "
+            f"al periodo di prova presso <b>{society_name}</b> alle seguenti condizioni:",
+            body_justify
+        ))
     elements.append(Spacer(1, 6))
     
     # === CONDIZIONI ===
@@ -20921,8 +20938,12 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     elements.append(Paragraph(f"Il periodo di prova avra una durata massima di <b>{trial_max_days} giorni</b> dalla data della prima presenza registrata.", bullet_style))
     elements.append(Paragraph(f"Durante questo periodo, l'atleta potra partecipare a un massimo di <b>{trial_max_sessions} allenamenti</b>.", bullet_style))
     elements.append(Paragraph("La partecipazione e subordinata alla presentazione di un certificato medico valido per attivita sportiva non agonistica.", bullet_style))
-    elements.append(Paragraph("Il genitore/tutore si impegna a comunicare tempestivamente eventuali problematiche di salute dell'atleta.", bullet_style))
-    elements.append(Paragraph("Al termine del periodo di prova, l'atleta potra essere tesserato con il consenso del genitore/tutore.", bullet_style))
+    if is_minor:
+        elements.append(Paragraph("Il genitore/tutore si impegna a comunicare tempestivamente eventuali problematiche di salute dell'atleta.", bullet_style))
+        elements.append(Paragraph("Al termine del periodo di prova, l'atleta potra essere tesserato con il consenso del genitore/tutore.", bullet_style))
+    else:
+        elements.append(Paragraph("L'atleta si impegna a comunicare tempestivamente eventuali problematiche di salute.", bullet_style))
+        elements.append(Paragraph("Al termine del periodo di prova, l'atleta potra procedere con il tesseramento.", bullet_style))
     elements.append(Spacer(1, 10))
     
     # === PAGE BREAK - Accettazione e Firma su Pagina 2 ===
@@ -20940,11 +20961,18 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     sh6.setStyle(section_header_style_tbl)
     elements.append(sh6)
     elements.append(Spacer(1, 6))
-    elements.append(Paragraph(
-        "Con la sottoscrizione del presente documento il genitore/tutore autorizza la partecipazione del "
-        "minore al periodo di prova alle condizioni sopra indicate.",
-        body_justify
-    ))
+    if is_minor:
+        elements.append(Paragraph(
+            "Con la sottoscrizione del presente documento il genitore/tutore autorizza la partecipazione del "
+            "minore al periodo di prova alle condizioni sopra indicate.",
+            body_justify
+        ))
+    else:
+        elements.append(Paragraph(
+            "Con la sottoscrizione del presente documento l'atleta dichiara di accettare le condizioni "
+            "del periodo di prova sopra indicate e di parteciparvi volontariamente.",
+            body_justify
+        ))
     elements.append(Spacer(1, 14))
     
     # === FIRMA DIGITALE (embedded signature image) ===
@@ -20957,7 +20985,7 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     
     elements.append(Paragraph(f"<b>Firmato digitalmente il {sign_date_str}</b>", ParagraphStyle('SignDate', parent=styles['Normal'], fontSize=9, textColor=text_muted, fontName='Helvetica')))
     elements.append(Spacer(1, 6))
-    elements.append(Paragraph("Firma del genitore/tutore:", ParagraphStyle('SignLabel', parent=styles['Normal'], fontSize=9.5, fontName='Helvetica', textColor=text_muted)))
+    elements.append(Paragraph("Firma del genitore/tutore:" if is_minor else "Firma dell'atleta:", ParagraphStyle('SignLabel', parent=styles['Normal'], fontSize=9.5, fontName='Helvetica', textColor=text_muted)))
     
     # Embed the actual signature image (subito sotto la label, allineata a sinistra)
     try:
