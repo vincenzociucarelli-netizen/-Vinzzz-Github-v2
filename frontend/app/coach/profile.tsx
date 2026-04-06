@@ -1428,7 +1428,7 @@ Società sportiva: ${societyName}
         )}
 
           {/* Privacy Consent Management */}
-          <ConsentManager entityType="user" accentColor="#1565C0" />
+          <ConsentManager entityType="staff" accentColor="#1565C0" />
 
         <View style={{ height: 40 }} />
       </ScrollView>

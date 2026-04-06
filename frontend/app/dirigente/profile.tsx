@@ -21,6 +21,7 @@ import { Ionicons } from '../../src/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
+import { ConsentManager } from '../../src/components/ConsentManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -1322,6 +1323,9 @@ Società sportiva: ${societyName}
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Consensi Privacy e Immagini */}
+      <ConsentManager entityType="staff" accentColor="#6A1B9A" />
 
       {/* GDPR Privacy Modal */}
       <GDPRPrivacyModal

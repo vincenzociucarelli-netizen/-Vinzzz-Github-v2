@@ -25,6 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import PhotoViewer from '../../src/components/PhotoViewer';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
+import { ConsentManager } from '../../src/components/ConsentManager';
 import { OnboardingTutorial, COLLABORATORE_STEPS } from '../../src/components/OnboardingTutorial';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 
@@ -1463,6 +1464,9 @@ Società sportiva: ${societyName}
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Consensi Privacy e Immagini */}
+      <ConsentManager entityType="staff" accentColor="#E65100" />
 
       {/* GDPR Privacy Modal */}
       <GDPRPrivacyModal
