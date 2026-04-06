@@ -39,6 +39,7 @@ Comprehensive sports team management application for Italian volleyball societie
 - Athlete data export includes "Stato Nascita" column
 
 ## Completed Features (Latest)
+- [2026-04-07] Rimosso campo "Codice Fiscale" dalla registrazione atleta maggiorenne (verrà compilato nel profilo). Fix visualizzazione consensi per atleti adulti (gestione formato booleano legacy).
 - [2026-04-07] Fix bug 403 profilo atleta adulto: gli atleti adulti (ruolo "athlete") ora possono accedere ai propri consensi senza essere reindirizzati al login. Corretta anche gestione dei consensi salvati come booleani (vs dict).
 - [2026-04-06] Trial Period flow per atleti 18+, consensi immagini interni+promo per tutti i ruoli adulti, fix doc PDF on-the-fly, fix registrazione atleta adulto.
 - [2026-04-05] Foreign-born athlete logic: Receipt shows "Stato di nascita" for non-Italian athletes, hides "Comune di nascita" and province. Backend API returns country_of_birth. Validation skips birth_place for foreign athletes. GDPR PDFs fall back to country_of_birth when birth_place is empty.

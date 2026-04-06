@@ -657,22 +657,7 @@ export default function Register() {
         onChangeText={(text) => setFirstName(text.toUpperCase())}
         autoCapitalize="characters"
         returnKeyType="next"
-        onSubmitEditing={() => fiscalCodeRef.current?.focus()}
-      />
-
-      <Text style={styles.inputLabel}>Codice Fiscale</Text>
-      <TextInput
-        ref={fiscalCodeRef}
-        style={styles.input}
-        placeholder="es: RSSMRA85M01G478L"
-        placeholderTextColor="#aaa"
-        value={fiscalCode}
-        onChangeText={(text) => setFiscalCode(text.toUpperCase())}
-        autoCapitalize="characters"
-        maxLength={16}
-        returnKeyType="next"
         onSubmitEditing={() => phoneRef.current?.focus()}
-        data-testid="fiscal-code-input"
       />
 
       <Text style={styles.inputLabel}>Telefono * (per contatti urgenti)</Text>

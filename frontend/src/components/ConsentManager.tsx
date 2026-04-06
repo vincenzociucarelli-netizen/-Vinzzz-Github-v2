@@ -143,7 +143,8 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
       {consentTypes.map((type) => {
         const c = consents?.[type];
         const isEditable = editableTypes.includes(type);
-        const value = c?.value ?? null;
+        // Handle both boolean (legacy) and object {value, timestamp} formats
+        const value = typeof c === 'boolean' ? c : (c?.value ?? null);
 
         return (
           <View key={type} style={s.consentRow} data-testid={`consent-row-${type}`}>
