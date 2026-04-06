@@ -39,6 +39,7 @@ Comprehensive sports team management application for Italian volleyball societie
 - Athlete data export includes "Stato Nascita" column
 
 ## Completed Features (Latest)
+- [2026-04-07] Allineamento tracciabilità consensi atleta adulto: formato strutturato {value, timestamp, user_id, document_version} con storico (insert, non update). Migrati dati Eva/Lena. Fix logica update per atleti adulti (chiave diretta, non per-genitore).
 - [2026-04-07] Rimosso campo "Codice Fiscale" dalla registrazione atleta maggiorenne (verrà compilato nel profilo). Fix visualizzazione consensi per atleti adulti (gestione formato booleano legacy).
 - [2026-04-07] Fix bug 403 profilo atleta adulto: gli atleti adulti (ruolo "athlete") ora possono accedere ai propri consensi senza essere reindirizzati al login. Corretta anche gestione dei consensi salvati come booleani (vs dict).
 - [2026-04-06] Trial Period flow per atleti 18+, consensi immagini interni+promo per tutti i ruoli adulti, fix doc PDF on-the-fly, fix registrazione atleta adulto.

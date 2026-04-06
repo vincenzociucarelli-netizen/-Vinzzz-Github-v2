@@ -1908,6 +1908,37 @@ async def register_adult_athlete(data: AdultAthleteRegister):
         now = datetime.utcnow()
         consent_data = data.consents or {}
         
+        # Structured consent format with timestamp tracking (aligned with minors/staff)
+        structured_consents = {
+            "privacy_viewed": {
+                "value": True,
+                "timestamp": now.isoformat(),
+                "user_id": user_dict["id"],
+                "document_version": "1.0",
+            },
+        }
+        for ctype in ["images_internal", "images_promo"]:
+            cval = consent_data.get(ctype, False)
+            structured_consents[ctype] = {
+                "value": cval,
+                "timestamp": now.isoformat(),
+                "user_id": user_dict["id"],
+                "document_version": "1.0",
+            }
+        
+        # Build consent history entries (insert, not update)
+        consent_history = []
+        for ctype in ["privacy_viewed", "images_internal", "images_promo"]:
+            consent_history.append({
+                "type": ctype,
+                "action": "granted" if structured_consents[ctype]["value"] else "set",
+                "old_value": None,
+                "new_value": structured_consents[ctype]["value"],
+                "timestamp": now.isoformat(),
+                "user_id": user_dict["id"],
+                "source": "registration",
+            })
+        
         # Save Privacy document
         privacy_doc_id = str(ObjectId())
         privacy_doc = {
@@ -1922,7 +1953,7 @@ async def register_adult_athlete(data: AdultAthleteRegister):
             "signed_at": now,
             "created_at": now,
             "consent_data": {
-                "privacy_viewed": consent_data.get("privacy_viewed", True),
+                "privacy_viewed": True,
                 "images_internal": consent_data.get("images_internal", False),
                 "images_promo": consent_data.get("images_promo", False),
             },
@@ -1949,27 +1980,24 @@ async def register_adult_athlete(data: AdultAthleteRegister):
         }
         await db.signed_documents.insert_one(terms_doc)
         
-        # Update athlete with consent info
+        # Update athlete with structured consent info and history
         await db.athletes.update_one(
             {"id": athlete_id},
             {"$set": {
                 "privacy_accepted": True,
-                "consents": {
-                    "privacy_viewed": True,
-                    "images_internal": consent_data.get("images_internal", False),
-                    "images_promo": consent_data.get("images_promo", False),
-                },
+                "consents": structured_consents,
+                "consent_history": consent_history,
             }}
         )
         
-        # Update user with consent info
+        # Update user with structured consent info
         await db.users.update_one(
             {"id": user_dict["id"]},
             {"$set": {
                 "consents": {
-                    "privacy_viewed": True,
-                    "images_internal": consent_data.get("images_internal", False),
-                    "images_promo": consent_data.get("images_promo", False),
+                    "privacy_viewed": structured_consents["privacy_viewed"],
+                    "images_internal": structured_consents["images_internal"],
+                    "images_promo": structured_consents["images_promo"],
                 },
             }}
         )
@@ -23226,27 +23254,39 @@ async def update_athlete_consents(
     
     new_history_entries = []
     
+    # For adult athletes updating their own consents, use direct key (not per-parent key)
+    is_self_athlete = current_user["role"] == "athlete" and current_user.get("athlete_id") == athlete_id
+    
     for consent_type_name, consent_value in [("images_internal", data.images_internal), ("images_promo", data.images_promo)]:
         if consent_value is not None:
-            # Chiave per-genitore: consent_type__parent_id
-            per_parent_key = f"{consent_type_name}__{parent_id}"
-            old_entry = existing_consents.get(per_parent_key) or existing_consents.get(consent_type_name) or {}
-            old_val = old_entry.get("value") if old_entry else None
+            if is_self_athlete:
+                # Adult athlete: use direct key
+                consent_key = consent_type_name
+            else:
+                # Parent: use per-parent key
+                consent_key = f"{consent_type_name}__{parent_id}"
+            
+            old_entry = existing_consents.get(consent_key) or existing_consents.get(consent_type_name) or {}
+            if isinstance(old_entry, bool):
+                old_val = old_entry
+            else:
+                old_val = old_entry.get("value") if isinstance(old_entry, dict) else None
             
             if old_val != consent_value:
                 entry = {
                     "value": consent_value,
                     "timestamp": now.isoformat(),
-                    "parent_id": parent_id,
-                    "child_id": athlete_id,
+                    "user_id": parent_id,
                     "document_version": "1.0",
                     "ip_address": client_ip,
                 }
+                if not is_self_athlete:
+                    entry["parent_id"] = parent_id
+                    entry["child_id"] = athlete_id
                 if old_val is True and consent_value is False:
                     entry["revoked_at"] = now.isoformat()
                 
-                # Salva con chiave per-genitore
-                existing_consents[per_parent_key] = entry
+                existing_consents[consent_key] = entry
                 
                 new_history_entries.append({
                     "type": consent_type_name,
