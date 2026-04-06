@@ -19956,6 +19956,8 @@ async def download_document(
             society = await db.societies.find_one({"id": doc.get("society_id")})
             
             signer_name = doc.get("signer_name") or (signer.get("full_name", "") if signer else "")
+            signer_first = signer.get("first_name", "") if signer else ""
+            signer_last = signer.get("last_name", "") if signer else ""
             signer_cf = signer.get("fiscal_code", "") or signer.get("tax_code", "") if signer else ""
             signer_bp = signer.get("place_of_birth", "") or signer.get("country_of_birth", "") if signer else ""
             signer_dob = ""
@@ -19963,25 +19965,38 @@ async def download_document(
                 try:
                     dob = signer["date_of_birth"]
                     if isinstance(dob, str):
-                        from datetime import datetime as dt2
-                        dob = dt2.fromisoformat(dob.replace("Z", "+00:00"))
+                        dob = datetime.fromisoformat(dob.replace("Z", "+00:00"))
                     signer_dob = dob.strftime("%d/%m/%Y")
                 except:
                     pass
             
-            society_name = society.get("name", "") if society else ""
             consent_data = doc.get("consent_data", {})
+            signed_at = doc.get("signed_at", datetime.utcnow())
+            ts_str = signed_at.strftime("%Y-%m-%d %H:%M:%S") if isinstance(signed_at, datetime) else str(signed_at)
             
             pdf_bytes = generate_gdpr_adult_privacy_pdf(
-                signer_name=signer_name,
-                signer_fiscal_code=signer_cf,
-                signer_birth_place=signer_bp,
-                signer_birth_date=signer_dob,
-                society_name=society_name,
+                society_name=society.get("name", "") if society else "",
+                ragione_sociale=society.get("ragione_sociale", "") if society else "",
                 society_address=society.get("address", "") if society else "",
                 society_fiscal_code=society.get("fiscal_code", "") if society else "",
+                society_email=society.get("email", "") if society else "",
+                signer_name=signer_first,
+                signer_surname=signer_last,
+                signer_fiscal_code=signer_cf,
+                signer_birth_date=signer_dob,
+                signer_birth_place=signer_bp,
+                signer_address=signer.get("address", "") if signer else "",
+                signer_city=signer.get("city", "") if signer else "",
+                signer_province=signer.get("province", "") if signer else "",
+                signature_base64="",
+                timestamp=ts_str,
+                ip_address="Registrazione",
+                user_agent="Registrazione via app",
+                document_version="1.0",
+                document_hash="generated-on-download",
+                user_id=doc.get("signer_id", ""),
+                society_id=doc.get("society_id", ""),
                 consent_data=consent_data,
-                is_preview=False,
             )
             
             # Cache the generated PDF
@@ -20101,19 +20116,30 @@ async def get_my_documents(
         }
         for ckey, clabel in consent_label_map.items():
             c = consents.get(ckey)
-            if c and c.get("value"):
+            if c is None:
+                continue
+            # Handle both formats: simple bool or dict with "value"
+            if isinstance(c, bool):
+                c_value = c
+                c_timestamp = None
+            elif isinstance(c, dict):
+                c_value = c.get("value", False)
+                c_timestamp = c.get("timestamp")
+            else:
+                continue
+            if c_value:
                 consent_docs.append({
                     "id": f"consent_{ckey}_{target_user_id}",
                     "document_type": f"consent_{ckey}",
                     "document_title": clabel,
-                    "signed_at": c.get("timestamp"),
-                    "created_at": c.get("timestamp"),
+                    "signed_at": c_timestamp,
+                    "created_at": c_timestamp,
                     "is_consent_record": True,
                     "consent_metadata": {
-                        "source": c.get("source", "registration"),
-                        "ip_address": c.get("ip_address"),
-                        "document_version": c.get("document_version"),
-                        "user_id": c.get("user_id"),
+                        "source": c.get("source", "registration") if isinstance(c, dict) else "registration",
+                        "ip_address": c.get("ip_address") if isinstance(c, dict) else None,
+                        "document_version": c.get("document_version") if isinstance(c, dict) else None,
+                        "user_id": c.get("user_id") if isinstance(c, dict) else None,
                     }
                 })
         # Add Terms of Use acceptance if legal_accepted_at is present
