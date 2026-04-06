@@ -1734,6 +1734,7 @@ class AdultAthleteRegister(BaseModel):
     date_of_birth: Optional[str] = None  # YYYY-MM-DD format, optional initially
     fiscal_code: Optional[str] = None
     gender: Optional[str] = None  # 'M' or 'F'
+    consents: Optional[dict] = None  # {privacy_viewed: bool, images_promo: bool}
 
 @api_router.post("/auth/register-adult-athlete")
 async def register_adult_athlete(data: AdultAthleteRegister):
@@ -1898,6 +1899,77 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     # Send verification email
     await _send_verification_email(data.email.lower(), email_verification_token, full_name, society.get("name", ""))
     
+    # Save signed privacy/terms documents if consents provided
+    if data.consents and data.consents.get("privacy_viewed"):
+        now = datetime.utcnow()
+        consent_data = data.consents or {}
+        
+        # Save Privacy document
+        privacy_doc_id = str(ObjectId())
+        privacy_doc = {
+            "id": privacy_doc_id,
+            "document_type": "gdpr_privacy_adult",
+            "document_title": "Informativa Privacy - Atleta Adulto",
+            "signer_id": user_dict["id"],
+            "signer_name": full_name,
+            "athlete_name": full_name,
+            "related_entity_id": athlete_id,
+            "society_id": society_id,
+            "signed_at": now,
+            "created_at": now,
+            "consent_data": {
+                "privacy_viewed": consent_data.get("privacy_viewed", True),
+                "images_internal": consent_data.get("images_internal", False),
+                "images_promo": consent_data.get("images_promo", False),
+            },
+            "gdpr_metadata": {
+                "is_adult": True,
+                "signed_during_registration": True,
+            },
+        }
+        await db.signed_documents.insert_one(privacy_doc)
+        
+        # Save Terms of Use document
+        terms_doc_id = str(ObjectId())
+        terms_doc = {
+            "id": terms_doc_id,
+            "document_type": "terms_of_use",
+            "document_title": "Termini di Utilizzo",
+            "signer_id": user_dict["id"],
+            "signer_name": full_name,
+            "athlete_name": full_name,
+            "related_entity_id": athlete_id,
+            "society_id": society_id,
+            "signed_at": now,
+            "created_at": now,
+        }
+        await db.signed_documents.insert_one(terms_doc)
+        
+        # Update athlete with consent info
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {
+                "privacy_accepted": True,
+                "consents": {
+                    "privacy_viewed": True,
+                    "images_internal": consent_data.get("images_internal", False),
+                    "images_promo": consent_data.get("images_promo", False),
+                },
+            }}
+        )
+        
+        # Update user with consent info
+        await db.users.update_one(
+            {"id": user_dict["id"]},
+            {"$set": {
+                "consents": {
+                    "privacy_viewed": True,
+                    "images_internal": consent_data.get("images_internal", False),
+                    "images_promo": consent_data.get("images_promo", False),
+                },
+            }}
+        )
+    
     return {
         "message": "Registrazione completata! Controlla la tua email per attivare l'account.",
         "status": "pending_email",
@@ -1995,14 +2067,13 @@ async def verify_email(token: str):
         }}
     )
     
-    # Also activate the athlete record
+    # Also activate the athlete record - set to pending_trial (trial starts at first QR scan)
     athlete_id = user.get("athlete_id")
     if athlete_id:
         await db.athletes.update_one(
             {"id": athlete_id},
             {"$set": {
-                "status": "trial",
-                "trial_end_date": trial_end,
+                "status": "pending_trial",
             }}
         )
     
@@ -2013,8 +2084,7 @@ async def verify_email(token: str):
             await db.athletes.update_one(
                 {"id": athlete["id"]},
                 {"$set": {
-                    "status": "trial",
-                    "trial_end_date": trial_end,
+                    "status": "pending_trial",
                 }}
             )
     

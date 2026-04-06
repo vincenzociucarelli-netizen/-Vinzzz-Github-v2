@@ -658,8 +658,8 @@ export default function AthleteScreen() {
             </View>
           )}
           
-          {/* Banner viola per inserimento/modifica date - solo senza certificato */}
-          {!isMinor && !(profile as any)?.medical_certificate_expiry && (
+          {/* Banner viola per inserimento/modifica date - sempre visibile per adulti */}
+          {!isMinor && (
           <TouchableOpacity 
             style={{ 
               backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
@@ -670,7 +670,7 @@ export default function AthleteScreen() {
           >
             <Ionicons name={showCertForm ? "chevron-up" : "calendar-outline"} size={18} color="#7B1FA2" />
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
-              Inserisci dati certificato
+              {(profile as any)?.medical_certificate_expiry ? 'Modifica data certificato' : 'Inserisci dati certificato'}
             </Text>
           </TouchableOpacity>
           )}
@@ -1020,21 +1020,20 @@ export default function AthleteScreen() {
             <Text style={styles.warningText}>Nessun certificato inserito</Text>
           </View>
         )}
-        {!(profile as any)?.medical_certificate_expiry && (
-          <TouchableOpacity 
-            style={{ 
-              backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-              borderWidth: 1, borderColor: '#CE93D8',
-            }}
-            onPress={() => setShowCertForm(!showCertForm)}
-          >
-            <Ionicons name={showCertForm ? "chevron-up" : "calendar-outline"} size={18} color="#7B1FA2" />
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
-              Inserisci dati certificato
-            </Text>
-          </TouchableOpacity>
-        )}
+        {/* Pulsante modifica certificato - sempre visibile */}
+        <TouchableOpacity 
+          style={{ 
+            backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+            borderWidth: 1, borderColor: '#CE93D8',
+          }}
+          onPress={() => setShowCertForm(!showCertForm)}
+        >
+          <Ionicons name={showCertForm ? "chevron-up" : "calendar-outline"} size={18} color="#7B1FA2" />
+          <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
+            {(profile as any)?.medical_certificate_expiry ? 'Modifica data certificato' : 'Inserisci dati certificato'}
+          </Text>
+        </TouchableOpacity>
         {showCertForm && (
           <View style={{ marginTop: 8 }}>
             <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 }}>Data di Emissione (GG/MM/AAAA)</Text>

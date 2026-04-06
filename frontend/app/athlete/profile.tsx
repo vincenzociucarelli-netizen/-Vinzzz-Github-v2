@@ -1282,7 +1282,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         </View>
 
           {/* Privacy Consent Management */}
-          <ConsentManager entityType="user" accentColor="#4CAF50" />
+          <ConsentManager entityType="athlete" accentColor="#4CAF50" />
 
         <View style={{ height: 120 }} />
       </ScrollView>

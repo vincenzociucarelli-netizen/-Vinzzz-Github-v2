@@ -165,7 +165,13 @@ export default function Register() {
           first_name: firstName.trim(),
           last_name: lastName.trim().toUpperCase(),
           phone: phone.trim(),
+          fiscal_code: fiscalCode.trim().toUpperCase() || undefined,
           invite_code: inviteCode.trim().toUpperCase(),
+          consents: {
+            privacy_viewed: consentPrivacyViewed,
+            images_internal: consentInternalImages,
+            images_promo: consentPromotionalImages,
+          },
         });
         
         // Athlete needs email verification
@@ -804,6 +810,18 @@ export default function Register() {
                 Dichiaro di aver preso visione dell'Informativa sulla Privacy e dei Termini di utilizzo *
               </Text>
             </View>
+
+            {/* Internal images consent */}
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 10, gap: 10, backgroundColor: '#FFF3E0', borderRadius: 10, padding: 12, marginTop: 4 }}
+              onPress={() => setConsentInternalImages(!consentInternalImages)}
+              data-testid="consent-internal-images"
+            >
+              <Ionicons name={consentInternalImages ? "checkbox" : "square-outline"} size={22} color={consentInternalImages ? "#FF9800" : "#999"} />
+              <Text style={{ flex: 1, fontSize: 13, color: '#333' }}>
+                Acconsento all'utilizzo delle mie immagini ad uso interno (facoltativo)
+              </Text>
+            </TouchableOpacity>
 
             {/* Promotional images consent */}
             <TouchableOpacity

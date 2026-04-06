@@ -16,3 +16,13 @@
 ## Parent (Mauro)
 - Email: mauro@test.com
 - Password: Test1234
+
+## Parent (Luigi)
+- Email: luigi@test.com
+- Password: Test1234
+- Has athlete: Monia Paglia (born in Canada)
+
+## Adult Athlete (Lena)
+- Email: lena@test.com
+- Password: (set during registration)
+- Status: pending_trial
