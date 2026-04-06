@@ -16694,6 +16694,11 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
             ts_str = signed_at.strftime("%Y-%m-%d %H:%M:%S") if isinstance(signed_at, datetime) else str(signed_at)
             
             if document.get("document_type") == "gdpr_privacy_adult":
+                # Get metadata from document or generate defaults
+                doc_meta = document.get("gdpr_metadata", {})
+                import hashlib
+                doc_hash = hashlib.sha256(f"{document.get('id', '')}{ts_str}".encode()).hexdigest()[:16]
+                
                 pdf_bytes = generate_gdpr_adult_privacy_pdf(
                     society_name=society.get("name", "") if society else "",
                     ragione_sociale=society.get("ragione_sociale", "") if society else "",
@@ -16710,14 +16715,20 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
                     signer_province=signer.get("province", "") if signer else "",
                     signature_base64="",
                     timestamp=ts_str,
+                    ip_address=document.get("ip_address", "N/A"),
+                    user_agent=document.get("user_agent", "N/A"),
+                    document_version="1.0",
+                    document_hash=doc_hash,
+                    user_id=document.get("signer_id", ""),
+                    society_id=document.get("society_id", ""),
                     consent_data=consent_data,
-                    signer_residence_address=signer.get("address", "") if signer else "",
-                    signer_residence_city=signer.get("city", "") if signer else "",
-                    signer_residence_province=signer.get("province", "") if signer else "",
                 )
             else:
                 # Minor privacy - use existing generate function
                 parent = await db.users.find_one({"id": athlete.get("parent_id")}) if athlete else None
+                import hashlib
+                doc_hash_m = hashlib.sha256(f"{document.get('id', '')}{ts_str}".encode()).hexdigest()[:16]
+                
                 pdf_bytes = generate_gdpr_minor_privacy_pdf(
                     society_name=society.get("name", "") if society else "",
                     ragione_sociale=society.get("ragione_sociale", "") if society else "",
@@ -16727,11 +16738,6 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
                     parent_name=parent.get("first_name", "") if parent else "",
                     parent_surname=parent.get("last_name", "") if parent else "",
                     parent_fiscal_code=parent.get("fiscal_code", "") if parent else "",
-                    parent_birth_date=parent.get("date_of_birth", "") if parent else "",
-                    parent_birth_place=parent.get("place_of_birth", "") if parent else "",
-                    parent_address=parent.get("address", "") if parent else "",
-                    parent_city=parent.get("city", "") if parent else "",
-                    parent_province=parent.get("province", "") if parent else "",
                     minor_name=athlete.get("first_name", "") if athlete else "",
                     minor_surname=athlete.get("last_name", "") if athlete else "",
                     minor_fiscal_code=athlete.get("fiscal_code", "") if athlete else "",
@@ -16739,6 +16745,12 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
                     minor_birth_place=athlete.get("place_of_birth", "") if athlete else "",
                     signature_base64=document.get("signature_base64", ""),
                     timestamp=ts_str,
+                    ip_address=document.get("ip_address", "N/A"),
+                    user_agent=document.get("user_agent", "N/A"),
+                    document_version="1.0",
+                    document_hash=doc_hash_m,
+                    user_id=document.get("signer_id", ""),
+                    society_id=document.get("society_id", ""),
                     consent_data=consent_data,
                 )
             
