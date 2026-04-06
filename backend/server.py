@@ -20220,6 +20220,11 @@ async def get_my_documents(
         {"parent_id": target_user_id}
     ]}
     
+    # For athletes: also include documents linked via related_entity_id
+    athlete_id = current_user.get("athlete_id")
+    if role == UserRole.ATHLETE and athlete_id:
+        query["$or"].append({"related_entity_id": athlete_id})
+    
     # For parents: also include documents for their children (signed by the other parent)
     if role == UserRole.PARENT or (signer_id and current_user.get("role") == UserRole.ADMIN):
         lookup_id = target_user_id
@@ -21324,9 +21329,7 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
         "document_title": f"Dichiarazione Periodo di Prova - {athlete.get('full_name', '')}",
         "signer_id": current_user["id"],
         "signer_name": parent_name,
-        "parent_id": current_user["id"],
-        "minor_id": athlete_id,
-        "minor_name": athlete.get("full_name", ""),
+        "related_entity_id": athlete_id,
         "athlete_name": athlete.get("full_name", ""),
         "society_id": athlete.get("society_id"),
         "pdf_base64": pdf_b64_archive,
@@ -21334,6 +21337,10 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
         "signed_at": now,
         "created_at": now,
     }
+    if is_minor:
+        signed_doc_record["parent_id"] = current_user["id"]
+        signed_doc_record["minor_id"] = athlete_id
+        signed_doc_record["minor_name"] = athlete.get("full_name", "")
     await db.signed_documents.insert_one(signed_doc_record)
     
     # Log nell'audit trail

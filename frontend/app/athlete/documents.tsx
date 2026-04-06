@@ -118,6 +118,28 @@ export default function AthleteDocumentsScreen() {
           });
         }
         
+        // Trial declaration document
+        if (athleteRes.data.trial_document_generated) {
+          try {
+            const archiveRes2 = await api.get('/documents/signed', {
+              params: { page: 1, limit: 100, related_entity_id: athleteId }
+            });
+            const allDocs = archiveRes2.data?.documents || archiveRes2.data || [];
+            const trialDoc = allDocs.find((d: any) => d.document_type === 'trial_declaration');
+            if (trialDoc) {
+              docs.push({
+                id: trialDoc.id,
+                type: 'trial',
+                name: 'Dichiarazione Periodo di Prova',
+                date: trialDoc.signed_at || '',
+                url: `/api/documents/signed/${trialDoc.id}/pdf`,
+              });
+            }
+          } catch (e) {
+            console.log('Could not fetch trial document:', e);
+          }
+        }
+        
         setDocuments(docs);
       }
     } catch (error) {
