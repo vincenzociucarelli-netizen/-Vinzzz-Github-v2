@@ -23144,7 +23144,8 @@ async def get_athlete_consents(athlete_id: str, current_user = Depends(get_curre
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
     is_parent = current_user["id"] in [athlete.get("parent_id"), athlete.get("second_parent_id")]
-    if current_user["role"] not in ["admin"] and not is_parent:
+    is_self = current_user["role"] == "athlete" and current_user.get("athlete_id") == athlete_id
+    if current_user["role"] not in ["admin"] and not is_parent and not is_self:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     
     consents = athlete.get("consents") or {}
@@ -23152,16 +23153,24 @@ async def get_athlete_consents(athlete_id: str, current_user = Depends(get_curre
     # Calcola lo stato finale per i consensi immagini (regola: un NO = NEGATO)
     parent_ids = [pid for pid in [athlete.get("parent_id"), athlete.get("second_parent_id")] if pid]
     
+    def _extract_consent_value(entry):
+        """Extract bool value from consent entry (handles both bool and dict formats)."""
+        if isinstance(entry, bool):
+            return entry
+        if isinstance(entry, dict):
+            return entry.get("value", False)
+        return False
+
     final_consents = {}
     for consent_type in ["images_internal", "images_promo"]:
         parent_states = {}
         for pid in parent_ids:
             key = f"{consent_type}__{pid}"
             if key in consents:
-                parent_states[pid] = consents[key].get("value", False)
+                parent_states[pid] = _extract_consent_value(consents[key])
             elif pid == athlete.get("parent_id") and consent_type in consents:
                 # Retrocompatibilità: consenso senza parent_id specifico
-                parent_states[pid] = consents[consent_type].get("value", False)
+                parent_states[pid] = _extract_consent_value(consents[consent_type])
         
         # Regola: se almeno un genitore nega → NEGATO. Solo se TUTTI accettano → ACCETTATO
         if parent_states:
@@ -23171,8 +23180,9 @@ async def get_athlete_consents(athlete_id: str, current_user = Depends(get_curre
                 "denied_by": [pid for pid, v in parent_states.items() if not v] or None,
             }
         else:
+            raw = consents.get(consent_type)
             final_consents[consent_type] = {
-                "final_value": consents.get(consent_type, {}).get("value", False) if consents.get(consent_type) else False,
+                "final_value": _extract_consent_value(raw) if raw is not None else False,
                 "per_parent": {},
                 "denied_by": None,
             }
@@ -23201,7 +23211,8 @@ async def update_athlete_consents(
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
     is_parent = current_user["id"] in [athlete.get("parent_id"), athlete.get("second_parent_id")]
-    if current_user["role"] not in ["admin"] and not is_parent:
+    is_self = current_user["role"] == "athlete" and current_user.get("athlete_id") == athlete_id
+    if current_user["role"] not in ["admin"] and not is_parent and not is_self:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     
     # Block image consent changes if privacy has not been signed for this athlete

@@ -24,5 +24,10 @@
 
 ## Adult Athlete (Lena)
 - Email: lena@test.com
-- Password: (set during registration)
+- Password: Test1234
+- Status: pending_trial
+
+## Adult Athlete (Eva)
+- Email: eva@test.com
+- Password: Test1234
 - Status: pending_trial
