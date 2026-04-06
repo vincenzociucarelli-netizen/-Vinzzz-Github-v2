@@ -14875,15 +14875,11 @@ def generate_gdpr_adult_privacy_pdf(
     
     y -= 4.5*cm
     
-    # Signature
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(2*cm, y, "Accettazione digitale:")
-    
-    y -= 0.5*cm
-    
-    # Draw signature
-    logging.info(f"[GDPR PDF] signature_base64 present: {bool(signature_base64)}, length: {len(signature_base64) if signature_base64 else 0}")
+    # Signature / Acceptance section
     if signature_base64 and HAS_PIL:
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(2*cm, y, "Accettazione digitale:")
+        y -= 0.5*cm
         try:
             if ',' in signature_base64:
                 signature_base64_clean = signature_base64.split(',')[1]
@@ -14910,8 +14906,14 @@ def generate_gdpr_adult_privacy_pdf(
             c.drawImage(img_reader, 2*cm, y - 2*cm, width=6*cm, height=2*cm, preserveAspectRatio=True)
         except Exception as e:
             logging.error(f"Error adding signature: {e}")
-    
-    y -= 2.5*cm
+        y -= 2.5*cm
+    else:
+        # No signature - document accepted digitally during registration
+        c.setFont("Helvetica-Oblique", 9)
+        c.setFillColor(colors.HexColor("#555555"))
+        y = draw_wrapped_text(c, f"Documento accettato digitalmente tramite applicativo gestionale in fase di registrazione - {timestamp}", 2*cm, y, max_w, font_name="Helvetica-Oblique", font_size=9)
+        c.setFillColor(colors.black)
+        y -= 0.5*cm
     
     # Technical metadata box (very important for legal validity)
     c.setFont("Helvetica-Bold", 9)
@@ -16634,18 +16636,125 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
         raise HTTPException(status_code=403, detail="Non autorizzato a visualizzare questo documento")
     
     # Check if PDF exists
-    if not document.get("pdf_base64"):
-        # Try to get from file path if available
-        if document.get("pdf_path"):
-            try:
-                with open(document["pdf_path"], "rb") as f:
-                    pdf_bytes = f.read()
-            except:
-                raise HTTPException(status_code=404, detail="File PDF non trovato")
-        else:
-            raise HTTPException(status_code=404, detail="PDF non disponibile per questo documento")
-    else:
+    pdf_bytes = None
+    if document.get("pdf_base64"):
         pdf_bytes = base64.b64decode(document["pdf_base64"])
+    elif document.get("pdf_path"):
+        try:
+            with open(document["pdf_path"], "rb") as f:
+                pdf_bytes = f.read()
+        except:
+            pass
+    
+    # Generate PDF on-the-fly if not stored (registration-time documents)
+    if not pdf_bytes and document.get("document_type") in ("gdpr_privacy_adult", "gdpr_privacy_minor"):
+        try:
+            signer = await db.users.find_one({"id": document.get("signer_id")})
+            athlete = await db.athletes.find_one({"id": document.get("related_entity_id")})
+            society = await db.societies.find_one({"id": document.get("society_id")})
+            
+            # Check profile completeness before generating PDF (adult athletes)
+            if document.get("document_type") == "gdpr_privacy_adult" and signer:
+                signer_missing = []
+                if not (signer.get("fiscal_code") or "").strip():
+                    signer_missing.append("Codice Fiscale")
+                if not signer.get("date_of_birth"):
+                    signer_missing.append("Data di nascita")
+                country = (signer.get("country_of_birth") or "Italia").strip().upper()
+                is_foreign = country not in ("ITALIA", "")
+                if not is_foreign and not (signer.get("place_of_birth") or "").strip():
+                    signer_missing.append("Luogo di nascita")
+                if not (signer.get("address") or "").strip():
+                    signer_missing.append("Indirizzo")
+                if not (signer.get("city") or "").strip():
+                    signer_missing.append("Città")
+                if signer_missing:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Profilo incompleto. Compilare i seguenti campi prima di visualizzare il documento: {', '.join(signer_missing)}"
+                    )
+            
+            signer_name = document.get("signer_name") or (signer.get("full_name", "") if signer else "")
+            signer_first = signer.get("first_name", "") if signer else ""
+            signer_last = signer.get("last_name", "") if signer else ""
+            signer_cf = (signer.get("fiscal_code", "") or signer.get("tax_code", "")) if signer else ""
+            signer_bp = (signer.get("place_of_birth", "") or signer.get("country_of_birth", "")) if signer else ""
+            signer_dob = ""
+            if signer and signer.get("date_of_birth"):
+                try:
+                    dob = signer["date_of_birth"]
+                    if isinstance(dob, str):
+                        dob = datetime.fromisoformat(dob.replace("Z", "+00:00"))
+                    signer_dob = dob.strftime("%d/%m/%Y")
+                except:
+                    pass
+            
+            consent_data = document.get("consent_data", {})
+            signed_at = document.get("signed_at", datetime.utcnow())
+            ts_str = signed_at.strftime("%Y-%m-%d %H:%M:%S") if isinstance(signed_at, datetime) else str(signed_at)
+            
+            if document.get("document_type") == "gdpr_privacy_adult":
+                pdf_bytes = generate_gdpr_adult_privacy_pdf(
+                    society_name=society.get("name", "") if society else "",
+                    ragione_sociale=society.get("ragione_sociale", "") if society else "",
+                    society_address=society.get("address", "") if society else "",
+                    society_fiscal_code=society.get("fiscal_code", "") if society else "",
+                    society_email=society.get("email", "") if society else "",
+                    signer_name=signer_first,
+                    signer_surname=signer_last,
+                    signer_fiscal_code=signer_cf,
+                    signer_birth_date=signer_dob,
+                    signer_birth_place=signer_bp,
+                    signer_address=signer.get("address", "") if signer else "",
+                    signer_city=signer.get("city", "") if signer else "",
+                    signer_province=signer.get("province", "") if signer else "",
+                    signature_base64="",
+                    timestamp=ts_str,
+                    consent_data=consent_data,
+                    signer_residence_address=signer.get("address", "") if signer else "",
+                    signer_residence_city=signer.get("city", "") if signer else "",
+                    signer_residence_province=signer.get("province", "") if signer else "",
+                )
+            else:
+                # Minor privacy - use existing generate function
+                parent = await db.users.find_one({"id": athlete.get("parent_id")}) if athlete else None
+                pdf_bytes = generate_gdpr_minor_privacy_pdf(
+                    society_name=society.get("name", "") if society else "",
+                    ragione_sociale=society.get("ragione_sociale", "") if society else "",
+                    society_address=society.get("address", "") if society else "",
+                    society_fiscal_code=society.get("fiscal_code", "") if society else "",
+                    society_email=society.get("email", "") if society else "",
+                    parent_name=parent.get("first_name", "") if parent else "",
+                    parent_surname=parent.get("last_name", "") if parent else "",
+                    parent_fiscal_code=parent.get("fiscal_code", "") if parent else "",
+                    parent_birth_date=parent.get("date_of_birth", "") if parent else "",
+                    parent_birth_place=parent.get("place_of_birth", "") if parent else "",
+                    parent_address=parent.get("address", "") if parent else "",
+                    parent_city=parent.get("city", "") if parent else "",
+                    parent_province=parent.get("province", "") if parent else "",
+                    minor_name=athlete.get("first_name", "") if athlete else "",
+                    minor_surname=athlete.get("last_name", "") if athlete else "",
+                    minor_fiscal_code=athlete.get("fiscal_code", "") if athlete else "",
+                    minor_birth_date=athlete.get("date_of_birth", "") if athlete else "",
+                    minor_birth_place=athlete.get("place_of_birth", "") if athlete else "",
+                    signature_base64=document.get("signature_base64", ""),
+                    timestamp=ts_str,
+                    consent_data=consent_data,
+                )
+            
+            if pdf_bytes:
+                # Cache the generated PDF
+                await db.signed_documents.update_one(
+                    {"id": document_id},
+                    {"$set": {"pdf_base64": base64.b64encode(pdf_bytes).decode()}}
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error generating PDF on-the-fly: {e}")
+    
+    if not pdf_bytes:
+        raise HTTPException(status_code=404, detail="PDF non disponibile per questo documento")
     
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
@@ -19982,6 +20091,26 @@ async def download_document(
             signer = await db.users.find_one({"id": doc.get("signer_id")})
             athlete = await db.athletes.find_one({"id": doc.get("related_entity_id")})
             society = await db.societies.find_one({"id": doc.get("society_id")})
+            
+            # Check profile completeness before generating PDF
+            if doc.get("document_type") == "gdpr_privacy_adult" and signer:
+                # For adult athletes, validate THEIR profile (they are both signer and athlete)
+                signer_missing = []
+                if not (signer.get("fiscal_code") or "").strip():
+                    signer_missing.append("Codice Fiscale")
+                if not signer.get("date_of_birth"):
+                    signer_missing.append("Data di nascita")
+                if not (signer.get("place_of_birth") or signer.get("country_of_birth") or "").strip():
+                    signer_missing.append("Luogo di nascita")
+                if not (signer.get("address") or "").strip():
+                    signer_missing.append("Indirizzo")
+                if not (signer.get("city") or "").strip():
+                    signer_missing.append("Città")
+                if signer_missing:
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Profilo incompleto. Compilare i seguenti campi prima di visualizzare il documento: {', '.join(signer_missing)}"
+                    )
             
             signer_name = doc.get("signer_name") or (signer.get("full_name", "") if signer else "")
             signer_first = signer.get("first_name", "") if signer else ""

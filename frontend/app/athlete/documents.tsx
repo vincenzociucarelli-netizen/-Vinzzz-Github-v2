@@ -324,9 +324,21 @@ export default function AthleteDocumentsScreen() {
                         const blob = new Blob([response.data], { type: 'application/pdf' });
                         const url = window.URL.createObjectURL(blob);
                         window.open(url, '_blank');
-                      } catch (error) {
+                      } catch (error: any) {
                         console.error('Error downloading document:', error);
-                        window.alert('Impossibile scaricare il documento');
+                        // Show server error message (e.g. profile incomplete)
+                        if (error?.response?.status === 400) {
+                          try {
+                            const errText = error.response.data instanceof Blob 
+                              ? JSON.parse(await error.response.data.text())
+                              : error.response.data;
+                            window.alert(errText?.detail || 'Errore nel caricamento del documento');
+                          } catch {
+                            window.alert('Profilo incompleto. Compilare i dati del profilo prima di visualizzare il documento.');
+                          }
+                        } else {
+                          window.alert('Impossibile scaricare il documento');
+                        }
                       }
                     } else {
                       // Regular URL
