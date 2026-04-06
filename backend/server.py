@@ -14757,7 +14757,7 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2*cm, y, "7. ACCETTAZIONE DIGITALE DEL DOCUMENTO")
     y -= 0.6*cm
     c.setFont("Helvetica", 10)
-    firma_text = "L'accettazione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla Società. Il sistema registra metadati tecnici dell'accettazione, tra cui: data e ora della conferma; identificativo dell'utente; dispositivo utilizzato. Tali informazioni sono raccolte esclusivamente ai fini della tracciabilità e della sicurezza del sistema."
+    firma_text = "L'accettazione del presente documento avviene tramite l'applicativo gestionale utilizzato dalla Società. Il sistema registra metadati tecnici dell'accettazione (data, ora, identificativo utente, dispositivo e indirizzo IP) ai fini della tracciabilità e sicurezza."
     y = draw_wrapped_text(c, firma_text, 2*cm, y, max_w)
     
     y -= 0.5*cm
@@ -14780,23 +14780,29 @@ def generate_gdpr_adult_privacy_pdf(
     c.setFont("Helvetica", 9)
     
     check_pv = "X" if cd.get("privacy_viewed", True) else " "
-    c.drawString(2*cm, y, f"[{check_pv}] Ho preso visione dell'informativa privacy")
+    c.drawString(2*cm, y, f"[{check_pv}] Dichiaro di aver preso visione dell'informativa sulla privacy")
     y -= 0.6*cm
     
     # CONSENSI FACOLTATIVI
     c.setFont("Helvetica-Bold", 11)
     c.drawString(2*cm, y, "CONSENSI FACOLTATIVI")
     y -= 0.4*cm
-    c.setFont("Helvetica-Oblique", 8)
-    c.setFillColor(colors.HexColor("#555555"))
-    c.drawString(2*cm, y, "Il trattamento delle immagini promozionali è basato sul consenso dell'interessato.")
-    c.setFillColor(colors.black)
-    y -= 0.4*cm
     
     c.setFont("Helvetica", 9)
+    check_ii = "X" if cd.get("images_internal", False) else " "
+    y = draw_wrapped_text(c, f"[{check_ii}] Acconsento all'utilizzo delle mie immagini per finalita' interne (es. comunicazioni, gruppi, attivita' sportive)", 2*cm, y, max_w, font_name="Helvetica", font_size=9)
+    y -= 0.3*cm
+    
     check_ip = "X" if cd.get("images_promo", False) else " "
-    c.drawString(2*cm, y, f"[{check_ip}] Utilizzo immagini a scopo promozionale (sito, social, materiale pubblicitario)")
-    y -= 0.4*cm
+    y = draw_wrapped_text(c, f"[{check_ip}] Acconsento all'utilizzo delle mie immagini per finalita' promozionali (es. sito web, social network, materiale pubblicitario)", 2*cm, y, max_w, font_name="Helvetica", font_size=9)
+    y -= 0.3*cm
+    
+    # Nota revoca consensi
+    c.setFont("Helvetica-Oblique", 8)
+    c.setFillColor(colors.HexColor("#555555"))
+    y = draw_wrapped_text(c, "Il consenso e' facoltativo e puo' essere revocato in qualsiasi momento. La revoca ha effetto solo per utilizzi futuri.", 2*cm, y, max_w, font_name="Helvetica-Oblique", font_size=8)
+    c.setFillColor(colors.black)
+    y -= 0.3*cm
     
     # Nota riprese di contesto
     c.setFont("Helvetica-Oblique", 8)
@@ -14804,13 +14810,6 @@ def generate_gdpr_adult_privacy_pdf(
     c.drawString(2*cm, y, "Nota: durante eventi e manifestazioni sportive potranno essere effettuate riprese a fini documentativi.")
     y -= 0.3*cm
     c.drawString(2*cm, y, "Per utilizzi promozionali specifici sara' richiesto apposito consenso.")
-    c.setFillColor(colors.black)
-    y -= 0.4*cm
-    
-    # Nota revoca
-    c.setFont("Helvetica-Oblique", 8)
-    c.setFillColor(colors.HexColor("#666666"))
-    c.drawString(2*cm, y, "La revoca dei consensi relativi alle immagini ha effetto solo per utilizzi futuri.")
     c.setFillColor(colors.black)
     y -= 0.4*cm
     
