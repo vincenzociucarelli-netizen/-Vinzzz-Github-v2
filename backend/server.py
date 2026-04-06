@@ -19948,6 +19948,58 @@ async def download_document(
             headers={"Content-Disposition": f'inline; filename="documento_{document_id}.pdf"'}
         )
     
+    # Generate PDF on-the-fly for registration-time documents (no PDF stored)
+    if doc.get("document_type") in ("gdpr_privacy_adult", "gdpr_privacy_minor"):
+        try:
+            signer = await db.users.find_one({"id": doc.get("signer_id")})
+            athlete = await db.athletes.find_one({"id": doc.get("related_entity_id")})
+            society = await db.societies.find_one({"id": doc.get("society_id")})
+            
+            signer_name = doc.get("signer_name") or (signer.get("full_name", "") if signer else "")
+            signer_cf = signer.get("fiscal_code", "") or signer.get("tax_code", "") if signer else ""
+            signer_bp = signer.get("place_of_birth", "") or signer.get("country_of_birth", "") if signer else ""
+            signer_dob = ""
+            if signer and signer.get("date_of_birth"):
+                try:
+                    dob = signer["date_of_birth"]
+                    if isinstance(dob, str):
+                        from datetime import datetime as dt2
+                        dob = dt2.fromisoformat(dob.replace("Z", "+00:00"))
+                    signer_dob = dob.strftime("%d/%m/%Y")
+                except:
+                    pass
+            
+            society_name = society.get("name", "") if society else ""
+            consent_data = doc.get("consent_data", {})
+            
+            pdf_bytes = generate_gdpr_adult_privacy_pdf(
+                signer_name=signer_name,
+                signer_fiscal_code=signer_cf,
+                signer_birth_place=signer_bp,
+                signer_birth_date=signer_dob,
+                society_name=society_name,
+                society_address=society.get("address", "") if society else "",
+                society_fiscal_code=society.get("fiscal_code", "") if society else "",
+                consent_data=consent_data,
+                is_preview=False,
+            )
+            
+            # Cache the generated PDF
+            pdf_b64 = base64.b64encode(pdf_bytes).decode()
+            await db.signed_documents.update_one(
+                {"id": document_id},
+                {"$set": {"pdf_base64": pdf_b64}}
+            )
+            
+            return StreamingResponse(
+                io.BytesIO(pdf_bytes),
+                media_type="application/pdf",
+                headers={"Content-Disposition": f'inline; filename="privacy_{signer_name.replace(" ", "_")}.pdf"'}
+            )
+        except Exception as e:
+            logger.error(f"Error generating PDF on-the-fly: {e}")
+            raise HTTPException(status_code=500, detail="Errore nella generazione del PDF")
+    
     raise HTTPException(status_code=404, detail="File PDF non trovato")
 
 @api_router.get("/documents/my-documents")
