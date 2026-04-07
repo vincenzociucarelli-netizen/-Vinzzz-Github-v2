@@ -2093,6 +2093,8 @@ export default function AdminAthleteDetail() {
                     </View>
                   )}
                   
+                  {!athlete?.parents_detached && (
+                  <>
                   <Text style={[styles.inputLabel, { marginTop: 16 }]}>Codice Atleta (per Import Pagamenti)</Text>
                   <TextInput
                     style={styles.input}
@@ -2105,6 +2107,8 @@ export default function AdminAthleteDetail() {
                   <Text style={{ fontSize: 11, color: '#666', marginTop: 4, marginBottom: 8 }}>
                     Questo codice viene usato per abbinare i pagamenti importati da Excel
                   </Text>
+                  </>
+                  )}
                 </>
               ) : (
                 <>
@@ -2122,12 +2126,14 @@ export default function AdminAthleteDetail() {
                       </Text>
                     </View>
                   )}
+                  {!athlete?.parents_detached && (
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>Codice Atleta (Import)</Text>
                     <Text style={[styles.valueCode, { color: '#007AFF' }]}>
                       {athlete?.athlete_code || '-'}
                     </Text>
                   </View>
+                  )}
                 </>
               )}
             </View>
