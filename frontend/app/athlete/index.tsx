@@ -835,33 +835,25 @@ export default function AthleteScreen() {
           <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
         
-        {/* Privacy - hidden for minors (parent manages privacy) */}
-        {!isMinor && (
+        {/* Privacy status - only show if NOT yet accepted (to prompt signing) */}
+        {!isMinor && !profile?.privacy_accepted && (
         <TouchableOpacity 
-          style={[styles.menuItem, { backgroundColor: profile?.privacy_accepted ? '#E8F5E9' : '#FFF3E0' }]} 
+          style={[styles.menuItem, { backgroundColor: '#FFF3E0' }]} 
           data-testid="privacy-status"
           onPress={() => {
-            if (!profile?.privacy_accepted) {
-              handleStayAndSignPrivacy();
-            }
+            handleStayAndSignPrivacy();
           }}
         >
           <Ionicons 
-            name={profile?.privacy_accepted ? "checkmark-circle" : "alert-circle"} 
+            name="alert-circle" 
             size={22} 
-            color={profile?.privacy_accepted ? "#4CAF50" : "#FF9800"} 
+            color="#FF9800" 
           />
           <View style={styles.menuItemContent}>
             <Text style={styles.menuItemTitle}>Privacy</Text>
-            <Text style={styles.menuItemSubtitle}>
-              {profile?.privacy_accepted 
-                ? `Accettata il ${formatDateIT(profile.privacy_accepted_date)}` 
-                : 'Da accettare - Clicca per firmare'}
-            </Text>
+            <Text style={styles.menuItemSubtitle}>Da accettare - Clicca per firmare</Text>
           </View>
-          {!profile?.privacy_accepted && (
-            <Ionicons name="chevron-forward" size={20} color="#FF9800" />
-          )}
+          <Ionicons name="chevron-forward" size={20} color="#FF9800" />
         </TouchableOpacity>
         )}
         
