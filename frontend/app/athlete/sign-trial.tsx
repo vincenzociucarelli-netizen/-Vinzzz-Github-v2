@@ -74,67 +74,64 @@ export default function SignTrialPage() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1976D2" />
+        <ActivityIndicator size="large" color="#7B1FA2" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header - stile viola come il minore */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-          <Text style={{ color: '#fff', fontSize: 15 }}>Indietro</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Firma Dichiarazione</Text>
-        <View style={{ width: 80 }} />
+        <Text style={styles.headerTitle}>Firma Dichiarazione di Prova</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
+          <Ionicons name="close" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-        {/* Info */}
-        <View style={{ backgroundColor: '#E3F2FD', borderRadius: 12, padding: 16, marginBottom: 20 }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#1565C0', marginBottom: 8, textAlign: 'center' }}>
-            Dichiarazione Periodo di Prova
-          </Text>
-          <Text style={{ fontSize: 13, color: '#1565C0', lineHeight: 20, textAlign: 'center' }}>
-            Firmando questo documento dichiari di voler partecipare al periodo di prova.
-            {'\n'}La tua firma verr{'a'} incorporata nel documento PDF ufficiale.
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+        {/* Info box viola */}
+        <View style={{ backgroundColor: '#F3E5F5', borderRadius: 10, padding: 14, marginBottom: 20 }}>
+          <Text style={{ fontSize: 13, color: '#6A1B9A', lineHeight: 20 }}>
+            Firmando questo documento dichiari di voler partecipare al periodo di prova presso la societ{'a'}.
+            {'\n'}La tua firma digitale verr{'a'} incorporata nel documento PDF ufficiale.
           </Text>
         </View>
 
-        {/* Athlete Info */}
-        <View style={{ backgroundColor: '#f9f9f9', borderRadius: 10, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: '#e0e0e0' }}>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 4 }}>
-            {profile?.first_name} {profile?.last_name}
-          </Text>
-          <Text style={{ fontSize: 12, color: '#666' }}>
-            Stato: In Attesa Prova
-          </Text>
-        </View>
+        {/* Dati atleta */}
+        {profile && (
+          <View style={{ backgroundColor: '#F3E5F5', borderRadius: 10, padding: 14, marginBottom: 20, borderLeftWidth: 3, borderLeftColor: '#9C27B0' }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#7B1FA2', marginBottom: 4 }}>
+              {profile?.first_name} {profile?.last_name}
+            </Text>
+            <Text style={{ fontSize: 12, color: '#6A1B9A' }}>
+              In attesa di inizio prova
+            </Text>
+          </View>
+        )}
 
         {/* Signature Pad */}
-        <Text style={{ fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 10 }}>
-          Disegna la tua firma qui sotto:
-        </Text>
+        <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 }}>Disegna la tua firma qui sotto:</Text>
         <SignaturePadInline
           ref={trialSignatureRef}
-          height={200}
+          height={180}
           penColor="#1a237e"
           backgroundColor="#fafafa"
           onSave={(sig: string) => setTrialSignature(sig)}
           onClear={() => setTrialSignature(null)}
         />
 
-        {/* Confirm Button */}
+        {/* Confirm Button - viola come il minore */}
         <TouchableOpacity
           style={{
-            backgroundColor: trialSignature ? '#1976D2' : '#ccc',
-            paddingVertical: 16,
-            borderRadius: 12,
+            backgroundColor: trialSignature ? '#7B1FA2' : '#ccc',
+            paddingVertical: 14,
+            borderRadius: 10,
             alignItems: 'center',
-            marginTop: 20,
-            marginBottom: 40,
+            marginTop: 16,
             flexDirection: 'row',
             justifyContent: 'center',
             gap: 8,
@@ -145,13 +142,13 @@ export default function SignTrialPage() {
           data-testid="confirm-trial-sign-btn"
         >
           {signingTrialDoc ? (
-            <ActivityIndicator color="#fff" size="small" />
+            <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={22} color="#fff" />
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Conferma e Firma</Text>
-            </>
+            <Ionicons name="checkmark-circle" size={20} color="#fff" />
           )}
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
+            Conferma e Firma
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -173,14 +170,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#7B1FA2',
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     paddingBottom: 15,
     paddingHorizontal: 16,
   },
   headerTitle: {
-    color: '#FFD700',
-    fontSize: 17,
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '700',
   },
 });

@@ -444,40 +444,45 @@ export default function AthleteScreen() {
             </TouchableOpacity>
           )}
           
-          {/* Pending Trial - Dichiarazione di prova */}
+          {/* Pending Trial - Dichiarazione di prova (stile identico al minore - VIOLA) */}
           {!isMinor && (profile?.status === 'pending_trial' || (profile?.status === 'trial' && !(profile as any)?.trial_document_generated)) && (
-            <View style={{ marginTop: 10 }}>
-              <View style={{ backgroundColor: '#E3F2FD', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#1976D2' }}>
-                <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 14, textAlign: 'center', marginBottom: 4 }}>
-                  In attesa di inizio prova
-                </Text>
-                <Text style={{ color: '#1976D2', fontSize: 12, textAlign: 'center', marginBottom: 10 }}>
-                  Per iniziare il periodo di prova devi firmare la dichiarazione.{'\n'}La prova inizier{'à'} al primo rilevamento QR da parte del coach.
-                </Text>
+            <View style={{ marginTop: 16 }}>
+              <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 12 }}>Stato</Text>
                 
-                {(profile as any)?.trial_document_generated ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8 }}>
-                    <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                    <Text style={{ color: '#2E7D32', fontWeight: '600', fontSize: 13 }}>Dichiarazione di prova firmata</Text>
-                  </View>
-                ) : Platform.OS === 'web' ? (
-                  <a
-                    href="/athlete/sign-trial"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1976D2', paddingTop: 12, paddingBottom: 12, borderRadius: 10, textDecoration: 'none', cursor: 'pointer' }}
-                    data-testid="sign-trial-doc-btn"
-                  >
-                    <Ionicons name="document-text" size={18} color="#fff" />
-                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Firma Dichiarazione di Prova</Text>
-                  </a>
-                ) : (
-                  <TouchableOpacity
-                    style={{ backgroundColor: '#1976D2', paddingVertical: 12, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                    onPress={() => router.push('/athlete/sign-trial')}
-                    data-testid="sign-trial-doc-btn"
-                  >
-                    <Ionicons name="document-text" size={18} color="#fff" />
-                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Firma Dichiarazione di Prova</Text>
-                  </TouchableOpacity>
+                <View style={{ backgroundColor: '#F3E5F5', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#9C27B0', marginBottom: 12 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#7B1FA2', marginBottom: 4 }}>In attesa di inizio prova</Text>
+                  {(profile as any)?.trial_document_generated ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                      <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+                      <Text style={{ fontSize: 13, color: '#4CAF50', fontWeight: '600' }}>Dichiarazione di prova firmata</Text>
+                    </View>
+                  ) : (
+                    <Text style={{ fontSize: 12, color: '#6A1B9A', lineHeight: 18 }}>
+                      Il periodo di prova inizier{'à'} automaticamente nel momento in cui registrerai la tua prima presenza in palestra, con la scansione del tuo codice QR da parte del coach.{'\n'}Per poter partecipare, dovrai avere la dichiarazione di prova firmata.{'\n'}Per evitare dimenticanze, ti consigliamo di firmare la dichiarazione sin da ora.
+                    </Text>
+                  )}
+                </View>
+                
+                {!(profile as any)?.trial_document_generated && (
+                  Platform.OS === 'web' ? (
+                    <a
+                      href="/athlete/sign-trial"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#EDE7F6', paddingTop: 12, paddingBottom: 12, borderRadius: 10, textDecoration: 'none', cursor: 'pointer' }}
+                      data-testid="sign-trial-doc-btn"
+                    >
+                      <Text style={{ fontWeight: '600', color: '#7B1FA2', fontSize: 14 }}>Firma Dichiarazione di Prova</Text>
+                    </a>
+                  ) : (
+                    <TouchableOpacity
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#EDE7F6', paddingVertical: 12, borderRadius: 10, gap: 8 }}
+                      onPress={() => router.push('/athlete/sign-trial')}
+                      data-testid="sign-trial-doc-btn"
+                    >
+                      <Ionicons name="create" size={18} color="#7B1FA2" />
+                      <Text style={{ fontWeight: '600', color: '#7B1FA2', fontSize: 14 }}>Firma Dichiarazione di Prova</Text>
+                    </TouchableOpacity>
+                  )
                 )}
               </View>
             </View>
