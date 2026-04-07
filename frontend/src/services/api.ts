@@ -28,19 +28,19 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      // Clear stored auth data on auth errors
+    if (error.response?.status === 401) {
+      // Clear stored auth data only on 401 Unauthorized (expired/invalid token)
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('user');
       
-      // Redirect to login (web only - native apps handle this differently)
+      // Redirect to login (web only)
       if (typeof window !== 'undefined' && window.location) {
-        // Only redirect if not already on login page
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }
       }
     }
+    // 403 Forbidden = permission denied for specific resource, NOT invalid auth
     return Promise.reject(error);
   }
 );
