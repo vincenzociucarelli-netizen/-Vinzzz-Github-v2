@@ -285,7 +285,7 @@ export default function AthletePayments() {
               <div class="receipt-container">
                 <div class="header">
                   <h1>RICEVUTA PAGAMENTI</h1>
-                  <div class="society-name">${data.society?.name || 'Società Sportiva'}</div>
+                  <div class="society-name">${data.society?.name || data.society?.ragione_sociale || 'Società Sportiva'}</div>
                   ${data.society?.address ? `<div style="font-size: 12px; color: #555; margin-top: 2px;">${data.society.address}${data.society.city ? ', ' + data.society.city : ''}${data.society.province ? ' (' + data.society.province + ')' : ''}</div>` : ''}
                   ${data.society?.fiscal_code ? `<div style="font-size: 12px; color: #555;">C.F.: ${data.society.fiscal_code}</div>` : ''}
                   <div class="season">Stagione Sportiva ${data.season || ''}</div>
