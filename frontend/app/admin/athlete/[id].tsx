@@ -1282,6 +1282,8 @@ export default function AdminAthleteDetail() {
               <div class="header">
                 <h1>RICEVUTA PAGAMENTI</h1>
                 <div class="society-name">${societyData?.ragione_sociale || societyData?.society_name || 'Società Sportiva'}</div>
+                ${societyData?.address ? `<div style="font-size: 12px; color: #555; margin-top: 2px;">${societyData.address}${societyData.city ? ', ' + societyData.city : ''}${societyData.province ? ' (' + societyData.province + ')' : ''}</div>` : ''}
+                ${societyData?.fiscal_code ? `<div style="font-size: 12px; color: #555;">C.F.: ${societyData.fiscal_code}</div>` : ''}
                 <div class="season">Stagione Sportiva ${season}</div>
               </div>
               
