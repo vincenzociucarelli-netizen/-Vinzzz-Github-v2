@@ -876,6 +876,7 @@ class AthleteCreate(BaseModel):
     date_of_birth: str
     birth_place: Optional[str] = None
     birth_province: Optional[str] = None
+    country_of_birth: Optional[str] = None
     gender: Optional[str] = None
     fiscal_code: str
     email: Optional[str] = None
