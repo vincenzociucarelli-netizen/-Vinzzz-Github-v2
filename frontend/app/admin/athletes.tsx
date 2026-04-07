@@ -487,17 +487,23 @@ export default function AdminAthletes() {
 
   const getStatusText = (item: Athlete) => {
     if (item.is_withdrawn) return 'Ritirato';
+    if (item.status === 'pending_trial') return 'In attesa';
     if (item.status === 'trial') {
       return item.trial_start_date ? 'In prova' : 'In attesa';
     }
+    if (item.status === 'pending' || item.status === 'pending_email') return 'In attesa';
+    if (item.status === 'pending_privacy') return 'Firma Privacy';
     return 'Attivo';
   };
 
   const getStatusColor = (item: Athlete) => {
     if (item.is_withdrawn) return '#FF3B30';
+    if (item.status === 'pending_trial') return '#9C27B0';
     if (item.status === 'trial') {
       return item.trial_start_date ? '#FF9500' : '#9C27B0';
     }
+    if (item.status === 'pending' || item.status === 'pending_email') return '#9C27B0';
+    if (item.status === 'pending_privacy') return '#1976D2';
     return '#34C759';
   };
 
