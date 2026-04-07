@@ -266,11 +266,11 @@ export default function AthleteScreen() {
         try {
           const trialRes = await api.get(`/athletes/${athleteData.athlete_id}/trial-status`);
           setTrialStatus(trialRes.data);
-        } catch { console.log('No trial status'); }
+        } catch (e) { /* trial status not available */ }
         try {
           const endTrialRes = await api.get(`/athletes/${athleteData.athlete_id}/end-trial-status`);
           setEndTrialStatus(endTrialRes.data);
-        } catch { console.log('No end-trial status'); }
+        } catch (e) { /* end-trial status not available */ }
       }
       
       // Load expiring notifications
