@@ -21179,6 +21179,12 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
             athlete_dob = dob.strftime("%d/%m/%Y")
     athlete_cf = athlete.get("fiscal_code", "")
     athlete_pob = athlete.get("place_of_birth") or athlete.get("birth_place", "")
+    athlete_country = athlete.get("country_of_birth", "")
+    if athlete_country and athlete_country.lower() != "italia":
+        if athlete_pob:
+            athlete_pob = f"{athlete_pob} ({athlete_country})"
+        else:
+            athlete_pob = athlete_country
     data2 = [
         ["Nome e Cognome:", athlete_name],
         ["Data di Nascita:", athlete_dob],
