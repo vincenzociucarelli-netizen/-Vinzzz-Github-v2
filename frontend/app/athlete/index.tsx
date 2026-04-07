@@ -107,6 +107,11 @@ export default function AthleteScreen() {
   const [trialSignature, setTrialSignature] = useState<string | null>(null);
   const [signingTrialDoc, setSigningTrialDoc] = useState(false);
   const trialSignatureRef = useRef<SignaturePadInlineRef>(null);
+  
+  // Trial status data (matching minor flow)
+  const [trialStatus, setTrialStatus] = useState<any>(null);
+  const [endTrialStatus, setEndTrialStatus] = useState<any>(null);
+  const [societyName, setSocietyName] = useState<string>('');
 
   // Helper function to format date strings correctly
   const formatDateIT = (dateStr: string | undefined) => {
@@ -254,6 +259,19 @@ export default function AthleteScreen() {
       const settingsResponse = await api.get('/settings/society');
       setSocietySettings(settingsResponse.data);
       setSocietyEmail(settingsResponse.data?.email || '');
+      setSocietyName(settingsResponse.data?.name || settingsResponse.data?.ragione_sociale || '');
+      
+      // Load trial status data for adult athletes
+      if (athleteData.athlete_id) {
+        try {
+          const trialRes = await api.get(`/athletes/${athleteData.athlete_id}/trial-status`);
+          setTrialStatus(trialRes.data);
+        } catch { console.log('No trial status'); }
+        try {
+          const endTrialRes = await api.get(`/athletes/${athleteData.athlete_id}/end-trial-status`);
+          setEndTrialStatus(endTrialRes.data);
+        } catch { console.log('No end-trial status'); }
+      }
       
       // Load expiring notifications
       try {
@@ -488,79 +506,287 @@ export default function AthleteScreen() {
             </View>
           )}
 
-          {/* Trial info + actions */}
-          {!isMinor && profile?.status === 'trial' && (
-            <View style={{ marginTop: 10 }}>
-              {profile?.trial_end_date && (
-                <Text style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>
-                  Fine prova: {formatDateIT(profile.trial_end_date)}
-                </Text>
-              )}
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 8, textAlign: 'center' }}>
-                Vuoi terminare il periodo di prova?
-              </Text>
-              <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
-                <TouchableOpacity 
-                  style={{ flex: 1, maxWidth: 200, backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#4CAF50' }}
-                  onPress={async () => {
-                    const confirm = Platform.OS === 'web'
-                      ? window.confirm('Confermi di voler restare nella società?')
-                      : await new Promise<boolean>((resolve) => {
-                          Alert.alert('Resta nella Società', 'Confermi di voler restare?', [
-                            { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-                            { text: 'Conferma', onPress: () => resolve(true) }
-                          ]);
-                        });
-                    if (confirm) {
-                      try {
-                        const res = await api.post('/athletes/withdraw-trial-stay');
-                        if (res.data?.action === 'activated') {
-                          if (Platform.OS === 'web') { window.alert('Benvenuto nella società!'); } else { Alert.alert('Benvenuto!'); }
-                          loadData();
-                        } else {
-                          handleStayAndSignPrivacy();
-                        }
-                      } catch (error: any) {
-                        const msg = error.response?.data?.detail || 'Errore';
-                        if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Errore', msg); }
-                      }
-                    }
-                  }}
-                >
-                  <Text style={{ color: '#2E7D32', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>Resta nella Società</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={{ flex: 1, maxWidth: 200, backgroundColor: '#FFEBEE', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#F44336' }}
-                  onPress={async () => {
-                    const confirm = Platform.OS === 'web' 
-                      ? window.confirm('ATTENZIONE: Questa azione cancellerà definitivamente tutti i tuoi dati (profilo, pagamenti, presenze). Sei sicuro?')
-                      : await new Promise<boolean>((resolve) => {
-                          Alert.alert(
-                            'Abbandona la Società',
-                            'ATTENZIONE: Questa azione cancellerà definitivamente tutti i tuoi dati.\n\nSei sicuro?',
-                            [
-                              { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-                              { text: 'Cancella Tutto', style: 'destructive', onPress: () => resolve(true) }
-                            ]
-                          );
-                        });
-                    if (confirm) {
-                      try {
-                        await api.post('/athletes/withdraw-trial-leave');
-                        if (Platform.OS === 'web') { window.alert('Account eliminato. Tutti i tuoi dati sono stati cancellati.'); } else { Alert.alert('Account Eliminato'); }
-                        handleLogout();
-                      } catch (error: any) {
-                        const msg = error.response?.data?.detail || 'Errore';
-                        if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Errore', msg); }
-                      }
-                    }
-                  }}
-                >
-                  <Text style={{ color: '#C62828', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>Abbandona la Società</Text>
-                </TouchableOpacity>
+          {/* Trial info + actions (copiato dal flusso minore) */}
+          {!isMinor && profile?.status === 'trial' && (() => {
+            const trialHasStarted = !!(profile as any)?.trial_start_date;
+            return (
+            <View style={{ marginTop: 16 }}>
+              <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 12 }}>Stato</Text>
+                
+                {/* In prova ATTIVA (BLU) */}
+                {trialHasStarted && trialStatus && !trialStatus.trial_expired && !trialStatus.trial_warning && (
+                  <>
+                    <View style={{ backgroundColor: '#E3F2FD', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#1976D2', marginBottom: 12 }} data-testid="trial-status-active">
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#1565C0', marginBottom: 8 }}>Periodo di prova attivo</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <Ionicons name="calendar-outline" size={16} color="#1976D2" />
+                        <Text style={{ fontSize: 13, color: '#333' }}>
+                          Inizio: <Text style={{ fontWeight: '700' }}>{(profile as any).trial_start_date ? new Date((profile as any).trial_start_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</Text>
+                        </Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <Ionicons name="calendar" size={16} color="#1976D2" />
+                        <Text style={{ fontSize: 13, color: '#333' }}>
+                          Scadenza: <Text style={{ fontWeight: '700' }}>{(profile as any).trial_end_date ? new Date((profile as any).trial_end_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</Text>
+                        </Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <Ionicons name="fitness" size={16} color="#1976D2" />
+                        <Text style={{ fontSize: 13, color: '#333' }}>
+                          <Text style={{ fontWeight: '700' }}>{trialStatus.sessions_remaining}</Text> allenamenti disponibili ({trialStatus.sessions_count}/{trialStatus.max_sessions})
+                        </Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="calendar" size={16} color="#1976D2" />
+                        <Text style={{ fontSize: 13, color: '#333' }}>
+                          <Text style={{ fontWeight: '700' }}>{trialStatus.days_remaining}</Text> giorni rimanenti
+                        </Text>
+                      </View>
+                      {(profile as any).trial_document_generated && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                          <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                          <Text style={{ fontSize: 13, color: '#4CAF50', fontWeight: '600' }}>Dichiarazione di prova firmata</Text>
+                        </View>
+                      )}
+                    </View>
+                    {/* Bottoni Resta / Lascia */}
+                    <View style={{ marginBottom: 4 }}>
+                      <Text style={{ fontSize: 13, color: '#333', textAlign: 'center', marginBottom: 8, fontWeight: '500' }}>
+                        Vuoi terminare il periodo di prova?
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 10 }}>
+                        <TouchableOpacity
+                          style={{ flex: 1, borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#fff' }}
+                          onPress={async () => {
+                            const confirm = Platform.OS === 'web'
+                              ? window.confirm('Confermi di voler restare nella società?')
+                              : await new Promise<boolean>((resolve) => {
+                                  Alert.alert('Resta nella Società', 'Confermi di voler restare?', [
+                                    { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                                    { text: 'Conferma', onPress: () => resolve(true) }
+                                  ]);
+                                });
+                            if (confirm) {
+                              try {
+                                const res = await api.post('/athletes/withdraw-trial-stay');
+                                if (res.data?.action === 'activated') {
+                                  showAlert('Benvenuto!', 'Sei stato attivato nella società!');
+                                  loadData();
+                                } else {
+                                  showAlert('Successo', 'Richiesta inviata.');
+                                  loadData();
+                                }
+                              } catch (error: any) {
+                                showAlert('Errore', error.response?.data?.detail || 'Errore');
+                              }
+                            }
+                          }}
+                          data-testid="resta-societa-btn"
+                        >
+                          <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>
+                            Resta nella Società
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#FFEBEE' }}
+                          onPress={async () => {
+                            const confirm = Platform.OS === 'web'
+                              ? window.confirm('ATTENZIONE: Questa azione cancellerà definitivamente tutti i tuoi dati. Sei sicuro?')
+                              : await new Promise<boolean>((resolve) => {
+                                  Alert.alert('Lascia la Società', 'ATTENZIONE: Tutti i tuoi dati verranno cancellati.\n\nSei sicuro?', [
+                                    { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                                    { text: 'Cancella Tutto', style: 'destructive', onPress: () => resolve(true) }
+                                  ]);
+                                });
+                            if (confirm) {
+                              try {
+                                await api.post('/athletes/withdraw-trial-leave');
+                                showAlert('Account Eliminato', 'Tutti i tuoi dati sono stati cancellati.');
+                                handleLogout();
+                              } catch (error: any) {
+                                showAlert('Errore', error.response?.data?.detail || 'Errore');
+                              }
+                            }
+                          }}
+                          data-testid="lascia-societa-btn"
+                        >
+                          <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Lascia {societyName || 'la Società'}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </>
+                )}
+
+                {/* WARNING - Ultimo allenamento o ultimo giorno (ARANCIONE) */}
+                {trialHasStarted && trialStatus && trialStatus.trial_warning && !trialStatus.trial_expired && (
+                  <>
+                    <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF6F00', marginBottom: 12 }} data-testid="trial-status-warning">
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                        <Ionicons name="warning" size={18} color="#E65100" />
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100' }}>
+                          {trialStatus.sessions_remaining <= 1 ? 'Ultimo allenamento disponibile' : 'Ultimi giorni di prova'}
+                        </Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                        <Ionicons name="fitness" size={14} color="#E65100" />
+                        <Text style={{ fontSize: 12, color: '#555' }}>
+                          {trialStatus.sessions_count}/{trialStatus.max_sessions} allenamenti utilizzati
+                        </Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="calendar" size={14} color="#E65100" />
+                        <Text style={{ fontSize: 12, color: '#555' }}>
+                          {trialStatus.days_remaining} giorni rimanenti
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={{ marginBottom: 4 }}>
+                      <Text style={{ fontSize: 13, color: '#333', textAlign: 'center', marginBottom: 8, fontWeight: '500' }}>
+                        Vuoi terminare il periodo di prova?
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 10 }}>
+                        <TouchableOpacity
+                          style={{ flex: 1, borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#fff' }}
+                          onPress={async () => {
+                            const confirm = Platform.OS === 'web'
+                              ? window.confirm('Confermi di voler restare nella società?')
+                              : await new Promise<boolean>((resolve) => {
+                                  Alert.alert('Resta nella Società', 'Confermi?', [
+                                    { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                                    { text: 'Conferma', onPress: () => resolve(true) }
+                                  ]);
+                                });
+                            if (confirm) {
+                              try {
+                                const res = await api.post('/athletes/withdraw-trial-stay');
+                                if (res.data?.action === 'activated') {
+                                  showAlert('Benvenuto!', 'Sei stato attivato nella società!');
+                                } else {
+                                  showAlert('Successo', 'Richiesta inviata.');
+                                }
+                                loadData();
+                              } catch (error: any) {
+                                showAlert('Errore', error.response?.data?.detail || 'Errore');
+                              }
+                            }
+                          }}
+                          data-testid="resta-societa-warning-btn"
+                        >
+                          <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Resta nella Società</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#FFEBEE' }}
+                          onPress={async () => {
+                            const confirm = Platform.OS === 'web'
+                              ? window.confirm('ATTENZIONE: Tutti i tuoi dati verranno cancellati. Sei sicuro?')
+                              : await new Promise<boolean>((resolve) => {
+                                  Alert.alert('Lascia la Società', 'Tutti i dati cancellati. Sei sicuro?', [
+                                    { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                                    { text: 'Cancella Tutto', style: 'destructive', onPress: () => resolve(true) }
+                                  ]);
+                                });
+                            if (confirm) {
+                              try {
+                                await api.post('/athletes/withdraw-trial-leave');
+                                showAlert('Account Eliminato', 'Tutti i tuoi dati sono stati cancellati.');
+                                handleLogout();
+                              } catch (error: any) {
+                                showAlert('Errore', error.response?.data?.detail || 'Errore');
+                              }
+                            }
+                          }}
+                          data-testid="lascia-societa-warning-btn"
+                        >
+                          <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Lascia {societyName || 'la Società'}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </>
+                )}
+
+                {/* SCADUTO (ROSSO) */}
+                {trialHasStarted && trialStatus && trialStatus.trial_expired && (
+                  <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#F44336', marginBottom: 12 }} data-testid="trial-status-expired">
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <Ionicons name="close-circle" size={18} color="#C62828" />
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#C62828' }}>Periodo di prova terminato</Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#555', lineHeight: 18, marginBottom: 8 }}>
+                      Per proseguire l'attivita sportiva, avvia la procedura di iscrizione.
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                      <TouchableOpacity
+                        style={{ flex: 1, borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#fff' }}
+                        onPress={async () => {
+                          const confirm = Platform.OS === 'web'
+                            ? window.confirm('Confermi di voler restare nella società?')
+                            : await new Promise<boolean>((resolve) => {
+                                Alert.alert('Resta nella Società', 'Confermi?', [
+                                  { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                                  { text: 'Conferma', onPress: () => resolve(true) }
+                                ]);
+                              });
+                          if (confirm) {
+                            try {
+                              const res = await api.post('/athletes/withdraw-trial-stay');
+                              if (res.data?.action === 'activated') {
+                                showAlert('Benvenuto!', 'Sei stato attivato nella società!');
+                              } else {
+                                showAlert('Successo', 'Richiesta inviata.');
+                              }
+                              loadData();
+                            } catch (error: any) {
+                              showAlert('Errore', error.response?.data?.detail || 'Errore');
+                            }
+                          }
+                        }}
+                        data-testid="resta-societa-expired-btn"
+                      >
+                        <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Resta nella Società</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#FFEBEE' }}
+                        onPress={async () => {
+                          const confirm = Platform.OS === 'web'
+                            ? window.confirm('ATTENZIONE: Tutti i tuoi dati verranno cancellati. Sei sicuro?')
+                            : await new Promise<boolean>((resolve) => {
+                                Alert.alert('Lascia la Società', 'Tutti i dati cancellati. Sei sicuro?', [
+                                  { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                                  { text: 'Cancella Tutto', style: 'destructive', onPress: () => resolve(true) }
+                                ]);
+                              });
+                          if (confirm) {
+                            try {
+                              await api.post('/athletes/withdraw-trial-leave');
+                              showAlert('Account Eliminato', 'Tutti i tuoi dati sono stati cancellati.');
+                              handleLogout();
+                            } catch (error: any) {
+                              showAlert('Errore', error.response?.data?.detail || 'Errore');
+                            }
+                          }
+                        }}
+                        data-testid="lascia-societa-expired-btn"
+                      >
+                        <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Lascia {societyName || 'la Società'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* Non ancora iniziato - senza trialStatus */}
+                {!trialHasStarted && (
+                  <View style={{ backgroundColor: '#F3E5F5', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#9C27B0' }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#7B1FA2', marginBottom: 4 }}>In attesa di inizio prova</Text>
+                    <Text style={{ fontSize: 12, color: '#6A1B9A', lineHeight: 18 }}>
+                      La prova inizier{'à'} alla prima scansione QR del coach.
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
-          )}
+            );
+          })()}
         </View>
         
         {/* QR Code Section */}
