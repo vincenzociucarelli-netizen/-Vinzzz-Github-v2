@@ -9225,7 +9225,7 @@ async def withdraw_from_trial(current_user = Depends(get_current_user)):
 
 @api_router.post("/athletes/withdraw-trial-stay")
 async def withdraw_trial_stay(current_user = Depends(get_current_user)):
-    """End trial but stay - athlete must sign privacy to continue"""
+    """End trial but stay - if privacy already signed, go directly to active"""
     athlete_id = current_user.get("athlete_id")
     if not athlete_id:
         raise HTTPException(status_code=400, detail="Non sei un atleta")
@@ -9237,7 +9237,22 @@ async def withdraw_trial_stay(current_user = Depends(get_current_user)):
     if athlete.get("status") != "trial":
         raise HTTPException(status_code=400, detail="Non sei in periodo di prova")
     
-    # Change status to "pending_privacy" - athlete must sign privacy to become active
+    # If privacy is already accepted (adult 18+ signed during registration), go directly to active
+    if athlete.get("privacy_accepted"):
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {
+                "status": "active",
+                "trial_ended_date": datetime.utcnow(),
+            }}
+        )
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": {"status": "active"}}
+        )
+        return {"message": "Benvenuto nella società!", "action": "activated"}
+    
+    # Minor or athlete without privacy: change to pending_privacy
     await db.athletes.update_one(
         {"id": athlete_id},
         {"$set": {

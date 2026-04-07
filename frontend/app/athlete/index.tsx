@@ -487,10 +487,33 @@ export default function AthleteScreen() {
               </Text>
               <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
                 <TouchableOpacity 
-                  style={{ flex: 1, maxWidth: 200, backgroundColor: '#E3F2FD', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#2196F3' }}
-                  onPress={handleStayAndSignPrivacy}
+                  style={{ flex: 1, maxWidth: 200, backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#4CAF50' }}
+                  onPress={async () => {
+                    const confirm = Platform.OS === 'web'
+                      ? window.confirm('Confermi di voler restare nella società?')
+                      : await new Promise<boolean>((resolve) => {
+                          Alert.alert('Resta nella Società', 'Confermi di voler restare?', [
+                            { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                            { text: 'Conferma', onPress: () => resolve(true) }
+                          ]);
+                        });
+                    if (confirm) {
+                      try {
+                        const res = await api.post('/athletes/withdraw-trial-stay');
+                        if (res.data?.action === 'activated') {
+                          if (Platform.OS === 'web') { window.alert('Benvenuto nella società!'); } else { Alert.alert('Benvenuto!'); }
+                          loadData();
+                        } else {
+                          handleStayAndSignPrivacy();
+                        }
+                      } catch (error: any) {
+                        const msg = error.response?.data?.detail || 'Errore';
+                        if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Errore', msg); }
+                      }
+                    }
+                  }}
                 >
-                  <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>Rimani e Firma Privacy</Text>
+                  <Text style={{ color: '#2E7D32', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>Resta nella Società</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={{ flex: 1, maxWidth: 200, backgroundColor: '#FFEBEE', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#F44336' }}
@@ -499,7 +522,7 @@ export default function AthleteScreen() {
                       ? window.confirm('ATTENZIONE: Questa azione cancellerà definitivamente tutti i tuoi dati (profilo, pagamenti, presenze). Sei sicuro?')
                       : await new Promise<boolean>((resolve) => {
                           Alert.alert(
-                            'Cancella Account',
+                            'Abbandona la Società',
                             'ATTENZIONE: Questa azione cancellerà definitivamente tutti i tuoi dati.\n\nSei sicuro?',
                             [
                               { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
@@ -510,7 +533,7 @@ export default function AthleteScreen() {
                     if (confirm) {
                       try {
                         await api.post('/athletes/withdraw-trial-leave');
-                        if (Platform.OS === 'web') { window.alert('Account eliminato.'); } else { Alert.alert('Account Eliminato'); }
+                        if (Platform.OS === 'web') { window.alert('Account eliminato. Tutti i tuoi dati sono stati cancellati.'); } else { Alert.alert('Account Eliminato'); }
                         handleLogout();
                       } catch (error: any) {
                         const msg = error.response?.data?.detail || 'Errore';
@@ -519,7 +542,7 @@ export default function AthleteScreen() {
                     }
                   }}
                 >
-                  <Text style={{ color: '#C62828', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>Non Rimanere</Text>
+                  <Text style={{ color: '#C62828', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>Abbandona la Società</Text>
                 </TouchableOpacity>
               </View>
             </View>
