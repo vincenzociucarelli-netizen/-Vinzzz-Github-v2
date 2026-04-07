@@ -39,6 +39,7 @@ Comprehensive sports team management application for Italian volleyball societie
 - Athlete data export includes "Stato Nascita" column
 
 ## Completed Features (Latest)
+- [2026-04-07] Fix Ricevuta Fiscale lato Atleta: il backend ora restituisce il nome breve della società ("Pallavolo Perugia SSD a RL") invece della ragione sociale completa nell'endpoint `/payments/{id}/fiscal-receipt`.
 - [2026-04-07] Allineamento tracciabilità consensi atleta adulto: formato strutturato {value, timestamp, user_id, document_version} con storico (insert, non update). Migrati dati Eva/Lena. Fix logica update per atleti adulti (chiave diretta, non per-genitore).
 - [2026-04-07] Rimosso campo "Codice Fiscale" dalla registrazione atleta maggiorenne (verrà compilato nel profilo). Fix visualizzazione consensi per atleti adulti (gestione formato booleano legacy).
 - [2026-04-07] Fix bug 403 profilo atleta adulto: gli atleti adulti (ruolo "athlete") ora possono accedere ai propri consensi senza essere reindirizzati al login. Corretta anche gestione dei consensi salvati come booleani (vs dict).
