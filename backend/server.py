@@ -2087,13 +2087,14 @@ async def verify_email(token: str):
     if user.get("email_verified"):
         return {"message": "Email già verificata. Puoi accedere con le tue credenziali.", "already_verified": True}
     
-    # Activate user
+    # Activate user - set appropriate status based on role
+    new_user_status = "pending_trial" if user.get("role") == "athlete" else "approved"
     trial_end = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
     await db.users.update_one(
         {"id": user["id"]},
         {"$set": {
             "email_verified": True,
-            "status": "approved",
+            "status": new_user_status,
             "email_verification_token": None,
             "verified_at": datetime.now(timezone.utc).isoformat(),
         }}

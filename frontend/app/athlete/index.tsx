@@ -408,13 +408,13 @@ export default function AthleteScreen() {
               )}
             </View>
             <View style={{ 
-              backgroundColor: isMinor ? '#FFF3E0' : profile?.status === 'trial' ? '#FFF3E0' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#E3F2FD' : '#E8F5E9', 
+              backgroundColor: isMinor ? '#FFF3E0' : profile?.status === 'trial' ? '#FFF3E0' : profile?.status === 'pending_trial' ? '#F3E5F5' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#E3F2FD' : '#E8F5E9', 
               paddingHorizontal: 10, 
               paddingVertical: 5, 
               borderRadius: 12
             }}>
               <Text style={{ 
-                color: isMinor ? '#FF9800' : profile?.status === 'trial' ? '#FF9800' : profile?.status === 'pending_trial' ? '#1976D2' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#1976D2' : '#4CAF50',
+                color: isMinor ? '#FF9800' : profile?.status === 'trial' ? '#FF9800' : profile?.status === 'pending_trial' ? '#7B1FA2' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#1976D2' : '#4CAF50',
                 fontWeight: '600',
                 fontSize: 12
               }} data-testid="athlete-status">
