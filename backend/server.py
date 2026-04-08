@@ -16905,7 +16905,7 @@ async def list_signed_documents(
             if "$or" in query:
                 query["$and"] = [{"$or": query.pop("$or")}, {"$or": filter_conditions}]
     
-    documents = await db.signed_documents.find(query, {"pdf_base64": 0}).to_list(100)
+    documents = await db.signed_documents.find(query, {"pdf_base64": 0}).sort([("signed_at", -1), ("created_at", -1)]).to_list(100)
     
     for doc in documents:
         clean_mongo_doc(doc)
@@ -20357,8 +20357,15 @@ async def get_my_documents(
                 }
             })
     
-    # Prepend consent docs to personal section
-    grouped["personal"] = consent_docs + grouped["personal"]
+    # Merge consent docs with personal section and sort by date (newest first)
+    all_personal = consent_docs + grouped["personal"]
+    def get_doc_date(d):
+        dt = d.get("signed_at") or d.get("created_at")
+        if dt is None:
+            return ""
+        return str(dt)
+    all_personal.sort(key=get_doc_date, reverse=True)
+    grouped["personal"] = all_personal
     
     # Convert minors dict to list for easier frontend handling
     minors_list = list(grouped["minors"].values())
