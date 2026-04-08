@@ -585,7 +585,7 @@ export default function AthleteScreen() {
                           data-testid="resta-societa-btn"
                         >
                           <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>
-                            Resta nella Società
+                            Interrompi la prova e resta nella Società
                           </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -673,7 +673,7 @@ export default function AthleteScreen() {
                           }}
                           data-testid="resta-societa-warning-btn"
                         >
-                          <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Resta nella Società</Text>
+                          <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Interrompi la prova e resta nella Società</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#FFEBEE' }}
@@ -743,7 +743,7 @@ export default function AthleteScreen() {
                         }}
                         data-testid="resta-societa-expired-btn"
                       >
-                        <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Resta nella Società</Text>
+                        <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>Interrompi la prova e resta nella Società</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={{ flex: 1, borderWidth: 2, borderColor: '#C62828', borderRadius: 10, paddingVertical: 11, alignItems: 'center', backgroundColor: '#FFEBEE' }}
