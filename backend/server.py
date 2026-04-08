@@ -11572,8 +11572,41 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
     athlete_id = athlete["id"]
     athlete_name = athlete.get("full_name", "Atleta")
     
-    # 2. Check if athlete is active
+    # 2. Check if athlete is active or in trial
     athlete_status = athlete.get("status", "pending")
+    
+    # Allow pending_trial athletes: first QR scan starts their trial
+    if athlete_status == "pending_trial":
+        # Start the trial period
+        trial_days = 14  # default trial period
+        trial_sessions = 3  # default max sessions
+        
+        # Get society settings for trial config
+        society_settings = await db.settings.find_one({"type": "society"})
+        if society_settings:
+            trial_days = society_settings.get("trial_days", 14)
+            trial_sessions = society_settings.get("trial_max_sessions", 3)
+        
+        trial_start = datetime.now()
+        trial_end = trial_start + timedelta(days=trial_days)
+        
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {
+                "status": "trial",
+                "trial_start_date": trial_start.isoformat(),
+                "trial_end_date": trial_end.isoformat(),
+                "trial_max_sessions": trial_sessions,
+            }}
+        )
+        # Also update user status
+        user_id = athlete.get("user_id")
+        if user_id:
+            await db.users.update_one({"id": user_id}, {"$set": {"status": "trial"}})
+        
+        athlete_status = "trial"
+        logger.info(f"Trial started for athlete {athlete_name} ({athlete_id})")
+    
     if athlete_status not in ["active", "trial", "approved"]:
         raise HTTPException(
             status_code=403, 
