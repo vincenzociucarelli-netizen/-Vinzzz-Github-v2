@@ -9,6 +9,8 @@ import {
   Alert,
   Platform,
   Image,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -89,6 +91,9 @@ export default function AdminDashboard() {
   const [processingDeletion, setProcessingDeletion] = useState<string | null>(null);
   const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
   const [showShareLink, setShowShareLink] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ email: '', first_name: '', last_name: '' });
   const [proEnabled, setProEnabled] = useState<boolean>(false);
 
   // Refresh user data on mount to get profile_photo
@@ -536,6 +541,80 @@ export default function AdminDashboard() {
                 </View>
               </View>
             )}
+            
+            {/* Invita via Email */}
+            <TouchableOpacity 
+              style={{ backgroundColor: '#007AFF', paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 }}
+              onPress={() => setShowInviteModal(true)}
+              data-testid="invite-email-btn"
+            >
+              <Ionicons name="mail" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Invita via Email</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Invite Email Modal */}
+        {showInviteModal && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginHorizontal: 16, borderWidth: 1, borderColor: '#e0e0e0', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#333' }}>Invita via Email</Text>
+              <TouchableOpacity onPress={() => { setShowInviteModal(false); setInviteForm({ email: '', first_name: '', last_name: '' }); }}>
+                <Ionicons name="close-circle" size={24} color="#999" />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, marginBottom: 8, fontSize: 14 }}
+              placeholder="Email *"
+              value={inviteForm.email}
+              onChangeText={(t) => setInviteForm({...inviteForm, email: t})}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <TextInput
+              style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, marginBottom: 8, fontSize: 14 }}
+              placeholder="Nome (opzionale)"
+              value={inviteForm.first_name}
+              onChangeText={(t) => setInviteForm({...inviteForm, first_name: t})}
+            />
+            <TextInput
+              style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 14 }}
+              placeholder="Cognome (opzionale)"
+              value={inviteForm.last_name}
+              onChangeText={(t) => setInviteForm({...inviteForm, last_name: t})}
+            />
+            <TouchableOpacity 
+              style={{ backgroundColor: sendingInvite ? '#ccc' : '#007AFF', paddingVertical: 12, borderRadius: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}
+              disabled={sendingInvite || !inviteForm.email}
+              onPress={async () => {
+                if (!inviteForm.email) return;
+                setSendingInvite(true);
+                try {
+                  const res = await api.post('/athletes/invite', {
+                    email: inviteForm.email,
+                    first_name: inviteForm.first_name || undefined,
+                    last_name: inviteForm.last_name || undefined,
+                  });
+                  showInfo('Invito Inviato', res.data.message || `Invito inviato a ${inviteForm.email}`);
+                  setShowInviteModal(false);
+                  setInviteForm({ email: '', first_name: '', last_name: '' });
+                } catch (error: any) {
+                  showInfo('Errore', error.response?.data?.detail || 'Errore nell\'invio');
+                } finally {
+                  setSendingInvite(false);
+                }
+              }}
+              data-testid="send-invite-btn"
+            >
+              {sendingInvite ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="send" size={16} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Invia Invito</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
         )}
 
