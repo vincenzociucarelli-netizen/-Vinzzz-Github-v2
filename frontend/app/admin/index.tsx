@@ -490,21 +490,29 @@ export default function AdminDashboard() {
               </View>
             </View>
             
-            {/* Share Registration Link */}
-            <TouchableOpacity 
-              style={{ backgroundColor: '#25D366', paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 }}
-              onPress={() => setShowShareLink(!showShareLink)}
-              data-testid="share-link-btn"
-            >
-              <Ionicons name="share-social" size={16} color="#fff" />
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Condividi Link Registrazione</Text>
-            </TouchableOpacity>
+            {/* Share + Invite buttons in single row */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+              <TouchableOpacity 
+                style={{ flex: 1, backgroundColor: '#25D366', paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                onPress={() => setShowShareLink(!showShareLink)}
+                data-testid="share-link-btn"
+              >
+                <Ionicons name="share-social" size={14} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Condividi</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={{ flex: 1, backgroundColor: '#007AFF', paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                onPress={() => setShowInviteModal(true)}
+                data-testid="invite-email-btn"
+              >
+                <Ionicons name="mail" size={14} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Invita Email</Text>
+              </TouchableOpacity>
+            </View>
             
+            {/* Expandable Share Link Panel */}
             {showShareLink && (
               <View style={{ backgroundColor: '#f0f4f8', borderRadius: 8, padding: 10, marginTop: 8, borderWidth: 1, borderColor: '#e0e0e0' }}>
-                <Text style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>
-                  Condividi questo link per registrare nuovi membri:
-                </Text>
                 <View style={{ backgroundColor: '#fff', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', marginBottom: 8 }}>
                   <Text style={{ fontSize: 10, color: '#333', fontFamily: 'monospace' }} selectable>
                     {Platform.OS === 'web' ? `${window.location.origin}/register?code=${inviteCode}` : `registrateam://register?code=${inviteCode}`}
@@ -512,45 +520,31 @@ export default function AdminDashboard() {
                 </View>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <TouchableOpacity 
-                    style={{ flex: 1, backgroundColor: '#007AFF', paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    style={{ flex: 1, backgroundColor: '#007AFF', paddingVertical: 7, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                     onPress={() => {
                       const link = Platform.OS === 'web' ? `${window.location.origin}/register?code=${inviteCode}` : '';
-                      if (Platform.OS === 'web') {
-                        navigator.clipboard.writeText(link);
-                        showInfo('Copiato!', 'Link negli appunti');
-                      }
+                      if (Platform.OS === 'web') { navigator.clipboard.writeText(link); showInfo('Copiato!', 'Link negli appunti'); }
                     }}
                     data-testid="copy-link-btn"
                   >
-                    <Ionicons name="copy" size={14} color="#fff" />
-                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Copia</Text>
+                    <Ionicons name="copy" size={13} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 11 }}>Copia Link</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
-                    style={{ flex: 1, backgroundColor: '#25D366', paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    style={{ flex: 1, backgroundColor: '#25D366', paddingVertical: 7, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                     onPress={() => {
                       const link = Platform.OS === 'web' ? `${window.location.origin}/register?code=${inviteCode}` : '';
-                      const msg = `Ciao! Per iscriverti alla ${society.name}, registrati qui:\n${link}\n\nInserisci il codice società: ${inviteCode}`;
-                      const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-                      if (Platform.OS === 'web') window.open(url, '_blank');
+                      const msg = `Ciao! Per iscriverti alla ${society.name}, registrati qui:\n${link}\n\nCodice società: ${inviteCode}`;
+                      if (Platform.OS === 'web') window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
                     }}
                     data-testid="share-whatsapp-btn"
                   >
-                    <Ionicons name="logo-whatsapp" size={14} color="#fff" />
-                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>WhatsApp</Text>
+                    <Ionicons name="logo-whatsapp" size={13} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 11 }}>WhatsApp</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             )}
-            
-            {/* Invita via Email */}
-            <TouchableOpacity 
-              style={{ backgroundColor: '#007AFF', paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 }}
-              onPress={() => setShowInviteModal(true)}
-              data-testid="invite-email-btn"
-            >
-              <Ionicons name="mail" size={16} color="#fff" />
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Invita via Email</Text>
-            </TouchableOpacity>
           </View>
         )}
 
