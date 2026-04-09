@@ -263,31 +263,6 @@ export default function CoachAthleteDetail() {
       <ScrollView style={styles.content}>
         {/* Athlete Info Card */}
         <View style={styles.athleteCard}>
-          <View style={styles.photoSection}>
-            {transformingPhoto ? (
-              <View style={styles.photoPlaceholder}>
-                <ActivityIndicator size="large" color="#007AFF" />
-                <Text style={styles.transformingText}>Trasformando...</Text>
-              </View>
-            ) : photoArtistic ? (
-              <Image
-                source={{ uri: `data:image/jpeg;base64,${photoArtistic}` }}
-                style={styles.athletePhoto}
-              />
-            ) : (
-              <View style={styles.photoPlaceholder}>
-                <Ionicons name="person" size={48} color="#ccc" />
-              </View>
-            )}
-            <TouchableOpacity 
-              style={[styles.changePhotoBtn, transformingPhoto && styles.changePhotoBtnDisabled]} 
-              onPress={handleSelectPhoto}
-              disabled={transformingPhoto}
-            >
-              <Ionicons name="camera" size={16} color="#fff" />
-              <Text style={styles.changePhotoBtnText}>Foto</Text>
-            </TouchableOpacity>
-          </View>
           <View style={styles.athleteInfo}>
             <Text style={styles.athleteName}>{athlete.full_name}</Text>
             {age && <Text style={styles.athleteAge}>{age} anni</Text>}

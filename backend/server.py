@@ -8025,9 +8025,10 @@ async def get_athlete_technical_data(athlete_id: str, current_user = Depends(get
         cert_expiry = certificate.get("expiry_date")
         if cert_expiry:
             expiry_date = datetime.fromisoformat(cert_expiry.replace('Z', '+00:00')) if isinstance(cert_expiry, str) else cert_expiry
-            if expiry_date < datetime.now(expiry_date.tzinfo) if expiry_date.tzinfo else datetime.utcnow():
+            now = datetime.now(expiry_date.tzinfo) if expiry_date.tzinfo else datetime.utcnow()
+            if expiry_date < now:
                 cert_status = "expired"
-            elif expiry_date < (datetime.now(expiry_date.tzinfo) if expiry_date.tzinfo else datetime.utcnow()) + timedelta(days=30):
+            elif expiry_date < now + timedelta(days=30):
                 cert_status = "expiring_soon"
             else:
                 cert_status = "valid"
