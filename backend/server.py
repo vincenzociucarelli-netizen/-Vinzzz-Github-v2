@@ -14507,7 +14507,13 @@ async def check_pending_trials(current_user = Depends(get_current_user)):
                     "id": athlete.get("id"),
                     "full_name": athlete.get("full_name"),
                     "team_name": athlete.get("team_name"),
-                    "trial_end_date": trial_end_date.isoformat()
+                    "trial_end_date": trial_end_date.isoformat(),
+                    "fiscal_code": athlete.get("fiscal_code"),
+                    "date_of_birth": athlete.get("date_of_birth"),
+                    "birth_place": athlete.get("birth_place") or athlete.get("place_of_birth"),
+                    "place_of_birth": athlete.get("place_of_birth") or athlete.get("birth_place"),
+                    "country_of_birth": athlete.get("country_of_birth"),
+                    "gender": athlete.get("gender"),
                 })
     
     return {"athletes_requiring_action": athletes_requiring_action}
