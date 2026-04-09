@@ -10948,7 +10948,7 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
         "parent": {
             "first_name": athlete.get("tax_payer_first_name", "") or (parent.get("first_name", "") if parent else current_user.get("first_name", "")),
             "last_name": athlete.get("tax_payer_last_name", "") or (parent.get("last_name", "") if parent else current_user.get("last_name", "")),
-            "fiscal_code": athlete.get("tax_payer_fiscal_code", "") or (parent.get("tax_code", "") if parent else current_user.get("tax_code", "")),
+            "fiscal_code": athlete.get("tax_payer_fiscal_code", "") or (parent.get("fiscal_code", "") or parent.get("tax_code", "") if parent else current_user.get("fiscal_code", "") or current_user.get("tax_code", "")),
         },
         "society": {
             "name": society.get("name") or society.get("ragione_sociale", "SOCIETÀ SPORTIVA") if society else "SOCIETÀ SPORTIVA",
