@@ -88,6 +88,7 @@ export default function AdminDashboard() {
   const [inviteCode, setInviteCode] = useState<string>('');
   const [processingDeletion, setProcessingDeletion] = useState<string | null>(null);
   const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
+  const [showShareLink, setShowShareLink] = useState(false);
   const [proEnabled, setProEnabled] = useState<boolean>(false);
 
   // Refresh user data on mount to get profile_photo
@@ -371,20 +372,6 @@ export default function AdminDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Beta Phase Banner */}
-        <View style={styles.betaBanner}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 20, marginRight: 8 }}>{Icons.gift}</Text>
-            <Text style={styles.betaBannerTitle}>Fase Beta Gratuita</Text>
-          </View>
-          <Text style={styles.betaBannerText}>
-            Accesso completo fino al 30/09/2026
-          </Text>
-          <Text style={styles.betaBannerSubtext}>
-            Dal 01/10/2026: versione FREE (30 tesserati) + pack aggiuntivi
-          </Text>
-        </View>
-
         <Text style={styles.welcomeText}>
           Benvenuto, {user?.full_name?.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
         </Text>
@@ -472,7 +459,7 @@ export default function AdminDashboard() {
           </View>
         )}
 
-        {/* Invite Code Card - VERSIONE ULTRA COMPATTA */}
+        {/* Invite Code Card + Share/Invite Buttons */}
         {inviteCode && (
           <View style={styles.inviteCodeCard}>
             <View style={styles.inviteCodeRow}>
@@ -486,7 +473,7 @@ export default function AdminDashboard() {
                   onPress={() => {
                     if (Platform.OS === 'web') {
                       navigator.clipboard.writeText(inviteCode);
-                      showInfo('✓ Copiato!', 'Codice negli appunti');
+                      showInfo('Copiato!', 'Codice negli appunti');
                     } else {
                       showInfo('Codice Invito', `${inviteCode}\n\nComunica questo codice ai tuoi membri`);
                     }
@@ -497,6 +484,58 @@ export default function AdminDashboard() {
                 </TouchableOpacity>
               </View>
             </View>
+            
+            {/* Share Registration Link */}
+            <TouchableOpacity 
+              style={{ backgroundColor: '#25D366', paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10 }}
+              onPress={() => setShowShareLink(!showShareLink)}
+              data-testid="share-link-btn"
+            >
+              <Ionicons name="share-social" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Condividi Link Registrazione</Text>
+            </TouchableOpacity>
+            
+            {showShareLink && (
+              <View style={{ backgroundColor: '#f0f4f8', borderRadius: 8, padding: 10, marginTop: 8, borderWidth: 1, borderColor: '#e0e0e0' }}>
+                <Text style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>
+                  Condividi questo link per registrare nuovi membri:
+                </Text>
+                <View style={{ backgroundColor: '#fff', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 10, color: '#333', fontFamily: 'monospace' }} selectable>
+                    {Platform.OS === 'web' ? `${window.location.origin}/register?code=${inviteCode}` : `registrateam://register?code=${inviteCode}`}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity 
+                    style={{ flex: 1, backgroundColor: '#007AFF', paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    onPress={() => {
+                      const link = Platform.OS === 'web' ? `${window.location.origin}/register?code=${inviteCode}` : '';
+                      if (Platform.OS === 'web') {
+                        navigator.clipboard.writeText(link);
+                        showInfo('Copiato!', 'Link negli appunti');
+                      }
+                    }}
+                    data-testid="copy-link-btn"
+                  >
+                    <Ionicons name="copy" size={14} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Copia</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={{ flex: 1, backgroundColor: '#25D366', paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    onPress={() => {
+                      const link = Platform.OS === 'web' ? `${window.location.origin}/register?code=${inviteCode}` : '';
+                      const msg = `Ciao! Per iscriverti alla ${society.name}, registrati qui:\n${link}\n\nInserisci il codice società: ${inviteCode}`;
+                      const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                      if (Platform.OS === 'web') window.open(url, '_blank');
+                    }}
+                    data-testid="share-whatsapp-btn"
+                  >
+                    <Ionicons name="logo-whatsapp" size={14} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>WhatsApp</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
         )}
 

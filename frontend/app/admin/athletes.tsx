@@ -603,62 +603,6 @@ export default function AdminAthletes() {
         </View>
       </View>
 
-      {/* Share Registration Link Button */}
-      <View style={{ paddingHorizontal: 16, marginBottom: 4 }}>
-        <TouchableOpacity 
-          style={{ backgroundColor: '#25D366', paddingVertical: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-          onPress={() => setShowShareLink(!showShareLink)}
-          data-testid="share-link-btn"
-        >
-          <Ionicons name="share-social" size={18} color="#fff" />
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Condividi Link Registrazione</Text>
-        </TouchableOpacity>
-        
-        {showShareLink && (
-          <View style={{ backgroundColor: '#f5f7fa', borderRadius: 8, padding: 12, marginTop: 8, borderWidth: 1, borderColor: '#e0e0e0' }}>
-            <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-              Condividi questo link per far registrare nuovi atleti o genitori alla {societyName}:
-            </Text>
-            <View style={{ backgroundColor: '#fff', padding: 10, borderRadius: 6, borderWidth: 1, borderColor: '#ddd', marginBottom: 10 }}>
-              <Text style={{ fontSize: 11, color: '#333', fontFamily: 'monospace' }} selectable>{getRegistrationLink()}</Text>
-            </View>
-            <Text style={{ fontSize: 11, color: '#999', marginBottom: 10 }}>
-              Codice società: <Text style={{ fontWeight: '700', color: '#333' }}>{inviteCode}</Text>
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity 
-                style={{ flex: 1, backgroundColor: '#007AFF', paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                onPress={handleCopyLink}
-                data-testid="copy-link-btn"
-              >
-                <Ionicons name="copy" size={16} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Copia</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={{ flex: 1, backgroundColor: '#25D366', paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                onPress={handleShareWhatsApp}
-                data-testid="share-whatsapp-btn"
-              >
-                <Ionicons name="logo-whatsapp" size={16} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>WhatsApp</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </View>
-      
-      {/* Invite Single Person Button */}
-      <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
-        <TouchableOpacity 
-          style={{ backgroundColor: '#007AFF', paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-          onPress={() => setShowInviteModal(true)}
-          data-testid="invite-person-btn"
-        >
-          <Ionicons name="person-add" size={18} color="#fff" />
-          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Invita Persona</Text>
-        </TouchableOpacity>
-      </View>
-
       <View style={styles.contentContainer}>
         {/* Athletes List */}
         <SectionList
