@@ -10841,8 +10841,21 @@ async def get_expiring_notifications(current_user = Depends(get_current_user)):
                             "amount": amount
                         })
     
-        # Check trial period expiring
-        if athlete.get("is_trial") and athlete.get("trial_start_date"):
+        # Check trial period expiring - only for athletes still in trial status
+        athlete_status = athlete.get("status", "")
+        if athlete_status == "trial" and athlete.get("trial_start_date"):
+            # Check if athlete already has a valid medical certificate
+            cert = await db.certificates.find_one({"athlete_id": athlete_id})
+            has_valid_cert = False
+            if cert:
+                cert_exp = cert.get("expiry_date")
+                if cert_exp:
+                    try:
+                        exp_dt = datetime.fromisoformat(str(cert_exp).replace('Z', '+00:00')) if isinstance(cert_exp, str) else cert_exp
+                        has_valid_cert = exp_dt.replace(tzinfo=None) > today
+                    except:
+                        pass
+            
             society_settings = await db.settings.find_one({"type": "society"})
             max_sessions = society_settings.get("trial_max_sessions", 3) if society_settings else 3
             max_days = society_settings.get("trial_max_days", 7) if society_settings else 7
@@ -10862,16 +10875,17 @@ async def get_expiring_notifications(current_user = Depends(get_current_user)):
             trial_warning = not trial_expired and (sessions_remaining <= 1 or (days_remaining is not None and days_remaining <= 2))
             
             if trial_expired:
-                notifications.append({
-                    "type": "trial",
-                    "athlete_id": athlete_id,
-                    "athlete_name": athlete_name,
-                    "message": "Periodo di prova terminato. Inserire certificato medico per proseguire.",
-                    "status": "expired",
-                    "days_until": 0,
-                    "sessions_remaining": 0,
-                    "trial_days_remaining": days_remaining or 0,
-                })
+                if not has_valid_cert:
+                    notifications.append({
+                        "type": "trial",
+                        "athlete_id": athlete_id,
+                        "athlete_name": athlete_name,
+                        "message": "Periodo di prova terminato. Inserire certificato medico per proseguire.",
+                        "status": "expired",
+                        "days_until": 0,
+                        "sessions_remaining": 0,
+                        "trial_days_remaining": days_remaining or 0,
+                    })
             elif trial_warning:
                 warn_detail = f"Rimane {sessions_remaining} allenamento" if sessions_remaining <= 1 else f"Rimangono {days_remaining} giorni"
                 notifications.append({
