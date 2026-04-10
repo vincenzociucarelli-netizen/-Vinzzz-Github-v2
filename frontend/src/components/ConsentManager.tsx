@@ -56,7 +56,7 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
   const fetchConsents = async () => {
     try {
       const endpoint =
-        entityType === 'user'
+        (entityType === 'user' || entityType === 'staff')
           ? '/users/me/consents'
           : `/athletes/${entityId}/consents`;
       const res = await api.get(endpoint);
@@ -77,7 +77,7 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
     setSaving(type);
     try {
       const endpoint =
-        entityType === 'user'
+        (entityType === 'user' || entityType === 'staff')
           ? '/users/me/consents'
           : `/athletes/${entityId}/consents`;
       const body: any = {};
@@ -86,7 +86,7 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
       setConsents(res.data.consents || {});
       // Refresh history
       const refreshRes = await api.get(
-        entityType === 'user'
+        (entityType === 'user' || entityType === 'staff')
           ? '/users/me/consents'
           : `/athletes/${entityId}/consents`
       );
