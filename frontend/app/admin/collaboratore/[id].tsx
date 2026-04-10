@@ -35,6 +35,7 @@ interface Collaboratore {
   last_name?: string;
   date_of_birth?: string;
   place_of_birth?: string;
+  country_of_birth?: string;
   fiscal_code?: string;
   address?: string;
   city?: string;
@@ -581,6 +582,10 @@ export default function AdminCollaboratoreDetail() {
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Data di nascita:</Text>
             <Text style={styles.infoValue}>{formatDate(collaboratore.date_of_birth)}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Stato di nascita:</Text>
+            <Text style={styles.infoValue}>{collaboratore.country_of_birth || 'Italia'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Luogo di nascita:</Text>

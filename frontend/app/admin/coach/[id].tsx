@@ -37,6 +37,7 @@ interface Coach {
   last_name?: string;
   date_of_birth?: string;
   place_of_birth?: string;
+  country_of_birth?: string;
   fiscal_code?: string;
   address?: string;
   city?: string;
@@ -783,6 +784,10 @@ export default function AdminCoachDetail() {
           <View style={styles.infoRow}>
             <Text style={styles.label}>Data di nascita</Text>
             <Text style={styles.value}>{formatDate(coach.date_of_birth)}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Stato di nascita</Text>
+            <Text style={styles.value}>{coach.country_of_birth || 'Italia'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.label}>Luogo di nascita</Text>
