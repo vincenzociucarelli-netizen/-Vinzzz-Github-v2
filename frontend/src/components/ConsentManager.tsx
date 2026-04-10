@@ -110,7 +110,8 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
     );
   }
 
-  // For users (parents/staff), hide images_internal - covered by legitimate interest
+  // For parents (user), hide images_internal - covered by legitimate interest
+  // For staff (coaches), show both image consents
   const consentTypes = entityType === 'user' 
     ? ['privacy_viewed', 'images_promo'] as const
     : ['privacy_viewed', 'images_internal', 'images_promo'] as const;
