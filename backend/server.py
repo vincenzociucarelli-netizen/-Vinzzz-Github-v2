@@ -14899,11 +14899,13 @@ def generate_gdpr_adult_privacy_pdf(
     
     c.setFont("Helvetica", 9)
     check_ii = "X" if cd.get("images_internal", False) else " "
-    y = draw_wrapped_text(c, f"[{check_ii}] Acconsento all'utilizzo delle mie immagini per finalita' interne (es. comunicazioni, gruppi, attivita')", 2*cm, y, max_w, font_name="Helvetica", font_size=9)
+    ii_text = f"[{check_ii}] Acconsento all'utilizzo delle mie immagini per finalita' interne (es. comunicazioni, gruppi, attivita')" if is_staff else f"[{check_ii}] Acconsento all'utilizzo delle mie immagini per finalita' interne (es. comunicazioni, gruppi, attivita' sportive)"
+    y = draw_wrapped_text(c, ii_text, 2*cm, y, max_w, font_name="Helvetica", font_size=9)
     y -= 0.3*cm
     
     check_ip = "X" if cd.get("images_promo", False) else " "
-    y = draw_wrapped_text(c, f"[{check_ip}] Acconsento all'utilizzo delle mie immagini per finalita' promozionali (es. sito web, social, materiale pubblicitario)", 2*cm, y, max_w, font_name="Helvetica", font_size=9)
+    ip_text = f"[{check_ip}] Acconsento all'utilizzo delle mie immagini per finalita' promozionali (es. sito web, social, materiale pubblicitario)" if is_staff else f"[{check_ip}] Acconsento all'utilizzo delle mie immagini per finalita' promozionali (es. sito web, social network, materiale pubblicitario)"
+    y = draw_wrapped_text(c, ip_text, 2*cm, y, max_w, font_name="Helvetica", font_size=9)
     y -= 0.3*cm
     
     # Nota revoca consensi
