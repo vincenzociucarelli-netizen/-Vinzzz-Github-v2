@@ -84,13 +84,17 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
   const [consentImagesInternal, setConsentImagesInternal] = useState(false);
   const [consentImagesPromo, setConsentImagesPromo] = useState(false);
 
-  // Reset preview when modal opens or minor changes
+  // Reset preview when modal opens or minor changes or signer changes
   useEffect(() => {
     if (visible) {
+      // Revoke old blob URL to prevent caching
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
       setPreviewUrl(null);
       setShowPdfViewer(false);
     }
-  }, [visible, minorInfo?.id]);
+  }, [visible, minorInfo?.id, signerInfo?.name, signerInfo?.surname, documentType]);
 
   // Load society info if not provided
   useEffect(() => {
@@ -111,6 +115,12 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
   const handlePreviewPDF = async () => {
     setLoadingPreview(true);
     try {
+      // Revoke old blob URL before generating new one
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+      
       const payload: any = {
         document_type: documentType,
         signer_name: signerInfo.name,
@@ -683,7 +693,7 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
         <View style={styles.pdfViewerOverlay}>
           <View style={styles.pdfViewerContainer}>
             <View style={styles.pdfViewerHeader}>
-              <Text style={styles.pdfViewerTitle}>Anteprima Documento</Text>
+              <Text style={styles.pdfViewerTitle}>Anteprima Documento — {signerInfo.surname} {signerInfo.name}</Text>
               <TouchableOpacity 
                 style={styles.pdfViewerCloseBtn} 
                 onPress={() => setShowPdfViewer(false)}

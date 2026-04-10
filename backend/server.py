@@ -17461,7 +17461,10 @@ async def preview_gdpr_privacy_document(
                 consent_data=request.consent_data if request.consent_data else None,
                 signer_role=current_user.get("role", "")
             )
-            doc_title = "ANTEPRIMA - Informativa Privacy GDPR - Staff"
+            role = current_user.get("role", "")
+            staff_roles = ["coach", "collaboratore", "dirigente"]
+            role_label = "Staff" if role in staff_roles else "Atleta Maggiorenne"
+            doc_title = f"ANTEPRIMA - Informativa Privacy GDPR - {role_label}"
             
         elif request.document_type == "gdpr_minor":
             if not request.minor_id:
