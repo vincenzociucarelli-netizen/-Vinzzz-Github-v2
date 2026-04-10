@@ -210,7 +210,7 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
         signer_province: signerInfo.province,
         consent_data: {
           privacy_viewed: consentPrivacyViewed,
-          ...(isMinor ? { images_internal: consentImagesInternal } : {}),
+          images_internal: consentImagesInternal,
           images_promo: consentImagesPromo,
           document_version: '1.0-2026',
         },
@@ -301,11 +301,11 @@ L'interessato può esercitare i diritti previsti dagli articoli 15–22 del GDPR
 7. RIPRESE FOTOGRAFICHE E VIDEO
 Durante eventi, gare, allenamenti e manifestazioni sportive potranno essere effettuate riprese fotografiche e video a fini documentativi e informativi. La presenza in tali contesti comporta la possibilità di essere ripresi sullo sfondo delle immagini. Tale trattamento si fonda sul legittimo interesse della Società alla documentazione delle proprie attività. Per eventuali utilizzi promozionali specifici (es. pubblicazione su sito web o social network), sarà richiesto apposito consenso. L'interessato ha in ogni momento il diritto di richiedere la rimozione di immagini in cui appare, contattando la Società ai recapiti indicati.
 
-8. FIRMA DIGITALE DEL DOCUMENTO
-La sottoscrizione del presente documento può avvenire in forma digitale tramite l'applicativo gestionale utilizzato dalla Società. Il sistema può registrare metadati tecnici della firma digitale, tra cui: data e ora della sottoscrizione; identificativo dell'utente; dispositivo utilizzato per la firma. Tali informazioni sono raccolte esclusivamente ai fini della tracciabilità e della sicurezza del sistema.
+8. ACCETTAZIONE DIGITALE DEL DOCUMENTO
+L'accettazione del presente documento avviene tramite l'applicativo gestionale utilizzato dalla Società. Il sistema registra metadati tecnici dell'accettazione (data, ora, identificativo utente, dispositivo, IP) ai fini della tracciabilità e sicurezza.
 
 DICHIARAZIONE
-Il sottoscritto dichiara di aver letto e compreso la presente informativa e prende atto del trattamento dei dati personali per le finalità indicate.
+Il sottoscritto dichiara di aver preso visione dell'informativa sulla privacy ai sensi del Regolamento UE 2016/679 e prende atto del trattamento dei propri dati personali.
 `.trim();
 
   const privacyTextMinor = `
@@ -540,7 +540,7 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                   </View>
                   <View style={consentStyles.checkboxTextContainer}>
                     <Text style={consentStyles.checkboxLabel}>Utilizzo immagini per finalità promozionali</Text>
-                    <Text style={consentStyles.checkboxSubtext}>Sito web, social network, materiale informativo della società</Text>
+                    <Text style={consentStyles.checkboxSubtext}>Sito web, social, materiale pubblicitario</Text>
                   </View>
                 </TouchableOpacity>
               </View>

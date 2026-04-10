@@ -14718,7 +14718,8 @@ def generate_gdpr_adult_privacy_pdf(
     document_hash: str,
     user_id: str,
     society_id: str,
-    consent_data: dict = None
+    consent_data: dict = None,
+    signer_role: str = ""
 ) -> bytes:
     """Generate GDPR-compliant privacy consent PDF for adults (collaboratori, coach, dirigenti, atleti maggiorenni)"""
     if not HAS_PDF_GENERATION:
@@ -14754,9 +14755,13 @@ def generate_gdpr_adult_privacy_pdf(
         return y
     
     # ==================== PAGE 1 ====================
-    # Header
+    # Header - role-specific title
+    staff_roles = ["coach", "collaboratore", "dirigente"]
+    is_staff = signer_role.lower() in staff_roles if signer_role else False
+    pdf_title = "INFORMATIVA PRIVACY PER STAFF" if is_staff else "INFORMATIVA PRIVACY PER ATLETI MAGGIORENNI"
+    
     c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(width/2, height - 2*cm, "INFORMATIVA PRIVACY PER ATLETI MAGGIORENNI")
+    c.drawCentredString(width/2, height - 2*cm, pdf_title)
     c.setFont("Helvetica", 10)
     c.drawCentredString(width/2, height - 2.6*cm, "(ai sensi del Regolamento UE 2016/679 - GDPR)")
     
@@ -14778,9 +14783,10 @@ def generate_gdpr_adult_privacy_pdf(
     
     y -= 3.6*cm
     
-    # Intro
+    # Intro - role-specific greeting
     c.setFont("Helvetica", 10)
-    intro_text = f"Gentile Atleta, la presente informativa descrive le modalità di trattamento dei dati personali da parte della società sportiva {nome_legale}."
+    greeting = "Gentile Collaboratore / Membro dello Staff" if is_staff else "Gentile Atleta"
+    intro_text = f"{greeting}, la presente informativa descrive le modalità di trattamento dei dati personali da parte della società sportiva {nome_legale}."
     y = draw_wrapped_text(c, intro_text, 2*cm, y, max_w)
     y -= 0.3*cm
     titolare_intro = "Il Titolare del trattamento dei dati personali è la società sportiva sopra indicata nella persona del proprio legale rappresentante pro tempore."
@@ -14893,26 +14899,17 @@ def generate_gdpr_adult_privacy_pdf(
     
     c.setFont("Helvetica", 9)
     check_ii = "X" if cd.get("images_internal", False) else " "
-    y = draw_wrapped_text(c, f"[{check_ii}] Acconsento all'utilizzo delle mie immagini per finalita' interne (es. comunicazioni, gruppi, attivita' sportive)", 2*cm, y, max_w, font_name="Helvetica", font_size=9)
+    y = draw_wrapped_text(c, f"[{check_ii}] Acconsento all'utilizzo delle mie immagini per finalita' interne (es. comunicazioni, gruppi, attivita')", 2*cm, y, max_w, font_name="Helvetica", font_size=9)
     y -= 0.3*cm
     
     check_ip = "X" if cd.get("images_promo", False) else " "
-    y = draw_wrapped_text(c, f"[{check_ip}] Acconsento all'utilizzo delle mie immagini per finalita' promozionali (es. sito web, social network, materiale pubblicitario)", 2*cm, y, max_w, font_name="Helvetica", font_size=9)
+    y = draw_wrapped_text(c, f"[{check_ip}] Acconsento all'utilizzo delle mie immagini per finalita' promozionali (es. sito web, social, materiale pubblicitario)", 2*cm, y, max_w, font_name="Helvetica", font_size=9)
     y -= 0.3*cm
     
     # Nota revoca consensi
     c.setFont("Helvetica-Oblique", 8)
     c.setFillColor(colors.HexColor("#555555"))
     y = draw_wrapped_text(c, "Il consenso e' facoltativo e puo' essere revocato in qualsiasi momento. La revoca ha effetto solo per utilizzi futuri.", 2*cm, y, max_w, font_name="Helvetica-Oblique", font_size=8)
-    c.setFillColor(colors.black)
-    y -= 0.3*cm
-    
-    # Nota riprese di contesto
-    c.setFont("Helvetica-Oblique", 8)
-    c.setFillColor(colors.HexColor("#666666"))
-    c.drawString(2*cm, y, "Nota: durante eventi e manifestazioni sportive potranno essere effettuate riprese a fini documentativi.")
-    y -= 0.3*cm
-    c.drawString(2*cm, y, "Per utilizzi promozionali specifici sara' richiesto apposito consenso.")
     c.setFillColor(colors.black)
     y -= 0.4*cm
     
@@ -16500,7 +16497,8 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
                 document_hash=doc_hash,
                 user_id=current_user["id"],
                 society_id=current_user.get("society_id", ""),
-                consent_data=getattr(request, 'consent_data', None)
+                consent_data=getattr(request, 'consent_data', None),
+                signer_role=role or current_user.get("role", "")
             )
         else:
             # Use the generic signed PDF function for other document types
@@ -16718,7 +16716,7 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
             pass
     
     # Generate PDF on-the-fly if not stored (registration-time documents)
-    if not pdf_bytes and document.get("document_type") in ("gdpr_privacy_adult", "gdpr_privacy_minor"):
+    if not pdf_bytes and document.get("document_type") in ("gdpr_privacy_adult", "gdpr_privacy_minor", "gdpr_adult", "privacy_consent"):
         try:
             signer = await db.users.find_one({"id": document.get("signer_id")})
             athlete = await db.athletes.find_one({"id": document.get("related_entity_id")})
@@ -16773,7 +16771,7 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
             signed_at = document.get("signed_at", datetime.utcnow())
             ts_str = signed_at.strftime("%Y-%m-%d %H:%M:%S") if isinstance(signed_at, datetime) else str(signed_at)
             
-            if document.get("document_type") == "gdpr_privacy_adult":
+            if document.get("document_type") in ("gdpr_privacy_adult", "gdpr_adult", "privacy_consent"):
                 # Get metadata from document or generate defaults
                 doc_meta = document.get("gdpr_metadata", {})
                 import hashlib
@@ -16802,6 +16800,7 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
                     user_id=document.get("signer_id", ""),
                     society_id=document.get("society_id", ""),
                     consent_data=consent_data,
+                    signer_role=signer.get("role", "") if signer else "",
                 )
             else:
                 # Minor privacy - use existing generate function
@@ -17062,7 +17061,8 @@ async def sign_gdpr_privacy_document(
                 document_hash=document_hash,
                 user_id=current_user["id"],
                 society_id=society_id,
-                consent_data=request.consent_data
+                consent_data=request.consent_data,
+                signer_role=current_user.get("role", "")
             )
             
             doc_title = "Informativa Privacy GDPR - Staff"
@@ -17456,7 +17456,8 @@ async def preview_gdpr_privacy_document(
                 document_hash=document_hash,
                 user_id=current_user["id"],
                 society_id=society_id,
-                consent_data=request.consent_data if request.consent_data else None
+                consent_data=request.consent_data if request.consent_data else None,
+                signer_role=current_user.get("role", "")
             )
             doc_title = "ANTEPRIMA - Informativa Privacy GDPR - Staff"
             
@@ -20178,7 +20179,7 @@ async def download_document(
         )
     
     # Generate PDF on-the-fly for registration-time documents (no PDF stored)
-    if doc.get("document_type") in ("gdpr_privacy_adult", "gdpr_privacy_minor"):
+    if doc.get("document_type") in ("gdpr_privacy_adult", "gdpr_privacy_minor", "gdpr_adult"):
         try:
             signer = await db.users.find_one({"id": doc.get("signer_id")})
             athlete = await db.athletes.find_one({"id": doc.get("related_entity_id")})
@@ -20246,6 +20247,7 @@ async def download_document(
                 user_id=doc.get("signer_id", ""),
                 society_id=doc.get("society_id", ""),
                 consent_data=consent_data,
+                signer_role=signer.get("role", "") if signer else "",
             )
             
             # Cache the generated PDF

@@ -304,11 +304,11 @@ I dati personali saranno conservati per tutta la durata del rapporto con la Soci
 6. DIRITTI DELL'INTERESSATO
 L'interessato può esercitare i diritti previsti dagli articoli 15–22 del GDPR.
 
-7. FIRMA DIGITALE DEL DOCUMENTO
-La sottoscrizione del presente documento avviene in forma digitale tramite l'applicativo gestionale utilizzato dalla Società.
+7. ACCETTAZIONE DIGITALE DEL DOCUMENTO
+L'accettazione del presente documento avviene tramite l'applicativo gestionale utilizzato dalla Società. Il sistema registra metadati tecnici dell'accettazione (data, ora, identificativo utente, dispositivo, IP) ai fini della tracciabilità e sicurezza.
 
 DICHIARAZIONE
-Il sottoscritto dichiara di aver letto e compreso la presente informativa e prende atto del trattamento dei dati personali per le finalità indicate.
+Il sottoscritto dichiara di aver preso visione dell'informativa sulla privacy ai sensi del Regolamento UE 2016/679 e prende atto del trattamento dei propri dati personali.
 
 Staff: ${profileData.full_name || `${editData.last_name} ${editData.first_name}`}
 Società sportiva: ${societyName}
