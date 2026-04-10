@@ -1079,6 +1079,33 @@ Società sportiva: ${societyName}
                   borderBottomWidth: index < Math.min(myDocuments.length, 3) - 1 ? 1 : 0,
                   borderBottomColor: '#f0f0f0',
                 }}>
+                  <a
+                    href="#"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      try {
+                        const token = await AsyncStorage.getItem('token');
+                        const downloadUrl = `${API_URL}/api/documents/signed/${doc.id}/pdf`;
+                        if (Platform.OS === 'web') {
+                          const response = await fetch(downloadUrl, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                          });
+                          if (!response.ok) {
+                            Alert.alert('Errore', 'Impossibile aprire il documento');
+                            return;
+                          }
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          window.open(url, '_blank');
+                        }
+                      } catch (err) {
+                        console.error('Download error:', err);
+                        Alert.alert('Errore', 'Apertura non riuscita');
+                      }
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none' }}
+                    data-testid={`open-doc-${doc.id}`}
+                  >
                   <Ionicons 
                     name={doc.document_type === 'privacy_consent' ? 'shield-checkmark' : 
                           doc.document_type?.includes('5000') ? 'alert-circle' :
@@ -1096,72 +1123,8 @@ Società sportiva: ${societyName}
                       {doc.signed_at ? new Date(doc.signed_at).toLocaleDateString('it-IT') : ''}
                     </Text>
                   </View>
-                  {doc.pdf_filename && (
-                    <TouchableOpacity
-                      onPress={async () => {
-                        try {
-                          const token = await AsyncStorage.getItem('token');
-                          const downloadUrl = `${API_URL}/api/documents/download/${doc.id}`;
-                          
-                          if (Platform.OS === 'web') {
-                            // Web: Use blob and download link
-                            const response = await fetch(downloadUrl, {
-                              headers: { 'Authorization': `Bearer ${token}` }
-                            });
-                            
-                            if (!response.ok) {
-                              Alert.alert('Errore', 'Impossibile aprire il documento');
-                              return;
-                            }
-                            
-                            const blob = await response.blob();
-                            const url = window.URL.createObjectURL(blob);
-                            // Open in new tab instead of downloading
-                            window.open(url, '_blank');
-                          } else {
-                            // Mobile: Use expo-file-system and expo-sharing
-                            const filename = doc.pdf_filename || `documento_${doc.id}.pdf`;
-                            const fileUri = FileSystem.documentDirectory + filename;
-                            
-                            const downloadResult = await FileSystem.downloadAsync(
-                              downloadUrl,
-                              fileUri,
-                              {
-                                headers: { 'Authorization': `Bearer ${token}` }
-                              }
-                            );
-                            
-                            if (downloadResult.status !== 200) {
-                              Alert.alert('Errore', 'Impossibile scaricare il documento');
-                              return;
-                            }
-                            
-                            // Check if sharing is available
-                            const isSharingAvailable = await Sharing.isAvailableAsync();
-                            if (isSharingAvailable) {
-                              await Sharing.shareAsync(downloadResult.uri, {
-                                mimeType: 'application/pdf',
-                                dialogTitle: 'Apri documento PDF'
-                              });
-                            } else {
-                              Alert.alert('Successo', `Documento salvato in: ${fileUri}`);
-                            }
-                          }
-                        } catch (err) {
-                          console.error('Download error:', err);
-                          Alert.alert('Errore', 'Apertura non riuscita');
-                        }
-                      }}
-                      style={{ 
-                        padding: 10, 
-                        backgroundColor: '#00ACC1',
-                        borderRadius: 8,
-                      }}
-                      data-testid={`download-doc-${doc.id}`}
-                    >
-                      <Ionicons name="eye-outline" size={20} color="#fff" />
-                    </TouchableOpacity>
-                  )}
+                  <Ionicons name="open-outline" size={20} color="#8E44AD" />
+                  </a>
                 </View>
               ))}
               {myDocuments.length > 3 && (
@@ -1400,6 +1363,33 @@ Società sportiva: ${societyName}
                   borderBottomWidth: index < myDocuments.length - 1 ? 1 : 0,
                   borderBottomColor: '#f0f0f0',
                 }}>
+                  <a
+                    href="#"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      try {
+                        const token = await AsyncStorage.getItem('token');
+                        const downloadUrl = `${API_URL}/api/documents/signed/${doc.id}/pdf`;
+                        if (Platform.OS === 'web') {
+                          const response = await fetch(downloadUrl, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                          });
+                          if (!response.ok) {
+                            Alert.alert('Errore', 'Impossibile aprire il documento');
+                            return;
+                          }
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          window.open(url, '_blank');
+                        }
+                      } catch (err) {
+                        console.error('Download error:', err);
+                        Alert.alert('Errore', 'Apertura non riuscita');
+                      }
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none' }}
+                    data-testid={`open-modal-doc-${doc.id}`}
+                  >
                   <Ionicons 
                     name={doc.document_type === 'privacy_consent' ? 'shield-checkmark' : 
                           doc.document_type?.includes('5000') ? 'alert-circle' :
@@ -1417,66 +1407,8 @@ Società sportiva: ${societyName}
                       {doc.signed_at ? new Date(doc.signed_at).toLocaleDateString('it-IT') : ''}
                     </Text>
                   </View>
-                  {doc.pdf_filename && (
-                    <TouchableOpacity
-                      onPress={async () => {
-                        try {
-                          const token = await AsyncStorage.getItem('token');
-                          const downloadUrl = `${API_URL}/api/documents/download/${doc.id}`;
-                          
-                          if (Platform.OS === 'web') {
-                            const response = await fetch(downloadUrl, {
-                              headers: { 'Authorization': `Bearer ${token}` }
-                            });
-                            
-                            if (!response.ok) {
-                              Alert.alert('Errore', 'Impossibile scaricare il documento');
-                              return;
-                            }
-                            
-                            const blob = await response.blob();
-                            const url = window.URL.createObjectURL(blob);
-                            // Open in new tab instead of downloading
-                            window.open(url, '_blank');
-                          } else {
-                            const filename = doc.pdf_filename || `documento_${doc.id}.pdf`;
-                            const fileUri = FileSystem.documentDirectory + filename;
-                            
-                            const downloadResult = await FileSystem.downloadAsync(
-                              downloadUrl,
-                              fileUri,
-                              { headers: { 'Authorization': `Bearer ${token}` } }
-                            );
-                            
-                            if (downloadResult.status !== 200) {
-                              Alert.alert('Errore', 'Impossibile scaricare il documento');
-                              return;
-                            }
-                            
-                            const isSharingAvailable = await Sharing.isAvailableAsync();
-                            if (isSharingAvailable) {
-                              await Sharing.shareAsync(downloadResult.uri, {
-                                mimeType: 'application/pdf',
-                                dialogTitle: 'Apri documento PDF'
-                              });
-                            } else {
-                              Alert.alert('Successo', `Documento salvato`);
-                            }
-                          }
-                        } catch (err) {
-                          console.error('Download error:', err);
-                          Alert.alert('Errore', 'Apertura non riuscita');
-                        }
-                      }}
-                      style={{ 
-                        padding: 10, 
-                        backgroundColor: '#00ACC1',
-                        borderRadius: 8,
-                      }}
-                    >
-                      <Ionicons name="eye-outline" size={20} color="#fff" />
-                    </TouchableOpacity>
-                  )}
+                  <Ionicons name="open-outline" size={20} color="#8E44AD" />
+                  </a>
                 </View>
               ))}
             </ScrollView>
