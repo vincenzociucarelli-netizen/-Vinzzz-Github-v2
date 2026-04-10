@@ -317,6 +317,7 @@ export default function AdminAthletes() {
         data_nascita: adultForm.date_of_birth,
         luogo_nascita: luogoNascita,
         sesso: adultForm.gender,
+        stato_nascita: adultForm.country_of_birth || 'Italia',
       });
 
       if (response.data.success && response.data.codice_fiscale) {

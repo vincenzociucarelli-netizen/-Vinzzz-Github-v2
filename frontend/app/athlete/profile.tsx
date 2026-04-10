@@ -454,6 +454,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         data_nascita: editData.date_of_birth,
         luogo_nascita: luogoNascita,
         sesso: editData.gender,
+        stato_nascita: editData.country_of_birth || 'Italia',
       });
 
       if (response.data.success && response.data.codice_fiscale) {

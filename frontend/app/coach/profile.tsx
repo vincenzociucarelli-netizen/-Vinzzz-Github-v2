@@ -236,11 +236,24 @@ export default function CoachProfile() {
       // Load my signed documents (privacy, receipts, etc.)
       try {
         const docsRes = await api.get('/documents/my-documents');
+        const allDocs: any[] = [];
+        // Add signed documents
         if (docsRes.data?.documents) {
-          // Filter only signed documents (with signed_at date)
-          const signedDocs = docsRes.data.documents.filter((doc: any) => doc.signed_at);
-          setMyDocuments(signedDocs);
+          allDocs.push(...docsRes.data.documents.filter((doc: any) => doc.signed_at));
         }
+        // Add consent records from grouped.personal
+        if (docsRes.data?.grouped?.personal) {
+          allDocs.push(...docsRes.data.grouped.personal.filter((doc: any) => doc.signed_at));
+        }
+        // Deduplicate by id and sort newest first
+        const seen = new Set<string>();
+        const uniqueDocs = allDocs.filter((doc: any) => {
+          if (seen.has(doc.id)) return false;
+          seen.add(doc.id);
+          return true;
+        });
+        uniqueDocs.sort((a: any, b: any) => new Date(b.signed_at).getTime() - new Date(a.signed_at).getTime());
+        setMyDocuments(uniqueDocs);
       } catch (err) {
         console.log('No documents found');
       }
@@ -461,8 +474,9 @@ Società sportiva: ${societyName}
         nome: editData.first_name,
         cognome: editData.last_name,
         data_nascita: editData.date_of_birth,
-        luogo_nascita: luogoNascita,
+        luogo_nascita: isEstero ? (editData.place_of_birth || editData.country_of_birth) : editData.place_of_birth,
         sesso: editData.gender,
+        stato_nascita: editData.country_of_birth || 'Italia',
       });
 
       if (response.data.success && response.data.codice_fiscale) {
