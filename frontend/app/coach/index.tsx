@@ -1593,7 +1593,7 @@ export default function CoachScreen() {
           </View>
           {teams.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="football-outline" size={48} color="#ccc" />
+              <Image source={{ uri: 'https://static.prod-images.emergentagent.com/jobs/81c992fa-a01b-413c-9ecc-c8b7592a946d/images/3bc080fdf486359eb4ff40c3b9dd373e282b9ef4b2377bab4e1eefdf30c489d9.png' }} style={{ width: 120, height: 120, opacity: 0.5, marginBottom: 10 }} resizeMode="contain" />
               <Text style={styles.emptyText}>Nessuna squadra assegnata</Text>
               <Text style={styles.emptySubtext}>Contatta l'admin per essere assegnato a una squadra</Text>
             </View>
