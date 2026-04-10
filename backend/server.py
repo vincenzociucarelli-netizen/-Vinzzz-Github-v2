@@ -4551,6 +4551,7 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "last_name": user.get("last_name"),
         "date_of_birth": user.get("date_of_birth"),
         "place_of_birth": user.get("place_of_birth"),
+        "country_of_birth": user.get("country_of_birth"),
         # Contact
         "phone": user.get("phone"),
         "address": user.get("address"),
