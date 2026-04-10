@@ -1071,14 +1071,29 @@ Società sportiva: ${societyName}
                       placeholder="CODICE FISCALE"
                       placeholderTextColor="#999"
                     />
-                    <TouchableOpacity 
-                      style={styles.calculateCfBtn}
-                      onPress={handleCalculateCF}
-                      disabled={!editData.gender || !editData.date_of_birth || !editData.place_of_birth || !editData.first_name || !editData.last_name}
-                    >
-                      <Ionicons name="calculator" size={18} color="#fff" />
-                      <Text style={styles.calculateCfBtnText}>Calcola</Text>
-                    </TouchableOpacity>
+                    {Platform.OS === 'web' ? (
+                      <div
+                        onClick={() => {
+                          if (editData.gender && editData.date_of_birth && editData.place_of_birth && editData.first_name && editData.last_name) {
+                            handleCalculateCF();
+                          }
+                        }}
+                        style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: (!editData.gender || !editData.date_of_birth || !editData.place_of_birth || !editData.first_name || !editData.last_name) ? '#ccc' : '#4CAF50', paddingLeft: 12, paddingRight: 12, paddingTop: 10, paddingBottom: 10, borderRadius: 8, cursor: 'pointer' }}
+                        data-testid="calculate-cf-btn"
+                      >
+                        <Ionicons name="calculator" size={18} color="#fff" />
+                        <Text style={styles.calculateCfBtnText}>Calcola</Text>
+                      </div>
+                    ) : (
+                      <TouchableOpacity 
+                        style={styles.calculateCfBtn}
+                        onPress={handleCalculateCF}
+                        disabled={!editData.gender || !editData.date_of_birth || !editData.place_of_birth || !editData.first_name || !editData.last_name}
+                      >
+                        <Ionicons name="calculator" size={18} color="#fff" />
+                        <Text style={styles.calculateCfBtnText}>Calcola</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ) : (
                   <Text style={styles.fieldValue}>{profileData.fiscal_code || '-'}</Text>
