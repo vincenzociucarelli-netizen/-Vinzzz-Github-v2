@@ -16682,6 +16682,18 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
     """Download a signed document PDF"""
     document = await db.signed_documents.find_one({"id": document_id})
     
+    # If not found and it's a virtual consent document ID, find the real signed doc
+    if not document and document_id.startswith("consent_"):
+        # Extract user_id from the virtual ID pattern: consent_{type}_{user_id}
+        parts = document_id.split("_")
+        if len(parts) >= 3:
+            user_id = parts[-1]
+            # Find the actual GDPR signed document for this user
+            document = await db.signed_documents.find_one({
+                "signer_id": user_id,
+                "document_type": {"$in": ["gdpr_adult", "gdpr_privacy_adult", "privacy_consent"]}
+            }, sort=[("signed_at", -1)])
+    
     if not document:
         raise HTTPException(status_code=404, detail="Documento non trovato")
     

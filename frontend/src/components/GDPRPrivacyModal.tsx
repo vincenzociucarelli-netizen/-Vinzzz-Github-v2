@@ -523,8 +523,7 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                 <View style={consentStyles.separator} />
                 <Text style={consentStyles.optionalLabel}>Consensi facoltativi - immagini/video</Text>
 
-                {/* Immagini uso interno - SOLO per minori (per adulti coperto da legittimo interesse) */}
-                {isMinor && (
+                {/* Immagini uso interno - per tutti (adulti e minori) */}
                 <TouchableOpacity 
                   style={consentStyles.checkboxRow}
                   onPress={() => setConsentImagesInternal(!consentImagesInternal)}
@@ -534,10 +533,9 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                   </View>
                   <View style={consentStyles.checkboxTextContainer}>
                     <Text style={consentStyles.checkboxLabel}>Utilizzo immagini per uso interno</Text>
-                    <Text style={consentStyles.checkboxSubtext}>Documentazione attività, comunicazioni alle famiglie</Text>
+                    <Text style={consentStyles.checkboxSubtext}>{isMinor ? 'Documentazione attività, comunicazioni alle famiglie' : 'Comunicazioni, gruppi, attività sportive'}</Text>
                   </View>
                 </TouchableOpacity>
-                )}
 
                 {/* Immagini uso promozionale - FACOLTATIVA per tutti */}
                 <TouchableOpacity 
