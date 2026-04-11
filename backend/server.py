@@ -17375,8 +17375,8 @@ class GDPRPreviewRequest(BaseModel):
 _preview_pdf_cache = {}
 
 @api_router.get("/documents/preview-pdf/{preview_id}")
-async def serve_preview_pdf(preview_id: str):
-    """Serve a temporarily cached preview PDF directly"""
+async def serve_preview_pdf(preview_id: str, raw: str = None):
+    """Serve a temporarily cached preview PDF with pdf.js viewer and close button"""
     import time
     cache_entry = _preview_pdf_cache.get(preview_id)
     if not cache_entry:
@@ -17390,11 +17390,89 @@ async def serve_preview_pdf(preview_id: str):
     pdf_bytes = cache_entry["pdf_bytes"]
     signer_name = cache_entry.get("signer_name", "documento")
     
+    # raw=1 returns actual PDF bytes (used by pdf.js fetch)
+    if raw == "1":
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename=anteprima_{signer_name.replace(' ', '_')}.pdf",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+            }
+        )
+    
+    # Return HTML viewer with pdf.js rendering + close button
+    raw_url = f"/api/documents/preview-pdf/{preview_id}?raw=1&t={int(time.time())}"
+    html_content = f"""<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3">
+<title>Anteprima - {signer_name}</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#525659;overflow-x:hidden}}
+.close-btn{{
+  position:fixed;top:12px;right:12px;z-index:999;
+  width:44px;height:44px;border-radius:50%;
+  background:rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.8);
+  color:#fff;font-size:22px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;backdrop-filter:blur(4px);
+  box-shadow:0 2px 12px rgba(0,0,0,0.4);
+  -webkit-tap-highlight-color:transparent;
+}}
+.close-btn:active{{background:rgba(0,0,0,0.8);transform:scale(0.92)}}
+.pdf-pages{{padding:8px 0 60px;display:flex;flex-direction:column;align-items:center;gap:4px}}
+.pdf-pages canvas{{max-width:100%;height:auto!important;display:block;box-shadow:0 1px 6px rgba(0,0,0,0.3)}}
+.loading{{color:#fff;text-align:center;padding:40px 20px;font-size:16px}}
+.page-label{{color:rgba(255,255,255,0.6);font-size:12px;padding:4px 0}}
+</style>
+</head>
+<body>
+<button class="close-btn" id="closeBtn" aria-label="Chiudi">&#x2715;</button>
+<div class="pdf-pages" id="pdfPages">
+  <div class="loading" id="loadMsg">Caricamento documento...</div>
+</div>
+<script>
+document.getElementById('closeBtn').addEventListener('click',function(){{
+  try{{window.close()}}catch(e){{}}
+  setTimeout(function(){{history.back()}},300);
+}});
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+pdfjsLib.getDocument('{raw_url}').promise.then(function(pdf){{
+  document.getElementById('loadMsg').remove();
+  var container=document.getElementById('pdfPages');
+  for(var i=1;i<=pdf.numPages;i++){{
+    (function(pageNum){{
+      pdf.getPage(pageNum).then(function(page){{
+        var scale=2;
+        var vp=page.getViewport({{scale:scale}});
+        var canvas=document.createElement('canvas');
+        canvas.width=vp.width;canvas.height=vp.height;
+        canvas.style.width='100%';
+        var label=document.createElement('div');
+        label.className='page-label';
+        label.textContent='Pagina '+pageNum+' di '+pdf.numPages;
+        container.appendChild(canvas);
+        container.appendChild(label);
+        page.render({{canvasContext:canvas.getContext('2d'),viewport:vp}});
+      }});
+    }})(i);
+  }}
+}}).catch(function(err){{
+  document.getElementById('loadMsg').textContent='Errore nel caricamento del documento.';
+}});
+</script>
+</body>
+</html>"""
+    
     return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
+        content=html_content,
+        media_type="text/html",
         headers={
-            "Content-Disposition": f"inline; filename=anteprima_{signer_name.replace(' ', '_')}.pdf",
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
         }
