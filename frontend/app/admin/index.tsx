@@ -81,6 +81,7 @@ export default function AdminDashboard() {
   const { user, logout, refreshUser } = useAuthStore();
   const [stats, setStats] = useState<Stats | null>(null);
   const [pendingCounts, setPendingCounts] = useState<PendingCount>({ dirigenti: 0, coaches: 0, collaboratori: 0, parents: 0 });
+  const [pendingStaff, setPendingStaff] = useState<any[]>([]);
   const [pendingAthletes, setPendingAthletes] = useState<any[]>([]);
   const [deletionRequests, setDeletionRequests] = useState<any[]>([]);
   const [society, setSociety] = useState<SocietySettings>({ name: 'Società Sportiva', logo: null, sport_image: null });
@@ -143,8 +144,11 @@ export default function AdminDashboard() {
       setPendingAthletes(pendingAthletesRes.data || []);
       setDeletionRequests(deletionRes.data || []);
       
-      // Count pending by role
+      // Count pending by role and save staff pending list
       const pending = pendingRes.data || [];
+      const staffRoles = ['coach', 'collaboratore', 'admin', 'viewer'];
+      const staffPending = pending.filter((u: any) => staffRoles.includes(u.role));
+      setPendingStaff(staffPending);
       const dirigentiPending = pending.filter((u: any) => u.role === 'admin' || u.role === 'viewer').length;
       const coachesPending = pending.filter((u: any) => u.role === 'coach').length;
       const collaboratoriPending = pending.filter((u: any) => u.role === 'collaboratore').length;
@@ -262,6 +266,44 @@ export default function AdminDashboard() {
       window.alert(`${title}\n\n${message}`);
     } else {
       Alert.alert(title, message);
+    }
+  };
+
+  const handleStaffAction = async (userId: string, userName: string, action: 'approved' | 'rejected') => {
+    const actionLabel = action === 'approved' ? 'approvare' : 'rifiutare';
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm(`Vuoi ${actionLabel} ${userName}?`)
+      : await new Promise((resolve) => {
+          Alert.alert('Conferma', `Vuoi ${actionLabel} ${userName}?`, [
+            { text: 'Annulla', onPress: () => resolve(false) },
+            { text: 'Conferma', onPress: () => resolve(true) },
+          ]);
+        });
+    if (!confirmed) return;
+    try {
+      await api.patch(`/users/${userId}/status`, { status: action });
+      showAlert('Successo', `${userName} ${action === 'approved' ? 'approvato' : 'rifiutato'}!`);
+      loadStats();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore');
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'coach': return 'Coach';
+      case 'collaboratore': return 'Collaboratore';
+      case 'admin': case 'viewer': return 'Dirigente';
+      default: return role;
+    }
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'coach': return '#E67E22';
+      case 'collaboratore': return '#3498DB';
+      case 'admin': case 'viewer': return '#8E44AD';
+      default: return '#666';
     }
   };
 
@@ -609,6 +651,54 @@ export default function AdminDashboard() {
                 </>
               )}
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Pending Staff Section - Approvals for Dirigenti, Coach, Collaboratori */}
+        {pendingStaff.length > 0 && (
+          <View style={[styles.pendingAthletesCard, { borderLeftColor: '#8E44AD', borderLeftWidth: 4 }]} data-testid="pending-staff-section">
+            <View style={styles.pendingAthletesHeader}>
+              <Ionicons name="people" size={22} color="#8E44AD" />
+              <Text style={[styles.pendingAthletesTitle, { color: '#8E44AD' }]}>
+                Staff in Attesa di Approvazione ({pendingStaff.length})
+              </Text>
+            </View>
+            {pendingStaff.map((staffUser: any) => (
+              <View key={staffUser.id} style={[styles.pendingAthleteItem, { borderBottomColor: '#f0f0f0', borderBottomWidth: 1, paddingVertical: 12 }]}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#333' }}>
+                      {staffUser.last_name} {staffUser.first_name}
+                    </Text>
+                    <View style={{ backgroundColor: getRoleColor(staffUser.role), paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{getRoleLabel(staffUser.role)}</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 13, color: '#666' }}>{staffUser.email}</Text>
+                  {staffUser.phone && <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{staffUser.phone}</Text>}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <a
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); handleStaffAction(staffUser.id, `${staffUser.last_name} ${staffUser.first_name}`, 'approved'); }}
+                    style={{ backgroundColor: '#4CAF50', paddingLeft: 12, paddingRight: 12, paddingTop: 8, paddingBottom: 8, borderRadius: 8, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                    data-testid={`approve-staff-${staffUser.id}`}
+                  >
+                    <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Approva</Text>
+                  </a>
+                  <a
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); handleStaffAction(staffUser.id, `${staffUser.last_name} ${staffUser.first_name}`, 'rejected'); }}
+                    style={{ backgroundColor: '#F44336', paddingLeft: 12, paddingRight: 12, paddingTop: 8, paddingBottom: 8, borderRadius: 8, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                    data-testid={`reject-staff-${staffUser.id}`}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Rifiuta</Text>
+                  </a>
+                </View>
+              </View>
+            ))}
           </View>
         )}
 
