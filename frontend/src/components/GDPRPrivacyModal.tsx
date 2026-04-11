@@ -14,6 +14,8 @@ import ReactSignatureCanvas from 'react-signature-canvas';
 import { Ionicons } from './Icon';
 import api from '../services/api';
 
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+
 interface SocietyInfo {
   name: string;
   ragione_sociale?: string;
