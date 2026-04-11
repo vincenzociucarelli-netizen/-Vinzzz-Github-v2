@@ -150,7 +150,7 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
         headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
       });
       
-      if (response.data.pdf_base64) {
+      if (response.data.preview_url) {
         // Verify the response belongs to the correct user
         const responseUser = response.data.signer_name || '';
         const expectedUser = signerInfo.surname || '';
@@ -160,9 +160,9 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
           return;
         }
         
-        // Use data URL directly - works on all browsers including Chrome Android
-        const dataUrl = `data:application/pdf;base64,${response.data.pdf_base64}`;
-        setPreviewUrl(dataUrl);
+        // Use the server-side preview URL (proper HTTP with Content-Type: application/pdf)
+        const fullUrl = `${API_URL}${response.data.preview_url}`;
+        setPreviewUrl(fullUrl);
         setShowPdfViewer(true);
       }
     } catch (error: any) {

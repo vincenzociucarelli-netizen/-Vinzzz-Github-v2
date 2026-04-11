@@ -17370,6 +17370,39 @@ class GDPRPreviewRequest(BaseModel):
     consent_data: Optional[dict] = None
 
 
+
+# Temporary preview PDF cache (in-memory, auto-expires)
+_preview_pdf_cache = {}
+
+@api_router.get("/documents/preview-pdf/{preview_id}")
+async def serve_preview_pdf(preview_id: str):
+    """Serve a temporarily cached preview PDF as a proper HTTP response"""
+    import time
+    cache_entry = _preview_pdf_cache.get(preview_id)
+    if not cache_entry:
+        raise HTTPException(status_code=404, detail="Anteprima non trovata o scaduta")
+    
+    # Check expiry (5 minutes)
+    if time.time() - cache_entry["created_at"] > 300:
+        del _preview_pdf_cache[preview_id]
+        raise HTTPException(status_code=404, detail="Anteprima scaduta")
+    
+    pdf_bytes = cache_entry["pdf_bytes"]
+    signer_name = cache_entry.get("signer_name", "documento")
+    filename = f"anteprima_{signer_name.replace(' ', '_')}.pdf"
+    
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename={filename}",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        }
+    )
+
+
 @api_router.post("/documents/preview-gdpr-privacy")
 async def preview_gdpr_privacy_document(
     request: GDPRPreviewRequest, 
@@ -17542,15 +17575,28 @@ async def preview_gdpr_privacy_document(
         logging.error(f"Error generating GDPR preview: {e}")
         raise HTTPException(status_code=500, detail=f"Errore nella generazione dell'anteprima: {str(e)}")
     
-    # Return base64-encoded PDF with signer verification data
-    pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+    # Return preview URL that serves the PDF as proper HTTP response
+    import time
+    preview_id = str(uuid.uuid4())
+    
+    # Clean old cache entries (>5 min)
+    now = time.time()
+    expired = [k for k, v in _preview_pdf_cache.items() if now - v["created_at"] > 300]
+    for k in expired:
+        del _preview_pdf_cache[k]
+    
     signer_full_name = f"{full_user.get('last_name', '')} {full_user.get('first_name', '')}".strip()
+    _preview_pdf_cache[preview_id] = {
+        "pdf_bytes": pdf_bytes,
+        "signer_name": signer_full_name,
+        "created_at": now,
+    }
     
     from fastapi.responses import JSONResponse
     response = JSONResponse(content={
         "success": True,
         "document_title": doc_title,
-        "pdf_base64": pdf_base64,
+        "preview_url": f"/api/documents/preview-pdf/{preview_id}",
         "signer_name": signer_full_name,
         "signer_id": current_user["id"],
         "message": "Questa è un'anteprima. Il documento finale includerà la tua firma e i metadati di validità legale."
