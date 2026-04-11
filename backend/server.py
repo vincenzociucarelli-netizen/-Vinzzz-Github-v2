@@ -17375,8 +17375,8 @@ class GDPRPreviewRequest(BaseModel):
 _preview_pdf_cache = {}
 
 @api_router.get("/documents/preview-pdf/{preview_id}")
-async def serve_preview_pdf(preview_id: str, raw: str = None):
-    """Serve a temporarily cached preview PDF wrapped in an HTML viewer with close button"""
+async def serve_preview_pdf(preview_id: str):
+    """Serve a temporarily cached preview PDF directly"""
     import time
     cache_entry = _preview_pdf_cache.get(preview_id)
     if not cache_entry:
@@ -17390,99 +17390,11 @@ async def serve_preview_pdf(preview_id: str, raw: str = None):
     pdf_bytes = cache_entry["pdf_bytes"]
     signer_name = cache_entry.get("signer_name", "documento")
     
-    # If raw=1, return the actual PDF (for iframe embedding)
-    if raw == "1":
-        return Response(
-            content=pdf_bytes,
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f"inline; filename=anteprima_{signer_name.replace(' ', '_')}.pdf",
-                "Cache-Control": "no-cache, no-store, must-revalidate",
-            }
-        )
-    
-    # Return HTML wrapper with embedded PDF and close button
-    # Use the ?raw=1 HTTP URL (NOT data: URL) to avoid Chrome Android caching/blocking issues
-    raw_pdf_url = f"/api/documents/preview-pdf/{preview_id}?raw=1&t={int(time.time())}"
-    html_content = f"""<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Anteprima - {signer_name}</title>
-<style>
-* {{ margin: 0; padding: 0; box-sizing: border-box; }}
-body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; }}
-.header {{
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  background: linear-gradient(135deg, #8E44AD, #6C3483);
-  padding: 12px 16px;
-  display: flex; align-items: center; justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}}
-.header-title {{ color: #fff; font-size: 15px; font-weight: 700; }}
-.header-sub {{ color: rgba(255,255,255,0.85); font-size: 12px; }}
-.close-btn {{
-  background: rgba(255,255,255,0.2); border: 2px solid #fff;
-  color: #fff; padding: 8px 20px; border-radius: 20px;
-  font-size: 14px; font-weight: 700; cursor: pointer;
-  text-decoration: none; display: flex; align-items: center; gap: 6px;
-  white-space: nowrap;
-}}
-.close-btn:hover {{ background: rgba(255,255,255,0.35); }}
-.pdf-container {{ 
-  width: 100%; height: calc(100vh - 56px); margin-top: 56px;
-  display: flex; flex-direction: column; align-items: center;
-}}
-.pdf-container iframe {{ width: 100%; height: 100%; border: none; }}
-.mobile-fallback {{
-  display: none; padding: 30px 20px; text-align: center;
-}}
-.mobile-fallback a {{
-  display: inline-block; background: #8E44AD; color: #fff;
-  padding: 14px 32px; border-radius: 8px; font-size: 16px;
-  font-weight: 700; text-decoration: none; margin-top: 12px;
-}}
-.mobile-fallback p {{ color: #555; font-size: 14px; margin-bottom: 10px; }}
-</style>
-</head>
-<body>
-<div class="header">
-  <div>
-    <div class="header-title">ANTEPRIMA DOCUMENTO</div>
-    <div class="header-sub">{signer_name}</div>
-  </div>
-  <a href="#" class="close-btn" id="closeBtn">&#x2715; Chiudi</a>
-</div>
-<div class="pdf-container">
-  <iframe id="pdfFrame" src="{raw_pdf_url}"></iframe>
-  <div class="mobile-fallback" id="mobileFallback">
-    <p>Il tuo browser non supporta la visualizzazione PDF integrata.</p>
-    <a href="{raw_pdf_url}" target="_blank">Apri il PDF</a>
-  </div>
-</div>
-<script>
-  // Close button: try window.close, then history.back
-  document.getElementById('closeBtn').addEventListener('click', function(e) {{
-    e.preventDefault();
-    try {{ window.close(); }} catch(err) {{}}
-    setTimeout(function() {{ history.back(); }}, 200);
-  }});
-  // Detect mobile and show fallback if iframe can't render PDF
-  var isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-  if (isMobile) {{
-    // On mobile, iframe PDF rendering is unreliable - show direct link
-    document.getElementById('pdfFrame').style.display = 'none';
-    document.getElementById('mobileFallback').style.display = 'block';
-  }}
-</script>
-</body>
-</html>"""
-    
     return Response(
-        content=html_content,
-        media_type="text/html",
+        content=pdf_bytes,
+        media_type="application/pdf",
         headers={
+            "Content-Disposition": f"inline; filename=anteprima_{signer_name.replace(' ', '_')}.pdf",
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
         }
