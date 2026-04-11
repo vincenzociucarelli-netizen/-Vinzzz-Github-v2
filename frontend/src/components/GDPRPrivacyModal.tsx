@@ -84,13 +84,9 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
   const [consentImagesInternal, setConsentImagesInternal] = useState(false);
   const [consentImagesPromo, setConsentImagesPromo] = useState(false);
 
-  // Reset preview when modal opens or minor changes or signer changes
+  // Reset preview when modal opens or signer changes
   useEffect(() => {
     if (visible) {
-      // Revoke old blob URL to prevent caching
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
       setPreviewUrl(null);
       setShowPdfViewer(false);
     }
@@ -155,31 +151,19 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
       });
       
       if (response.data.pdf_base64) {
-        // Create blob URL for PDF viewing
-        const byteCharacters = atob(response.data.pdf_base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        
         // Verify the response belongs to the correct user
         const responseUser = response.data.signer_name || '';
         const expectedUser = signerInfo.surname || '';
         if (responseUser && expectedUser && !responseUser.toUpperCase().includes(expectedUser.toUpperCase())) {
           console.warn('Preview mismatch! Expected:', expectedUser, 'Got:', responseUser);
           alert('Errore: documento non corrispondente. Riprova.');
-          URL.revokeObjectURL(url);
           return;
         }
         
-        // Open in PDF viewer modal instead of new tab
-        if (Platform.OS === 'web') {
-          setShowPdfViewer(true);
-        }
-        setPreviewUrl(url);
+        // Use data URL directly - works on all browsers including Chrome Android
+        const dataUrl = `data:application/pdf;base64,${response.data.pdf_base64}`;
+        setPreviewUrl(dataUrl);
+        setShowPdfViewer(true);
       }
     } catch (error: any) {
       console.error('Error generating preview:', error);
