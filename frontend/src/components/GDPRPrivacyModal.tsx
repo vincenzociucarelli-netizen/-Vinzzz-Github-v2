@@ -716,11 +716,34 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
             </View>
             <View style={{ flex: 1 }}>
               {previewUrl && Platform.OS === 'web' ? (
-                <iframe 
-                  src={previewUrl + '#toolbar=1'} 
-                  style={{ width: '100%', height: '100%', border: 'none', minHeight: 500 } as any}
-                  title={`Anteprima PDF — ${signerInfo.surname} ${signerInfo.name}`}
-                />
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                  <Ionicons name="checkmark-circle" size={64} color="#4CAF50" />
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', textAlign: 'center', marginTop: 16 }}>
+                    PDF generato correttamente
+                  </Text>
+                  <Text style={{ fontSize: 14, color: '#666', textAlign: 'center', marginTop: 8, marginBottom: 24 }}>
+                    Intestatario: {signerInfo.surname} {signerInfo.name}
+                  </Text>
+                  <a
+                    href={previewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      backgroundColor: '#007AFF',
+                      paddingLeft: 32, paddingRight: 32,
+                      paddingTop: 14, paddingBottom: 14,
+                      borderRadius: 25,
+                      textDecoration: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                    data-testid="open-preview-pdf"
+                  >
+                    <Ionicons name="open-outline" size={20} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Visualizza PDF</Text>
+                  </a>
+                </View>
               ) : (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
                   <Ionicons name="document-text-outline" size={48} color="#8E44AD" />
