@@ -17542,15 +17542,23 @@ async def preview_gdpr_privacy_document(
         logging.error(f"Error generating GDPR preview: {e}")
         raise HTTPException(status_code=500, detail=f"Errore nella generazione dell'anteprima: {str(e)}")
     
-    # Return base64-encoded PDF
+    # Return base64-encoded PDF with signer verification data
     pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+    signer_full_name = f"{full_user.get('last_name', '')} {full_user.get('first_name', '')}".strip()
     
-    return {
+    from fastapi.responses import JSONResponse
+    response = JSONResponse(content={
         "success": True,
         "document_title": doc_title,
         "pdf_base64": pdf_base64,
+        "signer_name": signer_full_name,
+        "signer_id": current_user["id"],
         "message": "Questa è un'anteprima. Il documento finale includerà la tua firma e i metadati di validità legale."
-    }
+    })
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 # ==================== DIRIGENTE COMPENSATION ENDPOINTS ====================

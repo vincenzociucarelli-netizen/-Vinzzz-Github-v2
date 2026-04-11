@@ -131,6 +131,7 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
         signer_address: signerInfo.address,
         signer_city: signerInfo.city,
         signer_province: signerInfo.province,
+        _nocache: Date.now(),
       };
 
       if (documentType === 'gdpr_minor' && minorInfo) {
@@ -149,7 +150,9 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
         images_promo: consentImagesPromo,
       };
 
-      const response = await api.post('/documents/preview-gdpr-privacy', payload);
+      const response = await api.post('/documents/preview-gdpr-privacy', payload, {
+        headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
+      });
       
       if (response.data.pdf_base64) {
         // Create blob URL for PDF viewing
@@ -161,6 +164,16 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
+        
+        // Verify the response belongs to the correct user
+        const responseUser = response.data.signer_name || '';
+        const expectedUser = signerInfo.surname || '';
+        if (responseUser && expectedUser && !responseUser.toUpperCase().includes(expectedUser.toUpperCase())) {
+          console.warn('Preview mismatch! Expected:', expectedUser, 'Got:', responseUser);
+          alert('Errore: documento non corrispondente. Riprova.');
+          URL.revokeObjectURL(url);
+          return;
+        }
         
         // Open in PDF viewer modal instead of new tab
         if (Platform.OS === 'web') {
@@ -701,30 +714,21 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-              <Ionicons name="document-text-outline" size={48} color="#8E44AD" />
-              <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', marginTop: 16, marginBottom: 24 }}>
-                Documento PDF generato con successo
-              </Text>
-              <TouchableOpacity
-                style={{ backgroundColor: '#007AFF', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 25 }}
-                onPress={() => {
-                  if (previewUrl && Platform.OS === 'web') {
-                    // Create anchor and trigger download - works on mobile browsers
-                    const link = document.createElement('a');
-                    link.href = previewUrl;
-                    link.download = 'privacy_gdpr.pdf';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="download-outline" size={20} color="#fff" />
-                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Scarica PDF</Text>
+            <View style={{ flex: 1 }}>
+              {previewUrl && Platform.OS === 'web' ? (
+                <iframe 
+                  src={previewUrl + '#toolbar=1'} 
+                  style={{ width: '100%', height: '100%', border: 'none', minHeight: 500 } as any}
+                  title={`Anteprima PDF — ${signerInfo.surname} ${signerInfo.name}`}
+                />
+              ) : (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                  <Ionicons name="document-text-outline" size={48} color="#8E44AD" />
+                  <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', marginTop: 16 }}>
+                    Caricamento PDF...
+                  </Text>
                 </View>
-              </TouchableOpacity>
+              )}
             </View>
             <TouchableOpacity 
               style={styles.pdfViewerCloseButton}
