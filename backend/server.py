@@ -20506,14 +20506,20 @@ async def get_my_documents(
         else:
             grouped["personal"].append(doc)
     
-    # Add consent-based virtual documents for the parent's personal section
+    # Add consent-based virtual documents ONLY if no real GDPR signed document exists
+    # Check if there's already a real signed GDPR document for this user
+    has_real_gdpr_doc = any(
+        d.get("document_type") in ("gdpr_adult", "gdpr_privacy_adult", "privacy_consent")
+        for d in grouped["personal"]
+    )
+    
     target_user = await db.users.find_one(
         {"id": target_user_id},
         {"_id": 0, "consents": 1, "legal_accepted_at": 1, "full_name": 1}
     )
     parent_name = target_user.get("full_name", "") if target_user else ""
     consent_docs = []
-    if target_user and target_user.get("consents"):
+    if target_user and target_user.get("consents") and not has_real_gdpr_doc:
         consents = target_user["consents"]
         consent_label_map = {
             "privacy_viewed": "Informativa Privacy - Presa visione",
