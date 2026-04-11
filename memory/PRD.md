@@ -1,68 +1,51 @@
 # RegistraTEAM - Product Requirements Document
 
-## Problem Statement
-Comprehensive sports team management application for Italian volleyball societies with strict GDPR compliance, role-specific onboarding flows, manual parent-athlete linking workflows, dynamic legal document generation (PDFs), and automated calendar/match syncing with the official FIPAV regional website.
+## Problema Originale
+Applicazione completa per la gestione di società sportive di pallavolo italiane (RegistraTEAM). Focus su conformità GDPR, flussi di onboarding specifici per ruolo, workflow di collegamento genitori-atleti con approvazione manuale, generazione dinamica di documenti legali (PDF) e sincronizzazione automatica del calendario/partite con il sito regionale FIPAV.
 
-## Core Features
+## Architettura
+- **Frontend**: React/Expo (build statiche web `npx expo export -p web` + `serve -s dist -l 3000`)
+- **Backend**: FastAPI (server.py monolitico >24k righe)
+- **Database**: MongoDB
+- **Integrazioni**: Brevo (email transazionali), ReportLab (PDF), BeautifulSoup (scraping FIPAV)
 
-### Authentication & Registration
-- Multi-role registration (Admin, Parent, Coach, Collaborator, Dirigente, Athlete)
-- Unified registration flow via register.tsx
-- Society invite code required for all roles
-- Email invites with token-based auto-fill
+## Ruoli Utente
+- Admin, Coach, Dirigente, Collaboratore, Atleta (18+/18-), Genitore
 
-### GDPR & Privacy
-- Dynamic multi-page PDF generation for adults vs minors
-- Live preview of GDPR documents with current consent data
-- Explicit consent checkmarks ([X] ACCONSENTO / [ ] NON ACCONSENTO)
-- Image usage consent (promotional only for parents, internal+promotional for minors)
-- "Riprese di contesto" clause in privacy text
-- Image removal request button for parents
+## Funzionalità Implementate
+- Sistema di registrazione unificato con flussi role-specific
+- Generazione PDF GDPR dinamica multi-pagina (adulti vs minori)
+- Sistema di consensi granulari (privacy obbligatoria + immagini facoltative)
+- Workflow di approvazione multi-genitore
+- Dashboard Admin con Staff in attesa (approvazione rapida)
+- Scraper FIPAV per calendario partite
+- Compensi e quietanze per staff
+- Preview PDF con pdf.js viewer e pulsante chiusura (X)
 
-### Parent-Athlete Management
-- Multi-parent linking with approval workflow
-- Data protection password system with shared fallback
-- Profile completeness validation before GDPR signing
+## Stato Attuale (11/04/2026)
 
-### Calendar & Matches
-- FIPAV web scraper for automatic match synchronization
-- Persistent FIPAV preferences (federation, region, season)
-- Tab filters (upcoming, played, all)
-- UTC timezone handling for match times
+### Completato in questa sessione:
+- Fix BUG CRITICO: checkbox "Utilizzo immagini per uso interno" era visibile SOLO per i minori, ora appare per tutti (coach, dirigenti, collaboratori, atleti 18+, e minori tramite genitori)
+- Fix documenti duplicati: rimosso "documento virtuale" ridondante quando esiste il documento GDPR reale firmato
+- Fix apertura documenti: IDs virtuali (`consent_*`) ora trovano il documento GDPR reale
+- PDF Preview con pdf.js: rendering pagine come canvas con pulsante X di chiusura in alto a destra (funziona su Chrome Android)
+- Rimosso wrapper HTML con iframe (non funzionava su Chrome Android)
 
-### Payments & Receipts
-- Fiscal receipt (Attestato di Versamento) generation
-- Foreign-born athlete support: shows "Stato di nascita" instead of "Comune di nascita"
-- Season-based receipt numbering (RIC-24/25-0001)
+### In Attesa di Test (utente testerà domani):
+- Verifica checkbox immagini per Dirigenti
+- Verifica checkbox immagini per Collaboratori  
+- Verifica checkbox immagini per Atleti 18+
+- Verifica checkbox immagini per Atleti 18- (firmati dai genitori)
 
-### Excel Export
-- Athlete data export includes "Stato Nascita" column
+## Task Futuri
+- (P1) Re-importazione file Excel calendario per aggiornamento date partite
+- (P1) UI per atleti con contratti formali
+- (P2) Refactoring server.py monolitico in routers/models separati
+- (P2) Re-implementazione Stripe per pagamenti
+- (P2) Assistenza pubblicazione dominio e App Store
+- (P3) Upload screenshot per richiesta rimozione foto
 
-## Completed Features (Latest)
-- [2026-04-07] Fix Ricevuta Fiscale lato Atleta: il backend ora restituisce il nome breve della società ("Pallavolo Perugia SSD a RL") invece della ragione sociale completa nell'endpoint `/payments/{id}/fiscal-receipt`.
-- [2026-04-07] Allineamento tracciabilità consensi atleta adulto: formato strutturato {value, timestamp, user_id, document_version} con storico (insert, non update). Migrati dati Eva/Lena. Fix logica update per atleti adulti (chiave diretta, non per-genitore).
-- [2026-04-07] Rimosso campo "Codice Fiscale" dalla registrazione atleta maggiorenne (verrà compilato nel profilo). Fix visualizzazione consensi per atleti adulti (gestione formato booleano legacy).
-- [2026-04-07] Fix bug 403 profilo atleta adulto: gli atleti adulti (ruolo "athlete") ora possono accedere ai propri consensi senza essere reindirizzati al login. Corretta anche gestione dei consensi salvati come booleani (vs dict).
-- [2026-04-06] Trial Period flow per atleti 18+, consensi immagini interni+promo per tutti i ruoli adulti, fix doc PDF on-the-fly, fix registrazione atleta adulto.
-- [2026-04-05] Foreign-born athlete logic: Receipt shows "Stato di nascita" for non-Italian athletes, hides "Comune di nascita" and province. Backend API returns country_of_birth. Validation skips birth_place for foreign athletes. GDPR PDFs fall back to country_of_birth when birth_place is empty.
-
-## Tech Stack
-- Frontend: React Native / Expo (web static builds)
-- Backend: FastAPI (Python)
-- Database: MongoDB
-- PDF: ReportLab
-- Email: Brevo
-- Scraping: BeautifulSoup
-
-## Architecture
-- Frontend served as static build: `npx expo export -p web` + `serve -s dist -l 3000`
-- Backend: Monolithic server.py (>23k lines - needs refactoring)
-- MongoDB collections: users, athletes, teams, payments, settings, matches, etc.
-
-## Upcoming Tasks (Priority Order)
-1. (P1) Re-import Excel calendar for match date updates (differential update)
-2. (P1) UI for athletes with formal contracts
-3. (P2) Refactoring server.py into separate routers/models
-4. (P2) Stripe payment re-implementation
-5. (P2) Domain/App Store publishing assistance
-6. (P3) Screenshot upload for photo removal requests
+## Note Tecniche Critiche
+- **EXPO TUNNEL NON FUNZIONA**: Usare sempre build statiche (`npx expo export -p web`)
+- **Chrome Android PDF**: Non supporta iframe/blob/data URL per PDF. Usare pdf.js per rendering
+- **LINGUA**: Rispondi sempre in Italiano
