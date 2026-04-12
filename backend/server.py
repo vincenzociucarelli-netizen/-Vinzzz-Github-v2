@@ -16693,6 +16693,24 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
                 "signer_id": user_id,
                 "document_type": {"$in": ["gdpr_adult", "gdpr_privacy_adult", "privacy_consent"]}
             }, sort=[("signed_at", -1)])
+            
+            # If still no document found, generate one on-the-fly from user consents
+            if not document:
+                target_user = await db.users.find_one({"id": user_id})
+                if target_user and target_user.get("consents", {}).get("privacy_viewed", {}).get("value"):
+                    # Create a synthetic document record for on-the-fly PDF generation
+                    document = {
+                        "id": document_id,
+                        "document_type": "gdpr_adult",
+                        "signer_id": user_id,
+                        "signer_name": target_user.get("full_name", ""),
+                        "consent_data": {
+                            "privacy_viewed": True,
+                            "images_internal": target_user.get("consents", {}).get("images_internal", {}).get("value") if isinstance(target_user.get("consents", {}).get("images_internal"), dict) else None,
+                            "images_promo": target_user.get("consents", {}).get("images_promo", {}).get("value") if isinstance(target_user.get("consents", {}).get("images_promo"), dict) else None,
+                        },
+                        "_synthetic": True,
+                    }
     
     if not document:
         raise HTTPException(status_code=404, detail="Documento non trovato")
@@ -20552,20 +20570,7 @@ async def get_my_documents(
                         "user_id": c.get("user_id") if isinstance(c, dict) else None,
                     }
                 })
-        # Add Terms of Use acceptance if legal_accepted_at is present
-        legal_at = target_user.get("legal_accepted_at")
-        if legal_at:
-            consent_docs.append({
-                "id": f"consent_terms_{target_user_id}",
-                "document_type": "consent_terms",
-                "document_title": "Termini di Utilizzo - Accettati",
-                "signed_at": legal_at if isinstance(legal_at, str) else legal_at.isoformat() if hasattr(legal_at, 'isoformat') else str(legal_at),
-                "created_at": legal_at if isinstance(legal_at, str) else legal_at.isoformat() if hasattr(legal_at, 'isoformat') else str(legal_at),
-                "is_consent_record": True,
-                "consent_metadata": {
-                    "source": "registration",
-                }
-            })
+        # Note: Terms of Use are not shown as downloadable documents (no PDF generated)
     
     # Merge consent docs with personal section and sort by date (newest first)
     all_personal = consent_docs + grouped["personal"]
