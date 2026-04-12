@@ -664,37 +664,43 @@ export default function AdminDashboard() {
               </Text>
             </View>
             {pendingStaff.map((staffUser: any) => (
-              <View key={staffUser.id} style={[styles.pendingAthleteItem, { borderBottomColor: '#f0f0f0', borderBottomWidth: 1, paddingVertical: 12 }]}>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#333' }}>
-                      {staffUser.last_name} {staffUser.first_name}
-                    </Text>
-                    <View style={{ backgroundColor: getRoleColor(staffUser.role), paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
-                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{getRoleLabel(staffUser.role)}</Text>
-                    </View>
+              <View key={staffUser.id} style={{ backgroundColor: '#fafafa', borderRadius: 10, padding: 14, marginTop: 10, borderWidth: 1, borderColor: '#eee' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#333', flex: 1 }}>
+                    {staffUser.last_name} {staffUser.first_name}
+                  </Text>
+                  <View style={{ backgroundColor: getRoleColor(staffUser.role), paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 }}>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{getRoleLabel(staffUser.role)}</Text>
                   </View>
-                  <Text style={{ fontSize: 13, color: '#666' }}>{staffUser.email}</Text>
-                  {staffUser.phone && <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{staffUser.phone}</Text>}
                 </View>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <Ionicons name="mail-outline" size={15} color="#666" />
+                  <Text style={{ fontSize: 13, color: '#555' }}>{staffUser.email}</Text>
+                </View>
+                {staffUser.phone && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <Ionicons name="call-outline" size={15} color="#666" />
+                    <Text style={{ fontSize: 13, color: '#555' }}>{staffUser.phone}</Text>
+                  </View>
+                )}
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                   <a
                     href="#"
                     onClick={(e) => { e.preventDefault(); handleStaffAction(staffUser.id, `${staffUser.last_name} ${staffUser.first_name}`, 'approved'); }}
-                    style={{ backgroundColor: '#4CAF50', paddingLeft: 12, paddingRight: 12, paddingTop: 8, paddingBottom: 8, borderRadius: 8, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                    style={{ flex: 1, backgroundColor: '#4CAF50', paddingTop: 10, paddingBottom: 10, borderRadius: 10, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                     data-testid={`approve-staff-${staffUser.id}`}
                   >
                     <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Approva</Text>
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Approva</Text>
                   </a>
                   <a
                     href="#"
                     onClick={(e) => { e.preventDefault(); handleStaffAction(staffUser.id, `${staffUser.last_name} ${staffUser.first_name}`, 'rejected'); }}
-                    style={{ backgroundColor: '#F44336', paddingLeft: 12, paddingRight: 12, paddingTop: 8, paddingBottom: 8, borderRadius: 8, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                    style={{ flex: 1, backgroundColor: '#F44336', paddingTop: 10, paddingBottom: 10, borderRadius: 10, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                     data-testid={`reject-staff-${staffUser.id}`}
                   >
                     <Ionicons name="close-circle" size={18} color="#fff" />
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Rifiuta</Text>
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Rifiuta</Text>
                   </a>
                 </View>
               </View>
