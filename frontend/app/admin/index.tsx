@@ -282,8 +282,8 @@ export default function AdminDashboard() {
     if (!confirmed) return;
     try {
       await api.patch(`/users/${userId}/status`, { status: action });
-      showAlert('Successo', `${userName} ${action === 'approved' ? 'approvato' : 'rifiutato'}!`);
       loadStats();
+      showAlert('Successo', `${userName} ${action === 'approved' ? 'approvato' : 'rifiutato'}!`);
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore');
     }
@@ -663,11 +663,13 @@ export default function AdminDashboard() {
                 Staff in Attesa di Approvazione ({pendingStaff.length})
               </Text>
             </View>
-            {pendingStaff.map((staffUser: any) => (
+            {pendingStaff.map((staffUser: any) => {
+              const displayName = staffUser.full_name || `${staffUser.last_name || ''} ${staffUser.first_name || ''}`.trim() || staffUser.email;
+              return (
               <View key={staffUser.id} style={{ backgroundColor: '#fafafa', borderRadius: 8, padding: 10, marginTop: 8, borderWidth: 1, borderColor: '#eee' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 }}>
                   <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', flex: 1 }}>
-                    {staffUser.last_name} {staffUser.first_name}
+                    {displayName}
                   </Text>
                   <View style={{ backgroundColor: getRoleColor(staffUser.role), paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
                     <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{getRoleLabel(staffUser.role)}</Text>
@@ -686,7 +688,7 @@ export default function AdminDashboard() {
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                   <a
                     href="#"
-                    onClick={(e) => { e.preventDefault(); handleStaffAction(staffUser.id, `${staffUser.last_name} ${staffUser.first_name}`, 'approved'); }}
+                    onClick={(e) => { e.preventDefault(); handleStaffAction(staffUser.id, displayName, 'approved'); }}
                     style={{ flex: 1, backgroundColor: '#4CAF50', paddingTop: 7, paddingBottom: 7, borderRadius: 8, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
                     data-testid={`approve-staff-${staffUser.id}`}
                   >
@@ -695,7 +697,7 @@ export default function AdminDashboard() {
                   </a>
                   <a
                     href="#"
-                    onClick={(e) => { e.preventDefault(); handleStaffAction(staffUser.id, `${staffUser.last_name} ${staffUser.first_name}`, 'rejected'); }}
+                    onClick={(e) => { e.preventDefault(); handleStaffAction(staffUser.id, displayName, 'rejected'); }}
                     style={{ flex: 1, backgroundColor: '#F44336', paddingTop: 7, paddingBottom: 7, borderRadius: 8, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
                     data-testid={`reject-staff-${staffUser.id}`}
                   >
@@ -704,7 +706,8 @@ export default function AdminDashboard() {
                   </a>
                 </View>
               </View>
-            ))}
+              );
+            })}
           </View>
         )}
 
