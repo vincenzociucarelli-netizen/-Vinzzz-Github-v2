@@ -1627,9 +1627,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   thresholdWarningBox15k: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: '#F3E5F5',
     borderWidth: 2,
-    borderColor: '#F44336',
+    borderColor: '#8E44AD',
     borderRadius: 8,
     padding: 10,
     marginTop: 10,
@@ -1637,12 +1637,12 @@ const styles = StyleSheet.create({
   },
   thresholdWarningTitle15k: {
     fontSize: 14,
-    color: '#C62828',
+    color: '#6C3483',
     fontWeight: 'bold',
   },
   thresholdWarningText15k: {
     fontSize: 12,
-    color: '#D32F2F',
+    color: '#8E44AD',
     marginTop: 2,
   },
   totalContractBox: {

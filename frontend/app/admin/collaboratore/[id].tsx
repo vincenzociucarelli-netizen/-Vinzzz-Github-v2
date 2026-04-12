@@ -902,7 +902,7 @@ export default function AdminCollaboratoreDetail() {
                               )}
                               <Text style={{ fontSize: 15, color: yearlyBreakdown[years[0]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].grandTotal)}</Text></Text>
                             </View>
-                            {yearlyBreakdown[years[0]].exceedsThreshold5k && !yearlyBreakdown[years[0]].exceedsThreshold15k && (
+                            {yearlyBreakdown[years[0]].exceedsThreshold5k && (
                               <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 10, marginTop: 8 }}>
                                 <Text style={{ fontSize: 13, color: '#E65100', fontWeight: 'bold', textAlign: 'center' }}>
                                   ⚠️ SUPERAMENTO € 5.000,00
@@ -913,11 +913,11 @@ export default function AdminCollaboratoreDetail() {
                               </View>
                             )}
                             {yearlyBreakdown[years[0]].exceedsThreshold15k && (
-                              <View style={{ backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#F44336', borderRadius: 8, padding: 10, marginTop: 8 }}>
-                                <Text style={{ fontSize: 13, color: '#C62828', fontWeight: 'bold', textAlign: 'center' }}>
+                              <View style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#8E44AD', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#6C3483', fontWeight: 'bold', textAlign: 'center' }}>
                                   🚨 SUPERAMENTO € 15.000,00
                                 </Text>
-                                <Text style={{ fontSize: 11, color: '#D32F2F', textAlign: 'center', marginTop: 4 }}>
+                                <Text style={{ fontSize: 11, color: '#8E44AD', textAlign: 'center', marginTop: 4 }}>
                                   Tassazione IRPEF obbligatoria
                                 </Text>
                               </View>
@@ -940,9 +940,12 @@ export default function AdminCollaboratoreDetail() {
                             <View style={{ marginTop: 8 }}>
                               <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].baseAmount || yearlyBreakdown[years[1]].total)}</Text></Text>
                               <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].supplementary || 0)}</Text></Text>
+                              {yearlyBreakdown[years[1]].priorCompensation > 0 && (
+                                <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].priorCompensation)}</Text></Text>
+                              )}
                               <Text style={{ fontSize: 15, color: yearlyBreakdown[years[1]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].grandTotal)}</Text></Text>
                             </View>
-                            {yearlyBreakdown[years[1]].exceedsThreshold5k && !yearlyBreakdown[years[1]].exceedsThreshold15k && (
+                            {yearlyBreakdown[years[1]].exceedsThreshold5k && (
                               <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 10, marginTop: 8 }}>
                                 <Text style={{ fontSize: 13, color: '#E65100', fontWeight: 'bold', textAlign: 'center' }}>
                                   ⚠️ SUPERAMENTO € 5.000,00
@@ -953,11 +956,11 @@ export default function AdminCollaboratoreDetail() {
                               </View>
                             )}
                             {yearlyBreakdown[years[1]].exceedsThreshold15k && (
-                              <View style={{ backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#F44336', borderRadius: 8, padding: 10, marginTop: 8 }}>
-                                <Text style={{ fontSize: 13, color: '#C62828', fontWeight: 'bold', textAlign: 'center' }}>
+                              <View style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#8E44AD', borderRadius: 8, padding: 10, marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#6C3483', fontWeight: 'bold', textAlign: 'center' }}>
                                   🚨 SUPERAMENTO € 15.000,00
                                 </Text>
-                                <Text style={{ fontSize: 11, color: '#D32F2F', textAlign: 'center', marginTop: 4 }}>
+                                <Text style={{ fontSize: 11, color: '#8E44AD', textAlign: 'center', marginTop: 4 }}>
                                   Tassazione IRPEF obbligatoria
                                 </Text>
                               </View>
