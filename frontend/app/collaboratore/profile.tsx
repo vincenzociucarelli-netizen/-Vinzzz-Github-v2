@@ -984,32 +984,12 @@ Società sportiva: ${societyName}
           </View>
           
           {renderField('Telefono', profileData.phone, 'phone')}
-            </View>
-          )}
-        </View>
 
-        {/* Fiscal Data - Collapsible */}
-        <View style={styles.card}>
-          <TouchableOpacity 
-            style={styles.collapsibleHeader}
-            onPress={() => toggleSection('fiscali')}
-          >
-            <Text style={styles.cardTitle}>💼 Dati Fiscali</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, fiscali: true})); setEditing(true); }}>
-                <Ionicons name="create-outline" size={20} color="#007AFF" />
-              </TouchableOpacity>
-              <Ionicons 
-                name={sectionsExpanded.fiscali ? "chevron-up" : "chevron-down"} 
-                size={24} 
-                color="#666" 
-              />
-            </View>
-          </TouchableOpacity>
-          
-          {sectionsExpanded.fiscali && (
-            <View style={styles.collapsibleContent}>
-          
+              {/* Dati Fiscali - integrati nella sezione anagrafici */}
+              <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#eee' }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#666', marginBottom: 12 }}>Dati Fiscali</Text>
+              </View>
+
           {/* Gender Selection */}
           <View style={styles.fieldContainer}>
             <Text style={styles.fieldLabel}>Sesso</Text>
