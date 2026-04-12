@@ -13,29 +13,21 @@ Applicazione completa per la gestione di società sportive di pallavolo italiane
 - Admin, Coach, Dirigente, Collaboratore, Atleta (18+/18-), Genitore
 
 ## Funzionalità Implementate
-- Sistema di registrazione unificato con flussi role-specific
-- Generazione PDF GDPR dinamica multi-pagina (adulti vs minori)
-- Sistema di consensi granulari (privacy obbligatoria + immagini facoltative)
-- Workflow di approvazione multi-genitore
-- Dashboard Admin con Staff in attesa (approvazione rapida)
-- Scraper FIPAV per calendario partite
-- Compensi e quietanze per staff
-- Preview PDF con pdf.js viewer e pulsante chiusura (X)
 
-## Stato Attuale (11/04/2026)
+### Completato 12/04/2026:
+- **Fix checkbox consensi immagini**: "Utilizzo immagini per uso interno" ora visibile per tutte le figure (coach, dirigenti, collaboratori, atleti 18+, minori tramite genitori) — era visibile solo per i minori
+- **Fix documenti duplicati**: Rimosso documento virtuale ridondante quando esiste il GDPR reale firmato
+- **Fix apertura documenti**: IDs virtuali (`consent_*`) ora trovano il documento GDPR reale + generazione PDF on-the-fly per utenti registrati col vecchio sistema
+- **Rimosso "Termini di Utilizzo"** dalla lista documenti (non è un PDF scaricabile)
+- **Rimossa privacy dalla registrazione**: Le liberatorie non vengono più chieste all'iscrizione — troppo invasivo e mancano i dati anagrafici. La privacy GDPR viene richiesta dopo aver completato il profilo
+- **Unificata sezione profilo**: "Dati Anagrafici" e "Dati Fiscali" ora in un'unica card per Coach, Dirigente, Collaboratore
+- **Fix Staff in Attesa**: Nome utente ora mostrato correttamente (`full_name` al posto di `last_name`/`first_name` undefined)
+- **Admin vede stesse info compensi del coach**: Alert SUPERAMENTO €5k e €15k entrambi visibili, "Pregressi" nel secondo anno, banner "Prossima soglia" e "Dichiarazione richiesta"
+- **Colori unificati soglie compensi**: €5.000 = arancione, €15.000 = viola — applicato a tutte le viste (admin + profili propri) per Coach, Dirigente, Collaboratore
 
-### Completato in questa sessione:
-- Fix BUG CRITICO: checkbox "Utilizzo immagini per uso interno" era visibile SOLO per i minori, ora appare per tutti (coach, dirigenti, collaboratori, atleti 18+, e minori tramite genitori)
-- Fix documenti duplicati: rimosso "documento virtuale" ridondante quando esiste il documento GDPR reale firmato
-- Fix apertura documenti: IDs virtuali (`consent_*`) ora trovano il documento GDPR reale
-- PDF Preview con pdf.js: rendering pagine come canvas con pulsante X di chiusura in alto a destra (funziona su Chrome Android)
-- Rimosso wrapper HTML con iframe (non funzionava su Chrome Android)
-
-### In Attesa di Test (utente testerà domani):
-- Verifica checkbox immagini per Dirigenti
-- Verifica checkbox immagini per Collaboratori  
-- Verifica checkbox immagini per Atleti 18+
-- Verifica checkbox immagini per Atleti 18- (firmati dai genitori)
+### Completato 11/04/2026:
+- PDF Preview con pdf.js viewer e pulsante X di chiusura (funziona su Chrome Android)
+- Fix caching PDF Chrome Android (endpoint HTTP dedicato)
 
 ## Task Futuri
 - (P1) Re-importazione file Excel calendario per aggiornamento date partite
@@ -47,5 +39,5 @@ Applicazione completa per la gestione di società sportive di pallavolo italiane
 
 ## Note Tecniche Critiche
 - **EXPO TUNNEL NON FUNZIONA**: Usare sempre build statiche (`npx expo export -p web`)
-- **Chrome Android PDF**: Non supporta iframe/blob/data URL per PDF. Usare pdf.js per rendering
+- **Chrome Android PDF**: Usare pdf.js per rendering (non iframe/blob/data URL)
 - **LINGUA**: Rispondi sempre in Italiano
