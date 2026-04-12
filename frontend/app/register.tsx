@@ -167,11 +167,6 @@ export default function Register() {
           phone: phone.trim(),
           fiscal_code: fiscalCode.trim().toUpperCase() || undefined,
           invite_code: inviteCode.trim().toUpperCase(),
-          consents: {
-            privacy_viewed: consentPrivacyViewed,
-            images_internal: consentInternalImages,
-            images_promo: consentPromotionalImages,
-          },
         });
         
         // Athlete needs email verification
@@ -194,10 +189,6 @@ export default function Register() {
           role: role,
           invite_code: inviteCode.trim().toUpperCase(),
           ...(role === 'parent' && dataPassword ? { data_password: dataPassword } : {}),
-          consents: {
-            privacy_viewed: consentPrivacyViewed,
-            images_promo: consentPromotionalImages,
-          },
         });
       }
 
@@ -391,7 +382,7 @@ export default function Register() {
     if (type === 'terms') setHasOpenedTerms(true);
   };
 
-  const canContinueFromWelcome = hasOpenedPrivacy && hasOpenedTerms && consentPrivacyViewed;
+  const canContinueFromWelcome = hasOpenedPrivacy && hasOpenedTerms;
 
   // After welcome, decide next step - ALWAYS go to invite code step
   const proceedFromWelcome = () => {
@@ -489,37 +480,8 @@ export default function Register() {
         </TouchableOpacity>
 
         <Text style={styles.welcomeAcceptText}>
-          Continuando, accetti i Termini di utilizzo e l'Informativa sulla Privacy.
+          Continuando, accetti i Termini di utilizzo.
         </Text>
-
-        {/* GDPR Consent Checkboxes */}
-        {hasOpenedPrivacy && hasOpenedTerms && (
-          <View style={{ marginTop: 12, marginBottom: 8 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>I tuoi consensi personali:</Text>
-            
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 10 }}
-              onPress={() => setConsentPrivacyViewed(!consentPrivacyViewed)}
-              data-testid="consent-privacy-viewed"
-            >
-              <Ionicons name={consentPrivacyViewed ? "checkbox" : "square-outline"} size={22} color={consentPrivacyViewed ? "#4CAF50" : "#999"} />
-              <Text style={{ flex: 1, fontSize: 13, color: '#333', lineHeight: 18 }}>
-                <Text style={{ fontWeight: '600' }}>Dichiaro di aver preso visione dell'Informativa sulla Privacy</Text> <Text style={{ color: '#C62828', fontWeight: '700' }}>*</Text>
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 10, backgroundColor: '#FFF3E0', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#FFB74D' }}
-              onPress={() => setConsentPromotionalImages(!consentPromotionalImages)}
-              data-testid="consent-promotional-images"
-            >
-              <Ionicons name={consentPromotionalImages ? "checkbox" : "square-outline"} size={26} color={consentPromotionalImages ? "#FF6F00" : "#FF9800"} />
-              <Text style={{ flex: 1, fontSize: 14, color: '#333', lineHeight: 20, fontWeight: '500' }}>
-                Acconsento all'uso delle mie immagini a scopi promozionali
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
         {!canContinueFromWelcome && (
           <View style={styles.welcomeHintBox}>
@@ -792,33 +754,9 @@ export default function Register() {
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 10, gap: 10 }}>
               <Ionicons name="checkbox" size={22} color="#4CAF50" />
               <Text style={{ flex: 1, fontSize: 13, color: '#333' }}>
-                Dichiaro di aver preso visione dell'Informativa sulla Privacy e dei Termini di utilizzo *
+                Dichiaro di aver preso visione dei Termini di utilizzo *
               </Text>
             </View>
-
-            {/* Internal images consent */}
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 10, gap: 10, backgroundColor: '#FFF3E0', borderRadius: 10, padding: 12, marginTop: 4 }}
-              onPress={() => setConsentInternalImages(!consentInternalImages)}
-              data-testid="consent-internal-images"
-            >
-              <Ionicons name={consentInternalImages ? "checkbox" : "square-outline"} size={22} color={consentInternalImages ? "#FF9800" : "#999"} />
-              <Text style={{ flex: 1, fontSize: 13, color: '#333' }}>
-                Acconsento all'utilizzo delle mie immagini ad uso interno (facoltativo)
-              </Text>
-            </TouchableOpacity>
-
-            {/* Promotional images consent */}
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 10, gap: 10, backgroundColor: '#FFF3E0', borderRadius: 10, padding: 12, marginTop: 4 }}
-              onPress={() => setConsentPromotionalImages(!consentPromotionalImages)}
-              data-testid="consent-promo-images"
-            >
-              <Ionicons name={consentPromotionalImages ? "checkbox" : "square-outline"} size={22} color={consentPromotionalImages ? "#FF9800" : "#999"} />
-              <Text style={{ flex: 1, fontSize: 13, color: '#333' }}>
-                Acconsento all'uso delle mie immagini a scopi promozionali (facoltativo)
-              </Text>
-            </TouchableOpacity>
           </>
         )}
 
