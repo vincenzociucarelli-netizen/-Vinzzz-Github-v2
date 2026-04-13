@@ -1244,6 +1244,12 @@ export default function AdminCoachDetail() {
                 <Text style={styles.compensationAmount}>{formatCurrency(coach.monthly_compensation || 0)}</Text>
                 <Text style={styles.compensationPeriod}> / mese</Text>
               </View>
+              {coach.compensation_accepted && (
+                <View style={[styles.acceptedBadge, { marginTop: 8, marginBottom: 0 }]}>
+                  <Text style={{ fontSize: 14 }}>✅</Text>
+                  <Text style={styles.acceptedText}>Accettato dal coach</Text>
+                </View>
+              )}
               
               {/* Calcolo per Anno Solare - Stesso formato del collaboratore */}
               {(coach.contract_start_date || coach.contract_end_date) && (() => {
@@ -1369,12 +1375,6 @@ export default function AdminCoachDetail() {
             </>
           )}
 
-          {coach.compensation_accepted && (
-            <View style={styles.acceptedBadge}>
-              <Text style={{ fontSize: 14 }}>✅</Text>
-              <Text style={styles.acceptedText}>Accettato dal coach</Text>
-            </View>
-          )}
           
           {/* Totale già percepito (quietanze firmate) */}
           {signedReceipts.filter((r: any) => r.receipt_signed).length > 0 && (

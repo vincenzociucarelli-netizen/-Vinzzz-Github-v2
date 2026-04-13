@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, TextInput, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/services/api';
@@ -70,11 +70,19 @@ export default function QuietanzePage() {
 
   const handleDelete = async (receipt: any) => {
     const endpoint = `/admin/${receipt.user_role}/${receipt.user_id}/compensation/${receipt.year}/${receipt.month}`;
+    const msg = `Eliminare la quietanza di ${receipt.user_name} per ${MONTH_NAMES[receipt.month]} ${receipt.year}?`;
     
-    Alert.alert(
-      'Elimina Quietanza',
-      `Eliminare la quietanza di ${receipt.user_name} per ${MONTH_NAMES[receipt.month]} ${receipt.year}?`,
-      [
+    if (Platform.OS === 'web') {
+      if (!window.confirm(msg)) return;
+      try {
+        await api.delete(endpoint);
+        alert('Quietanza eliminata con successo');
+        loadReceipts();
+      } catch (error: any) {
+        alert(error.response?.data?.detail || 'Impossibile eliminare');
+      }
+    } else {
+      Alert.alert('Elimina Quietanza', msg, [
         { text: 'Annulla', style: 'cancel' },
         {
           text: 'Elimina',
@@ -89,8 +97,8 @@ export default function QuietanzePage() {
             }
           }
         }
-      ]
-    );
+      ]);
+    }
   };
 
   const handleEdit = (receipt: any) => {
@@ -268,6 +276,10 @@ export default function QuietanzePage() {
                           <Text style={styles.actionBtnText}>Elimina</Text>
                         </TouchableOpacity>
                       </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, justifyContent: 'center' }}>
+                        <Ionicons name="time-outline" size={14} color="#FF9800" />
+                        <Text style={{ fontSize: 12, color: '#FF9800', fontWeight: '600' }}>In attesa di firma</Text>
+                      </View>
                     </View>
                   ))}
                 </View>
@@ -321,6 +333,10 @@ export default function QuietanzePage() {
                           )}
                         </View>
                       )}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, justifyContent: 'center' }}>
+                        <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
+                        <Text style={{ fontSize: 12, color: '#4CAF50', fontWeight: '600' }}>Firmata dal coach</Text>
+                      </View>
                     </View>
                   ))}
                 </View>
