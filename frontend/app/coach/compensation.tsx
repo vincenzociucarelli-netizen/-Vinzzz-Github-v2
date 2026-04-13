@@ -549,15 +549,17 @@ export default function CoachCompensation() {
     // Calculate actual total from receipts (includes custom amounts)
     let actualYearlyTotal = 0;
     let supplementaryTotal = 0;
+    let specialMonths: { month: number, amount: number }[] = [];
     
     monthsInYear.forEach(month => {
       const receipt = records.find(r => r.year === year && r.month === month);
       const receiptAmount = receipt?.amount_gross || receipt?.amount || monthlyComp;
       actualYearlyTotal += receiptAmount;
       
-      // Calculate supplementary (amount above standard monthly)
-      if (receiptAmount > monthlyComp) {
-        supplementaryTotal += receiptAmount;
+      // Calculate supplementary (custom amount different from standard monthly)
+      if (receiptAmount !== monthlyComp && receipt) {
+        supplementaryTotal += (receiptAmount - monthlyComp);
+        specialMonths.push({ month, amount: receiptAmount });
       }
     });
     
@@ -578,6 +580,7 @@ export default function CoachCompensation() {
       yearlyFromContract: actualYearlyTotal,  // Now includes supplementary amounts
       yearlyFromContractBase,  // Base compensation (monthly × months)
       supplementaryTotal,  // Amount above standard monthly
+      specialMonths,  // Months with custom amounts
       priorCompensation: prior,
       totalProjected: total,
       signedTotal: signedTotal + prior,
@@ -1008,9 +1011,10 @@ export default function CoachCompensation() {
               {/* Linear layout like Admin view */}
               {(() => {
                 const summary1 = getYearSummary(contractStartYear);
-                const summary2 = contractEndYear > contractStartYear ? getYearSummary(contractEndYear) : { yearlyFromContract: 0, yearlyFromContractBase: 0, supplementaryTotal: 0 };
+                const summary2 = contractEndYear > contractStartYear ? getYearSummary(contractEndYear) : { yearlyFromContract: 0, yearlyFromContractBase: 0, supplementaryTotal: 0, specialMonths: [] };
                 const totalBase = (summary1.yearlyFromContractBase || 0) + (summary2.yearlyFromContractBase || 0);
                 const totalSupplementary = (summary1.supplementaryTotal || 0) + (summary2.supplementaryTotal || 0);
+                const allSpecialMonths = [...(summary1.specialMonths || []).map((s: any) => ({ ...s, year: contractStartYear })), ...((summary2 as any).specialMonths || []).map((s: any) => ({ ...s, year: contractEndYear }))];
                 const grandTotal = totalBase + totalSupplementary;
                 const months1 = getContractMonthsForYear(contractStartYear).length;
                 const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
@@ -1020,7 +1024,9 @@ export default function CoachCompensation() {
                   <View style={{ marginTop: 8 }}>
                     <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalBase)}</Text></Text>
                     <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({totalMonths} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text>
-                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalSupplementary)}</Text></Text>
+                    {allSpecialMonths.length > 0 && (
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Mensilità speciale ({allSpecialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(s.year).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalSupplementary)}</Text></Text>
+                    )}
                     <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(grandTotal)}</Text></Text>
                   </View>
                 );
@@ -1052,7 +1058,9 @@ export default function CoachCompensation() {
                   {/* Linear layout like Admin view */}
                   <View style={{ marginTop: 8 }}>
                     <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
-                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
+                    {(summary.specialMonths?.length > 0) && (
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Mensilità speciale ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractStartYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
+                    )}
                     {summary.priorCompensation > 0 && (
                       <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.priorCompensation)}</Text></Text>
                     )}
@@ -1096,7 +1104,9 @@ export default function CoachCompensation() {
                   {/* Linear layout like Admin view */}
                   <View style={{ marginTop: 8 }}>
                     <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
-                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somme suppl.: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
+                    {(summary.specialMonths?.length > 0) && (
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Mensilità speciale ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractEndYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
+                    )}
                     <Text style={{ fontSize: 15, color: exceeds15k ? '#8E44AD' : exceeds5k ? '#F57F17' : headerColor, fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.totalProjected)}</Text></Text>
                   </View>
                   
