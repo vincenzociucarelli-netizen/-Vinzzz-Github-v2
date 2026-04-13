@@ -1269,8 +1269,8 @@ Società sportiva: ${societyName}
         </View>
       )}
 
-      {/* Consensi Privacy e Immagini */}
-      <ConsentManager entityType="staff" accentColor="#6A1B9A" />
+      {/* Consensi Privacy e Immagini - solo dopo firma privacy */}
+      {privacyAccepted && <ConsentManager entityType="staff" accentColor="#6A1B9A" />}
 
       {/* GDPR Privacy Modal */}
       <GDPRPrivacyModal

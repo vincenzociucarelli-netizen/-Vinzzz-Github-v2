@@ -1408,8 +1408,8 @@ Società sportiva: ${societyName}
         </View>
         )}
 
-          {/* Privacy Consent Management */}
-          <ConsentManager entityType="staff" accentColor="#1565C0" />
+          {/* Privacy Consent Management - solo dopo firma privacy */}
+          {privacyAccepted && <ConsentManager entityType="staff" accentColor="#1565C0" />}
 
         <View style={{ height: 40 }} />
       </ScrollView>
