@@ -497,3 +497,9 @@ credentials.json
 *.pem
 *.key
 .credentials
+
+# Test files with credentials
+backend/tests/
+backend_test.py
+test_reports/
+frontend/.metro-cache/
