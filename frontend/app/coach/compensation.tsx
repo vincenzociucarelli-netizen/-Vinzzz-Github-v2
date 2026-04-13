@@ -1025,7 +1025,7 @@ export default function CoachCompensation() {
                     <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalBase)}</Text></Text>
                     <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({totalMonths} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text>
                     {allSpecialMonths.length > 0 && (
-                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Mensilità speciale ({allSpecialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(s.year).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalSupplementary)}</Text></Text>
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({allSpecialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(s.year).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalSupplementary)}</Text></Text>
                     )}
                     <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(grandTotal)}</Text></Text>
                   </View>
@@ -1059,7 +1059,7 @@ export default function CoachCompensation() {
                   <View style={{ marginTop: 8 }}>
                     <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
                     {(summary.specialMonths?.length > 0) && (
-                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Mensilità speciale ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractStartYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractStartYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
                     )}
                     {summary.priorCompensation > 0 && (
                       <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.priorCompensation)}</Text></Text>
@@ -1105,7 +1105,7 @@ export default function CoachCompensation() {
                   <View style={{ marginTop: 8 }}>
                     <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
                     {(summary.specialMonths?.length > 0) && (
-                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Mensilità speciale ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractEndYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractEndYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
                     )}
                     <Text style={{ fontSize: 15, color: exceeds15k ? '#8E44AD' : exceeds5k ? '#F57F17' : headerColor, fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.totalProjected)}</Text></Text>
                   </View>
