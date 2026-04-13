@@ -14,20 +14,33 @@ Applicazione completa per la gestione di società sportive di pallavolo italiane
 
 ## Funzionalità Implementate
 
+### Completato 13/04/2026:
+- **Fix bug "Elimina" quietanza personalizzata**: Usava `Alert.alert` che non funziona su web, ora usa `window.confirm`
+- **Spostato badge "Accettato dal coach"**: Ora subito sotto il compenso mensile concordato
+- **Indicatore accettazione quietanze**: "In attesa di firma" (arancione) / "Firmata dal coach" (verde)
+- **Rinominato "Somme suppl." in "Somma supplementare [mese]"**: Con indicazione del mese specifico (es. "Apr '26")
+- **Colori soglie uniformati ovunque**: 5k=arancione, 15k=viola — fix seconda sezione calcolo admin/coach
+- **Nascosta sezione "Consensi Privacy"** se privacy non firmata (dirigente, coach, collaboratore)
+- **Fix errore GitHub SECRETS_DETECTED**: Rimossi file test/cache dal tracking git
+- **File LOCKED_FILES.md creato**: Per proteggere file completati da modifiche involontarie
+
 ### Completato 12/04/2026:
-- **Fix checkbox consensi immagini**: "Utilizzo immagini per uso interno" ora visibile per tutte le figure (coach, dirigenti, collaboratori, atleti 18+, minori tramite genitori) — era visibile solo per i minori
-- **Fix documenti duplicati**: Rimosso documento virtuale ridondante quando esiste il GDPR reale firmato
-- **Fix apertura documenti**: IDs virtuali (`consent_*`) ora trovano il documento GDPR reale + generazione PDF on-the-fly per utenti registrati col vecchio sistema
-- **Rimosso "Termini di Utilizzo"** dalla lista documenti (non è un PDF scaricabile)
-- **Rimossa privacy dalla registrazione**: Le liberatorie non vengono più chieste all'iscrizione — troppo invasivo e mancano i dati anagrafici. La privacy GDPR viene richiesta dopo aver completato il profilo
-- **Unificata sezione profilo**: "Dati Anagrafici" e "Dati Fiscali" ora in un'unica card per Coach, Dirigente, Collaboratore
-- **Fix Staff in Attesa**: Nome utente ora mostrato correttamente (`full_name` al posto di `last_name`/`first_name` undefined)
-- **Admin vede stesse info compensi del coach**: Alert SUPERAMENTO €5k e €15k entrambi visibili, "Pregressi" nel secondo anno, banner "Prossima soglia" e "Dichiarazione richiesta"
-- **Colori unificati soglie compensi**: €5.000 = arancione, €15.000 = viola — applicato a tutte le viste (admin + profili propri) per Coach, Dirigente, Collaboratore
+- Fix checkbox consensi immagini (critico): ora visibile per tutte le figure
+- Rimossa privacy dalla registrazione
+- Unificata sezione profilo "Dati Anagrafici + Fiscali"
+- Admin vede stesse info compensi del coach
+- Colori unificati soglie
+- Fix nome "undefined" nella card Staff in Attesa
 
 ### Completato 11/04/2026:
-- PDF Preview con pdf.js viewer e pulsante X di chiusura (funziona su Chrome Android)
-- Fix caching PDF Chrome Android (endpoint HTTP dedicato)
+- PDF Preview con pdf.js viewer e pulsante X di chiusura
+- Fix caching PDF Chrome Android
+
+## File Bloccati (verificati dall'utente)
+Vedi `/app/memory/LOCKED_FILES.md`
+
+## In Attesa di Test
+- Atleti 18+ e 18- (utente verificherà prossimamente)
 
 ## Task Futuri
 - (P1) Re-importazione file Excel calendario per aggiornamento date partite
@@ -41,3 +54,4 @@ Applicazione completa per la gestione di società sportive di pallavolo italiane
 - **EXPO TUNNEL NON FUNZIONA**: Usare sempre build statiche (`npx expo export -p web`)
 - **Chrome Android PDF**: Usare pdf.js per rendering (non iframe/blob/data URL)
 - **LINGUA**: Rispondi sempre in Italiano
+- **LOCKED FILES**: Controllare `/app/memory/LOCKED_FILES.md` prima di modificare qualsiasi file
