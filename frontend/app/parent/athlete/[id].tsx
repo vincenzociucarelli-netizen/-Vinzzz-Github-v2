@@ -1791,40 +1791,26 @@ export default function AthleteDetail() {
             </View>
           )}
 
-          {/* Divider between sections */}
-          <View style={{ height: 1, backgroundColor: '#E5E5E5', marginVertical: 8 }} />
-
-          {/* Dati del genitore che porterà in detrazione la spesa */}
-          <TouchableOpacity 
-            style={styles.collapsibleHeader}
-            onPress={() => toggleSection('fiscali')}
-          >
-            <Text style={styles.cardTitle}>Dati del genitore che porta in detrazione la spesa</Text>
-            <Ionicons 
-              name={sectionsExpanded.fiscali ? "chevron-up" : "chevron-down"} 
-              size={24} 
-              color="#666" 
-            />
-          </TouchableOpacity>
-          
-          {sectionsExpanded.fiscali && (
-            <View style={styles.collapsibleContent}>
-              <View style={styles.dataRow}>
-                <Text style={styles.dataLabel}>Cognome</Text>
-                <Text style={styles.dataValue}>{maskData(athlete.tax_payer_last_name)}</Text>
-              </View>
-              
-              <View style={styles.dataRow}>
-                <Text style={styles.dataLabel}>Nome</Text>
-                <Text style={styles.dataValue}>{maskData(athlete.tax_payer_first_name)}</Text>
-              </View>
-              
-              <View style={styles.dataRow}>
-                <Text style={styles.dataLabel}>Codice Fiscale</Text>
-                <Text style={styles.dataValue}>{maskData(athlete.tax_payer_fiscal_code)}</Text>
-              </View>
+          {/* Dati del genitore che porterà in detrazione - integrati nella stessa card */}
+          <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#eee' }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#666', marginBottom: 12 }}>Dati del genitore che porta in detrazione la spesa</Text>
+          </View>
+          <View style={styles.collapsibleContent}>
+            <View style={styles.dataRow}>
+              <Text style={styles.dataLabel}>Cognome</Text>
+              <Text style={styles.dataValue}>{maskData(athlete.tax_payer_last_name)}</Text>
             </View>
-          )}
+            
+            <View style={styles.dataRow}>
+              <Text style={styles.dataLabel}>Nome</Text>
+              <Text style={styles.dataValue}>{maskData(athlete.tax_payer_first_name)}</Text>
+            </View>
+            
+            <View style={styles.dataRow}>
+              <Text style={styles.dataLabel}>Codice Fiscale</Text>
+              <Text style={styles.dataValue}>{maskData(athlete.tax_payer_fiscal_code)}</Text>
+            </View>
+          </View>
         </View>
 
         {/* Coach Info */}

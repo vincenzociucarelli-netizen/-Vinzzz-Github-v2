@@ -1008,29 +1008,12 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               </View>
               
               {renderField('Telefono', profileData.phone, 'phone')}
-            </View>
-          )}
 
-          {/* Divider between sections */}
-          <View style={{ height: 1, backgroundColor: '#E5E5E5', marginVertical: 8 }} />
+              {/* Dati Fiscali - integrati nella sezione anagrafici */}
+              <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#eee' }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#666', marginBottom: 12 }}>Dati Fiscali</Text>
+              </View>
 
-          {/* Fiscal Data - Same Card */}
-          <TouchableOpacity 
-            style={styles.collapsibleHeader}
-            onPress={() => toggleSection('fiscali')}
-          >
-            <Text style={styles.cardTitle}>💼 Dati Fiscali</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Ionicons 
-                name={sectionsExpanded.fiscali ? "chevron-up" : "chevron-down"} 
-                size={24} 
-                color="#666" 
-              />
-            </View>
-          </TouchableOpacity>
-          
-          {sectionsExpanded.fiscali && (
-            <View style={styles.collapsibleContent}>
               {/* Gender Selection */}
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>Sesso</Text>
