@@ -69,6 +69,7 @@ export default function PreseasonAdmin() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [responses, setResponses] = useState<ResponseItem[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [selectedResponse, setSelectedResponse] = useState<ResponseItem | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loadingResponses, setLoadingResponses] = useState(false);
   const [togglingReminders, setTogglingReminders] = useState<string | null>(null);
@@ -519,7 +520,7 @@ export default function PreseasonAdmin() {
             }).map((r) => {
               const il = interestLabel(r.interest_level);
               return (
-                <View key={r.id} style={{ backgroundColor: '#fff', borderRadius: 10, padding: 14, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: il.color }}>
+                <TouchableOpacity key={r.id} onPress={() => setSelectedResponse(r)} style={{ backgroundColor: '#fff', borderRadius: 10, padding: 14, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: il.color }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={{ fontSize: 14, fontWeight: '700', color: '#333' }}>
                       {r.last_name} {r.first_name}
@@ -555,11 +556,119 @@ export default function PreseasonAdmin() {
                     </View>
                   )}
                   {r.notes ? <Text style={{ fontSize: 11, color: '#aaa', marginTop: 4, fontStyle: 'italic' }}>Note: {r.notes}</Text> : null}
-                </View>
+                </TouchableOpacity>
               );
             })
           )}
         </View>
+      )}
+
+      {/* Response Detail Modal */}
+      {selectedResponse && (
+        <Modal visible={true} animationType="fade" transparent onRequestClose={() => setSelectedResponse(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 440, maxHeight: '90%' }}>
+              <View style={{ backgroundColor: '#0D47A1', paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700', flex: 1 }}>
+                  {selectedResponse.last_name} {selectedResponse.first_name}
+                </Text>
+                <TouchableOpacity onPress={() => setSelectedResponse(null)} style={{ padding: 4 }}>
+                  <Ionicons name="close" size={22} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={{ padding: 16 }}>
+                {/* Interest level badge */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <View style={{ backgroundColor: interestLabel(selectedResponse.interest_level).bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: interestLabel(selectedResponse.interest_level).color }}>
+                      {interestLabel(selectedResponse.interest_level).text}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: selectedResponse.already_member ? '#2E7D32' : '#E65100', fontWeight: '700' }}>
+                    {selectedResponse.already_member ? 'Gia iscritto' : 'Nuovo'}
+                  </Text>
+                </View>
+
+                {/* Anagrafica */}
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 8 }}>Dati Personali</Text>
+                <View style={{ backgroundColor: '#F8F9FA', borderRadius: 10, padding: 12, marginBottom: 14 }}>
+                  <DetailRow label="Nome" value={`${selectedResponse.first_name} ${selectedResponse.last_name}`} />
+                  <DetailRow label="Data di nascita" value={selectedResponse.birth_date} />
+                  {selectedResponse.phone_athlete ? <DetailRow label="Telefono atleta" value={selectedResponse.phone_athlete} /> : null}
+                  {selectedResponse.phone_parent ? <DetailRow label="Telefono genitore" value={selectedResponse.phone_parent} /> : null}
+                </View>
+
+                {/* Esperienza */}
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 8 }}>Esperienza Sportiva</Text>
+                <View style={{ backgroundColor: '#F8F9FA', borderRadius: 10, padding: 12, marginBottom: 14 }}>
+                  {selectedResponse.played_volleyball === true && (
+                    <>
+                      <DetailRow label="Pallavolo" value="Si" />
+                      {selectedResponse.played_at_school && <DetailRow label="A scuola" value="Si" />}
+                      {selectedResponse.played_in_society && <DetailRow label="In societa" value={selectedResponse.years_in_society ? `Si (${selectedResponse.years_in_society} anni)` : 'Si'} />}
+                    </>
+                  )}
+                  {selectedResponse.played_volleyball === false && (
+                    <DetailRow label="Pallavolo" value="No" />
+                  )}
+                  {selectedResponse.previous_sport ? <DetailRow label="Sport precedente" value={selectedResponse.previous_sport} /> : null}
+                  {selectedResponse.previous_club ? <DetailRow label="Club precedente" value={selectedResponse.previous_club} /> : null}
+                  {selectedResponse.championships_played ? <DetailRow label="Campionati" value={selectedResponse.championships_played} /> : null}
+                  {selectedResponse.role_played ? <DetailRow label="Ruolo" value={selectedResponse.role_played} /> : null}
+                </View>
+
+                {/* Note */}
+                {selectedResponse.notes ? (
+                  <>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 8 }}>Note</Text>
+                    <View style={{ backgroundColor: '#FFF8E1', borderRadius: 10, padding: 12, marginBottom: 14 }}>
+                      <Text style={{ fontSize: 13, color: '#555', fontStyle: 'italic' }}>{selectedResponse.notes}</Text>
+                    </View>
+                  </>
+                ) : null}
+
+                {/* Data invio */}
+                {selectedResponse.created_at && (
+                  <Text style={{ fontSize: 11, color: '#999', textAlign: 'center', marginBottom: 8 }}>
+                    Inviato il: {new Date(selectedResponse.created_at).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                )}
+
+                {/* Action buttons */}
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 16 }}>
+                  {Platform.OS === 'web' && (
+                    <TouchableOpacity 
+                      onPress={() => {
+                        const r = selectedResponse;
+                        const il = interestLabel(r.interest_level);
+                        const text = `PRE-ISCRIZIONE\n\nNome: ${r.first_name} ${r.last_name}\nData nascita: ${r.birth_date}\n${r.phone_athlete ? 'Tel atleta: ' + r.phone_athlete + '\n' : ''}${r.phone_parent ? 'Tel genitore: ' + r.phone_parent + '\n' : ''}Interesse: ${il.text}\nStato: ${r.already_member ? 'Gia iscritto' : 'Nuovo'}\n${r.played_volleyball === true ? 'Pallavolo: Si\n' : r.played_volleyball === false ? 'Pallavolo: No\n' : ''}${r.previous_sport ? 'Sport precedente: ' + r.previous_sport + '\n' : ''}${r.previous_club ? 'Club precedente: ' + r.previous_club + '\n' : ''}${r.championships_played ? 'Campionati: ' + r.championships_played + '\n' : ''}${r.role_played ? 'Ruolo: ' + r.role_played + '\n' : ''}${r.notes ? 'Note: ' + r.notes : ''}`;
+                        if (navigator.share) {
+                          navigator.share({ title: `Pre-iscrizione ${r.first_name} ${r.last_name}`, text });
+                        } else {
+                          navigator.clipboard.writeText(text);
+                          alert('Copiato negli appunti!');
+                        }
+                      }}
+                      style={{ flex: 1, backgroundColor: '#1565C0', paddingVertical: 12, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    >
+                      <Ionicons name="share-outline" size={18} color="#fff" />
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Condividi</Text>
+                    </TouchableOpacity>
+                  )}
+                  {Platform.OS === 'web' && (
+                    <TouchableOpacity 
+                      onPress={() => { window.print(); }}
+                      style={{ flex: 1, backgroundColor: '#4CAF50', paddingVertical: 12, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    >
+                      <Ionicons name="print-outline" size={18} color="#fff" />
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Stampa</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       )}
 
       {/* Create Campaign Modal */}
@@ -628,3 +737,13 @@ const inp: any = {
   borderWidth: 1, borderColor: '#DDD', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10,
   fontSize: 14, color: '#333', backgroundColor: '#FAFAFA',
 };
+
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#EEE' }}>
+      <Text style={{ fontSize: 12, color: '#888', flex: 1 }}>{label}</Text>
+      <Text style={{ fontSize: 13, color: '#333', fontWeight: '600', flex: 1, textAlign: 'right' }}>{value || '-'}</Text>
+    </View>
+  );
+}
