@@ -12,35 +12,25 @@ Applicazione completa per la gestione di società sportive di pallavolo italiane
 ## Ruoli Utente
 - Admin, Coach, Dirigente, Collaboratore, Atleta (18+/18-), Genitore
 
-## Funzionalità Implementate
-
-### Completato 13/04/2026:
-- **Fix bug "Elimina" quietanza personalizzata**: Usava `Alert.alert` che non funziona su web, ora usa `window.confirm`
-- **Spostato badge "Accettato dal coach"**: Ora subito sotto il compenso mensile concordato
-- **Indicatore accettazione quietanze**: "In attesa di firma" (arancione) / "Firmata dal coach" (verde)
-- **Rinominato "Somme suppl." in "Somma supplementare [mese]"**: Con indicazione del mese specifico (es. "Apr '26")
-- **Colori soglie uniformati ovunque**: 5k=arancione, 15k=viola — fix seconda sezione calcolo admin/coach
-- **Nascosta sezione "Consensi Privacy"** se privacy non firmata (dirigente, coach, collaboratore)
-- **Fix errore GitHub SECRETS_DETECTED**: Rimossi file test/cache dal tracking git
-- **File LOCKED_FILES.md creato**: Per proteggere file completati da modifiche involontarie
-
-### Completato 12/04/2026:
-- Fix checkbox consensi immagini (critico): ora visibile per tutte le figure
-- Rimossa privacy dalla registrazione
-- Unificata sezione profilo "Dati Anagrafici + Fiscali"
-- Admin vede stesse info compensi del coach
-- Colori unificati soglie
-- Fix nome "undefined" nella card Staff in Attesa
-
-### Completato 11/04/2026:
-- PDF Preview con pdf.js viewer e pulsante X di chiusura
-- Fix caching PDF Chrome Android
+## Completato 14/04/2026:
+- Unificata sezione "Dati Anagrafici + Fiscali" per Atleta 18+ e Atleta 18- (vista genitore)
+- Fix `country_of_birth` accettato come alternativa a `place_of_birth` nel check profilo completo
+- Fix cancellazione automatica dati GDPR per atleta 18+ in prova (`withdraw-trial-leave`): bug `_id` vs `id`
+- Cancellazione completa dati per atleta 18-/genitore (`request-data-deletion`): aggiunta cancellazione documenti firmati + utente
+- Nuovo endpoint `/staff/leave-society` per Coach/Dirigente/Collaboratore: auto-delete senza obblighi fiscali, richiesta admin con obblighi
+- Pre-iscrizione: data nascita con calendar picker, logica condizionale (ha giocato/no), filtri statistiche cliccabili, popup dettaglio con sport praticato
+- Ordinamento documenti dal più recente per dirigente, collaboratore, admin dirigente, admin collaboratore
+- Fix "Elimina" quietanza personalizzata (window.confirm per web)
+- Nascosta sezione "Consensi Privacy" se privacy non firmata (dirigente, collaboratore)
 
 ## File Bloccati (verificati dall'utente)
 Vedi `/app/memory/LOCKED_FILES.md`
 
-## In Attesa di Test
-- Atleti 18+ e 18- (utente verificherà prossimamente)
+## Da Verificare/Completare
+- **Dirigenti**: profilo, compensi, vista admin — da verificare e bloccare
+- **Collaboratori**: profilo, compensi, vista admin — da verificare e bloccare
+- **Atleti 18-**: profilo (vista genitore) — da verificare e bloccare
+- **Genitori**: flusso completo — da verificare e bloccare
 
 ## Task Futuri
 - (P1) Re-importazione file Excel calendario per aggiornamento date partite
@@ -52,6 +42,6 @@ Vedi `/app/memory/LOCKED_FILES.md`
 
 ## Note Tecniche Critiche
 - **EXPO TUNNEL NON FUNZIONA**: Usare sempre build statiche (`npx expo export -p web`)
-- **Chrome Android PDF**: Usare pdf.js per rendering (non iframe/blob/data URL)
+- **Chrome Android PDF**: Usare pdf.js per rendering
 - **LINGUA**: Rispondi sempre in Italiano
 - **LOCKED FILES**: Controllare `/app/memory/LOCKED_FILES.md` prima di modificare qualsiasi file
