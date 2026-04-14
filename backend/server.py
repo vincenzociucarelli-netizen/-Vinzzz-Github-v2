@@ -23183,6 +23183,18 @@ async def get_public_campaign_info(campaign_id: str):
     }
 
 
+def _convert_date_to_italian(date_str: str) -> str:
+    """Convert YYYY-MM-DD to DD/MM/YYYY, or return as-is if already in Italian format"""
+    if not date_str:
+        return date_str
+    if '-' in date_str and len(date_str) == 10:
+        parts = date_str.split('-')
+        if len(parts) == 3 and len(parts[0]) == 4:
+            return f"{parts[2]}/{parts[1]}/{parts[0]}"
+    return date_str
+
+
+
 @api_router.post("/preseason/public/{campaign_id}/respond")
 async def submit_public_preseason_response(campaign_id: str, data: PreseasonResponse):
     """Risposta pubblica (senza autenticazione) al form pre-stagione"""
@@ -23215,7 +23227,7 @@ async def submit_public_preseason_response(campaign_id: str, data: PreseasonResp
         "society_id": campaign.get("society_id", ""),
         "first_name": data.first_name.strip().upper(),
         "last_name": data.last_name.strip().upper(),
-        "birth_date": data.birth_date,
+        "birth_date": _convert_date_to_italian(data.birth_date),
         "phone_athlete": data.phone_athlete or "",
         "phone_parent": data.phone_parent or "",
         "already_member": data.already_member,
@@ -23263,7 +23275,7 @@ async def submit_authenticated_preseason_response(campaign_id: str, data: Presea
         "society_id": campaign.get("society_id", ""),
         "first_name": data.first_name.strip().upper(),
         "last_name": data.last_name.strip().upper(),
-        "birth_date": data.birth_date,
+        "birth_date": _convert_date_to_italian(data.birth_date),
         "phone_athlete": data.phone_athlete or "",
         "phone_parent": data.phone_parent or "",
         "already_member": data.already_member,
