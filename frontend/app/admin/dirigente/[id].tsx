@@ -234,6 +234,7 @@ export default function AdminDirigenteDetail() {
         const docsRes = await api.get(`/documents/my-documents?signer_id=${id}`);
         // Filter only signed documents (with signed_at date)
         const signedDocs = (docsRes.data?.documents || []).filter((doc: any) => doc.signed_at);
+        signedDocs.sort((a: any, b: any) => new Date(b.signed_at).getTime() - new Date(a.signed_at).getTime());
         setUserDocuments(signedDocs);
       } catch (docError) {
         console.log('No documents found for user');

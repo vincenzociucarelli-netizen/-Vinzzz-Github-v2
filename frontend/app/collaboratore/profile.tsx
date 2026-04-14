@@ -237,6 +237,7 @@ export default function CollaboratoreProfile() {
         if (docsRes.data?.documents) {
           // Filter only signed documents (with signed_at date)
           const signedDocs = docsRes.data.documents.filter((doc: any) => doc.signed_at);
+          signedDocs.sort((a: any, b: any) => new Date(b.signed_at).getTime() - new Date(a.signed_at).getTime());
           setMyDocuments(signedDocs);
         }
       } catch (err) {
