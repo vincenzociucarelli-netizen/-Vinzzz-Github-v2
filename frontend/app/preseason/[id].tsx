@@ -194,15 +194,34 @@ export default function PublicPreseasonForm() {
           {/* Data di nascita */}
           <View style={{ marginBottom: 14 }}>
             <Text style={labelStyle}>Data di nascita *</Text>
-            <TextInput style={inputStyle} value={birthDate} onChangeText={(text) => {
-              // Auto-format as GG/MM/AAAA
-              const digits = text.replace(/\D/g, '');
-              let formatted = '';
-              if (digits.length <= 2) formatted = digits;
-              else if (digits.length <= 4) formatted = digits.slice(0, 2) + '/' + digits.slice(2);
-              else formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4, 8);
-              setBirthDate(formatted);
-            }} placeholder="GG/MM/AAAA" keyboardType="numeric" maxLength={10} data-testid="preseason-birth-date" />
+            {Platform.OS === 'web' ? (
+              <input
+                type="text"
+                inputMode="numeric"
+                value={birthDate}
+                onChange={(e: any) => {
+                  const raw = e.target.value.replace(/\D/g, '');
+                  let fmt = '';
+                  if (raw.length <= 2) fmt = raw;
+                  else if (raw.length <= 4) fmt = raw.slice(0, 2) + '/' + raw.slice(2);
+                  else fmt = raw.slice(0, 2) + '/' + raw.slice(2, 4) + '/' + raw.slice(4, 8);
+                  setBirthDate(fmt);
+                }}
+                placeholder="GG/MM/AAAA"
+                maxLength={10}
+                data-testid="preseason-birth-date"
+                style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 10, padding: 14, fontSize: 15, color: '#333', backgroundColor: '#FAFAFA', width: '100%', boxSizing: 'border-box', border: '1px solid #E0E0E0', outline: 'none' } as any}
+              />
+            ) : (
+              <TextInput style={inputStyle} value={birthDate} onChangeText={(text) => {
+                const digits = text.replace(/\D/g, '');
+                let formatted = '';
+                if (digits.length <= 2) formatted = digits;
+                else if (digits.length <= 4) formatted = digits.slice(0, 2) + '/' + digits.slice(2);
+                else formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4, 8);
+                setBirthDate(formatted);
+              }} placeholder="GG/MM/AAAA" keyboardType="numeric" maxLength={10} data-testid="preseason-birth-date-native" />
+            )}
           </View>
 
           {/* Telefoni */}
