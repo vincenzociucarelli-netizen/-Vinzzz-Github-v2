@@ -13,3 +13,7 @@ NON devono essere modificati a meno che l'utente lo richieda esplicitamente.
 ## Atleta 18+ - Completati e verificati (14/04/2026)
 - `/app/frontend/app/athlete/profile.tsx` - Profilo atleta, dati anagrafici+fiscali unificati, country_of_birth accettato come alternativa a place_of_birth
 - `/app/frontend/app/athlete/index.tsx` - Dashboard atleta, check profilo completo con country_of_birth
+
+## Pre-iscrizione - Completati e verificati (14/04/2026)
+- `/app/frontend/app/preseason/[id].tsx` - Form pre-iscrizione: data nascita con calendar picker, logica condizionale (ha giocato sì/no), campi sport/campionati/ruolo
+- `/app/frontend/app/admin/preseason.tsx` - Admin pre-iscrizione: filtri statistiche cliccabili, popup dettaglio con condivisione/stampa, sport praticato nel popup
