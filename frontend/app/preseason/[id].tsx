@@ -296,37 +296,40 @@ export default function PublicPreseasonForm() {
             </View>
           )}
 
-          {/* Gia iscritto nella societa */}
-          <View style={{ marginBottom: 14 }}>
-            <Text style={labelStyle}>Gia iscritto nella societa?</Text>
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
-              <TouchableOpacity
-                style={[chipStyle, alreadyMember && chipActiveStyle]}
-                onPress={() => setAlreadyMember(true)}
-                data-testid="preseason-member-yes"
-              >
-                <Text style={[chipTextStyle, alreadyMember && chipTextActiveStyle]}>Si</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[chipStyle, !alreadyMember && chipActiveStyle]}
-                onPress={() => setAlreadyMember(false)}
-                data-testid="preseason-member-no"
-              >
-                <Text style={[chipTextStyle, !alreadyMember && chipTextActiveStyle]}>No</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          {/* Gia iscritto + Campionati + Ruolo: solo se ha giocato */}
+          {playedVolleyball === true && (
+            <>
+              <View style={{ marginBottom: 14 }}>
+                <Text style={labelStyle}>Gia iscritto nella societa?</Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
+                  <TouchableOpacity
+                    style={[chipStyle, alreadyMember && chipActiveStyle]}
+                    onPress={() => setAlreadyMember(true)}
+                    data-testid="preseason-member-yes"
+                  >
+                    <Text style={[chipTextStyle, alreadyMember && chipTextActiveStyle]}>Si</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[chipStyle, !alreadyMember && chipActiveStyle]}
+                    onPress={() => setAlreadyMember(false)}
+                    data-testid="preseason-member-no"
+                  >
+                    <Text style={[chipTextStyle, !alreadyMember && chipTextActiveStyle]}>No</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-          {/* Campionati e Ruolo */}
-          <View style={{ marginBottom: 14 }}>
-            <Text style={labelStyle}>Campionati giocati</Text>
-            <TextInput style={inputStyle} value={championships} onChangeText={setChampionships} placeholder="Es: Under 14, Serie C, Prima Divisione..." data-testid="preseason-championships" />
-          </View>
+              <View style={{ marginBottom: 14 }}>
+                <Text style={labelStyle}>Campionati giocati</Text>
+                <TextInput style={inputStyle} value={championships} onChangeText={setChampionships} placeholder="Es: Under 14, Serie C, Prima Divisione..." data-testid="preseason-championships" />
+              </View>
 
-          <View style={{ marginBottom: 14 }}>
-            <Text style={labelStyle}>Ruolo giocato</Text>
-            <TextInput style={inputStyle} value={role} onChangeText={setRole} placeholder="Es: Palleggiatore, Schiacciatore, Libero..." data-testid="preseason-role" />
-          </View>
+              <View style={{ marginBottom: 14 }}>
+                <Text style={labelStyle}>Ruolo giocato</Text>
+                <TextInput style={inputStyle} value={role} onChangeText={setRole} placeholder="Es: Palleggiatore, Schiacciatore, Libero..." data-testid="preseason-role" />
+              </View>
+            </>
+          )}
 
           {/* Interesse */}
           <View style={{ marginBottom: 14 }}>

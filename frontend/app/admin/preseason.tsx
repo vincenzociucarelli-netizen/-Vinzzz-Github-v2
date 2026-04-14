@@ -606,15 +606,16 @@ export default function PreseasonAdmin() {
                       <DetailRow label="Pallavolo" value="Si" />
                       {selectedResponse.played_at_school && <DetailRow label="A scuola" value="Si" />}
                       {selectedResponse.played_in_society && <DetailRow label="In societa" value={selectedResponse.years_in_society ? `Si (${selectedResponse.years_in_society} anni)` : 'Si'} />}
+                      {selectedResponse.championships_played ? <DetailRow label="Campionati" value={selectedResponse.championships_played} /> : null}
+                      {selectedResponse.role_played ? <DetailRow label="Ruolo" value={selectedResponse.role_played} /> : null}
                     </>
                   )}
                   {selectedResponse.played_volleyball === false && (
-                    <DetailRow label="Pallavolo" value="No" />
+                    <>
+                      <DetailRow label="Pallavolo" value="No" />
+                      {selectedResponse.previous_sport ? <DetailRow label="Sport praticato" value={selectedResponse.previous_sport} /> : null}
+                    </>
                   )}
-                  {selectedResponse.previous_sport ? <DetailRow label="Sport precedente" value={selectedResponse.previous_sport} /> : null}
-                  {selectedResponse.previous_club ? <DetailRow label="Club precedente" value={selectedResponse.previous_club} /> : null}
-                  {selectedResponse.championships_played ? <DetailRow label="Campionati" value={selectedResponse.championships_played} /> : null}
-                  {selectedResponse.role_played ? <DetailRow label="Ruolo" value={selectedResponse.role_played} /> : null}
                 </View>
 
                 {/* Note */}
