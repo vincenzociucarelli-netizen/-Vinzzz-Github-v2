@@ -145,7 +145,7 @@ export default function AthleteScreen() {
     const lastName = profile.last_name;
     const fiscalCode = profile.fiscal_code;
     const dateOfBirth = (profile as any).date_of_birth || (profile as any).birth_date;
-    const placeOfBirth = (profile as any).place_of_birth || (profile as any).birth_place;
+    const placeOfBirth = (profile as any).place_of_birth || (profile as any).birth_place || (profile as any).country_of_birth;
     const gender = (profile as any).gender || (profile as any).sesso;
     
     // Log for debugging
@@ -165,7 +165,7 @@ export default function AthleteScreen() {
     if (!profile.last_name) missing.push('cognome');
     if (!profile.fiscal_code) missing.push('codice fiscale');
     if (!(profile as any).date_of_birth && !(profile as any).birth_date) missing.push('data di nascita');
-    if (!(profile as any).place_of_birth && !(profile as any).birth_place) missing.push('luogo di nascita');
+    if (!(profile as any).place_of_birth && !(profile as any).birth_place && !(profile as any).country_of_birth) missing.push('luogo di nascita');
     if (!(profile as any).gender && !(profile as any).sesso) missing.push('sesso');
     return missing.join(', ');
   };
