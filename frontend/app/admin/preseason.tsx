@@ -68,6 +68,7 @@ export default function PreseasonAdmin() {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [responses, setResponses] = useState<ResponseItem[]>([]);
+  const [activeFilter, setActiveFilter] = useState<string>('all');
   const [stats, setStats] = useState<Stats | null>(null);
   const [loadingResponses, setLoadingResponses] = useState(false);
   const [togglingReminders, setTogglingReminders] = useState<string | null>(null);
@@ -471,20 +472,20 @@ export default function PreseasonAdmin() {
             <Text style={{ fontSize: 16, fontWeight: '700', color: '#0D47A1' }}>
               Risposte: {selectedCampaign.title}
             </Text>
-            <TouchableOpacity onPress={() => { setSelectedCampaign(null); setResponses([]); setStats(null); }}>
+            <TouchableOpacity onPress={() => { setSelectedCampaign(null); setResponses([]); setStats(null); setActiveFilter('all'); }}>
               <Ionicons name="close" size={22} color="#666" />
             </TouchableOpacity>
           </View>
 
-          {/* Stats cards */}
+          {/* Stats cards - clickable filters */}
           {stats && (
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-              <StatCard label="Totali" value={stats.total} color="#1565C0" bg="#E3F2FD" />
-              <StatCard label="Interessati" value={stats.interested} color="#2E7D32" bg="#E8F5E9" />
-              <StatCard label="Ci pensano" value={stats.thinking} color="#F57F17" bg="#FFF8E1" />
-              <StatCard label="No" value={stats.not_interested} color="#C62828" bg="#FFEBEE" />
-              <StatCard label="Gia iscritti" value={stats.existing_members} color="#6A1B9A" bg="#F3E5F5" />
-              <StatCard label="Nuovi" value={stats.new_athletes} color="#00695C" bg="#E0F2F1" />
+              <StatCard label="Totali" value={stats.total} color="#1565C0" bg="#E3F2FD" active={activeFilter === 'all'} onPress={() => setActiveFilter(activeFilter === 'all' ? 'all' : 'all')} />
+              <StatCard label="Interessati" value={stats.interested} color="#2E7D32" bg="#E8F5E9" active={activeFilter === 'interested'} onPress={() => setActiveFilter(activeFilter === 'interested' ? 'all' : 'interested')} />
+              <StatCard label="Ci pensano" value={stats.thinking} color="#F57F17" bg="#FFF8E1" active={activeFilter === 'thinking'} onPress={() => setActiveFilter(activeFilter === 'thinking' ? 'all' : 'thinking')} />
+              <StatCard label="No" value={stats.not_interested} color="#C62828" bg="#FFEBEE" active={activeFilter === 'no'} onPress={() => setActiveFilter(activeFilter === 'no' ? 'all' : 'no')} />
+              <StatCard label="Gia iscritti" value={stats.existing_members} color="#6A1B9A" bg="#F3E5F5" active={activeFilter === 'existing'} onPress={() => setActiveFilter(activeFilter === 'existing' ? 'all' : 'existing')} />
+              <StatCard label="Nuovi" value={stats.new_athletes} color="#00695C" bg="#E0F2F1" active={activeFilter === 'new'} onPress={() => setActiveFilter(activeFilter === 'new' ? 'all' : 'new')} />
             </View>
           )}
 
@@ -495,7 +496,27 @@ export default function PreseasonAdmin() {
               <Text style={{ fontSize: 14, color: '#999' }}>Nessuna risposta ancora.</Text>
             </View>
           ) : (
-            responses.map((r) => {
+            responses.filter((r) => {
+              if (activeFilter === 'all') return true;
+              if (activeFilter === 'interested') return r.interest_level === 'si';
+              if (activeFilter === 'thinking') return r.interest_level === 'ci_penso';
+              if (activeFilter === 'no') return r.interest_level === 'no';
+              if (activeFilter === 'existing') return r.already_member === true;
+              if (activeFilter === 'new') return r.already_member === false;
+              return true;
+            }).length === 0 ? (
+              <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 24, alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, color: '#999' }}>Nessuna risposta per questo filtro.</Text>
+              </View>
+            ) : responses.filter((r) => {
+              if (activeFilter === 'all') return true;
+              if (activeFilter === 'interested') return r.interest_level === 'si';
+              if (activeFilter === 'thinking') return r.interest_level === 'ci_penso';
+              if (activeFilter === 'no') return r.interest_level === 'no';
+              if (activeFilter === 'existing') return r.already_member === true;
+              if (activeFilter === 'new') return r.already_member === false;
+              return true;
+            }).map((r) => {
               const il = interestLabel(r.interest_level);
               return (
                 <View key={r.id} style={{ backgroundColor: '#fff', borderRadius: 10, padding: 14, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: il.color }}>
@@ -593,12 +614,12 @@ export default function PreseasonAdmin() {
   );
 }
 
-function StatCard({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
+function StatCard({ label, value, color, bg, active, onPress }: { label: string; value: number; color: string; bg: string; active?: boolean; onPress?: () => void }) {
   return (
-    <View style={{ backgroundColor: bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, minWidth: 80, alignItems: 'center' }}>
+    <TouchableOpacity onPress={onPress} style={{ backgroundColor: bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, minWidth: 80, alignItems: 'center', borderWidth: active ? 2 : 0, borderColor: active ? color : 'transparent', opacity: active === false ? 0.5 : 1 }}>
       <Text style={{ fontSize: 20, fontWeight: '800', color }}>{value}</Text>
       <Text style={{ fontSize: 10, fontWeight: '600', color, marginTop: 2 }}>{label}</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
