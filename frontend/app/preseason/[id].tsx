@@ -194,7 +194,15 @@ export default function PublicPreseasonForm() {
           {/* Data di nascita */}
           <View style={{ marginBottom: 14 }}>
             <Text style={labelStyle}>Data di nascita *</Text>
-            <TextInput style={inputStyle} value={birthDate} onChangeText={setBirthDate} placeholder="GG/MM/AAAA" data-testid="preseason-birth-date" />
+            <TextInput style={inputStyle} value={birthDate} onChangeText={(text) => {
+              // Auto-format as GG/MM/AAAA
+              const digits = text.replace(/\D/g, '');
+              let formatted = '';
+              if (digits.length <= 2) formatted = digits;
+              else if (digits.length <= 4) formatted = digits.slice(0, 2) + '/' + digits.slice(2);
+              else formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4, 8);
+              setBirthDate(formatted);
+            }} placeholder="GG/MM/AAAA" keyboardType="numeric" maxLength={10} data-testid="preseason-birth-date" />
           </View>
 
           {/* Telefoni */}
