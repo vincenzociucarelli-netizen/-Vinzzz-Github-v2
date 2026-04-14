@@ -9289,12 +9289,38 @@ async def withdraw_trial_leave(current_user = Depends(get_current_user)):
     await db.certificates.delete_many({"athlete_id": athlete_id})
     await db.payments.delete_many({"athlete_id": athlete_id})
     await db.attendances.delete_many({"athlete_id": athlete_id})
+    await db.signed_documents.delete_many({"signer_id": user_id})
+    await db.signed_documents.delete_many({"signer_id": athlete_id})
     
     # Delete the athlete record
     await db.athletes.delete_one({"id": athlete_id})
     
     # Delete the user account
-    await db.users.delete_one({"_id": ObjectId(user_id)})
+    await db.users.delete_one({"id": user_id})
+    
+    # Log the auto-deletion
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "action": "trial_leave_data_deleted",
+        "details": {
+            "athlete_id": athlete_id,
+            "athlete_name": athlete.get("full_name", ""),
+            "reason": "Atleta ha scelto di lasciare durante il periodo di prova",
+        },
+        "created_at": datetime.now(timezone.utc)
+    })
+    
+    # Notify admin
+    await db.admin_notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "type": "trial_leave_deleted",
+        "title": "Atleta rinuncia - dati cancellati",
+        "message": f"{athlete.get('full_name', '')} ha rinunciato al periodo di prova e i dati sono stati cancellati automaticamente (GDPR).",
+        "data": {"athlete_name": athlete.get("full_name", ""), "athlete_email": athlete.get("email", "")},
+        "read": False,
+        "created_at": datetime.now(timezone.utc),
+    })
     
     return {"message": "Account e dati eliminati con successo", "action": "logout"}
 
@@ -21830,6 +21856,55 @@ async def request_end_trial(athlete_id: str, current_user = Depends(get_current_
             "society_id": current_user.get("society_id", ""),
         }
         await db.admin_notifications.insert_one(admin_notification)
+    
+    # For adult athletes (18+) in trial with no obligations, auto-delete data (GDPR)
+    is_minor = athlete.get("is_minor", False)
+    user_id = athlete.get("user_id")
+    
+    if not is_minor and user_id:
+        # Check if athlete has any fiscal obligations
+        fiscal_doc_types = ["compensation_receipt", "quietanza"]
+        fiscal_docs = await db.signed_documents.find({
+            "signer_id": user_id,
+            "document_type": {"$in": fiscal_doc_types}
+        }).to_list(10)
+        
+        if not fiscal_docs:
+            # No obligations - auto-delete all data
+            await db.athletes.delete_one({"id": athlete_id})
+            await db.signed_documents.delete_many({"signer_id": user_id})
+            await db.signed_documents.delete_many({"signer_id": athlete_id})
+            await db.users.delete_one({"id": user_id})
+            
+            # Log the auto-deletion
+            await db.audit_logs.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "user_email": athlete.get("email", ""),
+                "action": "trial_auto_deletion",
+                "details": {
+                    "athlete_id": athlete_id,
+                    "athlete_name": athlete.get("full_name", ""),
+                    "reason": "Atleta 18+ ha rinunciato al periodo di prova - cancellazione automatica GDPR",
+                },
+                "created_at": datetime.now(timezone.utc)
+            })
+            
+            # Notify admin of auto-deletion
+            await db.admin_notifications.insert_one({
+                "id": str(uuid.uuid4()),
+                "type": "trial_auto_deleted",
+                "title": "Atleta rinuncia - dati cancellati",
+                "message": f"{athlete.get('full_name', '')} ha rinunciato al periodo di prova. I dati sono stati cancellati automaticamente (GDPR).",
+                "data": {
+                    "athlete_name": athlete.get("full_name", ""),
+                    "athlete_email": athlete.get("email", ""),
+                },
+                "read": False,
+                "created_at": datetime.now(timezone.utc),
+            })
+            
+            return {"message": "Rinuncia registrata. I tuoi dati sono stati cancellati.", "data_deleted": True, "end_trial_requested": True}
     
     return {"message": "Richiesta di fine prova registrata", "end_trial_requested": True}
 
