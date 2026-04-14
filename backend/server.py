@@ -9324,6 +9324,88 @@ async def withdraw_trial_leave(current_user = Depends(get_current_user)):
     
     return {"message": "Account e dati eliminati con successo", "action": "logout"}
 
+@api_router.post("/staff/leave-society")
+async def staff_leave_society(current_user = Depends(get_current_user)):
+    """Staff member (coach, dirigente, collaboratore) requests to leave the society - deletes all data (GDPR)"""
+    user_id = current_user.get("id")
+    role = current_user.get("role")
+    
+    if role not in ["coach", "dirigente", "collaboratore"]:
+        raise HTTPException(status_code=403, detail="Questa funzione è disponibile solo per coach, dirigenti e collaboratori")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    user_name = user.get("full_name", "")
+    user_email = user.get("email", "")
+    
+    # Check for fiscal obligations (compensation receipts)
+    fiscal_doc_types = ["compensation_receipt", "quietanza"]
+    fiscal_docs = await db.signed_documents.find({
+        "signer_id": user_id,
+        "document_type": {"$in": fiscal_doc_types}
+    }).to_list(10)
+    
+    # Check for compensation records
+    comp_collection = f"{role}_compensations"
+    compensations = await db[comp_collection].find({f"{role}_id": user_id}).to_list(10) if comp_collection in await db.list_collection_names() else []
+    
+    has_obligations = bool(fiscal_docs) or bool(compensations)
+    
+    if has_obligations:
+        # Cannot auto-delete - flag for admin review
+        await db.users.update_one({"id": user_id}, {"$set": {
+            "leave_requested": True,
+            "leave_requested_date": datetime.now(timezone.utc),
+            "status": "leave_requested",
+        }})
+        
+        await db.admin_notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "type": "staff_leave_request",
+            "title": f"{role.capitalize()} richiede di lasciare",
+            "message": f"{user_name} ({role}) ha richiesto di lasciare la società. Ha obblighi fiscali, verificare prima di cancellare.",
+            "data": {"user_id": user_id, "user_name": user_name, "role": role, "has_obligations": True},
+            "read": False,
+            "created_at": datetime.now(timezone.utc),
+        })
+        
+        return {"message": "Richiesta di uscita registrata. L'admin verificherà gli obblighi fiscali prima di procedere.", "data_deleted": False, "has_obligations": True}
+    
+    # No obligations - auto-delete all data
+    await db.signed_documents.delete_many({"signer_id": user_id})
+    await db.users.delete_one({"id": user_id})
+    
+    # Log the deletion
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "user_email": user_email,
+        "action": "staff_leave_data_deleted",
+        "details": {
+            "user_name": user_name,
+            "role": role,
+            "reason": f"{role.capitalize()} ha scelto di lasciare la società - cancellazione automatica GDPR",
+        },
+        "created_at": datetime.now(timezone.utc)
+    })
+    
+    # Notify admin
+    await db.admin_notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "type": "staff_leave_deleted",
+        "title": f"{role.capitalize()} lascia - dati cancellati",
+        "message": f"{user_name} ({role}) ha lasciato la società. I dati sono stati cancellati automaticamente (GDPR).",
+        "data": {"user_name": user_name, "user_email": user_email, "role": role},
+        "read": False,
+        "created_at": datetime.now(timezone.utc),
+    })
+    
+    return {"message": "I tuoi dati sono stati cancellati. Arrivederci!", "data_deleted": True, "action": "logout"}
+
+
+
 
 @api_router.delete("/athletes/{athlete_id}")
 async def delete_athlete(athlete_id: str, current_user = Depends(get_current_user)):
@@ -14476,10 +14558,20 @@ async def request_data_deletion(athlete_id: str, current_user = Depends(get_curr
     # 3. Delete attendances
     await db.attendances.delete_many({"athlete_id": athlete_id})
     
-    # 4. Delete the athlete
+    # 4. Delete signed documents
+    user_id = athlete.get("user_id")
+    await db.signed_documents.delete_many({"signer_id": athlete_id})
+    if user_id:
+        await db.signed_documents.delete_many({"signer_id": user_id})
+    
+    # 5. Delete the athlete
     await db.athletes.delete_one({"id": athlete_id})
     
-    # 5. Check if parent has other athletes - if not, delete parent account too
+    # 6. Delete the athlete's user account (if 18+)
+    if user_id and not athlete.get("is_minor", False):
+        await db.users.delete_one({"id": user_id})
+    
+    # 7. Check if parent has other athletes - if not, delete parent account too
     should_delete_parent = False
     if parent_id:
         remaining_athletes = await db.athletes.count_documents({
@@ -14489,7 +14581,8 @@ async def request_data_deletion(athlete_id: str, current_user = Depends(get_curr
             ]
         })
         if remaining_athletes == 0:
-            # Delete the parent account
+            # Delete the parent account and their documents
+            await db.signed_documents.delete_many({"signer_id": parent_id})
             await db.users.delete_one({"id": parent_id})
             should_delete_parent = True
     
