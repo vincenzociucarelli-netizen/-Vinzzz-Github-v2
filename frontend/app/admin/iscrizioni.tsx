@@ -100,6 +100,24 @@ export default function IscrizioniPage() {
           </View>
         </View>
 
+        {/* Toggle all button */}
+        {sortedDates.length > 0 && (
+          <TouchableOpacity 
+            onPress={() => {
+              const anyExpanded = Object.values(expandedDates).some(v => v);
+              const newState: Record<string, boolean> = {};
+              sortedDates.forEach(d => { newState[d] = !anyExpanded; });
+              setExpandedDates(newState);
+            }}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, marginBottom: 10 }}
+          >
+            <Ionicons name={Object.values(expandedDates).some(v => v) ? "contract-outline" : "expand-outline"} size={16} color="#1565C0" />
+            <Text style={{ fontSize: 13, color: '#1565C0', fontWeight: '600' }}>
+              {Object.values(expandedDates).some(v => v) ? 'Chiudi tutti' : 'Espandi tutti'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {sortedDates.length === 0 ? (
           <View style={styles.emptyCard}>
             <Ionicons name="people-outline" size={40} color="#ccc" />
