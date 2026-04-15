@@ -7932,6 +7932,62 @@ async def get_deletion_requests(current_user = Depends(get_current_user)):
     
     return result
 
+@api_router.get("/athletes/registered-today")
+async def get_athletes_registered_today(current_user = Depends(get_current_user)):
+    """Get athletes registered today with parent info and team assignment status"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    today = datetime.utcnow().date()
+    all_athletes = await db.athletes.find({}).to_list(5000)
+    
+    today_athletes = []
+    for a in all_athletes:
+        created = a.get("created_at")
+        if not created:
+            continue
+        try:
+            if isinstance(created, str):
+                created_dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
+            elif isinstance(created, datetime):
+                created_dt = created
+            else:
+                continue
+            if created_dt.date() == today:
+                parent_name = None
+                if a.get("parent_id"):
+                    parent = await db.users.find_one({"id": a["parent_id"]}, {"_id": 0, "full_name": 1})
+                    parent_name = parent.get("full_name") if parent else None
+                
+                second_parent_name = None
+                if a.get("second_parent_id"):
+                    sp = await db.users.find_one({"id": a["second_parent_id"]}, {"_id": 0, "full_name": 1})
+                    second_parent_name = sp.get("full_name") if sp else None
+                
+                team_name = None
+                if a.get("team_id"):
+                    team = await db.teams.find_one({"id": a["team_id"]}, {"_id": 0, "name": 1})
+                    team_name = team.get("name") if team else None
+                
+                today_athletes.append({
+                    "id": a.get("id"),
+                    "full_name": a.get("full_name", ""),
+                    "is_minor": a.get("is_minor", False),
+                    "parent_name": parent_name,
+                    "second_parent_name": second_parent_name,
+                    "team_id": a.get("team_id"),
+                    "team_name": team_name,
+                    "has_team": bool(a.get("team_id")),
+                    "status": a.get("status", ""),
+                    "created_at": str(created),
+                })
+        except:
+            continue
+    
+    today_athletes.sort(key=lambda x: x["created_at"], reverse=True)
+    return {"athletes": today_athletes, "count": len(today_athletes)}
+
+
 @api_router.get("/athletes/{athlete_id}", response_model=Athlete)
 async def get_athlete(athlete_id: str, current_user = Depends(get_current_user)):
     athlete = await db.athletes.find_one({"id": athlete_id})
@@ -12686,6 +12742,9 @@ async def get_today_birthdays(current_user = Depends(get_current_user)):
 
 
 # ==================== COACH COMPENSATION ENDPOINTS ====================
+
+
+
 
 @api_router.get("/coach/{coach_id}/compensation")
 async def get_coach_compensation(coach_id: str, current_user = Depends(get_current_user)):

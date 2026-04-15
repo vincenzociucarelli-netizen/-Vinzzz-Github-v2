@@ -87,6 +87,7 @@ export default function AdminDashboard() {
   const [society, setSociety] = useState<SocietySettings>({ name: 'Società Sportiva', logo: null, sport_image: null });
   const [refreshing, setRefreshing] = useState(false);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
+  const [todayAthletes, setTodayAthletes] = useState<any[]>([]);
   const [expiringCerts, setExpiringCerts] = useState<ExpiringCertificates>({ count_today: 0, count_30_days: 0, expiring_today: [], expiring_soon: [] });
   const [inviteCode, setInviteCode] = useState<string>('');
   const [processingDeletion, setProcessingDeletion] = useState<string | null>(null);
@@ -164,6 +165,12 @@ export default function AdminDashboard() {
       ]);
       
       setBirthdays(birthdaysRes.data || []);
+      
+      // Load today's registered athletes
+      try {
+        const todayRes = await api.get('/athletes/registered-today');
+        setTodayAthletes(todayRes.data?.athletes || []);
+      } catch { setTodayAthletes([]); }
       const certsData = certsRes.data || { count_today: 0, count_30_days: 0, expiring_today: [], expiring_soon: [] };
       setExpiringCerts(certsData);
       setInviteCode(inviteRes.data?.invite_code || '');
@@ -781,6 +788,53 @@ export default function AdminDashboard() {
                   </TouchableOpacity>
                 </View>
               </View>
+            ))}
+          </View>
+        )}
+
+        {/* Today's Registered Athletes */}
+        {todayAthletes.length > 0 && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Ionicons name="person-add" size={20} color="#1565C0" />
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#1565C0' }}>
+                Nuove Iscrizioni Oggi ({todayAthletes.length})
+              </Text>
+            </View>
+            {todayAthletes.map((ta: any) => (
+              <TouchableOpacity
+                key={ta.id}
+                onPress={() => router.push(`/admin/athlete/${ta.id}`)}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}
+              >
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#333' }}>{ta.full_name}</Text>
+                    {ta.is_minor && (
+                      <View style={{ backgroundColor: '#E3F2FD', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                        <Text style={{ color: '#1565C0', fontSize: 9, fontWeight: '700' }}>18-</Text>
+                      </View>
+                    )}
+                  </View>
+                  {ta.parent_name && (
+                    <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+                      Iscritto da: {ta.parent_name}
+                      {ta.second_parent_name ? ` / ${ta.second_parent_name}` : ''}
+                    </Text>
+                  )}
+                </View>
+                {ta.has_team ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+                    <Text style={{ fontSize: 11, color: '#4CAF50', fontWeight: '600' }}>{ta.team_name || 'Assegnato'}</Text>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="alert-circle-outline" size={18} color="#FF9800" />
+                    <Text style={{ fontSize: 11, color: '#FF9800', fontWeight: '600' }}>Da assegnare</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             ))}
           </View>
         )}
