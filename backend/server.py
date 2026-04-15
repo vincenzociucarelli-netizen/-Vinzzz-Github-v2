@@ -6740,7 +6740,9 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
         data_password_hash=data_password_hash,
     )
     
-    await db.athletes.insert_one(athlete.dict())
+    athlete_dict = athlete.dict()
+    athlete_dict["created_at"] = datetime.utcnow()
+    await db.athletes.insert_one(athlete_dict)
     
     # === LINKING SECONDO GENITORE (solo salva email, richiesta creata quando B si registra) ===
     if athlete_data.second_parent_email:
