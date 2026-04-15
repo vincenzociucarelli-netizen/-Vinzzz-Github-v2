@@ -11809,7 +11809,9 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
     
     qr_code_value = attendance_data.qr_code.strip().upper()
     team_id = attendance_data.team_id
-    today = datetime.now().strftime("%Y-%m-%d")
+    # Use Italian timezone for date comparison
+    italy_tz = timezone(timedelta(hours=2))  # CET+1 (CEST in summer)
+    today = datetime.now(italy_tz).strftime("%Y-%m-%d")
     
     # 1. Find athlete by qr_identifier, athlete_code, or id
     athlete = await db.athletes.find_one({"qr_identifier": qr_code_value})
@@ -11909,10 +11911,11 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
     })
     
     if existing_attendance and not attendance_data.force:
-        # Return info about existing attendance
+        # Return info about existing attendance - show Italian time
         existing_time = existing_attendance.get("check_in_time")
         if isinstance(existing_time, datetime):
-            time_str = existing_time.strftime("%H:%M")
+            italy_time = existing_time + timedelta(hours=2) if existing_time.tzinfo is None else existing_time.astimezone(italy_tz)
+            time_str = italy_time.strftime("%H:%M")
         else:
             time_str = str(existing_time)[:5] if existing_time else "N/D"
         
