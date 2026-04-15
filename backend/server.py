@@ -8010,6 +8010,58 @@ async def get_athletes_registered_today(current_user = Depends(get_current_user)
     today_athletes.sort(key=lambda x: x["created_at"], reverse=True)
     return {"athletes": today_athletes, "count": len(today_athletes)}
 
+@api_router.get("/athletes/registrations-history")
+async def get_registrations_history(current_user = Depends(get_current_user)):
+    """Get all athlete registrations grouped by date for admin"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    
+    all_athletes = await db.athletes.find({"created_at": {"$exists": True, "$ne": None}}).sort("created_at", -1).to_list(5000)
+    
+    registrations = []
+    for a in all_athletes:
+        created = a.get("created_at")
+        try:
+            if isinstance(created, str):
+                created_dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
+            elif isinstance(created, datetime):
+                created_dt = created
+            else:
+                continue
+            
+            parent_name = None
+            if a.get("parent_id"):
+                parent = await db.users.find_one({"id": a["parent_id"]}, {"_id": 0, "full_name": 1})
+                parent_name = parent.get("full_name") if parent else None
+            
+            second_parent_name = None
+            if a.get("second_parent_id"):
+                sp = await db.users.find_one({"id": a["second_parent_id"]}, {"_id": 0, "full_name": 1})
+                second_parent_name = sp.get("full_name") if sp else None
+            
+            team_name = None
+            if a.get("team_id"):
+                team = await db.teams.find_one({"id": a["team_id"]}, {"_id": 0, "name": 1})
+                team_name = team.get("name") if team else None
+            
+            registrations.append({
+                "id": a.get("id"),
+                "full_name": a.get("full_name", ""),
+                "is_minor": a.get("is_minor", False),
+                "parent_name": parent_name,
+                "second_parent_name": second_parent_name,
+                "team_id": a.get("team_id"),
+                "team_name": team_name,
+                "has_team": bool(a.get("team_id")),
+                "status": a.get("status", ""),
+                "date": created_dt.strftime("%Y-%m-%d"),
+                "created_at": str(created),
+            })
+        except:
+            continue
+    
+    return {"registrations": registrations}
+
 
 @api_router.get("/athletes/{athlete_id}", response_model=Athlete)
 async def get_athlete(athlete_id: str, current_user = Depends(get_current_user)):
