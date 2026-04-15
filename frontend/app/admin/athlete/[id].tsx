@@ -2230,6 +2230,37 @@ export default function AdminAthleteDetail() {
                   </View>
                   )}
                   <Text style={styles.inputLabel}>Codice Fiscale</Text>
+                  {/* Gender selection */}
+                  <Text style={styles.inputLabel}>Sesso</Text>
+                  <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+                    {Platform.OS === 'web' ? (
+                      <>
+                        <div
+                          onClick={() => setEditData({...editData, gender: 'M'})}
+                          style={{ flex: 1, paddingTop: 10, paddingBottom: 10, borderRadius: 8, textAlign: 'center', cursor: 'pointer', backgroundColor: editData.gender === 'M' ? '#1565C0' : '#f0f0f0', color: editData.gender === 'M' ? '#fff' : '#333', fontWeight: 700, fontSize: 15, border: 'none' } as any}
+                        >M</div>
+                        <div
+                          onClick={() => setEditData({...editData, gender: 'F'})}
+                          style={{ flex: 1, paddingTop: 10, paddingBottom: 10, borderRadius: 8, textAlign: 'center', cursor: 'pointer', backgroundColor: editData.gender === 'F' ? '#E91E63' : '#f0f0f0', color: editData.gender === 'F' ? '#fff' : '#333', fontWeight: 700, fontSize: 15, border: 'none' } as any}
+                        >F</div>
+                      </>
+                    ) : (
+                      <>
+                        <TouchableOpacity
+                          style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: editData.gender === 'M' ? '#1565C0' : '#f0f0f0' }}
+                          onPress={() => setEditData({...editData, gender: 'M'})}
+                        >
+                          <Text style={{ color: editData.gender === 'M' ? '#fff' : '#333', fontWeight: '700', fontSize: 15 }}>M</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: editData.gender === 'F' ? '#E91E63' : '#f0f0f0' }}
+                          onPress={() => setEditData({...editData, gender: 'F'})}
+                        >
+                          <Text style={{ color: editData.gender === 'F' ? '#fff' : '#333', fontWeight: '700', fontSize: 15 }}>F</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <TextInput
                       style={[styles.input, { flex: 1, marginRight: 8 }]}
