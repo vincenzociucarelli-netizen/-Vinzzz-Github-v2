@@ -3652,7 +3652,7 @@ export default function AthleteDetail() {
                     setMinorHasPin(true);
                     setMinorAccessEnabled(true);
                     setMinorPinModalVisible(false);
-                    showAlert('Successo', `PIN impostato! ${athlete?.first_name || "L'atleta"} puo ora accedere con il codice ${minorAthleteCode} e il PIN.`);
+                    showAlert('Successo', `PIN impostato! ${athlete?.first_name || "L'atleta"} puo ora accedere con il codice ${minorAthleteCode} (oppure con un Alias da voi scelto) e il PIN.`);
                   } catch (e: any) {
                     showAlert('Errore', e.response?.data?.detail || 'Errore nel salvataggio');
                   } finally {
