@@ -1646,8 +1646,8 @@ async def register(user_data: UserCreate, request: Request):
         }
     await db.users.update_one({"id": user.id}, {"$set": consent_update})
     
-    # Crea notifica per admin se l'utente richiede approvazione (coach, viewer, collaboratore)
-    if initial_status == UserStatus.PENDING and society_id:
+    # Crea notifica per admin per TUTTE le registrazioni
+    if society_id:
         # Trova tutti gli admin della società
         admins = await db.users.find({
             "society_id": society_id,
@@ -1658,7 +1658,9 @@ async def register(user_data: UserCreate, request: Request):
         role_label = {
             "coach": "Coach",
             "viewer": "Dirigente",
-            "collaboratore": "Collaboratore"
+            "collaboratore": "Collaboratore",
+            "parent": "Genitore",
+            "athlete": "Atleta",
         }.get(final_role, final_role.capitalize())
         
         for admin in admins:
@@ -6744,6 +6746,25 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     athlete_dict["created_at"] = datetime.utcnow()
     await db.athletes.insert_one(athlete_dict)
     
+    
+    # Notifica admin per nuova iscrizione atleta minore
+    parent_name = current_user.get("full_name", "")
+    athlete_full_name = athlete_data.full_name or f"{athlete_data.last_name} {athlete_data.first_name}"
+    society_id = current_user.get("society_id")
+    if society_id:
+        admins = await db.users.find({"society_id": society_id, "role": {"$in": ["admin", "viewer"]}, "status": "approved"}).to_list(100)
+        for admin in admins:
+            await db.notifications.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": admin["id"],
+                "type": "new_minor_athlete",
+                "title": "Nuovo atleta minore iscritto",
+                "message": f"{parent_name} ha iscritto {athlete_full_name} (minore).",
+                "data": {"athlete_id": athlete.id, "athlete_name": athlete_full_name, "parent_name": parent_name},
+                "read": False,
+                "created_at": datetime.now(timezone.utc)
+            })
+
     # === LINKING SECONDO GENITORE (solo salva email, richiesta creata quando B si registra) ===
     if athlete_data.second_parent_email:
         second_email = athlete_data.second_parent_email.lower().strip()
