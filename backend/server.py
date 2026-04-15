@@ -1309,6 +1309,10 @@ async def check_athlete_status(athlete_id: str):
     if not certificate and not cert_expiry:
         return {"allowed": False, "reason": "⛔ CERTIFICATO MEDICO MANCANTE - Atleta NON ammesso", "warning": None}
     
+    # Certificato non autenticato dall'admin = BLOCCATO
+    if not athlete.get("medical_certificate_verified", False):
+        return {"allowed": False, "reason": "⛔ CERTIFICATO MEDICO NON AUTENTICATO - In attesa di verifica admin", "warning": None}
+    
     # Check if certificate is expired
     if expiry_date and datetime.utcnow() > expiry_date:
         # Check for active single-session override
