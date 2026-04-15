@@ -2238,12 +2238,77 @@ export default function AdminAthleteDetail() {
                       autoCapitalize="characters"
                       maxLength={16}
                     />
+                    {Platform.OS === 'web' ? (
+                      <div
+                        onClick={() => {
+                          try {
+                            const dob = editData.date_of_birth;
+                            const isEstero = editData.country_of_birth && editData.country_of_birth !== 'Italia' && editData.country_of_birth !== 'ITALIA';
+                            
+                            if (!dob || !editData.last_name || !editData.first_name || !editData.gender) {
+                              alert('Per calcolare il CF servono: Cognome, Nome, Data di Nascita e Sesso');
+                              return;
+                            }
+                            if (!isEstero && !editData.place_of_birth && !editData.birth_place) {
+                              alert('Compila il Luogo di Nascita per calcolare il CF');
+                              return;
+                            }
+                            
+                            let day, month, year;
+                            if (dob.includes('/')) {
+                              const parts = dob.split('/');
+                              day = parseInt(parts[0]);
+                              month = parseInt(parts[1]);
+                              year = parseInt(parts[2]);
+                            } else if (dob.includes('-')) {
+                              const parts = dob.split('-');
+                              year = parseInt(parts[0]);
+                              month = parseInt(parts[1]);
+                              day = parseInt(parts[2]);
+                            } else {
+                              const d = new Date(dob);
+                              day = d.getDate();
+                              month = d.getMonth() + 1;
+                              year = d.getFullYear();
+                            }
+                            
+                            const birthplaceValue = isEstero 
+                              ? editData.country_of_birth.toUpperCase() 
+                              : (editData.birth_place || editData.place_of_birth || '').toUpperCase();
+                            const cf = new CodiceFiscale({
+                              name: editData.first_name.toUpperCase(),
+                              surname: editData.last_name.toUpperCase(),
+                              gender: editData.gender as 'M' | 'F',
+                              day: day,
+                              month: month,
+                              year: year,
+                              birthplace: birthplaceValue,
+                              birthplaceProvincia: isEstero ? 'EE' : (editData.birth_province?.toUpperCase() || editData.province_of_birth?.toUpperCase() || ''),
+                            });
+                            
+                            setEditData({...editData, fiscal_code: cf.toString()});
+                            alert('Codice Fiscale calcolato!');
+                          } catch (error: any) {
+                            console.error('CF calculation error:', error);
+                            alert('Impossibile calcolare il CF. Verifica i dati inseriti.');
+                          }
+                        }}
+                        style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#4CAF50', paddingLeft: 14, paddingRight: 14, paddingTop: 10, paddingBottom: 10, borderRadius: 8, cursor: 'pointer' } as any}
+                        data-testid="calculate-cf-btn"
+                      >
+                        <Ionicons name="calculator" size={18} color="#fff" />
+                        <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>Calcola</Text>
+                      </div>
+                    ) : (
                     <TouchableOpacity
                       style={{
-                        backgroundColor: '#007AFF',
-                        paddingHorizontal: 12,
+                        backgroundColor: '#4CAF50',
+                        paddingHorizontal: 14,
                         paddingVertical: 10,
                         borderRadius: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
                       }}
                       onPress={() => {
                         try {
@@ -2259,7 +2324,6 @@ export default function AdminAthleteDetail() {
                             return;
                           }
                           
-                          // Parse date - handle different formats
                           let day, month, year;
                           if (dob.includes('/')) {
                             const parts = dob.split('/');
@@ -2296,12 +2360,14 @@ export default function AdminAthleteDetail() {
                           Alert.alert('Successo', 'Codice Fiscale calcolato!');
                         } catch (error: any) {
                           console.error('CF calculation error:', error);
-                          Alert.alert('Errore', 'Impossibile calcolare il CF. Verifica i dati inseriti (es. comune di nascita deve essere valido).');
+                          Alert.alert('Errore', 'Impossibile calcolare il CF. Verifica i dati inseriti.');
                         }
                       }}
                     >
                       <Ionicons name="calculator" size={18} color="#fff" />
+                      <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>Calcola</Text>
                     </TouchableOpacity>
+                    )}
                   </View>
                   <Text style={styles.inputLabel}>Email</Text>
                   <TextInput
