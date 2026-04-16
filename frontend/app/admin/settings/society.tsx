@@ -285,7 +285,18 @@ export default function SocietySettings() {
           
           {Platform.OS === 'web' ? (
           <div
-            onClick={() => {
+            role="button"
+            tabIndex={0}
+            onClick={(e: any) => {
+              e.stopPropagation();
+              if (blockExpiredCertificates) {
+                setShowOverrideModal(true);
+              } else {
+                setBlockExpiredCertificates(true);
+              }
+            }}
+            onTouchEnd={(e: any) => {
+              e.stopPropagation();
               if (blockExpiredCertificates) {
                 setShowOverrideModal(true);
               } else {
