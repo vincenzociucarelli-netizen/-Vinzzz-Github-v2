@@ -494,6 +494,7 @@ export default function AdminAthletes() {
     }
     if (item.status === 'pending' || item.status === 'pending_email') return 'In attesa';
     if (item.status === 'pending_privacy') return 'Firma Privacy';
+    if (item.status === 'pending_certificate') return 'Attesa Certificato';
     return 'Attivo';
   };
 
@@ -505,6 +506,7 @@ export default function AdminAthletes() {
     }
     if (item.status === 'pending' || item.status === 'pending_email') return '#9C27B0';
     if (item.status === 'pending_privacy') return '#1976D2';
+    if (item.status === 'pending_certificate') return '#FF9800';
     return '#34C759';
   };
 
