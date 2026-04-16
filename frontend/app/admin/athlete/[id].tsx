@@ -1805,6 +1805,16 @@ export default function AdminAthleteDetail() {
 
             {/* Dati Tecnici */}
             <View style={styles.card}>
+              {/* Box Validazione Certificato */}
+              {athlete.status === 'pending_certificate' && (
+                <View style={{ marginBottom: 16 }}>
+                  <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>Validazione Certificato</Text>
+                    <Text style={{ fontSize: 13, color: '#666' }}>Privacy firmata. In attesa della validazione del certificato medico da parte dell'admin.</Text>
+                  </View>
+                </View>
+              )}
+
               {/* Box Periodo di Prova - solo per atleti trial */}
               {athlete.status === 'trial' && (
                 <View style={{ marginBottom: 16 }}>
