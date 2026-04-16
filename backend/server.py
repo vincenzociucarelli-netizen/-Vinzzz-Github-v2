@@ -1284,6 +1284,20 @@ async def check_athlete_status(athlete_id: str):
     block_certificates = True  # Default: block
     if society_settings:
         block_certificates = society_settings.get("block_expired_certificates", True)
+        # Check if temporary override has expired
+        override_expires = society_settings.get("override_expires_at")
+        if override_expires and not block_certificates:
+            try:
+                exp_dt = datetime.fromisoformat(override_expires.replace('Z', '+00:00')).replace(tzinfo=None)
+                if datetime.utcnow() > exp_dt:
+                    # Override expired - reactivate blocking
+                    await db.settings.update_one(
+                        {"type": "society"},
+                        {"$set": {"block_expired_certificates": True, "override_type": None, "override_expires_at": None}}
+                    )
+                    block_certificates = True
+            except:
+                pass
     
     # Check certificate (skip ONLY for active trial athletes who haven't accepted privacy yet)
     if trial_active and not athlete.get("privacy_accepted", False):

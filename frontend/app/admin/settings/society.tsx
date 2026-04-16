@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../../src/components/Icon';
@@ -53,6 +54,56 @@ export default function SocietySettings() {
   const [societyEmail, setSocietyEmail] = useState('');
   const [societyPec, setSocietyPec] = useState('');
   const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(false);
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [overridePermanent, setOverridePermanent] = useState(false);
+  const [overrideExpiry, setOverrideExpiry] = useState<string | null>(null);
+
+  const handleOverride = async (type: 'temporary' | 'permanent') => {
+    setShowOverrideModal(false);
+    setBlockExpiredCertificates(false);
+    
+    if (type === 'temporary') {
+      // Set 15 min expiry
+      const expiry = new Date(Date.now() + 15 * 60 * 1000);
+      const expiryStr = expiry.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+      setOverrideExpiry(expiryStr);
+      
+      // Save with expiry to backend
+      try {
+        const token = await AsyncStorage.getItem('token');
+        await axios.patch(`${API_URL}/api/settings/society`, {
+          block_expired_certificates: false,
+          override_type: 'temporary',
+          override_expires_at: expiry.toISOString(),
+        }, { headers: { Authorization: `Bearer ${token}` } });
+      } catch {}
+      
+      // Auto-reactivate after 15 min
+      setTimeout(() => {
+        setBlockExpiredCertificates(true);
+        setOverrideExpiry(null);
+        AsyncStorage.getItem('token').then(token => {
+          if (token) {
+            axios.patch(`${API_URL}/api/settings/society`, {
+              block_expired_certificates: true,
+              override_type: null,
+              override_expires_at: null,
+            }, { headers: { Authorization: `Bearer ${token}` } });
+          }
+        });
+      }, 15 * 60 * 1000);
+    } else {
+      // Permanent override
+      try {
+        const token = await AsyncStorage.getItem('token');
+        await axios.patch(`${API_URL}/api/settings/society`, {
+          block_expired_certificates: false,
+          override_type: 'permanent',
+          override_expires_at: null,
+        }, { headers: { Authorization: `Bearer ${token}` } });
+      } catch {}
+    }
+  };
 
   // Stagione sportiva
   const [seasonStartMonth, setSeasonStartMonth] = useState(7);
@@ -243,7 +294,27 @@ export default function SocietySettings() {
               borderWidth: 1,
               borderColor: blockExpiredCertificates ? '#66BB6A' : '#FFB74D',
             }]}
-            onPress={() => setBlockExpiredCertificates(!blockExpiredCertificates)}
+            onPress={() => {
+              if (blockExpiredCertificates) {
+                // Disabling - show popup with options
+                if (Platform.OS === 'web') {
+                  setShowOverrideModal(true);
+                } else {
+                  Alert.alert(
+                    'Disattivare il blocco certificati?',
+                    'Scegli la modalità di disattivazione',
+                    [
+                      { text: 'Annulla', style: 'cancel' },
+                      { text: 'Temporaneo (15 min)', onPress: () => handleOverride('temporary') },
+                      { text: 'Definitivo', onPress: () => handleOverride('permanent') },
+                    ]
+                  );
+                }
+              } else {
+                // Enabling - just toggle
+                setBlockExpiredCertificates(true);
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1, marginRight: 12 }}>
@@ -253,7 +324,9 @@ export default function SocietySettings() {
               <Text style={{ fontSize: 12, color: '#666' }}>
                 {blockExpiredCertificates 
                   ? 'La scansione QR blocca la registrazione agli allenamenti per atleti con certificato scaduto o mancante'
-                  : 'La scansione QR permette la registrazione agli allenamenti anche con certificato scaduto'}
+                  : overrideExpiry 
+                    ? `Override temporaneo attivo fino alle ${overrideExpiry}`
+                    : 'La scansione QR permette la registrazione agli allenamenti anche con certificato scaduto'}
               </Text>
             </View>
             <View style={[{
@@ -592,6 +665,44 @@ export default function SocietySettings() {
         {/* Spacer */}
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Override Modal */}
+      <Modal visible={showOverrideModal} animationType="fade" transparent onRequestClose={() => setShowOverrideModal(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '100%', maxWidth: 380 }}>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#333', marginBottom: 8 }}>Disattivare il blocco certificati?</Text>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 20, lineHeight: 20 }}>
+              Questa azione permettera agli atleti di allenarsi anche senza certificato medico autenticato.
+            </Text>
+
+            {/* Temporary option */}
+            <TouchableOpacity
+              onPress={() => handleOverride('temporary')}
+              style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#FFB74D' }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>Temporaneo (15 minuti)</Text>
+              <Text style={{ fontSize: 12, color: '#888' }}>Valido per una sola scansione e per massimo 15 minuti. Dopo si riattiva automaticamente.</Text>
+            </TouchableOpacity>
+
+            {/* Permanent option */}
+            <TouchableOpacity
+              onPress={() => handleOverride('permanent')}
+              style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#EF9A9A' }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#C62828', marginBottom: 4 }}>Disattiva definitivamente</Text>
+              <Text style={{ fontSize: 12, color: '#888' }}>Il blocco resta disattivo finche non lo riattivi manualmente.</Text>
+            </TouchableOpacity>
+
+            {/* Cancel */}
+            <TouchableOpacity
+              onPress={() => setShowOverrideModal(false)}
+              style={{ paddingVertical: 12, alignItems: 'center' }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#999' }}>Annulla</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Floating Save Button */}
       <View style={styles.floatingButtonContainer}>
