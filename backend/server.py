@@ -1279,12 +1279,27 @@ async def check_athlete_status(athlete_id: str):
     if is_trial and trial_start and not trial_active and not athlete.get("privacy_accepted"):
         return {"allowed": False, "reason": "Periodo di prova terminato - iscrizione richiesta", "warning": None}
     
-    # BLOCCO AUTOMATICO SEMPRE ATTIVO - nessun check impostazioni
+    # Check society settings for certificate blocking
+    society_settings = await db.settings.find_one({"type": "society"})
+    block_certificates = True  # Default: block
+    if society_settings:
+        block_certificates = society_settings.get("block_expired_certificates", True)
     
     # Check certificate (skip ONLY for active trial athletes who haven't accepted privacy yet)
     if trial_active and not athlete.get("privacy_accepted", False):
         # Trial athletes without privacy can train without certificate
         return {"allowed": True, "reason": None, "warning": "Atleta in periodo di prova - Certificato medico richiesto al termine della prova"}
+    
+    # If certificate blocking is disabled by admin, allow with warning
+    if not block_certificates:
+        certificate = await db.certificates.find_one({"athlete_id": athlete_id})
+        if not certificate:
+            return {"allowed": True, "reason": None, "warning": "⚠️ Certificato medico mancante (blocco disattivato dall'admin)"}
+        if not athlete.get("medical_certificate_verified", False):
+            return {"allowed": True, "reason": None, "warning": "⚠️ Certificato medico non autenticato (blocco disattivato dall'admin)"}
+        return {"allowed": True, "reason": None, "warning": None}
+    
+    # Certificate blocking is ACTIVE
     
     # Check certificate
     certificate = await db.certificates.find_one({"athlete_id": athlete_id})
