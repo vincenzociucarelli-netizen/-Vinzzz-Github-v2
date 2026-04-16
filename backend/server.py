@@ -1281,9 +1281,9 @@ async def check_athlete_status(athlete_id: str):
     
     # BLOCCO AUTOMATICO SEMPRE ATTIVO - nessun check impostazioni
     
-    # Check certificate (skip for active trial athletes)
-    if trial_active:
-        # Trial athletes can train without certificate
+    # Check certificate (skip ONLY for active trial athletes who haven't accepted privacy yet)
+    if trial_active and not athlete.get("privacy_accepted", False):
+        # Trial athletes without privacy can train without certificate
         return {"allowed": True, "reason": None, "warning": "Atleta in periodo di prova - Certificato medico richiesto al termine della prova"}
     
     # Check certificate
