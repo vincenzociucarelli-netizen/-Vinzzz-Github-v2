@@ -283,43 +283,30 @@ export default function SocietySettings() {
             Gestione scadenza certificati medici atleti
           </Text>
           
-          <TouchableOpacity 
-            style={[{
+          {Platform.OS === 'web' ? (
+          <div
+            onClick={() => {
+              if (blockExpiredCertificates) {
+                setShowOverrideModal(true);
+              } else {
+                setBlockExpiredCertificates(true);
+              }
+            }}
+            style={{
+              display: 'flex',
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: 14,
               borderRadius: 10,
               backgroundColor: blockExpiredCertificates ? '#E8F5E9' : '#FFF3E0',
-              borderWidth: 1,
-              borderColor: blockExpiredCertificates ? '#66BB6A' : '#FFB74D',
-            }]}
-            onPress={() => {
-              if (blockExpiredCertificates) {
-                // Disabling - show popup with options
-                if (Platform.OS === 'web') {
-                  setShowOverrideModal(true);
-                } else {
-                  Alert.alert(
-                    'Disattivare il blocco certificati?',
-                    'Scegli la modalità di disattivazione',
-                    [
-                      { text: 'Annulla', style: 'cancel' },
-                      { text: 'Temporaneo (15 min)', onPress: () => handleOverride('temporary') },
-                      { text: 'Definitivo', onPress: () => handleOverride('permanent') },
-                    ]
-                  );
-                }
-              } else {
-                // Enabling - just toggle
-                setBlockExpiredCertificates(true);
-              }
-            }}
-            activeOpacity={0.7}
+              border: `1px solid ${blockExpiredCertificates ? '#66BB6A' : '#FFB74D'}`,
+              cursor: 'pointer',
+            } as any}
           >
             <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: blockExpiredCertificates ? '#2E7D32' : '#E65100', marginBottom: 4 }}>
-                {blockExpiredCertificates ? '🔒 Blocco automatico ATTIVO' : '🔓 Blocco automatico DISATTIVO'}
+                {blockExpiredCertificates ? 'Blocco automatico ATTIVO' : 'Blocco automatico DISATTIVO'}
               </Text>
               <Text style={{ fontSize: 12, color: '#666' }}>
                 {blockExpiredCertificates 
@@ -340,7 +327,59 @@ export default function SocietySettings() {
                 alignSelf: blockExpiredCertificates ? 'flex-end' : 'flex-start',
               }]} />
             </View>
+          </div>
+          ) : (
+          <TouchableOpacity 
+            style={[{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: 14,
+              borderRadius: 10,
+              backgroundColor: blockExpiredCertificates ? '#E8F5E9' : '#FFF3E0',
+              borderWidth: 1,
+              borderColor: blockExpiredCertificates ? '#66BB6A' : '#FFB74D',
+            }]}
+            onPress={() => {
+              if (blockExpiredCertificates) {
+                Alert.alert(
+                  'Disattivare il blocco certificati?',
+                  'Scegli la modalità di disattivazione',
+                  [
+                    { text: 'Annulla', style: 'cancel' },
+                    { text: 'Temporaneo (15 min)', onPress: () => handleOverride('temporary') },
+                    { text: 'Definitivo', onPress: () => handleOverride('permanent') },
+                  ]
+                );
+              } else {
+                setBlockExpiredCertificates(true);
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: blockExpiredCertificates ? '#2E7D32' : '#E65100', marginBottom: 4 }}>
+                {blockExpiredCertificates ? 'Blocco automatico ATTIVO' : 'Blocco automatico DISATTIVO'}
+              </Text>
+              <Text style={{ fontSize: 12, color: '#666' }}>
+                {blockExpiredCertificates 
+                  ? 'La scansione QR blocca la registrazione agli allenamenti per atleti con certificato scaduto o mancante'
+                  : 'La scansione QR permette la registrazione agli allenamenti anche con certificato scaduto'}
+              </Text>
+            </View>
+            <View style={[{
+              width: 50, height: 28, borderRadius: 14, padding: 2,
+              backgroundColor: blockExpiredCertificates ? '#66BB6A' : '#ccc',
+              justifyContent: 'center',
+            }]}>
+              <View style={[{
+                width: 24, height: 24, borderRadius: 12,
+                backgroundColor: '#fff',
+                alignSelf: blockExpiredCertificates ? 'flex-end' : 'flex-start',
+              }]} />
+            </View>
           </TouchableOpacity>
+          )}
           
           {blockExpiredCertificates && (
             <View style={{ backgroundColor: '#FFF8E1', padding: 10, borderRadius: 8, marginTop: 10 }}>
