@@ -17561,6 +17561,13 @@ async def sign_gdpr_privacy_document(
                 **consent_sync
             }}
         )
+        # If athlete was in trial and privacy is now accepted, update status
+        minor_athlete = await db.athletes.find_one({"id": related_entity_id}, {"_id": 0, "is_trial": 1, "status": 1})
+        if minor_athlete and minor_athlete.get("is_trial"):
+            await db.athletes.update_one(
+                {"id": related_entity_id},
+                {"$set": {"status": "pending_certificate", "is_trial": False, "trial_status": "completed"}}
+            )
         # Also update the signing parent's own consents (mandatory + image consents)
         parent_consent_sync = {
             "consents.privacy_viewed": {"value": True, "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
