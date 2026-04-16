@@ -17,3 +17,7 @@ NON devono essere modificati a meno che l'utente lo richieda esplicitamente.
 ## Pre-iscrizione - Completati e verificati (14/04/2026)
 - `/app/frontend/app/preseason/[id].tsx` - Form pre-iscrizione: data nascita con calendar picker, logica condizionale (ha giocato sì/no), campi sport/campionati/ruolo
 - `/app/frontend/app/admin/preseason.tsx` - Admin pre-iscrizione: filtri statistiche cliccabili, popup dettaglio con condivisione/stampa, sport praticato nel popup
+
+## Atleta 18- e Genitori - Completati e verificati (16/04/2026)
+- `/app/frontend/app/parent/athlete/[id].tsx` - Vista genitore dell'atleta minore, dati anagrafici+fiscali unificati, badge "Validazione Certificato", firma privacy con aggiornamento status automatico
+- `/app/frontend/app/admin/athletes.tsx` - Lista atleti admin con status "Validazione Certificato" mappato correttamente
