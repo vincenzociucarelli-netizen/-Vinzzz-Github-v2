@@ -12,6 +12,11 @@ Applicazione completa per la gestione di società sportive di pallavolo italiane
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 17/04/2026:
+- Ridisegnato biglietto da visita JPG della società: design professionale con logo, ragione sociale, indirizzo+CAP+città, telefono, C.F., P.IVA, federazione e codice federale
+- Aggiunto campo Partita IVA al modello dati della società (backend + frontend)
+- Affiliazioni sportive incluse nel testo condivisione WhatsApp/Email
+
 ## Completato 16/04/2026:
 - Fix status atleta dopo firma privacy: da "trial" a "pending_certificate" automaticamente
 - Badge "Validazione Certificato" in lista atleti admin e vista genitore (sostituisce raw "pending_certificate")
@@ -29,9 +34,9 @@ Vedi `/app/memory/LOCKED_FILES.md`
 - **Override certificati con popup 15 min/definitivo**: non funziona il click su mobile, da riprovare
 
 ## Task Futuri
-- (P1) Re-importazione file Excel calendario
+- (P1) Re-importazione file Excel calendario per aggiornamento date partite
 - (P1) UI per atleti con contratti formali
-- (P2) Refactoring server.py monolitico
+- (P2) Refactoring server.py monolitico (>24k righe)
 - (P2) Re-implementazione Stripe
 - (P2) Pubblicazione dominio e App Store
 - (P3) Upload screenshot per rimozione foto

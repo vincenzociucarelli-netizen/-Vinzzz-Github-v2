@@ -52,6 +52,7 @@ export default function SocietyProfile() {
   const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
   const [fiscalCode, setFiscalCode] = useState('');
+  const [partitaIva, setPartitaIva] = useState('');
   const [cellulare, setCellulare] = useState('');
   const [phone2, setPhone2] = useState('');
   const [presidentName, setPresidentName] = useState('');
@@ -82,6 +83,7 @@ export default function SocietyProfile() {
       setCity(response.data.city || '');
       setProvince(response.data.province || '');
       setFiscalCode(response.data.fiscal_code || '');
+      setPartitaIva(response.data.partita_iva || '');
       setCellulare(response.data.phone || '');
       setPhone2(response.data.phone2 || '');
       setPresidentName(response.data.president_name || '');
@@ -112,6 +114,7 @@ export default function SocietyProfile() {
         city: city,
         province: province,
         fiscal_code: fiscalCode,
+        partita_iva: partitaIva,
         phone: cellulare,
         phone2: phone2,
         president_name: presidentName,
@@ -192,7 +195,14 @@ export default function SocietyProfile() {
     if (societyEmail) lines.push(`Email: ${societyEmail}`);
     if (societyPec) lines.push(`PEC: ${societyPec}`);
     if (fiscalCode) lines.push(`C.F.: ${fiscalCode}`);
+    if (partitaIva) lines.push(`P.IVA: ${partitaIva}`);
     if (presidentName) lines.push(`Presidente: ${presidentName}`);
+    if (affiliations.length > 0) {
+      lines.push('');
+      affiliations.forEach(aff => {
+        lines.push(`${aff.name}: ${aff.number}`);
+      });
+    }
     return lines.join('\n');
   };
 
@@ -401,6 +411,7 @@ export default function SocietyProfile() {
                 </TouchableOpacity>
               </View>
               <InfoRow icon="card" label="Codice Fiscale" value={fiscalCode} />
+              {partitaIva ? <InfoRow icon="receipt" label="Partita IVA" value={partitaIva} /> : null}
               <InfoRow icon="person" label="Presidente" value={presidentName} />
             </View>
 
@@ -514,6 +525,8 @@ export default function SocietyProfile() {
               <Text style={styles.sectionTitle}>Dati Fiscali</Text>
               <Text style={styles.inputLabel}>Codice Fiscale</Text>
               <TextInput style={styles.input} value={fiscalCode} onChangeText={setFiscalCode} placeholder="12345678901" placeholderTextColor="#999" autoCapitalize="characters" />
+              <Text style={styles.inputLabel}>Partita IVA</Text>
+              <TextInput style={styles.input} value={partitaIva} onChangeText={setPartitaIva} placeholder="12345678901" placeholderTextColor="#999" keyboardType="numeric" />
               <Text style={styles.inputLabel}>Presidente</Text>
               <TextInput style={styles.input} value={presidentName} onChangeText={setPresidentName} placeholder="Mario Rossi" placeholderTextColor="#999" />
             </View>

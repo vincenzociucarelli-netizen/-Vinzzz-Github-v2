@@ -3475,6 +3475,7 @@ class SocietySettingsUpdate(BaseModel):
     city: Optional[str] = None
     province: Optional[str] = None
     fiscal_code: Optional[str] = None  # Cod. Fiscale
+    partita_iva: Optional[str] = None  # Partita IVA
     phone: Optional[str] = None
     phone2: Optional[str] = None
     president_name: Optional[str] = None
@@ -3545,6 +3546,7 @@ async def get_society_settings():
             "city": None,
             "province": None,
             "fiscal_code": None,
+            "partita_iva": None,
             "phone": None,
             "phone2": None,
             "president_name": None,
@@ -3570,6 +3572,7 @@ async def get_society_settings():
         "city": settings.get("city"),
         "province": settings.get("province"),
         "fiscal_code": settings.get("fiscal_code"),
+        "partita_iva": settings.get("partita_iva"),
         "phone": settings.get("phone"),
         "phone2": settings.get("phone2"),
         "president_name": settings.get("president_name"),
@@ -3632,6 +3635,8 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
         update_dict["province"] = data.province
     if data.fiscal_code is not None:
         update_dict["fiscal_code"] = data.fiscal_code
+    if data.partita_iva is not None:
+        update_dict["partita_iva"] = data.partita_iva
     if data.phone is not None:
         update_dict["phone"] = data.phone
     if data.phone2 is not None:
@@ -20980,7 +20985,7 @@ async def delete_my_data(current_user = Depends(get_current_user)):
 
 @api_router.api_route("/society/card-fiscale", methods=["GET", "POST"])
 async def generate_fiscal_card(current_user = Depends(get_current_user)):
-    """Genera immagine JPG biglietto da visita della societa"""
+    """Genera immagine JPG biglietto da visita della societa - design professionale"""
     society = await db.settings.find_one({"type": "society"})
     if not society:
         society = await db.societies.find_one({"id": current_user.get("society_id")})
@@ -20990,65 +20995,80 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     from PIL import Image, ImageDraw, ImageFont
     import base64
     
-    PRIMARY = (21, 101, 192)
+    # === Color Palette ===
+    PRIMARY = (21, 101, 192)       # Blu principale
+    PRIMARY_DARK = (13, 71, 161)   # Blu scuro per accenti
+    PRIMARY_LIGHT = (227, 242, 253) # Azzurro chiaro sfondo
     DARK_TEXT = (26, 26, 46)
-    MID_TEXT = (80, 80, 100)
-    BG_COLOR = (255, 255, 255)
+    MID_TEXT = (70, 70, 90)
+    LIGHT_TEXT = (130, 130, 150)
+    WHITE = (255, 255, 255)
+    SEPARATOR = (200, 210, 225)
+    GOLD_ACCENT = (218, 165, 32)
     
     FONT_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
     FONT_REG = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+    FONT_ITALIC = "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf"
     try:
-        font_label = ImageFont.truetype(FONT_BOLD, 12)
-        font_value = ImageFont.truetype(FONT_REG, 14)
-        font_aff_value = ImageFont.truetype(FONT_BOLD, 13)
+        font_name_big = ImageFont.truetype(FONT_BOLD, 26)
+        font_ragione = ImageFont.truetype(FONT_ITALIC, 13)
+        font_label = ImageFont.truetype(FONT_BOLD, 10)
+        font_value = ImageFont.truetype(FONT_REG, 13)
+        font_value_bold = ImageFont.truetype(FONT_BOLD, 13)
+        font_aff_label = ImageFont.truetype(FONT_BOLD, 10)
+        font_aff_value = ImageFont.truetype(FONT_REG, 12)
+        font_sport = ImageFont.truetype(FONT_BOLD, 11)
     except Exception:
-        font_label = ImageFont.load_default()
-        font_value = font_aff_value = font_label
+        font_name_big = font_ragione = font_label = font_value = font_value_bold = ImageFont.load_default()
+        font_aff_label = font_aff_value = font_sport = font_label
     
-    pad_x = 30
-    top_y = 18
-    logo_max = 70
-    
-    # --- Step 1: Measure name to determine card width ---
-    # Split name: line1 = main name, line2 = suffix (SSD...)
+    # === Data extraction ===
     full_name = society.get("name", "Societa Sportiva")
-    name_upper = full_name.upper()
+    ragione_sociale = society.get("ragione_sociale", "")
+    sport = society.get("sport_praticato", "")
+    address = society.get("address", "")
+    postal_code = society.get("postal_code", "")
+    city = society.get("city", "")
+    province = society.get("province", "")
+    phone = society.get("phone", "")
+    phone2 = society.get("phone2", "")
+    email = society.get("email", "")
+    pec = society.get("pec", "")
+    fiscal_code = society.get("fiscal_code", "")
+    partita_iva = society.get("partita_iva", "")
+    president = society.get("president_name", "")
+    affiliations = society.get("affiliations", [])
+    logo_data = society.get("logo")
     
-    # Split at "SSD" if present
-    ssd_idx = name_upper.find("SSD")
-    if ssd_idx > 0:
-        line1 = name_upper[:ssd_idx].strip()
-        line2 = name_upper[ssd_idx:].strip()
-    else:
-        line1 = name_upper
-        line2 = ""
+    # === Layout constants ===
+    W = 720
+    pad_x = 32
+    pad_y = 24
     
-    # Temp canvas to measure text
-    tmp_img = Image.new('RGB', (2000, 100), BG_COLOR)
+    # --- Measure content to determine height ---
+    tmp_img = Image.new('RGB', (W, 50), WHITE)
     tmp_draw = ImageDraw.Draw(tmp_img)
     
-    title_font_size = 30
-    font_title = ImageFont.truetype(FONT_BOLD, title_font_size)
+    # Measure name
+    name_upper = full_name.upper()
+    bbox_name = tmp_draw.textbbox((0, 0), name_upper, font=font_name_big)
+    name_h = bbox_name[3] - bbox_name[1]
     
-    # Measure line1 width for card width
-    bbox1 = tmp_draw.textbbox((0, 0), line1, font=font_title)
-    line1_w = bbox1[2] - bbox1[0]
-    
-    logo_right_edge = pad_x + logo_max + 14  # estimate with logo
-    name_x = logo_right_edge
-    
-    # Card width = logo + name + padding
-    W = name_x + line1_w + pad_x + 10
-    W = max(W, 600)  # minimum width for contact info
-    
-    # --- Step 2: Create actual canvas ---
-    img = Image.new('RGB', (W, 700), BG_COLOR)
+    # === Build the card ===
+    # Generous height, we'll crop later
+    img = Image.new('RGB', (W, 600), WHITE)
     draw = ImageDraw.Draw(img)
-    draw.rectangle([(0, 0), (W, 6)], fill=PRIMARY)
     
-    # --- Step 3: Logo ---
-    logo_data = society.get("logo")
-    actual_logo_right = pad_x
+    # --- Top accent bar (gradient-like with 2 stripes) ---
+    draw.rectangle([(0, 0), (W, 5)], fill=PRIMARY)
+    draw.rectangle([(0, 5), (W, 7)], fill=GOLD_ACCENT)
+    
+    y = pad_y + 7
+    
+    # --- HEADER: Logo + Nome + Ragione Sociale ---
+    logo_size = 80
+    logo_placed = False
+    logo_right_x = pad_x
     
     if logo_data:
         try:
@@ -21057,84 +21077,155 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
             logo_bytes = base64.b64decode(logo_data)
             logo_img = Image.open(io.BytesIO(logo_bytes)).convert('RGBA')
             w, h = logo_img.size
-            ratio = min(logo_max / w, logo_max / h)
+            ratio = min(logo_size / w, logo_size / h)
             new_w, new_h = int(w * ratio), int(h * ratio)
             logo_img = logo_img.resize((new_w, new_h), Image.LANCZOS)
-            bg_patch = Image.new('RGB', (new_w, new_h), BG_COLOR)
+            # Paste with white background
+            bg_patch = Image.new('RGB', (new_w, new_h), WHITE)
             bg_patch.paste(logo_img, (0, 0), logo_img)
-            img.paste(bg_patch, (pad_x, top_y + (logo_max - new_h) // 2))
-            actual_logo_right = pad_x + new_w + 14
+            logo_y = y + (logo_size - new_h) // 2
+            img.paste(bg_patch, (pad_x, logo_y))
+            logo_right_x = pad_x + new_w + 16
+            logo_placed = True
         except Exception:
-            actual_logo_right = pad_x
+            logo_right_x = pad_x
     
-    name_x = actual_logo_right
+    # Name - centered vertically with logo area
+    text_x = logo_right_x
+    name_y = y + 8
+    draw.text((text_x, name_y), name_upper, fill=PRIMARY_DARK, font=font_name_big)
     
-    # --- Step 4: Name on 2 lines (same bold font) ---
-    draw.text((name_x, top_y + 4), line1, fill=DARK_TEXT, font=font_title)
-    cursor_y = top_y + title_font_size + 8
-    if line2:
-        draw.text((name_x, cursor_y), line2, fill=DARK_TEXT, font=font_title)
-        cursor_y += title_font_size + 6
+    # Ragione Sociale sotto il nome
+    rs_y = name_y + name_h + 6
+    if ragione_sociale:
+        draw.text((text_x, rs_y), ragione_sociale, fill=LIGHT_TEXT, font=font_ragione)
+        rs_y += 18
     
-    # --- Step 5: Separator ---
-    sep_y = max(top_y + logo_max + 10, cursor_y + 4)
+    # Sport badge
+    if sport:
+        badge_y = rs_y + 2
+        sport_text = sport.upper()
+        bbox_sport = draw.textbbox((0, 0), sport_text, font=font_sport)
+        sport_w = bbox_sport[2] - bbox_sport[0]
+        # Draw rounded badge background
+        badge_pad = 8
+        badge_h = 20
+        x0 = text_x
+        y0 = badge_y
+        x1 = x0 + sport_w + badge_pad * 2
+        y1 = y0 + badge_h
+        draw.rounded_rectangle([(x0, y0), (x1, y1)], radius=4, fill=PRIMARY_LIGHT)
+        draw.text((x0 + badge_pad, y0 + 3), sport_text, fill=PRIMARY, font=font_sport)
+        rs_y = y1 + 4
+    
+    # y after header
+    header_bottom = max(y + logo_size + 8 if logo_placed else rs_y + 4, rs_y + 4)
+    
+    # --- Separator line ---
+    sep_y = header_bottom + 4
     draw.line([(pad_x, sep_y), (W - pad_x, sep_y)], fill=PRIMARY, width=2)
     
-    # --- Step 6: Contact info in 2 columns (NO cellulare) ---
-    info_y = sep_y + 12
+    # --- BODY: Info in 2 columns ---
+    body_y = sep_y + 14
     col_left_x = pad_x
-    col_right_x = W // 2 + 10
-    line_h = 38
+    col_right_x = W // 2 + 14
+    row_h = 36
+    icon_indent = 0  # No icons in JPG, use label+value style
     
-    def draw_info(x, y, label, value):
+    def draw_field(x, y, label, value, bold_value=False):
+        """Draw a label-value pair and return new y"""
         if not value:
             return y
         draw.text((x, y), label.upper(), fill=PRIMARY, font=font_label)
-        draw.text((x, y + 15), str(value), fill=MID_TEXT, font=font_value)
-        return y + line_h
+        vfont = font_value_bold if bold_value else font_value
+        draw.text((x, y + 13), str(value), fill=DARK_TEXT, font=vfont)
+        return y + row_h
     
-    # Left column: Sede, C.F., Presidente
-    y_left = info_y
-    addr_parts = []
-    if society.get("address"):
-        addr_parts.append(society["address"])
-    loc_parts = []
-    if society.get("postal_code"):
-        loc_parts.append(society["postal_code"])
-    if society.get("city"):
-        loc_parts.append(society["city"])
-    if society.get("province"):
-        loc_parts.append(f"({society['province']})")
-    if loc_parts:
-        addr_parts.append(" ".join(loc_parts))
-    y_left = draw_info(col_left_x, y_left, "Sede", " - ".join(addr_parts) if addr_parts else "")
-    y_left = draw_info(col_left_x, y_left, "C.F.", society.get("fiscal_code", ""))
-    y_left = draw_info(col_left_x, y_left, "Presidente", society.get("president_name", ""))
+    # LEFT COLUMN
+    y_left = body_y
     
-    # Right column: Email, PEC (NO cellulare)
-    y_right = info_y
-    y_right = draw_info(col_right_x, y_right, "Email", society.get("email", ""))
-    y_right = draw_info(col_right_x, y_right, "PEC", society.get("pec", ""))
+    # Indirizzo
+    if address:
+        draw.text((col_left_x, y_left), "INDIRIZZO", fill=PRIMARY, font=font_label)
+        draw.text((col_left_x, y_left + 13), address, fill=DARK_TEXT, font=font_value)
+        y_left += row_h
     
-    # --- Step 7: Affiliations ---
-    bottom_y = max(y_left, y_right) + 4
-    affiliations = society.get("affiliations", [])
+    # CAP, Citta (Prov.)
+    location = ""
+    if postal_code:
+        location += postal_code
+    if city:
+        location += f"  {city}" if location else city
+    if province:
+        location += f" ({province})"
+    if location:
+        draw.text((col_left_x, y_left), "CAP / CITTA", fill=PRIMARY, font=font_label)
+        draw.text((col_left_x, y_left + 13), location.strip(), fill=DARK_TEXT, font=font_value)
+        y_left += row_h
+    
+    # Telefono
+    phone_str = ""
+    if phone:
+        phone_str = phone
+    if phone2:
+        phone_str += f"  /  {phone2}" if phone_str else phone2
+    if phone_str:
+        y_left = draw_field(col_left_x, y_left, "Telefono", phone_str)
+    
+    # Codice Fiscale
+    if fiscal_code:
+        y_left = draw_field(col_left_x, y_left, "Cod. Fiscale", fiscal_code, bold_value=True)
+    
+    # Partita IVA
+    if partita_iva:
+        y_left = draw_field(col_left_x, y_left, "P. IVA", partita_iva, bold_value=True)
+    
+    # RIGHT COLUMN
+    y_right = body_y
+    
+    # Email
+    if email:
+        y_right = draw_field(col_right_x, y_right, "Email", email)
+    
+    # PEC
+    if pec:
+        y_right = draw_field(col_right_x, y_right, "PEC", pec)
+    
+    # Presidente
+    if president:
+        y_right = draw_field(col_right_x, y_right, "Presidente", president)
+    
+    # --- AFFILIAZIONI (below both columns) ---
+    bottom_y = max(y_left, y_right) + 6
+    
     if affiliations:
-        draw.line([(pad_x, bottom_y), (W - pad_x, bottom_y)], fill=(220, 220, 225), width=1)
+        draw.line([(pad_x, bottom_y), (W - pad_x, bottom_y)], fill=SEPARATOR, width=1)
         bottom_y += 10
-        draw.text((pad_x, bottom_y), "AFFILIAZIONI", fill=PRIMARY, font=font_label)
-        aff_x = pad_x + 110
+        
+        # Header
+        draw.text((pad_x, bottom_y), "AFFILIAZIONI SPORTIVE", fill=PRIMARY, font=font_aff_label)
+        bottom_y += 16
+        
         for aff in affiliations:
-            aff_line = f"{aff.get('name', '')}: {aff.get('number', '')}"
-            draw.text((aff_x, bottom_y), aff_line, fill=MID_TEXT, font=font_aff_value)
-            aff_x += draw.textbbox((0, 0), aff_line + "    ", font=font_aff_value)[2]
-        bottom_y += 22
+            aff_name = aff.get('name', '')
+            aff_number = aff.get('number', '')
+            # Draw federation name
+            draw.text((pad_x + 8, bottom_y), aff_name, fill=MID_TEXT, font=font_aff_label)
+            # Draw code next to it
+            name_bbox = draw.textbbox((0, 0), aff_name + "  ", font=font_aff_label)
+            name_w = name_bbox[2] - name_bbox[0]
+            draw.text((pad_x + 8 + name_w, bottom_y), aff_number, fill=DARK_TEXT, font=font_value_bold)
+            bottom_y += 20
     
-    # --- Step 8: Crop ---
-    final_h = bottom_y + 16
+    # --- Bottom accent bar ---
+    final_h = bottom_y + pad_y
     img = img.crop((0, 0, W, final_h))
     draw = ImageDraw.Draw(img)
-    draw.rectangle([(0, final_h - 4), (W, final_h)], fill=PRIMARY)
+    draw.rectangle([(0, final_h - 5), (W, final_h - 2)], fill=GOLD_ACCENT)
+    draw.rectangle([(0, final_h - 2), (W, final_h)], fill=PRIMARY)
+    
+    # Add thin border
+    draw.rectangle([(0, 0), (W - 1, final_h - 1)], outline=(220, 220, 230), width=1)
     
     buffer = io.BytesIO()
     img.save(buffer, format='JPEG', quality=95, dpi=(300, 300))
