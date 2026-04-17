@@ -21141,7 +21141,7 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
         draw.text((x, y + 13), str(value), fill=DARK_TEXT, font=vfont)
         return y + row_h
     
-    # LEFT COLUMN
+    # LEFT COLUMN: Indirizzo, CAP/Citta, Cod. Fiscale, P. IVA
     y_left = body_y
     
     # Indirizzo
@@ -21163,15 +21163,6 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
         draw.text((col_left_x, y_left + 13), location.strip(), fill=DARK_TEXT, font=font_value)
         y_left += row_h
     
-    # Telefono
-    phone_str = ""
-    if phone:
-        phone_str = phone
-    if phone2:
-        phone_str += f"  /  {phone2}" if phone_str else phone2
-    if phone_str:
-        y_left = draw_field(col_left_x, y_left, "Telefono", phone_str)
-    
     # Codice Fiscale
     if fiscal_code:
         y_left = draw_field(col_left_x, y_left, "Cod. Fiscale", fiscal_code, bold_value=True)
@@ -21180,7 +21171,7 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     if partita_iva:
         y_left = draw_field(col_left_x, y_left, "P. IVA", partita_iva, bold_value=True)
     
-    # RIGHT COLUMN
+    # RIGHT COLUMN: Email, PEC, Telefono, Presidente
     y_right = body_y
     
     # Email
@@ -21190,6 +21181,15 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     # PEC
     if pec:
         y_right = draw_field(col_right_x, y_right, "PEC", pec)
+    
+    # Telefono (spostato a destra dopo PEC)
+    phone_str = ""
+    if phone:
+        phone_str = phone
+    if phone2:
+        phone_str += f"  /  {phone2}" if phone_str else phone2
+    if phone_str:
+        y_right = draw_field(col_right_x, y_right, "Telefono", phone_str)
     
     # Presidente
     if president:
