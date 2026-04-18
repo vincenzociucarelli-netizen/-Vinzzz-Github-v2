@@ -67,6 +67,11 @@ export default function ParentDashboard() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(true);
   
+  // User notifications (solleciti, etc.)
+  const [userNotifications, setUserNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showUserNotifs, setShowUserNotifs] = useState(false);
+  
   // Link requests state
   const [linkRequestsToApprove, setLinkRequestsToApprove] = useState<any[]>([]);
 
@@ -171,6 +176,27 @@ export default function ParentDashboard() {
     } catch (error) {
       console.log('Could not load link requests');
     }
+  };
+
+  const loadUserNotifications = async () => {
+    try {
+      const [notifsRes, countRes] = await Promise.all([
+        api.get('/user/notifications'),
+        api.get('/user/notifications/unread-count'),
+      ]);
+      setUserNotifications(notifsRes.data || []);
+      setUnreadCount(countRes.data.count || 0);
+    } catch (error) {
+      console.log('Could not load user notifications');
+    }
+  };
+
+  const markAllUserNotifsRead = async () => {
+    try {
+      await api.patch('/user/notifications/mark-all-read');
+      setUnreadCount(0);
+      setUserNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (error) {}
   };
 
   const loadCommitments = async () => {
@@ -423,12 +449,13 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
     loadTeams();
     loadNotifications();
     loadLinkRequests();
+    loadUserNotifications();
     checkTrialPeriods();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadAthletes(), loadCommitments(), loadTeams(), loadNotifications(), loadLinkRequests()]);
+    await Promise.all([loadAthletes(), loadCommitments(), loadTeams(), loadNotifications(), loadLinkRequests(), loadUserNotifications()]);
     setRefreshing(false);
   };
 
@@ -501,9 +528,21 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
       <OnboardingTutorial role="parent" steps={PARENT_STEPS} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>I Miei Figli</Text>
-        <TouchableOpacity onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <TouchableOpacity onPress={() => { setShowUserNotifs(!showUserNotifs); if (!showUserNotifs && unreadCount > 0) markAllUserNotifsRead(); }} data-testid="parent-notifications-bell">
+            <View>
+              <Ionicons name="notifications-outline" size={24} color="#fff" />
+              {unreadCount > 0 && (
+                <View style={{ position: 'absolute', top: -6, right: -8, backgroundColor: '#E53935', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{unreadCount}</Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -512,6 +551,32 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        {/* Pannello notifiche utente (solleciti, avvisi) */}
+        {showUserNotifs && (
+          <View style={{ backgroundColor: '#FFF8E1', marginHorizontal: 16, marginTop: 12, borderRadius: 12, padding: 14, borderLeftWidth: 4, borderLeftColor: '#FF9800' }} data-testid="user-notifications-panel">
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100' }}>Notifiche</Text>
+              <TouchableOpacity onPress={() => setShowUserNotifs(false)}>
+                <Ionicons name="close" size={20} color="#999" />
+              </TouchableOpacity>
+            </View>
+            {userNotifications.length === 0 ? (
+              <Text style={{ fontSize: 13, color: '#888', fontStyle: 'italic' }}>Nessuna notifica</Text>
+            ) : (
+              userNotifications.map((n: any, idx: number) => (
+                <View key={n.id || idx} style={{ paddingVertical: 8, borderTopWidth: idx > 0 ? 1 : 0, borderTopColor: '#FFE0B2' }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>{n.title}</Text>
+                  <Text style={{ fontSize: 12, color: '#555', marginTop: 2 }}>{n.message}</Text>
+                  {n.created_at && (
+                    <Text style={{ fontSize: 10, color: '#999', marginTop: 4 }}>
+                      {new Date(n.created_at).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  )}
+                </View>
+              ))
+            )}
+          </View>
+        )}
         <View style={styles.profileSection}>
           <View style={styles.welcomeRow}>
             <Text style={styles.welcomeLabel}>Benvenuto</Text>
