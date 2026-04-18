@@ -21,3 +21,7 @@ NON devono essere modificati a meno che l'utente lo richieda esplicitamente.
 ## Atleta 18- e Genitori - Completati e verificati (16/04/2026)
 - `/app/frontend/app/parent/athlete/[id].tsx` - Vista genitore dell'atleta minore, dati anagrafici+fiscali unificati, badge "Validazione Certificato", firma privacy con aggiornamento status automatico
 - `/app/frontend/app/admin/athletes.tsx` - Lista atleti admin con status "Validazione Certificato" mappato correttamente
+
+## Squadre - Completati e verificati (18/04/2026)
+- `/app/frontend/app/admin/teams.tsx` - Lista squadre, creazione con rate, placeholder data GG/MM/AAAA, validazione formato
+- `/app/frontend/app/admin/team/[id].tsx` - Dettaglio/modifica squadra, gestione rate con scadenze, placeholder data italiano
