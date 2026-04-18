@@ -5905,13 +5905,33 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
     def parse_date(date_str: str) -> datetime:
         if not date_str:
             return None
+        date_str = date_str.strip()
         # Try DD/MM/YYYY format first
         if '/' in date_str:
             parts = date_str.split('/')
             if len(parts) == 3:
-                return datetime(int(parts[2]), int(parts[1]), int(parts[0]))
-        # Try ISO format (YYYY-MM-DD)
-        return datetime.fromisoformat(date_str)
+                d, m, y = parts
+                # Handle 2-digit year
+                if len(y) == 2:
+                    y = '20' + y
+                return datetime(int(y), int(m), int(d))
+        # Try with dash separator
+        if '-' in date_str:
+            parts = date_str.split('-')
+            if len(parts) == 3:
+                # Could be YYYY-MM-DD or YY-MM-DD
+                a, b, c = parts
+                if len(a) == 4:
+                    # YYYY-MM-DD
+                    return datetime(int(a), int(b), int(c))
+                elif len(a) == 2:
+                    # YY-MM-DD
+                    return datetime(2000 + int(a), int(b), int(c))
+        # Fallback: try ISO format
+        try:
+            return datetime.fromisoformat(date_str)
+        except ValueError:
+            return None
     
     # Use trainings field if provided (new format from frontend)
     training_sessions = team_data.training_sessions or []
