@@ -10783,7 +10783,7 @@ async def send_solleciti_notification(data: dict, current_user = Depends(get_cur
         if not notify_user_id:
             continue
         
-        unpaid = await db.payments.find({"athlete_id": athlete_id, "paid": False}).to_list(100)
+        unpaid = await db.payments.find({"athlete_id": athlete_id, "paid": {"$ne": True}}).to_list(100)
         if not unpaid:
             continue
         
@@ -10818,7 +10818,7 @@ async def send_solleciti_notification(data: dict, current_user = Depends(get_cur
         # In-app notification for second parent (if exists)
         second_parent_id = athlete.get("second_parent_id")
         if second_parent_id and second_parent_id != "None":
-            notification2 = {**notification, "id": str(uuid.uuid4()), "user_id": second_parent_id}
+            notification2 = {"id": str(uuid.uuid4()), "user_id": second_parent_id, "type": notification["type"], "title": notification["title"], "message": notification["message"], "data": notification["data"], "read": False, "created_at": notification["created_at"]}
             await db.notifications.insert_one(notification2)
         
         sent_notif += 1
