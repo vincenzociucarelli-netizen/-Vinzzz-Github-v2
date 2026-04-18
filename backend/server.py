@@ -10676,17 +10676,42 @@ async def get_solleciti(current_user = Depends(get_current_user)):
     athletes = await db.athletes.find({"society_id": society_id, "is_withdrawn": {"$ne": True}}).to_list(10000)
     teams = await db.teams.find({}).to_list(100)
     team_map = {t["id"]: t.get("name", "") for t in teams}
+    team_map_full = {t["id"]: t for t in teams}
     
     result = []
     for athlete in athletes:
-        unpaid = await db.payments.find({"athlete_id": athlete["id"], "paid": False}).to_list(100)
+        all_payments = await db.payments.find({"athlete_id": athlete["id"]}).to_list(100)
+        unpaid = [p for p in all_payments if not p.get("paid")]
         if not unpaid:
             continue
         
+        # Check overall balance using team quota (same logic as payment summary)
+        team_id = athlete.get("team_id")
+        team = team_map_full.get(team_id)
+        if team:
+            team_total = team.get("total_amount", 0) or 0
+            discount = athlete.get("discount_amount", 0) or 0
+            total_after_discount = team_total - discount
+            total_paid = sum(p.get("amount", 0) for p in all_payments if p.get("paid"))
+            # If paid >= due (or overpaid), skip this athlete
+            if total_paid >= total_after_discount and total_after_discount > 0:
+                continue
+        
+        # Find contact: parent or athlete's own user account
         parent_id = athlete.get("parent_id")
         parent = None
-        if parent_id:
+        if parent_id and parent_id != "None":
             parent = await db.users.find_one({"id": parent_id}, {"_id": 0, "first_name": 1, "last_name": 1, "email": 1, "phone": 1})
+        
+        # If no parent, use the athlete's own user account
+        athlete_user = None
+        if not parent:
+            user_id = athlete.get("user_id")
+            if user_id:
+                athlete_user = await db.users.find_one({"id": user_id}, {"_id": 0, "first_name": 1, "last_name": 1, "email": 1, "phone": 1})
+        
+        contact = parent or athlete_user
+        contact_id = parent_id if parent else (athlete.get("user_id") or "")
         
         total_due = sum(p.get("amount", 0) for p in unpaid)
         installments = []
@@ -10706,10 +10731,10 @@ async def get_solleciti(current_user = Depends(get_current_user)):
             "cognome": athlete.get("last_name", ""),
             "nome": athlete.get("first_name", ""),
             "squadra": team_map.get(athlete.get("team_id"), ""),
-            "parent_name": f"{parent.get('first_name', '')} {parent.get('last_name', '')}".strip() if parent else "",
-            "parent_email": parent.get("email", "") if parent else "",
-            "parent_phone": parent.get("phone", "") if parent else "",
-            "parent_id": parent_id or "",
+            "parent_name": f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip() if contact else "",
+            "parent_email": contact.get("email", "") if contact else "",
+            "parent_phone": contact.get("phone", "") if contact else "",
+            "parent_id": contact_id if contact_id and contact_id != "None" else "",
             "total_due": total_due,
             "installments": installments,
         })
@@ -10743,9 +10768,21 @@ async def send_solleciti_notification(data: dict, current_user = Depends(get_cur
         athlete = await db.athletes.find_one({"id": athlete_id})
         if not athlete:
             continue
+        
+        # Determine notification recipient: parent or athlete's own user
         parent_id = athlete.get("parent_id")
-        if not parent_id:
+        notify_user_id = None
+        if parent_id and parent_id != "None":
+            notify_user_id = parent_id
+        else:
+            # Adult athlete - notify their own user account
+            user_id = athlete.get("user_id")
+            if user_id:
+                notify_user_id = user_id
+        
+        if not notify_user_id:
             continue
+        
         unpaid = await db.payments.find({"athlete_id": athlete_id, "paid": False}).to_list(100)
         if not unpaid:
             continue
@@ -10765,10 +10802,10 @@ async def send_solleciti_notification(data: dict, current_user = Depends(get_cur
         
         msg = f"Risultano pagamenti in sospeso per {athlete_name} per un totale di {total_due:.2f} euro. Ti preghiamo di regolarizzare la posizione."
         
-        # In-app notification for primary parent
+        # In-app notification for primary recipient
         notification = {
             "id": str(uuid.uuid4()),
-            "user_id": parent_id,
+            "user_id": notify_user_id,
             "type": "payment_reminder",
             "title": "Sollecito pagamento quote",
             "message": msg,
@@ -10778,9 +10815,9 @@ async def send_solleciti_notification(data: dict, current_user = Depends(get_cur
         }
         await db.notifications.insert_one(notification)
         
-        # In-app notification for second parent
+        # In-app notification for second parent (if exists)
         second_parent_id = athlete.get("second_parent_id")
-        if second_parent_id:
+        if second_parent_id and second_parent_id != "None":
             notification2 = {**notification, "id": str(uuid.uuid4()), "user_id": second_parent_id}
             await db.notifications.insert_one(notification2)
         
@@ -10788,14 +10825,16 @@ async def send_solleciti_notification(data: dict, current_user = Depends(get_cur
         
         # Send email if requested
         if send_email:
-            parent = await db.users.find_one({"id": parent_id}, {"_id": 0, "email": 1, "first_name": 1, "last_name": 1})
-            parents_to_email = []
-            if parent and parent.get("email"):
-                parents_to_email.append(parent)
-            if second_parent_id:
+            recipients_to_email = []
+            # Get primary recipient
+            primary_user = await db.users.find_one({"id": notify_user_id}, {"_id": 0, "email": 1, "first_name": 1, "last_name": 1})
+            if primary_user and primary_user.get("email"):
+                recipients_to_email.append(primary_user)
+            # Get second parent if exists
+            if second_parent_id and second_parent_id != "None":
                 parent2 = await db.users.find_one({"id": second_parent_id}, {"_id": 0, "email": 1, "first_name": 1, "last_name": 1})
                 if parent2 and parent2.get("email"):
-                    parents_to_email.append(parent2)
+                    recipients_to_email.append(parent2)
             
             logo_html = f'<img src="{logo_url}" alt="{society_name}" style="width: 56px; height: 56px; object-fit: contain;" />' if logo_url else ""
             
@@ -10828,7 +10867,7 @@ async def send_solleciti_notification(data: dict, current_user = Depends(get_cur
             """
             
             from email_service import send_transactional_email
-            for p_to_email in parents_to_email:
+            for p_to_email in recipients_to_email:
                 try:
                     await send_transactional_email(
                         to_email=p_to_email["email"],
