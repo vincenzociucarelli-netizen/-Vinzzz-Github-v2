@@ -744,8 +744,8 @@ export default function TeamDetail() {
                             newInstallments[index] = { ...newInstallments[index], due_date: formatDateInput(text) };
                             setInstallments(newInstallments);
                           }}
-                          placeholder="GG/MM/AAAA"
-                          placeholderTextColor="#999"
+                          placeholder="es: 15/11/2026"
+                          placeholderTextColor="#bbb"
                           keyboardType="numeric"
                           maxLength={10}
                         />

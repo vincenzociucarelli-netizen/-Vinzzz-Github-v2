@@ -326,6 +326,12 @@ export default function TeamsScreen() {
           showAlert('Errore', `Inserisci la scadenza per ${validInstallments[i].name}`);
           return;
         }
+        // Validate date format DD/MM/YYYY
+        const dateParts = validInstallments[i].due_date.split('/');
+        if (dateParts.length !== 3 || dateParts[2].length !== 4) {
+          showAlert('Errore', `La scadenza di ${validInstallments[i].name} deve essere in formato GG/MM/AAAA (es: 15/11/2026)`);
+          return;
+        }
       }
 
       if (!bankInfo || !paypalEmail) {
@@ -865,8 +871,8 @@ export default function TeamsScreen() {
                           <Text style={styles.miniLabel}>Scadenza *</Text>
                           <TextInput
                             style={styles.input}
-                            placeholder="GG/MM/AAAA"
-                            placeholderTextColor="#999"
+                            placeholder="es: 15/11/2026"
+                            placeholderTextColor="#bbb"
                             value={inst.due_date}
                             onChangeText={(text) => {
                               let formatted = text.replace(/[^0-9]/g, '');
