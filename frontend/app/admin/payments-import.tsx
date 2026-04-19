@@ -231,25 +231,19 @@ export default function PrimaNotaPagamenti() {
     }
     try {
       if (Platform.OS === 'web') {
-        // Download directly from backend endpoint
-        const token = await api.defaults.headers.common['Authorization'];
+        const token = api.defaults.headers.common['Authorization'];
         const baseUrl = api.defaults.baseURL || '';
-        const url = `${baseUrl}/export-xlsx/registro`;
-        const response = await fetch(url, {
-          headers: { 'Authorization': token as string }
-        });
-        if (!response.ok) throw new Error('Download failed');
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
+        const response = await api.get('/export-csv/prima-nota', { responseType: 'blob' });
+        const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = `Registro_Stagione_${registro.season.replace('/', '-')}.xlsx`;
+        a.href = url;
+        a.download = `Prima_Nota_Cassa_${registro.season.replace('/', '-')}.csv`;
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
-        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(blobUrl); }, 200);
+        setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 200);
       } else {
-        // Mobile: use XLSX client-side
         const headers = ['Ric. Fiscale', 'Data Registrazione', 'Cognome', 'Nome', 'Data Pagamento', 'Tipo', 'Importo', 'Causale'];
         const data = registro.rows.map((r: any) => [
           r['Ric. Fiscale'], r['Data Registrazione'], r['Cognome'], r['Nome'],
@@ -562,7 +556,7 @@ export default function PrimaNotaPagamenti() {
                   data-testid="download-registro-btn"
                 >
                   <Ionicons name="download-outline" size={22} color="#fff" />
-                  <Text style={styles.actionBtnText}>Scarica Registro Excel</Text>
+                  <Text style={styles.actionBtnText}>Scarica Registro CSV</Text>
                 </TouchableOpacity>
 
                 {registro.rows.length > 0 ? (
