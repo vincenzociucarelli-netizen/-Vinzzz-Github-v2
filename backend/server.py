@@ -23314,6 +23314,16 @@ async def export_audit_logs_csv(
     )
 
 @api_router.get("/export-csv/prima-nota")
+@api_router.get("/promo/flyer")
+async def get_promo_flyer():
+    """Serve the promotional flyer HTML"""
+    import os
+    flyer_path = os.path.join(os.path.dirname(__file__), "promo-registrateam.html")
+    if not os.path.exists(flyer_path):
+        raise HTTPException(status_code=404, detail="Flyer non trovato")
+    return FileResponse(flyer_path, media_type="text/html")
+
+
 async def export_prima_nota_csv(current_user = Depends(get_current_user)):
     """Export Prima Nota Cassa as CSV - Admin only"""
     if current_user["role"] != UserRole.ADMIN:
