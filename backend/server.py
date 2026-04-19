@@ -23403,6 +23403,91 @@ async def export_prima_nota_csv(current_user = Depends(get_current_user)):
         headers={"Content-Disposition": f"attachment; filename=prima_nota_cassa_{season_str.replace('/', '-')}_{datetime.now().strftime('%Y%m%d')}.csv"}
     )
 
+@api_router.get("/export-xlsx/registro")
+async def export_registro_xlsx(current_user = Depends(get_current_user)):
+    """Export Registro Pagamenti as XLSX - Admin only"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può esportare dati")
+    
+    # Reuse registro-stagione logic
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    
+    society_id = current_user.get("society_id")
+    settings = await db.settings.find_one({"society_id": society_id, "type": "society"})
+    if not settings:
+        settings = await db.settings.find_one({"type": "society"})
+    season_start_month = settings.get("season_start_month", 7) if settings else 7
+    season_start_day = settings.get("season_start_day", 1) if settings else 1
+    now = datetime.utcnow()
+    if now.month >= season_start_month:
+        season_start = datetime(now.year, season_start_month, season_start_day)
+    else:
+        season_start = datetime(now.year - 1, season_start_month, season_start_day)
+    season_end = datetime(season_start.year + 1, season_start_month, season_start_day)
+    season_str = f"{season_start.year % 100:02d}/{season_end.year % 100:02d}"
+    
+    athletes_list = await db.athletes.find({"society_id": society_id}, {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "team_id": 1}).to_list(10000)
+    athlete_map = {a["id"]: a for a in athletes_list}
+    athlete_ids = list(athlete_map.keys())
+    
+    teams_list = await db.teams.find({"society_id": society_id}, {"_id": 0, "id": 1, "name": 1}).to_list(100)
+    team_map = {t.get("id", ""): t.get("name", "") for t in teams_list}
+    
+    payments = await db.payments.find(
+        {"athlete_id": {"$in": athlete_ids}, "receipt_number": {"$exists": True, "$nin": [None, ""]}}
+    ).sort("receipt_number", 1).to_list(50000)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"Registro {season_str.replace('/', '-')}"
+    
+    headers = ['Ric. Fiscale', 'Data Registrazione', 'Cognome', 'Nome', 'Data Pagamento', 'Tipo', 'Importo', 'Causale']
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="1565C0", end_color="1565C0", fill_type="solid")
+    
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+    
+    for idx, p in enumerate(payments, 2):
+        athlete = athlete_map.get(p.get("athlete_id", ""), {})
+        paid_date = p.get("paid_date", "")
+        if isinstance(paid_date, datetime):
+            paid_date = paid_date.strftime("%d/%m/%Y")
+        reg_date = p.get("registration_date", p.get("created_at", ""))
+        if isinstance(reg_date, datetime):
+            reg_date = reg_date.strftime("%d/%m/%Y")
+        amount = p.get("amount", 0)
+        
+        ws.cell(row=idx, column=1, value=p.get("receipt_number", ""))
+        ws.cell(row=idx, column=2, value=str(reg_date))
+        ws.cell(row=idx, column=3, value=athlete.get("last_name", ""))
+        ws.cell(row=idx, column=4, value=athlete.get("first_name", ""))
+        ws.cell(row=idx, column=5, value=str(paid_date))
+        ws.cell(row=idx, column=6, value=p.get("payment_method", ""))
+        ws.cell(row=idx, column=7, value=amount)
+        ws.cell(row=idx, column=7).number_format = '#,##0.00'
+        ws.cell(row=idx, column=8, value=p.get("description", ""))
+    
+    # Auto-width columns
+    for col in range(1, 9):
+        ws.column_dimensions[chr(64 + col)].width = 18
+    
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"Registro_Stagione_{season_str.replace('/', '-')}.xlsx"
+    return StreamingResponse(buffer, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Cache-Control": "no-cache"
+    })
+
+
+
 # Include the router in the main app
 # ==================== PRE-SEASON CAMPAIGN ====================
 

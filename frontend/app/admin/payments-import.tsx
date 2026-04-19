@@ -230,16 +230,36 @@ export default function PrimaNotaPagamenti() {
       return;
     }
     try {
-      const headers = ['Ric. Fiscale', 'Data Registrazione', 'Cognome', 'Nome', 'Data Pagamento', 'Tipo', 'Importo', 'Causale'];
-      const data = registro.rows.map((r: any) => [
-        r['Ric. Fiscale'], r['Data Registrazione'], r['Cognome'], r['Nome'],
-        r['Data Pagamento'], r['Tipo'], r['Importo'], r['Causale']
-      ]);
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-      ws['!cols'] = [{ wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 10 }, { wch: 12 }, { wch: 30 }];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, `Registro ${registro.season}`);
-      await downloadXlsx(wb, `Registro_Stagione_${registro.season.replace('/', '-')}.xlsx`);
+      if (Platform.OS === 'web') {
+        // Download directly from backend endpoint
+        const token = await api.defaults.headers.common['Authorization'];
+        const baseUrl = api.defaults.baseURL || '';
+        const url = `${baseUrl}/export-xlsx/registro`;
+        const response = await fetch(url, {
+          headers: { 'Authorization': token as string }
+        });
+        if (!response.ok) throw new Error('Download failed');
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `Registro_Stagione_${registro.season.replace('/', '-')}.xlsx`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(blobUrl); }, 200);
+      } else {
+        // Mobile: use XLSX client-side
+        const headers = ['Ric. Fiscale', 'Data Registrazione', 'Cognome', 'Nome', 'Data Pagamento', 'Tipo', 'Importo', 'Causale'];
+        const data = registro.rows.map((r: any) => [
+          r['Ric. Fiscale'], r['Data Registrazione'], r['Cognome'], r['Nome'],
+          r['Data Pagamento'], r['Tipo'], r['Importo'], r['Causale']
+        ]);
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, `Registro ${registro.season}`);
+        await downloadXlsx(wb, `Registro_Stagione_${registro.season.replace('/', '-')}.xlsx`);
+      }
     } catch (error) {
       showAlert('Errore', 'Impossibile scaricare il registro');
     }
