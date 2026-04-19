@@ -61,16 +61,24 @@ export default function PrimaNotaPagamenti() {
   // === DOWNLOAD XLSX HELPER ===
   const downloadXlsx = async (wb: XLSX.WorkBook, filename: string) => {
     if (Platform.OS === 'web') {
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      try {
+        XLSX.writeFile(wb, filename);
+      } catch (e) {
+        // Fallback: manual blob download
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
+      }
     } else {
       const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
       const fileUri = FileSystem.documentDirectory + filename;
