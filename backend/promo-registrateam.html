@@ -423,8 +423,12 @@
   .footer-right { font-size: 9.5px; color: #555; font-weight: 500; }
   
   @media print {
-    body { width: 210mm; min-height: 297mm; }
+    body { width: 210mm; min-height: 297mm; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
     .hero, .features, .benefits, .compliance, .cta, .footer { break-inside: avoid; }
+    .hero { background: #1A4B9C !important; }
+    .cta { background: #0F3270 !important; }
+    .accent-bar { background: #E53935 !important; }
+    .feature-icon { -webkit-print-color-adjust: exact; }
   }
 </style>
 </head>
@@ -599,9 +603,12 @@
       <a href="mailto:info@registrateam.it?subject=Voglio%20provare%20RegistraTEAM" class="cta-btn primary">
         Richiedi l'Accesso
       </a>
-      <a href="#" class="cta-btn secondary">
+      <a href="mailto:info@registrateam.it" class="cta-btn secondary">
         Contattaci
       </a>
+    </div>
+    <div style="margin-top: 14px; font-size: 14px; color: #fff; font-weight: 600; letter-spacing: 0.5px; position: relative; z-index: 2;">
+      info@registrateam.it
     </div>
   </div>
   
