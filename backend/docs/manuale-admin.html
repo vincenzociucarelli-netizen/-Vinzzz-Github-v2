@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>RegistraTEAM - Manuale Admin</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  @page{size:A4;margin:16mm 14mm}
+  body{font-family:'Poppins',sans-serif;color:#1a1a2e;width:210mm;margin:0 auto;font-size:10px;line-height:1.55}
+  :root{--blue:#1A4B9C;--blue-dk:#0F3270;--blue-lt:#E8EFF9;--red:#E53935;--red-lt:#FFEBEE}
+  .header{background:linear-gradient(135deg,var(--blue-dk),var(--blue));color:#fff;padding:16px 24px;display:flex;align-items:center;gap:14px;border-radius:0 0 10px 10px;margin-bottom:20px}
+  .header img{height:32px}
+  .header h1{font-size:18px;font-weight:700}
+  .header .role-badge{background:var(--red);padding:3px 12px;border-radius:20px;font-size:10px;font-weight:600;margin-left:auto}
+  h2{font-size:14px;font-weight:700;color:var(--blue);margin:18px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--red)}
+  h3{font-size:11px;font-weight:700;color:var(--blue-dk);margin:12px 0 5px}
+  p{margin-bottom:6px}
+  ul,ol{padding-left:16px;margin:4px 0 10px}
+  li{margin-bottom:3px}
+  .step{display:flex;gap:8px;margin-bottom:8px;align-items:flex-start}
+  .step-n{width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+  .step-t h4{font-size:10px;font-weight:600;color:#1a1a2e}
+  .step-t p{font-size:9px;color:#555;margin:0}
+  .tip{background:#FFF8E1;border-left:3px solid #FF9800;padding:8px 12px;border-radius:0 6px 6px 0;margin:10px 0;font-size:9px}
+  .warn{background:var(--red-lt);border-left:3px solid var(--red);padding:8px 12px;border-radius:0 6px 6px 0;margin:10px 0;font-size:9px}
+  .info{background:var(--blue-lt);border-left:3px solid var(--blue);padding:8px 12px;border-radius:0 6px 6px 0;margin:10px 0;font-size:9px}
+  .section-card{background:#f8f9fd;border-radius:8px;padding:12px 14px;margin:8px 0;border-left:3px solid var(--blue)}
+  .footer{text-align:center;font-size:8px;color:#aaa;margin-top:20px;padding-top:8px;border-top:1px solid #eee}
+  @media print{body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.header{background:var(--blue)!important}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="https://customer-assets.emergentagent.com/job_81c992fa-a01b-413c-9ecc-c8b7592a946d/artifacts/9yjcy9vx_Logo%20in%20linea.png" alt="RegistraTEAM">
+  <h1>Manuale d'Uso</h1>
+  <span class="role-badge">ADMIN</span>
+</div>
+
+<h2>1. Dashboard Principale</h2>
+<p>Al login come Admin vedrai la dashboard con:</p>
+<ul>
+  <li><strong>Statistiche</strong>: totale atleti, attivi, in prova, in attesa certificato</li>
+  <li><strong>Utenti in attesa</strong>: nuove registrazioni da approvare</li>
+  <li><strong>Certificati in scadenza</strong>: atleti con certificato medico prossimo alla scadenza</li>
+  <li><strong>Compleanni del giorno</strong></li>
+  <li><strong>Iscrizioni recenti</strong>: atleti registrati oggi</li>
+</ul>
+
+<h2>2. Gestione Atleti</h2>
+<h3>Visualizzare gli atleti</h3>
+<p>Dal menu <strong>Atleti</strong> vedi l'elenco completo. Puoi filtrare per squadra e cercare per nome. Ogni atleta mostra lo stato attuale:</p>
+<ul>
+  <li><strong>In Prova</strong>: periodo di prova attivo</li>
+  <li><strong>Validazione Certificato</strong>: privacy firmata, in attesa di validazione certificato medico</li>
+  <li><strong>Attivo</strong>: tutto in regola, puo allenarsi</li>
+</ul>
+
+<h3>Autenticare un certificato medico</h3>
+<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Vai nel profilo dell'atleta</h4><p>Clicca sull'atleta dalla lista.</p></div></div>
+<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Sezione Certificato Medico</h4><p>Carica o verifica il certificato. Inserisci data emissione, validita e scadenza.</p></div></div>
+<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Conferma</h4><p>L'atleta passa in stato "Attivo" e puo accedere agli allenamenti.</p></div></div>
+
+<div class="warn"><strong>Attenzione:</strong> Senza certificato autenticato, la scansione QR dell'atleta viene bloccata automaticamente.</div>
+
+<h2>3. Gestione Squadre</h2>
+<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Crea una squadra</h4><p>Menu Squadre > Nuova Squadra. Inserisci nome, quota totale e le rate con scadenze (formato GG/MM/AAAA).</p></div></div>
+<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Assegna atleti</h4><p>Dal profilo di ogni atleta, seleziona la squadra di appartenenza.</p></div></div>
+
+<h2>4. Pagamenti e Prima Nota</h2>
+<h3>Registrare un pagamento</h3>
+<p>Vai in <strong>Prima Nota Pagamenti</strong> > <strong>Importa</strong>. Puoi registrare pagamenti singoli o importare un file Excel con il template fornito.</p>
+
+<h3>Solleciti</h3>
+<p>Nella sezione <strong>Solleciti</strong> vedi tutti gli atleti con rate non pagate. Seleziona quelli da sollecitare e clicca "Invia Sollecito". Il sistema invia una notifica in-app e (opzionalmente) un'email al genitore o all'atleta adulto.</p>
+
+<div class="tip"><strong>Nota:</strong> Gli atleti che hanno gia pagato la quota completa (anche se una singola rata risulta "non pagata") NON compaiono nei solleciti.</div>
+
+<h3>Scarica Registro</h3>
+<p>Clicca <strong>Scarica Registro CSV</strong> per esportare tutta la prima nota cassa della stagione, importabile in Excel o in software di contabilita.</p>
+
+<h2>5. Presenze (Scansione QR)</h2>
+<p>Dal menu <strong>Presenze</strong>, usa la fotocamera per scansionare il QR code dell'atleta. Il sistema:</p>
+<ul>
+  <li>Verifica il certificato medico</li>
+  <li>Registra data e ora della presenza (fuso orario italiano)</li>
+  <li>Mostra un messaggio di conferma o di blocco</li>
+</ul>
+
+<h3>Override Certificato</h3>
+<p>In <strong>Impostazioni > Societa</strong> puoi attivare/disattivare l'override del blocco certificato per situazioni eccezionali.</p>
+
+<h2>6. Compensi Coach/Dirigenti/Collaboratori</h2>
+<p>Nella sezione dedicata di ogni ruolo (Coach, Dirigenti, Collaboratori), puoi:</p>
+<ul>
+  <li>Inserire compensi mensili con importo, metodo di pagamento e descrizione</li>
+  <li>Visualizzare il totale erogato con alert automatici alle soglie di 5.000 e 15.000 euro</li>
+  <li>Generare e scaricare le quietanze mensili in PDF</li>
+</ul>
+
+<h2>7. Impostazioni Societa</h2>
+<p>In <strong>Impostazioni > Profilo Societa</strong> configura:</p>
+<ul>
+  <li>Nome, ragione sociale, indirizzo, P.IVA, codice fiscale</li>
+  <li>Logo e timbro/firma (usati nei documenti PDF)</li>
+  <li>Affiliazioni sportive (federazione e codice federale)</li>
+  <li>Parametri stagione (mese/giorno di inizio)</li>
+  <li>Periodo di prova (durata e numero sessioni)</li>
+</ul>
+
+<h2>8. Calendario Gare</h2>
+<p>In <strong>Calendario > Importa</strong>, inserisci l'URL del calendario dal sito della tua federazione. Il sistema importa automaticamente tutte le gare con data, ora, avversario e luogo.</p>
+
+<h2>9. Documenti</h2>
+<p>Tutti i documenti (privacy, ricevute, dichiarazioni periodo di prova) sono archiviati e scaricabili dalla sezione <strong>Archivio Documenti</strong>.</p>
+
+<div class="footer">RegistraTEAM &copy; 2026 &mdash; info@registrateam.it</div>
+</body>
+</html>

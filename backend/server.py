@@ -23323,6 +23323,18 @@ async def get_promo_flyer():
         raise HTTPException(status_code=404, detail="Flyer non trovato")
     return FileResponse(flyer_path, media_type="text/html")
 
+@api_router.get("/docs/{doc_name}")
+async def get_doc(doc_name: str):
+    """Serve documentation HTML files"""
+    import os
+    allowed = ["presentazione", "manuale-admin", "manuale-coach", "manuale-dirigente", "manuale-collaboratore", "manuale-genitore", "manuale-atleta-minorenne", "manuale-atleta-18plus"]
+    if doc_name not in allowed:
+        raise HTTPException(status_code=404, detail="Documento non trovato")
+    doc_path = os.path.join(os.path.dirname(__file__), "docs", f"{doc_name}.html")
+    if not os.path.exists(doc_path):
+        raise HTTPException(status_code=404, detail="Documento non trovato")
+    return FileResponse(doc_path, media_type="text/html")
+
 
 async def export_prima_nota_csv(current_user = Depends(get_current_user)):
     """Export Prima Nota Cassa as CSV - Admin only"""

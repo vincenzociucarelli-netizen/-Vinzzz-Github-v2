@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RegistraTEAM - Presentazione Dettagliata</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  @page { size:A4; margin:18mm 16mm; }
+  body { font-family:'Poppins',sans-serif; color:#1a1a2e; width:210mm; margin:0 auto; font-size:10.5px; line-height:1.6; }
+  :root { --blue:#1A4B9C; --blue-dk:#0F3270; --blue-lt:#E8EFF9; --red:#E53935; --red-lt:#FFEBEE; }
+  
+  .cover { height:297mm; background:linear-gradient(135deg,var(--blue-dk) 0%,var(--blue) 50%,#2962A8 100%); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; position:relative; overflow:hidden; page-break-after:always; }
+  .cover::before { content:''; position:absolute; top:-100px; right:-80px; width:400px; height:400px; background:rgba(255,255,255,0.03); border-radius:50%; }
+  .cover::after { content:''; position:absolute; bottom:-80px; left:-60px; width:300px; height:300px; background:rgba(229,57,53,0.06); border-radius:50%; }
+  .cover-logo { width:120px; height:120px; background:#fff; border-radius:24px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 40px rgba(0,0,0,0.2); padding:10px; margin-bottom:30px; position:relative; z-index:2; }
+  .cover-logo img { width:100%; height:100%; object-fit:contain; }
+  .cover-brand img { height:60px; position:relative; z-index:2; }
+  .cover-tagline { font-size:16px; color:rgba(255,255,255,0.7); margin-top:8px; position:relative; z-index:2; }
+  .cover-title { font-size:28px; font-weight:800; color:#fff; margin-top:50px; position:relative; z-index:2; line-height:1.3; }
+  .cover-title em { font-style:normal; color:var(--red); background:rgba(255,255,255,0.95); padding:2px 10px; border-radius:4px; }
+  .cover-sub { font-size:13px; color:rgba(255,255,255,0.8); margin-top:16px; max-width:70%; position:relative; z-index:2; line-height:1.6; }
+  .cover-footer { position:absolute; bottom:40px; font-size:11px; color:rgba(255,255,255,0.5); z-index:2; }
+  
+  h1 { font-size:22px; font-weight:800; color:var(--blue); margin:30px 0 16px; padding-bottom:8px; border-bottom:3px solid var(--red); }
+  h2 { font-size:16px; font-weight:700; color:var(--blue-dk); margin:22px 0 10px; }
+  h3 { font-size:12px; font-weight:700; color:var(--blue); margin:14px 0 6px; }
+  p { margin-bottom:8px; }
+  .page { padding:20px 30px; page-break-after:always; }
+  .page:last-child { page-break-after:auto; }
+  
+  .intro-box { background:var(--blue-lt); border-left:4px solid var(--blue); border-radius:0 8px 8px 0; padding:14px 18px; margin:16px 0; }
+  .intro-box p { margin:0; font-size:11px; }
+  
+  .feature-section { margin:14px 0; }
+  .feature-card { display:flex; gap:12px; padding:12px 14px; background:#f8f9fd; border-radius:8px; margin-bottom:8px; border-left:3px solid var(--blue); }
+  .feature-card:nth-child(even) { border-left-color:var(--red); }
+  .feature-card .fc-icon { width:36px; height:36px; border-radius:8px; background:var(--blue); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .feature-card:nth-child(even) .fc-icon { background:var(--red); }
+  .feature-card .fc-text h3 { margin:0 0 2px; font-size:11.5px; }
+  .feature-card .fc-text p { margin:0; font-size:9.5px; color:#555; }
+  
+  .role-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0; }
+  .role-card { padding:10px 12px; border-radius:8px; background:#fff; border:1.5px solid #e0e7f2; }
+  .role-card h4 { font-size:11px; font-weight:700; color:var(--blue); margin-bottom:3px; }
+  .role-card p { font-size:9px; color:#555; margin:0; }
+  
+  .flow-step { display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; }
+  .flow-num { width:28px; height:28px; border-radius:50%; background:var(--blue); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; }
+  .flow-text h4 { font-size:10.5px; font-weight:700; color:#1a1a2e; margin-bottom:1px; }
+  .flow-text p { font-size:9.5px; color:#555; margin:0; }
+  
+  .highlight-box { background:var(--red-lt); border:1.5px solid var(--red); border-radius:8px; padding:12px 16px; margin:14px 0; }
+  .highlight-box h3 { color:var(--red); margin:0 0 4px; }
+  .highlight-box p { margin:0; font-size:10px; }
+  
+  .gdpr-box { background:#E8F5E9; border:1.5px solid #4CAF50; border-radius:8px; padding:12px 16px; margin:14px 0; }
+  .gdpr-box h3 { color:#2E7D32; margin:0 0 4px; }
+  .gdpr-box p { margin:0; font-size:10px; }
+  
+  ul { padding-left:18px; margin:6px 0 10px; }
+  li { margin-bottom:3px; font-size:10px; }
+  
+  .sport-tags { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0; }
+  .sport-tag { padding:4px 12px; border-radius:20px; background:var(--blue-lt); color:var(--blue); font-size:9.5px; font-weight:600; border:1px solid rgba(26,75,156,0.2); }
+  
+  .cta-section { background:linear-gradient(135deg,var(--blue-dk),var(--blue)); color:#fff; padding:24px; border-radius:12px; text-align:center; margin-top:24px; }
+  .cta-section h2 { color:#fff; margin:0 0 6px; }
+  .cta-section p { color:rgba(255,255,255,0.85); font-size:11px; }
+  .cta-section .email { font-size:16px; font-weight:700; margin-top:12px; color:#fff; }
+  
+  @media print {
+    body { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    .cover { background:var(--blue) !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <div class="cover-logo">
+    <img src="https://customer-assets.emergentagent.com/job_81c992fa-a01b-413c-9ecc-c8b7592a946d/artifacts/ks9vfqzt_Logo.PNG" alt="RegistraTEAM">
+  </div>
+  <div class="cover-brand">
+    <img src="https://customer-assets.emergentagent.com/job_81c992fa-a01b-413c-9ecc-c8b7592a946d/artifacts/9yjcy9vx_Logo%20in%20linea.png" alt="RegistraTEAM">
+  </div>
+  <div class="cover-tagline">Gestione Sportiva Digitale</div>
+  <div class="cover-title">Presentazione <em>Completa</em><br>della Piattaforma</div>
+  <div class="cover-sub">La soluzione digitale pensata per le societa sportive italiane.<br>Iscrizioni, pagamenti, presenze, documenti e molto altro in un'unica piattaforma.</div>
+  <div class="cover-footer">info@registrateam.it &mdash; RegistraTEAM &copy; 2026</div>
+</div>
+
+<!-- PAGE 1: COS'E' REGISTRATEAM -->
+<div class="page">
+  <h1>Cos'e RegistraTEAM?</h1>
+  
+  <div class="intro-box">
+    <p><strong>RegistraTEAM</strong> e una piattaforma web completa per la gestione delle societa sportive dilettantistiche italiane. Progettata per semplificare la burocrazia quotidiana, permette di gestire iscrizioni, pagamenti, presenze, documenti legali e comunicazioni da un'unica interfaccia accessibile da qualsiasi dispositivo.</p>
+  </div>
+  
+  <h2>Il Problema che Risolviamo</h2>
+  <p>Ogni stagione sportiva le societa si trovano a dover gestire:</p>
+  <ul>
+    <li>Decine (o centinaia) di iscrizioni cartacee con documenti da archiviare</li>
+    <li>Fogli Excel per tracciare i pagamenti delle quote sociali</li>
+    <li>Moduli privacy e consensi da far firmare manualmente</li>
+    <li>Certificati medici da verificare prima di ogni allenamento</li>
+    <li>Comunicazioni frammentate tra gruppi WhatsApp, email e telefonate</li>
+    <li>Ricevute fiscali e compensi sportivi da monitorare per le soglie di legge</li>
+  </ul>
+  <p><strong>RegistraTEAM digitalizza tutto questo</strong>, riducendo drasticamente il tempo dedicato alla burocrazia e azzerando il rischio di errori o documenti mancanti.</p>
+  
+  <h2>Per chi e pensato?</h2>
+  <p>RegistraTEAM si adatta a qualsiasi disciplina sportiva di squadra:</p>
+  <div class="sport-tags">
+    <span class="sport-tag">Pallavolo</span>
+    <span class="sport-tag">Calcio</span>
+    <span class="sport-tag">Basket</span>
+    <span class="sport-tag">Baseball</span>
+    <span class="sport-tag">Rugby</span>
+    <span class="sport-tag">Handball</span>
+    <span class="sport-tag">Hockey</span>
+    <span class="sport-tag">E molti altri...</span>
+  </div>
+  <p>E compatibile con le principali federazioni sportive italiane (FIPAV, FIGC, FIP, FIBS, FIR, FIGH...) per l'importazione automatica dei calendari gare.</p>
+  
+  <h2>I Ruoli nella Piattaforma</h2>
+  <div class="role-grid">
+    <div class="role-card">
+      <h4>Admin (Presidente/Segreteria)</h4>
+      <p>Gestisce l'intera societa: iscrizioni, pagamenti, squadre, compensi, documenti e impostazioni.</p>
+    </div>
+    <div class="role-card">
+      <h4>Coach (Allenatore)</h4>
+      <p>Gestisce le presenze della propria squadra, visualizza i propri compensi e il calendario gare.</p>
+    </div>
+    <div class="role-card">
+      <h4>Dirigente</h4>
+      <p>Visiona la propria squadra, i compensi ricevuti e i dati anagrafici/fiscali personali.</p>
+    </div>
+    <div class="role-card">
+      <h4>Collaboratore</h4>
+      <p>Accede al proprio profilo, ai compensi e ai documenti relativi alla propria attivita.</p>
+    </div>
+    <div class="role-card">
+      <h4>Genitore</h4>
+      <p>Iscrive i figli minorenni, firma la privacy, visualizza pagamenti, presenze e documenti.</p>
+    </div>
+    <div class="role-card">
+      <h4>Atleta (18+ e minori)</h4>
+      <p>Accede al proprio profilo, QR code per le presenze, calendario e documenti personali.</p>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2: FUNZIONALITA' PRINCIPALI -->
+<div class="page">
+  <h1>Funzionalita Principali</h1>
+  
+  <div class="feature-section">
+    <div class="feature-card">
+      <div class="fc-icon">&#9998;</div>
+      <div class="fc-text">
+        <h3>Iscrizioni Online e Firma Digitale</h3>
+        <p>Atleti, genitori, coach, dirigenti e collaboratori si registrano dal proprio dispositivo. La privacy GDPR, i consensi per le immagini e tutti i dati anagrafici vengono firmati digitalmente con firma su schermo. Ogni documento viene generato automaticamente in PDF e inviato via email.</p>
+      </div>
+    </div>
+    
+    <div class="feature-card">
+      <div class="fc-icon">&#8364;</div>
+      <div class="fc-text">
+        <h3>Gestione Completa dei Pagamenti</h3>
+        <p>Definisci le rate per ogni squadra con importi e scadenze personalizzabili. Il sistema genera automaticamente ricevute fiscali numerate progressivamente, tiene traccia della prima nota cassa esportabile in CSV, e permette di inviare solleciti ai genitori/atleti con un click tramite notifica in-app ed email.</p>
+      </div>
+    </div>
+    
+    <div class="feature-card">
+      <div class="fc-icon">&#10003;</div>
+      <div class="fc-text">
+        <h3>Presenze con QR Code e Controllo Certificati</h3>
+        <p>Ogni atleta ha un QR code personale. Al momento della scansione, il sistema verifica automaticamente la validita del certificato medico: se mancante o non autenticato dall'admin, l'atleta viene bloccato. L'admin puo configurare un override temporaneo (15 minuti) o definitivo.</p>
+      </div>
+    </div>
+    
+    <div class="feature-card">
+      <div class="fc-icon">&#128196;</div>
+      <div class="fc-text">
+        <h3>Generazione Automatica Documenti PDF</h3>
+        <p>Informativa privacy GDPR completa, consenso immagini (interno e promozionale), ricevute fiscali, dichiarazioni di periodo di prova, biglietto da visita della societa. Ogni documento e generato dinamicamente con i dati reali, firmabile digitalmente e inviato via email.</p>
+      </div>
+    </div>
+    
+    <div class="feature-card">
+      <div class="fc-icon">&#128197;</div>
+      <div class="fc-text">
+        <h3>Calendario Gare Federale</h3>
+        <p>Importa automaticamente il calendario delle partite dal sito della federazione sportiva (FIPAV, FIGC, FIP, FIBS...). Le gare vengono visualizzate per ogni squadra con data, ora, avversario e luogo. Supporta anche l'aggiornamento differenziale per variazioni di calendario.</p>
+      </div>
+    </div>
+    
+    <div class="feature-card">
+      <div class="fc-icon">&#128202;</div>
+      <div class="fc-text">
+        <h3>Compensi Sportivi con Soglie Fiscali</h3>
+        <p>Monitoraggio in tempo reale dei compensi erogati a coach, dirigenti e collaboratori. Alert automatici al raggiungimento delle soglie di 5.000 euro (arancione) e 15.000 euro (viola) previste dalla Riforma dello Sport. Generazione automatica delle quietanze mensili con "Mensilita speciale" per importi extra.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3: FLUSSI E GDPR -->
+<div class="page">
+  <h1>Come Funziona: Il Flusso di Iscrizione</h1>
+  
+  <h2>Iscrizione Atleta Minorenne (sotto i 18 anni)</h2>
+  <div class="flow-step">
+    <div class="flow-num">1</div>
+    <div class="flow-text"><h4>Il genitore si registra</h4><p>Inserisce i propri dati anagrafici, email e password. Riceve un'email di verifica.</p></div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">2</div>
+    <div class="flow-text"><h4>Completa il profilo</h4><p>Dopo il login, inserisce codice fiscale, indirizzo e dati fiscali completi.</p></div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">3</div>
+    <div class="flow-text"><h4>Registra il figlio/a</h4><p>Inserisce i dati anagrafici dell'atleta minorenne e lo assegna a una squadra.</p></div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">4</div>
+    <div class="flow-text"><h4>Firma la Privacy GDPR</h4><p>Firma digitalmente l'informativa privacy completa con tutti i consensi (immagini interne, promozionali, trattamento dati).</p></div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">5</div>
+    <div class="flow-text"><h4>L'admin autentica il certificato medico</h4><p>L'atleta entra in stato "Validazione Certificato". L'admin verifica e autentica il certificato. Solo a quel punto l'atleta diventa "Attivo" e puo accedere agli allenamenti.</p></div>
+  </div>
+  
+  <h2>Iscrizione Atleta Maggiorenne (18+)</h2>
+  <div class="flow-step">
+    <div class="flow-num">1</div>
+    <div class="flow-text"><h4>L'atleta si registra autonomamente</h4><p>Inserisce i propri dati, email e password. Sceglie la squadra.</p></div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">2</div>
+    <div class="flow-text"><h4>Completa profilo e firma privacy</h4><p>Inserisce tutti i dati anagrafici/fiscali e firma digitalmente la privacy GDPR.</p></div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">3</div>
+    <div class="flow-text"><h4>Certificato medico e attivazione</h4><p>Stesso flusso dei minorenni: l'admin valida il certificato per attivare l'atleta.</p></div>
+  </div>
+  
+  <div class="gdpr-box">
+    <h3>Conformita GDPR</h3>
+    <p>Tutti i documenti di privacy sono generati in conformita al Regolamento EU 2016/679 (GDPR). Includono: base giuridica del trattamento, finalita, durata della conservazione, diritti dell'interessato, contatti del titolare e del DPO. Ogni firma digitale viene registrata con timestamp, indirizzo IP e hash del documento.</p>
+  </div>
+  
+  <div class="highlight-box">
+    <h3>Periodo di Prova</h3>
+    <p>RegistraTEAM supporta un flusso di "periodo di prova" configurabile dall'admin: l'atleta puo partecipare a un numero limitato di allenamenti (es. 3 sessioni o 7 giorni) prima dell'iscrizione definitiva. Il genitore firma una dichiarazione specifica, e il sistema traccia automaticamente le presenze in prova.</p>
+  </div>
+  
+  <h2>Collegamento Multi-Genitore</h2>
+  <p>RegistraTEAM supporta il collegamento di due genitori allo stesso atleta minorenne. Il secondo genitore si registra autonomamente e invia una richiesta di collegamento. Il primo genitore deve approvare la richiesta dalla propria dashboard. Entrambi i genitori ricevono notifiche, solleciti e hanno accesso ai documenti dell'atleta.</p>
+</div>
+
+<!-- PAGE 4: SICUREZZA E CONTATTI -->
+<div class="page">
+  <h1>Sicurezza e Tecnologia</h1>
+  
+  <h2>Architettura</h2>
+  <ul>
+    <li><strong>Web App Responsive</strong>: accessibile da smartphone, tablet e PC senza installare nulla</li>
+    <li><strong>Backend sicuro</strong>: API REST con autenticazione JWT e crittografia delle password (bcrypt)</li>
+    <li><strong>Database MongoDB</strong>: scalabile e performante per gestire migliaia di atleti</li>
+    <li><strong>Email transazionali</strong>: invio automatico di verifiche, notifiche e solleciti via Brevo</li>
+    <li><strong>Generazione PDF</strong>: documenti legali generati server-side con ReportLab</li>
+  </ul>
+  
+  <h2>Sicurezza dei Dati</h2>
+  <ul>
+    <li>Password crittografate con bcrypt (hash irreversibile)</li>
+    <li>Token di sessione JWT con scadenza configurabile</li>
+    <li>Protezione anti brute-force sugli accessi</li>
+    <li>Audit log completo di tutte le operazioni sensibili</li>
+    <li>Separazione dei dati per societa (multi-tenancy)</li>
+    <li>Certificati medici archiviati con retention di 5 anni come da normativa</li>
+  </ul>
+  
+  <h2>Conformita Normativa</h2>
+  <ul>
+    <li><strong>GDPR (Reg. EU 2016/679)</strong>: informativa privacy completa, consensi granulari, diritto alla cancellazione</li>
+    <li><strong>Riforma dello Sport (D.Lgs. 36/2021)</strong>: soglie compensi, ricevute conformi, quietanze mensili</li>
+    <li><strong>Codice in materia di protezione dei dati personali</strong>: trattamento dati minori con consenso genitoriale</li>
+  </ul>
+  
+  <h2>Funzionalita Aggiuntive</h2>
+  <ul>
+    <li>Campagne pre-stagionali con email e reminder automatici</li>
+    <li>Archivio storico stagioni con possibilita di archiviazione e ripristino</li>
+    <li>Export dati in CSV/Excel per integrazione con software contabili</li>
+    <li>Notifiche scadenza certificati medici (30/15/7 giorni prima)</li>
+    <li>Compleanni del giorno nella dashboard admin</li>
+    <li>Biglietto da visita digitale della societa (JPG generato automaticamente)</li>
+    <li>Timeline completa per ogni atleta con storico operazioni</li>
+  </ul>
+  
+  <div class="cta-section">
+    <h2>Prova RegistraTEAM Gratuitamente</h2>
+    <p>Stiamo selezionando un numero limitato di societa sportive per la fase di test.<br>Chi partecipa avra accesso completamente gratuito fino al 30/06/2027.</p>
+    <div class="email">info@registrateam.it</div>
+  </div>
+</div>
+
+</body>
+</html>
