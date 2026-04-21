@@ -1031,7 +1031,7 @@ Società sportiva: ${societyName}
                 <TouchableOpacity 
                   style={styles.calculateCfBtn}
                   onPress={handleCalculateCF}
-                  disabled={!editData.gender || !editData.date_of_birth || !editData.place_of_birth || !editData.first_name || !editData.last_name}
+                  disabled={!editData.gender || !editData.date_of_birth || !editData.first_name || !editData.last_name || (editData.country_of_birth === 'Italia' || editData.country_of_birth === 'ITALIA' || !editData.country_of_birth ? !editData.place_of_birth : false)}
                 >
                   <Ionicons name="calculator" size={18} color="#fff" />
                   <Text style={styles.calculateCfBtnText}>Calcola</Text>
