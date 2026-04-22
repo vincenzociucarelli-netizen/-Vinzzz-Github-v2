@@ -1399,13 +1399,13 @@ export default function CollaboratoreCompensation() {
                     </Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 10, color: '#888' }}>Totale annuo prima del compenso:</Text>
+                    <Text style={{ fontSize: 10, color: '#888' }}>Totale percepito nel {selectedYear} prima del compenso:</Text>
                     <Text style={{ fontSize: 10, color: '#333' }}>
                       € {((thresholdStatus?.yearly_total || 0)).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
                     </Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 10, color: '#888' }}>Totale annuo dopo il compenso:</Text>
+                    <Text style={{ fontSize: 10, color: '#888' }}>Totale percepito nel {selectedYear} dopo il compenso:</Text>
                     <Text style={{ fontSize: 10, color: '#333' }}>
                       € {((thresholdStatus?.yearly_total || 0) + (profile?.monthly_compensation || 0)).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
                     </Text>
