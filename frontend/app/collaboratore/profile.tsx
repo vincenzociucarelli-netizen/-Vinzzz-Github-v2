@@ -118,6 +118,7 @@ export default function CollaboratoreProfile() {
   // Privacy consent state
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showConsents, setShowConsents] = useState(false);
   const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
   
   // My Documents state
@@ -776,7 +777,7 @@ Società sportiva: ${societyName}
     <View style={styles.container}>
       <OnboardingTutorial role="collaboratore" steps={COLLABORATORE_STEPS} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.push('/collaboratore')}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}>
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>
@@ -1415,8 +1416,19 @@ Società sportiva: ${societyName}
         </View>
       )}
 
-      {/* Consensi Privacy e Immagini - solo dopo firma privacy */}
-      {privacyAccepted && <ConsentManager entityType="staff" accentColor="#E65100" />}
+      {/* Consensi Privacy e Immagini - collassabile, solo dopo firma privacy */}
+      {privacyAccepted && (
+        <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 8 }}>
+          <TouchableOpacity 
+            onPress={() => setShowConsents(!showConsents)}
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF3E0', padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#E65100' }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100' }}>Consensi Privacy</Text>
+            <Ionicons name={showConsents ? "chevron-up" : "chevron-down"} size={20} color="#E65100" />
+          </TouchableOpacity>
+          {showConsents && <ConsentManager entityType="staff" accentColor="#E65100" />}
+        </View>
+      )}
 
       {/* GDPR Privacy Modal */}
       <GDPRPrivacyModal
