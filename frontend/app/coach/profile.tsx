@@ -123,6 +123,7 @@ export default function CoachProfile() {
   // Privacy consent state
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showConsents, setShowConsents] = useState(false);
   const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
   
   // My documents (privacy, receipts, etc.)
@@ -1409,7 +1410,18 @@ Società sportiva: ${societyName}
         )}
 
           {/* Privacy Consent Management - solo dopo firma privacy */}
-          {privacyAccepted && <ConsentManager entityType="staff" accentColor="#1565C0" />}
+          {privacyAccepted && (
+            <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 8 }}>
+              <TouchableOpacity 
+                onPress={() => setShowConsents(!showConsents)}
+                style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#E3F2FD', padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#1565C0' }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#1565C0' }}>Consensi Privacy</Text>
+                <Ionicons name={showConsents ? "chevron-up" : "chevron-down"} size={20} color="#1565C0" />
+              </TouchableOpacity>
+              {showConsents && <ConsentManager entityType="staff" accentColor="#1565C0" />}
+            </View>
+          )}
 
         <View style={{ height: 40 }} />
       </ScrollView>

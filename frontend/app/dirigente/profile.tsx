@@ -61,6 +61,7 @@ export default function DirigenteProfile() {
   // Privacy consent state
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showConsents, setShowConsents] = useState(false);
   const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
   
   // Signed receipts for compact view
@@ -1271,7 +1272,18 @@ Società sportiva: ${societyName}
       )}
 
       {/* Consensi Privacy e Immagini - solo dopo firma privacy */}
-      {privacyAccepted && <ConsentManager entityType="staff" accentColor="#6A1B9A" />}
+      {privacyAccepted && (
+        <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 8 }}>
+          <TouchableOpacity 
+            onPress={() => setShowConsents(!showConsents)}
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F3E5F5', padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#6A1B9A' }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#6A1B9A' }}>Consensi Privacy</Text>
+            <Ionicons name={showConsents ? "chevron-up" : "chevron-down"} size={20} color="#6A1B9A" />
+          </TouchableOpacity>
+          {showConsents && <ConsentManager entityType="staff" accentColor="#6A1B9A" />}
+        </View>
+      )}
 
       {/* GDPR Privacy Modal */}
       <GDPRPrivacyModal

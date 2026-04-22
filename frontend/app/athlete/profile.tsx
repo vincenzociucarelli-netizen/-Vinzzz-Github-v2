@@ -47,6 +47,7 @@ export default function AthleteProfile() {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [showTrialEndModal, setShowTrialEndModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showConsents, setShowConsents] = useState(false);
   const [deletingData, setDeletingData] = useState(false);
   const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
   const [athleteId, setAthleteId] = useState<string | null>(null);
@@ -1265,8 +1266,17 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           ) : null}
         </View>
 
-          {/* Privacy Consent Management */}
-          <ConsentManager entityType="athlete" entityId={athleteId || undefined} accentColor="#4CAF50" />
+          {/* Privacy Consent Management - collassabile */}
+          <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 8 }}>
+            <TouchableOpacity 
+              onPress={() => setShowConsents(!showConsents)}
+              style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#4CAF50' }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#2E7D32' }}>Consensi Privacy</Text>
+              <Ionicons name={showConsents ? "chevron-up" : "chevron-down"} size={20} color="#2E7D32" />
+            </TouchableOpacity>
+            {showConsents && <ConsentManager entityType="athlete" entityId={athleteId || undefined} accentColor="#4CAF50" />}
+          </View>
 
         <View style={{ height: 120 }} />
       </ScrollView>

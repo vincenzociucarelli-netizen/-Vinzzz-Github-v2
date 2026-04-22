@@ -29,6 +29,7 @@ export default function ParentProfile() {
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [showConsents, setShowConsents] = useState(false);
   
   // Profile data
   const [profileData, setProfileData] = useState({
@@ -659,17 +660,30 @@ export default function ParentProfile() {
             </View>
           )}
 
-          {/* Privacy Consent Management */}
-          <ConsentManager entityType="user" accentColor="#E91E63" />
-          {children.filter(c => c.is_minor).map((child) => (
-            <ConsentManager
-              key={`consent-${child.id}`}
-              entityType="athlete"
-              entityId={child.id}
-              entityName={`${child.first_name} ${child.last_name}`}
-              accentColor="#E91E63"
-            />
-          ))}
+          {/* Privacy Consent Management - collassabile */}
+          <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 8 }}>
+            <TouchableOpacity 
+              onPress={() => setShowConsents(!showConsents)}
+              style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FCE4EC', padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#E91E63' }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#C2185B' }}>Consensi Privacy</Text>
+              <Ionicons name={showConsents ? "chevron-up" : "chevron-down"} size={20} color="#C2185B" />
+            </TouchableOpacity>
+            {showConsents && (
+              <>
+                <ConsentManager entityType="user" accentColor="#E91E63" />
+                {children.filter(c => c.is_minor).map((child) => (
+                  <ConsentManager
+                    key={`consent-${child.id}`}
+                    entityType="athlete"
+                    entityId={child.id}
+                    entityName={`${child.first_name} ${child.last_name}`}
+                    accentColor="#E91E63"
+                  />
+                ))}
+              </>
+            )}
+          </View>
 
           <View style={{ height: 40 }} />
         </ScrollView>
