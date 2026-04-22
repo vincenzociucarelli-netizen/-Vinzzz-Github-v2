@@ -19299,6 +19299,9 @@ async def get_collaboratore_threshold_status(
         "year": year,
         "monthly_compensation": monthly_compensation,
         "yearly_total": yearly_total,
+        "prior_compensation": prior_compensation,
+        "total_with_prior": yearly_total,
+        "yearly_total_without_prior": yearly_total - prior_compensation if prior_compensation > 0 else yearly_total,
         "thresholds": {
             "5000": {
                 "threshold": 5000,
