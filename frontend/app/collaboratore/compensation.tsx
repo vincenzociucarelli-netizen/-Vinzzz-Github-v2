@@ -172,6 +172,7 @@ export default function CollaboratoreCompensation() {
   // Declaration modal
   const [showDeclarationModal, setShowDeclarationModal] = useState(false);
   const [declarationType, setDeclarationType] = useState<'5000' | '15000'>('5000');
+  const [declarationAmount, setDeclarationAmount] = useState(0);
   const [declarationSignature, setDeclarationSignature] = useState<string | null>(null);
   const [signingDeclaration, setSigningDeclaration] = useState(false);
   
@@ -359,14 +360,19 @@ export default function CollaboratoreCompensation() {
   const openDeclarationModalForMonth = (type: '5000' | '15000', month: number, year: number) => {
     setDeclarationType(type);
     setDeclarationSignature(null);
-    // Also set selected month/year in signature modal state for when declaration is done
     setSignatureModalState(prev => ({ ...prev, month, year }));
+    // Calculate the actual amount for this month (base + special)
+    const existingRecord = records.find(r => matchesMonth(r.month, month) && r.year === year);
+    setDeclarationAmount(existingRecord?.amount_gross || existingRecord?.amount || profile?.monthly_compensation || 0);
     setShowDeclarationModal(true);
   };
 
   const openDeclarationModal = (type: '5000' | '15000') => {
     setDeclarationType(type);
     setDeclarationSignature(null);
+    // Use the current pending month's amount
+    const pendingMonth = records.find(r => !r.receipt_signed && !r.declaration_pending);
+    setDeclarationAmount(pendingMonth?.amount_gross || pendingMonth?.amount || profile?.monthly_compensation || 0);
     setShowDeclarationModal(true);
   };
 
@@ -1420,7 +1426,7 @@ export default function CollaboratoreCompensation() {
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Text style={{ fontSize: 10, color: '#888' }}>Totale somme percepite {selectedYear} dopo il compenso:</Text>
-                    <Text style={{ fontSize: 10, color: '#333' }}>€ {((tsCurrentYear?.yearly_total || 0) + (profile?.monthly_compensation || 0)).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
+                    <Text style={{ fontSize: 10, color: '#333' }}>€ {((tsCurrentYear?.yearly_total || 0) + declarationAmount).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Text style={{ fontSize: 10, color: '#888' }}>Soglia superata:</Text>

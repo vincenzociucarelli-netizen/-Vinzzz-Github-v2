@@ -129,6 +129,7 @@ export default function DirigenteCompensation() {
   // Declaration modal
   const [showDeclarationModal, setShowDeclarationModal] = useState(false);
   const [declarationType, setDeclarationType] = useState<'5000' | '15000'>('5000');
+  const [declarationAmount, setDeclarationAmount] = useState(0);
   const [declarationSignature, setDeclarationSignature] = useState<string | null>(null);
   const [signingDeclaration, setSigningDeclaration] = useState(false);
   
@@ -286,6 +287,8 @@ export default function DirigenteCompensation() {
   const openDeclarationModal = (type: '5000' | '15000') => {
     setDeclarationType(type);
     setDeclarationSignature(null);
+    const pendingMonth = records.find(r => !r.receipt_signed && !r.declaration_pending);
+    setDeclarationAmount(pendingMonth?.amount_gross || pendingMonth?.amount || profile?.monthly_compensation || 0);
     setShowDeclarationModal(true);
   };
 
@@ -1223,7 +1226,7 @@ export default function DirigenteCompensation() {
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Text style={{ fontSize: 10, color: '#888' }}>Totale somme percepite {selectedYear} dopo il compenso:</Text>
-                    <Text style={{ fontSize: 10, color: '#333' }}>€ {((tsCurrentYear?.yearly_total || tsCurrentYear?.total_with_prior || 0) + (profile?.monthly_compensation || 0)).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
+                    <Text style={{ fontSize: 10, color: '#333' }}>€ {((tsCurrentYear?.yearly_total || tsCurrentYear?.total_with_prior || 0) + declarationAmount).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Text style={{ fontSize: 10, color: '#888' }}>Soglia superata:</Text>
