@@ -1330,20 +1330,35 @@ export default function CoachCompensation() {
               <View style={{ backgroundColor: '#F5F5F5', padding: 12, marginVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E0E0E0' }}>
                 <Text style={{ fontSize: 11, fontWeight: '700', color: '#666', marginBottom: 8, textAlign: 'center' }}>METADATI DI VERIFICA</Text>
                 {(() => {
-                  const ts = selectedYear === 2026 ? (thresholdStatus2026 || thresholdStatus) : thresholdStatus;
+                  const tsCurrentYear = selectedYear === 2026 ? (thresholdStatus2026 || thresholdStatus) : thresholdStatus;
+                  const tsPrevYear = selectedYear === 2026 ? thresholdStatus : null;
+                  const prevYear = selectedYear ? selectedYear - 1 : null;
                   return (
                 <View style={{ gap: 4 }}>
+                  {tsPrevYear && prevYear && (
+                    <>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 10, color: '#888' }}>Somme pregresse {prevYear}:</Text>
+                        <Text style={{ fontSize: 10, color: '#333' }}>€ {(tsPrevYear?.prior_compensation || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 10, color: '#888' }}>Totale somme percepite {prevYear}:</Text>
+                        <Text style={{ fontSize: 10, color: '#333' }}>€ {(tsPrevYear?.yearly_total || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
+                      </View>
+                      <View style={{ height: 6 }} />
+                    </>
+                  )}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 10, color: '#888' }}>Compensi pregressi dichiarati:</Text>
-                    <Text style={{ fontSize: 10, color: '#333' }}>€ {(ts?.prior_compensation || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
+                    <Text style={{ fontSize: 10, color: '#888' }}>Somme pregresse {selectedYear}:</Text>
+                    <Text style={{ fontSize: 10, color: '#333' }}>€ {(selectedYear && selectedYear > (tsPrevYear?.year || 0) ? 0 : (tsCurrentYear?.prior_compensation || 0)).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 10, color: '#888' }}>Totale percepito nel {selectedYear} prima del compenso:</Text>
-                    <Text style={{ fontSize: 10, color: '#333' }}>€ {(ts?.yearly_total || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
+                    <Text style={{ fontSize: 10, color: '#888' }}>Totale somme percepite {selectedYear} prima del compenso:</Text>
+                    <Text style={{ fontSize: 10, color: '#333' }}>€ {(tsCurrentYear?.yearly_total || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 10, color: '#888' }}>Totale percepito nel {selectedYear} dopo il compenso:</Text>
-                    <Text style={{ fontSize: 10, color: '#333' }}>€ {((ts?.yearly_total || 0) + (profile?.monthly_compensation || 0)).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
+                    <Text style={{ fontSize: 10, color: '#888' }}>Totale somme percepite {selectedYear} dopo il compenso:</Text>
+                    <Text style={{ fontSize: 10, color: '#333' }}>€ {((tsCurrentYear?.yearly_total || 0) + (profile?.monthly_compensation || 0)).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Text style={{ fontSize: 10, color: '#888' }}>Soglia superata:</Text>
