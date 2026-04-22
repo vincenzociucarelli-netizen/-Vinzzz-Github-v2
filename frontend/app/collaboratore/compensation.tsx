@@ -1427,8 +1427,8 @@ export default function CollaboratoreCompensation() {
                     <Text style={{ fontSize: 10, color: '#333', fontWeight: '600' }}>€ {declarationType === '5000' ? '5.000,00' : '15.000,00'}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, borderTopWidth: 1, borderTopColor: '#E0E0E0', paddingTop: 4 }}>
-                    <Text style={{ fontSize: 10, color: '#888' }}>Timestamp firma (UTC):</Text>
-                    <Text style={{ fontSize: 10, color: '#333' }}>{new Date().toISOString()}</Text>
+                    <Text style={{ fontSize: 10, color: '#888' }}>Timestamp firma:</Text>
+                    <Text style={{ fontSize: 10, color: '#333' }}>{new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</Text>
                   </View>
                 </View>
                   );
