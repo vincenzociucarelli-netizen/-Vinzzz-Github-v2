@@ -1,38 +1,46 @@
 # RegistraTEAM - Product Requirements Document
 
 ## Problema Originale
-Applicazione completa per la gestione di societa sportive dilettantistiche italiane. Focus su GDPR, ruoli, collegamento genitori-atleti, documenti PDF dinamici e sincronizzazione calendario gare federali.
+Applicazione completa per la gestione di società sportive dilettantistiche italiane. Focus su GDPR, ruoli, collegamento genitori-atleti, documenti PDF dinamici e sincronizzazione calendario gare federali.
 
 ## Architettura
-- **Frontend**: React/Expo (build statiche web)
+- **Frontend**: React/Expo (build statiche web `npx expo export -p web` + `serve -s dist -l 3000`)
 - **Backend**: FastAPI (server.py monolitico >24k righe)
 - **Database**: MongoDB
 - **Integrazioni**: Brevo (email), ReportLab (PDF), BeautifulSoup (scraping federazioni)
 
-## Completato 19/04/2026:
-- Presentazione dettagliata HTML (4 pagine) con logo e brand RegistraTEAM
-- 7 Manuali d'uso per ruolo: Admin, Coach, Dirigente, Collaboratore, Genitore, Atleta 18-, Atleta 18+
-- Flyer promozionale A4 con loghi, multi-sport, CTA con info@registrateam.it e accesso gratuito fino 30/06/2027
-- Campanella notifiche nella dashboard genitore (solleciti pagamento, avvisi)
-- Endpoint notifiche utente: GET/PATCH /user/notifications
-- Fix solleciti: atleti che hanno pagato >= quota non compaiono, supporto atleti adulti senza genitore
-- Fix paid:None vs paid:False nell'invio notifiche + DuplicateKey secondo genitore
-- Download Registro CSV (sostituisce Excel che crashava su Expo web)
-- Fix creazione squadra: parsing date YY-MM-DD, validazione GG/MM/AAAA
-- Biglietto da visita: aggiunto P.IVA, telefono spostato a destra, design professionale
-
-## Completato 17/04/2026:
-- Biglietto da visita JPG ridisegnato
-- Campo Partita IVA aggiunto
-
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
-## Da Verificare/Completare
-- Dirigenti e Collaboratori: test flussi completi
-- Override certificati: toggle mobile web non funziona
+## Completato 23/04/2026:
+- Fix calcolo "Somma supplementare" viste Admin (coach, dirigente, collaboratore)
+- Fix pagina bianca admin/collaboratore e admin/dirigente
+- Calcolo mese superamento soglia basato su cumulativo reale
+- Testo "Con la quietanza del mese di [Mese]..." su tutte le figure
+- Timestamp PDF ora italiana su tutte le figure
+- Consensi Privacy collassabili per tutte le figure
+- Campanella notifiche dashboard genitore
+- Email invito generica "Gentile Utente"
+- Dirigenti in lista "Staff in Attesa di Approvazione"
+- Dashboard dirigente: solo squadre assegnate
+- Fix calcolo CF per nati all'estero
+- Fix salvataggio profilo dirigente/coach prima di firma privacy
+- Presentazione dettagliata HTML + 7 Manuali d'uso per ruolo
+- Flyer promozionale A4 con accesso gratuito fino 30/06/2027
 
-## Task Futuri
+## Completato 19/04/2026:
+- Download Registro CSV funzionante
+- Fix solleciti pagamento
+- Fix creazione squadra (date)
+- Biglietto da visita con P.IVA
+
+## IN SOSPESO (prossima sessione):
+- Privacy Livia: cancellare e rifirmare, verificare dati nel PDF
+- Mese soglia: il banner mostra mese sbagliato, investigare build
+- Banner previsione €15k dove manca
+
+## Task Futuri:
+- (P1) Fix toggle override certificato (mobile web)
 - (P1) Re-importazione Excel calendario per aggiornamento date partite
 - (P1) UI per atleti con contratti formali
 - (P2) Refactoring server.py monolitico
