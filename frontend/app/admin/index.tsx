@@ -667,7 +667,7 @@ export default function AdminDashboard() {
             <View style={styles.pendingAthletesHeader}>
               <Ionicons name="people" size={22} color="#8E44AD" />
               <Text style={[styles.pendingAthletesTitle, { color: '#8E44AD' }]}>
-                Staff in Attesa di Approvazione ({pendingStaff.length})
+                Staff in Attesa di Approvazione
               </Text>
             </View>
             {pendingStaff.map((staffUser: any) => {
