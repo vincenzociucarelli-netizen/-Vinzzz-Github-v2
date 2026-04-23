@@ -510,8 +510,41 @@ Società sportiva: ${societyName}
       return;
     }
     
-    // If privacy not yet accepted, show privacy modal instead of saving directly
+    // If privacy not yet accepted, save profile first then show privacy modal
     if (!privacyAccepted) {
+      setSaving(true);
+      try {
+        let isoDate = null;
+        if (editData.date_of_birth) {
+          const parts = editData.date_of_birth.split('/');
+          if (parts.length === 3) {
+            isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+        }
+        await api.patch('/auth/me', {
+          first_name: editData.first_name,
+          last_name: editData.last_name,
+          full_name: `${editData.last_name} ${editData.first_name}`,
+          date_of_birth: isoDate,
+          place_of_birth: editData.place_of_birth,
+          birth_province: editData.province_of_birth,
+          country_of_birth: editData.country_of_birth,
+          gender: editData.gender,
+          fiscal_code: editData.fiscal_code,
+          address: editData.address,
+          city: editData.city,
+          postal_code: editData.postal_code,
+          province: editData.province,
+          phone: editData.phone,
+          coach_license_number: editData.coach_license_number,
+          other_annual_compensation: editData.other_annual_compensation || 0,
+        });
+      } catch (error: any) {
+        showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
       setProfileData({...profileData, ...editData});
       setShowPrivacyModal(true);
       return;
