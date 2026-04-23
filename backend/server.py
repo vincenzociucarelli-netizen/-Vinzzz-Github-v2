@@ -2190,6 +2190,7 @@ class AthleteInviteRequest(BaseModel):
     last_name: Optional[str] = None
     is_minor: bool = False
     team_id: Optional[str] = None
+    role: Optional[str] = None
 
 @api_router.post("/athletes/invite")
 async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_current_user)):
@@ -2238,7 +2239,8 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
     register_link = f"{base_url}/invite-register?token={token}"
     
     # Send invitation email
-    recipient_label = "Genitore" if data.is_minor else "Atleta"
+    # Generic greeting for all roles
+    recipient_label = "Utente"
     athlete_name = ""
     if data.first_name and data.last_name:
         athlete_name = f" per <strong>{data.first_name} {data.last_name}</strong>"
