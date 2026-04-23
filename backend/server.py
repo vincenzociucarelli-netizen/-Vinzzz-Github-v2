@@ -20564,6 +20564,24 @@ async def calcola_codice_fiscale(data: CalcolaCodiceFiscaleRequest):
         is_estero = data.stato_nascita and data.stato_nascita.upper() not in ('ITALIA', 'IT', '')
         birthplace = data.stato_nascita.upper() if is_estero else data.luogo_nascita
         
+        # Map common Italian country names to names recognized by codicefiscale library
+        country_map = {
+            'CINA': 'REPUBBLICA POPOLARE CINESE',
+            'RUSSIA': 'FEDERAZIONE RUSSA',
+            'COREA DEL SUD': 'COREA DEL SUD',
+            'COREA DEL NORD': "COREA DEL NORD",
+            'INGHILTERRA': 'REGNO UNITO',
+            'GRAN BRETAGNA': 'REGNO UNITO',
+            'USA': 'STATI UNITI D\'AMERICA',
+            'STATI UNITI': 'STATI UNITI D\'AMERICA',
+            'AMERICA': 'STATI UNITI D\'AMERICA',
+            'MOLDAVIA': 'MOLDOVA',
+            'OLANDA': 'PAESI BASSI',
+            'REPUBBLICA CECA': 'CECHIA',
+        }
+        if is_estero and birthplace in country_map:
+            birthplace = country_map[birthplace]
+        
         # Calcola il CF
         result = codicefiscale.encode(
             lastname=data.cognome.upper(),
