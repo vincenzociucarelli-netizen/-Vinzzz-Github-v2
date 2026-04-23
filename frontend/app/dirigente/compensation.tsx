@@ -489,11 +489,28 @@ export default function DirigenteCompensation() {
     
     const warnings = [];
     
-    // Find the next unsigned month name for each year
-    const nextUnsignedMonth1 = records.find(r => r.year === contractStartYear && !r.receipt_signed);
-    const nextMonthName1 = nextUnsignedMonth1 ? MONTH_NAMES[nextUnsignedMonth1.month] : '';
-    const nextUnsignedMonth2 = records.find(r => r.year === (contractStartYear + 1) && !r.receipt_signed);
-    const nextMonthName2 = nextUnsignedMonth2 ? MONTH_NAMES[nextUnsignedMonth2.month] : '';
+    // Calculate which month the threshold is actually crossed for each year
+    const monthlyComp = profile?.monthly_compensation || 0;
+    const priorComp = profile?.other_annual_compensation || 0;
+    
+    const findThresholdMonth = (year: number, threshold: number) => {
+      const yearRecords = records.filter(r => r.year === year).sort((a: any, b: any) => a.month - b.month);
+      const prior = (year === contractStartYear) ? priorComp : 0;
+      let cumulative = prior;
+      for (const r of yearRecords) {
+        const amt = r.amount_gross || r.amount || monthlyComp;
+        cumulative += amt;
+        if (cumulative > threshold) {
+          return MONTH_NAMES[r.month] || '';
+        }
+      }
+      return '';
+    };
+    
+    const thresholdMonth5k_y1 = findThresholdMonth(contractStartYear, 5000);
+    const thresholdMonth15k_y1 = findThresholdMonth(contractStartYear, 15000);
+    const thresholdMonth5k_y2 = findThresholdMonth(contractStartYear + 1, 5000);
+    const thresholdMonth15k_y2 = findThresholdMonth(contractStartYear + 1, 15000);
     
     // ==================== FIRST YEAR (contractStartYear) WARNINGS ====================
     // Warning for approaching €5.000
@@ -504,7 +521,7 @@ export default function DirigenteCompensation() {
           <View style={styles.thresholdBannerContent}>
             <Text style={styles.thresholdBannerTitle}>Anno {contractStartYear}: Prossima soglia €5.000</Text>
             <Text style={styles.thresholdBannerText}>
-              Con la quietanza del mese di {nextMonthName1} supererai la soglia previdenziale di €5.000.
+              Con la quietanza del mese di {thresholdMonth5k_y1} supererai la soglia previdenziale di €5.000.
             </Text>
           </View>
         </View>
@@ -519,7 +536,7 @@ export default function DirigenteCompensation() {
           <View style={styles.thresholdBannerContent}>
             <Text style={[styles.thresholdBannerTitle, { color: '#721C24' }]}>Anno {contractStartYear}: Prossima soglia €15.000</Text>
             <Text style={[styles.thresholdBannerText, { color: '#721C24' }]}>
-              Con la quietanza del mese di {nextMonthName1} supererai la soglia fiscale di €15.000.
+              Con la quietanza del mese di {thresholdMonth15k_y1} supererai la soglia fiscale di €15.000.
             </Text>
           </View>
         </View>
@@ -642,7 +659,7 @@ export default function DirigenteCompensation() {
             <View style={styles.thresholdBannerContent}>
               <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Prossima soglia €5.000</Text>
               <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>
-                Con la quietanza del mese di {nextMonthName2} supererai la soglia previdenziale.
+                Con la quietanza del mese di {thresholdMonth5k_y2} supererai la soglia previdenziale.
               </Text>
             </View>
           </View>
@@ -657,7 +674,7 @@ export default function DirigenteCompensation() {
             <View style={styles.thresholdBannerContent}>
               <Text style={[styles.thresholdBannerTitle, { color: '#C2185B' }]}>Anno {year2026}: Prossima soglia €15.000</Text>
               <Text style={[styles.thresholdBannerText, { color: '#C2185B' }]}>
-                Con la quietanza del mese di {nextMonthName2} supererai la soglia fiscale.
+                Con la quietanza del mese di {thresholdMonth15k_y2} supererai la soglia fiscale.
               </Text>
             </View>
           </View>
