@@ -147,7 +147,7 @@ export default function AdminDashboard() {
       
       // Count pending by role and save staff pending list
       const pending = pendingRes.data || [];
-      const staffRoles = ['coach', 'collaboratore', 'admin', 'viewer'];
+      const staffRoles = ['coach', 'collaboratore', 'dirigente', 'admin', 'viewer'];
       const staffPending = pending.filter((u: any) => staffRoles.includes(u.role));
       setPendingStaff(staffPending);
       const dirigentiPending = pending.filter((u: any) => u.role === 'admin' || u.role === 'viewer').length;
