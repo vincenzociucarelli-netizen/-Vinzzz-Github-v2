@@ -1508,10 +1508,8 @@ Società sportiva: ${societyName}
                   borderBottomWidth: index < myDocuments.length - 1 ? 1 : 0,
                   borderBottomColor: '#f0f0f0',
                 }}>
-                  <a
-                    href="#"
-                    onClick={async (e) => {
-                      e.preventDefault();
+                  <div
+                    onClick={async () => {
                       try {
                         const token = await AsyncStorage.getItem('token');
                         const downloadUrl = `${API_URL}/api/documents/signed/${doc.id}/pdf`;
@@ -1532,7 +1530,7 @@ Società sportiva: ${societyName}
                         Alert.alert('Errore', 'Apertura non riuscita');
                       }
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none', listStyleType: 'none', display: 'flex' }}
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none', display: 'flex', cursor: 'pointer' }}
                     data-testid={`open-modal-doc-${doc.id}`}
                   >
                   <Ionicons 
@@ -1555,7 +1553,7 @@ Società sportiva: ${societyName}
                     </Text>
                   </View>
                   <Ionicons name="open-outline" size={20} color="#007AFF" />
-                  </a>
+                  </div>
                 </View>
               ))}
             </ScrollView>
