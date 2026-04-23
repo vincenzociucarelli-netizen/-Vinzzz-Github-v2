@@ -484,7 +484,7 @@ export default function AdminCollaboratoreDetail() {
         }
         
         if (isInContract && receiptAmount > monthly) {
-          supplementaryTotal += receiptAmount;
+          supplementaryTotal += receiptAmount - monthlyComp;
         }
       });
     }
