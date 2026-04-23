@@ -14991,7 +14991,7 @@ def generate_monthly_receipt_pdf(
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    timestamp = datetime.now().strftime("%d/%m/%Y")
+    timestamp = to_rome_time(datetime.now(timezone.utc)).strftime("%d/%m/%Y")
     
     # Title - centered, bold
     c.setFont("Helvetica-Bold", 14)
@@ -16124,7 +16124,7 @@ def generate_privacy_consent_pdf(
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    timestamp = datetime.now().strftime("%d/%m/%Y")
+    timestamp = to_rome_time(datetime.now(timezone.utc)).strftime("%d/%m/%Y")
     
     # Title - centered, bold
     c.setFont("Helvetica-Bold", 14)
@@ -16325,7 +16325,7 @@ def generate_threshold_5k_pdf(
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    timestamp = to_rome_time(datetime.now(timezone.utc)).strftime("%d/%m/%Y %H:%M:%S")
     
     # Name is already stored as "COGNOME NOME" in database - use as-is
     formatted_name = collaborator_name
@@ -16493,7 +16493,7 @@ def generate_threshold_15k_pdf(
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    timestamp = to_rome_time(datetime.now(timezone.utc)).strftime("%d/%m/%Y %H:%M:%S")
     
     # Name is already stored as "COGNOME NOME" in database - use as-is
     formatted_name = collaborator_name
@@ -16657,7 +16657,7 @@ def generate_signed_pdf(
     width, height = A4
     
     # Timestamp
-    timestamp = datetime.now().strftime("%d/%m/%Y alle %H:%M:%S")
+    timestamp = to_rome_time(datetime.now(timezone.utc)).strftime("%d/%m/%Y alle %H:%M:%S")
     
     # Header
     c.setFont("Helvetica-Bold", 16)
