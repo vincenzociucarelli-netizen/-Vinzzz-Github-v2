@@ -1217,7 +1217,7 @@ Società sportiva: ${societyName}
                         Alert.alert('Errore', 'Apertura non riuscita');
                       }
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none' }}
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none', listStyleType: 'none', display: 'flex' }}
                     data-testid={`open-doc-${doc.id}`}
                   >
                   <Ionicons 
@@ -1532,7 +1532,7 @@ Società sportiva: ${societyName}
                         Alert.alert('Errore', 'Apertura non riuscita');
                       }
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none' }}
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none', listStyleType: 'none', display: 'flex' }}
                     data-testid={`open-modal-doc-${doc.id}`}
                   >
                   <Ionicons 
