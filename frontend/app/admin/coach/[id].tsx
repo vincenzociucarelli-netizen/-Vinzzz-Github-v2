@@ -557,7 +557,7 @@ export default function AdminCoachDetail() {
         
         // Only count supplementary if within contract and amount > standard
         if (isInContract && receiptAmount > monthly) {
-          supplementaryTotal += receiptAmount - monthlyComp;
+          supplementaryTotal += receiptAmount - monthly;
         }
       });
     }

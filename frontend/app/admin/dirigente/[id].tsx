@@ -436,7 +436,7 @@ export default function AdminDirigenteDetail() {
         }
         
         if (isInContract && receiptAmount > monthly) {
-          supplementaryTotal += receiptAmount - monthlyComp;
+          supplementaryTotal += receiptAmount - monthly;
         }
       });
     }
