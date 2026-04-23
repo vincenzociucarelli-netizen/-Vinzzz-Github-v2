@@ -586,7 +586,7 @@ export default function CollaboratoreCompensation() {
       
       // Calculate supplementary (amount above standard monthly)
       if (receiptAmount > monthlyComp) {
-        supplementaryTotal += receiptAmount;
+        supplementaryTotal += receiptAmount - monthlyComp;
       }
     });
     
