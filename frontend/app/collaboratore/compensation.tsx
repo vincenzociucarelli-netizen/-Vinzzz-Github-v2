@@ -619,6 +619,12 @@ export default function CollaboratoreCompensation() {
     
     const warnings = [];
     
+    // Find the next unsigned month name for each year
+    const nextUnsignedMonth1 = records.find(r => r.year === contractStartYear && !r.receipt_signed);
+    const nextMonthName1 = nextUnsignedMonth1 ? MONTH_NAMES[nextUnsignedMonth1.month] : '';
+    const nextUnsignedMonth2 = records.find(r => r.year === (contractStartYear + 1) && !r.receipt_signed);
+    const nextMonthName2 = nextUnsignedMonth2 ? MONTH_NAMES[nextUnsignedMonth2.month] : '';
+    
     // ==================== FIRST YEAR (contractStartYear) WARNINGS ====================
     // Warning for approaching €5.000
     if (thresholdStatus.thresholds['5000'].needs_warning && !thresholdStatus.thresholds['5000'].declaration_signed) {
@@ -628,7 +634,7 @@ export default function CollaboratoreCompensation() {
           <View style={styles.thresholdBannerContent}>
             <Text style={styles.thresholdBannerTitle}>Anno {contractStartYear}: Prossima soglia €5.000</Text>
             <Text style={styles.thresholdBannerText}>
-              Con la prossima quietanza supererai la soglia previdenziale di €5.000.
+              Con la quietanza del mese di {nextMonthName1} supererai la soglia previdenziale di €5.000.
             </Text>
           </View>
         </View>
@@ -643,7 +649,7 @@ export default function CollaboratoreCompensation() {
           <View style={styles.thresholdBannerContent}>
             <Text style={[styles.thresholdBannerTitle, { color: '#721C24' }]}>Anno {contractStartYear}: Prossima soglia €15.000</Text>
             <Text style={[styles.thresholdBannerText, { color: '#721C24' }]}>
-              Con la prossima quietanza supererai la soglia fiscale di €15.000.
+              Con la quietanza del mese di {nextMonthName1} supererai la soglia fiscale di €15.000.
             </Text>
           </View>
         </View>
@@ -766,7 +772,7 @@ export default function CollaboratoreCompensation() {
             <View style={styles.thresholdBannerContent}>
               <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Prossima soglia €5.000</Text>
               <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>
-                Con la prossima quietanza del {year2026} supererai la soglia previdenziale.
+                Con la quietanza del mese di {nextMonthName2} supererai la soglia previdenziale.
               </Text>
             </View>
           </View>
@@ -781,7 +787,7 @@ export default function CollaboratoreCompensation() {
             <View style={styles.thresholdBannerContent}>
               <Text style={[styles.thresholdBannerTitle, { color: '#C2185B' }]}>Anno {year2026}: Prossima soglia €15.000</Text>
               <Text style={[styles.thresholdBannerText, { color: '#C2185B' }]}>
-                Con la prossima quietanza del {year2026} supererai la soglia fiscale.
+                Con la quietanza del mese di {nextMonthName2} supererai la soglia fiscale.
               </Text>
             </View>
           </View>

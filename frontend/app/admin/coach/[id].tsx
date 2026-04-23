@@ -1173,7 +1173,7 @@ export default function AdminCoachDetail() {
                     <Ionicons name="warning" size={18} color="#856404" />
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#856404' }}>Attenzione: Prossima soglia €5.000</Text>
-                      <Text style={{ fontSize: 11, color: '#856404' }}>Con la prossima quietanza supererà la soglia previdenziale di €5.000.</Text>
+                      <Text style={{ fontSize: 11, color: '#856404' }}>Con la quietanza del mese di {['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus?.thresholds?.['5000']?.threshold_month || 0]} supererà la soglia previdenziale di €5.000.</Text>
                     </View>
                   </View>
                 )}
@@ -1182,7 +1182,7 @@ export default function AdminCoachDetail() {
                     <Ionicons name="warning" size={18} color="#856404" />
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#856404' }}>Attenzione: Prossima soglia €5.000 ({coach?.contract_end_year})</Text>
-                      <Text style={{ fontSize: 11, color: '#856404' }}>Con la prossima quietanza supererà la soglia previdenziale di €5.000.</Text>
+                      <Text style={{ fontSize: 11, color: '#856404' }}>Con la quietanza del mese di {['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus2?.thresholds?.['5000']?.threshold_month || 0]} supererà la soglia previdenziale di €5.000.</Text>
                     </View>
                   </View>
                 )}
@@ -1192,7 +1192,7 @@ export default function AdminCoachDetail() {
                     <Ionicons name="alert-circle" size={18} color="#6C3483" />
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#6C3483' }}>Attenzione: Prossima soglia €15.000</Text>
-                      <Text style={{ fontSize: 11, color: '#8E44AD' }}>Con la prossima quietanza supererà la soglia fiscale di €15.000.</Text>
+                      <Text style={{ fontSize: 11, color: '#8E44AD' }}>Con la quietanza del mese di {['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus?.thresholds?.['15000']?.threshold_month || 0]} supererà la soglia fiscale di €15.000.</Text>
                     </View>
                   </View>
                 )}
@@ -1201,7 +1201,7 @@ export default function AdminCoachDetail() {
                     <Ionicons name="alert-circle" size={18} color="#6C3483" />
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#6C3483' }}>Attenzione: Prossima soglia €15.000 ({coach?.contract_end_year})</Text>
-                      <Text style={{ fontSize: 11, color: '#8E44AD' }}>Con la prossima quietanza supererà la soglia fiscale di €15.000.</Text>
+                      <Text style={{ fontSize: 11, color: '#8E44AD' }}>Con la quietanza del mese di {['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus2?.thresholds?.['15000']?.threshold_month || 0]} supererà la soglia fiscale di €15.000.</Text>
                     </View>
                   </View>
                 )}
