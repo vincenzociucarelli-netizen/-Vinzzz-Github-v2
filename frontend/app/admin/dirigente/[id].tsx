@@ -347,12 +347,12 @@ export default function AdminDirigenteDetail() {
         
         const baseAmountThisYear = monthly * monthsThisYear;
         
-        // Calculate supplementary: full amount of receipts that differ from monthly rate
+        // Calculate supplementary: difference between receipt amount and monthly rate
         let supplementaryThisYear = 0;
         yearReceipts.forEach((receipt: any) => {
           const receiptAmount = receipt.amount_gross || receipt.amount || 0;
           if (receiptAmount > monthly) {
-            supplementaryThisYear += receiptAmount;
+            supplementaryThisYear += receiptAmount - monthly;
           }
         });
         
