@@ -25,3 +25,7 @@ NON devono essere modificati a meno che l'utente lo richieda esplicitamente.
 ## Squadre - Completati e verificati (18/04/2026)
 - `/app/frontend/app/admin/teams.tsx` - Lista squadre, creazione con rate, placeholder data GG/MM/AAAA, validazione formato
 - `/app/frontend/app/admin/team/[id].tsx` - Dettaglio/modifica squadra, gestione rate con scadenze, placeholder data italiano
+
+## Collaboratore - Completati e verificati (23/04/2026)
+- `/app/frontend/app/collaboratore/profile.tsx` - Profilo collaboratore, dati anagrafici+fiscali unificati, codice fiscale estero, consensi privacy collassabili, documenti senza bullet, pulsante indietro funzionante
+- `/app/frontend/app/collaboratore/compensation.tsx` - Compensi collaboratore, soglie 5k/15k, metadati verifica con somme pregresse per anno, mensilità speciale inclusa nel totale, timestamp ora italiana
