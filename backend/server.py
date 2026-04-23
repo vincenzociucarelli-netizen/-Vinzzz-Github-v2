@@ -15338,11 +15338,16 @@ def generate_gdpr_adult_privacy_pdf(
     y_box = y - 0.9*cm
     c.drawString(2.5*cm, y_box, f"Nome: {signer_surname} {signer_name}")
     y_box -= 0.45*cm
-    c.drawString(2.5*cm, y_box, f"Codice Fiscale: {signer_fiscal_code}")
+    c.drawString(2.5*cm, y_box, f"Codice Fiscale: {signer_fiscal_code or '________________________'}")
     y_box -= 0.45*cm
-    c.drawString(2.5*cm, y_box, f"Nato/a a {signer_birth_place} il {signer_birth_date}")
+    birth_place_str = signer_birth_place or '________'
+    birth_date_str = signer_birth_date or '________'
+    c.drawString(2.5*cm, y_box, f"Nato/a a {birth_place_str} il {birth_date_str}")
     y_box -= 0.45*cm
-    c.drawString(2.5*cm, y_box, f"Residente in {signer_address}, {signer_city} ({signer_province})")
+    addr_str = signer_address or '________'
+    city_str = signer_city or '________'
+    prov_str = signer_province or '__'
+    c.drawString(2.5*cm, y_box, f"Residente in {addr_str}, {city_str} ({prov_str})")
     y_box -= 0.45*cm
     c.drawString(2.5*cm, y_box, f"Società: {nome_legale}")
     
