@@ -51,8 +51,17 @@ export default function DirigenteIndex() {
 
   const loadTeams = async () => {
     try {
+      // Load user profile to get assigned teams
+      const meRes = await api.get('/auth/me');
+      const assignedTeamIds = meRes.data.assigned_teams || [];
+      
       const response = await api.get('/teams');
-      setTeams(response.data);
+      // Filter to only show assigned teams (if any are assigned)
+      if (assignedTeamIds.length > 0) {
+        setTeams(response.data.filter((t: Team) => assignedTeamIds.includes(t.id)));
+      } else {
+        setTeams([]);
+      }
     } catch (error) {
       console.error('Error loading teams:', error);
     } finally {
