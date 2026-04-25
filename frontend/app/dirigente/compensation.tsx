@@ -531,7 +531,7 @@ export default function DirigenteCompensation() {
         <View key="warning-5000" style={styles.alertBox5k}>
           <Text style={styles.alertTitle5k}>⚠️ Anno {contractStartYear}: Soglia dei €5.000</Text>
           <Text style={styles.alertBody5k}>
-            Con la quietanza del mese di {thresholdMonth5k_y1} supererai la soglia previdenziale di €5.000.
+            Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth5k_y1}</Text> supererai la soglia previdenziale di €5.000.
           </Text>
           <Text style={styles.alertFooter5k}>Contributi previdenziali INPS</Text>
         </View>
@@ -544,7 +544,7 @@ export default function DirigenteCompensation() {
         <View key="warning-15000" style={styles.alertBox15k}>
           <Text style={styles.alertTitle15k}>🚨 Anno {contractStartYear}: Soglia dei €15.000</Text>
           <Text style={styles.alertBody15k}>
-            Con la quietanza del mese di {thresholdMonth15k_y1} supererai la soglia fiscale di €15.000.
+            Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth15k_y1}</Text> supererai la soglia fiscale di €15.000.
           </Text>
           <Text style={styles.alertFooter15k}>Tassazione IRPEF obbligatoria</Text>
         </View>
@@ -665,7 +665,7 @@ export default function DirigenteCompensation() {
           <View key="warning-5000-2026" style={styles.alertBox5k}>
             <Text style={styles.alertTitle5k}>⚠️ Anno {year2026}: Soglia dei €5.000</Text>
             <Text style={styles.alertBody5k}>
-              Con la quietanza del mese di {thresholdMonth5k_y2} supererai la soglia previdenziale di €5.000.
+              Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth5k_y2}</Text> supererai la soglia previdenziale di €5.000.
             </Text>
             <Text style={styles.alertFooter5k}>Contributi previdenziali INPS</Text>
           </View>
@@ -678,7 +678,7 @@ export default function DirigenteCompensation() {
           <View key="warning-15000-2026" style={styles.alertBox15k}>
             <Text style={styles.alertTitle15k}>🚨 Anno {year2026}: Soglia dei €15.000</Text>
             <Text style={styles.alertBody15k}>
-              Con la quietanza del mese di {thresholdMonth15k_y2} supererai la soglia fiscale di €15.000.
+              Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth15k_y2}</Text> supererai la soglia fiscale di €15.000.
             </Text>
             <Text style={styles.alertFooter15k}>Tassazione IRPEF obbligatoria</Text>
           </View>
