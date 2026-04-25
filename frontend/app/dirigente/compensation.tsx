@@ -528,14 +528,12 @@ export default function DirigenteCompensation() {
     // Warning for approaching €5.000
     if (thresholdStatus.thresholds['5000'].needs_warning && !thresholdStatus.thresholds['5000'].declaration_signed) {
       warnings.push(
-        <View key="warning-5000" style={[styles.thresholdBanner, { backgroundColor: '#FFF3CD' }]}>
-          <Ionicons name="warning" size={18} color="#856404" />
-          <View style={styles.thresholdBannerContent}>
-            <Text style={styles.thresholdBannerTitle}>Anno {contractStartYear}: Soglia dei €5.000</Text>
-            <Text style={styles.thresholdBannerText}>
-              Con la quietanza del mese di {thresholdMonth5k_y1} supererai la soglia previdenziale di €5.000 (Contributi previdenziali INPS).
-            </Text>
-          </View>
+        <View key="warning-5000" style={styles.alertBox5k}>
+          <Text style={styles.alertTitle5k}>⚠️ Anno {contractStartYear}: Soglia dei €5.000</Text>
+          <Text style={styles.alertBody5k}>
+            Con la quietanza del mese di {thresholdMonth5k_y1} supererai la soglia previdenziale di €5.000.
+          </Text>
+          <Text style={styles.alertFooter5k}>Contributi previdenziali INPS</Text>
         </View>
       );
     }
@@ -543,14 +541,12 @@ export default function DirigenteCompensation() {
     // Warning for approaching €15.000
     if (thresholdStatus.thresholds['15000'].needs_warning && !thresholdStatus.thresholds['15000'].declaration_signed) {
       warnings.push(
-        <View key="warning-15000" style={[styles.thresholdBanner, { backgroundColor: '#F8D7DA' }]}>
-          <Ionicons name="alert-circle" size={18} color="#721C24" />
-          <View style={styles.thresholdBannerContent}>
-            <Text style={[styles.thresholdBannerTitle, { color: '#721C24' }]}>Anno {contractStartYear}: Soglia dei €15.000</Text>
-            <Text style={[styles.thresholdBannerText, { color: '#721C24' }]}>
-              Con la quietanza del mese di {thresholdMonth15k_y1} supererai la soglia fiscale di €15.000 (Tassazione IRPEF obbligatoria).
-            </Text>
-          </View>
+        <View key="warning-15000" style={styles.alertBox15k}>
+          <Text style={styles.alertTitle15k}>🚨 Anno {contractStartYear}: Soglia dei €15.000</Text>
+          <Text style={styles.alertBody15k}>
+            Con la quietanza del mese di {thresholdMonth15k_y1} supererai la soglia fiscale di €15.000.
+          </Text>
+          <Text style={styles.alertFooter15k}>Tassazione IRPEF obbligatoria</Text>
         </View>
       );
     }
@@ -666,14 +662,12 @@ export default function DirigenteCompensation() {
       // Warning for approaching €5.000 in 2026 (not yet signed)
       if (thresholdStatus2026.thresholds['5000'].needs_warning && !thresholdStatus2026.thresholds['5000'].declaration_signed) {
         warnings.push(
-          <View key="warning-5000-2026" style={[styles.thresholdBanner, { backgroundColor: '#FFF3CD' }]}>
-            <Ionicons name="warning" size={18} color="#856404" />
-            <View style={styles.thresholdBannerContent}>
-              <Text style={styles.thresholdBannerTitle}>Anno {year2026}: Soglia dei €5.000</Text>
-              <Text style={styles.thresholdBannerText}>
-                Con la quietanza del mese di {thresholdMonth5k_y2} supererai la soglia previdenziale (Contributi previdenziali INPS).
-              </Text>
-            </View>
+          <View key="warning-5000-2026" style={styles.alertBox5k}>
+            <Text style={styles.alertTitle5k}>⚠️ Anno {year2026}: Soglia dei €5.000</Text>
+            <Text style={styles.alertBody5k}>
+              Con la quietanza del mese di {thresholdMonth5k_y2} supererai la soglia previdenziale di €5.000.
+            </Text>
+            <Text style={styles.alertFooter5k}>Contributi previdenziali INPS</Text>
           </View>
         );
       }
@@ -681,14 +675,12 @@ export default function DirigenteCompensation() {
       // Warning for approaching €15.000 in 2026 (not yet signed)
       if (thresholdStatus2026.thresholds['15000'].needs_warning && !thresholdStatus2026.thresholds['15000'].declaration_signed) {
         warnings.push(
-          <View key="warning-15000-2026" style={[styles.thresholdBanner, { backgroundColor: '#FCE4EC', borderLeftColor: '#E91E63', borderLeftWidth: 4 }]}>
-            <Ionicons name="alert-circle" size={18} color="#C2185B" />
-            <View style={styles.thresholdBannerContent}>
-              <Text style={[styles.thresholdBannerTitle, { color: '#C2185B' }]}>Anno {year2026}: Soglia dei €15.000</Text>
-              <Text style={[styles.thresholdBannerText, { color: '#C2185B' }]}>
-                Con la quietanza del mese di {thresholdMonth15k_y2} supererai la soglia fiscale (Tassazione IRPEF obbligatoria).
-              </Text>
-            </View>
+          <View key="warning-15000-2026" style={styles.alertBox15k}>
+            <Text style={styles.alertTitle15k}>🚨 Anno {year2026}: Soglia dei €15.000</Text>
+            <Text style={styles.alertBody15k}>
+              Con la quietanza del mese di {thresholdMonth15k_y2} supererai la soglia fiscale di €15.000.
+            </Text>
+            <Text style={styles.alertFooter15k}>Tassazione IRPEF obbligatoria</Text>
           </View>
         );
       }
@@ -1386,6 +1378,65 @@ const styles = StyleSheet.create({
   },
   blockedBanner: {
     backgroundColor: '#FF9500',
+  },
+  // Alert boxes (stile vecchio SUPERAMENTO con bordi e testo centrato)
+  alertBox5k: {
+    backgroundColor: '#FFF3E0',
+    borderWidth: 2,
+    borderColor: '#FF9800',
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+  },
+  alertTitle5k: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#E65100',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  alertBody5k: {
+    fontSize: 13,
+    color: '#E65100',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  alertFooter5k: {
+    fontSize: 12,
+    color: '#E65100',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  alertBox15k: {
+    backgroundColor: '#F3E5F5',
+    borderWidth: 2,
+    borderColor: '#9C27B0',
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+  },
+  alertTitle15k: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#6A1B9A',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  alertBody15k: {
+    fontSize: 13,
+    color: '#6A1B9A',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  alertFooter15k: {
+    fontSize: 12,
+    color: '#6A1B9A',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   sectionTitle: {
     fontSize: 16,
