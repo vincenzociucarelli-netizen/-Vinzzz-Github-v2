@@ -2969,7 +2969,7 @@ export default function AthleteDetail() {
             surname: parentProfile.last_name || (parentProfile.full_name?.split(' ')[0] || ''),
             fiscal_code: parentProfile.fiscal_code || '',
             birth_date: parentProfile.date_of_birth || '',
-            birth_place: parentProfile.birth_place || parentProfile.place_of_birth || '',
+            birth_place: parentProfile.birth_place || parentProfile.place_of_birth || parentProfile.country_of_birth || '',
             address: parentProfile.address || '',
             city: parentProfile.city || '',
             province: parentProfile.province || '',
@@ -2980,7 +2980,7 @@ export default function AthleteDetail() {
             surname: athlete.last_name || '',
             fiscal_code: athlete.fiscal_code || '',
             birth_date: athlete.date_of_birth || '',
-            birth_place: athlete.birth_place || '',
+            birth_place: athlete.birth_place || athlete.country_of_birth || '',
           }}
           showDeleteOption={athlete.status === 'trial' && !endTrialStatus?.end_trial_requested}
           onDeleteRequest={() => {

@@ -1368,7 +1368,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             surname: profileData.last_name || (profileData.full_name?.split(' ')[0] || ''),
             fiscal_code: profileData.fiscal_code || '',
             birth_date: profileData.date_of_birth || '',
-            birth_place: profileData.place_of_birth || '',
+            birth_place: profileData.place_of_birth || profileData.country_of_birth || '',
             address: profileData.address || '',
             city: profileData.city || '',
             province: profileData.province || '',
