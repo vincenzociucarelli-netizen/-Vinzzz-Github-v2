@@ -531,9 +531,9 @@ export default function DirigenteCompensation() {
         <View key="warning-5000" style={[styles.thresholdBanner, { backgroundColor: '#FFF3CD' }]}>
           <Ionicons name="warning" size={18} color="#856404" />
           <View style={styles.thresholdBannerContent}>
-            <Text style={styles.thresholdBannerTitle}>Anno {contractStartYear}: Prossima soglia €5.000</Text>
+            <Text style={styles.thresholdBannerTitle}>Anno {contractStartYear}: Soglia dei €5.000</Text>
             <Text style={styles.thresholdBannerText}>
-              Con la quietanza del mese di {thresholdMonth5k_y1} supererai la soglia previdenziale di €5.000.
+              Con la quietanza del mese di {thresholdMonth5k_y1} supererai la soglia previdenziale di €5.000 (Contributi previdenziali INPS).
             </Text>
           </View>
         </View>
@@ -546,9 +546,9 @@ export default function DirigenteCompensation() {
         <View key="warning-15000" style={[styles.thresholdBanner, { backgroundColor: '#F8D7DA' }]}>
           <Ionicons name="alert-circle" size={18} color="#721C24" />
           <View style={styles.thresholdBannerContent}>
-            <Text style={[styles.thresholdBannerTitle, { color: '#721C24' }]}>Anno {contractStartYear}: Prossima soglia €15.000</Text>
+            <Text style={[styles.thresholdBannerTitle, { color: '#721C24' }]}>Anno {contractStartYear}: Soglia dei €15.000</Text>
             <Text style={[styles.thresholdBannerText, { color: '#721C24' }]}>
-              Con la quietanza del mese di {thresholdMonth15k_y1} supererai la soglia fiscale di €15.000.
+              Con la quietanza del mese di {thresholdMonth15k_y1} supererai la soglia fiscale di €15.000 (Tassazione IRPEF obbligatoria).
             </Text>
           </View>
         </View>
@@ -669,9 +669,9 @@ export default function DirigenteCompensation() {
           <View key="warning-5000-2026" style={[styles.thresholdBanner, { backgroundColor: '#E3F2FD', borderLeftColor: '#2196F3', borderLeftWidth: 4 }]}>
             <Ionicons name="information-circle" size={18} color="#1565C0" />
             <View style={styles.thresholdBannerContent}>
-              <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Prossima soglia €5.000</Text>
+              <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Soglia dei €5.000</Text>
               <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>
-                Con la quietanza del mese di {thresholdMonth5k_y2} supererai la soglia previdenziale.
+                Con la quietanza del mese di {thresholdMonth5k_y2} supererai la soglia previdenziale (Contributi previdenziali INPS).
               </Text>
             </View>
           </View>
@@ -684,9 +684,9 @@ export default function DirigenteCompensation() {
           <View key="warning-15000-2026" style={[styles.thresholdBanner, { backgroundColor: '#FCE4EC', borderLeftColor: '#E91E63', borderLeftWidth: 4 }]}>
             <Ionicons name="alert-circle" size={18} color="#C2185B" />
             <View style={styles.thresholdBannerContent}>
-              <Text style={[styles.thresholdBannerTitle, { color: '#C2185B' }]}>Anno {year2026}: Prossima soglia €15.000</Text>
+              <Text style={[styles.thresholdBannerTitle, { color: '#C2185B' }]}>Anno {year2026}: Soglia dei €15.000</Text>
               <Text style={[styles.thresholdBannerText, { color: '#C2185B' }]}>
-                Con la quietanza del mese di {thresholdMonth15k_y2} supererai la soglia fiscale.
+                Con la quietanza del mese di {thresholdMonth15k_y2} supererai la soglia fiscale (Tassazione IRPEF obbligatoria).
               </Text>
             </View>
           </View>
@@ -980,20 +980,6 @@ export default function DirigenteCompensation() {
                     )}
                     <Text style={{ fontSize: 15, color: exceeds15k ? '#8E44AD' : exceeds5k ? '#F57F17' : headerColor, fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.totalProjected)}</Text></Text>
                   </View>
-                  
-                  {/* Threshold Warnings - Show both if both exceeded */}
-                  {exceeds5k && (
-                    <View style={styles.thresholdWarningBox5k}>
-                      <Text style={styles.thresholdWarningTitle5k}>⚠️ SUPERAMENTO € 5.000,00</Text>
-                      <Text style={styles.thresholdWarningText5k}>Contributi previdenziali INPS</Text>
-                    </View>
-                  )}
-                  {exceeds15k && (
-                    <View style={styles.thresholdWarningBox15k}>
-                      <Text style={styles.thresholdWarningTitle15k}>🚨 SUPERAMENTO € 15.000,00</Text>
-                      <Text style={styles.thresholdWarningText15k}>Tassazione IRPEF obbligatoria</Text>
-                    </View>
-                  )}
                 </View>
               );
             })()}
@@ -1021,20 +1007,6 @@ export default function DirigenteCompensation() {
                     <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
                     <Text style={{ fontSize: 15, color: exceeds15k ? '#8E44AD' : exceeds5k ? '#F57F17' : headerColor, fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.totalProjected)}</Text></Text>
                   </View>
-                  
-                  {/* Threshold Warnings - Show both if both exceeded */}
-                  {exceeds5k && (
-                    <View style={styles.thresholdWarningBox5k}>
-                      <Text style={styles.thresholdWarningTitle5k}>⚠️ SUPERAMENTO € 5.000,00</Text>
-                      <Text style={styles.thresholdWarningText5k}>Contributi previdenziali INPS</Text>
-                    </View>
-                  )}
-                  {exceeds15k && (
-                    <View style={styles.thresholdWarningBox15k}>
-                      <Text style={styles.thresholdWarningTitle15k}>🚨 SUPERAMENTO € 15.000,00</Text>
-                      <Text style={styles.thresholdWarningText15k}>Tassazione IRPEF obbligatoria</Text>
-                    </View>
-                  )}
                 </View>
               );
             })()}
