@@ -112,6 +112,8 @@ export default function AdminCollaboratoreDetail() {
   
   // Quietanze firmate
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
+  const [thresholdStatus, setThresholdStatus] = useState<any>(null);
+  const [thresholdStatus2, setThresholdStatus2] = useState<any>(null);
   const [quietanzeModalVisible, setQuietanzeModalVisible] = useState(false);
   
   // Modal per creare quietanza (Admin)
@@ -249,6 +251,27 @@ export default function AdminCollaboratoreDetail() {
         setSignedReceipts(records);
       } catch (compError) {
         setSignedReceipts([]);
+      }
+      
+      // Load threshold status (year 1 + year 2)
+      try {
+        const startYear = collabRes.data.contract_start_date 
+          ? parseInt(collabRes.data.contract_start_date.split('-')[0]) 
+          : new Date().getFullYear();
+        const endYear = collabRes.data.contract_end_date 
+          ? parseInt(collabRes.data.contract_end_date.split('-')[0]) 
+          : startYear;
+        const t1Res = await api.get(`/collaboratore/${id}/threshold-status/${startYear}`);
+        setThresholdStatus(t1Res.data);
+        if (endYear > startYear) {
+          const t2Res = await api.get(`/collaboratore/${id}/threshold-status/${endYear}`);
+          setThresholdStatus2(t2Res.data);
+        } else {
+          setThresholdStatus2(null);
+        }
+      } catch (e) {
+        setThresholdStatus(null);
+        setThresholdStatus2(null);
       }
       
       // Load user's signed documents (admin can see all with signer_id)
@@ -903,26 +926,6 @@ export default function AdminCollaboratoreDetail() {
                               )}
                               <Text style={{ fontSize: 15, color: yearlyBreakdown[years[0]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].grandTotal)}</Text></Text>
                             </View>
-                            {yearlyBreakdown[years[0]].exceedsThreshold5k && (
-                              <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 10, marginTop: 8 }}>
-                                <Text style={{ fontSize: 13, color: '#E65100', fontWeight: 'bold', textAlign: 'center' }}>
-                                  ⚠️ SUPERAMENTO € 5.000,00
-                                </Text>
-                                <Text style={{ fontSize: 11, color: '#F57F17', textAlign: 'center', marginTop: 4 }}>
-                                  Contributi previdenziali INPS
-                                </Text>
-                              </View>
-                            )}
-                            {yearlyBreakdown[years[0]].exceedsThreshold15k && (
-                              <View style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#8E44AD', borderRadius: 8, padding: 10, marginTop: 8 }}>
-                                <Text style={{ fontSize: 13, color: '#6C3483', fontWeight: 'bold', textAlign: 'center' }}>
-                                  🚨 SUPERAMENTO € 15.000,00
-                                </Text>
-                                <Text style={{ fontSize: 11, color: '#8E44AD', textAlign: 'center', marginTop: 4 }}>
-                                  Tassazione IRPEF obbligatoria
-                                </Text>
-                              </View>
-                            )}
                           </View>
                         )}
                         
@@ -946,31 +949,83 @@ export default function AdminCollaboratoreDetail() {
                               )}
                               <Text style={{ fontSize: 15, color: yearlyBreakdown[years[1]].exceedsThreshold15k ? '#8E44AD' : yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].grandTotal)}</Text></Text>
                             </View>
-                            {yearlyBreakdown[years[1]].exceedsThreshold5k && (
-                              <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 8, padding: 10, marginTop: 8 }}>
-                                <Text style={{ fontSize: 13, color: '#E65100', fontWeight: 'bold', textAlign: 'center' }}>
-                                  ⚠️ SUPERAMENTO € 5.000,00
-                                </Text>
-                                <Text style={{ fontSize: 11, color: '#F57F17', textAlign: 'center', marginTop: 4 }}>
-                                  Contributi previdenziali INPS
-                                </Text>
-                              </View>
-                            )}
-                            {yearlyBreakdown[years[1]].exceedsThreshold15k && (
-                              <View style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#8E44AD', borderRadius: 8, padding: 10, marginTop: 8 }}>
-                                <Text style={{ fontSize: 13, color: '#6C3483', fontWeight: 'bold', textAlign: 'center' }}>
-                                  🚨 SUPERAMENTO € 15.000,00
-                                </Text>
-                                <Text style={{ fontSize: 11, color: '#8E44AD', textAlign: 'center', marginTop: 4 }}>
-                                  Tassazione IRPEF obbligatoria
-                                </Text>
-                              </View>
-                            )}
                           </View>
                         )}
                       </>
                     );
                   })()}
+                </View>
+              )}
+              
+              {/* Threshold Warnings/Signed Banners (admin view) */}
+              {(thresholdStatus || thresholdStatus2) && (
+                <View style={{ marginTop: 12, gap: 10 }}>
+                  {/* Warning 5k - YEAR 1 */}
+                  {thresholdStatus?.thresholds?.['5000']?.needs_warning && !thresholdStatus?.thresholds?.['5000']?.declaration_signed && (
+                    <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 10, padding: 14, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 6 }}>⚠️ Anno {collaboratore?.contract_start_year || (collaboratore?.contract_start_date?.split('-')[0])}: Soglia dei €5.000</Text>
+                      <Text style={{ fontSize: 13, color: '#E65100', textAlign: 'center', lineHeight: 18 }}>
+                        Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus?.thresholds?.['5000']?.threshold_month || 0]}</Text> supererà la soglia previdenziale di €5.000.
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#E65100', textAlign: 'center', fontStyle: 'italic', marginTop: 4 }}>Contributi previdenziali INPS</Text>
+                    </View>
+                  )}
+                  {/* Warning 15k - YEAR 1 */}
+                  {thresholdStatus?.thresholds?.['15000']?.needs_warning && !thresholdStatus?.thresholds?.['15000']?.declaration_signed && (
+                    <View style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#9C27B0', borderRadius: 10, padding: 14, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 6 }}>🚨 Anno {collaboratore?.contract_start_year || (collaboratore?.contract_start_date?.split('-')[0])}: Soglia dei €15.000</Text>
+                      <Text style={{ fontSize: 13, color: '#6A1B9A', textAlign: 'center', lineHeight: 18 }}>
+                        Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus?.thresholds?.['15000']?.threshold_month || 0]}</Text> supererà la soglia fiscale di €15.000.
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#6A1B9A', textAlign: 'center', fontStyle: 'italic', marginTop: 4 }}>Tassazione IRPEF obbligatoria</Text>
+                    </View>
+                  )}
+                  {/* Warning 5k - YEAR 2 */}
+                  {thresholdStatus2?.thresholds?.['5000']?.needs_warning && !thresholdStatus2?.thresholds?.['5000']?.declaration_signed && (
+                    <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 10, padding: 14, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 6 }}>⚠️ Anno {collaboratore?.contract_end_year || (collaboratore?.contract_end_date?.split('-')[0])}: Soglia dei €5.000</Text>
+                      <Text style={{ fontSize: 13, color: '#E65100', textAlign: 'center', lineHeight: 18 }}>
+                        Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus2?.thresholds?.['5000']?.threshold_month || 0]}</Text> supererà la soglia previdenziale di €5.000.
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#E65100', textAlign: 'center', fontStyle: 'italic', marginTop: 4 }}>Contributi previdenziali INPS</Text>
+                    </View>
+                  )}
+                  {/* Warning 15k - YEAR 2 */}
+                  {thresholdStatus2?.thresholds?.['15000']?.needs_warning && !thresholdStatus2?.thresholds?.['15000']?.declaration_signed && (
+                    <View style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#9C27B0', borderRadius: 10, padding: 14, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 6 }}>🚨 Anno {collaboratore?.contract_end_year || (collaboratore?.contract_end_date?.split('-')[0])}: Soglia dei €15.000</Text>
+                      <Text style={{ fontSize: 13, color: '#6A1B9A', textAlign: 'center', lineHeight: 18 }}>
+                        Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus2?.thresholds?.['15000']?.threshold_month || 0]}</Text> supererà la soglia fiscale di €15.000.
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#6A1B9A', textAlign: 'center', fontStyle: 'italic', marginTop: 4 }}>Tassazione IRPEF obbligatoria</Text>
+                    </View>
+                  )}
+                  {/* Signed declarations - YEAR 1 */}
+                  {thresholdStatus?.thresholds?.['5000']?.declaration_signed && (
+                    <View style={{ backgroundColor: '#D4EDDA', borderWidth: 2, borderColor: '#28A745', borderRadius: 10, padding: 14, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {collaboratore?.contract_start_year || (collaboratore?.contract_start_date?.split('-')[0])}: Dichiarazione €5.000 firmata</Text>
+                      <Text style={{ fontSize: 13, color: '#155724', textAlign: 'center', fontStyle: 'italic' }}>Soglia previdenziale comunicata</Text>
+                    </View>
+                  )}
+                  {thresholdStatus?.thresholds?.['15000']?.declaration_signed && (
+                    <View style={{ backgroundColor: '#D4EDDA', borderWidth: 2, borderColor: '#28A745', borderRadius: 10, padding: 14, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {collaboratore?.contract_start_year || (collaboratore?.contract_start_date?.split('-')[0])}: Dichiarazione €15.000 firmata</Text>
+                      <Text style={{ fontSize: 13, color: '#155724', textAlign: 'center', fontStyle: 'italic' }}>Soglia fiscale comunicata</Text>
+                    </View>
+                  )}
+                  {/* Signed declarations - YEAR 2 */}
+                  {thresholdStatus2?.thresholds?.['5000']?.declaration_signed && (
+                    <View style={{ backgroundColor: '#E3F2FD', borderWidth: 2, borderColor: '#2196F3', borderRadius: 10, padding: 14, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0', textAlign: 'center', marginBottom: 6 }}>✅ Anno {collaboratore?.contract_end_year || (collaboratore?.contract_end_date?.split('-')[0])}: Dichiarazione €5.000 firmata</Text>
+                      <Text style={{ fontSize: 13, color: '#1565C0', textAlign: 'center', fontStyle: 'italic' }}>Soglia previdenziale comunicata</Text>
+                    </View>
+                  )}
+                  {thresholdStatus2?.thresholds?.['15000']?.declaration_signed && (
+                    <View style={{ backgroundColor: '#E3F2FD', borderWidth: 2, borderColor: '#2196F3', borderRadius: 10, padding: 14, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0', textAlign: 'center', marginBottom: 6 }}>✅ Anno {collaboratore?.contract_end_year || (collaboratore?.contract_end_date?.split('-')[0])}: Dichiarazione €15.000 firmata</Text>
+                      <Text style={{ fontSize: 13, color: '#1565C0', textAlign: 'center', fontStyle: 'italic' }}>Soglia fiscale comunicata</Text>
+                    </View>
+                  )}
                 </View>
               )}
               
