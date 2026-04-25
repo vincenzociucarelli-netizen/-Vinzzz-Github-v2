@@ -18646,16 +18646,66 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     if next_unsigned_record:
         next_amount = next_unsigned_record.get("amount_gross", next_unsigned_record.get("amount", monthly_compensation)) or monthly_compensation
     
-    # Calculate if we're approaching thresholds
+    # Calculate PROJECTED yearly total (all months of contract for this year)
+    contract_end = dirigente.get("contract_end_date")
+    contract_start_month = 9  # Default September
+    contract_end_month = 6    # Default June
+    contract_end_year = None
+    if contract_start and hasattr(contract_start, 'month'):
+        contract_start_month = contract_start.month
+    elif contract_start and isinstance(contract_start, str):
+        try:
+            contract_start_month = int(contract_start.split('-')[1])
+        except:
+            pass
+    if contract_end:
+        try:
+            if isinstance(contract_end, str):
+                contract_end_month = int(contract_end.split('-')[1])
+                contract_end_year = int(contract_end.split('-')[0].split('T')[0])
+            elif hasattr(contract_end, 'month'):
+                contract_end_month = contract_end.month
+                contract_end_year = contract_end.year
+        except:
+            pass
+    
+    # Determine months in this year for the contract
+    if contract_start_year and year == contract_start_year:
+        months_in_year = list(range(contract_start_month, 13))  # start_month to December
+    elif contract_end_year and year == contract_end_year:
+        months_in_year = list(range(1, contract_end_month + 1))  # January to end_month
+    else:
+        months_in_year = list(range(1, 13))
+    
+    # Get ALL records for this year (signed and unsigned)
+    all_year_records = await db.dirigente_compensations.find({
+        "dirigente_id": dirigente_id,
+        "year": year
+    }).to_list(12)
+    
+    # Calculate projected total with actual amounts where available
+    projected_total = effective_prior
+    threshold_5k_month = 0
+    threshold_15k_month = 0
+    for m in months_in_year:
+        existing = next((r for r in all_year_records if r.get("month") == m), None)
+        amt = existing.get("amount_gross", existing.get("amount", monthly_compensation)) if existing else monthly_compensation
+        projected_total += amt
+        if projected_total > 5000 and threshold_5k_month == 0:
+            threshold_5k_month = m
+        if projected_total > 15000 and threshold_15k_month == 0:
+            threshold_15k_month = m
+    
+    # Calculate if we're approaching thresholds based on PROJECTED total
     next_total = total_with_prior + next_amount
     
     # Special case: if prior > 5000, no €5k declaration needed (already declared to other clubs)
     already_over_5k_from_prior = effective_prior > 5000
     already_over_15k_from_prior = effective_prior > 15000
     
-    # Warning flags
-    approaching_5000 = not already_over_5k_from_prior and (total_with_prior < 5000 and next_total >= 5000)
-    approaching_15000 = not already_over_15k_from_prior and (total_with_prior <= 15000 and next_total > 15000)
+    # Warning: show if projected total will exceed threshold during the year
+    approaching_5000 = not already_over_5k_from_prior and not exceeded_5000_record and (threshold_5k_month > 0 and total_with_prior < 5000)
+    approaching_15000 = not already_over_15k_from_prior and not exceeded_15000_record and (threshold_15k_month > 0 and total_with_prior <= 15000)
     
     # Declaration needed - superamento è da OLTRE la soglia (€5.001 e €15.001)
     needs_5000_declaration = not already_over_5k_from_prior and (total_with_prior > 5000 and not exceeded_5000_record)
@@ -19302,11 +19352,62 @@ async def get_collaboratore_threshold_status(
     warning_5000_threshold = 5000 - monthly_compensation if monthly_compensation > 0 else 5000
     warning_15000_threshold = 15000 - monthly_compensation if monthly_compensation > 0 else 15000
     
+    # Calculate PROJECTED total for the entire year (all contract months)
+    contract_end = collaboratore.get("contract_end_date")
+    collab_start_month = 9
+    collab_end_month = 6
+    collab_end_year_val = None
+    collab_start_year_val = None
+    if contract_start and hasattr(contract_start, 'month'):
+        collab_start_month = contract_start.month
+    elif contract_start and isinstance(contract_start, str):
+        try: collab_start_month = int(contract_start.split('-')[1])
+        except: pass
+    if contract_start:
+        try:
+            if isinstance(contract_start, str): collab_start_year_val = int(contract_start.split('-')[0].split('T')[0])
+            elif hasattr(contract_start, 'year'): collab_start_year_val = contract_start.year
+        except: pass
+    if contract_end:
+        try:
+            if isinstance(contract_end, str):
+                collab_end_month = int(contract_end.split('-')[1])
+                collab_end_year_val = int(contract_end.split('-')[0].split('T')[0])
+            elif hasattr(contract_end, 'month'):
+                collab_end_month = contract_end.month
+                collab_end_year_val = contract_end.year
+        except: pass
+    
+    if collab_start_year_val and year == collab_start_year_val:
+        collab_months_in_year = list(range(collab_start_month, 13))
+    elif collab_end_year_val and year == collab_end_year_val:
+        collab_months_in_year = list(range(1, collab_end_month + 1))
+    else:
+        collab_months_in_year = list(range(1, 13))
+    
+    all_collab_year_records = await db.collaboratore_compensations.find({
+        "collaboratore_id": collaboratore_id, "year": year
+    }).to_list(12)
+    
+    eff_prior = prior_compensation if (collab_start_year_val and year == collab_start_year_val) else 0
+    proj_total = eff_prior
+    collab_threshold_5k_month = 0
+    collab_threshold_15k_month = 0
+    for m in collab_months_in_year:
+        existing = next((r for r in all_collab_year_records if r.get("month") == m), None)
+        amt = existing.get("amount_gross", existing.get("amount", monthly_compensation)) if existing else monthly_compensation
+        proj_total += amt
+        if proj_total > 5000 and collab_threshold_5k_month == 0:
+            collab_threshold_5k_month = m
+        if proj_total > 15000 and collab_threshold_15k_month == 0:
+            collab_threshold_15k_month = m
+    
+    needs_warning_5000 = (not prior_already_exceeded_5k) and not (declaration_5000 and declaration_5000.get("signed")) and (collab_threshold_5k_month > 0 and yearly_total < 5000)
+    needs_warning_15000 = (not prior_already_exceeded_15k) and not (declaration_15000 and declaration_15000.get("signed")) and (collab_threshold_15k_month > 0 and yearly_total <= 15000)
+    
     # Don't require €5k declaration if pregressi already exceeded it (they declared it to other clubs)
     needs_declaration_5000 = (not prior_already_exceeded_5k) and yearly_total > 5000 and (not declaration_5000 or not declaration_5000.get("signed"))
     needs_declaration_15000 = (not prior_already_exceeded_15k) and yearly_total > 15000 and (not declaration_15000 or not declaration_15000.get("signed"))
-    
-    # Blocking status: can't sign new receipts if declaration is needed
     is_blocked = needs_declaration_5000 or needs_declaration_15000
     
     return {

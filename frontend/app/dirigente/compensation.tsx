@@ -494,14 +494,26 @@ export default function DirigenteCompensation() {
     const priorComp = profile?.other_annual_compensation || 0;
     
     const findThresholdMonth = (year: number, threshold: number) => {
-      const yearRecords = records.filter(r => r.year === year).sort((a: any, b: any) => a.month - b.month);
+      // Generate all months for the given year based on contract period
+      let months: number[] = [];
+      if (year === contractStartYear && contractStartMonth) {
+        // First year: from contract start month to December
+        for (let m = contractStartMonth; m <= 12; m++) months.push(m);
+      } else if (year === contractEndYear && contractEndMonth) {
+        // Second year: from January to contract end month
+        for (let m = 1; m <= contractEndMonth; m++) months.push(m);
+      }
+      
       const prior = (year === contractStartYear) ? priorComp : 0;
       let cumulative = prior;
-      for (const r of yearRecords) {
-        const amt = r.amount_gross || r.amount || monthlyComp;
+      
+      for (const m of months) {
+        // Check if there's an actual record with a different amount (e.g., special month)
+        const existingRecord = records.find(r => r.year === year && r.month === m);
+        const amt = existingRecord ? (existingRecord.amount_gross || existingRecord.amount || monthlyComp) : monthlyComp;
         cumulative += amt;
         if (cumulative > threshold) {
-          return MONTH_NAMES[r.month] || '';
+          return MONTH_NAMES[m] || '';
         }
       }
       return '';
