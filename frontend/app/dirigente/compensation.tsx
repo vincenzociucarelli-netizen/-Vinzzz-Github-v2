@@ -600,32 +600,26 @@ export default function DirigenteCompensation() {
     // Show signed declarations for first year
     if (thresholdStatus.thresholds['5000'].declaration_signed) {
       warnings.push(
-        <View key="signed-5000" style={[styles.thresholdBanner, { backgroundColor: '#D4EDDA' }]}>
-          <Ionicons name="checkmark-circle" size={18} color="#155724" />
-          <View style={styles.thresholdBannerContent}>
-            <Text style={[styles.thresholdBannerTitle, { color: '#155724' }]}>
-              Anno {contractStartYear}: Dichiarazione €5.000 firmata
-            </Text>
-            <Text style={[styles.thresholdBannerText, { color: '#155724' }]}>
-              Soglia previdenziale comunicata
-            </Text>
-          </View>
+        <View key="signed-5000" style={styles.thresholdSignedBox}>
+          <Text style={styles.thresholdSignedTitle}>
+            ✅ Anno {contractStartYear}: Dichiarazione €5.000 firmata
+          </Text>
+          <Text style={styles.thresholdSignedBody}>
+            Soglia previdenziale comunicata
+          </Text>
         </View>
       );
     }
     
     if (thresholdStatus.thresholds['15000'].declaration_signed) {
       warnings.push(
-        <View key="signed-15000" style={[styles.thresholdBanner, { backgroundColor: '#D4EDDA' }]}>
-          <Ionicons name="checkmark-circle" size={18} color="#155724" />
-          <View style={styles.thresholdBannerContent}>
-            <Text style={[styles.thresholdBannerTitle, { color: '#155724' }]}>
-              Anno {contractStartYear}: Dichiarazione €15.000 firmata
-            </Text>
-            <Text style={[styles.thresholdBannerText, { color: '#155724' }]}>
-              Soglia fiscale comunicata
-            </Text>
-          </View>
+        <View key="signed-15000" style={styles.thresholdSignedBox}>
+          <Text style={styles.thresholdSignedTitle}>
+            ✅ Anno {contractStartYear}: Dichiarazione €15.000 firmata
+          </Text>
+          <Text style={styles.thresholdSignedBody}>
+            Soglia fiscale comunicata
+          </Text>
         </View>
       );
     }
@@ -637,24 +631,26 @@ export default function DirigenteCompensation() {
       // Show signed declarations for 2026 - LIGHT BLUE to distinguish from first year
       if (thresholdStatus2026.thresholds['5000'].declaration_signed) {
         warnings.push(
-          <View key="signed-5000-2026" style={[styles.thresholdBanner, { backgroundColor: '#E3F2FD', borderLeftColor: '#2196F3', borderLeftWidth: 4 }]}>
-            <Ionicons name="checkmark-circle" size={18} color="#1565C0" />
-            <View style={styles.thresholdBannerContent}>
-              <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Dichiarazione €5.000 firmata</Text>
-              <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>Soglia previdenziale comunicata</Text>
-            </View>
+          <View key="signed-5000-2026" style={[styles.thresholdSignedBox, { backgroundColor: '#E3F2FD', borderColor: '#2196F3' }]}>
+            <Text style={[styles.thresholdSignedTitle, { color: '#1565C0' }]}>
+              ✅ Anno {year2026}: Dichiarazione €5.000 firmata
+            </Text>
+            <Text style={[styles.thresholdSignedBody, { color: '#1565C0' }]}>
+              Soglia previdenziale comunicata
+            </Text>
           </View>
         );
       }
       
       if (thresholdStatus2026.thresholds['15000'].declaration_signed) {
         warnings.push(
-          <View key="signed-15000-2026" style={[styles.thresholdBanner, { backgroundColor: '#E3F2FD', borderLeftColor: '#2196F3', borderLeftWidth: 4 }]}>
-            <Ionicons name="checkmark-circle" size={18} color="#1565C0" />
-            <View style={styles.thresholdBannerContent}>
-              <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Dichiarazione €15.000 firmata</Text>
-              <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>Soglia fiscale comunicata</Text>
-            </View>
+          <View key="signed-15000-2026" style={[styles.thresholdSignedBox, { backgroundColor: '#E3F2FD', borderColor: '#2196F3' }]}>
+            <Text style={[styles.thresholdSignedTitle, { color: '#1565C0' }]}>
+              ✅ Anno {year2026}: Dichiarazione €15.000 firmata
+            </Text>
+            <Text style={[styles.thresholdSignedBody, { color: '#1565C0' }]}>
+              Soglia fiscale comunicata
+            </Text>
           </View>
         );
       }
@@ -1437,6 +1433,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     marginTop: 2,
+  },
+  // Banner "Dichiarazione firmata" (verde, stesso layout dei warning)
+  thresholdSignedBox: {
+    backgroundColor: '#D4EDDA',
+    borderWidth: 2,
+    borderColor: '#28A745',
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+  },
+  thresholdSignedTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#155724',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  thresholdSignedBody: {
+    fontSize: 13,
+    color: '#155724',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   sectionTitle: {
     fontSize: 16,
