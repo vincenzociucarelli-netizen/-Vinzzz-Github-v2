@@ -12,6 +12,17 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 25/04/2026:
+- Banner soglie 5k/15k unificati (Dirigente/Coach/Collaboratore + viste Admin):
+  - Stile bordato/centrato unico, mese superamento in **grassetto**
+  - Colori coerenti tra anno 1 e anno 2 (arancio per 5k, viola per 15k)
+  - Banner "Dichiarazione firmata" con stile bordato verde (anno 1) / azzurro (anno 2)
+  - Rimossi badge SUPERAMENTO inline ridondanti dentro al riepilogo annuo
+- Backend: aggiunto `threshold_month` nel response API `/threshold-status` per dirigente/coach/collaboratore (logica di proiezione su tutti i mesi del contratto)
+
+## ⏰ DA RICORDARE ALL'UTENTE (richiesto 25/04/2026):
+- **L'utente vuole controllare ancora il ruolo Dirigente**: testare flussi/pagine non ancora verificati. Quando torna, chiedere: "Hai detto che volevi controllare se il dirigente ha altre cose da testare. Vuoi farlo ora?"
+
 ## Completato 23/04/2026:
 - Fix calcolo "Somma supplementare" viste Admin (coach, dirigente, collaboratore)
 - Fix pagina bianca admin/collaboratore e admin/dirigente
