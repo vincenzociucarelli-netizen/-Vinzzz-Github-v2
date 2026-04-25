@@ -666,11 +666,11 @@ export default function DirigenteCompensation() {
       // Warning for approaching €5.000 in 2026 (not yet signed)
       if (thresholdStatus2026.thresholds['5000'].needs_warning && !thresholdStatus2026.thresholds['5000'].declaration_signed) {
         warnings.push(
-          <View key="warning-5000-2026" style={[styles.thresholdBanner, { backgroundColor: '#E3F2FD', borderLeftColor: '#2196F3', borderLeftWidth: 4 }]}>
-            <Ionicons name="information-circle" size={18} color="#1565C0" />
+          <View key="warning-5000-2026" style={[styles.thresholdBanner, { backgroundColor: '#FFF3CD' }]}>
+            <Ionicons name="warning" size={18} color="#856404" />
             <View style={styles.thresholdBannerContent}>
-              <Text style={[styles.thresholdBannerTitle, { color: '#1565C0' }]}>Anno {year2026}: Soglia dei €5.000</Text>
-              <Text style={[styles.thresholdBannerText, { color: '#1565C0' }]}>
+              <Text style={styles.thresholdBannerTitle}>Anno {year2026}: Soglia dei €5.000</Text>
+              <Text style={styles.thresholdBannerText}>
                 Con la quietanza del mese di {thresholdMonth5k_y2} supererai la soglia previdenziale (Contributi previdenziali INPS).
               </Text>
             </View>
