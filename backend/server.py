@@ -14083,6 +14083,44 @@ async def get_coach_threshold_status(
     # Blocking status: can't sign new receipts if declaration is needed
     is_blocked = needs_declaration_5000 or needs_declaration_15000
     
+    # Calculate PROJECTED threshold months (which month will exceed €5k / €15k)
+    contract_end = coach.get("contract_end_date")
+    contract_start_month = 9
+    contract_end_month = 6
+    contract_end_year = None
+    if contract_start:
+        try:
+            contract_start_month = int(str(contract_start).split('-')[1])
+        except:
+            pass
+    if contract_end:
+        try:
+            contract_end_month = int(str(contract_end).split('-')[1])
+            contract_end_year = int(str(contract_end).split('-')[0].split('T')[0])
+        except:
+            pass
+    if contract_year and year == contract_year:
+        months_in_year = list(range(contract_start_month, 13))
+    elif contract_end_year and year == contract_end_year:
+        months_in_year = list(range(1, contract_end_month + 1))
+    else:
+        months_in_year = list(range(1, 13))
+    all_year_records = await db.coach_compensations.find({
+        "coach_id": coach_id,
+        "year": year
+    }).to_list(12)
+    projected_total = prior_compensation if (contract_year == year) else 0
+    threshold_5k_month = 0
+    threshold_15k_month = 0
+    for m in months_in_year:
+        existing = next((r for r in all_year_records if r.get("month") == m), None)
+        amt = existing.get("amount_gross", existing.get("amount", monthly_compensation)) if existing else monthly_compensation
+        projected_total += amt
+        if projected_total > 5000 and threshold_5k_month == 0:
+            threshold_5k_month = m
+        if projected_total > 15000 and threshold_15k_month == 0:
+            threshold_15k_month = m
+    
     return {
         "coach_id": coach_id,
         "coach_name": coach.get("full_name", ""),
@@ -14100,7 +14138,8 @@ async def get_coach_threshold_status(
                 "needs_declaration": needs_declaration_5000,
                 "declaration_signed": bool(declaration_5000 and declaration_5000.get("signed")),
                 "declaration_date": declaration_5000.get("signed_date") if declaration_5000 else None,
-                "document_id": declaration_5000.get("document_id") if declaration_5000 else None
+                "document_id": declaration_5000.get("document_id") if declaration_5000 else None,
+                "threshold_month": threshold_5k_month
             },
             "15000": {
                 "threshold": 15000,
@@ -14109,7 +14148,8 @@ async def get_coach_threshold_status(
                 "needs_declaration": needs_declaration_15000,
                 "declaration_signed": bool(declaration_15000 and declaration_15000.get("signed")),
                 "declaration_date": declaration_15000.get("signed_date") if declaration_15000 else None,
-                "document_id": declaration_15000.get("document_id") if declaration_15000 else None
+                "document_id": declaration_15000.get("document_id") if declaration_15000 else None,
+                "threshold_month": threshold_15k_month
             }
         },
         "is_blocked": is_blocked,
@@ -18729,7 +18769,8 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
                 "needs_warning": approaching_5000,
                 "needs_declaration": needs_5000_declaration,
                 "declaration_signed": exceeded_5000_record is not None,
-                "declaration_date": exceeded_5000_record.get("exceeded_5000_date") if exceeded_5000_record else None
+                "declaration_date": exceeded_5000_record.get("exceeded_5000_date") if exceeded_5000_record else None,
+                "threshold_month": threshold_5k_month
             },
             "15000": {
                 "threshold": 15000,
@@ -18737,7 +18778,8 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
                 "needs_warning": approaching_15000,
                 "needs_declaration": needs_15000_declaration,
                 "declaration_signed": exceeded_15000_record is not None,
-                "declaration_date": exceeded_15000_record.get("exceeded_15000_date") if exceeded_15000_record else None
+                "declaration_date": exceeded_15000_record.get("exceeded_15000_date") if exceeded_15000_record else None,
+                "threshold_month": threshold_15k_month
             }
         },
         "is_blocked": is_blocked,
@@ -19427,7 +19469,8 @@ async def get_collaboratore_threshold_status(
                 "needs_declaration": needs_declaration_5000,
                 "declaration_signed": bool(declaration_5000 and declaration_5000.get("signed")),
                 "declaration_date": declaration_5000.get("signed_date") if declaration_5000 else None,
-                "document_id": declaration_5000.get("document_id") if declaration_5000 else None
+                "document_id": declaration_5000.get("document_id") if declaration_5000 else None,
+                "threshold_month": collab_threshold_5k_month
             },
             "15000": {
                 "threshold": 15000,
@@ -19436,7 +19479,8 @@ async def get_collaboratore_threshold_status(
                 "needs_declaration": needs_declaration_15000,
                 "declaration_signed": bool(declaration_15000 and declaration_15000.get("signed")),
                 "declaration_date": declaration_15000.get("signed_date") if declaration_15000 else None,
-                "document_id": declaration_15000.get("document_id") if declaration_15000 else None
+                "document_id": declaration_15000.get("document_id") if declaration_15000 else None,
+                "threshold_month": collab_threshold_15k_month
             }
         },
         "is_blocked": is_blocked,
