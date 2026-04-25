@@ -15122,7 +15122,8 @@ def generate_gdpr_adult_privacy_pdf(
     user_id: str,
     society_id: str,
     consent_data: dict = None,
-    signer_role: str = ""
+    signer_role: str = "",
+    signer_country_of_birth: str = ""
 ) -> bytes:
     """Generate GDPR-compliant privacy consent PDF for adults (collaboratori, coach, dirigenti, atleti maggiorenni)"""
     if not HAS_PDF_GENERATION:
@@ -15340,7 +15341,7 @@ def generate_gdpr_adult_privacy_pdf(
     y_box -= 0.45*cm
     c.drawString(2.5*cm, y_box, f"Codice Fiscale: {signer_fiscal_code or '________________________'}")
     y_box -= 0.45*cm
-    birth_place_str = signer_birth_place or '________'
+    birth_place_str = signer_birth_place or signer_country_of_birth or '________'
     birth_date_str = signer_birth_date or '________'
     c.drawString(2.5*cm, y_box, f"Nato/a a {birth_place_str} il {birth_date_str}")
     y_box -= 0.45*cm
@@ -16908,10 +16909,10 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
                 user_id=current_user["id"],
                 society_id=current_user.get("society_id", ""),
                 consent_data=getattr(request, 'consent_data', None),
-                signer_role=role or current_user.get("role", "")
+                signer_role=role or current_user.get("role", ""),
+                signer_country_of_birth=user_data.get("country_of_birth", "") or athlete_data.get("country_of_birth", "") or ""
             )
         else:
-            # Use the generic signed PDF function for other document types
             pdf_bytes = generate_signed_pdf(
                 document_title=request.document_title,
                 document_text=request.document_text,
@@ -17502,7 +17503,8 @@ async def sign_gdpr_privacy_document(
                 user_id=current_user["id"],
                 society_id=society_id,
                 consent_data=request.consent_data,
-                signer_role=current_user.get("role", "")
+                signer_role=current_user.get("role", ""),
+                signer_country_of_birth=current_user.get("country_of_birth", "")
             )
             
             doc_title = "Informativa Privacy GDPR - Staff"
@@ -18013,7 +18015,8 @@ async def preview_gdpr_privacy_document(
                 user_id=current_user["id"],
                 society_id=society_id,
                 consent_data=request.consent_data if request.consent_data else None,
-                signer_role=current_user.get("role", "")
+                signer_role=current_user.get("role", ""),
+                signer_country_of_birth=current_user.get("country_of_birth", "")
             )
             role = current_user.get("role", "")
             staff_roles = ["coach", "collaboratore", "dirigente"]
