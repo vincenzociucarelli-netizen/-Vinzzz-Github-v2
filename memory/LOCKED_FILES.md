@@ -3,8 +3,8 @@
 Questi file sono stati completati e verificati dall'utente. 
 NON devono essere modificati a meno che l'utente lo richieda esplicitamente.
 
-## Coach - Completati e verificati (13/04/2026)
-- `/app/frontend/app/coach/compensation.tsx` - Compensi sportivi, soglie 5k/15k, somma supplementare con mese
+## Coach - Completati e verificati (25/04/2026)
+- `/app/frontend/app/coach/compensation.tsx` - Compensi sportivi, soglie 5k/15k unificate (banner bordati/centrati con mese in grassetto), banner "Dichiarazione firmata" stile bordato verde, somma supplementare con mese
 - `/app/frontend/app/coach/profile.tsx` - Profilo coach, dati anagrafici+fiscali unificati, consensi privacy nascosti se non firmata
 
 ## Admin Coach - Completati e verificati (13/04/2026)
@@ -26,6 +26,6 @@ NON devono essere modificati a meno che l'utente lo richieda esplicitamente.
 - `/app/frontend/app/admin/teams.tsx` - Lista squadre, creazione con rate, placeholder data GG/MM/AAAA, validazione formato
 - `/app/frontend/app/admin/team/[id].tsx` - Dettaglio/modifica squadra, gestione rate con scadenze, placeholder data italiano
 
-## Collaboratore - Completati e verificati (23/04/2026)
+## Collaboratore - Completati e verificati (25/04/2026)
 - `/app/frontend/app/collaboratore/profile.tsx` - Profilo collaboratore, dati anagrafici+fiscali unificati, codice fiscale estero, consensi privacy collassabili, documenti senza bullet, pulsante indietro funzionante
-- `/app/frontend/app/collaboratore/compensation.tsx` - Compensi collaboratore, soglie 5k/15k, metadati verifica con somme pregresse per anno, mensilità speciale inclusa nel totale, timestamp ora italiana
+- `/app/frontend/app/collaboratore/compensation.tsx` - Compensi collaboratore, soglie 5k/15k unificate (banner bordati/centrati con mese in grassetto), banner "Dichiarazione firmata" stile bordato verde, metadati verifica con somme pregresse per anno, mensilità speciale inclusa nel totale, timestamp ora italiana
