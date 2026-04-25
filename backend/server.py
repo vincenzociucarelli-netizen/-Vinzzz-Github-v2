@@ -17470,6 +17470,9 @@ async def sign_gdpr_privacy_document(
             signer_name = request.signer_name or current_user.get("first_name", "")
             signer_surname = request.signer_surname or current_user.get("last_name", "") or current_user.get("full_name", "").split()[0] if current_user.get("full_name") else ""
             
+            # Load full user data for fields not in JWT token
+            full_user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+            
             # If full_name is "COGNOME NOME" format
             if not signer_name and current_user.get("full_name"):
                 parts = current_user.get("full_name", "").split()
@@ -17488,12 +17491,12 @@ async def sign_gdpr_privacy_document(
                 society_email=society_email,
                 signer_name=signer_name,
                 signer_surname=signer_surname,
-                signer_fiscal_code=request.signer_fiscal_code or current_user.get("fiscal_code", ""),
+                signer_fiscal_code=request.signer_fiscal_code or (full_user.get("fiscal_code", "") if full_user else ""),
                 signer_birth_date=request.signer_birth_date or "",
-                signer_birth_place=request.signer_birth_place or current_user.get("place_of_birth", ""),
-                signer_address=request.signer_address or current_user.get("address", ""),
-                signer_city=request.signer_city or current_user.get("city", ""),
-                signer_province=request.signer_province or current_user.get("province", ""),
+                signer_birth_place=request.signer_birth_place or (full_user.get("place_of_birth", "") if full_user else ""),
+                signer_address=request.signer_address or (full_user.get("address", "") if full_user else ""),
+                signer_city=request.signer_city or (full_user.get("city", "") if full_user else ""),
+                signer_province=request.signer_province or (full_user.get("province", "") if full_user else ""),
                 signature_base64=request.signature_base64,
                 timestamp=timestamp_display,
                 ip_address=client_ip,
@@ -17504,7 +17507,7 @@ async def sign_gdpr_privacy_document(
                 society_id=society_id,
                 consent_data=request.consent_data,
                 signer_role=current_user.get("role", ""),
-                signer_country_of_birth=current_user.get("country_of_birth", "")
+                signer_country_of_birth=full_user.get("country_of_birth", "") if full_user else ""
             )
             
             doc_title = "Informativa Privacy GDPR - Staff"
