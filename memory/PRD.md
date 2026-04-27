@@ -9,6 +9,13 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 - **Database**: MongoDB
 - **Integrazioni**: Brevo (email), ReportLab (PDF), BeautifulSoup (scraping federazioni)
 
+## Asset Pubblicazione (acquisiti)
+- **Domini**: registrateam.it (principale), registrateam.com, registrateam.net
+- **Email**: 
+  - info@registrateam.it (contatto commerciale)
+  - assistenza@registrateam.it (supporto utenti)
+  - registrateam@gmail.com (operativo interno: Brevo, Stripe, fornitori)
+
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
