@@ -28,7 +28,22 @@ Vedi `/app/memory/LOCKED_FILES.md`
 - Backend: aggiunto `threshold_month` nel response API `/threshold-status` per dirigente/coach/collaboratore (logica di proiezione su tutti i mesi del contratto)
 
 ## ⏰ DA RICORDARE ALL'UTENTE (richiesto 25/04/2026):
-- **L'utente vuole controllare ancora il ruolo Dirigente**: testare flussi/pagine non ancora verificati. Quando torna, chiedere: "Hai detto che volevi controllare se il dirigente ha altre cose da testare. Vuoi farlo ora?"
+- **L'utente vuole controllare ancora il ruolo Dirigente**: testare flussi/pagine non ancora verificati. Quando torna, chiedere: "Hai detto che volevi controllare se il dirigente ha altre cose da testare. Vuoi farlo ora?" ✅ COMPLETATO 27/04/2026 (Dirigente bloccato)
+
+## 🚀 PIANO PUBBLICAZIONE (da iniziare quando l'utente è pronto):
+L'utente ha richiesto guida passo-passo perché non riesce a fare da solo. Procedere:
+1. Acquisto/configurazione DNS dominio registrateam.it (record A/CNAME verso server produzione)
+2. Deploy backend produzione (separato da preview Emergent)
+3. Setup HTTPS/SSL (Let's Encrypt)
+4. Configurazione Brevo: SPF + DKIM per assistenza@registrateam.it (sender autenticato)
+5. Backup automatici MongoDB
+6. Error tracking (Sentry free tier)
+7. Privacy Policy pubblica + Cookie banner GDPR
+8. Aggiornamento flyer/manuali HTML con email reali (info@registrateam.it, assistenza@registrateam.it)
+9. Stripe modalità live (post-pilota)
+10. PWA installabile (Add to Home Screen)
+
+NOTA: Dare istruzioni dettagliate e sequenziali. L'utente farà solo azioni dirette (login pannelli provider). Codice/config tecnico fatto da agente.
 
 ## Completato 23/04/2026:
 - Fix calcolo "Somma supplementare" viste Admin (coach, dirigente, collaboratore)
