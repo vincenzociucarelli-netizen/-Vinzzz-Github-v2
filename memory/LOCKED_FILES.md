@@ -26,6 +26,12 @@ NON devono essere modificati a meno che l'utente lo richieda esplicitamente.
 - `/app/frontend/app/admin/teams.tsx` - Lista squadre, creazione con rate, placeholder data GG/MM/AAAA, validazione formato
 - `/app/frontend/app/admin/team/[id].tsx` - Dettaglio/modifica squadra, gestione rate con scadenze, placeholder data italiano
 
+## Dirigente - Completati e verificati (26/04/2026)
+- `/app/frontend/app/dirigente/compensation.tsx` - Compensi dirigente, soglie 5k/15k unificate (banner bordati/centrati con mese in grassetto), banner "Dichiarazione firmata" stile bordato verde, somma supplementare con mese, timestamp ora italiana
+- `/app/frontend/app/dirigente/profile.tsx` - Profilo dirigente, dati anagrafici+fiscali unificati, codice fiscale estero, consensi privacy collassabili, country_of_birth come fallback per place_of_birth
+- `/app/frontend/app/dirigente/index.tsx` - Dashboard dirigente filtrata su `assigned_teams`
+- `/app/frontend/app/admin/dirigente/[id].tsx` - Vista admin dirigente, banner soglie 5k/15k unificati (anno 1 + anno 2), banner "Dichiarazione firmata", warning con mese in grassetto
+
 ## Collaboratore - Completati e verificati (25/04/2026)
 - `/app/frontend/app/collaboratore/profile.tsx` - Profilo collaboratore, dati anagrafici+fiscali unificati, codice fiscale estero, consensi privacy collassabili, documenti senza bullet, pulsante indietro funzionante
 - `/app/frontend/app/collaboratore/compensation.tsx` - Compensi collaboratore, soglie 5k/15k unificate (banner bordati/centrati con mese in grassetto), banner "Dichiarazione firmata" stile bordato verde, metadati verifica con somme pregresse per anno, mensilità speciale inclusa nel totale, timestamp ora italiana
