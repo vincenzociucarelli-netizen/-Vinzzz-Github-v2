@@ -101,11 +101,44 @@ export default function OtherSettings() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Auto-add eventuali campi pendenti compilati (ma non confermati con +)
+      let finalRoles = athleteRoles;
+      let finalChars = athleteCharacteristics;
+      let finalQuals = dirigenteQualifications;
+      let finalVenues = venues;
+      
+      if (newRole.trim() && !athleteRoles.includes(newRole.trim())) {
+        finalRoles = [...athleteRoles, newRole.trim()];
+        setAthleteRoles(finalRoles);
+        setNewRole('');
+      }
+      if (newCharacteristic.trim() && !athleteCharacteristics.includes(newCharacteristic.trim())) {
+        finalChars = [...athleteCharacteristics, newCharacteristic.trim()];
+        setAthleteCharacteristics(finalChars);
+        setNewCharacteristic('');
+      }
+      if (newQualification.trim() && !dirigenteQualifications.includes(newQualification.trim())) {
+        finalQuals = [...dirigenteQualifications, newQualification.trim()];
+        setDirigenteQualifications(finalQuals);
+        setNewQualification('');
+      }
+      if (newVenueName.trim() && !venues.some(v => v.name.toLowerCase() === newVenueName.trim().toLowerCase())) {
+        finalVenues = [...venues, {
+          name: newVenueName.trim(),
+          address: newVenueAddress.trim(),
+          city: newVenueCity.trim()
+        }];
+        setVenues(finalVenues);
+        setNewVenueName('');
+        setNewVenueAddress('');
+        setNewVenueCity('');
+      }
+      
       await api.patch('/settings/society', {
-        athlete_roles: athleteRoles,
-        athlete_characteristics: athleteCharacteristics,
-        dirigente_qualifications: dirigenteQualifications,
-        venues: venues,
+        athlete_roles: finalRoles,
+        athlete_characteristics: finalChars,
+        dirigente_qualifications: finalQuals,
+        venues: finalVenues,
         sport_image: sportImage,
         sport_praticato: sportName,
         season_start_month: seasonStartMonth,
