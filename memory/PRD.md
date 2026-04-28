@@ -19,6 +19,18 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 28/04/2026 (lavoro notturno):
+- ✅ **Aggiornati tutti i 7 manuali HTML** (`/app/backend/docs/`) aggiungendo sezione "Supporto" con email reali (info@registrateam.it, assistenza@registrateam.it) e dominio www.registrateam.it
+- ✅ **Redirect domini configurati**: registrateam.com e registrateam.net → registrateam.it (301 permanente, già attivi su Aruba)
+- ✅ **Preparazione refactoring backend/server.py** (25.037 righe → moduli):
+  - Creata struttura cartelle `/app/backend/routes/`, `/app/backend/models/`, `/app/backend/services/` (vuote, pronte)
+  - Creato `/app/backend/database.py` (singleton MongoDB)
+  - Creato `/app/backend/auth_utils.py` (JWT + get_current_user + password hashing)
+  - Documento dettagliato in `/app/memory/REFACTORING_PLAN.md` con mappa completa di endpoint per dominio (304 endpoint, 92 modelli Pydantic)
+- ✅ **Suite test smoke regressione**: `/app/backend/tests/test_smoke_regression.py` (14 test, eseguono in 5 secondi, verificano endpoint critici: auth, /me, settings, users, teams, athletes, notifications, export, threshold)
+- ✅ **Documentazione architettura**: `/app/memory/ARCHITECTURE.md` (stack, modelli DB, flussi auth, comandi utili, deploy plan)
+- ⚠️ **Refactoring vero (spostamento codice da server.py)**: NON eseguito nella notte per sicurezza. Da fare insieme all'utente in sessione attiva (~1-2 ore). Tutto è preparato e pronto.
+
 ## Completato 25/04/2026:
 - Banner soglie 5k/15k unificati (Dirigente/Coach/Collaboratore + viste Admin):
   - Stile bordato/centrato unico, mese superamento in **grassetto**
