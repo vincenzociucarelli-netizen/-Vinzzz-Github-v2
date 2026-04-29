@@ -27,10 +27,11 @@ Vedi `/app/memory/LOCKED_FILES.md`
 - ✅ **Estratto `routes/notifications.py`** (10 endpoint admin/user/photo-removal)
 - ✅ **Estratto `routes/settings.py`** (6 endpoint society + stripe)
 - ✅ **Estratto `routes/seasons.py`** (4 endpoint archivi stagioni)
-- ✅ **server.py ridotto** da 25.037 a 24.465 righe (-572 righe = **-2.3%**)
+- ✅ **Estratto `routes/parents.py`** (5 endpoint commitments + parent-link/*)
+- ✅ **server.py ridotto** da 25.037 a **24.011 righe (-1.026 righe = -4.1%)**
+- ✅ **25 endpoint** ora in 4 file modulari
 - ✅ **Test smoke 14/14 passati** dopo ogni step + verifica manuale endpoint estratti
-- ✅ **20 endpoint** ora in 3 file modulari, pronti per future modifiche più rapide
-- 📌 **Pattern proof-of-concept** consolidato e documentato
+- 📌 **Pattern proof-of-concept** consolidato e replicabile
 
 ## Completato 28/04/2026 (lavoro notturno):
 - ✅ **Aggiornati tutti i 7 manuali HTML** (`/app/backend/docs/`) aggiungendo sezione "Supporto" con email reali (info@registrateam.it, assistenza@registrateam.it) e dominio www.registrateam.it
