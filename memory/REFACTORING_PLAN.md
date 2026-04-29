@@ -2,7 +2,19 @@
 
 **File analizzato**: `/app/backend/server.py`  
 **Data analisi**: 28/04/2026  
-**Dimensione attuale**: 25.037 righe (monolitico)
+**Dimensione attuale**: 24.905 righe (DOPO prima ondata refactoring 29/04)
+
+## ✅ STATO REFACTORING
+
+| Step | Status | Note |
+|---|---|---|
+| Setup cartelle (routes/, models/, services/) | ✅ Completato 28/04 | |
+| `database.py` (MongoDB singleton) | ✅ Completato 28/04 | |
+| `auth_utils.py` (JWT + get_current_user) | ✅ Completato 28/04 | |
+| `utils.py` (MONTH_NAMES, to_rome_time, clean_mongo_doc) | ✅ Completato 29/04 | |
+| `models/enums.py` (UserRole, UserStatus) | ✅ Completato 29/04 | |
+| `routes/notifications.py` (10 endpoint) | ✅ Completato 29/04 | Test smoke 14/14 ✅ |
+| Estrazione altri gruppi route | ⏸️ Da continuare | Pattern verificato |
 
 ## 📊 Statistiche
 

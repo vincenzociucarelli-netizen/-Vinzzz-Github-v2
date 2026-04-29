@@ -3852,146 +3852,9 @@ async def delete_stripe_keys(current_user = Depends(get_current_user)):
     return {"message": "Chiavi Stripe eliminate con successo"}
 
 
-# ==================== ADMIN NOTIFICATIONS ====================
-
-@api_router.get("/admin/notifications")
-async def get_admin_notifications(current_user = Depends(get_current_user)):
-    """Get all admin notifications"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può vedere le notifiche")
-    
-    notifications = await db.admin_notifications.find({}).sort("created_at", -1).to_list(100)
-    result = []
-    for n in notifications:
-        clean_mongo_doc(n)
-        # Convert created_at to ISO string with timezone info for proper frontend parsing
-        if 'created_at' in n and n['created_at']:
-            ca = n['created_at']
-            if isinstance(ca, datetime):
-                # Add UTC timezone info and convert to ISO format with time
-                n['created_at'] = ca.replace(tzinfo=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S+00:00')
-            elif isinstance(ca, str) and len(ca) == 10:
-                # If it's a date-only string, add time
-                n['created_at'] = ca + 'T00:00:00+00:00'
-        result.append(n)
-    return JSONResponse(content=result)
-
-@api_router.get("/admin/notifications/unread-count")
-async def get_unread_notifications_count(current_user = Depends(get_current_user)):
-    """Get count of unread notifications"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può vedere le notifiche")
-    
-    count = await db.admin_notifications.count_documents({"read": False})
-    return {"count": count}
-
-@api_router.patch("/admin/notifications/{notification_id}/read")
-async def mark_notification_read(notification_id: str, current_user = Depends(get_current_user)):
-    """Mark a notification as read"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può gestire le notifiche")
-    
-    result = await db.admin_notifications.update_one(
-        {"id": notification_id},
-        {"$set": {"read": True}}
-    )
-    
-    if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="Notifica non trovata")
-    
-    return {"message": "Notifica segnata come letta"}
-
-@api_router.patch("/admin/notifications/mark-all-read")
-async def mark_all_notifications_read(current_user = Depends(get_current_user)):
-    """Mark all notifications as read"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può gestire le notifiche")
-    
-    await db.admin_notifications.update_many(
-        {"read": False},
-        {"$set": {"read": True}}
-    )
-    
-    return {"message": "Tutte le notifiche segnate come lette"}
-
-@api_router.delete("/admin/notifications/{notification_id}")
-async def delete_notification(notification_id: str, current_user = Depends(get_current_user)):
-    """Delete a notification"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può gestire le notifiche")
-    
-    result = await db.admin_notifications.delete_one({"id": notification_id})
-    
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Notifica non trovata")
-    
-    return {"message": "Notifica eliminata"}
-
-
-# ==================== USER NOTIFICATIONS (parents, athletes, coaches) ====================
-
-@api_router.get("/user/notifications")
-async def get_user_notifications(current_user = Depends(get_current_user)):
-    """Get notifications for the current user (parents, athletes, coaches, etc.)"""
-    notifications = await db.notifications.find(
-        {"user_id": current_user["id"]}
-    ).sort("created_at", -1).to_list(50)
-    result = []
-    for n in notifications:
-        clean_mongo_doc(n)
-        if 'created_at' in n and n['created_at']:
-            ca = n['created_at']
-            if isinstance(ca, datetime):
-                n['created_at'] = ca.replace(tzinfo=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S+00:00')
-        result.append(n)
-    return result
-
-@api_router.get("/user/notifications/unread-count")
-async def get_user_unread_count(current_user = Depends(get_current_user)):
-    """Get count of unread notifications for the current user"""
-    count = await db.notifications.count_documents({"user_id": current_user["id"], "read": False})
-    return {"count": count}
-
-@api_router.patch("/user/notifications/{notification_id}/read")
-async def mark_user_notification_read(notification_id: str, current_user = Depends(get_current_user)):
-    """Mark a user notification as read"""
-    result = await db.notifications.update_one(
-        {"id": notification_id, "user_id": current_user["id"]},
-        {"$set": {"read": True}}
-    )
-    return {"message": "OK"}
-
-@api_router.patch("/user/notifications/mark-all-read")
-async def mark_all_user_notifications_read(current_user = Depends(get_current_user)):
-    """Mark all user notifications as read"""
-    await db.notifications.update_many(
-        {"user_id": current_user["id"], "read": False},
-        {"$set": {"read": True}}
-    )
-    return {"message": "OK"}
-
-
-@api_router.post("/notifications/photo-removal-request")
-async def request_photo_removal(current_user = Depends(get_current_user)):
-    """Parent/staff requests removal of their photos from society publications"""
-    user_name = f"{current_user.get('first_name', '')} {current_user.get('last_name', '')}".strip()
-    
-    notification = {
-        "id": str(uuid.uuid4()),
-        "society_id": current_user.get("society_id"),
-        "type": "photo_removal_request",
-        "title": "Richiesta rimozione immagini",
-        "message": f"{user_name} ({current_user.get('email', '')}) ha richiesto la rimozione delle proprie immagini da tutte le pubblicazioni della società.",
-        "priority": "high",
-        "read": False,
-        "created_at": datetime.utcnow().isoformat(),
-        "user_id": current_user["id"],
-    }
-    
-    await db.admin_notifications.insert_one(notification)
-    
-    return {"message": "Richiesta di rimozione immagini inviata all'amministratore"}
-
+# ==================== NOTIFICATIONS ROUTES MOVED TO routes/notifications.py ====================
+# All /admin/notifications, /user/notifications and /notifications/photo-removal-request
+# routes have been moved to routes/notifications.py (registered via api_router.include_router)
 
 
 # ==================== USER MANAGEMENT ENDPOINTS (ADMIN) ====================
@@ -24662,6 +24525,11 @@ async def get_all_consents_admin(current_user = Depends(get_current_user)):
     
     return result
 
+
+# ==================== MODULAR ROUTERS (refactoring in progress) ====================
+# Routers extracted to separate files. Must be included BEFORE app.include_router(api_router)
+from routes.notifications import router as notifications_router
+api_router.include_router(notifications_router)
 
 app.include_router(api_router)
 

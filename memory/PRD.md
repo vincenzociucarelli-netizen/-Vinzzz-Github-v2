@@ -19,6 +19,17 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 29/04/2026 (refactoring server.py - prima ondata):
+- ✅ **Creato `utils.py`**: MONTH_NAMES, to_rome_time, format_rome_timestamp, clean_mongo_doc, clean_mongo_docs (utility condivise pronte all'uso da nuovi moduli)
+- ✅ **Creato `models/enums.py`**: UserRole + UserStatus enum
+- ✅ **Estratto primo gruppo route in `routes/notifications.py`** (10 endpoint):
+  - `/admin/notifications` (GET, GET unread-count, PATCH read, PATCH mark-all-read, DELETE)
+  - `/user/notifications` (GET, GET unread-count, PATCH read, PATCH mark-all-read)
+  - `/notifications/photo-removal-request` (POST)
+- ✅ **server.py ridotto** da 25.037 a 24.905 righe (-132 righe)
+- ✅ **Test smoke 14/14 passati** dopo ogni step
+- 📌 **Pattern funzionante e replicabile**: per estendere il refactoring basta creare nuovi `routes/<gruppo>.py` con il template di `routes/notifications.py`
+
 ## Completato 28/04/2026 (lavoro notturno):
 - ✅ **Aggiornati tutti i 7 manuali HTML** (`/app/backend/docs/`) aggiungendo sezione "Supporto" con email reali (info@registrateam.it, assistenza@registrateam.it) e dominio www.registrateam.it
 - ✅ **Redirect domini configurati**: registrateam.com e registrateam.net → registrateam.it (301 permanente, già attivi su Aruba)
