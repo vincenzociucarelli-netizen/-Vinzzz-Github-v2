@@ -20,15 +20,17 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 Vedi `/app/memory/LOCKED_FILES.md`
 
 ## Completato 29/04/2026 (refactoring server.py - prima ondata):
-- ✅ **Creato `utils.py`**: MONTH_NAMES, to_rome_time, format_rome_timestamp, clean_mongo_doc, clean_mongo_docs (utility condivise pronte all'uso da nuovi moduli)
+- ✅ **Creato `utils.py`**: MONTH_NAMES, to_rome_time, format_rome_timestamp, clean_mongo_doc, clean_mongo_docs, get_current_season
 - ✅ **Creato `models/enums.py`**: UserRole + UserStatus enum
-- ✅ **Estratto primo gruppo route in `routes/notifications.py`** (10 endpoint):
-  - `/admin/notifications` (GET, GET unread-count, PATCH read, PATCH mark-all-read, DELETE)
-  - `/user/notifications` (GET, GET unread-count, PATCH read, PATCH mark-all-read)
-  - `/notifications/photo-removal-request` (POST)
-- ✅ **server.py ridotto** da 25.037 a 24.905 righe (-132 righe)
-- ✅ **Test smoke 14/14 passati** dopo ogni step
-- 📌 **Pattern funzionante e replicabile**: per estendere il refactoring basta creare nuovi `routes/<gruppo>.py` con il template di `routes/notifications.py`
+- ✅ **Creato `models/settings_models.py`**: SocietySettingsUpdate + StripeSettingsUpdate
+- ✅ **Creato `models/season_models.py`**: SeasonArchive
+- ✅ **Estratto `routes/notifications.py`** (10 endpoint admin/user/photo-removal)
+- ✅ **Estratto `routes/settings.py`** (6 endpoint society + stripe)
+- ✅ **Estratto `routes/seasons.py`** (4 endpoint archivi stagioni)
+- ✅ **server.py ridotto** da 25.037 a 24.465 righe (-572 righe = **-2.3%**)
+- ✅ **Test smoke 14/14 passati** dopo ogni step + verifica manuale endpoint estratti
+- ✅ **20 endpoint** ora in 3 file modulari, pronti per future modifiche più rapide
+- 📌 **Pattern proof-of-concept** consolidato e documentato
 
 ## Completato 28/04/2026 (lavoro notturno):
 - ✅ **Aggiornati tutti i 7 manuali HTML** (`/app/backend/docs/`) aggiungendo sezione "Supporto" con email reali (info@registrateam.it, assistenza@registrateam.it) e dominio www.registrateam.it

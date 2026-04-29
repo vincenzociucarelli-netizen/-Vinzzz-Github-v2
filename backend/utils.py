@@ -57,10 +57,19 @@ def clean_mongo_docs(docs):
     return [clean_mongo_doc(doc) for doc in docs]
 
 
+def get_current_season() -> str:
+    """Get current season name based on date (July to June)."""
+    now = datetime.utcnow()
+    if now.month >= 7:
+        return f"{now.year}-{now.year + 1}"
+    return f"{now.year - 1}-{now.year}"
+
+
 __all__ = [
     "MONTH_NAMES",
     "to_rome_time",
     "format_rome_timestamp",
     "clean_mongo_doc",
     "clean_mongo_docs",
+    "get_current_season",
 ]
