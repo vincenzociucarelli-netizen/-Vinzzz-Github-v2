@@ -4,17 +4,11 @@
 **Data analisi**: 28/04/2026  
 **Dimensione attuale**: 24.905 righe (DOPO prima ondata refactoring 29/04)
 
-## ✅ STATO REFACTORING
+## ⏸️ REFACTORING IN PAUSA (29/04/2026)
+Decisione strategica: refactoring "just-in-time" — continueremo solo quando serve toccare un'area specifica per fix/feature. Pattern dimostrato e funzionante. server.py: 23.651 righe (37/304 endpoint estratti).
 
-| Step | Status | Note |
-|---|---|---|
-| Setup cartelle (routes/, models/, services/) | ✅ Completato 28/04 | |
-| `database.py` (MongoDB singleton) | ✅ Completato 28/04 | |
-| `auth_utils.py` (JWT + get_current_user) | ✅ Completato 28/04 | |
-| `utils.py` (MONTH_NAMES, to_rome_time, clean_mongo_doc) | ✅ Completato 29/04 | |
-| `models/enums.py` (UserRole, UserStatus) | ✅ Completato 29/04 | |
-| `routes/notifications.py` (10 endpoint) | ✅ Completato 29/04 | Test smoke 14/14 ✅ |
-| Estrazione altri gruppi route | ⏸️ Da continuare | Pattern verificato |
+## 🚀 PROSSIMA FASE: DEPLOY PRODUZIONE
+Vedi PRD.md sezione "PIANO PUBBLICAZIONE" per i 10 step.
 
 ## 📊 Statistiche
 
