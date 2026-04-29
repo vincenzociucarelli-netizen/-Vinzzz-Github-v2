@@ -21,16 +21,18 @@ Vedi `/app/memory/LOCKED_FILES.md`
 
 ## Completato 29/04/2026 (refactoring server.py - prima ondata):
 - ✅ **Creato `utils.py`**: MONTH_NAMES, to_rome_time, format_rome_timestamp, clean_mongo_doc, clean_mongo_docs, get_current_season
-- ✅ **Creato `models/enums.py`**: UserRole + UserStatus enum
+- ✅ **Creato `models/enums.py`**: UserRole + UserStatus
 - ✅ **Creato `models/settings_models.py`**: SocietySettingsUpdate + StripeSettingsUpdate
 - ✅ **Creato `models/season_models.py`**: SeasonArchive
+- ✅ **Creato `models/team_models.py`**: TrainingSession, MatchDay, Team, TeamCreate, TeamUpdate, AssignmentRequest
 - ✅ **Estratto `routes/notifications.py`** (10 endpoint admin/user/photo-removal)
 - ✅ **Estratto `routes/settings.py`** (6 endpoint society + stripe)
 - ✅ **Estratto `routes/seasons.py`** (4 endpoint archivi stagioni)
 - ✅ **Estratto `routes/parents.py`** (5 endpoint commitments + parent-link/*)
-- ✅ **server.py ridotto** da 25.037 a **24.011 righe (-1.026 righe = -4.1%)**
-- ✅ **25 endpoint** ora in 4 file modulari
-- ✅ **Test smoke 14/14 passati** dopo ogni step + verifica manuale endpoint estratti
+- ✅ **Estratto `routes/teams.py`** (12 endpoint principali; restano in server.py: attendance-stats e championships)
+- ✅ **server.py ridotto** da 25.037 a **23.651 righe (-1.386 righe = -5.5%)**
+- ✅ **37 endpoint** ora in 5 file modulari, modifiche future molto più rapide
+- ✅ **Test smoke 14/14 passati** + verifica manuale teams (GET, payment-info, athletes-count) → tutto OK
 - 📌 **Pattern proof-of-concept** consolidato e replicabile
 
 ## Completato 28/04/2026 (lavoro notturno):
