@@ -64,11 +64,43 @@ export default function CertificateOverridePopup() {
       if (next && (!pending || pending.id !== next.id)) {
         setPending(next);
         setReason('');
+        playPing();
       }
     } catch {
       // silent
     }
   }, [pending]);
+
+  // Short ping sound using Web Audio API (no external asset needed)
+  const playPing = () => {
+    try {
+      if (Platform.OS !== 'web') return;
+      const w: any = typeof window !== 'undefined' ? window : null;
+      if (!w) return;
+      const AC = w.AudioContext || w.webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      // Two-tone ping (C6 -> E6) like a gentle notification
+      const play = (freq: number, start: number, dur: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + dur + 0.02);
+      };
+      play(1047, 0, 0.18);    // C6
+      play(1319, 0.18, 0.22); // E6
+      setTimeout(() => ctx.close().catch(() => {}), 700);
+    } catch {
+      // Autoplay blocked before user interaction: silently ignore
+    }
+  };
 
   useEffect(() => {
     fetchPending();
