@@ -90,6 +90,14 @@ export default function GlobalOverrideStatusPopup() {
 
   const fetchStatus = useCallback(async () => {
     try {
+      // Skip if primary admin still needs to sign declaration (let that modal take priority)
+      try {
+        const paRes = await api.get('/admin/primary-admin/status');
+        if (paRes.data?.is_current_user_primary && !paRes.data?.declaration_signed) {
+          setVisible(false);
+          return;
+        }
+      } catch {}
       const res = await api.get('/settings/certificate-override-status');
       const data: OverrideStatus = res.data;
       setStatus(data);

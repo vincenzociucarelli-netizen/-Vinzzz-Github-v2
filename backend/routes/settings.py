@@ -13,6 +13,7 @@ from database import db
 from auth_utils import get_current_user
 from models.enums import UserRole
 from models.settings_models import SocietySettingsUpdate, StripeSettingsUpdate
+from routes.primary_admin import is_primary_admin, has_valid_primary_declaration
 
 router = APIRouter()
 
@@ -142,6 +143,19 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
                     detail="Motivo obbligatorio (minimo 5 caratteri) per disattivare il blocco certificati."
                 )
             keep_disabled = bool(data.override_keep_disabled)
+
+            # GUARD: only the Primary Admin (with signed declaration) can set keep_disabled=True
+            if keep_disabled:
+                if not await is_primary_admin(current_user):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Solo il Responsabile Admin può mantenere l'override disattivato oltre la mezzanotte."
+                    )
+                if not await has_valid_primary_declaration(current_user):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Devi firmare la dichiarazione di Responsabile Admin (Legale Rappresentante o Dirigente autorizzato) prima di usare questa opzione."
+                    )
 
             # Compute next midnight Italy time (Europe/Rome ≈ UTC+1 / UTC+2 DST)
             # Approx: current Italy time = UTC+1. Next midnight Italy in UTC = today 23:00 or 22:00 UTC (DST).

@@ -61,6 +61,22 @@ export default function SocietySettings() {
   const [overrideAutoReactivateAt, setOverrideAutoReactivateAt] = useState<string | null>(null);
   const [overrideKeepDisabledSaved, setOverrideKeepDisabledSaved] = useState(false);
   const [overrideSubmitting, setOverrideSubmitting] = useState(false);
+  const [isPrimaryAdmin, setIsPrimaryAdmin] = useState(false);
+  const [primaryAdminName, setPrimaryAdminName] = useState<string | null>(null);
+  const [primaryDeclarationSigned, setPrimaryDeclarationSigned] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get('/admin/primary-admin/status');
+        setIsPrimaryAdmin(!!res.data?.is_current_user_primary);
+        setPrimaryAdminName(res.data?.primary_admin_name || null);
+        setPrimaryDeclarationSigned(!!res.data?.declaration_signed);
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
 
   const formatReactivateLabel = (iso: string | null): string | null => {
     if (!iso) return null;
@@ -754,34 +770,64 @@ export default function SocietySettings() {
               autoFocus
             />
 
-            {/* Keep disabled checkbox */}
-            <TouchableOpacity
-              data-testid="keep-disabled-checkbox"
-              onPress={() => setOverrideKeepDisabled(!overrideKeepDisabled)}
-              style={{
-                flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-                backgroundColor: overrideKeepDisabled ? '#FFEBEE' : '#F5F5F5',
-                padding: 12, borderRadius: 8, marginBottom: 8,
-                borderWidth: 1, borderColor: overrideKeepDisabled ? '#EF9A9A' : '#E0E0E0',
-              }}
-            >
-              <View style={{
-                width: 20, height: 20, borderRadius: 4, borderWidth: 2,
-                borderColor: overrideKeepDisabled ? '#C62828' : '#999',
-                backgroundColor: overrideKeepDisabled ? '#C62828' : 'transparent',
-                alignItems: 'center', justifyContent: 'center', marginTop: 2,
-              }}>
-                {overrideKeepDisabled && <Ionicons name="checkmark" size={14} color="#fff" />}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: overrideKeepDisabled ? '#C62828' : '#444' }}>
-                  Mantieni disattivato oltre la mezzanotte
-                </Text>
-                <Text style={{ fontSize: 12, color: '#666', marginTop: 3, lineHeight: 17 }}>
-                  Sotto la mia responsabilità. Ogni accesso Admin mostrerà un promemoria giornaliero finché non riattivo il blocco.
-                </Text>
-              </View>
-            </TouchableOpacity>
+            {/* Keep disabled checkbox - only enabled for Primary Admin with signed declaration */}
+            {(() => {
+              const canKeepDisabled = isPrimaryAdmin && primaryDeclarationSigned;
+              return (
+                <>
+                  <TouchableOpacity
+                    data-testid="keep-disabled-checkbox"
+                    onPress={() => {
+                      if (!canKeepDisabled) {
+                        const msg = !isPrimaryAdmin
+                          ? `Solo il Responsabile Admin${primaryAdminName ? ` (${primaryAdminName})` : ''} può mantenere l'override disattivato oltre la mezzanotte.`
+                          : "Devi firmare la dichiarazione di Responsabile Admin prima di usare questa opzione. La dichiarazione appare automaticamente al tuo accesso.";
+                        showAlert('Accesso riservato', msg);
+                        return;
+                      }
+                      setOverrideKeepDisabled(!overrideKeepDisabled);
+                    }}
+                    style={{
+                      flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+                      backgroundColor: !canKeepDisabled ? '#F5F5F5' : (overrideKeepDisabled ? '#FFEBEE' : '#F5F5F5'),
+                      padding: 12, borderRadius: 8, marginBottom: 8,
+                      borderWidth: 1, borderColor: !canKeepDisabled ? '#E0E0E0' : (overrideKeepDisabled ? '#EF9A9A' : '#E0E0E0'),
+                      opacity: !canKeepDisabled ? 0.55 : 1,
+                    }}
+                  >
+                    <View style={{
+                      width: 20, height: 20, borderRadius: 4, borderWidth: 2,
+                      borderColor: overrideKeepDisabled && canKeepDisabled ? '#C62828' : '#999',
+                      backgroundColor: overrideKeepDisabled && canKeepDisabled ? '#C62828' : 'transparent',
+                      alignItems: 'center', justifyContent: 'center', marginTop: 2,
+                    }}>
+                      {overrideKeepDisabled && canKeepDisabled && <Ionicons name="checkmark" size={14} color="#fff" />}
+                      {!canKeepDisabled && <Ionicons name="lock-closed" size={12} color="#999" />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: overrideKeepDisabled && canKeepDisabled ? '#C62828' : '#444' }}>
+                        Mantieni disattivato oltre la mezzanotte
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#666', marginTop: 3, lineHeight: 17 }}>
+                        Sotto la mia responsabilità. Ogni accesso Admin mostrerà un promemoria giornaliero finché non riattivo il blocco.
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  {!canKeepDisabled && (
+                    <View style={{
+                      backgroundColor: '#E3F2FD', padding: 8, borderRadius: 6, marginBottom: 10,
+                      borderLeftWidth: 3, borderLeftColor: '#1565C0',
+                    }}>
+                      <Text style={{ fontSize: 11, color: '#0D47A1', lineHeight: 16 }}>
+                        🔒 {!isPrimaryAdmin
+                          ? `Opzione riservata al Responsabile Admin${primaryAdminName ? ` (${primaryAdminName})` : ''}. Il blocco si riattiverà automaticamente alle 00:00.`
+                          : 'Devi firmare la dichiarazione di Responsabile Admin per abilitare questa opzione.'}
+                      </Text>
+                    </View>
+                  )}
+                </>
+              );
+            })()}
 
             <View style={{ backgroundColor: '#FFF8E1', padding: 10, borderRadius: 6, marginBottom: 14, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
               <Text style={{ fontSize: 11, color: '#E65100', lineHeight: 16 }}>

@@ -95,6 +95,17 @@ NOTA: Dare istruzioni dettagliate e sequenziali. L'utente farà solo azioni dire
 - Fix creazione squadra (date)
 - Biglietto da visita con P.IVA
 
+- **Responsabile Admin con dichiarazione obbligatoria** (P0 — 30/04/2026)
+  - Concetto introdotto: "Responsabile Admin" = primo admin registrato (trasferibile via delega)
+  - Modale bloccante al primo accesso: il Responsabile DEVE dichiarare se è il **Legale Rappresentante** o un **Dirigente autorizzato**
+  - Solo il Responsabile con dichiarazione firmata può attivare il flag "Mantieni disattivato oltre la mezzanotte"
+  - Checkbox disabilitata con icona 🔒 e info-box per Admin non-Responsabile
+  - Endpoint: `GET /api/admin/primary-admin/status`, `POST /declare`, `POST /delegate`
+  - Audit log: dichiarazione + delega tracciati con user, IP, timestamp
+  - Delega: invalida la dichiarazione (il nuovo Responsabile deve rifirmare)
+  - Guard backend 403 sul PATCH `/settings/society` con `override_keep_disabled=true` se non-Responsabile o senza dichiarazione
+  - Nuovo router `routes/primary_admin.py` + componente `PrimaryAdminDeclarationModal.tsx`
+
 ## Completato 30/04/2026:
 - **Override certificato athlete-specific via POPUP real-time Admin** (P0)
   - QR scan con cert. scaduto/non autenticato/mancante: Coach blocca e invia notifica all'Admin

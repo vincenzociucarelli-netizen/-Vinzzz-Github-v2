@@ -6,6 +6,7 @@ import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import CertificateOverridePopup from '../../src/components/CertificateOverridePopup';
 import GlobalOverrideStatusPopup from '../../src/components/GlobalOverrideStatusPopup';
+import PrimaryAdminDeclarationModal from '../../src/components/PrimaryAdminDeclarationModal';
 
 const TERMS_TEXT = `TERMINI DI UTILIZZO DELLA PIATTAFORMA
 REGISTRATEAM
@@ -171,6 +172,8 @@ export default function AdminLayout() {
       <CertificateOverridePopup />
       {/* Popup + banner: override globale certificato disattivato */}
       <GlobalOverrideStatusPopup />
+      {/* Dichiarazione obbligatoria Responsabile Admin (se non firmata) */}
+      <PrimaryAdminDeclarationModal />
     </>
   );
 }

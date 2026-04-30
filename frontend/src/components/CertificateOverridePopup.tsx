@@ -52,6 +52,14 @@ export default function CertificateOverridePopup() {
 
   const fetchPending = useCallback(async () => {
     try {
+      // Skip if primary admin still needs to sign declaration (let that modal take priority)
+      try {
+        const paRes = await api.get('/admin/primary-admin/status');
+        if (paRes.data?.is_current_user_primary && !paRes.data?.declaration_signed) {
+          setPending(null);
+          return;
+        }
+      } catch {}
       const res = await api.get('/admin/notifications');
       const list: PendingOverrideNotification[] = res.data || [];
       // Find first pending expired_cert_scan notification not yet dismissed in this session
