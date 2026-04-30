@@ -95,6 +95,18 @@ NOTA: Dare istruzioni dettagliate e sequenziali. L'utente farà solo azioni dire
 - Fix creazione squadra (date)
 - Biglietto da visita con P.IVA
 
+- **Gerarchia Responsabile Admin con Delega/Rimessa/Revoca** (P0 — 30/04/2026, sessione finale)
+  - **Legale Rappresentante**: unica identità persistente (non si "perde" con la delega). Può: delegare ad un Admin di fiducia, revocare la delega in corso.
+  - **Dirigente autorizzato** (delegate): NON può delegare ulteriormente (errore 403). Può SOLO rimettere l'incarico al Legale Rappresentante.
+  - Quando il Legale Rappresentante delega → target diventa automaticamente `authorized_delegate` + `is_primary_admin=True`. Legale Rappresentante mantiene `primary_admin_declaration='legal_representative'` come "identità" anche senza scettro.
+  - **Rimessa incarico**: il delegato restituisce lo scettro al Legale Rappresentante. Endpoint `POST /api/admin/primary-admin/resign`.
+  - **Revoca delega**: il Legale Rappresentante (non più primary dopo la delega) riprende lo scettro. Endpoint `POST /api/admin/primary-admin/revoke`.
+  - Blocco "Non puoi esistere 2 Legali Rappresentanti": il declare di tipo `legal_representative` è bloccato se un altro admin già lo detiene.
+  - Delega reset automatico del flag `override_keep_disabled` sul blocco certificati (il nuovo holder deve ri-decidere).
+  - UI aggiornata: 4 card contestuali (Delega/Rimetti/Revoca/Orfano) mostrate solo se il backend conferma il permesso (`can_delegate`, `can_resign`, `can_revoke`, `orphan_delegate`).
+  - Storico: `primary_admin_declaration_signed`, `primary_admin_delegated`, `primary_admin_resigned`, `primary_admin_delegation_revoked` — tutti tracciati con user, IP, timestamp e dettagli.
+  - E2E test backend: Vincenzo come delegate → **403 delega bloccata**, resign → scettro a pallavolo (legal_rep). Smoke test **17/17 passing**.
+
 - **Pagina UI "Responsabile Admin"** in Impostazioni (30/04/2026)
   - Card "scettro" con avatar del detentore attuale (nome + email + badge "Sei tu")
   - Stato dichiarazione (verde/arancione) con tipo e data di firma

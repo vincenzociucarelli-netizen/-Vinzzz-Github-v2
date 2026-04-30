@@ -72,8 +72,7 @@ async def has_valid_primary_declaration(user: dict) -> bool:
 
 @router.get("/admin/primary-admin/status")
 async def get_primary_admin_status(current_user=Depends(get_current_user)):
-    """Tells the frontend who is primary, whether the current user IS primary,
-    and whether the declaration has been signed."""
+    """Tells the frontend who is primary, the legal rep, and what actions the current user can take."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
 
@@ -83,26 +82,50 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
         primary_user = await db.users.find_one(
             {"id": primary_id},
             {
-                "_id": 0,
-                "id": 1,
-                "email": 1,
-                "full_name": 1,
+                "_id": 0, "id": 1, "email": 1, "full_name": 1,
                 "primary_admin_declaration": 1,
                 "primary_admin_declaration_at": 1,
+                "delegated_by_name": 1, "delegated_at": 1,
             },
         )
+
+    # Legal Representative user (identity that survives delegation)
+    legal_rep = await db.users.find_one(
+        {"role": "admin", "primary_admin_declaration": "legal_representative"},
+        {"_id": 0, "id": 1, "email": 1, "full_name": 1},
+    )
+
+    # Current user's own declaration (fresh from DB)
+    me = await db.users.find_one(
+        {"id": current_user["id"]},
+        {"_id": 0, "primary_admin_declaration": 1, "is_primary_admin": 1},
+    ) or {}
+    my_decl = me.get("primary_admin_declaration")
 
     is_current_primary = primary_user is not None and primary_user.get("id") == current_user["id"]
     declaration_signed = bool(primary_user and primary_user.get("primary_admin_declaration") in PRIMARY_DECLARATION_TYPES)
 
-    # Admin list for potential delegation (excluding the current primary)
+    # Admins that can RECEIVE delegation (only if caller is legal_rep + primary)
     admins = []
-    if is_current_primary:
+    can_delegate = is_current_primary and my_decl == "legal_representative"
+    if can_delegate:
         async for a in db.users.find(
             {"role": "admin", "id": {"$ne": primary_id}},
-            {"_id": 0, "id": 1, "email": 1, "full_name": 1},
+            {"_id": 0, "id": 1, "email": 1, "full_name": 1, "primary_admin_declaration": 1},
         ).sort("full_name", 1):
-            admins.append(a)
+            # Exclude other legal_reps (shouldn't exist but defensive)
+            if a.get("primary_admin_declaration") != "legal_representative":
+                a.pop("primary_admin_declaration", None)
+                admins.append(a)
+
+    # Authorized delegate can RESIGN if legal_rep exists
+    can_resign = is_current_primary and my_decl == "authorized_delegate" and legal_rep is not None
+
+    # Legal rep can REVOKE an active delegation (they are legal_rep + NOT currently primary)
+    can_revoke = (my_decl == "legal_representative" and not is_current_primary and primary_user is not None)
+
+    # Orphan state: current primary declared as authorized_delegate but no legal_rep exists
+    orphan_delegate = is_current_primary and my_decl == "authorized_delegate" and legal_rep is None
 
     return {
         "primary_admin_id": primary_id,
@@ -112,9 +135,18 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
         "declaration_signed": declaration_signed,
         "declaration_type": (primary_user or {}).get("primary_admin_declaration") if primary_user else None,
         "declaration_at": (primary_user or {}).get("primary_admin_declaration_at") if primary_user else None,
-        # Admin list only if current user is primary (for delegation UI)
+        "delegated_by_name": (primary_user or {}).get("delegated_by_name"),
+        "delegated_at": (primary_user or {}).get("delegated_at"),
+        # Legal representative identity (may differ from primary if delegation is active)
+        "legal_representative_id": (legal_rep or {}).get("id"),
+        "legal_representative_name": (legal_rep or {}).get("full_name"),
+        "legal_representative_email": (legal_rep or {}).get("email"),
+        # Action flags for the UI
+        "can_delegate": can_delegate,
+        "can_resign": can_resign,
+        "can_revoke": can_revoke,
+        "orphan_delegate": orphan_delegate,
         "delegable_admins": admins,
-        # If a primary is set via flag; used by FE to distinguish auto-resolved from explicit
         "primary_set_explicitly": bool(await db.users.find_one({"role": "admin", "is_primary_admin": True})),
     }
 
@@ -137,6 +169,19 @@ async def declare_primary_admin(
     if not await is_primary_admin(current_user):
         raise HTTPException(status_code=403, detail="Solo il Responsabile Admin può firmare questa dichiarazione")
 
+    # If declaring as legal_representative, ensure nobody else holds that role
+    if data.declaration_type == "legal_representative":
+        other_legal_rep = await db.users.find_one({
+            "role": "admin",
+            "primary_admin_declaration": "legal_representative",
+            "id": {"$ne": current_user["id"]},
+        })
+        if other_legal_rep:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Esiste già un Legale Rappresentante registrato ({other_legal_rep.get('full_name', 'altro admin')}). Può esistere un solo Legale Rappresentante per società."
+            )
+
     client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
     if "," in (client_ip or ""):
         client_ip = client_ip.split(",")[0].strip()
@@ -147,7 +192,7 @@ async def declare_primary_admin(
         {"id": current_user["id"]},
         {
             "$set": {
-                "is_primary_admin": True,  # ensure the flag is explicit
+                "is_primary_admin": True,
                 "primary_admin_declaration": data.declaration_type,
                 "primary_admin_declaration_at": now_iso,
                 "primary_admin_declaration_ip": client_ip,
@@ -180,48 +225,54 @@ async def delegate_primary_admin(
     request: Request,
     current_user=Depends(get_current_user),
 ):
-    """Current primary admin delegates the role to another admin.
-    The new admin must then sign their own declaration.
+    """Current Legal Representative delegates the scepter to another admin.
+    Only the Legal Representative (with signed declaration) can delegate.
+    The target automatically becomes an 'authorized_delegate' and holds the scepter
+    until they resign (or the legal rep revokes the delegation).
     """
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
 
+    # Must be the current primary AND the legal representative
     if not await is_primary_admin(current_user):
         raise HTTPException(status_code=403, detail="Solo il Responsabile Admin attuale può delegare")
+    me_fresh = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "primary_admin_declaration": 1})
+    if (me_fresh or {}).get("primary_admin_declaration") != "legal_representative":
+        raise HTTPException(
+            status_code=403,
+            detail="Solo il Legale Rappresentante può delegare. I Dirigenti autorizzati possono solo rimettere l'incarico."
+        )
 
     new_admin = await db.users.find_one({"id": data.new_admin_id, "role": "admin"})
     if not new_admin:
         raise HTTPException(status_code=404, detail="Admin destinatario non trovato")
     if new_admin["id"] == current_user["id"]:
         raise HTTPException(status_code=400, detail="Non puoi delegare a te stesso")
+    if new_admin.get("primary_admin_declaration") == "legal_representative":
+        raise HTTPException(status_code=400, detail="Non puoi delegare ad un altro Legale Rappresentante")
 
     client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
     if "," in (client_ip or ""):
         client_ip = client_ip.split(",")[0].strip()
-
     now_iso = datetime.now(timezone.utc).isoformat()
 
-    # Remove primary flag and declaration from the current user
+    # Step down: legal_rep loses primary flag BUT keeps declaration='legal_representative' (identity)
     await db.users.update_one(
         {"id": current_user["id"]},
-        {
-            "$set": {
-                "is_primary_admin": False,
-                "primary_admin_declaration": None,
-                "primary_admin_declaration_at": None,
-                "primary_admin_declaration_ip": None,
-            }
-        },
+        {"$set": {"is_primary_admin": False}},
     )
-    # Set the flag on the new admin (declaration NOT carried over - must re-sign)
+    # Promote: target becomes primary, auto-declared as authorized_delegate
     await db.users.update_one(
         {"id": new_admin["id"]},
         {
             "$set": {
                 "is_primary_admin": True,
-                "primary_admin_declaration": None,
-                "primary_admin_declaration_at": None,
-                "primary_admin_declaration_ip": None,
+                "primary_admin_declaration": "authorized_delegate",
+                "primary_admin_declaration_at": now_iso,
+                "primary_admin_declaration_ip": client_ip,
+                "delegated_by_id": current_user["id"],
+                "delegated_by_name": current_user.get("full_name", ""),
+                "delegated_at": now_iso,
             }
         },
     )
@@ -243,28 +294,175 @@ async def delegate_primary_admin(
         "timestamp": now_iso,
     })
 
-    # Also disable any active "keep_disabled" override (new primary must re-decide)
+    # Any active 'keep_disabled' override must be reset on delegation (new holder must re-authorize)
     settings = await db.settings.find_one({"type": "society"})
     if settings and settings.get("override_keep_disabled"):
         await db.settings.update_one(
             {"type": "society"},
-            {
-                "$set": {
-                    "override_keep_disabled": False,
-                    "block_expired_certificates": True,
-                    "override_auto_reactivate_at": None,
-                    "override_deactivation_reason": None,
-                    "override_deactivated_by": None,
-                    "override_deactivated_by_name": None,
-                    "override_deactivated_at": None,
-                }
-            },
+            {"$set": {
+                "override_keep_disabled": False,
+                "block_expired_certificates": True,
+                "override_auto_reactivate_at": None,
+                "override_deactivation_reason": None,
+                "override_deactivated_by": None,
+                "override_deactivated_by_name": None,
+                "override_deactivated_at": None,
+            }},
         )
 
     return {
-        "message": "Responsabile Admin delegato",
+        "message": "Delega effettuata",
         "new_primary_admin_id": new_admin["id"],
         "new_primary_admin_name": new_admin.get("full_name", ""),
+    }
+
+
+@router.post("/admin/primary-admin/resign")
+async def resign_primary_admin(
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    """The current authorized_delegate (NOT legal_rep) returns the scepter to the legal representative."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    if not await is_primary_admin(current_user):
+        raise HTTPException(status_code=403, detail="Solo il Responsabile Admin in carica può rimettere l'incarico")
+    me_fresh = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "primary_admin_declaration": 1})
+    if (me_fresh or {}).get("primary_admin_declaration") != "authorized_delegate":
+        raise HTTPException(
+            status_code=403,
+            detail="Solo un Dirigente autorizzato può rimettere l'incarico. Il Legale Rappresentante non può 'rimettersi' lo scettro."
+        )
+    legal_rep = await db.users.find_one({"role": "admin", "primary_admin_declaration": "legal_representative"})
+    if not legal_rep:
+        raise HTTPException(
+            status_code=400,
+            detail="Nessun Legale Rappresentante registrato: impossibile rimettere l'incarico. Chiedi al Legale Rappresentante di registrarsi nel sistema."
+        )
+
+    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    if "," in (client_ip or ""):
+        client_ip = client_ip.split(",")[0].strip()
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # Clear delegate's primary + declaration
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {
+            "is_primary_admin": False,
+            "primary_admin_declaration": None,
+            "primary_admin_declaration_at": None,
+            "primary_admin_declaration_ip": None,
+            "delegated_by_id": None,
+            "delegated_by_name": None,
+            "delegated_at": None,
+        }},
+    )
+    # Restore legal_rep as primary
+    await db.users.update_one(
+        {"id": legal_rep["id"]},
+        {"$set": {"is_primary_admin": True}},
+    )
+
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "user_email": current_user.get("email", ""),
+        "user_name": current_user.get("full_name", ""),
+        "action": "primary_admin_resigned",
+        "details": {
+            "from_user_id": current_user["id"],
+            "from_user_name": current_user.get("full_name", ""),
+            "to_user_id": legal_rep["id"],
+            "to_user_name": legal_rep.get("full_name", ""),
+        },
+        "ip_address": client_ip,
+        "created_at": datetime.now(timezone.utc),
+        "timestamp": now_iso,
+    })
+
+    # Reset override keep_disabled (new holder decides)
+    await db.settings.update_one(
+        {"type": "society"},
+        {"$set": {"override_keep_disabled": False, "block_expired_certificates": True}},
+    )
+
+    return {
+        "message": "Incarico rimesso al Legale Rappresentante",
+        "legal_rep_id": legal_rep["id"],
+        "legal_rep_name": legal_rep.get("full_name", ""),
+    }
+
+
+@router.post("/admin/primary-admin/revoke")
+async def revoke_delegation(
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    """The Legal Representative revokes an active delegation and reclaims the scepter."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    me_fresh = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "primary_admin_declaration": 1, "is_primary_admin": 1})
+    if (me_fresh or {}).get("primary_admin_declaration") != "legal_representative":
+        raise HTTPException(status_code=403, detail="Solo il Legale Rappresentante può revocare una delega")
+    if me_fresh.get("is_primary_admin"):
+        raise HTTPException(status_code=400, detail="Sei già Responsabile Admin: nessuna delega attiva da revocare")
+
+    current_delegate = await db.users.find_one({"role": "admin", "is_primary_admin": True})
+    if not current_delegate:
+        raise HTTPException(status_code=400, detail="Nessun delegato attualmente in carica")
+    if current_delegate["id"] == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Stato incoerente: sei già il Responsabile")
+
+    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    if "," in (client_ip or ""):
+        client_ip = client_ip.split(",")[0].strip()
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # Clear delegate
+    await db.users.update_one(
+        {"id": current_delegate["id"]},
+        {"$set": {
+            "is_primary_admin": False,
+            "primary_admin_declaration": None,
+            "primary_admin_declaration_at": None,
+            "primary_admin_declaration_ip": None,
+            "delegated_by_id": None,
+            "delegated_by_name": None,
+            "delegated_at": None,
+        }},
+    )
+    # Restore legal_rep
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {"is_primary_admin": True}},
+    )
+
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "user_email": current_user.get("email", ""),
+        "user_name": current_user.get("full_name", ""),
+        "action": "primary_admin_delegation_revoked",
+        "details": {
+            "revoked_user_id": current_delegate["id"],
+            "revoked_user_name": current_delegate.get("full_name", ""),
+        },
+        "ip_address": client_ip,
+        "created_at": datetime.now(timezone.utc),
+        "timestamp": now_iso,
+    })
+
+    # Reset override keep_disabled (scepter changed hands)
+    await db.settings.update_one(
+        {"type": "society"},
+        {"$set": {"override_keep_disabled": False, "block_expired_certificates": True}},
+    )
+
+    return {
+        "message": "Delega revocata. Hai ripreso l'incarico.",
+        "revoked_user_id": current_delegate["id"],
+        "revoked_user_name": current_delegate.get("full_name", ""),
     }
 
 
@@ -277,13 +475,14 @@ async def get_primary_admin_history(current_user=Depends(get_current_user)):
     actions = [
         "primary_admin_declaration_signed",
         "primary_admin_delegated",
+        "primary_admin_resigned",
+        "primary_admin_delegation_revoked",
     ]
     events = []
     async for log in db.audit_logs.find(
         {"action": {"$in": actions}},
         {"_id": 0},
     ).sort("created_at", -1).limit(50):
-        # Remove ObjectId-like fields and normalize created_at
         log.pop("_id", None)
         if "created_at" in log and not isinstance(log["created_at"], str):
             try:

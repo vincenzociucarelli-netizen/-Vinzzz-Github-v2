@@ -41,6 +41,15 @@ interface PrimaryStatus {
   declaration_signed: boolean;
   declaration_type: 'legal_representative' | 'authorized_delegate' | null;
   declaration_at: string | null;
+  delegated_by_name?: string | null;
+  delegated_at?: string | null;
+  legal_representative_id?: string | null;
+  legal_representative_name?: string | null;
+  legal_representative_email?: string | null;
+  can_delegate: boolean;
+  can_resign: boolean;
+  can_revoke: boolean;
+  orphan_delegate: boolean;
   delegable_admins: Admin[];
   primary_set_explicitly: boolean;
 }
@@ -81,6 +90,8 @@ export default function PrimaryAdminPage() {
   const [delegateModalOpen, setDelegateModalOpen] = useState(false);
   const [selectedDelegate, setSelectedDelegate] = useState<Admin | null>(null);
   const [delegating, setDelegating] = useState(false);
+  const [resigning, setResigning] = useState(false);
+  const [revoking, setRevoking] = useState(false);
 
   const showMsg = (title: string, message: string) => {
     if (Platform.OS === 'web') window.alert(`${title}\n\n${message}`);
@@ -124,7 +135,7 @@ export default function PrimaryAdminPage() {
       setSelectedDelegate(null);
       showMsg(
         '✅ Delega completata',
-        `${selectedDelegate.full_name} è ora il nuovo Responsabile Admin. Dovrà firmare la propria dichiarazione al prossimo accesso.`
+        `${selectedDelegate.full_name} è ora il Responsabile Admin come Dirigente autorizzato. Potrà rimettere l'incarico in qualsiasi momento. Tu resti il Legale Rappresentante e potrai revocare la delega.`
       );
       await loadAll();
     } catch (error: any) {
@@ -132,6 +143,50 @@ export default function PrimaryAdminPage() {
       showMsg('Errore', msg);
     } finally {
       setDelegating(false);
+    }
+  };
+
+  const handleResign = async () => {
+    if (!status?.legal_representative_name) return;
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm(`Rimettere l'incarico al Legale Rappresentante (${status.legal_representative_name})?\n\nLo scettro tornerà a lui/lei.`)
+      : await new Promise<boolean>(r => Alert.alert('Rimetti l\'incarico', `Rimettere l'incarico a ${status.legal_representative_name}?`, [
+          { text: 'Annulla', style: 'cancel', onPress: () => r(false) },
+          { text: 'Rimetti incarico', style: 'destructive', onPress: () => r(true) },
+        ]));
+    if (!confirmed) return;
+    setResigning(true);
+    try {
+      const res = await api.post('/admin/primary-admin/resign');
+      showMsg('✅ Incarico rimesso', `Lo scettro è tornato a ${res.data?.legal_rep_name || 'Legale Rappresentante'}.`);
+      await loadAll();
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || 'Impossibile rimettere l\'incarico';
+      showMsg('Errore', msg);
+    } finally {
+      setResigning(false);
+    }
+  };
+
+  const handleRevoke = async () => {
+    if (!status?.primary_admin_name) return;
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm(`Revocare la delega a ${status.primary_admin_name} e riprendere l'incarico?`)
+      : await new Promise<boolean>(r => Alert.alert('Revoca delega', `Revocare la delega a ${status.primary_admin_name}?`, [
+          { text: 'Annulla', style: 'cancel', onPress: () => r(false) },
+          { text: 'Revoca', style: 'destructive', onPress: () => r(true) },
+        ]));
+    if (!confirmed) return;
+    setRevoking(true);
+    try {
+      await api.post('/admin/primary-admin/revoke');
+      showMsg('✅ Delega revocata', 'Hai ripreso l\'incarico di Responsabile Admin.');
+      await loadAll();
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || 'Impossibile revocare';
+      showMsg('Errore', msg);
+    } finally {
+      setRevoking(false);
     }
   };
 
@@ -207,15 +262,28 @@ export default function PrimaryAdminPage() {
           )}
         </View>
 
-        {/* Delegation (only if current user is primary) */}
-        {isPrimary && (
+        {/* Orphan state warning */}
+        {status.orphan_delegate && (
+          <View style={[styles.card, { borderColor: '#E65100', backgroundColor: '#FFF3E0' }]}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="warning" size={20} color="#E65100" />
+              <Text style={[styles.cardTitle, { color: '#E65100' }]}>Nessun Legale Rappresentante registrato</Text>
+            </View>
+            <Text style={styles.warningText}>
+              Sei Responsabile come Dirigente autorizzato ma nel sistema non risulta registrato nessun Legale Rappresentante. Non potrai "rimettere l'incarico". Chiedi al Legale Rappresentante di registrarsi come Admin nella società.
+            </Text>
+          </View>
+        )}
+
+        {/* Delegation (only for Legal Representative who is primary) */}
+        {status.can_delegate && (
           <View style={[styles.card, { borderColor: '#7B1FA2' }]}>
             <View style={styles.cardHeader}>
               <Ionicons name="swap-horizontal" size={20} color="#7B1FA2" />
-              <Text style={[styles.cardTitle, { color: '#7B1FA2' }]}>Delega ad un altro Admin</Text>
+              <Text style={[styles.cardTitle, { color: '#7B1FA2' }]}>Delega ad un Admin di fiducia</Text>
             </View>
             <Text style={styles.hintText}>
-              Puoi passare lo "scettro" ad un altro Admin della società. La dichiarazione attuale verrà annullata e il nuovo Responsabile dovrà firmarne una propria.
+              Come Legale Rappresentante puoi passare lo "scettro" ad un altro Admin della società. Il delegato potrà operare come Dirigente autorizzato ma NON potrà a sua volta delegare: potrà solo rimettere l'incarico a te, oppure sarai tu a revocare la delega.
             </Text>
             {status.delegable_admins.length === 0 ? (
               <Text style={styles.mutedText}>Nessun altro Admin disponibile per la delega.</Text>
@@ -243,6 +311,69 @@ export default function PrimaryAdminPage() {
           </View>
         )}
 
+        {/* Resign (for authorized_delegate primary) */}
+        {status.can_resign && (
+          <View style={[styles.card, { borderColor: '#FF6F00' }]}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="return-up-back" size={20} color="#FF6F00" />
+              <Text style={[styles.cardTitle, { color: '#FF6F00' }]}>Rimetti l'incarico</Text>
+            </View>
+            <Text style={styles.hintText}>
+              Come Dirigente autorizzato non puoi delegare. Puoi però rimettere l'incarico al Legale Rappresentante, che tornerà ad essere Responsabile Admin.
+            </Text>
+            <View style={styles.infoBox}>
+              <Text style={styles.infoBoxLabel}>Incarico verrà rimesso a</Text>
+              <Text style={styles.infoBoxValue}>{status.legal_representative_name || '—'}</Text>
+              {status.legal_representative_email && (
+                <Text style={styles.infoBoxMeta}>{status.legal_representative_email}</Text>
+              )}
+            </View>
+            <TouchableOpacity
+              onPress={handleResign}
+              disabled={resigning}
+              style={[styles.resignBtn, resigning && { opacity: 0.5 }]}
+              data-testid="resign-btn"
+            >
+              {resigning ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="return-up-back" size={16} color="#fff" />
+                  <Text style={styles.resignBtnText}>RIMETTI L'INCARICO</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Revoke (legal rep not currently primary) */}
+        {status.can_revoke && (
+          <View style={[styles.card, { borderColor: '#C62828' }]}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="alert-circle" size={20} color="#C62828" />
+              <Text style={[styles.cardTitle, { color: '#C62828' }]}>Revoca delega attiva</Text>
+            </View>
+            <Text style={styles.hintText}>
+              Come Legale Rappresentante puoi revocare in qualsiasi momento la delega assegnata a {status.primary_admin_name} e riprendere l'incarico.
+            </Text>
+            <TouchableOpacity
+              onPress={handleRevoke}
+              disabled={revoking}
+              style={[styles.revokeBtn, revoking && { opacity: 0.5 }]}
+              data-testid="revoke-btn"
+            >
+              {revoking ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="close-circle" size={16} color="#fff" />
+                  <Text style={styles.resignBtnText}>REVOCA E RIPRENDI L'INCARICO</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* History */}
         <View style={[styles.card, { borderColor: '#5856D6' }]}>
           <View style={styles.cardHeader}>
@@ -257,9 +388,10 @@ export default function PrimaryAdminPage() {
                 <View style={styles.histDot} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.histAction}>
-                    {e.action === 'primary_admin_declaration_signed'
-                      ? '✍️ Dichiarazione firmata'
-                      : '🔄 Delega Responsabile Admin'}
+                    {e.action === 'primary_admin_declaration_signed' && '✍️ Dichiarazione firmata'}
+                    {e.action === 'primary_admin_delegated' && '🔄 Delega Responsabile Admin'}
+                    {e.action === 'primary_admin_resigned' && '↩️ Incarico rimesso'}
+                    {e.action === 'primary_admin_delegation_revoked' && '🚫 Delega revocata'}
                   </Text>
                   <Text style={styles.histMeta}>
                     {e.user_name || e.user_email || '—'} • {formatDateTime(e.created_at || e.timestamp)}
@@ -267,6 +399,16 @@ export default function PrimaryAdminPage() {
                   {e.action === 'primary_admin_delegated' && e.details && (
                     <Text style={styles.histDetail}>
                       Da {e.details.from_user_name || '—'} → {e.details.to_user_name || '—'}
+                    </Text>
+                  )}
+                  {e.action === 'primary_admin_resigned' && e.details && (
+                    <Text style={styles.histDetail}>
+                      {e.details.from_user_name || '—'} → {e.details.to_user_name || '—'} (Legale Rappresentante)
+                    </Text>
+                  )}
+                  {e.action === 'primary_admin_delegation_revoked' && e.details && (
+                    <Text style={styles.histDetail}>
+                      Delega a {e.details.revoked_user_name || '—'} revocata
                     </Text>
                   )}
                   {e.action === 'primary_admin_declaration_signed' && e.details?.declaration_type && (
@@ -404,6 +546,22 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#CE93D8',
   },
   delegateCtaText: { color: '#7B1FA2', fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
+  resignBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#FF6F00', paddingVertical: 12, borderRadius: 8, marginTop: 10,
+  },
+  revokeBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#C62828', paddingVertical: 12, borderRadius: 8, marginTop: 10,
+  },
+  resignBtnText: { color: '#fff', fontSize: 13, fontWeight: '800', letterSpacing: 0.3 },
+  infoBox: {
+    backgroundColor: '#FAFAFA', borderRadius: 8, padding: 10, marginTop: 8,
+    borderWidth: 1, borderColor: '#EEE',
+  },
+  infoBoxLabel: { fontSize: 10, color: '#888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+  infoBoxValue: { fontSize: 14, fontWeight: '700', color: '#1A1A1A', marginTop: 2 },
+  infoBoxMeta: { fontSize: 12, color: '#666', marginTop: 2 },
   histItem: { flexDirection: 'row', gap: 10, paddingVertical: 8 },
   histDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#5856D6', marginTop: 6 },
   histAction: { fontSize: 13, fontWeight: '700', color: '#333' },
