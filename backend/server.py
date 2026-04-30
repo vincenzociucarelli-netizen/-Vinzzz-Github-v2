@@ -10809,14 +10809,23 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
     # NOTE: Override è SEMPRE athlete-specific e richiede approvazione Admin via notifica
     # (no in-place override per evitare abusi su atleti diversi)
     if certificate_blocked and not attendance_data.force:
-        # Check if there's already a PENDING (non-authorized) notification for this athlete today
+        # Check if there's ALREADY a notification for this athlete today
+        # (pending OR authorized OR denied): in questi casi NON creiamo una nuova richiesta.
+        # - pending  → l'admin deve ancora decidere sulla richiesta di stamattina
+        # - authorized → l'atleta ha già consumato il suo override giornaliero
+        # - denied   → l'admin ha già detto NO oggi, non riproporre
         try:
             existing_notif = await db.admin_notifications.find_one({
                 "type": "expired_cert_scan",
                 "athlete_id": athlete_id,
                 "date": today,
-                "override_status": {"$in": [None, "pending"]},
             })
+            already_used_override = bool(
+                existing_notif and existing_notif.get("override_status") == "authorized"
+            )
+            already_denied_today = bool(
+                existing_notif and existing_notif.get("override_status") == "denied"
+            )
             if not existing_notif:
                 coach_name = current_user.get("full_name") or current_user.get("email") or "Coach"
                 await db.admin_notifications.insert_one({
@@ -10846,6 +10855,23 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
                 })
         except Exception as e:
             logger.warning(f"Could not create admin notification for expired cert scan: {e}")
+            already_used_override = False
+            already_denied_today = False
+
+        # Build an informative block reason for the Coach so they understand
+        # why the override is NOT being requested again today.
+        coach_block_reason = certificate_block_reason
+        if already_used_override:
+            coach_block_reason = (
+                f"{certificate_block_reason}\n\n"
+                f"⚠️ {athlete_name} ha già usato l'override giornaliero autorizzato dall'Admin. "
+                f"Non può rientrare oggi senza un certificato medico valido."
+            )
+        elif already_denied_today:
+            coach_block_reason = (
+                f"{certificate_block_reason}\n\n"
+                f"⛔ L'Admin ha già rifiutato l'override per {athlete_name} oggi."
+            )
 
         return {
             "id": None,
@@ -10854,10 +10880,12 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
             "team_id": team_id,
             "team_name": team.get("name"),
             "status": "blocked",
-            "block_reason": certificate_block_reason,
+            "block_reason": coach_block_reason,
             "certificate_blocked": True,
             "can_override": False,  # Override gestito SOLO via notifica Admin (athlete-specific)
-            "awaiting_admin_authorization": True,
+            "awaiting_admin_authorization": not (already_used_override or already_denied_today),
+            "override_already_used_today": already_used_override,
+            "override_denied_today": already_denied_today,
         }
     
     # 7. Create attendance record
