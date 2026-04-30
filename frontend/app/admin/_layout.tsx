@@ -4,6 +4,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet, Platform, Alert } from 'react-native';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
+import CertificateOverridePopup from '../../src/components/CertificateOverridePopup';
 
 const TERMS_TEXT = `TERMINI DI UTILIZZO DELLA PIATTAFORMA
 REGISTRATEAM
@@ -153,16 +154,21 @@ export default function AdminLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="teams" />
-      <Stack.Screen name="team/[id]" />
-      <Stack.Screen name="athletes" />
-      <Stack.Screen name="athlete-search" />
-      <Stack.Screen name="attendances" />
-      <Stack.Screen name="prime-squadre" />
-      <Stack.Screen name="prime-squadre/[id]" />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="teams" />
+        <Stack.Screen name="team/[id]" />
+        <Stack.Screen name="athletes" />
+        <Stack.Screen name="athlete-search" />
+        <Stack.Screen name="attendances" />
+        <Stack.Screen name="prime-squadre" />
+        <Stack.Screen name="prime-squadre/[id]" />
+      </Stack>
+      {/* Real-time popup: se un Coach scansiona un atleta con cert scaduto,
+          appare qui il modale con AUTORIZZA / RIFIUTA */}
+      <CertificateOverridePopup />
+    </>
   );
 }
 

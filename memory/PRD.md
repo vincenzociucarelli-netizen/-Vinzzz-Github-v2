@@ -96,15 +96,19 @@ NOTA: Dare istruzioni dettagliate e sequenziali. L'utente farà solo azioni dire
 - Biglietto da visita con P.IVA
 
 ## Completato 30/04/2026:
-- **Override certificato athlete-specific via notifica Admin** (P0)
-  - QR scan con cert. scaduto: Coach NON può approvare in-place
-  - Notifica popup all'Admin con nome atleta, coach, squadra
-  - Inline AUTORIZZA/RIFIUTA su `/admin/notifications` (motivo obbligatorio min 5 caratteri)
+- **Override certificato athlete-specific via POPUP real-time Admin** (P0)
+  - QR scan con cert. scaduto: Coach blocca l'ingresso e invia notifica all'Admin
+  - **Popup modale** su qualsiasi schermata admin (polling 10s): appare automaticamente quando il Coach scansiona un atleta con certificato scaduto
+  - Mostra: nome atleta, squadra, coach, motivo blocco + banner "valido solo per UN ingresso, riservato a [Nome Atleta]"
+  - Pulsanti: **NEGA INGRESSO** (rosso) / **ATTIVA OVERRIDE** (verde, abilitato con motivo ≥5 caratteri)
+  - Link "Decido più tardi" per posticipare senza chiudere la richiesta
   - Override **single-use, athlete-specific, no time limit** (consumato al primo ingresso valido)
   - Endpoint: `POST /api/admin/notifications/{id}/authorize-override`, `POST /api/admin/notifications/{id}/deny-override`
   - Audit log completo (user, IP, timestamp, source=admin_notification)
   - Coach popup post-override: "Accesso consentito SOLO per questa volta in attesa del nuovo certificato" (no IN PROVA)
-  - Rimossa modale override sul Coach (l'unica via è la notifica Admin)
+  - Notifiche anche fruibili su `/admin/notifications` con pulsanti inline (flusso asincrono)
+  - Rimossa modale override sul Coach (l'override passa SEMPRE dall'Admin)
+  - Nuovo componente `CertificateOverridePopup.tsx` montato in `app/admin/_layout.tsx`
   - +3 smoke regression tests (totale 17/17 passing)
 
 ## IN SOSPESO (prossima sessione):
