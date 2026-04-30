@@ -1,8 +1,13 @@
 # Test Credentials
 
-## Admin
+## Admin (persona fisica - può firmare come LR o autorizzato)
 - Email: vincenzo.ciucarelli@gmail.com
 - Password: Test123
+
+## Admin (account intestato alla SOCIETÀ - NON può firmare come LR)
+- Email: pallavoloperugia@gmail.com
+- Password: Test123
+- Nota: il nome profilo è "PALLAVOLO PERUGIA SSD A RL", quindi la modal di dichiarazione disabilita l'opzione "Legale Rappresentante" (può solo firmare come "incaricato" se serve come account operativo)
 
 ## Coach (Alice)
 - Email: alice@test.com

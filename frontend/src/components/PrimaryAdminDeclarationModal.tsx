@@ -38,6 +38,7 @@ export default function PrimaryAdminDeclarationModal() {
   const [selected, setSelected] = useState<DeclarationType | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [accountIsSociety, setAccountIsSociety] = useState(false);
 
   const showMsg = (title: string, message: string) => {
     if (Platform.OS === 'web') window.alert(`${title}\n\n${message}`);
@@ -52,6 +53,7 @@ export default function PrimaryAdminDeclarationModal() {
       // (and current user hasn't signed yet). Backend computes this via `should_show_declaration_popup`.
       if (d.should_show_declaration_popup) {
         setVisible(true);
+        setAccountIsSociety(Boolean(d.account_looks_like_society));
       } else {
         setVisible(false);
       }
@@ -113,16 +115,35 @@ export default function PrimaryAdminDeclarationModal() {
               <Text style={styles.sectionLabel}>Dichiaro di essere:</Text>
 
               <TouchableOpacity
-                onPress={() => setSelected('legal_representative')}
-                style={[styles.option, selected === 'legal_representative' && styles.optionSelected]}
+                onPress={() => {
+                  if (accountIsSociety) {
+                    showMsg(
+                      'Opzione non disponibile',
+                      "Questo account risulta intestato ad una società. Il Legale Rappresentante deve essere una persona fisica (Presidente, Amministratore, ecc.). Registra il Legale Rappresentante come admin con il suo nome e cognome personali."
+                    );
+                    return;
+                  }
+                  setSelected('legal_representative');
+                }}
+                style={[
+                  styles.option,
+                  selected === 'legal_representative' && styles.optionSelected,
+                  accountIsSociety && { opacity: 0.55, backgroundColor: '#F0F0F0' },
+                ]}
                 data-testid="decl-legal-rep"
               >
                 <View style={[styles.radio, selected === 'legal_representative' && styles.radioOn]}>
                   {selected === 'legal_representative' && <View style={styles.radioDot} />}
+                  {accountIsSociety && <Ionicons name="lock-closed" size={10} color="#999" />}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.optionTitle}>Legale Rappresentante della Società</Text>
                   <Text style={styles.optionDesc}>Sono il Presidente o il legale rappresentante pro-tempore iscritto nell'atto costitutivo / statuto.</Text>
+                  {accountIsSociety && (
+                    <Text style={[styles.optionDesc, { color: '#C62828', marginTop: 4, fontWeight: '700' }]}>
+                      🔒 Non disponibile: questo account è intestato ad una società, non a una persona fisica.
+                    </Text>
+                  )}
                 </View>
               </TouchableOpacity>
 

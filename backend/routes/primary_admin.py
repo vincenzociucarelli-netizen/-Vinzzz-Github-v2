@@ -28,6 +28,28 @@ router = APIRouter()
 
 PRIMARY_DECLARATION_TYPES = {"legal_representative", "authorized_delegate"}
 
+# Pattern che indicano un nome di società, non di persona fisica.
+# Un account con questi pattern NON può dichiararsi "Legale Rappresentante".
+_SOCIETY_PATTERNS = [
+    "SSD", "S.S.D", "SRL", "S.R.L", "SPA", "S.P.A", "ASD", "A.S.D",
+    "APS", "A.P.S", "APD", "A.P.D", "ONLUS", "ETS", "E.T.S",
+    "COOPERATIVA", "SOCIETA", "SOCIETÀ", "ASSOCIAZIONE", "A RL",
+]
+
+
+def looks_like_society_name(full_name: str) -> bool:
+    """Heuristic: detects if a full_name likely refers to a society/organization
+    (not a physical person). Used to prevent such accounts from declaring themselves
+    as Legal Representative."""
+    if not full_name:
+        return False
+    upper = full_name.upper()
+    for pat in _SOCIETY_PATTERNS:
+        # Match as whole word/token or substring with boundaries
+        if pat in upper:
+            return True
+    return False
+
 
 class PrimaryDeclarationRequest(BaseModel):
     declaration_type: str  # "legal_representative" | "authorized_delegate"
@@ -165,6 +187,7 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
         "can_crown": can_crown,
         "orphan_delegate": orphan_delegate,
         "should_show_declaration_popup": should_show_declaration_popup,
+        "account_looks_like_society": looks_like_society_name(current_user.get("full_name", "")),
         "delegable_admins": admins,
         "crownable_admins": crownable_admins,
         "primary_set_explicitly": bool(await db.users.find_one({"role": "admin", "is_primary_admin": True})),
@@ -202,6 +225,13 @@ async def declare_primary_admin(
     now_iso = datetime.now(timezone.utc).isoformat()
 
     if data.declaration_type == "legal_representative":
+        # GUARD: accounts that look like a society cannot be Legal Representative
+        if looks_like_society_name(current_user.get("full_name", "")):
+            raise HTTPException(
+                status_code=400,
+                detail="Questo account risulta essere intestato ad una società (non ad una persona fisica). Il Legale Rappresentante deve essere SEMPRE una persona fisica (Presidente, Amministratore, ecc.). Registra il Legale Rappresentante con il suo nome e cognome personali."
+            )
+
         # Reject if another LR already exists
         other_legal_rep = await db.users.find_one({
             "role": "admin",
