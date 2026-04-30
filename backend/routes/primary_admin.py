@@ -308,20 +308,20 @@ async def declare_primary_admin(
         client_ip = client_ip.split(",")[0].strip()
     now_iso = datetime.now(timezone.utc).isoformat()
 
-    if data.declaration_type == "legal_representative":
-        # GUARD 1: accounts that look like a society cannot be Legal Representative
-        if looks_like_society_name(current_user.get("full_name", "")):
-            raise HTTPException(
-                status_code=400,
-                detail="Questo account risulta essere intestato ad una società (non ad una persona fisica). Il Legale Rappresentante deve essere SEMPRE una persona fisica (Presidente, Amministratore, ecc.). Registra il Legale Rappresentante con il suo nome e cognome personali."
-            )
-        # GUARD 2: email corrisponde all'email istituzionale/PEC registrata nel profilo Società
-        if await is_society_institutional_email(current_user.get("email", "")):
-            raise HTTPException(
-                status_code=400,
-                detail="Questa email risulta essere l'email istituzionale o PEC della Società (registrata nel profilo). Il Legale Rappresentante deve firmare con la propria email personale."
-            )
+    # GUARD GLOBALE: account societari (nome società o email/PEC istituzionale) non possono
+    # firmare NESSUNA dichiarazione di Responsabile Admin. L'account resta solo operativo/email.
+    if looks_like_society_name(current_user.get("full_name", "")):
+        raise HTTPException(
+            status_code=400,
+            detail="Questo account risulta intestato ad una società, non ad una persona fisica. Non può firmare dichiarazioni di ruolo. Registra il Responsabile Admin con un account personale (nome e cognome)."
+        )
+    if await is_society_institutional_email(current_user.get("email", "")):
+        raise HTTPException(
+            status_code=400,
+            detail="Questa email risulta essere l'email istituzionale o PEC della Società. È riservata alle comunicazioni societarie e non può firmare dichiarazioni di ruolo. Il Responsabile Admin deve usare la propria email personale."
+        )
 
+    if data.declaration_type == "legal_representative":
         # Reject if another LR already exists
         other_legal_rep = await db.users.find_one({
             "role": "admin",

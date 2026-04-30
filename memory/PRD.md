@@ -95,6 +95,12 @@ NOTA: Dare istruzioni dettagliate e sequenziali. L'utente farà solo azioni dire
 - Fix creazione squadra (date)
 - Biglietto da visita con P.IVA
 
+- **Account istituzionali NON firmano NESSUNA dichiarazione** (P0 — 30/04/2026, refinement)
+  - Regola consolidata: se il nome account contiene pattern societari (SSD/SRL/SPA/ASD/...) OPPURE l'email coincide con email/PEC istituzionale della Società → l'account NON può firmare né `legal_representative` né `authorized_delegate`
+  - Guard backend globale nel `/primary-admin/declare`: entrambe le dichiarazioni ritornano 400 con messaggio chiaro
+  - Frontend modal: vista dedicata "Account istituzionale" con icona 🏢 e testo che spiega: "è riservato alle comunicazioni societarie" + CTA "HO CAPITO, CHIUDI"
+  - Rationale: l'email della società è solo operativa (ricevute, comunicazioni) — per operare come Responsabile Admin bisogna usare un account personale
+
 - **Email automatiche al Legale Rappresentante** (P1 — 30/04/2026)
   - Nuovo helper `_notify_legal_rep_scepter_event()` in `routes/primary_admin.py` (usa `email_service.send_transactional_email` con Brevo)
   - Eventi che triggerano email al LR:

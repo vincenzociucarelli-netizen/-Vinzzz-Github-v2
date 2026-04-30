@@ -114,65 +114,66 @@ export default function PrimaryAdminDeclarationModal() {
 
               <Text style={styles.sectionLabel}>Dichiaro di essere:</Text>
 
-              <TouchableOpacity
-                onPress={() => {
-                  if (accountIsSociety) {
-                    showMsg(
-                      'Opzione non disponibile',
-                      "Questo account risulta intestato ad una società. Il Legale Rappresentante deve essere una persona fisica (Presidente, Amministratore, ecc.). Registra il Legale Rappresentante come admin con il suo nome e cognome personali."
-                    );
-                    return;
-                  }
-                  setSelected('legal_representative');
-                }}
-                style={[
-                  styles.option,
-                  selected === 'legal_representative' && styles.optionSelected,
-                  accountIsSociety && { opacity: 0.55, backgroundColor: '#F0F0F0' },
-                ]}
-                data-testid="decl-legal-rep"
-              >
-                <View style={[styles.radio, selected === 'legal_representative' && styles.radioOn]}>
-                  {selected === 'legal_representative' && <View style={styles.radioDot} />}
-                  {accountIsSociety && <Ionicons name="lock-closed" size={10} color="#999" />}
+              {accountIsSociety ? (
+                <View style={styles.institutionalNotice}>
+                  <Ionicons name="business" size={28} color="#C62828" />
+                  <Text style={styles.institutionalTitle}>Account istituzionale</Text>
+                  <Text style={styles.institutionalText}>
+                    Questo account risulta <Text style={styles.bold}>intestato alla società</Text> (nome o email istituzionale/PEC).
+                  </Text>
+                  <Text style={styles.institutionalText}>
+                    Gli account istituzionali sono riservati alle <Text style={styles.bold}>comunicazioni societarie</Text> e <Text style={styles.bold}>non possono firmare dichiarazioni di ruolo</Text>.
+                  </Text>
+                  <Text style={[styles.institutionalText, { color: '#1565C0', marginTop: 8 }]}>
+                    👉 Registra il Responsabile Admin con un account personale (nome e cognome) ed effettua il login da quell'account.
+                  </Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.optionTitle}>Legale Rappresentante della Società</Text>
-                  <Text style={styles.optionDesc}>Sono il Presidente o il legale rappresentante pro-tempore iscritto nell'atto costitutivo / statuto.</Text>
-                  {accountIsSociety && (
-                    <Text style={[styles.optionDesc, { color: '#C62828', marginTop: 4, fontWeight: '700' }]}>
-                      🔒 Non disponibile: questo account è riservato alla società (nome o email istituzionale/PEC).
-                    </Text>
-                  )}
-                </View>
-              </TouchableOpacity>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    onPress={() => setSelected('legal_representative')}
+                    style={[styles.option, selected === 'legal_representative' && styles.optionSelected]}
+                    data-testid="decl-legal-rep"
+                  >
+                    <View style={[styles.radio, selected === 'legal_representative' && styles.radioOn]}>
+                      {selected === 'legal_representative' && <View style={styles.radioDot} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.optionTitle}>Legale Rappresentante della Società</Text>
+                      <Text style={styles.optionDesc}>Sono il Presidente o il legale rappresentante pro-tempore iscritto nell'atto costitutivo / statuto.</Text>
+                    </View>
+                  </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => setSelected('authorized_delegate')}
-                style={[styles.option, selected === 'authorized_delegate' && styles.optionSelected]}
-                data-testid="decl-delegate"
-              >
-                <View style={[styles.radio, selected === 'authorized_delegate' && styles.radioOn]}>
-                  {selected === 'authorized_delegate' && <View style={styles.radioDot} />}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.optionTitle}>Dirigente autorizzato</Text>
-                  <Text style={styles.optionDesc}>Sono un dirigente della società formalmente autorizzato dal Legale Rappresentante a esercitare questo ruolo.</Text>
-                </View>
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setSelected('authorized_delegate')}
+                    style={[styles.option, selected === 'authorized_delegate' && styles.optionSelected]}
+                    data-testid="decl-delegate"
+                  >
+                    <View style={[styles.radio, selected === 'authorized_delegate' && styles.radioOn]}>
+                      {selected === 'authorized_delegate' && <View style={styles.radioDot} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.optionTitle}>Dirigente autorizzato</Text>
+                      <Text style={styles.optionDesc}>Sono un dirigente della società formalmente autorizzato dal Legale Rappresentante a esercitare questo ruolo.</Text>
+                    </View>
+                  </TouchableOpacity>
+                </>
+              )}
 
-              <TouchableOpacity
-                onPress={() => setConfirmed(!confirmed)}
-                style={[styles.checkbox, confirmed && styles.checkboxOn]}
-                data-testid="decl-confirm"
-              >
-                <View style={[styles.checkSquare, confirmed && styles.checkSquareOn]}>
-                  {confirmed && <Ionicons name="checkmark" size={14} color="#fff" />}
-                </View>
-                <Text style={styles.checkText}>
-                  Confermo sotto la mia responsabilità che le informazioni fornite sono veritiere. La dichiarazione verrà registrata nell'audit log con data, ora e IP.
-                </Text>
-              </TouchableOpacity>
+              {!accountIsSociety && (
+                <TouchableOpacity
+                  onPress={() => setConfirmed(!confirmed)}
+                  style={[styles.checkbox, confirmed && styles.checkboxOn]}
+                  data-testid="decl-confirm"
+                >
+                  <View style={[styles.checkSquare, confirmed && styles.checkSquareOn]}>
+                    {confirmed && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  </View>
+                  <Text style={styles.checkText}>
+                    Confermo sotto la mia responsabilità che le informazioni fornite sono veritiere. La dichiarazione verrà registrata nell'audit log con data, ora e IP.
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               <View style={styles.infoBox}>
                 <Ionicons name="information-circle" size={16} color="#1565C0" />
@@ -182,18 +183,28 @@ export default function PrimaryAdminDeclarationModal() {
               </View>
 
               <View style={styles.actions}>
-                <TouchableOpacity
-                  onPress={submit}
-                  disabled={loading || !selected || !confirmed}
-                  style={[styles.btnPrimary, (loading || !selected || !confirmed) && styles.btnDisabled]}
-                  data-testid="decl-submit"
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={styles.btnPrimaryText}>FIRMA E CONFERMA</Text>
-                  )}
-                </TouchableOpacity>
+                {accountIsSociety ? (
+                  <TouchableOpacity
+                    onPress={() => { setVisible(false); }}
+                    style={styles.btnPrimary}
+                    data-testid="decl-institutional-close"
+                  >
+                    <Text style={styles.btnPrimaryText}>HO CAPITO, CHIUDI</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    onPress={submit}
+                    disabled={loading || !selected || !confirmed}
+                    style={[styles.btnPrimary, (loading || !selected || !confirmed) && styles.btnDisabled]}
+                    data-testid="decl-submit"
+                  >
+                    {loading ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.btnPrimaryText}>FIRMA E CONFERMA</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </ScrollView>
@@ -250,6 +261,21 @@ const styles = StyleSheet.create({
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#1565C0' },
   optionTitle: { fontSize: 13, fontWeight: '800', color: '#1A1A1A', marginBottom: 2 },
   optionDesc: { fontSize: 12, color: '#666', lineHeight: 17 },
+  institutionalNotice: {
+    backgroundColor: '#FFEBEE',
+    borderWidth: 1, borderColor: '#EF9A9A',
+    borderRadius: 10, padding: 16,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  institutionalTitle: {
+    fontSize: 15, fontWeight: '800', color: '#C62828',
+    marginTop: 8, marginBottom: 10,
+  },
+  institutionalText: {
+    fontSize: 13, color: '#444', lineHeight: 19, marginTop: 6,
+    textAlign: 'center',
+  },
   checkbox: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     backgroundColor: '#FFF8E1', padding: 12, borderRadius: 8,
