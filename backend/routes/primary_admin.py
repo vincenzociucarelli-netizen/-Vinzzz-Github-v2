@@ -127,6 +127,17 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
     # Orphan state: current primary declared as authorized_delegate but no legal_rep exists
     orphan_delegate = is_current_primary and my_decl == "authorized_delegate" and legal_rep is None
 
+    # Can crown: orphan delegate primary can crown another admin as legal_rep
+    can_crown = orphan_delegate
+    # Admins that can be crowned (all other admins, excluding self)
+    crownable_admins = []
+    if can_crown:
+        async for a in db.users.find(
+            {"role": "admin", "id": {"$ne": current_user["id"]}},
+            {"_id": 0, "id": 1, "email": 1, "full_name": 1},
+        ).sort("full_name", 1):
+            crownable_admins.append(a)
+
     return {
         "primary_admin_id": primary_id,
         "primary_admin_name": (primary_user or {}).get("full_name") if primary_user else None,
@@ -137,16 +148,16 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
         "declaration_at": (primary_user or {}).get("primary_admin_declaration_at") if primary_user else None,
         "delegated_by_name": (primary_user or {}).get("delegated_by_name"),
         "delegated_at": (primary_user or {}).get("delegated_at"),
-        # Legal representative identity (may differ from primary if delegation is active)
         "legal_representative_id": (legal_rep or {}).get("id"),
         "legal_representative_name": (legal_rep or {}).get("full_name"),
         "legal_representative_email": (legal_rep or {}).get("email"),
-        # Action flags for the UI
         "can_delegate": can_delegate,
         "can_resign": can_resign,
         "can_revoke": can_revoke,
+        "can_crown": can_crown,
         "orphan_delegate": orphan_delegate,
         "delegable_admins": admins,
+        "crownable_admins": crownable_admins,
         "primary_set_explicitly": bool(await db.users.find_one({"role": "admin", "is_primary_admin": True})),
     }
 
@@ -466,6 +477,93 @@ async def revoke_delegation(
     }
 
 
+@router.post("/admin/primary-admin/crown")
+async def crown_legal_representative(
+    data: DelegateRequest,
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    """Orphan authorized_delegate primary crowns another admin as Legal Representative.
+    The target becomes legal_rep + primary. The caller loses primary but keeps
+    'authorized_delegate' declaration (can be re-delegated later by the new legal_rep).
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    if not await is_primary_admin(current_user):
+        raise HTTPException(status_code=403, detail="Solo il Responsabile Admin può incoronare")
+
+    me_fresh = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "primary_admin_declaration": 1})
+    if (me_fresh or {}).get("primary_admin_declaration") != "authorized_delegate":
+        raise HTTPException(status_code=403, detail="Solo un Dirigente autorizzato può incoronare un Legale Rappresentante")
+
+    existing_legal_rep = await db.users.find_one({"role": "admin", "primary_admin_declaration": "legal_representative"})
+    if existing_legal_rep:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Esiste già un Legale Rappresentante registrato ({existing_legal_rep.get('full_name', '')}). Nessuna incoronazione necessaria."
+        )
+
+    new_legal_rep = await db.users.find_one({"id": data.new_admin_id, "role": "admin"})
+    if not new_legal_rep:
+        raise HTTPException(status_code=404, detail="Admin destinatario non trovato")
+    if new_legal_rep["id"] == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Non puoi incoronare te stesso. Modifica invece la tua dichiarazione.")
+
+    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    if "," in (client_ip or ""):
+        client_ip = client_ip.split(",")[0].strip()
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # Step down: current primary loses primary flag but keeps authorized_delegate declaration
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {"is_primary_admin": False}},
+    )
+    # Crown: target becomes legal_rep + primary
+    await db.users.update_one(
+        {"id": new_legal_rep["id"]},
+        {"$set": {
+            "is_primary_admin": True,
+            "primary_admin_declaration": "legal_representative",
+            "primary_admin_declaration_at": now_iso,
+            "primary_admin_declaration_ip": client_ip,
+            "crowned_by_id": current_user["id"],
+            "crowned_by_name": current_user.get("full_name", ""),
+            "crowned_at": now_iso,
+        }},
+    )
+
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "user_email": current_user.get("email", ""),
+        "user_name": current_user.get("full_name", ""),
+        "action": "primary_admin_crowned",
+        "details": {
+            "crowned_by_id": current_user["id"],
+            "crowned_by_name": current_user.get("full_name", ""),
+            "new_legal_rep_id": new_legal_rep["id"],
+            "new_legal_rep_name": new_legal_rep.get("full_name", ""),
+        },
+        "ip_address": client_ip,
+        "created_at": datetime.now(timezone.utc),
+        "timestamp": now_iso,
+    })
+
+    # Reset override keep_disabled (new scepter-holder must re-decide)
+    await db.settings.update_one(
+        {"type": "society"},
+        {"$set": {"override_keep_disabled": False, "block_expired_certificates": True}},
+    )
+
+    return {
+        "message": "Legale Rappresentante incoronato",
+        "new_legal_rep_id": new_legal_rep["id"],
+        "new_legal_rep_name": new_legal_rep.get("full_name", ""),
+    }
+
+
 @router.get("/admin/primary-admin/history")
 async def get_primary_admin_history(current_user=Depends(get_current_user)):
     """Return audit log entries related to the Responsabile Admin role."""
@@ -477,6 +575,7 @@ async def get_primary_admin_history(current_user=Depends(get_current_user)):
         "primary_admin_delegated",
         "primary_admin_resigned",
         "primary_admin_delegation_revoked",
+        "primary_admin_crowned",
     ]
     events = []
     async for log in db.audit_logs.find(

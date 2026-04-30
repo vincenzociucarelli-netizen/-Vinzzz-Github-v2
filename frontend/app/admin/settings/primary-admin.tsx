@@ -49,8 +49,10 @@ interface PrimaryStatus {
   can_delegate: boolean;
   can_resign: boolean;
   can_revoke: boolean;
+  can_crown: boolean;
   orphan_delegate: boolean;
   delegable_admins: Admin[];
+  crownable_admins: Admin[];
   primary_set_explicitly: boolean;
 }
 
@@ -92,6 +94,7 @@ export default function PrimaryAdminPage() {
   const [delegating, setDelegating] = useState(false);
   const [resigning, setResigning] = useState(false);
   const [revoking, setRevoking] = useState(false);
+  const [crowningId, setCrowningId] = useState<string | null>(null);
 
   const showMsg = (title: string, message: string) => {
     if (Platform.OS === 'web') window.alert(`${title}\n\n${message}`);
@@ -168,8 +171,28 @@ export default function PrimaryAdminPage() {
     }
   };
 
-  const handleRevoke = async () => {
-    if (!status?.primary_admin_name) return;
+  const handleCrown = async (admin: Admin) => {
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm(`Incoronare ${admin.full_name} come Legale Rappresentante?\n\nLui/lei diventerà Responsabile Admin al suo prossimo accesso. Tu resterai admin normale e perderai lo scettro.`)
+      : await new Promise<boolean>(r => Alert.alert('Incorona Legale Rappresentante', `${admin.full_name} diventerà Responsabile Admin.`, [
+          { text: 'Annulla', style: 'cancel', onPress: () => r(false) },
+          { text: 'Incorona', onPress: () => r(true) },
+        ]));
+    if (!confirmed) return;
+    setCrowningId(admin.id);
+    try {
+      await api.post('/admin/primary-admin/crown', { new_admin_id: admin.id });
+      showMsg('👑 Incoronazione completata', `${admin.full_name} è ora il Legale Rappresentante della società.`);
+      await loadAll();
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || 'Impossibile incoronare';
+      showMsg('Errore', msg);
+    } finally {
+      setCrowningId(null);
+    }
+  };
+
+  const handleRevoke = async () => {  if (!status?.primary_admin_name) return;
     const confirmed = Platform.OS === 'web'
       ? window.confirm(`Revocare la delega a ${status.primary_admin_name} e riprendere l'incarico?`)
       : await new Promise<boolean>(r => Alert.alert('Revoca delega', `Revocare la delega a ${status.primary_admin_name}?`, [
@@ -262,7 +285,7 @@ export default function PrimaryAdminPage() {
           )}
         </View>
 
-        {/* Orphan state warning */}
+        {/* Orphan state warning + Crown UI */}
         {status.orphan_delegate && (
           <View style={[styles.card, { borderColor: '#E65100', backgroundColor: '#FFF3E0' }]}>
             <View style={styles.cardHeader}>
@@ -270,8 +293,46 @@ export default function PrimaryAdminPage() {
               <Text style={[styles.cardTitle, { color: '#E65100' }]}>Nessun Legale Rappresentante registrato</Text>
             </View>
             <Text style={styles.warningText}>
-              Sei Responsabile come Dirigente autorizzato ma nel sistema non risulta registrato nessun Legale Rappresentante. Non potrai "rimettere l'incarico". Chiedi al Legale Rappresentante di registrarsi come Admin nella società.
+              Sei Responsabile come Dirigente autorizzato ma nel sistema non risulta ancora registrato un Legale Rappresentante. Alcune funzioni sensibili (come "Mantieni disattivato" il blocco certificati oltre la mezzanotte) restano bloccate.
             </Text>
+            {status.can_crown && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={[styles.hintText, { marginTop: 8 }]}>
+                  👑 Incorona il vero Legale Rappresentante fra gli admin registrati:
+                </Text>
+                {(status.crownable_admins || []).length === 0 ? (
+                  <View style={{ backgroundColor: '#FFF', padding: 10, borderRadius: 6, marginTop: 6 }}>
+                    <Text style={styles.mutedText}>
+                      Non ci sono altri admin registrati. Invita prima il Legale Rappresentante a registrarsi come admin, poi torna qui per incoronarlo.
+                    </Text>
+                  </View>
+                ) : (
+                  (status.crownable_admins || []).map(a => (
+                    <View key={a.id} style={[styles.adminRow, { borderColor: '#FFB74D' }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.adminName}>{a.full_name}</Text>
+                        <Text style={styles.adminEmail}>{a.email}</Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => handleCrown(a)}
+                        disabled={crowningId !== null}
+                        style={[styles.crownBtn, crowningId === a.id && { opacity: 0.6 }]}
+                        data-testid={`crown-${a.id}`}
+                      >
+                        {crowningId === a.id ? (
+                          <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                          <>
+                            <Ionicons name="ribbon" size={14} color="#fff" />
+                            <Text style={styles.crownBtnText}>INCORONA</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </View>
+            )}
           </View>
         )}
 
@@ -392,6 +453,7 @@ export default function PrimaryAdminPage() {
                     {e.action === 'primary_admin_delegated' && '🔄 Delega Responsabile Admin'}
                     {e.action === 'primary_admin_resigned' && '↩️ Incarico rimesso'}
                     {e.action === 'primary_admin_delegation_revoked' && '🚫 Delega revocata'}
+                    {e.action === 'primary_admin_crowned' && '👑 Legale Rappresentante incoronato'}
                   </Text>
                   <Text style={styles.histMeta}>
                     {e.user_name || e.user_email || '—'} • {formatDateTime(e.created_at || e.timestamp)}
@@ -546,6 +608,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#CE93D8',
   },
   delegateCtaText: { color: '#7B1FA2', fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
+  crownBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    backgroundColor: '#E65100', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6,
+  },
+  crownBtnText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
   resignBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: '#FF6F00', paddingVertical: 12, borderRadius: 8, marginTop: 10,

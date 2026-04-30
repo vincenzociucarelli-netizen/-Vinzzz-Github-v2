@@ -95,6 +95,14 @@ NOTA: Dare istruzioni dettagliate e sequenziali. L'utente farà solo azioni dire
 - Fix creazione squadra (date)
 - Biglietto da visita con P.IVA
 
+- **Incoronazione Legale Rappresentante** (P0 — 30/04/2026, finale)
+  - Caso reale: il dirigente tecnico scarica l'app → dichiara "Sono un incaricato" → stato orfano (nessun Legale Rappresentante). Invita il presidente a registrarsi come admin. Dalla pagina "Responsabile Admin" vede lista "Incorona" con pulsante 👑 accanto a ogni admin.
+  - Nuovo endpoint `POST /api/admin/primary-admin/crown` — solo orphan authorized_delegate primary può incoronare
+  - Dopo incoronazione: Legale Rappresentante = nuovo primary + legal_rep. Incaricato resta admin normale con declaration `authorized_delegate` (può ricevere delega dal Legale Rappresentante)
+  - Reset automatico flag `override_keep_disabled` (il nuovo scettro deve ri-decidere)
+  - Audit log: `primary_admin_crowned` (👑 nello storico)
+  - E2E test: stato orfano → crown → nuovo Legale Rappresentante ✓. Smoke 17/17.
+
 - **Gerarchia Responsabile Admin con Delega/Rimessa/Revoca** (P0 — 30/04/2026, sessione finale)
   - **Legale Rappresentante**: unica identità persistente (non si "perde" con la delega). Può: delegare ad un Admin di fiducia, revocare la delega in corso.
   - **Dirigente autorizzato** (delegate): NON può delegare ulteriormente (errore 403). Può SOLO rimettere l'incarico al Legale Rappresentante.
