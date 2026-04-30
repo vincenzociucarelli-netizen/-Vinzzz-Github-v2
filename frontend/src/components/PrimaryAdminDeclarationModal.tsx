@@ -108,9 +108,11 @@ export default function PrimaryAdminDeclarationModal() {
           </View>
           <ScrollView style={{ maxHeight: 560 }}>
             <View style={styles.body}>
-              <Text style={styles.lead}>
-                Sei il <Text style={styles.bold}>Responsabile Admin</Text> della società e devi firmare questa dichiarazione prima di esercitare funzioni sensibili (es. mantenere disattivato il blocco certificati oltre la mezzanotte).
-              </Text>
+              {!accountIsSociety && (
+                <Text style={styles.lead}>
+                  Sei il <Text style={styles.bold}>Responsabile Admin</Text> della società e devi firmare questa dichiarazione prima di esercitare funzioni sensibili (es. mantenere disattivato il blocco certificati oltre la mezzanotte).
+                </Text>
+              )}
 
               <Text style={styles.sectionLabel}>Dichiaro di essere:</Text>
 
@@ -175,12 +177,14 @@ export default function PrimaryAdminDeclarationModal() {
                 </TouchableOpacity>
               )}
 
-              <View style={styles.infoBox}>
-                <Ionicons name="information-circle" size={16} color="#1565C0" />
-                <Text style={styles.infoText}>
-                  Puoi delegare il ruolo di Responsabile Admin ad un altro Admin in qualsiasi momento da Impostazioni. La dichiarazione dovrà essere firmata nuovamente dal nuovo responsabile.
-                </Text>
-              </View>
+              {!accountIsSociety && (
+                <View style={styles.infoBox}>
+                  <Ionicons name="information-circle" size={16} color="#1565C0" />
+                  <Text style={styles.infoText}>
+                    Puoi delegare il ruolo di Responsabile Admin ad un altro Admin in qualsiasi momento da Impostazioni. La dichiarazione dovrà essere firmata nuovamente dal nuovo responsabile.
+                  </Text>
+                </View>
+              )}
 
               <View style={styles.actions}>
                 {accountIsSociety ? (
