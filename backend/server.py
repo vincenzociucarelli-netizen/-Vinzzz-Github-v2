@@ -10803,22 +10803,25 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
             "certificate_blocked": False
         }
     
-    # If blocked by certificate, allow override option for admin
+    # If blocked by certificate: notify Admin and require admin authorization
+    # NOTE: Override è SEMPRE athlete-specific e richiede approvazione Admin via notifica
+    # (no in-place override per evitare abusi su atleti diversi)
     if certificate_blocked and not attendance_data.force:
-        # Notify admin: QR with expired certificate was scanned (Fix C)
+        # Check if there's already a PENDING (non-authorized) notification for this athlete today
         try:
             existing_notif = await db.admin_notifications.find_one({
                 "type": "expired_cert_scan",
                 "athlete_id": athlete_id,
                 "date": today,
-                "read": False,
+                "override_status": {"$in": [None, "pending"]},
             })
             if not existing_notif:
+                coach_name = current_user.get("full_name") or current_user.get("email") or "Coach"
                 await db.admin_notifications.insert_one({
                     "id": str(uuid.uuid4()),
                     "type": "expired_cert_scan",
-                    "title": "Certificato scaduto rilevato",
-                    "message": f"{athlete_name} ({team.get('name', '')}) si è presentato all'allenamento con certificato medico scaduto/mancante. Valuta se attivare l'override per oggi.",
+                    "title": "Richiesta override certificato",
+                    "message": f"{athlete_name} ({team.get('name', '')}) si è presentato/a all'allenamento con certificato medico scaduto/mancante. Coach {coach_name} richiede l'autorizzazione all'ingresso.",
                     "athlete_id": athlete_id,
                     "athlete_name": athlete_name,
                     "team_id": team_id,
@@ -10826,12 +10829,22 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
                     "date": today,
                     "priority": "high",
                     "read": False,
+                    "override_status": "pending",  # pending | authorized | denied
                     "created_at": datetime.utcnow(),
-                    "data": {"action": "open_override_modal", "athlete_id": athlete_id}
+                    "data": {
+                        "action": "expired_cert_authorize",
+                        "athlete_id": athlete_id,
+                        "athlete_name": athlete_name,
+                        "team_id": team_id,
+                        "team_name": team.get("name", ""),
+                        "coach_id": current_user["id"],
+                        "coach_name": coach_name,
+                        "block_reason": certificate_block_reason,
+                    }
                 })
         except Exception as e:
             logger.warning(f"Could not create admin notification for expired cert scan: {e}")
-        
+
         return {
             "id": None,
             "athlete_id": athlete_id,
@@ -10841,7 +10854,8 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
             "status": "blocked",
             "block_reason": certificate_block_reason,
             "certificate_blocked": True,
-            "can_override": True  # Frontend can show override option
+            "can_override": False,  # Override gestito SOLO via notifica Admin (athlete-specific)
+            "awaiting_admin_authorization": True,
         }
     
     # 7. Create attendance record

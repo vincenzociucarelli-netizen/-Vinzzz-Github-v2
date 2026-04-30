@@ -20,14 +20,30 @@ interface Notification {
   type: string;
   title: string;
   message: string;
+  athlete_id?: string;
+  athlete_name?: string;
+  team_id?: string;
+  team_name?: string;
+  override_status?: 'pending' | 'authorized' | 'denied' | null;
+  override_reason?: string;
+  override_authorized_by_name?: string;
+  override_authorized_at?: string;
+  override_deny_reason?: string;
+  override_denied_by_name?: string;
+  override_denied_at?: string;
   data?: {
     athlete_id?: string;
     athlete_name?: string;
+    team_id?: string;
+    team_name?: string;
+    coach_name?: string;
     parent_name?: string;
     changed_by?: string;
     changed_by_role?: string;
     issue_date?: string;
     expiry_date?: string;
+    block_reason?: string;
+    action?: string;
     [key: string]: any;
   };
   related_user_id?: string;
@@ -50,6 +66,9 @@ export default function AdminNotifications() {
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [expandedNotifications, setExpandedNotifications] = useState<Record<string, boolean>>({});
+  // Certificate override state (athlete-specific) per notification id
+  const [overrideReasonByNotif, setOverrideReasonByNotif] = useState<Record<string, string>>({});
+  const [overrideLoadingByNotif, setOverrideLoadingByNotif] = useState<Record<string, boolean>>({});
 
   const loadNotifications = async () => {
     try {
@@ -162,6 +181,8 @@ export default function AdminNotifications() {
         return { name: 'checkmark-circle', color: '#34C759' };
       case 'deletion_rejected':
         return { name: 'close-circle', color: '#FF9500' };
+      case 'expired_cert_scan':
+        return { name: 'medkit', color: '#E53935' };
       default:
         return { name: 'notifications', color: '#007AFF' };
     }
@@ -169,6 +190,63 @@ export default function AdminNotifications() {
 
   const toggleGroup = (key: string) => {
     setCollapsedGroups(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Authorize athlete-specific certificate override from notification
+  const authorizeOverride = async (notification: Notification) => {
+    const reason = (overrideReasonByNotif[notification.id] || '').trim();
+    if (reason.length < 5) {
+      const msg = 'Inserisci il motivo dell\'override (minimo 5 caratteri).';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Errore', msg);
+      return;
+    }
+    setOverrideLoadingByNotif(prev => ({ ...prev, [notification.id]: true }));
+    try {
+      const res = await api.post(`/admin/notifications/${notification.id}/authorize-override`, { reason });
+      const athleteName = res.data?.athlete_name || notification.athlete_name || 'Atleta';
+      const successMsg = `Override autorizzato per ${athleteName}.\n\nIl Coach può ora ripetere la scansione del QR. L'override sarà consumato al primo ingresso valido.`;
+      if (Platform.OS === 'web') window.alert(`✅ AUTORIZZATO\n\n${successMsg}`);
+      else Alert.alert('✅ Autorizzato', successMsg);
+      setNotifications(prev =>
+        prev.map(n => n.id === notification.id
+          ? { ...n, override_status: 'authorized', override_reason: reason, read: true }
+          : n)
+      );
+      setOverrideReasonByNotif(prev => ({ ...prev, [notification.id]: '' }));
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.detail || 'Impossibile autorizzare l\'override';
+      if (Platform.OS === 'web') window.alert(`Errore: ${errMsg}`);
+      else Alert.alert('Errore', errMsg);
+    } finally {
+      setOverrideLoadingByNotif(prev => ({ ...prev, [notification.id]: false }));
+    }
+  };
+
+  // Deny override request
+  const denyOverride = async (notification: Notification) => {
+    const confirmDeny = Platform.OS === 'web'
+      ? window.confirm(`Rifiutare la richiesta di override per ${notification.athlete_name || 'l\'atleta'}?`)
+      : await new Promise<boolean>((resolve) => {
+          Alert.alert('Rifiuta override', `Rifiutare la richiesta per ${notification.athlete_name || 'l\'atleta'}?`, [
+            { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'Rifiuta', style: 'destructive', onPress: () => resolve(true) },
+          ]);
+        });
+    if (!confirmDeny) return;
+    setOverrideLoadingByNotif(prev => ({ ...prev, [notification.id]: true }));
+    try {
+      await api.post(`/admin/notifications/${notification.id}/deny-override`, { reason: '' });
+      setNotifications(prev =>
+        prev.map(n => n.id === notification.id ? { ...n, override_status: 'denied', read: true } : n)
+      );
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.detail || 'Impossibile rifiutare';
+      if (Platform.OS === 'web') window.alert(`Errore: ${errMsg}`);
+      else Alert.alert('Errore', errMsg);
+    } finally {
+      setOverrideLoadingByNotif(prev => ({ ...prev, [notification.id]: false }));
+    }
   };
 
   // Filter + group
@@ -179,6 +257,7 @@ export default function AdminNotifications() {
           n.title.toLowerCase().includes(q) ||
           n.message.toLowerCase().includes(q) ||
           (n.data?.athlete_name || '').toLowerCase().includes(q) ||
+          (n.athlete_name || '').toLowerCase().includes(q) ||
           (n.data?.changed_by || '').toLowerCase().includes(q) ||
           (n.related_user_name || '').toLowerCase().includes(q)
         )
@@ -349,6 +428,98 @@ export default function AdminNotifications() {
                               <Text style={styles.detailText}>Aggiornato da: {notification.data.changed_by} ({notification.data.changed_by_role || ''})</Text>
                             </View>
                           )}
+
+                          {/* Certificate override actions (athlete-specific) */}
+                          {notification.type === 'expired_cert_scan' && (
+                            <View style={styles.overrideBlock}>
+                              {notification.data?.coach_name && (
+                                <View style={styles.detailRow}>
+                                  <Ionicons name="person-circle" size={12} color="#1565C0" />
+                                  <Text style={styles.detailText}>Coach: {notification.data.coach_name}</Text>
+                                </View>
+                              )}
+                              {notification.data?.team_name && (
+                                <View style={styles.detailRow}>
+                                  <Ionicons name="people" size={12} color="#1565C0" />
+                                  <Text style={styles.detailText}>Squadra: {notification.data.team_name}</Text>
+                                </View>
+                              )}
+
+                              {(!notification.override_status || notification.override_status === 'pending') && (
+                                <>
+                                  <Text style={styles.overrideHint}>
+                                    Override valido per <Text style={{ fontWeight: '700' }}>UN solo ingresso</Text>, riservato esclusivamente a {notification.athlete_name || 'questo atleta'}.
+                                  </Text>
+                                  <Text style={styles.overrideLabel}>Motivo dell'override (obbligatorio, min 5 caratteri):</Text>
+                                  <TextInput
+                                    style={styles.overrideInput}
+                                    placeholder="es. Certificato in fase di rinnovo, gara imminente..."
+                                    placeholderTextColor="#999"
+                                    value={overrideReasonByNotif[notification.id] || ''}
+                                    onChangeText={(t) => setOverrideReasonByNotif(prev => ({ ...prev, [notification.id]: t }))}
+                                    multiline
+                                    numberOfLines={2}
+                                    data-testid={`override-reason-${notification.id}`}
+                                  />
+                                  <View style={styles.overrideActions}>
+                                    <TouchableOpacity
+                                      style={[styles.overrideDenyBtn, overrideLoadingByNotif[notification.id] && styles.btnDisabled]}
+                                      onPress={() => denyOverride(notification)}
+                                      disabled={!!overrideLoadingByNotif[notification.id]}
+                                      data-testid={`deny-override-${notification.id}`}
+                                    >
+                                      {overrideLoadingByNotif[notification.id] ? (
+                                        <ActivityIndicator color="#fff" size="small" />
+                                      ) : (
+                                        <>
+                                          <Ionicons name="close-circle" size={16} color="#fff" />
+                                          <Text style={styles.overrideBtnText}>RIFIUTA</Text>
+                                        </>
+                                      )}
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.overrideAuthBtn,
+                                        ((overrideReasonByNotif[notification.id] || '').trim().length < 5 || overrideLoadingByNotif[notification.id]) && styles.btnDisabled
+                                      ]}
+                                      onPress={() => authorizeOverride(notification)}
+                                      disabled={(overrideReasonByNotif[notification.id] || '').trim().length < 5 || !!overrideLoadingByNotif[notification.id]}
+                                      data-testid={`authorize-override-${notification.id}`}
+                                    >
+                                      {overrideLoadingByNotif[notification.id] ? (
+                                        <ActivityIndicator color="#fff" size="small" />
+                                      ) : (
+                                        <>
+                                          <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                                          <Text style={styles.overrideBtnText}>AUTORIZZA</Text>
+                                        </>
+                                      )}
+                                    </TouchableOpacity>
+                                  </View>
+                                </>
+                              )}
+
+                              {notification.override_status === 'authorized' && (
+                                <View style={styles.statusAuthorized}>
+                                  <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                                  <Text style={styles.statusAuthorizedText}>
+                                    Override autorizzato{notification.override_authorized_by_name ? ` da ${notification.override_authorized_by_name}` : ''}
+                                    {notification.override_reason ? ` — Motivo: ${notification.override_reason}` : ''}
+                                  </Text>
+                                </View>
+                              )}
+
+                              {notification.override_status === 'denied' && (
+                                <View style={styles.statusDenied}>
+                                  <Ionicons name="close-circle" size={16} color="#C62828" />
+                                  <Text style={styles.statusDeniedText}>
+                                    Richiesta rifiutata{notification.override_denied_by_name ? ` da ${notification.override_denied_by_name}` : ''}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                          )}
+
                           <View style={styles.expandedFooter}>
                             <Text style={styles.notificationDate}>{formatDate(notification.created_at)}</Text>
                             <TouchableOpacity
@@ -626,5 +797,110 @@ const styles = StyleSheet.create({
   deleteBtn: {
     padding: 6,
     marginLeft: 4,
+  },
+  // Certificate override styles
+  overrideBlock: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#FFE0B2',
+  },
+  overrideHint: {
+    fontSize: 12,
+    color: '#E65100',
+    backgroundColor: '#FFF3E0',
+    padding: 8,
+    borderRadius: 6,
+    marginTop: 8,
+    lineHeight: 17,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF9800',
+  },
+  overrideLabel: {
+    fontSize: 12,
+    color: '#444',
+    fontWeight: '600' as const,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  overrideInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    padding: 8,
+    fontSize: 13,
+    color: '#333',
+    minHeight: 50,
+    backgroundColor: '#fafafa',
+    textAlignVertical: 'top' as const,
+  },
+  overrideActions: {
+    flexDirection: 'row' as const,
+    gap: 8,
+    marginTop: 10,
+  },
+  overrideAuthBtn: {
+    flex: 1,
+    backgroundColor: '#2E7D32',
+    paddingVertical: 10,
+    borderRadius: 6,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+  },
+  overrideDenyBtn: {
+    flex: 1,
+    backgroundColor: '#C62828',
+    paddingVertical: 10,
+    borderRadius: 6,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+  },
+  btnDisabled: {
+    opacity: 0.5,
+  },
+  overrideBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700' as const,
+    letterSpacing: 0.3,
+  },
+  statusAuthorized: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    gap: 6,
+    backgroundColor: '#E8F5E9',
+    padding: 8,
+    borderRadius: 6,
+    marginTop: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#2E7D32',
+  },
+  statusAuthorizedText: {
+    fontSize: 12,
+    color: '#1B5E20',
+    flex: 1,
+    fontWeight: '500' as const,
+    lineHeight: 17,
+  },
+  statusDenied: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    backgroundColor: '#FFEBEE',
+    padding: 8,
+    borderRadius: 6,
+    marginTop: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#C62828',
+  },
+  statusDeniedText: {
+    fontSize: 12,
+    color: '#B71C1C',
+    flex: 1,
+    fontWeight: '500' as const,
   },
 });

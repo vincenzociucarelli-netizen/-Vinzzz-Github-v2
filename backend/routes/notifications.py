@@ -6,8 +6,9 @@ Notifications routes.
 """
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from database import db
 from auth_utils import get_current_user
@@ -15,6 +16,14 @@ from models.enums import UserRole
 from utils import clean_mongo_doc
 
 router = APIRouter()
+
+
+class CertificateOverrideAuthorizeRequest(BaseModel):
+    reason: str  # Motivo dell'override - obbligatorio (>=5 caratteri)
+
+
+class CertificateOverrideDenyRequest(BaseModel):
+    reason: str = ""  # Motivo opzionale del rifiuto
 
 
 # ==================== ADMIN NOTIFICATIONS ====================
@@ -87,6 +96,161 @@ async def delete_notification(notification_id: str, current_user = Depends(get_c
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Notifica non trovata")
     return {"message": "Notifica eliminata"}
+
+
+# ==================== CERTIFICATE OVERRIDE FROM NOTIFICATION (athlete-specific) ====================
+
+@router.post("/admin/notifications/{notification_id}/authorize-override")
+async def authorize_certificate_override_from_notification(
+    notification_id: str,
+    data: CertificateOverrideAuthorizeRequest,
+    request: Request,
+    current_user = Depends(get_current_user)
+):
+    """
+    Approve athlete-specific certificate override from an admin notification.
+    Activates a SINGLE-USE override for the specific athlete (consumed on next valid scan).
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può autorizzare l'override")
+
+    if not data.reason or len(data.reason.strip()) < 5:
+        raise HTTPException(status_code=400, detail="Motivo obbligatorio (minimo 5 caratteri)")
+
+    notification = await db.admin_notifications.find_one({"id": notification_id})
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notifica non trovata")
+    if notification.get("type") != "expired_cert_scan":
+        raise HTTPException(status_code=400, detail="Tipo notifica non valido per override")
+    if notification.get("override_status") in ("authorized", "denied"):
+        raise HTTPException(status_code=400, detail=f"Notifica già {notification.get('override_status')}")
+
+    athlete_id = notification.get("athlete_id") or (notification.get("data") or {}).get("athlete_id")
+    athlete_name = notification.get("athlete_name") or (notification.get("data") or {}).get("athlete_name", "Atleta")
+    if not athlete_id:
+        raise HTTPException(status_code=400, detail="Atleta non identificabile dalla notifica")
+
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    # Get client IP
+    client_ip = request.client.host if request.client else "unknown"
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+
+    reason = data.reason.strip()
+    now_iso = datetime.utcnow().isoformat()
+
+    # Activate single-use, athlete-specific override (no time expiration: consumed on next scan)
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "certificate_override_active": True,
+            "certificate_override_by": current_user["id"],
+            "certificate_override_reason": reason,
+            "certificate_override_timestamp": now_iso,
+            "certificate_override_notification_id": notification_id,
+        }}
+    )
+
+    # Audit log (legacy + standardized)
+    audit_entry = {
+        "id": str(uuid.uuid4()),
+        "athlete_id": athlete_id,
+        "athlete_name": athlete_name,
+        "user_id": current_user["id"],
+        "user_name": current_user.get("full_name", current_user.get("email")),
+        "reason": reason,
+        "timestamp": now_iso,
+        "ip_address": client_ip,
+        "type": "certificate_block_override",
+        "override_type": "single_session",
+        "source": "admin_notification",
+        "notification_id": notification_id,
+    }
+    await db.audit_logs.insert_one(audit_entry)
+
+    # Update notification status
+    await db.admin_notifications.update_one(
+        {"id": notification_id},
+        {"$set": {
+            "override_status": "authorized",
+            "override_reason": reason,
+            "override_authorized_by": current_user["id"],
+            "override_authorized_by_name": current_user.get("full_name", current_user.get("email")),
+            "override_authorized_at": now_iso,
+            "read": True,
+        }}
+    )
+
+    return {
+        "message": "Override autorizzato",
+        "athlete_id": athlete_id,
+        "athlete_name": athlete_name,
+        "reason": reason,
+    }
+
+
+@router.post("/admin/notifications/{notification_id}/deny-override")
+async def deny_certificate_override_from_notification(
+    notification_id: str,
+    data: CertificateOverrideDenyRequest,
+    request: Request,
+    current_user = Depends(get_current_user)
+):
+    """Reject the certificate override request from a notification."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può rifiutare l'override")
+
+    notification = await db.admin_notifications.find_one({"id": notification_id})
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notifica non trovata")
+    if notification.get("type") != "expired_cert_scan":
+        raise HTTPException(status_code=400, detail="Tipo notifica non valido")
+    if notification.get("override_status") in ("authorized", "denied"):
+        raise HTTPException(status_code=400, detail=f"Notifica già {notification.get('override_status')}")
+
+    athlete_id = notification.get("athlete_id") or (notification.get("data") or {}).get("athlete_id")
+    athlete_name = notification.get("athlete_name") or (notification.get("data") or {}).get("athlete_name", "Atleta")
+
+    client_ip = request.client.host if request.client else "unknown"
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+
+    now_iso = datetime.utcnow().isoformat()
+    deny_reason = (data.reason or "").strip() or "Override rifiutato dall'admin"
+
+    audit_entry = {
+        "id": str(uuid.uuid4()),
+        "athlete_id": athlete_id,
+        "athlete_name": athlete_name,
+        "user_id": current_user["id"],
+        "user_name": current_user.get("full_name", current_user.get("email")),
+        "reason": deny_reason,
+        "timestamp": now_iso,
+        "ip_address": client_ip,
+        "type": "certificate_access_denied",
+        "source": "admin_notification",
+        "notification_id": notification_id,
+    }
+    await db.audit_logs.insert_one(audit_entry)
+
+    await db.admin_notifications.update_one(
+        {"id": notification_id},
+        {"$set": {
+            "override_status": "denied",
+            "override_deny_reason": deny_reason,
+            "override_denied_by": current_user["id"],
+            "override_denied_by_name": current_user.get("full_name", current_user.get("email")),
+            "override_denied_at": now_iso,
+            "read": True,
+        }}
+    )
+
+    return {"message": "Richiesta override rifiutata", "athlete_id": athlete_id}
 
 
 # ==================== USER NOTIFICATIONS (parents, athletes, coaches) ====================

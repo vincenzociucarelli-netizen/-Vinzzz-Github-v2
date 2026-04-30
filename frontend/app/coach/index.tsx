@@ -395,16 +395,13 @@ export default function CoachScreen() {
         showForceRegistrationDialog(data, attendance);
       } else if (attendance.status === 'blocked') {
         // Check if blocked due to certificate
-        if (attendance.certificate_blocked && attendance.can_override && user?.role === 'admin') {
-          // Show override modal for admin
-          setCertificateOverrideData({
-            athleteId: attendance.athlete_id,
-            athleteName: attendance.athlete_name || 'Atleta',
-            teamId: attendance.team_id,
-            blockReason: attendance.block_reason || 'Certificato scaduto'
-          });
-          setOverrideReason('');
-          setCertificateOverrideModal(true);
+        if (attendance.certificate_blocked) {
+          // L'override è SEMPRE athlete-specific e gestito dall'Admin via notifica.
+          // Coach (e anche Admin che fa scan) NON puo' approvare in-place.
+          showAlert(
+            '⛔ ACCESSO NEGATO - Certificato non valido',
+            `${attendance.athlete_name || 'Atleta'}\n\n${attendance.block_reason || 'Certificato medico scaduto/mancante'}\n\n📨 Notifica inviata all'Admin: una volta autorizzato l'ingresso per questo atleta, ripeti la scansione del QR.`
+          );
         } else {
           // Blocked - show error with red styling
           showAlert(
@@ -415,16 +412,23 @@ export default function CoachScreen() {
       } else {
         // Allowed - show success with athlete name
         const athleteName = attendance.athlete_name || 'Atleta';
+        const overrideConsumed = attendance.certificate_override_consumed === true;
         const hasWarning = attendance.block_reason && attendance.block_reason.trim() !== '';
-        
-        // Build trial badge info
+
+        // Build trial badge info (NON mostrare se override appena consumato)
         let trialBadge = '';
-        if (attendance.is_trial) {
+        if (attendance.is_trial && !overrideConsumed) {
           trialBadge = `\n\n🔵 IN PROVA\n${attendance.trial_sessions_count}/${attendance.trial_max_sessions} allenamenti` +
             (attendance.trial_days_remaining !== null ? `\n${attendance.trial_days_remaining} giorni rimanenti` : '');
         }
-        
-        if (hasWarning) {
+
+        if (overrideConsumed) {
+          // Override certificato consumato: messaggio specifico richiesto dall'utente
+          showAlert(
+            '✅ ACCESSO AUTORIZZATO DALL\'ADMIN',
+            `${athleteName}\n\n⚠️ Accesso consentito SOLO per questa volta in attesa del nuovo certificato medico.\n\nL'override è stato consumato: per i prossimi ingressi l'atleta dovrà presentare un certificato valido.`
+          );
+        } else if (hasWarning) {
           showAlert(
             '✅ PRESENZA REGISTRATA - ATTENZIONE!',
             `${athleteName} ammesso/a all'allenamento.\n\n${attendance.block_reason}${trialBadge}`

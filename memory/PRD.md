@@ -95,16 +95,29 @@ NOTA: Dare istruzioni dettagliate e sequenziali. L'utente farà solo azioni dire
 - Fix creazione squadra (date)
 - Biglietto da visita con P.IVA
 
+## Completato 30/04/2026:
+- **Override certificato athlete-specific via notifica Admin** (P0)
+  - QR scan con cert. scaduto: Coach NON può approvare in-place
+  - Notifica popup all'Admin con nome atleta, coach, squadra
+  - Inline AUTORIZZA/RIFIUTA su `/admin/notifications` (motivo obbligatorio min 5 caratteri)
+  - Override **single-use, athlete-specific, no time limit** (consumato al primo ingresso valido)
+  - Endpoint: `POST /api/admin/notifications/{id}/authorize-override`, `POST /api/admin/notifications/{id}/deny-override`
+  - Audit log completo (user, IP, timestamp, source=admin_notification)
+  - Coach popup post-override: "Accesso consentito SOLO per questa volta in attesa del nuovo certificato" (no IN PROVA)
+  - Rimossa modale override sul Coach (l'unica via è la notifica Admin)
+  - +3 smoke regression tests (totale 17/17 passing)
+
 ## IN SOSPESO (prossima sessione):
 - Privacy Livia: cancellare e rifirmare, verificare dati nel PDF
 - Mese soglia: il banner mostra mese sbagliato, investigare build
 - Banner previsione €15k dove manca
 
 ## Task Futuri:
-- (P1) Fix toggle override certificato (mobile web)
+- (P0) Deploy Produzione (MongoDB Atlas, Render/Railway, Vercel, DNS Aruba, HTTPS Let's Encrypt)
+- (P1) GDPR/Legal pubblico per Pilot (Privacy Policy, Cookie banner, Termini di servizio)
 - (P1) Re-importazione Excel calendario per aggiornamento date partite
 - (P1) UI per atleti con contratti formali
-- (P2) Refactoring server.py monolitico
-- (P2) Re-implementazione Stripe
+- (P2) Refactoring server.py monolitico (37/N endpoint estratti, ~23.6k linee residue)
+- (P2) Re-implementazione Stripe (Live mode)
 - (P2) Pubblicazione dominio/App Store
-- (P3) Upload screenshot per rimozione foto
+- (P3) Upload screenshot per genitori che richiedono rimozione foto
