@@ -54,55 +54,64 @@ export default function SocietySettings() {
   const [presidentName, setPresidentName] = useState('');
   const [societyEmail, setSocietyEmail] = useState('');
   const [societyPec, setSocietyPec] = useState('');
-  const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(false);
+  const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(true);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
-  const [overridePermanent, setOverridePermanent] = useState(false);
-  const [overrideExpiry, setOverrideExpiry] = useState<string | null>(null);
+  const [overrideReason, setOverrideReason] = useState('');
+  const [overrideKeepDisabled, setOverrideKeepDisabled] = useState(false);
+  const [overrideAutoReactivateAt, setOverrideAutoReactivateAt] = useState<string | null>(null);
+  const [overrideKeepDisabledSaved, setOverrideKeepDisabledSaved] = useState(false);
+  const [overrideSubmitting, setOverrideSubmitting] = useState(false);
 
-  const handleOverride = async (type: 'temporary' | 'permanent') => {
-    setShowOverrideModal(false);
-    setBlockExpiredCertificates(false);
-    
-    if (type === 'temporary') {
-      // Set 15 min expiry
-      const expiry = new Date(Date.now() + 15 * 60 * 1000);
-      const expiryStr = expiry.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-      setOverrideExpiry(expiryStr);
-      
-      // Save with expiry to backend
-      try {
-        const token = await AsyncStorage.getItem('token');
-        await axios.patch(`${API_URL}/api/settings/society`, {
-          block_expired_certificates: false,
-          override_type: 'temporary',
-          override_expires_at: expiry.toISOString(),
-        }, { headers: { Authorization: `Bearer ${token}` } });
-      } catch {}
-      
-      // Auto-reactivate after 15 min
-      setTimeout(() => {
-        setBlockExpiredCertificates(true);
-        setOverrideExpiry(null);
-        AsyncStorage.getItem('token').then(token => {
-          if (token) {
-            axios.patch(`${API_URL}/api/settings/society`, {
-              block_expired_certificates: true,
-              override_type: null,
-              override_expires_at: null,
-            }, { headers: { Authorization: `Bearer ${token}` } });
-          }
-        });
-      }, 15 * 60 * 1000);
-    } else {
-      // Permanent override
-      try {
-        const token = await AsyncStorage.getItem('token');
-        await axios.patch(`${API_URL}/api/settings/society`, {
-          block_expired_certificates: false,
-          override_type: 'permanent',
-          override_expires_at: null,
-        }, { headers: { Authorization: `Bearer ${token}` } });
-      } catch {}
+  const formatReactivateLabel = (iso: string | null): string | null => {
+    if (!iso) return null;
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return iso;
+    }
+  };
+
+  // Called when Admin confirms the disable action in the modal
+  const submitDisableBlock = async () => {
+    const reason = overrideReason.trim();
+    if (reason.length < 5) {
+      showAlert('Errore', 'Inserisci il motivo della disattivazione (minimo 5 caratteri).');
+      return;
+    }
+    setOverrideSubmitting(true);
+    try {
+      await api.patch('/settings/society', {
+        block_expired_certificates: false,
+        override_keep_disabled: overrideKeepDisabled,
+        override_deactivation_reason: reason,
+      });
+      setShowOverrideModal(false);
+      setOverrideReason('');
+      await loadSettings();
+      showAlert(
+        overrideKeepDisabled ? '⚠️ Blocco disattivato a tempo indeterminato' : '⚠️ Blocco disattivato fino a mezzanotte',
+        overrideKeepDisabled
+          ? 'Il blocco resterà disattivato finché non lo riattivi manualmente. Ogni accesso Admin mostrerà un promemoria giornaliero.'
+          : 'Alle ore 00:00 (ora italiana) il blocco verrà riattivato automaticamente.'
+      );
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || 'Impossibile salvare';
+      showAlert('Errore', msg);
+    } finally {
+      setOverrideSubmitting(false);
+    }
+  };
+
+  // Re-enable immediately (no modal, no reason)
+  const reenableBlock = async () => {
+    try {
+      await api.patch('/settings/society', { block_expired_certificates: true });
+      await loadSettings();
+      showAlert('✅ Blocco riattivato', 'Il blocco certificati è ora attivo.');
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || 'Impossibile riattivare';
+      showAlert('Errore', msg);
     }
   };
 
@@ -152,7 +161,9 @@ export default function SocietySettings() {
       setStampSignature(response.data.stamp_signature || null);
       setSocietyEmail(response.data.email || '');
       setSocietyPec(response.data.pec || '');
-      setBlockExpiredCertificates(response.data.block_expired_certificates || false);
+      setBlockExpiredCertificates(response.data.block_expired_certificates !== false);
+      setOverrideAutoReactivateAt(response.data.override_auto_reactivate_at || null);
+      setOverrideKeepDisabledSaved(Boolean(response.data.override_keep_disabled));
       setSeasonStartMonth(response.data.season_start_month || 7);
       setSeasonStartDay(response.data.season_start_day || 1);
       setSeasonEndMonth(response.data.season_end_month || 6);
@@ -185,7 +196,6 @@ export default function SocietySettings() {
         stamp_signature: stampSignature,
         email: societyEmail,
         pec: societyPec,
-        block_expired_certificates: blockExpiredCertificates,
         season_start_month: seasonStartMonth,
         season_start_day: seasonStartDay,
         season_end_month: seasonEndMonth,
@@ -288,9 +298,11 @@ export default function SocietySettings() {
           <Pressable 
             onPress={() => {
               if (blockExpiredCertificates) {
+                setOverrideReason('');
+                setOverrideKeepDisabled(false);
                 setShowOverrideModal(true);
               } else {
-                setBlockExpiredCertificates(true);
+                reenableBlock();
               }
             }}
             style={{
@@ -310,10 +322,12 @@ export default function SocietySettings() {
               </Text>
               <Text style={{ fontSize: 12, color: '#666' }}>
                 {blockExpiredCertificates 
-                  ? 'La scansione QR blocca la registrazione agli allenamenti per atleti con certificato scaduto o mancante'
-                  : overrideExpiry 
-                    ? `Override temporaneo attivo fino alle ${overrideExpiry}`
-                    : 'La scansione QR permette la registrazione agli allenamenti anche con certificato scaduto'}
+                  ? 'La scansione QR blocca gli atleti con certificato scaduto/non valido. Il Coach può richiedere override al singolo atleta.'
+                  : overrideKeepDisabledSaved
+                    ? '⚠️ Override attivo a tempo indeterminato (promemoria giornaliero all\'accesso Admin)'
+                    : overrideAutoReactivateAt
+                      ? `Riattivazione automatica: ${formatReactivateLabel(overrideAutoReactivateAt) || 'a mezzanotte'}`
+                      : 'Gli atleti con certificato scaduto possono entrare'}
               </Text>
             </View>
             <View pointerEvents="none" style={[{
@@ -336,7 +350,11 @@ export default function SocietySettings() {
             <TouchableOpacity
               data-testid="disable-cert-block-btn"
               activeOpacity={0.7}
-              onPress={() => setShowOverrideModal(true)}
+              onPress={() => {
+                setOverrideReason('');
+                setOverrideKeepDisabled(false);
+                setShowOverrideModal(true);
+              }}
               style={{
                 marginTop: 8,
                 backgroundColor: '#FF6B35',
@@ -352,6 +370,31 @@ export default function SocietySettings() {
               <Ionicons name="lock-open-outline" size={18} color="#fff" />
               <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
                 Disattiva blocco (con motivo)
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Pulsante "Riattiva ora" quando override è ON */}
+          {!blockExpiredCertificates && (
+            <TouchableOpacity
+              data-testid="reenable-cert-block-btn"
+              activeOpacity={0.7}
+              onPress={reenableBlock}
+              style={{
+                marginTop: 8,
+                backgroundColor: '#2E7D32',
+                borderRadius: 8,
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 8,
+              }}
+            >
+              <Ionicons name="shield-checkmark" size={18} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>
+                Riattiva blocco ora
               </Text>
             </TouchableOpacity>
           )}
@@ -680,40 +723,99 @@ export default function SocietySettings() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Override Modal */}
+      {/* Override Modal: reason + keep_disabled flag */}
       <Modal visible={showOverrideModal} animationType="fade" transparent onRequestClose={() => setShowOverrideModal(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '100%', maxWidth: 380 }}>
-            <Text style={{ fontSize: 17, fontWeight: '700', color: '#333', marginBottom: 8 }}>Disattivare il blocco certificati?</Text>
-            <Text style={{ fontSize: 13, color: '#666', marginBottom: 20, lineHeight: 20 }}>
-              Questa azione permettera agli atleti di allenarsi anche senza certificato medico autenticato.
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 22, width: '100%', maxWidth: 440 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Ionicons name="warning" size={22} color="#E65100" />
+              <Text style={{ fontSize: 17, fontWeight: '800', color: '#333' }}>Disattivare il blocco certificati?</Text>
+            </View>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 14, lineHeight: 19 }}>
+              Gli atleti con certificato scaduto o non autenticato potranno accedere agli allenamenti senza richiesta di override. L'operazione sarà registrata nell'audit log.
             </Text>
 
-            {/* Temporary option */}
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#444', marginBottom: 6 }}>
+              Motivo della disattivazione (obbligatorio, min 5 caratteri)
+            </Text>
+            <TextInput
+              data-testid="disable-reason-input"
+              style={{
+                borderWidth: 1, borderColor: '#D9D9D9', borderRadius: 8,
+                padding: 10, fontSize: 13, color: '#222', minHeight: 60,
+                backgroundColor: '#FAFAFA', textAlignVertical: 'top', marginBottom: 14,
+              }}
+              placeholder="es. Torneo fuori sede, verifica massiva certificati..."
+              placeholderTextColor="#999"
+              value={overrideReason}
+              onChangeText={setOverrideReason}
+              multiline
+              numberOfLines={3}
+              autoFocus
+            />
+
+            {/* Keep disabled checkbox */}
             <TouchableOpacity
-              onPress={() => handleOverride('temporary')}
-              style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#FFB74D' }}
+              data-testid="keep-disabled-checkbox"
+              onPress={() => setOverrideKeepDisabled(!overrideKeepDisabled)}
+              style={{
+                flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+                backgroundColor: overrideKeepDisabled ? '#FFEBEE' : '#F5F5F5',
+                padding: 12, borderRadius: 8, marginBottom: 8,
+                borderWidth: 1, borderColor: overrideKeepDisabled ? '#EF9A9A' : '#E0E0E0',
+              }}
             >
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>Temporaneo (15 minuti)</Text>
-              <Text style={{ fontSize: 12, color: '#888' }}>Valido per una sola scansione e per massimo 15 minuti. Dopo si riattiva automaticamente.</Text>
+              <View style={{
+                width: 20, height: 20, borderRadius: 4, borderWidth: 2,
+                borderColor: overrideKeepDisabled ? '#C62828' : '#999',
+                backgroundColor: overrideKeepDisabled ? '#C62828' : 'transparent',
+                alignItems: 'center', justifyContent: 'center', marginTop: 2,
+              }}>
+                {overrideKeepDisabled && <Ionicons name="checkmark" size={14} color="#fff" />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: overrideKeepDisabled ? '#C62828' : '#444' }}>
+                  Mantieni disattivato oltre la mezzanotte
+                </Text>
+                <Text style={{ fontSize: 12, color: '#666', marginTop: 3, lineHeight: 17 }}>
+                  Sotto la mia responsabilità. Ogni accesso Admin mostrerà un promemoria giornaliero finché non riattivo il blocco.
+                </Text>
+              </View>
             </TouchableOpacity>
 
-            {/* Permanent option */}
-            <TouchableOpacity
-              onPress={() => handleOverride('permanent')}
-              style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#EF9A9A' }}
-            >
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#C62828', marginBottom: 4 }}>Disattiva definitivamente</Text>
-              <Text style={{ fontSize: 12, color: '#888' }}>Il blocco resta disattivo finche non lo riattivi manualmente.</Text>
-            </TouchableOpacity>
+            <View style={{ backgroundColor: '#FFF8E1', padding: 10, borderRadius: 6, marginBottom: 14, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
+              <Text style={{ fontSize: 11, color: '#E65100', lineHeight: 16 }}>
+                {overrideKeepDisabled
+                  ? '⚠️ Il blocco resterà disattivato a tempo indeterminato.'
+                  : '⏰ Il blocco si riattiverà automaticamente alle 00:00 (ora italiana).'}
+              </Text>
+            </View>
 
-            {/* Cancel */}
-            <TouchableOpacity
-              onPress={() => setShowOverrideModal(false)}
-              style={{ paddingVertical: 12, alignItems: 'center' }}
-            >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#999' }}>Annulla</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setShowOverrideModal(false)}
+                disabled={overrideSubmitting}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#EEE', alignItems: 'center' }}
+                data-testid="disable-cancel-btn"
+              >
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#666' }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={submitDisableBlock}
+                disabled={overrideSubmitting || overrideReason.trim().length < 5}
+                style={{
+                  flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#E65100',
+                  alignItems: 'center', opacity: (overrideSubmitting || overrideReason.trim().length < 5) ? 0.5 : 1,
+                }}
+                data-testid="disable-confirm-btn"
+              >
+                {overrideSubmitting ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>DISATTIVA</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

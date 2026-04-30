@@ -5,7 +5,8 @@ Society and Stripe settings routes.
 - /settings/stripe (GET, PATCH, DELETE keys - admin only)
 """
 import base64
-from datetime import datetime, timezone
+import uuid
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from database import db
@@ -83,7 +84,12 @@ async def get_society_settings():
         "pro_enabled": settings.get("pro_enabled", False),
         "season_start_month": settings.get("season_start_month", 7),
         "season_start_day": settings.get("season_start_day", 1),
-        "block_expired_certificates": settings.get("block_expired_certificates", False),
+        "block_expired_certificates": settings.get("block_expired_certificates", True),
+        "override_keep_disabled": settings.get("override_keep_disabled", False),
+        "override_auto_reactivate_at": settings.get("override_auto_reactivate_at"),
+        "override_deactivation_reason": settings.get("override_deactivation_reason"),
+        "override_deactivated_by_name": settings.get("override_deactivated_by_name"),
+        "override_deactivated_at": settings.get("override_deactivated_at"),
         "iban": settings.get("iban"),
         "bank_name": settings.get("bank_name"),
         "affiliations": settings.get("affiliations", []),
@@ -121,25 +127,84 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
         if v is not None:
             update_dict[f] = v
     
-    # block_expired_certificates: special handling with audit log
+    # block_expired_certificates: special handling with audit log + auto-reactivation
     if data.block_expired_certificates is not None:
-        update_dict["block_expired_certificates"] = data.block_expired_certificates
         current_settings = await db.settings.find_one({"type": "society"})
-        old_value = current_settings.get("block_expired_certificates") if current_settings else None
-        if old_value is None or old_value != data.block_expired_certificates:
+        old_value = current_settings.get("block_expired_certificates", True) if current_settings else True
+        new_value = data.block_expired_certificates
+
+        # When DISABLING: require reason (min 5 chars) and record audit + schedule auto-reactivate
+        if not new_value:
+            reason = (data.override_deactivation_reason or "").strip()
+            if len(reason) < 5:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Motivo obbligatorio (minimo 5 caratteri) per disattivare il blocco certificati."
+                )
+            keep_disabled = bool(data.override_keep_disabled)
+
+            # Compute next midnight Italy time (Europe/Rome ≈ UTC+1 / UTC+2 DST)
+            # Approx: current Italy time = UTC+1. Next midnight Italy in UTC = today 23:00 or 22:00 UTC (DST).
+            # Use Europe/Rome explicit via datetime
+            try:
+                from zoneinfo import ZoneInfo
+                now_it = datetime.now(ZoneInfo("Europe/Rome"))
+                next_midnight_it = (now_it + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+                next_midnight_utc = next_midnight_it.astimezone(timezone.utc)
+            except Exception:
+                next_midnight_utc = (datetime.now(timezone.utc) + timedelta(days=1)).replace(hour=23, minute=0, second=0, microsecond=0)
+
+            update_dict["block_expired_certificates"] = False
+            update_dict["override_keep_disabled"] = keep_disabled
+            update_dict["override_deactivation_reason"] = reason
+            update_dict["override_deactivated_by"] = current_user["id"]
+            update_dict["override_deactivated_by_name"] = current_user.get("full_name") or current_user.get("email")
+            update_dict["override_deactivated_at"] = datetime.now(timezone.utc).isoformat()
+            update_dict["override_auto_reactivate_at"] = None if keep_disabled else next_midnight_utc.isoformat()
+            # Clear per-day first-login dismissal so banner/popup show again
+            update_dict["override_last_admin_seen_date"] = None
+
             await db.audit_logs.insert_one({
+                "id": str(uuid.uuid4()),
                 "user_id": current_user["id"],
                 "user_email": current_user.get("email", ""),
+                "user_name": current_user.get("full_name", ""),
                 "society_id": current_user.get("society_id", ""),
-                "action": "certificate_block_changed",
+                "action": "certificate_block_disabled",
                 "details": {
-                    "old_value": old_value if old_value is not None else "non configurato",
-                    "new_value": data.block_expired_certificates,
-                    "action_type": "disabled" if not data.block_expired_certificates else "enabled"
+                    "old_value": old_value,
+                    "new_value": False,
+                    "reason": reason,
+                    "keep_disabled": keep_disabled,
+                    "auto_reactivate_at": None if keep_disabled else next_midnight_utc.isoformat(),
                 },
                 "ip_address": client_ip,
-                "created_at": datetime.now(timezone.utc)
+                "created_at": datetime.now(timezone.utc),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
+        else:
+            # RE-ENABLING: clear all override metadata and log
+            update_dict["block_expired_certificates"] = True
+            update_dict["override_keep_disabled"] = False
+            update_dict["override_auto_reactivate_at"] = None
+            update_dict["override_deactivation_reason"] = None
+            update_dict["override_deactivated_by"] = None
+            update_dict["override_deactivated_by_name"] = None
+            update_dict["override_deactivated_at"] = None
+
+            if old_value is False:
+                await db.audit_logs.insert_one({
+                    "id": str(uuid.uuid4()),
+                    "user_id": current_user["id"],
+                    "user_email": current_user.get("email", ""),
+                    "user_name": current_user.get("full_name", ""),
+                    "society_id": current_user.get("society_id", ""),
+                    "action": "certificate_block_enabled",
+                    "details": {"old_value": False, "new_value": True, "source": "manual"},
+                    "ip_address": client_ip,
+                    "created_at": datetime.now(timezone.utc),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                })
     
     # trial settings: clamp values
     if data.trial_max_days is not None:
@@ -154,6 +219,57 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
             upsert=True
         )
     return {"message": "Impostazioni aggiornate con successo"}
+
+
+# ==================== CERTIFICATE BLOCK OVERRIDE STATUS ====================
+
+@router.get("/settings/certificate-override-status")
+async def get_certificate_override_status(current_user = Depends(get_current_user)):
+    """
+    Return the current society-wide certificate block status
+    and whether the Admin has already been shown the popup today.
+    Used by the per-session popup on admin dashboard.
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può consultare questo stato")
+    settings = await db.settings.find_one({"type": "society"}) or {}
+    block_enabled = settings.get("block_expired_certificates", True)
+    # Today key (Italy) for per-day popup
+    try:
+        from zoneinfo import ZoneInfo
+        today_it = datetime.now(ZoneInfo("Europe/Rome")).strftime("%Y-%m-%d")
+    except Exception:
+        today_it = datetime.utcnow().strftime("%Y-%m-%d")
+    last_seen = settings.get("override_last_admin_seen_date")
+    should_show_popup = (not block_enabled) and (last_seen != today_it)
+    return {
+        "block_expired_certificates": block_enabled,
+        "override_keep_disabled": settings.get("override_keep_disabled", False),
+        "override_auto_reactivate_at": settings.get("override_auto_reactivate_at"),
+        "override_deactivation_reason": settings.get("override_deactivation_reason"),
+        "override_deactivated_by_name": settings.get("override_deactivated_by_name"),
+        "override_deactivated_at": settings.get("override_deactivated_at"),
+        "should_show_popup": should_show_popup,
+        "today": today_it,
+    }
+
+
+@router.post("/settings/certificate-override-status/mark-seen")
+async def mark_certificate_override_seen(current_user = Depends(get_current_user)):
+    """Mark that the current admin has seen today's popup (per-day dismissal)."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può eseguire questa operazione")
+    try:
+        from zoneinfo import ZoneInfo
+        today_it = datetime.now(ZoneInfo("Europe/Rome")).strftime("%Y-%m-%d")
+    except Exception:
+        today_it = datetime.utcnow().strftime("%Y-%m-%d")
+    await db.settings.update_one(
+        {"type": "society"},
+        {"$set": {"override_last_admin_seen_date": today_it}},
+        upsert=True,
+    )
+    return {"message": "Popup marcato come visto per oggi", "date": today_it}
 
 
 # ==================== STRIPE PAYMENT SETTINGS ====================

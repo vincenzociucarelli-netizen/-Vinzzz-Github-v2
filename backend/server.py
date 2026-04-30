@@ -3490,6 +3490,8 @@ class SocietySettingsUpdate(BaseModel):
     season_start_day: Optional[int] = None  # Day when season starts (1-31, default 1)
     # Medical certificate settings
     block_expired_certificates: Optional[bool] = None  # If True, QR scan blocked for expired certificates
+    override_keep_disabled: Optional[bool] = None  # If True, override stays disabled past midnight (admin responsibility)
+    override_deactivation_reason: Optional[str] = None  # Required reason when Admin disables block (min 5 chars)
     # Season end settings
     season_end_month: Optional[int] = None  # Month when season ends (1-12, default 6 = June)
     season_end_day: Optional[int] = None  # Day when season ends (1-31, default 30)
@@ -23662,6 +23664,71 @@ async def preseason_reminder_scheduler():
         await _asyncio.sleep(43200)
 
 
+async def certificate_block_auto_reactivate_check():
+    """
+    Re-enable the society-wide certificate block at midnight Italy time,
+    unless the admin explicitly set `override_keep_disabled = True`.
+    Runs on startup + every 10 minutes.
+    """
+    try:
+        settings = await db.settings.find_one({"type": "society"})
+        if not settings:
+            return
+        if settings.get("block_expired_certificates", True):
+            return  # Already enabled
+        if settings.get("override_keep_disabled"):
+            return  # Admin wants it off permanently
+        reactivate_at = settings.get("override_auto_reactivate_at")
+        if not reactivate_at:
+            return
+        try:
+            reactivate_dt = datetime.fromisoformat(str(reactivate_at).replace("Z", "+00:00"))
+            if reactivate_dt.tzinfo is None:
+                reactivate_dt = reactivate_dt.replace(tzinfo=timezone.utc)
+        except Exception:
+            return
+        if datetime.now(timezone.utc) < reactivate_dt:
+            return
+        await db.settings.update_one(
+            {"type": "society"},
+            {"$set": {
+                "block_expired_certificates": True,
+                "override_keep_disabled": False,
+                "override_auto_reactivate_at": None,
+                "override_deactivation_reason": None,
+                "override_deactivated_by": None,
+                "override_deactivated_by_name": None,
+                "override_deactivated_at": None,
+                "override_last_admin_seen_date": None,
+            }}
+        )
+        await db.audit_logs.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": "system",
+            "user_name": "Sistema (scheduler)",
+            "action": "certificate_block_enabled",
+            "details": {"old_value": False, "new_value": True, "source": "midnight_auto_reactivate"},
+            "ip_address": "system",
+            "created_at": datetime.now(timezone.utc),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+        logger.info("Certificate block auto-reactivated at midnight.")
+    except Exception as e:
+        logger.error(f"certificate_block_auto_reactivate_check error: {e}")
+
+
+async def certificate_block_scheduler():
+    """Runs the auto-reactivation check on startup and every 10 minutes."""
+    import asyncio as _asyncio
+    await _asyncio.sleep(20)
+    while True:
+        try:
+            await certificate_block_auto_reactivate_check()
+        except Exception as e:
+            logger.error(f"certificate_block_scheduler error: {e}")
+        await _asyncio.sleep(600)  # every 10 minutes
+
+
 @app.on_event("startup")
 async def start_certificate_scheduler():
     """Start the certificate notification background task on app startup."""
@@ -23670,6 +23737,8 @@ async def start_certificate_scheduler():
     logger.info("Certificate expiry notification scheduler started.")
     _asyncio.create_task(preseason_reminder_scheduler())
     logger.info("Pre-season reminder scheduler started.")
+    _asyncio.create_task(certificate_block_scheduler())
+    logger.info("Certificate block auto-reactivate scheduler started.")
 
 @app.on_event("startup")
 async def run_data_migrations():

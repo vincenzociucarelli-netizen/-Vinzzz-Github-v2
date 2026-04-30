@@ -97,19 +97,26 @@ NOTA: Dare istruzioni dettagliate e sequenziali. L'utente farà solo azioni dire
 
 ## Completato 30/04/2026:
 - **Override certificato athlete-specific via POPUP real-time Admin** (P0)
-  - QR scan con cert. scaduto: Coach blocca l'ingresso e invia notifica all'Admin
-  - **Popup modale** su qualsiasi schermata admin (polling 10s): appare automaticamente quando il Coach scansiona un atleta con certificato scaduto
-  - Mostra: nome atleta, squadra, coach, motivo blocco + banner "valido solo per UN ingresso, riservato a [Nome Atleta]"
-  - Pulsanti: **NEGA INGRESSO** (rosso) / **ATTIVA OVERRIDE** (verde, abilitato con motivo ≥5 caratteri)
-  - Link "Decido più tardi" per posticipare senza chiudere la richiesta
-  - Override **single-use, athlete-specific, no time limit** (consumato al primo ingresso valido)
-  - Endpoint: `POST /api/admin/notifications/{id}/authorize-override`, `POST /api/admin/notifications/{id}/deny-override`
-  - Audit log completo (user, IP, timestamp, source=admin_notification)
-  - Coach popup post-override: "Accesso consentito SOLO per questa volta in attesa del nuovo certificato" (no IN PROVA)
-  - Notifiche anche fruibili su `/admin/notifications` con pulsanti inline (flusso asincrono)
-  - Rimossa modale override sul Coach (l'override passa SEMPRE dall'Admin)
-  - Nuovo componente `CertificateOverridePopup.tsx` montato in `app/admin/_layout.tsx`
-  - +3 smoke regression tests (totale 17/17 passing)
+  - QR scan con cert. scaduto/non autenticato/mancante: Coach blocca e invia notifica all'Admin
+  - **Popup modale + ping sonoro** su qualsiasi schermata admin (polling 10s)
+  - Nome atleta evidenziato, squadra, coach, motivo blocco + banner "UN solo ingresso, riservato a [Nome Atleta]"
+  - Pulsanti: **NEGA INGRESSO** / **ATTIVA OVERRIDE** (motivo obbligatorio ≥5 caratteri) + "Decido più tardi"
+  - Override single-use, no time limit (consumato al primo ingresso valido)
+  - Fix critico: override bypassa TUTTI i motivi di blocco (scaduto/non autenticato/mancante), non solo expired
+  - Coach popup post-override: "Accesso consentito SOLO per questa volta in attesa del nuovo certificato"
+  - Endpoint: `POST /api/admin/notifications/{id}/authorize-override`, `/deny-override`
+
+- **Switch Override Globale certificati con auto-reattivazione mezzanotte + promemoria Admin** (P0)
+  - Default: **ATTIVO** (blocco sempre sull'atleta)
+  - Disattivazione richiede: motivo obbligatorio (≥5 caratteri) + checkbox esplicito "Mantieni disattivato oltre la mezzanotte"
+  - Senza flag keep_disabled: **auto-riattivazione alle 00:00 ora italiana** via scheduler (check ogni 10 min)
+  - Con flag keep_disabled: resta off a tempo indeterminato
+  - **Popup "Promemoria Sicurezza"** al primo login Admin del giorno (ping sonoro + stato + "HO CAPITO"/"RIATTIVA ORA")
+  - **Banner arancione permanente** sulla dashboard finché override è ON (link rapido a impostazioni)
+  - Audit log completo su disable/enable/auto-reactivate (user, IP, motivo, flag, timestamp)
+  - Endpoint: `GET/POST /api/settings/certificate-override-status[/mark-seen]`
+  - Nuovi componenti: `CertificateOverridePopup.tsx`, `GlobalOverrideStatusPopup.tsx`
+  - +3 smoke tests (totale 17/17)
 
 ## IN SOSPESO (prossima sessione):
 - Privacy Livia: cancellare e rifirmare, verificare dati nel PDF

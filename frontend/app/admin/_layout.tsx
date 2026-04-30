@@ -5,6 +5,7 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import CertificateOverridePopup from '../../src/components/CertificateOverridePopup';
+import GlobalOverrideStatusPopup from '../../src/components/GlobalOverrideStatusPopup';
 
 const TERMS_TEXT = `TERMINI DI UTILIZZO DELLA PIATTAFORMA
 REGISTRATEAM
@@ -168,6 +169,8 @@ export default function AdminLayout() {
       {/* Real-time popup: se un Coach scansiona un atleta con cert scaduto,
           appare qui il modale con AUTORIZZA / RIFIUTA */}
       <CertificateOverridePopup />
+      {/* Popup + banner: override globale certificato disattivato */}
+      <GlobalOverrideStatusPopup />
     </>
   );
 }

@@ -34,6 +34,8 @@ class SocietySettingsUpdate(BaseModel):
     season_start_month: Optional[int] = None
     season_start_day: Optional[int] = None
     block_expired_certificates: Optional[bool] = None
+    override_keep_disabled: Optional[bool] = None
+    override_deactivation_reason: Optional[str] = None
     season_end_month: Optional[int] = None
     season_end_day: Optional[int] = None
     # Banking & affiliation data
