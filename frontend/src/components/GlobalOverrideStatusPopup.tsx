@@ -90,10 +90,10 @@ export default function GlobalOverrideStatusPopup() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      // Skip if primary admin still needs to sign declaration (let that modal take priority)
+      // Skip if any admin still needs to sign declaration (let that modal take priority)
       try {
         const paRes = await api.get('/admin/primary-admin/status');
-        if (paRes.data?.is_current_user_primary && !paRes.data?.declaration_signed) {
+        if (paRes.data?.should_show_declaration_popup) {
           setVisible(false);
           return;
         }

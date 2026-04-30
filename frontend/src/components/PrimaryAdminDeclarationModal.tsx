@@ -48,8 +48,9 @@ export default function PrimaryAdminDeclarationModal() {
     try {
       const res = await api.get('/admin/primary-admin/status');
       const d = res.data || {};
-      // Show the modal only for the primary admin with no signed declaration
-      if (d.is_current_user_primary && !d.declaration_signed) {
+      // New logic: show popup to ANY admin while no legal representative is registered
+      // (and current user hasn't signed yet). Backend computes this via `should_show_declaration_popup`.
+      if (d.should_show_declaration_popup) {
         setVisible(true);
       } else {
         setVisible(false);

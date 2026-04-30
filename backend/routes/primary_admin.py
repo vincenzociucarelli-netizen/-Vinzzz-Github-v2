@@ -127,6 +127,14 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
     # Orphan state: current primary declared as authorized_delegate but no legal_rep exists
     orphan_delegate = is_current_primary and my_decl == "authorized_delegate" and legal_rep is None
 
+    # Popup di dichiarazione: da mostrare a QUALSIASI admin se non esiste un Legale Rappresentante
+    # e l'utente corrente non ha ancora firmato una dichiarazione (oppure se la sua è diversa dai tipi validi).
+    # Se esiste già un LR, nessun admin futuro vede il popup.
+    should_show_declaration_popup = (
+        legal_rep is None
+        and my_decl not in PRIMARY_DECLARATION_TYPES
+    )
+
     # Can crown: orphan delegate primary can crown another admin as legal_rep
     can_crown = orphan_delegate
     # Admins that can be crowned (all other admins, excluding self)
@@ -156,6 +164,7 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
         "can_revoke": can_revoke,
         "can_crown": can_crown,
         "orphan_delegate": orphan_delegate,
+        "should_show_declaration_popup": should_show_declaration_popup,
         "delegable_admins": admins,
         "crownable_admins": crownable_admins,
         "primary_set_explicitly": bool(await db.users.find_one({"role": "admin", "is_primary_admin": True})),
@@ -168,7 +177,17 @@ async def declare_primary_admin(
     request: Request,
     current_user=Depends(get_current_user),
 ):
-    """Primary admin signs their declaration (legal representative or authorized delegate)."""
+    """Any admin can sign their declaration.
+    
+    Logic:
+    - If declaration_type == 'legal_representative':
+        - Rejected if another LR already exists
+        - The caller becomes primary + legal_rep
+        - Any existing orphan primary (authorized_delegate) is demoted
+    - If declaration_type == 'authorized_delegate':
+        - The caller records their declaration
+        - Becomes primary ONLY if no other primary exists yet (first admin use case)
+    """
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
 
@@ -177,11 +196,13 @@ async def declare_primary_admin(
     if not data.confirmed:
         raise HTTPException(status_code=400, detail="Devi confermare la dichiarazione")
 
-    if not await is_primary_admin(current_user):
-        raise HTTPException(status_code=403, detail="Solo il Responsabile Admin può firmare questa dichiarazione")
+    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    if "," in (client_ip or ""):
+        client_ip = client_ip.split(",")[0].strip()
+    now_iso = datetime.now(timezone.utc).isoformat()
 
-    # If declaring as legal_representative, ensure nobody else holds that role
     if data.declaration_type == "legal_representative":
+        # Reject if another LR already exists
         other_legal_rep = await db.users.find_one({
             "role": "admin",
             "primary_admin_declaration": "legal_representative",
@@ -193,23 +214,46 @@ async def declare_primary_admin(
                 detail=f"Esiste già un Legale Rappresentante registrato ({other_legal_rep.get('full_name', 'altro admin')}). Può esistere un solo Legale Rappresentante per società."
             )
 
-    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
-    if "," in (client_ip or ""):
-        client_ip = client_ip.split(",")[0].strip()
+        # Demote any existing orphan primary (who was an authorized_delegate)
+        current_primary = await db.users.find_one({
+            "role": "admin",
+            "is_primary_admin": True,
+            "id": {"$ne": current_user["id"]},
+        })
+        if current_primary:
+            await db.users.update_one(
+                {"id": current_primary["id"]},
+                {"$set": {"is_primary_admin": False}},
+            )
 
-    now_iso = datetime.now(timezone.utc).isoformat()
-
-    await db.users.update_one(
-        {"id": current_user["id"]},
-        {
-            "$set": {
+        # Promote self: become primary + legal_rep
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": {
                 "is_primary_admin": True,
-                "primary_admin_declaration": data.declaration_type,
+                "primary_admin_declaration": "legal_representative",
                 "primary_admin_declaration_at": now_iso,
                 "primary_admin_declaration_ip": client_ip,
-            }
-        },
-    )
+            }},
+        )
+
+    else:  # authorized_delegate
+        # Become primary only if no other primary exists (first admin / bootstrap case)
+        explicit_primary = await db.users.find_one({
+            "role": "admin",
+            "is_primary_admin": True,
+            "id": {"$ne": current_user["id"]},
+        })
+        should_become_primary = explicit_primary is None
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": {
+                "is_primary_admin": should_become_primary or bool(current_user.get("is_primary_admin")),
+                "primary_admin_declaration": "authorized_delegate",
+                "primary_admin_declaration_at": now_iso,
+                "primary_admin_declaration_ip": client_ip,
+            }},
+        )
 
     await db.audit_logs.insert_one({
         "id": str(uuid.uuid4()),

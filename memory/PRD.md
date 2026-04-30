@@ -95,7 +95,17 @@ NOTA: Dare istruzioni dettagliate e sequenziali. L'utente farà solo azioni dire
 - Fix creazione squadra (date)
 - Biglietto da visita con P.IVA
 
-- **Incoronazione Legale Rappresentante** (P0 — 30/04/2026, finale)
+- **Popup dichiarazione per TUTTI gli admin finché manca il Legale Rappresentante** (P0 — 30/04/2026, finale)
+  - Nuovo campo risposta status: `should_show_declaration_popup` — true se nessun LR nel sistema + utente corrente non ha ancora firmato
+  - Endpoint `POST /primary-admin/declare` ora accessibile a QUALSIASI admin (non solo primary):
+    - `legal_representative`: valido solo se nessun altro LR esiste. Demote automatica di eventuale orphan primary. Chi firma diventa primary + LR.
+    - `authorized_delegate`: salva solo la dichiarazione. Diventa primary SOLO se non esiste già un altro primary (bootstrap case: primo admin orfano)
+  - Frontend: `PrimaryAdminDeclarationModal` ora mostra il popup a tutti gli admin senza dichiarazione finché non c'è LR. Una volta che qualcuno firma come LR, il popup sparisce per tutti i nuovi admin.
+  - I popup secondari (override atleta / override globale) restano soppressi finché il popup dichiarazione è attivo (UX single-action)
+  - Pulsante 👑 INCORONA resta come **backup** nello stato orfano (casi edge in cui un admin promosso non ha mai fatto login per firmare)
+  - E2E test backend: bootstrap primo admin → popup visto → firma delegate → orfano; secondo admin senza LR → popup visto → firma LR → diventa primary + LR, primo admin resta orfano normale.
+
+- **Incoronazione Legale Rappresentante** (P0 — 30/04/2026)
   - Caso reale: il dirigente tecnico scarica l'app → dichiara "Sono un incaricato" → stato orfano (nessun Legale Rappresentante). Invita il presidente a registrarsi come admin. Dalla pagina "Responsabile Admin" vede lista "Incorona" con pulsante 👑 accanto a ogni admin.
   - Nuovo endpoint `POST /api/admin/primary-admin/crown` — solo orphan authorized_delegate primary può incoronare
   - Dopo incoronazione: Legale Rappresentante = nuovo primary + legal_rep. Incaricato resta admin normale con declaration `authorized_delegate` (può ricevere delega dal Legale Rappresentante)
