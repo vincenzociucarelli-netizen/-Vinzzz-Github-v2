@@ -1334,6 +1334,19 @@ async def check_athlete_status(athlete_id: str):
         except:
             expiry_date = None
     
+    # Override athlete-specific: se attivo, consente l'ingresso una sola volta
+    # indipendentemente dalla causa del blocco (mancante / non autenticato / scaduto)
+    override_active = athlete.get("certificate_override_active", False)
+    if override_active:
+        override_reason = athlete.get("certificate_override_reason", "Autorizzato dall'admin")
+        return {
+            "allowed": True,
+            "reason": f"⚠️ ACCESSO CONSENTITO (Override Admin: {override_reason})",
+            "warning": "⚠️ Override certificato attivo SOLO per questo ingresso",
+            "override_active": True,
+            "athlete_id": athlete_id,
+        }
+
     # Certificato mancante = BLOCCATO
     if not certificate and not cert_expiry:
         return {"allowed": False, "reason": "⛔ CERTIFICATO MEDICO MANCANTE - Atleta NON ammesso", "warning": None}
@@ -1344,19 +1357,6 @@ async def check_athlete_status(athlete_id: str):
     
     # Check if certificate is expired
     if expiry_date and datetime.utcnow() > expiry_date:
-        # Check for active single-session override
-        override_active = athlete.get("certificate_override_active", False)
-        if override_active:
-            # Override is active for this single session
-            override_reason = athlete.get("certificate_override_reason", "Autorizzato dall'admin")
-            return {
-                "allowed": True, 
-                "reason": f"⚠️ CERTIFICATO SCADUTO (Override singola sessione: {override_reason})", 
-                "warning": f"⚠️ CERTIFICATO SCADUTO - Override attivo SOLO per questa sessione",
-                "override_active": True,  # Flag per consumare l'override dopo registrazione
-                "athlete_id": athlete_id
-            }
-        
         # No override - BLOCCATO
         return {"allowed": False, "reason": "⛔ CERTIFICATO MEDICO SCADUTO - Atleta NON ammesso all'allenamento", "warning": None}
     
