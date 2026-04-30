@@ -95,6 +95,13 @@ NOTA: Dare istruzioni dettagliate e sequenziali. L'utente farà solo azioni dire
 - Fix creazione squadra (date)
 - Biglietto da visita con P.IVA
 
+- **Guard Email Istituzionale su dichiarazione LR** (P0 — 30/04/2026)
+  - Oltre al rilevamento del nome società, ora si confronta anche l'email del profilo utente con l'email (o PEC) registrata nel profilo Società
+  - Se l'email utente coincide con `settings.email` o `settings.pec` → blocco dichiarazione LR (errore 400) + opzione disabilitata nel modal frontend
+  - Campo `account_looks_like_society` in `/primary-admin/status` ora è OR logico: nome-società OR email-istituzionale
+  - Messaggio frontend aggiornato: "Non disponibile: questo account è riservato alla società (nome o email istituzionale/PEC)"
+  - Nessun nuovo campo nel profilo Società (l'email sociale era già presente in Impostazioni → Dati Società)
+
 - **Popup dichiarazione per TUTTI gli admin finché manca il Legale Rappresentante** (P0 — 30/04/2026, finale)
   - Nuovo campo risposta status: `should_show_declaration_popup` — true se nessun LR nel sistema + utente corrente non ha ancora firmato
   - Endpoint `POST /primary-admin/declare` ora accessibile a QUALSIASI admin (non solo primary):

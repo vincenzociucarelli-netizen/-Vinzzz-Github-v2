@@ -51,6 +51,20 @@ def looks_like_society_name(full_name: str) -> bool:
     return False
 
 
+async def is_society_institutional_email(user_email: str) -> bool:
+    """Return True if the user's email matches the society's institutional email
+    or PEC stored in the society settings. Such accounts MUST NOT declare as
+    Legal Representative because the email is institutional, not personal.
+    """
+    if not user_email:
+        return False
+    settings = await db.settings.find_one({"type": "society"}) or {}
+    society_email = (settings.get("email") or "").strip().lower()
+    society_pec = (settings.get("pec") or "").strip().lower()
+    u = user_email.strip().lower()
+    return u != "" and (u == society_email or u == society_pec)
+
+
 class PrimaryDeclarationRequest(BaseModel):
     declaration_type: str  # "legal_representative" | "authorized_delegate"
     confirmed: bool
@@ -149,6 +163,12 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
     # Orphan state: current primary declared as authorized_delegate but no legal_rep exists
     orphan_delegate = is_current_primary and my_decl == "authorized_delegate" and legal_rep is None
 
+    # Account "is_society" for UI: match su nome società O email istituzionale/PEC
+    account_is_society_like = (
+        looks_like_society_name(current_user.get("full_name", ""))
+        or await is_society_institutional_email(current_user.get("email", ""))
+    )
+
     # Popup di dichiarazione: da mostrare a QUALSIASI admin se non esiste un Legale Rappresentante
     # e l'utente corrente non ha ancora firmato una dichiarazione (oppure se la sua è diversa dai tipi validi).
     # Se esiste già un LR, nessun admin futuro vede il popup.
@@ -187,7 +207,7 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
         "can_crown": can_crown,
         "orphan_delegate": orphan_delegate,
         "should_show_declaration_popup": should_show_declaration_popup,
-        "account_looks_like_society": looks_like_society_name(current_user.get("full_name", "")),
+        "account_looks_like_society": account_is_society_like,
         "delegable_admins": admins,
         "crownable_admins": crownable_admins,
         "primary_set_explicitly": bool(await db.users.find_one({"role": "admin", "is_primary_admin": True})),
@@ -225,11 +245,17 @@ async def declare_primary_admin(
     now_iso = datetime.now(timezone.utc).isoformat()
 
     if data.declaration_type == "legal_representative":
-        # GUARD: accounts that look like a society cannot be Legal Representative
+        # GUARD 1: accounts that look like a society cannot be Legal Representative
         if looks_like_society_name(current_user.get("full_name", "")):
             raise HTTPException(
                 status_code=400,
                 detail="Questo account risulta essere intestato ad una società (non ad una persona fisica). Il Legale Rappresentante deve essere SEMPRE una persona fisica (Presidente, Amministratore, ecc.). Registra il Legale Rappresentante con il suo nome e cognome personali."
+            )
+        # GUARD 2: email corrisponde all'email istituzionale/PEC registrata nel profilo Società
+        if await is_society_institutional_email(current_user.get("email", "")):
+            raise HTTPException(
+                status_code=400,
+                detail="Questa email risulta essere l'email istituzionale o PEC della Società (registrata nel profilo). Il Legale Rappresentante deve firmare con la propria email personale."
             )
 
         # Reject if another LR already exists

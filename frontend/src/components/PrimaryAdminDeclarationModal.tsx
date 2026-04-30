@@ -141,7 +141,7 @@ export default function PrimaryAdminDeclarationModal() {
                   <Text style={styles.optionDesc}>Sono il Presidente o il legale rappresentante pro-tempore iscritto nell'atto costitutivo / statuto.</Text>
                   {accountIsSociety && (
                     <Text style={[styles.optionDesc, { color: '#C62828', marginTop: 4, fontWeight: '700' }]}>
-                      🔒 Non disponibile: questo account è intestato ad una società, non a una persona fisica.
+                      🔒 Non disponibile: questo account è riservato alla società (nome o email istituzionale/PEC).
                     </Text>
                   )}
                 </View>
