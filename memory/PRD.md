@@ -95,6 +95,14 @@ NOTA: Dare istruzioni dettagliate e sequenziali. L'utente farà solo azioni dire
 - Fix creazione squadra (date)
 - Biglietto da visita con P.IVA
 
+- **Pagina UI "Responsabile Admin"** in Impostazioni (30/04/2026)
+  - Card "scettro" con avatar del detentore attuale (nome + email + badge "Sei tu")
+  - Stato dichiarazione (verde/arancione) con tipo e data di firma
+  - Sezione **Delega** (solo per il Responsabile): lista altri Admin + pulsante "DELEGA" + modale di conferma con warning
+  - **Storico cronologico** completo di firme e deleghe con user, timestamp, IP
+  - Nuovo endpoint: `GET /api/admin/primary-admin/history`
+  - Card in dashboard impostazioni con icona shield blu
+
 - **Responsabile Admin con dichiarazione obbligatoria** (P0 — 30/04/2026)
   - Concetto introdotto: "Responsabile Admin" = primo admin registrato (trasferibile via delega)
   - Modale bloccante al primo accesso: il Responsabile DEVE dichiarare se è il **Legale Rappresentante** o un **Dirigente autorizzato**

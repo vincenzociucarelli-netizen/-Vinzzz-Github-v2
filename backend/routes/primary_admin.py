@@ -266,3 +266,29 @@ async def delegate_primary_admin(
         "new_primary_admin_id": new_admin["id"],
         "new_primary_admin_name": new_admin.get("full_name", ""),
     }
+
+
+@router.get("/admin/primary-admin/history")
+async def get_primary_admin_history(current_user=Depends(get_current_user)):
+    """Return audit log entries related to the Responsabile Admin role."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    actions = [
+        "primary_admin_declaration_signed",
+        "primary_admin_delegated",
+    ]
+    events = []
+    async for log in db.audit_logs.find(
+        {"action": {"$in": actions}},
+        {"_id": 0},
+    ).sort("created_at", -1).limit(50):
+        # Remove ObjectId-like fields and normalize created_at
+        log.pop("_id", None)
+        if "created_at" in log and not isinstance(log["created_at"], str):
+            try:
+                log["created_at"] = log["created_at"].isoformat()
+            except Exception:
+                log["created_at"] = str(log["created_at"])
+        events.append(log)
+    return {"events": events}

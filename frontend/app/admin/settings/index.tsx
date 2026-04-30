@@ -57,6 +57,24 @@ export default function SettingsIndex() {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        {/* Card Responsabile Admin (lo "scettro" dell'app) */}
+        <TouchableOpacity 
+          style={[styles.card, { borderColor: '#1565C0', backgroundColor: '#E3F2FD' }]}
+          onPress={() => router.push('/admin/settings/primary-admin')}
+          data-testid="settings-primary-admin-btn"
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#1565C0' }]}>
+            <Ionicons name="shield-checkmark" size={32} color="#fff" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: '#1565C0' }]}>Responsabile Admin</Text>
+            <Text style={styles.cardDescription}>
+              Titolare autorizzato, dichiarazione di ruolo e delega ad altri Admin
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#1565C0" />
+        </TouchableOpacity>
+
         {/* Card Altre Impostazioni */}
         <TouchableOpacity 
           style={[styles.card, { borderColor: '#E65100', backgroundColor: '#FFF3E0' }]}
