@@ -304,7 +304,7 @@ export default function SocietySettings() {
               borderColor: blockExpiredCertificates ? '#66BB6A' : '#FFB74D',
             }}
           >
-            <View style={{ flex: 1, marginRight: 12 }}>
+            <View style={{ flex: 1, marginRight: 12 }} pointerEvents="none">
               <Text style={{ fontSize: 14, fontWeight: '700', color: blockExpiredCertificates ? '#2E7D32' : '#E65100', marginBottom: 4 }}>
                 {blockExpiredCertificates ? 'Blocco automatico ATTIVO' : 'Blocco automatico DISATTIVO'}
               </Text>
@@ -316,7 +316,7 @@ export default function SocietySettings() {
                     : 'La scansione QR permette la registrazione agli allenamenti anche con certificato scaduto'}
               </Text>
             </View>
-            <View style={[{
+            <View pointerEvents="none" style={[{
               width: 50, height: 28, borderRadius: 14, padding: 2,
               backgroundColor: blockExpiredCertificates ? '#66BB6A' : '#ccc',
               justifyContent: 'center',
@@ -329,6 +329,32 @@ export default function SocietySettings() {
             </View>
           </Pressable>
           </View>
+          
+          {/* Pulsante esplicito di disattivazione (visibile solo quando blocco è ATTIVO).
+              Risolve il bug del touch event mancato sul Pressable principale su Chrome Android. */}
+          {blockExpiredCertificates && (
+            <TouchableOpacity
+              data-testid="disable-cert-block-btn"
+              activeOpacity={0.7}
+              onPress={() => setShowOverrideModal(true)}
+              style={{
+                marginTop: 8,
+                backgroundColor: '#FF6B35',
+                borderRadius: 8,
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 8,
+              }}
+            >
+              <Ionicons name="lock-open-outline" size={18} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+                Disattiva blocco (con motivo)
+              </Text>
+            </TouchableOpacity>
+          )}
           
           {blockExpiredCertificates && (
             <View style={{ backgroundColor: '#FFF8E1', padding: 10, borderRadius: 8, marginTop: 10 }}>

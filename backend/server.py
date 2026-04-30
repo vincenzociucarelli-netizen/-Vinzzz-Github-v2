@@ -5285,23 +5285,8 @@ async def save_federation_preferences(data: dict, current_user = Depends(get_cur
 
 
 # ==================== /parent/commitments MOVED TO routes/parents.py ====================
-
-
-# ==================== ANTHROPIC MARKER (placeholder for next route) ====================
-
-# ==================== TEAM ENDPOINTS (ADMIN) ====================
-
-
-# ==================== TEAMS ROUTES MOVED TO routes/teams.py ====================
-# All /teams/* basic endpoints (12 endpoints) have been moved to routes/teams.py
-# Two remaining /teams routes (attendance-stats, championships) stay in server.py for now
-
-# ==================== PARENT LINK REQUESTS ====================
-
-
-
+# ==================== TEAMS ROUTES MOVED TO routes/teams.py (12 endpoints) ====================
 # ==================== /parent-link/* ROUTES MOVED TO routes/parents.py ====================
-# - search, request, requests, respond
 
 
 # ==================== ATHLETE ENDPOINTS ====================

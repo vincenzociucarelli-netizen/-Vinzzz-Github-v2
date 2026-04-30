@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 # Configuration
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
 SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY")
-SENDER_EMAIL = os.environ.get("SENDGRID_FROM_EMAIL", "noreply@registrateam.it")
+# Read SENDER_EMAIL (current standard) or SENDGRID_FROM_EMAIL (legacy fallback)
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL") or os.environ.get("SENDGRID_FROM_EMAIL", "assistenza@registrateam.it")
 SENDER_NAME = os.environ.get("SENDER_NAME", "RegistraTEAM")
 
 # Determine which service to use
