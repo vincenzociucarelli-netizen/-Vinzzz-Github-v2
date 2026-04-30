@@ -10805,6 +10805,33 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
     
     # If blocked by certificate, allow override option for admin
     if certificate_blocked and not attendance_data.force:
+        # Notify admin: QR with expired certificate was scanned (Fix C)
+        try:
+            existing_notif = await db.admin_notifications.find_one({
+                "type": "expired_cert_scan",
+                "athlete_id": athlete_id,
+                "date": today,
+                "read": False,
+            })
+            if not existing_notif:
+                await db.admin_notifications.insert_one({
+                    "id": str(uuid.uuid4()),
+                    "type": "expired_cert_scan",
+                    "title": "Certificato scaduto rilevato",
+                    "message": f"{athlete_name} ({team.get('name', '')}) si è presentato all'allenamento con certificato medico scaduto/mancante. Valuta se attivare l'override per oggi.",
+                    "athlete_id": athlete_id,
+                    "athlete_name": athlete_name,
+                    "team_id": team_id,
+                    "team_name": team.get("name", ""),
+                    "date": today,
+                    "priority": "high",
+                    "read": False,
+                    "created_at": datetime.utcnow(),
+                    "data": {"action": "open_override_modal", "athlete_id": athlete_id}
+                })
+        except Exception as e:
+            logger.warning(f"Could not create admin notification for expired cert scan: {e}")
+        
         return {
             "id": None,
             "athlete_id": athlete_id,
@@ -10839,7 +10866,11 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
         attendance_dict["force_note"] = attendance_data.force_note or "Forzatura coach"
     
     # 8. Handle certificate override consumption
+    override_consumed = False
+    override_reason_used = None
     if status_check["allowed"] and status_check.get("override_active"):
+        override_consumed = True
+        override_reason_used = athlete.get("certificate_override_reason", "")
         await db.athletes.update_one(
             {"id": athlete_id},
             {"$set": {
@@ -10930,7 +10961,9 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
         "block_reason": attendance_dict.get("block_reason"),
         "forced": bool(attendance_dict.get("forced", False)),
         "force_note": attendance_dict.get("force_note"),
-        "qr_code_used": str(attendance_dict.get("qr_code_used", ""))
+        "qr_code_used": str(attendance_dict.get("qr_code_used", "")),
+        "certificate_override_consumed": override_consumed,
+        "certificate_override_reason": override_reason_used,
     }
     
     # Add trial info if athlete is in trial
