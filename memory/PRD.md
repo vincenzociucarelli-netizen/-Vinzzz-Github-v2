@@ -95,6 +95,17 @@ NOTA: Dare istruzioni dettagliate e sequenziali. L'utente farà solo azioni dire
 - Fix creazione squadra (date)
 - Biglietto da visita con P.IVA
 
+- **Email automatiche al Legale Rappresentante** (P1 — 30/04/2026)
+  - Nuovo helper `_notify_legal_rep_scepter_event()` in `routes/primary_admin.py` (usa `email_service.send_transactional_email` con Brevo)
+  - Eventi che triggerano email al LR:
+    - 🔄 **Delega** effettuata dal LR ad un Dirigente
+    - ↩️ **Rimessa incarico** da parte del Dirigente autorizzato
+    - 🚫 **Revoca delega** dal LR (auto-conferma della propria azione)
+    - 👑 **Incoronazione** di un nuovo LR (benvenuto)
+    - ✍️ **Firma dichiarazione LR** (welcome con istruzioni)
+  - Email HTML responsive con marchio Società, mittente, timestamp UTC, IP
+  - Best-effort: errori silenti (l'email non blocca l'azione)
+
 - **Guard Email Istituzionale su dichiarazione LR** (P0 — 30/04/2026)
   - Oltre al rilevamento del nome società, ora si confronta anche l'email del profilo utente con l'email (o PEC) registrata nel profilo Società
   - Se l'email utente coincide con `settings.email` o `settings.pec` → blocco dichiarazione LR (errore 400) + opzione disabilitata nel modal frontend

@@ -13,6 +13,7 @@ such as permanently disabling the society-wide medical certificate block
 The primary admin role can be DELEGATED to another admin; delegation invalidates
 the current declaration (new admin must sign their own).
 """
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -22,6 +23,8 @@ from pydantic import BaseModel
 from database import db
 from auth_utils import get_current_user
 from models.enums import UserRole
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -63,6 +66,67 @@ async def is_society_institutional_email(user_email: str) -> bool:
     society_pec = (settings.get("pec") or "").strip().lower()
     u = user_email.strip().lower()
     return u != "" and (u == society_email or u == society_pec)
+
+
+async def _notify_legal_rep_scepter_event(
+    event_type: str,
+    summary: str,
+    actor_name: str,
+    details_html: str = "",
+) -> None:
+    """Send an email to the current Legal Representative about a scepter-related event.
+    Silently ignores errors (email is best-effort notification, not a hard dependency).
+    event_type: 'delegated' | 'resigned' | 'revoked' | 'crowned'
+    """
+    try:
+        legal_rep = await db.users.find_one(
+            {"role": "admin", "primary_admin_declaration": "legal_representative"}
+        )
+        if not legal_rep or not legal_rep.get("email"):
+            return  # No LR to notify (orphan state, common in bootstrap)
+
+        settings = await db.settings.find_one({"type": "society"}) or {}
+        society_name = settings.get("name", "la tua Società")
+
+        subject_map = {
+            "delegated": "Scettro delegato — notifica Responsabile",
+            "resigned": "Incarico rimesso — scettro tornato a te",
+            "revoked": "Delega revocata — hai ripreso lo scettro",
+            "crowned": "Incoronato Legale Rappresentante",
+        }
+        icon_map = {
+            "delegated": "🔄",
+            "resigned": "↩️",
+            "revoked": "🚫",
+            "crowned": "👑",
+        }
+        subject = f"{icon_map.get(event_type, '🔔')} {subject_map.get(event_type, 'Aggiornamento scettro')}"
+
+        html = f"""
+        <html><body style="font-family: Arial, sans-serif; color: #333; max-width: 560px; margin: 0 auto;">
+          <div style="background:#1565C0; color:#fff; padding:18px; border-radius:8px 8px 0 0;">
+            <h2 style="margin:0; font-size:18px;">{icon_map.get(event_type, '🔔')} {subject_map.get(event_type, 'Aggiornamento')}</h2>
+            <p style="margin:4px 0 0 0; font-size:13px; opacity:0.9;">{society_name}</p>
+          </div>
+          <div style="background:#fff; padding:20px; border:1px solid #E0E0E0; border-top:none; border-radius:0 0 8px 8px;">
+            <p style="font-size:14px; line-height:20px;">Ciao <strong>{legal_rep.get('full_name', 'Legale Rappresentante')}</strong>,</p>
+            <p style="font-size:14px; line-height:20px;">{summary}</p>
+            {f'<div style="background:#FAFAFA; border-left:3px solid #1565C0; padding:10px 12px; margin:14px 0; font-size:13px; color:#555;">{details_html}</div>' if details_html else ''}
+            <p style="font-size:12px; color:#888; margin-top:18px;">Operazione eseguita da: <strong>{actor_name}</strong></p>
+            <p style="font-size:12px; color:#888;">Data: {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')} UTC</p>
+            <p style="font-size:11px; color:#AAA; margin-top:20px; border-top:1px solid #EEE; padding-top:10px;">Questa notifica ti è stata inviata perché risulti registrato come Legale Rappresentante della società nel sistema RegistraTEAM. Se ritieni sia un errore, contatta subito gli admin della società.</p>
+          </div>
+        </body></html>
+        """
+
+        from email_service import send_transactional_email
+        await send_transactional_email(
+            to_email=legal_rep["email"],
+            subject=subject,
+            html_content=html,
+        )
+    except Exception as e:
+        logger.warning(f"Failed to send scepter email to legal rep: {e}")
 
 
 class PrimaryDeclarationRequest(BaseModel):
@@ -323,6 +387,15 @@ async def declare_primary_admin(
         "timestamp": now_iso,
     })
 
+    # If user just signed as LR, send them a welcome email summarizing the role
+    if data.declaration_type == "legal_representative":
+        await _notify_legal_rep_scepter_event(
+            event_type="crowned",
+            summary="Ti sei registrato come <strong>Legale Rappresentante</strong> della società. Lo scettro di Responsabile Admin è nelle tue mani.",
+            actor_name=current_user.get("full_name", current_user.get("email", "—")),
+            details_html="Da questa pagina (Impostazioni → Responsabile Admin) puoi delegare lo scettro ad un admin di fiducia, revocare eventuali deleghe e consultare lo storico.",
+        )
+
     return {
         "message": "Dichiarazione registrata",
         "declaration_type": data.declaration_type,
@@ -421,11 +494,29 @@ async def delegate_primary_admin(
             }},
         )
 
+    # Notify LR by email (best effort)
+    await _notify_legal_rep_scepter_event(
+        event_type="delegated",
+        summary=f"Hai delegato lo <strong>scettro di Responsabile Admin</strong> a <strong>{new_admin.get('full_name', '')}</strong> ({new_admin.get('email', '')}), che ora agirà come Dirigente autorizzato fino a quando non rimetterà l'incarico (o revocherai la delega).",
+        actor_name=current_user.get("full_name", current_user.get("email", "—")),
+        details_html=f"<strong>Dirigente autorizzato</strong>: {new_admin.get('full_name', '')}<br><strong>Email</strong>: {new_admin.get('email', '')}",
+    )
+
     return {
         "message": "Delega effettuata",
         "new_primary_admin_id": new_admin["id"],
         "new_primary_admin_name": new_admin.get("full_name", ""),
     }
+
+
+# Hook: email notification to LR after delegate (placed here so it runs after response isn't blocked)
+async def _send_delegate_email_hook(actor_name: str, new_admin_name: str, new_admin_email: str):
+    await _notify_legal_rep_scepter_event(
+        event_type="delegated",
+        summary=f"Hai delegato lo <strong>scettro di Responsabile Admin</strong> a <strong>{new_admin_name}</strong> ({new_admin_email}), che ora agirà come Dirigente autorizzato fino a quando non rimetterà l'incarico (o revocherai la delega).",
+        actor_name=actor_name,
+        details_html=f"<strong>Dirigente autorizzato</strong>: {new_admin_name}<br><strong>Email</strong>: {new_admin_email}",
+    )
 
 
 @router.post("/admin/primary-admin/resign")
@@ -498,6 +589,14 @@ async def resign_primary_admin(
         {"$set": {"override_keep_disabled": False, "block_expired_certificates": True}},
     )
 
+    # Notify LR by email
+    await _notify_legal_rep_scepter_event(
+        event_type="resigned",
+        summary=f"Il Dirigente autorizzato <strong>{current_user.get('full_name', '—')}</strong> ha <strong>rimesso l'incarico</strong>. Lo scettro di Responsabile Admin è tornato nelle tue mani.",
+        actor_name=current_user.get("full_name", current_user.get("email", "—")),
+        details_html="Ora sei di nuovo Responsabile Admin operativo. Se desideri, puoi delegare nuovamente dalla pagina Impostazioni → Responsabile Admin.",
+    )
+
     return {
         "message": "Incarico rimesso al Legale Rappresentante",
         "legal_rep_id": legal_rep["id"],
@@ -568,6 +667,14 @@ async def revoke_delegation(
     await db.settings.update_one(
         {"type": "society"},
         {"$set": {"override_keep_disabled": False, "block_expired_certificates": True}},
+    )
+
+    # Notify (self) LR: this is a self-triggered action, but an email confirming the action is a useful audit for the LR inbox
+    await _notify_legal_rep_scepter_event(
+        event_type="revoked",
+        summary=f"Hai <strong>revocato la delega</strong> a <strong>{current_delegate.get('full_name', '')}</strong> e ripreso l'incarico di Responsabile Admin.",
+        actor_name=current_user.get("full_name", current_user.get("email", "—")),
+        details_html=f"<strong>Delegato revocato</strong>: {current_delegate.get('full_name', '')}<br><strong>Email</strong>: {current_delegate.get('email', '')}",
     )
 
     return {
@@ -655,6 +762,15 @@ async def crown_legal_representative(
     await db.settings.update_one(
         {"type": "society"},
         {"$set": {"override_keep_disabled": False, "block_expired_certificates": True}},
+    )
+
+    # The newly crowned user is now the Legal Representative: the helper looks up
+    # the current LR from DB, which is exactly the person we just promoted.
+    await _notify_legal_rep_scepter_event(
+        event_type="crowned",
+        summary="Sei stato registrato come <strong>Legale Rappresentante</strong> della società. Lo scettro di Responsabile Admin è ora nelle tue mani.",
+        actor_name=current_user.get("full_name", current_user.get("email", "—")),
+        details_html=f"Incoronazione eseguita da: <strong>{current_user.get('full_name', '—')}</strong> (Dirigente autorizzato).<br>Ora puoi delegare ad un admin di fiducia o operare direttamente.",
     )
 
     return {
