@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../../src/components/Icon';
+import InstitutionalBanner from '../../../src/components/InstitutionalBanner';
 import api from '../../../src/services/api';
 
 interface StripeSettings {
@@ -162,6 +163,8 @@ export default function StripeSettings() {
         <Text style={styles.headerTitle}>Impostazioni Pagamenti</Text>
         <View style={{ width: 40 }} />
       </View>
+
+      <InstitutionalBanner detail="L'IBAN/conto della società è qui solo per riferimento. La firma sui pagamenti spetta al Legale Rappresentante." />
 
       <ScrollView style={styles.content}>
         {/* Stripe Logo & Info */}

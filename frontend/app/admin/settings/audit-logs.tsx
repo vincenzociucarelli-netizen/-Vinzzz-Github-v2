@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { Icon } from '../../../src/components/Icon';
+import InstitutionalBanner from '../../../src/components/InstitutionalBanner';
 import { useRouter } from 'expo-router';
 import api from '../../../src/services/api';
 
@@ -372,6 +373,8 @@ export default function AuditLogsPage() {
         <Text style={styles.title}>Audit Log</Text>
         <View style={{ width: 40 }} />
       </View>
+
+      <InstitutionalBanner />
 
       {/* Stats */}
       <View style={styles.statsBar}>

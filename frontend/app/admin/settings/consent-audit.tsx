@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../../src/components/Icon';
+import InstitutionalBanner from '../../../src/components/InstitutionalBanner';
 import api from '../../../src/services/api';
 
 const CONSENT_LABELS: Record<string, string> = {
@@ -107,6 +108,8 @@ export default function ConsentAuditPage() {
         <Text style={s.headerTitle}>Consensi Privacy</Text>
         <View style={{ width: 40 }} />
       </View>
+
+      <InstitutionalBanner />
 
       <ScrollView style={s.content} data-testid="consent-audit-list">
         {entities.length === 0 ? (

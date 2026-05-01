@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform }
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../../src/services/api';
+import InstitutionalBanner from '../../../src/components/InstitutionalBanner';
 
 export default function TrialSettings() {
   const router = useRouter();
@@ -70,6 +71,8 @@ export default function TrialSettings() {
         <Text style={styles.headerTitle}>Certificato Medico e Periodo di Prova</Text>
         <View style={{ width: 40 }} />
       </View>
+
+      <InstitutionalBanner detail="Il blocco certificati permanente (oltre la mezzanotte) richiede la firma del Legale Rappresentante." />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {/* Sezione Certificato Medico */}

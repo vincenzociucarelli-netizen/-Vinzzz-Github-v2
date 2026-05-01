@@ -17,6 +17,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
+import InstitutionalBadge from '../../src/components/InstitutionalBadge';
+import InstitutionalBanner from '../../src/components/InstitutionalBanner';
 
 // Emoji icons for reliable cross-platform support
 const Icons = {
@@ -426,9 +428,13 @@ export default function AdminDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Text style={styles.welcomeText}>
-          Benvenuto, {user?.full_name?.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
-        </Text>
+        <InstitutionalBanner />
+        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 16 }}>
+          <Text style={[styles.welcomeText, { paddingHorizontal: 0, paddingTop: 0 }]}>
+            Benvenuto, {user?.full_name?.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+          </Text>
+          <InstitutionalBadge size="md" />
+        </View>
 
         {/* Quick Stats */}
         {stats && (

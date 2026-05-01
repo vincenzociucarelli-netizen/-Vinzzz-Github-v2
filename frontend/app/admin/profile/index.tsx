@@ -16,6 +16,8 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../../src/store/authStore';
 import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
+import InstitutionalBadge from '../../../src/components/InstitutionalBadge';
+import InstitutionalBanner from '../../../src/components/InstitutionalBanner';
 import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
@@ -376,10 +378,15 @@ export default function AdminProfile() {
         <View style={{ width: 24 }} />
       </View>
 
+      <InstitutionalBanner detail="Questo profilo rappresenta la Società. Modifiche sui dati personali (codice fiscale, indirizzo, IBAN personale) non si applicano: l'unico dato sostanziale qui è quello istituzionale." />
+
       <ScrollView
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingTop: 12, flexWrap: 'wrap' }}>
+          <InstitutionalBadge size="md" />
+        </View>
         {/* Edit/Save Buttons */}
         <View style={styles.actionButtons}>
           {editing ? (

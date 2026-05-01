@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../../src/components/Icon';
+import InstitutionalBanner from '../../../src/components/InstitutionalBanner';
 import api from '../../../src/services/api';
 import { SportIcon } from '../../../src/components/SportIcon';
 import * as ImagePicker from 'expo-image-picker';
@@ -246,6 +247,8 @@ export default function OtherSettings() {
         <Text style={styles.headerTitle}>Altre Impostazioni</Text>
         <View style={{ width: 40 }} />
       </View>
+
+      <InstitutionalBanner />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Stagione Sportiva */}

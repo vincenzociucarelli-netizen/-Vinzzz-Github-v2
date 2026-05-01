@@ -26,6 +26,7 @@ import {
 import { useRouter } from 'expo-router';
 import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
+import InstitutionalBanner from '../../../src/components/InstitutionalBanner';
 
 interface Admin {
   id: string;
@@ -235,6 +236,11 @@ export default function PrimaryAdminPage() {
         <Text style={styles.headerTitle}>Responsabile Admin</Text>
         <View style={{ width: 40 }} />
       </View>
+
+      <InstitutionalBanner
+        text="Lo scettro di Responsabile Admin è riservato a una persona fisica."
+        detail="Questo account è la società stessa: non può firmare dichiarazioni di Legale Rappresentante o Dirigente autorizzato."
+      />
 
       <ScrollView style={styles.content} contentContainerStyle={{ padding: 16 }}>
         {/* Scettro card */}

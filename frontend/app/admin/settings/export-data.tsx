@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { Icon } from '../../../src/components/Icon';
+import InstitutionalBanner from '../../../src/components/InstitutionalBanner';
 import { useRouter } from 'expo-router';
 import api from '../../../src/services/api';
 
@@ -183,6 +184,8 @@ export default function ExportDataPage() {
         <Text style={styles.title}>Esporta Dati</Text>
         <View style={{ width: 40 }} />
       </View>
+
+      <InstitutionalBanner detail="Gli export GDPR personali devono essere richiesti dal Legale Rappresentante o dal singolo interessato." />
 
       {/* Info Banner */}
       <View style={styles.infoBanner}>

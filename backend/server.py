@@ -3572,6 +3572,17 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
         query["id"] = {"$ne": society_owner_id}
     
     dirigenti = await db.users.find(query).to_list(1000)
+
+    # Filtra account istituzionali (società, non persone fisiche): non sono dirigenti.
+    from routes.primary_admin import looks_like_society_name, is_society_institutional_email
+    filtered = []
+    for d in dirigenti:
+        if looks_like_society_name(d.get("full_name", "")):
+            continue
+        if await is_society_institutional_email(d.get("email", "")):
+            continue
+        filtered.append(d)
+    dirigenti = filtered
     
     # Get all teams for this society to resolve team names
     teams = await db.teams.find({"society_id": society_id}).to_list(1000)

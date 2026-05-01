@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../../src/components/Icon';
+import InstitutionalBanner from '../../../src/components/InstitutionalBanner';
 import api from '../../../src/services/api';
 import * as ImagePicker from 'expo-image-picker';
 import Slider from '@react-native-community/slider';
@@ -301,6 +302,8 @@ export default function SocietySettings() {
         <Text style={styles.headerTitle}>Dati Società</Text>
         <View style={{ width: 40 }} />
       </View>
+
+      <InstitutionalBanner />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Certificato Medico */}

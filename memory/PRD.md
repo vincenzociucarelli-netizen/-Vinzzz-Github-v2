@@ -19,15 +19,21 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 01/05/2026 (sera) — Account Istituzionale: badge + banner + filtri
+- ✅ **Backend `/api/auth/me`**: aggiunto campo `is_institutional_account` (bool) calcolato via `looks_like_society_name()` + `is_society_institutional_email()`. Verificato via curl: `True` per PPG, `False` per Vincenzo
+- ✅ **Backend `/api/users/dirigenti`**: filtra fuori gli account istituzionali (società non sono persone fisiche → non possono apparire nella lista dirigenti). Verificato via curl: PPG NON appare più
+- ✅ **Componente `InstitutionalBanner.tsx`**: banner rosso fisso in cima alle pagine sensibili. Auto-renderizzato solo se l'utente è istituzionale. Supporta `text` e `detail` custom
+- ✅ **Componente `InstitutionalBadge.tsx`**: badge inline rosso "ACC. ISTITUZIONALE" da affiancare al nome. Modi d'uso: senza props (current user) o con `fullName/email/societyEmail` per controllare un altro utente
+- ✅ **Banner applicato a 8 pagine settings**: `primary-admin`, `society`, `stripe`, `audit-logs`, `consent-audit`, `export-data`, `other`, `trial`
+- ✅ **Badge applicato a**: `select-role` (welcome), `admin/index` (dashboard "Benvenuto"), `admin/profile/index` (profilo)
+- ✅ **`select-role.tsx`**: nascosta la tile "Dirigente" per account istituzionali (società non è una persona); footer cambia in: "Questo è l'account ufficiale della Società. Può operare come Amministratore ma non come persona fisica (Dirigente)"
+- ✅ **Smoke regression** 17/17 passati; build statica rigenerata e expo riavviato
+
 ## Completato 01/05/2026 — Fix popup Dichiarazione Responsabile Admin
 - ✅ **Fix bug "Detentore Attuale" istituzionale** (verificato via API): il fallback `_resolve_primary_admin_id()` in `routes/primary_admin.py` ora salta gli account con nome di società o email/PEC istituzionale; il primary admin di default è ora la persona fisica (Vincenzo) invece di Pallavolo Perugia
 - ✅ **Riscritto testo del popup `PrimaryAdminDeclarationModal.tsx`**: rimossa la frase fuorviante "Sei il **Responsabile Admin** della società..." (era scorretta per chi sceglieva "Dirigente autorizzato"); ora testo iniziale neutro: "Per accedere ad alcune funzioni sensibili devi dichiarare il tuo ruolo nella società"
-- ✅ **Box informativo dinamico** in base al ruolo selezionato:
-  - Nessuna selezione → "Seleziona un'opzione qui sopra per vedere cosa potrai fare"
-  - LR selezionato → blu: spiega che potrà delegare e revocare la delega da Impostazioni
-  - Dirigente autorizzato selezionato → ambra: spiega chiaramente "Sarai temporaneamente Head Admin operativo... Quando il LR si registrerà potrai rimettergli l'incarico. Non potrai delegare lo scettro né disattivare permanentemente il blocco certificati"
-- ✅ **Build statica rigenerata** (`npx expo export -p web`) e supervisor expo riavviato; verificato bundle contiene nuove stringhe e non più quelle vecchie
-- ✅ **Smoke regression** 17/17 test passati
+- ✅ **Box informativo dinamico** in base al ruolo selezionato (LR / Dirigente autorizzato / nessuno)
+- ✅ **Build statica rigenerata** e bundle verificato
 
 ## Completato 29/04/2026 (refactoring server.py - prima ondata):
 - ✅ **Creato `utils.py`**: MONTH_NAMES, to_rome_time, format_rome_timestamp, clean_mongo_doc, clean_mongo_docs, get_current_season
