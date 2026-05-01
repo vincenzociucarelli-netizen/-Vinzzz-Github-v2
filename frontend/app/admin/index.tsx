@@ -404,13 +404,15 @@ export default function AdminDashboard() {
               </View>
             )}
           </TouchableOpacity>
-          {/* Switch to Dirigente button */}
-          <TouchableOpacity 
-            onPress={() => router.replace('/dirigente')} 
-            style={styles.headerIconBtn}
-          >
-            <Text style={{ fontSize: 18 }}>{Icons.briefcase}</Text>
-          </TouchableOpacity>
+          {/* Switch to Dirigente button — nascosto per account istituzionali */}
+          {!(user as any)?.is_institutional_account && (
+            <TouchableOpacity 
+              onPress={() => router.replace('/dirigente')} 
+              style={styles.headerIconBtn}
+            >
+              <Text style={{ fontSize: 18 }}>{Icons.briefcase}</Text>
+            </TouchableOpacity>
+          )}
           {/* Settings button */}
           <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerIconBtn}>
             <Text style={{ fontSize: 20 }}>{Icons.settings}</Text>
