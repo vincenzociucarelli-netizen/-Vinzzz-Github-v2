@@ -142,15 +142,26 @@ async def _resolve_primary_admin_id() -> Optional[str]:
     """Return the current primary admin's user id.
     Priority:
       1. user with is_primary_admin=True
-      2. oldest admin by created_at (fallback)
+      2. fallback: oldest NON-institutional admin (skip society-name accounts)
     """
     user = await db.users.find_one({"role": "admin", "is_primary_admin": True})
     if user:
         return user.get("id")
-    # Fallback: oldest admin
-    oldest = await db.users.find({"role": "admin"}, {"_id": 0, "id": 1, "created_at": 1}).sort("created_at", 1).to_list(1)
-    if oldest:
-        return oldest[0].get("id")
+    # Fallback: oldest admin by created_at, BUT skip institutional accounts
+    # (society-named or society-email/PEC accounts must never hold the scepter)
+    settings = await db.settings.find_one({"type": "society"}) or {}
+    society_email = (settings.get("email") or "").strip().lower()
+    society_pec = (settings.get("pec") or "").strip().lower()
+    async for a in db.users.find(
+        {"role": "admin"},
+        {"_id": 0, "id": 1, "email": 1, "full_name": 1, "created_at": 1},
+    ).sort("created_at", 1):
+        email_lc = (a.get("email") or "").strip().lower()
+        if looks_like_society_name(a.get("full_name", "")):
+            continue
+        if email_lc and (email_lc == society_email or email_lc == society_pec):
+            continue
+        return a.get("id")
     return None
 
 
