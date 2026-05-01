@@ -110,7 +110,7 @@ export default function PrimaryAdminDeclarationModal() {
             <View style={styles.body}>
               {!accountIsSociety && (
                 <Text style={styles.lead}>
-                  Sei il <Text style={styles.bold}>Responsabile Admin</Text> della società e devi firmare questa dichiarazione prima di esercitare funzioni sensibili (es. mantenere disattivato il blocco certificati oltre la mezzanotte).
+                  Per accedere ad alcune funzioni sensibili (es. mantenere disattivato il blocco certificati oltre la mezzanotte) devi <Text style={styles.bold}>dichiarare il tuo ruolo nella società</Text>. Scegli una delle opzioni qui sotto.
                 </Text>
               )}
 
@@ -177,11 +177,29 @@ export default function PrimaryAdminDeclarationModal() {
                 </TouchableOpacity>
               )}
 
-              {!accountIsSociety && (
+              {!accountIsSociety && selected === 'legal_representative' && (
                 <View style={styles.infoBox}>
                   <Ionicons name="information-circle" size={16} color="#1565C0" />
                   <Text style={styles.infoText}>
-                    Puoi delegare il ruolo di Responsabile Admin ad un altro Admin in qualsiasi momento da Impostazioni. La dichiarazione dovrà essere firmata nuovamente dal nuovo responsabile.
+                    Come Legale Rappresentante avrai lo "scettro" di Responsabile Admin e potrai delegarlo ad un altro Admin in qualsiasi momento da Impostazioni → Responsabile Admin. La delega potrà essere revocata.
+                  </Text>
+                </View>
+              )}
+
+              {!accountIsSociety && selected === 'authorized_delegate' && (
+                <View style={[styles.infoBox, { backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFE082' }]}>
+                  <Ionicons name="information-circle" size={16} color="#E65100" />
+                  <Text style={[styles.infoText, { color: '#5D4037' }]}>
+                    Stai dichiarando di agire come <Text style={styles.bold}>incaricato in attesa che il Legale Rappresentante si registri</Text>. Sarai temporaneamente Head Admin operativo: potrai invitare utenti, promuovere admin e gestire la società. Quando il LR si registrerà (o lo incoronerai tra gli admin), potrai <Text style={styles.bold}>rimettergli l'incarico</Text>. Non potrai delegare lo scettro né disattivare permanentemente il blocco certificati: queste azioni restano riservate al LR.
+                  </Text>
+                </View>
+              )}
+
+              {!accountIsSociety && !selected && (
+                <View style={[styles.infoBox, { backgroundColor: '#F5F5F5' }]}>
+                  <Ionicons name="information-circle" size={16} color="#666" />
+                  <Text style={[styles.infoText, { color: '#666' }]}>
+                    Seleziona un'opzione qui sopra per vedere cosa potrai fare con quel ruolo.
                   </Text>
                 </View>
               )}

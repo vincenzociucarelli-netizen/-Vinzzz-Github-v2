@@ -19,6 +19,16 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 01/05/2026 — Fix popup Dichiarazione Responsabile Admin
+- ✅ **Fix bug "Detentore Attuale" istituzionale** (verificato via API): il fallback `_resolve_primary_admin_id()` in `routes/primary_admin.py` ora salta gli account con nome di società o email/PEC istituzionale; il primary admin di default è ora la persona fisica (Vincenzo) invece di Pallavolo Perugia
+- ✅ **Riscritto testo del popup `PrimaryAdminDeclarationModal.tsx`**: rimossa la frase fuorviante "Sei il **Responsabile Admin** della società..." (era scorretta per chi sceglieva "Dirigente autorizzato"); ora testo iniziale neutro: "Per accedere ad alcune funzioni sensibili devi dichiarare il tuo ruolo nella società"
+- ✅ **Box informativo dinamico** in base al ruolo selezionato:
+  - Nessuna selezione → "Seleziona un'opzione qui sopra per vedere cosa potrai fare"
+  - LR selezionato → blu: spiega che potrà delegare e revocare la delega da Impostazioni
+  - Dirigente autorizzato selezionato → ambra: spiega chiaramente "Sarai temporaneamente Head Admin operativo... Quando il LR si registrerà potrai rimettergli l'incarico. Non potrai delegare lo scettro né disattivare permanentemente il blocco certificati"
+- ✅ **Build statica rigenerata** (`npx expo export -p web`) e supervisor expo riavviato; verificato bundle contiene nuove stringhe e non più quelle vecchie
+- ✅ **Smoke regression** 17/17 test passati
+
 ## Completato 29/04/2026 (refactoring server.py - prima ondata):
 - ✅ **Creato `utils.py`**: MONTH_NAMES, to_rome_time, format_rome_timestamp, clean_mongo_doc, clean_mongo_docs, get_current_season
 - ✅ **Creato `models/enums.py`**: UserRole + UserStatus
