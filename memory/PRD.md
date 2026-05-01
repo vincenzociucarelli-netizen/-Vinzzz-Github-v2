@@ -19,6 +19,16 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 01/05/2026 (notte) — Multi-tenancy Scettro + Test E2E Promozione
+**Bug critico scoperto**: tutte le query del primary admin in `routes/primary_admin.py` erano globali (single-tenant). Questo significava che in un ambiente con più società, l'admin di una società poteva apparire come Responsabile Admin di un'altra società.
+
+- ✅ **Refactor multi-tenant `routes/primary_admin.py`**: aggiunto parametro `society_id` a `_resolve_primary_admin_id()` e `is_society_institutional_email()`; tutte le query (admins/legal_rep/crownable/delegable/settings) ora filtrano per `society_id`
+- ✅ **Settings doc multi-tenant**: il get_primary_admin_status legge le settings filtrando per society_id
+- ✅ **Endpoint `declare`**: ora rifiuta solo se ESISTE già un LR NELLA STESSA SOCIETÀ (non globalmente)
+- ✅ **Test E2E `tests/test_promotion_flow.sh`**: simula il flusso completo (register-society → declaration delegate → register dirigente → approve → promote ad admin → modal dichiarazione apparire al neo-admin → firma come LR → scettro trasferito al LR). VERIFICATO che funziona end-to-end
+- ✅ **Verifica chiave**: dopo la promozione del Presidente ad admin, `should_show_declaration_popup=true` e `legal_representative_id=null` → il modal appare. Dopo la firma come LR, lo scettro passa correttamente al LR (Giuseppe), il vecchio admin (Mario) è declassato
+- ✅ **Smoke regression** 17/17 passati
+
 ## Completato 01/05/2026 (tarda notte) — Onboarding Nuova Società
 **Razionale**: con la sola lettura sull'account istituzionale, il flow di registrazione era contraddittorio (l'istituzionale non poteva accettare termini né creare la società). Implementato un flow corretto in cui il primo utente è SEMPRE persona fisica e l'account istituzionale viene creato automaticamente come "casella ombra".
 

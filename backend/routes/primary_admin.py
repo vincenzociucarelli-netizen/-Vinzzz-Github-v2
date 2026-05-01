@@ -54,16 +54,22 @@ def looks_like_society_name(full_name: str) -> bool:
     return False
 
 
-async def is_society_institutional_email(user_email: str) -> bool:
+async def is_society_institutional_email(user_email: str, society_id: Optional[str] = None) -> bool:
     """Return True if the user's email matches the society's institutional email
     or PEC stored in the society settings. Such accounts MUST NOT declare as
     Legal Representative because the email is institutional, not personal.
+
+    If society_id is given, looks up the settings of that specific society
+    (multi-tenant).
     """
     if not user_email:
         return False
-    settings = await db.settings.find_one({"type": "society"}) or {}
-    society_email = (settings.get("email") or "").strip().lower()
-    society_pec = (settings.get("pec") or "").strip().lower()
+    query = {"type": "society"}
+    if society_id:
+        query["society_id"] = society_id
+    settings = await db.settings.find_one(query) or {}
+    society_email = (settings.get("email") or settings.get("society_email") or "").strip().lower()
+    society_pec = (settings.get("pec") or settings.get("society_pec") or "").strip().lower()
     u = user_email.strip().lower()
     return u != "" and (u == society_email or u == society_pec)
 
@@ -138,22 +144,28 @@ class DelegateRequest(BaseModel):
     new_admin_id: str
 
 
-async def _resolve_primary_admin_id() -> Optional[str]:
-    """Return the current primary admin's user id.
+async def _resolve_primary_admin_id(society_id: Optional[str] = None) -> Optional[str]:
+    """Return the current primary admin's user id (scoped per-society in multi-tenant).
     Priority:
-      1. user with is_primary_admin=True
-      2. fallback: oldest NON-institutional admin (skip society-name accounts)
+      1. user with is_primary_admin=True (within the society if society_id given)
+      2. fallback: oldest NON-institutional admin in that society (skip society-name accounts)
     """
-    user = await db.users.find_one({"role": "admin", "is_primary_admin": True})
+    base_q = {"role": "admin"}
+    if society_id:
+        base_q["society_id"] = society_id
+    user = await db.users.find_one({**base_q, "is_primary_admin": True})
     if user:
         return user.get("id")
     # Fallback: oldest admin by created_at, BUT skip institutional accounts
     # (society-named or society-email/PEC accounts must never hold the scepter)
-    settings = await db.settings.find_one({"type": "society"}) or {}
-    society_email = (settings.get("email") or "").strip().lower()
-    society_pec = (settings.get("pec") or "").strip().lower()
+    settings_query = {"type": "society"}
+    if society_id:
+        settings_query["society_id"] = society_id
+    settings = await db.settings.find_one(settings_query) or {}
+    society_email = (settings.get("email") or settings.get("society_email") or "").strip().lower()
+    society_pec = (settings.get("pec") or settings.get("society_pec") or "").strip().lower()
     async for a in db.users.find(
-        {"role": "admin"},
+        base_q,
         {"_id": 0, "id": 1, "email": 1, "full_name": 1, "created_at": 1},
     ).sort("created_at", 1):
         email_lc = (a.get("email") or "").strip().lower()
@@ -168,7 +180,7 @@ async def _resolve_primary_admin_id() -> Optional[str]:
 async def is_primary_admin(user: dict) -> bool:
     if user.get("role") != "admin":
         return False
-    primary_id = await _resolve_primary_admin_id()
+    primary_id = await _resolve_primary_admin_id(user.get("society_id"))
     return primary_id is not None and user.get("id") == primary_id
 
 
@@ -187,7 +199,8 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
 
-    primary_id = await _resolve_primary_admin_id()
+    society_id = current_user.get("society_id")
+    primary_id = await _resolve_primary_admin_id(society_id)
     primary_user = None
     if primary_id:
         primary_user = await db.users.find_one(
@@ -200,9 +213,12 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
             },
         )
 
-    # Legal Representative user (identity that survives delegation)
+    # Legal Representative user (identity that survives delegation) - SCOPED PER SOCIETY
+    legal_rep_query = {"role": "admin", "primary_admin_declaration": "legal_representative"}
+    if society_id:
+        legal_rep_query["society_id"] = society_id
     legal_rep = await db.users.find_one(
-        {"role": "admin", "primary_admin_declaration": "legal_representative"},
+        legal_rep_query,
         {"_id": 0, "id": 1, "email": 1, "full_name": 1},
     )
 
@@ -216,12 +232,15 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
     is_current_primary = primary_user is not None and primary_user.get("id") == current_user["id"]
     declaration_signed = bool(primary_user and primary_user.get("primary_admin_declaration") in PRIMARY_DECLARATION_TYPES)
 
-    # Admins that can RECEIVE delegation (only if caller is legal_rep + primary)
+    # Admins that can RECEIVE delegation (only if caller is legal_rep + primary) - SCOPED PER SOCIETY
     admins = []
     can_delegate = is_current_primary and my_decl == "legal_representative"
     if can_delegate:
+        delegate_q = {"role": "admin", "id": {"$ne": primary_id}}
+        if society_id:
+            delegate_q["society_id"] = society_id
         async for a in db.users.find(
-            {"role": "admin", "id": {"$ne": primary_id}},
+            delegate_q,
             {"_id": 0, "id": 1, "email": 1, "full_name": 1, "primary_admin_declaration": 1},
         ).sort("full_name", 1):
             # Exclude other legal_reps (shouldn't exist but defensive)
@@ -238,10 +257,10 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
     # Orphan state: current primary declared as authorized_delegate but no legal_rep exists
     orphan_delegate = is_current_primary and my_decl == "authorized_delegate" and legal_rep is None
 
-    # Account "is_society" for UI: match su nome società O email istituzionale/PEC
+    # Account "is_society" for UI: match su nome società O email istituzionale/PEC (PER SOCIETY)
     account_is_society_like = (
         looks_like_society_name(current_user.get("full_name", ""))
-        or await is_society_institutional_email(current_user.get("email", ""))
+        or await is_society_institutional_email(current_user.get("email", ""), society_id)
     )
 
     # Popup di dichiarazione: da mostrare a QUALSIASI admin se non esiste un Legale Rappresentante
@@ -285,7 +304,9 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
         "account_looks_like_society": account_is_society_like,
         "delegable_admins": admins,
         "crownable_admins": crownable_admins,
-        "primary_set_explicitly": bool(await db.users.find_one({"role": "admin", "is_primary_admin": True})),
+        "primary_set_explicitly": bool(await db.users.find_one(
+            {"role": "admin", "is_primary_admin": True, **({"society_id": society_id} if society_id else {})}
+        )),
     }
 
 
@@ -319,6 +340,8 @@ async def declare_primary_admin(
         client_ip = client_ip.split(",")[0].strip()
     now_iso = datetime.now(timezone.utc).isoformat()
 
+    society_id = current_user.get("society_id")
+
     # GUARD GLOBALE: account societari (nome società o email/PEC istituzionale) non possono
     # firmare NESSUNA dichiarazione di Responsabile Admin. L'account resta solo operativo/email.
     if looks_like_society_name(current_user.get("full_name", "")):
@@ -326,31 +349,37 @@ async def declare_primary_admin(
             status_code=400,
             detail="Questo account risulta intestato ad una società, non ad una persona fisica. Non può firmare dichiarazioni di ruolo. Registra il Responsabile Admin con un account personale (nome e cognome)."
         )
-    if await is_society_institutional_email(current_user.get("email", "")):
+    if await is_society_institutional_email(current_user.get("email", ""), society_id):
         raise HTTPException(
             status_code=400,
             detail="Questa email risulta essere l'email istituzionale o PEC della Società. È riservata alle comunicazioni societarie e non può firmare dichiarazioni di ruolo. Il Responsabile Admin deve usare la propria email personale."
         )
 
     if data.declaration_type == "legal_representative":
-        # Reject if another LR already exists
-        other_legal_rep = await db.users.find_one({
+        # Reject if another LR already exists IN THE SAME SOCIETY
+        legal_rep_q = {
             "role": "admin",
             "primary_admin_declaration": "legal_representative",
             "id": {"$ne": current_user["id"]},
-        })
+        }
+        if society_id:
+            legal_rep_q["society_id"] = society_id
+        other_legal_rep = await db.users.find_one(legal_rep_q)
         if other_legal_rep:
             raise HTTPException(
                 status_code=400,
                 detail=f"Esiste già un Legale Rappresentante registrato ({other_legal_rep.get('full_name', 'altro admin')}). Può esistere un solo Legale Rappresentante per società."
             )
 
-        # Demote any existing orphan primary (who was an authorized_delegate)
-        current_primary = await db.users.find_one({
+        # Demote any existing orphan primary IN THE SAME SOCIETY (who was an authorized_delegate)
+        primary_q = {
             "role": "admin",
             "is_primary_admin": True,
             "id": {"$ne": current_user["id"]},
-        })
+        }
+        if society_id:
+            primary_q["society_id"] = society_id
+        current_primary = await db.users.find_one(primary_q)
         if current_primary:
             await db.users.update_one(
                 {"id": current_primary["id"]},
@@ -369,12 +398,15 @@ async def declare_primary_admin(
         )
 
     else:  # authorized_delegate
-        # Become primary only if no other primary exists (first admin / bootstrap case)
-        explicit_primary = await db.users.find_one({
+        # Become primary only if no other primary exists IN THE SAME SOCIETY (first admin / bootstrap case)
+        primary_q = {
             "role": "admin",
             "is_primary_admin": True,
             "id": {"$ne": current_user["id"]},
-        })
+        }
+        if society_id:
+            primary_q["society_id"] = society_id
+        explicit_primary = await db.users.find_one(primary_q)
         should_become_primary = explicit_primary is None
         await db.users.update_one(
             {"id": current_user["id"]},
