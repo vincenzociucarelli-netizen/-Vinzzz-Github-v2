@@ -11,7 +11,7 @@
  *  - email istituzionale ≠ email personale dirigente
  *  - termini, privacy e dichiarazione "autorizzato dalla Società" obbligatori
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,17 @@ const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function RegisterSocietyScreen() {
   const router = useRouter();
   const setUser = useAuthStore((s) => s.setUser);
+  const logout = useAuthStore((s) => s.logout);
+  const existingUser = useAuthStore((s) => s.user);
+
+  // Registering a NEW society should always start from a clean state. If any
+  // user is currently logged in (e.g. leftover PPG session), log them out first
+  // so we don't create the new society against the wrong token.
+  useEffect(() => {
+    if (existingUser) {
+      logout();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Society fields
   const [societyName, setSocietyName] = useState('');

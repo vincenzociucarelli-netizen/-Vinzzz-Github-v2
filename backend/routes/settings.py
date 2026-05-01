@@ -19,9 +19,28 @@ router = APIRouter()
 
 
 @router.get("/settings/society/logo.png")
-async def get_society_logo_image():
-    """Serve society logo as PNG image (public, for email embedding)."""
-    settings = await db.settings.find_one({"type": "society"}, {"_id": 0, "logo": 1})
+async def get_society_logo_image(request: Request):
+    """Serve society logo as PNG image.
+    Public endpoint for email embedding. If authenticated, serve the logo of
+    the requester's society; otherwise fallback to first society (single-tenant
+    legacy compatibility).
+    """
+    query = {"type": "society"}
+    auth_header = request.headers.get("authorization") or ""
+    if auth_header.lower().startswith("bearer "):
+        try:
+            import jwt as _jwt
+            from auth_utils import SECRET_KEY, ALGORITHM
+            token = auth_header.split(" ", 1)[1].strip()
+            payload = _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            uid = payload.get("user_id")
+            if uid:
+                u = await db.users.find_one({"id": uid}, {"_id": 0, "society_id": 1})
+                if u and u.get("society_id"):
+                    query["society_id"] = u["society_id"]
+        except Exception:
+            pass
+    settings = await db.settings.find_one(query, {"_id": 0, "logo": 1})
     if not settings or not settings.get("logo"):
         raise HTTPException(status_code=404, detail="Logo non trovato")
     logo_bytes = base64.b64decode(settings["logo"])
@@ -29,9 +48,28 @@ async def get_society_logo_image():
 
 
 @router.get("/settings/society")
-async def get_society_settings():
-    """Get society settings (public endpoint - no auth required for logo display)."""
-    settings = await db.settings.find_one({"type": "society"})
+async def get_society_settings(request: Request):
+    """Get society settings scoped to the requester's society.
+    Public endpoint (no auth required) for use in login/register pages, but if
+    an auth token is present the settings of THAT user's society are returned
+    (multi-tenant).
+    """
+    query = {"type": "society"}
+    auth_header = request.headers.get("authorization") or ""
+    if auth_header.lower().startswith("bearer "):
+        try:
+            import jwt as _jwt
+            from auth_utils import SECRET_KEY, ALGORITHM
+            token = auth_header.split(" ", 1)[1].strip()
+            payload = _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            uid = payload.get("user_id")
+            if uid:
+                u = await db.users.find_one({"id": uid}, {"_id": 0, "society_id": 1})
+                if u and u.get("society_id"):
+                    query["society_id"] = u["society_id"]
+        except Exception:
+            pass
+    settings = await db.settings.find_one(query)
     if not settings:
         return {
             "name": "Società Sportiva",
