@@ -57,12 +57,18 @@ export default function SelectRoleScreen() {
         <View style={styles.header}>
           <Ionicons name="person-circle" size={80} color="#007AFF" />
           <Text style={styles.welcomeText}>Benvenuto, {user?.full_name}</Text>
+          {(user as any)?.is_institutional_account && (
+            <View style={styles.institutionalBadge} data-testid="institutional-badge">
+              <Ionicons name="business" size={14} color="#C62828" />
+              <Text style={styles.institutionalBadgeText}>ACCOUNT ISTITUZIONALE</Text>
+            </View>
+          )}
           <Text style={styles.subtitle}>Come vuoi accedere al portale?</Text>
         </View>
 
         <View style={styles.optionsContainer}>
           {/* Admin Option */}
-          <TouchableOpacity style={styles.optionCard} onPress={handleSelectAdmin}>
+          <TouchableOpacity style={styles.optionCard} onPress={handleSelectAdmin} data-testid="select-admin">
             <View style={[styles.optionIcon, { backgroundColor: '#E3F2FD' }]}>
               <Ionicons name="shield-checkmark" size={40} color="#007AFF" />
             </View>
@@ -75,23 +81,27 @@ export default function SelectRoleScreen() {
             <Ionicons name="chevron-forward" size={24} color="#007AFF" />
           </TouchableOpacity>
 
-          {/* Dirigente Option */}
-          <TouchableOpacity style={styles.optionCard} onPress={handleSelectDirigente}>
-            <View style={[styles.optionIcon, { backgroundColor: '#F3E5F5' }]}>
-              <Ionicons name="briefcase" size={40} color="#8E44AD" />
-            </View>
-            <View style={styles.optionInfo}>
-              <Text style={styles.optionTitle}>Dirigente</Text>
-              <Text style={styles.optionDescription}>
-                Visualizza squadre e atleti, gestisci il tuo profilo e i compensi personali
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#8E44AD" />
-          </TouchableOpacity>
+          {/* Dirigente Option — nascosta per account istituzionali (società non è una persona) */}
+          {!(user as any)?.is_institutional_account && (
+            <TouchableOpacity style={styles.optionCard} onPress={handleSelectDirigente} data-testid="select-dirigente">
+              <View style={[styles.optionIcon, { backgroundColor: '#F3E5F5' }]}>
+                <Ionicons name="briefcase" size={40} color="#8E44AD" />
+              </View>
+              <View style={styles.optionInfo}>
+                <Text style={styles.optionTitle}>Dirigente</Text>
+                <Text style={styles.optionDescription}>
+                  Visualizza squadre e atleti, gestisci il tuo profilo e i compensi personali
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#8E44AD" />
+            </TouchableOpacity>
+          )}
         </View>
 
         <Text style={styles.footerText}>
-          Puoi sempre cambiare modalità effettuando un nuovo accesso
+          {(user as any)?.is_institutional_account
+            ? "Questo è l'account ufficiale della Società. Può operare come Amministratore ma non come persona fisica (Dirigente)."
+            : "Puoi sempre cambiare modalità effettuando un nuovo accesso"}
         </Text>
       </View>
     </SafeAreaView>
@@ -118,6 +128,24 @@ const styles = StyleSheet.create({
     color: '#333',
     marginTop: 16,
     textAlign: 'center',
+  },
+  institutionalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#FFEBEE',
+    borderWidth: 1,
+    borderColor: '#EF9A9A',
+    borderRadius: 20,
+  },
+  institutionalBadgeText: {
+    color: '#C62828',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
   },
   subtitle: {
     fontSize: 16,

@@ -2959,7 +2959,17 @@ async def get_me(current_user = Depends(get_current_user)):
             # Include Lite access fields
             user["nome_lite"] = athlete.get("nome_lite", "")
             user["minor_access_enabled"] = athlete.get("minor_access_enabled", False)
-    
+
+    # Flag account istituzionale (società) — usato dal frontend per:
+    # - mostrare badge "Account Istituzionale"
+    # - nascondere opzioni riservate a persone fisiche (es. "Dirigente" su select-role)
+    if user.get("role") == "admin":
+        from routes.primary_admin import looks_like_society_name, is_society_institutional_email
+        user["is_institutional_account"] = bool(
+            looks_like_society_name(user.get("full_name", ""))
+            or await is_society_institutional_email(user.get("email", ""))
+        )
+
     return user
 
 @api_router.post("/auth/accept-legal")
