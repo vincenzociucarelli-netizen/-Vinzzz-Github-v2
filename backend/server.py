@@ -23685,6 +23685,8 @@ from routes.primary_admin import looks_like_society_name, is_society_institution
 _INSTITUTIONAL_WRITE_WHITELIST_PREFIXES = (
     "/api/auth/login",
     "/api/auth/logout",
+    "/api/auth/register",
+    "/api/auth/register-society",  # onboarding nuova Società: pubblico, non bloccare
     "/api/auth/change-password",  # cambio password proprio
     "/api/auth/request-password-reset",
     "/api/auth/forgot-password",

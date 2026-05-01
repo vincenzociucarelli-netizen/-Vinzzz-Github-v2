@@ -20,6 +20,23 @@ export default function GlobalReadOnlyBanner() {
   if (!isInstitutional) return null;
   if (Platform.OS !== 'web') return null;
 
+  // Hide banner on public/onboarding pages where the user is NOT operating on data.
+  // Banner is meant for protected /admin pages, not for login/register/terms/privacy.
+  if (typeof window !== 'undefined') {
+    const path = window.location?.pathname || '';
+    const publicPaths = [
+      '/login',
+      '/register',
+      '/register-society',
+      '/terms-of-use',
+      '/privacy-policy',
+      '/forgot-password',
+      '/reset-password',
+      '/verify-email',
+    ];
+    if (publicPaths.some(p => path === p || path.startsWith(p + '/'))) return null;
+  }
+
   return (
     <View style={styles.wrap as any} data-testid="global-readonly-banner">
       <Ionicons name="lock-closed" size={14} color="#fff" />
