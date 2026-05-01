@@ -26,11 +26,11 @@ export default function InstitutionalBanner({ text, detail }: Props) {
 
   return (
     <View style={styles.banner} data-testid="institutional-banner">
-      <Ionicons name="business" size={18} color="#fff" />
+      <Ionicons name="lock-closed" size={20} color="#fff" />
       <View style={{ flex: 1 }}>
-        <Text style={styles.title}>ACCOUNT ISTITUZIONALE</Text>
+        <Text style={styles.title}>🔒 MODALITÀ SOLA LETTURA — ACCOUNT ISTITUZIONALE</Text>
         <Text style={styles.text}>
-          {text || 'Alcune azioni sono riservate al Responsabile Admin persona fisica.'}
+          {text || 'Questo account è intestato alla Società ed è una casella email condivisa: per garantire la tracciabilità delle azioni, qualsiasi modifica è bloccata. Effettua il login con un account personale (Legale Rappresentante o Dirigente autorizzato) per operare.'}
         </Text>
         {detail ? <Text style={styles.detail}>{detail}</Text> : null}
       </View>

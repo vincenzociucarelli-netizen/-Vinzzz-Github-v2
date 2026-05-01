@@ -23373,6 +23373,83 @@ app.add_middleware(
 )
 
 
+# ============================================================
+# READ-ONLY GUARD per ACCOUNT ISTITUZIONALI (società)
+# ------------------------------------------------------------
+# Gli account intestati alla società (es. pallavoloperugia@gmail.com)
+# sono caselle email condivise: chiunque le acceda potrebbe operare in
+# incognito. Per garantire accountability tutte le mutazioni vengono
+# bloccate a livello server (HTTP 403). Solo le letture (GET) e una
+# whitelist minima (login/logout/cambio password/export CSV) restano consentite.
+# ============================================================
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+import jwt as _jwt_lib
+from auth_utils import SECRET_KEY, ALGORITHM
+from routes.primary_admin import looks_like_society_name, is_society_institutional_email
+
+# Path che restano consentiti anche per account istituzionali (whitelist).
+# Rule: prefix match su request.url.path.
+_INSTITUTIONAL_WRITE_WHITELIST_PREFIXES = (
+    "/api/auth/login",
+    "/api/auth/logout",
+    "/api/auth/change-password",  # cambio password proprio
+    "/api/auth/request-password-reset",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
+)
+
+class InstitutionalReadOnlyMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        method = request.method.upper()
+        # Only filter mutating verbs
+        if method in ("GET", "HEAD", "OPTIONS"):
+            return await call_next(request)
+
+        path = request.url.path or ""
+        # Whitelist endpoints
+        if any(path.startswith(p) for p in _INSTITUTIONAL_WRITE_WHITELIST_PREFIXES):
+            return await call_next(request)
+
+        # Token check (best-effort: if no/invalid token, let route's auth handle the 401)
+        auth_header = request.headers.get("authorization") or ""
+        if not auth_header.lower().startswith("bearer "):
+            return await call_next(request)
+        token = auth_header.split(" ", 1)[1].strip()
+        try:
+            payload = _jwt_lib.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except Exception:
+            return await call_next(request)
+        user_id = payload.get("user_id") if isinstance(payload, dict) else None
+        if not user_id:
+            return await call_next(request)
+        user = await db.users.find_one({"id": user_id}, {"_id": 0, "role": 1, "full_name": 1, "email": 1})
+        if not user:
+            return await call_next(request)
+
+        # Only admins can be institutional accounts; no need to check other roles
+        if user.get("role") != "admin":
+            return await call_next(request)
+
+        is_institutional = (
+            looks_like_society_name(user.get("full_name", ""))
+            or await is_society_institutional_email(user.get("email", ""))
+        )
+        if not is_institutional:
+            return await call_next(request)
+
+        # Blocked: institutional admin cannot perform write operations
+        return JSONResponse(
+            status_code=403,
+            content={
+                "detail": "Operazione non consentita: questo account è intestato alla Società ed è in modalità SOLA LETTURA. Le modifiche devono essere eseguite da un account personale (Legale Rappresentante o Dirigente autorizzato).",
+                "code": "institutional_read_only",
+            },
+        )
+
+app.add_middleware(InstitutionalReadOnlyMiddleware)
+
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,

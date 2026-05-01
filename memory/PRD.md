@@ -19,21 +19,29 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 01/05/2026 (tarda sera) — Account Istituzionale: SOLA LETTURA TOTALE
+**Razionale**: L'account istituzionale (es. mailbox `pallavoloperugia@gmail.com`) è una casella email condivisa. Per garantire **accountability** delle operazioni nessuno deve poter operare in incognito da quella mailbox. Tutte le mutazioni sono bloccate; l'account può solo VEDERE.
+
+- ✅ **Backend middleware `InstitutionalReadOnlyMiddleware`** (in `server.py`): intercetta tutte le request a `/api/*`, blocca POST/PUT/PATCH/DELETE da admin con `looks_like_society_name() == True` o `is_society_institutional_email() == True`. Whitelist: `/api/auth/login`, `/api/auth/logout`, `/api/auth/change-password`, `/api/auth/forgot-password`, `/api/auth/reset-password`, `/api/auth/request-password-reset`. Risponde con `{detail, code: "institutional_read_only"}` HTTP 403
+- ✅ **Verificato via curl**: PPG GET → 200, PPG PATCH → 403 read-only, PPG POST change-password → 422 (whitelist passa, errore solo body), Vincenzo PATCH → 200 (utente fisico non bloccato)
+- ✅ **Axios interceptor** in `services/api.ts`: cattura 403 `institutional_read_only` e mostra alert nativo "Modalità SOLA LETTURA — questo account è intestato alla Società..." (throttled a 3.5s)
+- ✅ **`GlobalReadOnlyBanner.tsx`**: banner fisso position:fixed in cima ad ogni route web, sempre visibile per istituzionali. Inserito in root `_layout.tsx`
+- ✅ **`InstitutionalBanner` aggiornato**: ora usa "🔒 MODALITÀ SOLA LETTURA — ACCOUNT ISTITUZIONALE" con messaggio chiaro su accountability
+- ✅ **`select-role.tsx`**: per istituzionali fa redirect automatico a `/admin` (no più scelta)
+- ✅ **Cambio password rimane consentito** (whitelist), logout funziona, GET di tutto resta consentito
+- ✅ **Smoke regression** 17/17 passati
+
 ## Completato 01/05/2026 (sera) — Account Istituzionale: badge + banner + filtri
-- ✅ **Backend `/api/auth/me`**: aggiunto campo `is_institutional_account` (bool) calcolato via `looks_like_society_name()` + `is_society_institutional_email()`. Verificato via curl: `True` per PPG, `False` per Vincenzo
-- ✅ **Backend `/api/users/dirigenti`**: filtra fuori gli account istituzionali (società non sono persone fisiche → non possono apparire nella lista dirigenti). Verificato via curl: PPG NON appare più
-- ✅ **Componente `InstitutionalBanner.tsx`**: banner rosso fisso in cima alle pagine sensibili. Auto-renderizzato solo se l'utente è istituzionale. Supporta `text` e `detail` custom
-- ✅ **Componente `InstitutionalBadge.tsx`**: badge inline rosso "ACC. ISTITUZIONALE" da affiancare al nome. Modi d'uso: senza props (current user) o con `fullName/email/societyEmail` per controllare un altro utente
-- ✅ **Banner applicato a 8 pagine settings**: `primary-admin`, `society`, `stripe`, `audit-logs`, `consent-audit`, `export-data`, `other`, `trial`
-- ✅ **Badge applicato a**: `select-role` (welcome), `admin/index` (dashboard "Benvenuto"), `admin/profile/index` (profilo)
-- ✅ **`select-role.tsx`**: nascosta la tile "Dirigente" per account istituzionali (società non è una persona); footer cambia in: "Questo è l'account ufficiale della Società. Può operare come Amministratore ma non come persona fisica (Dirigente)"
-- ✅ **Smoke regression** 17/17 passati; build statica rigenerata e expo riavviato
+- ✅ **Backend `/api/auth/me`**: aggiunto campo `is_institutional_account`
+- ✅ **Backend `/api/users/dirigenti`**: filtra fuori gli account istituzionali
+- ✅ **Componenti `InstitutionalBanner.tsx` + `InstitutionalBadge.tsx`**
+- ✅ **Banner in 8 pagine settings** + **Badge in select-role/dashboard/profile**
+- ✅ **`select-role.tsx`**: tile "Dirigente" nascosta per istituzionali
+- ✅ **`authStore.loadAuth`**: ora chiama `refreshUser()` fire-and-forget per aggiornare flag dopo login da cache
 
 ## Completato 01/05/2026 — Fix popup Dichiarazione Responsabile Admin
-- ✅ **Fix bug "Detentore Attuale" istituzionale** (verificato via API): il fallback `_resolve_primary_admin_id()` in `routes/primary_admin.py` ora salta gli account con nome di società o email/PEC istituzionale; il primary admin di default è ora la persona fisica (Vincenzo) invece di Pallavolo Perugia
-- ✅ **Riscritto testo del popup `PrimaryAdminDeclarationModal.tsx`**: rimossa la frase fuorviante "Sei il **Responsabile Admin** della società..." (era scorretta per chi sceglieva "Dirigente autorizzato"); ora testo iniziale neutro: "Per accedere ad alcune funzioni sensibili devi dichiarare il tuo ruolo nella società"
-- ✅ **Box informativo dinamico** in base al ruolo selezionato (LR / Dirigente autorizzato / nessuno)
-- ✅ **Build statica rigenerata** e bundle verificato
+- ✅ Fix bug "Detentore Attuale" istituzionale (esclude society dal fallback primary admin)
+- ✅ Riscritto testo del popup con box informativi dinamici per LR/Dirigente autorizzato
 
 ## Completato 29/04/2026 (refactoring server.py - prima ondata):
 - ✅ **Creato `utils.py`**: MONTH_NAMES, to_rome_time, format_rome_timestamp, clean_mongo_doc, clean_mongo_docs, get_current_season

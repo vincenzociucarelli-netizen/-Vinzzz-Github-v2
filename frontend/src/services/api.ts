@@ -40,7 +40,26 @@ api.interceptors.response.use(
         }
       }
     }
-    // 403 Forbidden = permission denied for specific resource, NOT invalid auth
+    // 403 institutional_read_only: show friendly toast (web only — RN handles via component)
+    if (
+      error.response?.status === 403 &&
+      error.response?.data?.code === 'institutional_read_only' &&
+      typeof window !== 'undefined'
+    ) {
+      // Throttle: avoid spamming on bursts of write requests
+      const now = Date.now();
+      const last = (window as any).__lastInstReadOnlyToast || 0;
+      if (now - last > 3500) {
+        (window as any).__lastInstReadOnlyToast = now;
+        try {
+          window.alert(
+            '🔒 Modalità SOLA LETTURA\n\nQuesto account è intestato alla Società e non può eseguire operazioni. Effettua il login con un account personale (Legale Rappresentante o Dirigente autorizzato) per modificare i dati.'
+          );
+        } catch {
+          // ignore
+        }
+      }
+    }
     return Promise.reject(error);
   }
 );

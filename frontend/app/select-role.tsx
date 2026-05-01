@@ -30,6 +30,10 @@ export default function SelectRoleScreen() {
       // Redirect to login if not authenticated or not admin
       if (!user || user.role !== 'admin') {
         router.replace('/login');
+      } else if ((user as any).is_institutional_account) {
+        // Account istituzionali: niente scelta di ruolo, vanno direttamente alla
+        // dashboard admin in modalità sola lettura (banner globale + middleware backend).
+        router.replace('/admin');
       }
     }
   }, [user, isLoading, isChecking]);
