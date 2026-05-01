@@ -70,6 +70,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (token && userStr) {
         const user = JSON.parse(userStr);
         set({ user, token, isLoading: false });
+        // Fire-and-forget refresh: picks up new backend fields (e.g. is_institutional_account)
+        // added after the cached login, without requiring the user to logout/login.
+        get().refreshUser();
       } else {
         set({ isLoading: false });
       }
