@@ -230,6 +230,18 @@ export default function Login() {
             >
               <Text style={styles.linkText}>Non hai un account? Registrati</Text>
             </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            <TouchableOpacity
+              style={styles.newSocietyBtn}
+              onPress={() => router.push('/register-society')}
+              data-testid="new-society-link"
+            >
+              <Text style={styles.newSocietyText}>
+                Sei una nuova società? <Text style={styles.newSocietyEmph}>Registrati qui →</Text>
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.form}>
@@ -416,5 +428,23 @@ const styles = StyleSheet.create({
   forgotText: {
     color: '#666',
     fontSize: 13,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+    marginVertical: 18,
+    marginHorizontal: 8,
+  },
+  newSocietyBtn: {
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  newSocietyText: {
+    color: '#666',
+    fontSize: 13,
+  },
+  newSocietyEmph: {
+    color: '#1565C0',
+    fontWeight: '700',
   },
 });

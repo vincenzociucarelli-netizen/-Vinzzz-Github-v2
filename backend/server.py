@@ -1759,6 +1759,294 @@ async def register(user_data: UserCreate, request: Request):
         }
     )
 
+
+# ============================================================
+# REGISTRAZIONE NUOVA SOCIETÀ
+# ------------------------------------------------------------
+# Flow corretto per onboarding di una nuova Società:
+#   - L'utente che apre l'app per la prima volta è SEMPRE una persona fisica
+#     (il "Dirigente Incaricato" alla configurazione tecnica)
+#   - Inserisce dati Società + suoi dati personali + email istituzionale ufficiale
+#   - Il backend in transazione crea: Society, admin persona fisica, admin
+#     istituzionale (read-only) con password random + token reset
+#   - Manda email all'account istituzionale con link "Imposta password" (validità
+#     7 giorni) — il dirigente lo cliccherà per impostare la prima password
+# ============================================================
+import secrets as _secrets
+
+class RegisterSocietyRequest(BaseModel):
+    # Dati Società
+    society_name: str
+    society_fiscal_code: str  # P.IVA o CF Società (obbligatorio per legge)
+    society_address: str
+    society_city: Optional[str] = None
+    society_postal_code: Optional[str] = None
+    society_province: Optional[str] = None
+    society_email: EmailStr  # email istituzionale ufficiale (account read-only)
+    society_phone: Optional[str] = None
+    society_pec: Optional[str] = None
+    # Dati Dirigente Incaricato (persona fisica)
+    admin_email: EmailStr  # DEVE essere diversa da society_email
+    admin_password: str
+    admin_first_name: str
+    admin_last_name: str
+    admin_fiscal_code: str
+    admin_phone: str
+    # Dichiarazioni legali
+    accept_terms: bool
+    accept_privacy: bool
+    accept_authorization: bool  # "Dichiaro di essere autorizzato dalla Società"
+
+
+@api_router.post("/auth/register-society", response_model=TokenResponse)
+async def register_society(payload: RegisterSocietyRequest, request: Request):
+    """Registrazione di una nuova Società + Dirigente Incaricato.
+
+    Crea atomicamente:
+      1. la Società (con codice invito)
+      2. l'admin persona fisica (Dirigente Incaricato), approvato
+      3. l'admin istituzionale (account ombra, sola lettura) con token reset
+         password che il dirigente cliccherà per impostare la prima password
+         della casella ufficiale
+    """
+    # Validazioni base
+    if not payload.accept_terms or not payload.accept_privacy or not payload.accept_authorization:
+        raise HTTPException(status_code=400, detail="Devi accettare Termini, Privacy e dichiarare di essere autorizzato dalla Società")
+
+    admin_email_norm = payload.admin_email.lower().strip()
+    society_email_norm = payload.society_email.lower().strip()
+    if admin_email_norm == society_email_norm:
+        raise HTTPException(
+            status_code=400,
+            detail="L'email istituzionale della Società deve essere diversa dalla tua email personale.",
+        )
+
+    # Email entrambe non già usate
+    if await db.users.find_one({"email": admin_email_norm}):
+        raise HTTPException(status_code=400, detail="La tua email personale è già registrata")
+    if await db.users.find_one({"email": society_email_norm}):
+        raise HTTPException(status_code=400, detail="L'email istituzionale è già registrata in un'altra società")
+
+    # Genera codice invito unico
+    invite_code = generate_invite_code()
+    while await db.societies.find_one({"invite_code": invite_code}):
+        invite_code = generate_invite_code()
+
+    # 1) Società
+    society = Society(
+        name=payload.society_name.strip(),
+        invite_code=invite_code,
+        address=payload.society_address.strip(),
+        city=(payload.society_city or "").strip() or None,
+        postal_code=(payload.society_postal_code or "").strip() or None,
+        province=(payload.society_province or "").strip() or None,
+        phone=(payload.society_phone or "").strip() or None,
+        email=society_email_norm,
+        fiscal_code=payload.society_fiscal_code.strip().upper(),
+    )
+    society_dict = society.dict()
+    if payload.society_pec:
+        society_dict["pec"] = payload.society_pec.strip().lower()
+    await db.societies.insert_one(society_dict)
+
+    # Settings doc per la società (usato da molte query: ragione_sociale, society_email, society_pec)
+    now = datetime.now(timezone.utc)
+    await db.settings.update_one(
+        {"type": "society", "society_id": society.id},
+        {
+            "$set": {
+                "type": "society",
+                "society_id": society.id,
+                "name": society.name,
+                "ragione_sociale": society.name,
+                "fiscal_code": society.fiscal_code,
+                "address": society.address,
+                "city": society.city,
+                "postal_code": society.postal_code,
+                "province": society.province,
+                "society_email": society_email_norm,
+                "society_pec": society_dict.get("pec"),
+                "phone": society.phone,
+                "updated_at": now.isoformat(),
+            }
+        },
+        upsert=True,
+    )
+
+    # 2) Admin persona fisica (Dirigente Incaricato)
+    full_name = f"{payload.admin_first_name.strip()} {payload.admin_last_name.strip()}"
+    admin_user = User(
+        email=admin_email_norm,
+        password_hash=hash_password(payload.admin_password),
+        role="admin",
+        full_name=full_name,
+        status=UserStatus.APPROVED,
+        society_id=society.id,
+        first_name=payload.admin_first_name.strip(),
+        last_name=payload.admin_last_name.strip(),
+        phone=payload.admin_phone.strip(),
+    )
+    admin_dict = admin_user.dict()
+    admin_dict["fiscal_code"] = payload.admin_fiscal_code.upper().strip()
+    admin_dict["approved_at"] = now
+    admin_dict["legal_accepted_at"] = now.isoformat()
+    # Set società come owner del primo admin
+    admin_dict["consents"] = {
+        "privacy_viewed": {
+            "value": True,
+            "timestamp": now.isoformat(),
+            "source": "register-society",
+            "document_version": "1.0-2026",
+            "user_id": admin_user.id,
+        },
+    }
+    await db.users.insert_one(admin_dict)
+
+    # Aggiorna società con owner
+    await db.societies.update_one({"id": society.id}, {"$set": {"owner_id": admin_user.id}})
+
+    # 3) Admin istituzionale (account ombra read-only)
+    institutional_password = _secrets.token_urlsafe(24)
+    reset_token = _secrets.token_urlsafe(32)
+    reset_expires = now + timedelta(days=7)
+    institutional_user = User(
+        email=society_email_norm,
+        password_hash=hash_password(institutional_password),
+        role="admin",
+        full_name=society.name,  # nome = ragione sociale → looks_like_society_name() = True
+        status=UserStatus.APPROVED,
+        society_id=society.id,
+    )
+    inst_dict = institutional_user.dict()
+    inst_dict["approved_at"] = now
+    inst_dict["legal_accepted_at"] = now.isoformat()
+    inst_dict["password_reset_token"] = reset_token
+    inst_dict["password_reset_expires"] = reset_expires
+    inst_dict["created_via"] = "register-society-auto"  # marker per audit
+    await db.users.insert_one(inst_dict)
+
+    # 4) Email all'account istituzionale con link "imposta password"
+    try:
+        await send_institutional_account_setup_email(
+            to_email=society_email_norm,
+            society_name=society.name,
+            invite_code=invite_code,
+            admin_full_name=full_name,
+            reset_code=reset_token[:8].upper(),
+        )
+    except Exception as e:
+        # Non blocchiamo la registrazione se l'email fallisce — il dirigente può sempre fare reset password
+        logging.warning(f"register-society: invio email istituzionale fallito ({society_email_norm}): {e}")
+
+    # 5) Auto-login del dirigente persona fisica
+    token = create_token(admin_user.id, "admin")
+    return TokenResponse(
+        token=token,
+        user={
+            "id": admin_user.id,
+            "email": admin_user.email,
+            "role": "admin",
+            "full_name": admin_user.full_name,
+            "status": UserStatus.APPROVED,
+            "society_id": society.id,
+        },
+    )
+
+
+async def send_institutional_account_setup_email(
+    to_email: str,
+    society_name: str,
+    invite_code: str,
+    admin_full_name: str,
+    reset_code: str,
+):
+    """Email inviata all'account istituzionale (società) appena creato.
+
+    Spiega il ruolo della casella e fornisce un link/codice per impostare la
+    prima password (token valido 7 giorni). L'account è SOLA LETTURA.
+    """
+    base_url = os.environ.get("EXPO_PUBLIC_BACKEND_URL", os.environ.get("FRONTEND_URL", ""))
+    reset_link = f"{base_url}/reset-password?email={to_email}" if base_url else ""
+
+    reset_button_html = ""
+    if reset_link:
+        reset_button_html = f"""
+            <p style="text-align:center; margin: 28px 0 8px 0;">
+                <a href="{reset_link}" style="display:inline-block; background-color:#C62828; color:white; text-decoration:none; padding:14px 32px; border-radius:8px; font-weight:700; font-size:16px;">
+                    🔐 Imposta la prima password
+                </a>
+            </p>
+            <p style="text-align:center; font-size:12px; color:#999;">Oppure apri l'app e inserisci il codice manualmente</p>
+        """
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html><head><meta charset="utf-8"><style>
+        body {{ font-family: Arial, sans-serif; line-height:1.6; color:#333; }}
+        .container {{ max-width:600px; margin:0 auto; padding:20px; }}
+        .header {{ background-color:#C62828; color:white; padding:24px 20px; text-align:center; border-radius:8px 8px 0 0; }}
+        .header h1 {{ margin:0; font-size:20px; color:white; }}
+        .content {{ background-color:#fafafa; padding:30px; border:1px solid #ddd; }}
+        .code {{ background-color:#C62828; color:white; font-size:28px; font-weight:bold; padding:15px 30px; text-align:center; border-radius:8px; margin:20px 0; letter-spacing:4px; }}
+        .info-box {{ background-color:#FFEBEE; border:1px solid #EF9A9A; border-radius:6px; padding:14px 16px; margin:18px 0; }}
+        .invite {{ background-color:#E3F2FD; border:1px solid #90CAF9; border-radius:6px; padding:12px; text-align:center; margin:16px 0; font-size:18px; font-weight:700; letter-spacing:2px; color:#0D47A1; }}
+        .footer {{ text-align:center; padding:20px; color:#666; font-size:12px; }}
+    </style></head><body>
+    <div class="container">
+        <div class="header">
+            <div style="font-size:40px; margin-bottom:8px;">🏛️</div>
+            <h1>{society_name}</h1>
+            <p style="margin:8px 0 0 0; font-size:13px; opacity:0.9;">Account Istituzionale RegistraTEAM</p>
+        </div>
+        <div class="content">
+            <p>Ciao,</p>
+            <p>È stato creato un <strong>Account Istituzionale</strong> intestato a <strong>{society_name}</strong> nella piattaforma RegistraTEAM. Questa è la casella email ufficiale della tua Società.</p>
+
+            <div class="info-box">
+                <strong>🔒 Modalità SOLA LETTURA</strong><br/>
+                <span style="font-size:13px;">Trattandosi di una casella email condivisa, questo account potrà <strong>solo consultare i dati</strong>. Per garantire la tracciabilità, qualsiasi modifica deve essere effettuata da un account personale (Legale Rappresentante o Dirigente autorizzato).</span>
+            </div>
+
+            <p><strong>Cosa fare ora:</strong></p>
+            <ol>
+                <li>Imposta la prima password della casella istituzionale cliccando il pulsante qui sotto:</li>
+            </ol>
+
+            <div class="code">{reset_code}</div>
+
+            {reset_button_html}
+
+            <p style="margin-top:24px;"><strong>📋 Codice della tua Società (per invitare gli utenti):</strong></p>
+            <div class="invite">{invite_code}</div>
+            <p style="font-size:12px; color:#666; text-align:center; margin-top:-8px;">Condividi questo codice solo con i dirigenti, atleti e collaboratori che vuoi far entrare nella tua Società.</p>
+
+            <p style="margin-top:28px; font-size:13px; color:#555;">Per qualsiasi problema, contatta {admin_full_name} (Dirigente che ha attivato l'app).</p>
+            <p style="font-size:12px; color:#999;">Il codice di reset scade tra <strong>7 giorni</strong>.</p>
+        </div>
+        <div class="footer">
+            <p>Questa è un'email automatica, non rispondere.</p>
+            <p>&copy; {datetime.now().year} RegistraTEAM</p>
+        </div>
+    </div>
+    </body></html>
+    """
+
+    try:
+        result = await send_transactional_email(
+            to_email=to_email,
+            subject=f"🏛️ Account Istituzionale creato — {society_name}",
+            html_content=html_content,
+            to_name=society_name,
+        )
+        if result.get("success"):
+            logging.info(f"Institutional setup email sent to {to_email}")
+        else:
+            logging.error(f"Failed to send institutional setup email: {result.get('error')}")
+    except Exception as e:
+        logging.error(f"Institutional setup email error: {e}")
+        raise
+
+
 # Modello per registrazione atleta maggiorenne (self-registration)
 class AdultAthleteRegister(BaseModel):
     email: str

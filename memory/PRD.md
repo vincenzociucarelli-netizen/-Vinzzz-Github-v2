@@ -19,6 +19,17 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 01/05/2026 (tarda notte) — Onboarding Nuova Società
+**Razionale**: con la sola lettura sull'account istituzionale, il flow di registrazione era contraddittorio (l'istituzionale non poteva accettare termini né creare la società). Implementato un flow corretto in cui il primo utente è SEMPRE persona fisica e l'account istituzionale viene creato automaticamente come "casella ombra".
+
+- ✅ **Endpoint `POST /api/auth/register-society`** in `server.py`: crea atomicamente Società + admin persona fisica (Dirigente Incaricato) + admin istituzionale (read-only) con token reset password 7 giorni; manda email Brevo all'istituzionale con codice societario, link "imposta password", spiegazione del ruolo
+- ✅ **Validazioni**: email istituzionale ≠ email personale (errore 400); termini + privacy + dichiarazione "autorizzato dalla società" obbligatori; nessuna delle email già usate
+- ✅ **Helper `send_institutional_account_setup_email`**: email HTML brandizzata rossa con info-box "Modalità SOLA LETTURA", codice di reset, codice societario, durata 7 giorni
+- ✅ **Verificato curl**: email uguali → 400, no terms → 400, OK → 200 + auto-login + utente in DB con `created_via: register-society-auto`. Email Brevo inviata effettivamente (Message ID confermato in log)
+- ✅ **Frontend `/register-society`**: pagina pubblica con form 3-sezioni (Società / Dirigente / Legale), validazioni client-side, auto-login post-success → /admin
+- ✅ **Login**: aggiunto link discreto "Sei una nuova società? Registrati qui →" sotto il bottone "Registrati" esistente
+- ✅ **Smoke regression** 17/17 passati; build statica rigenerata
+
 ## Completato 01/05/2026 (tarda sera) — Account Istituzionale: SOLA LETTURA TOTALE
 **Razionale**: L'account istituzionale (es. mailbox `pallavoloperugia@gmail.com`) è una casella email condivisa. Per garantire **accountability** delle operazioni nessuno deve poter operare in incognito da quella mailbox. Tutte le mutazioni sono bloccate; l'account può solo VEDERE.
 
