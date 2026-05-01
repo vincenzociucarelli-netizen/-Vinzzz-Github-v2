@@ -1777,7 +1777,8 @@ import secrets as _secrets
 class RegisterSocietyRequest(BaseModel):
     # Dati Società
     society_name: str
-    society_fiscal_code: str  # P.IVA o CF Società (obbligatorio per legge)
+    society_fiscal_code: str  # C.F. della Società (può coincidere con P.IVA per alcuni enti)
+    society_vat: Optional[str] = None  # P.IVA (se diversa dal C.F., oppure lasciata vuota)
     society_address: str
     society_city: Optional[str] = None
     society_postal_code: Optional[str] = None
@@ -1845,6 +1846,8 @@ async def register_society(payload: RegisterSocietyRequest, request: Request):
         fiscal_code=payload.society_fiscal_code.strip().upper(),
     )
     society_dict = society.dict()
+    if payload.society_vat:
+        society_dict["vat_number"] = payload.society_vat.strip().upper()
     if payload.society_pec:
         society_dict["pec"] = payload.society_pec.strip().lower()
     await db.societies.insert_one(society_dict)
@@ -1860,6 +1863,7 @@ async def register_society(payload: RegisterSocietyRequest, request: Request):
                 "name": society.name,
                 "ragione_sociale": society.name,
                 "fiscal_code": society.fiscal_code,
+                "vat_number": (payload.society_vat or "").strip().upper() or None,
                 "address": society.address,
                 "city": society.city,
                 "postal_code": society.postal_code,

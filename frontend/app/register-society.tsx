@@ -38,6 +38,7 @@ export default function RegisterSocietyScreen() {
   // Society fields
   const [societyName, setSocietyName] = useState('');
   const [societyFiscal, setSocietyFiscal] = useState('');
+  const [societyVat, setSocietyVat] = useState('');
   const [societyAddress, setSocietyAddress] = useState('');
   const [societyCity, setSocietyCity] = useState('');
   const [societyPostalCode, setSocietyPostalCode] = useState('');
@@ -76,7 +77,9 @@ export default function RegisterSocietyScreen() {
   const validate = (): string | null => {
     if (!societyName.trim()) return 'Inserisci il nome della Società';
     if (!societyFiscal.trim() || societyFiscal.trim().length < 11)
-      return 'Codice fiscale / P.IVA della Società obbligatorio (min 11 caratteri)';
+      return 'Codice fiscale Società obbligatorio (min 11 caratteri)';
+    if (societyVat.trim() && societyVat.trim().length !== 11)
+      return 'La P.IVA deve essere di 11 caratteri (oppure lascia il campo vuoto)';
     if (!societyAddress.trim()) return 'Inserisci la sede legale della Società';
     if (!REGEX_EMAIL.test(societyEmail.trim()))
       return "L'email istituzionale della Società non è valida";
@@ -109,6 +112,7 @@ export default function RegisterSocietyScreen() {
       const res = await api.post('/auth/register-society', {
         society_name: societyName.trim(),
         society_fiscal_code: societyFiscal.trim().toUpperCase(),
+        society_vat: societyVat.trim().toUpperCase() || undefined,
         society_address: societyAddress.trim(),
         society_city: societyCity.trim() || undefined,
         society_postal_code: societyPostalCode.trim() || undefined,
@@ -181,7 +185,9 @@ export default function RegisterSocietyScreen() {
           <Text style={styles.sectionTitle}>1. Dati della Società</Text>
 
           <Field label="Nome / Ragione Sociale *" value={societyName} onChange={setSocietyName} placeholder="Es. Pallavolo Perugia SSD A RL" testID="society-name" />
-          <Field label="Codice Fiscale / P.IVA Società *" value={societyFiscal} onChange={setSocietyFiscal} placeholder="11 caratteri" autoCap="characters" testID="society-fiscal" maxLength={16} />
+          <Field label="Codice Fiscale Società *" value={societyFiscal} onChange={setSocietyFiscal} placeholder="11 o 16 caratteri" autoCap="characters" testID="society-fiscal" maxLength={16} />
+          <Field label="Partita IVA (se diversa dal C.F.)" value={societyVat} onChange={setSocietyVat} placeholder="11 caratteri" autoCap="characters" testID="society-vat" maxLength={11} />
+          <Text style={styles.hint}>Alcune associazioni (es. ASD/SSD non commerciali) hanno solo C.F. Se hai anche la P.IVA inseriscila qui.</Text>
           <Field label="Sede legale (Via, n.) *" value={societyAddress} onChange={setSocietyAddress} placeholder="Es. Via Roma 1" testID="society-address" />
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View style={{ flex: 2 }}>
