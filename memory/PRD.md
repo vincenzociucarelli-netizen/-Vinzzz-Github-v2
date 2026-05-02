@@ -4,6 +4,25 @@
 - 🔮 **Preview re-import calendario (richiesto 02/05/2026 sera)**: prima di confermare un re-import Excel, mostrare all'admin una tabella di anteprima con tutte le partite che cambieranno: data vecchia → data nuova, luogo vecchio → luogo nuovo, ecc. Solo dopo conferma esplicita procedere con l'import. Migliora la fiducia dell'utente prima di un'operazione che modifica molte gare. Stima: ~1-2 ore di lavoro (nuovo endpoint preview + nuovo modal frontend).
 - 📧 **Migrazione Brevo a account dedicato RegistraTEAM (richiesto 02/05/2026 sera, post-Pilot)**: configurazione attuale = mittente "RegistraTEAM" <info@pallavoloperugia.it>, dominio DKIM `pallavoloperugia.it` (verificato), 300 email/gg condivise con la società. Per migrare: 1) Creare account Brevo nuovo con email `registrateam@gmail.com`, 2) Verificare dominio `registrateam.it` su Brevo (record DNS Aruba: SPF, DKIM, DMARC), 3) Configurare mittente `info@registrateam.it` o `noreply@registrateam.it` con nome "RegistraTEAM", 4) Caricare logo RegistraTEAM, 5) Generare nuova API key, 6) Aggiornare `BREVO_API_KEY` su Render + cambiare l'email mittente nel codice (cercare `info@pallavoloperugia.it` in `backend/`). Tempo: ~30-45 min. Richiede 1 piccolo cambio codice (email mittente) + redeploy.
 
+## Completato 03/05/2026 (ore 00:30-01:00) — Deploy Backend Produzione su Render (P0 - Fase 1/3)
+**Obiettivo**: portare backend RegistraTEAM in produzione su infrastruttura cloud reale (non più Emergent preview).
+
+- ✅ **Backend live**: https://registrateam-backend.onrender.com (piano Free, region Frankfurt EU)
+- ✅ **MongoDB Atlas connesso**: cluster M0 free tier, DB `registrateam`, utente `registrateam_db_user`, IP whitelist `0.0.0.0/0`
+- ✅ **GitHub**: codice salvato sul repo `vincenzociucarelli-netizen/Vinzzz-Github` branch `02-05-2026`
+- ✅ **11 env vars Render**: PYTHON_VERSION, MONGO_URL, DB_NAME, JWT_SECRET_KEY, BREVO_API_KEY, EMERGENT_LLM_KEY, SENDER_EMAIL, SENDGRID_FROM_EMAIL, SENDER_NAME, FRONTEND_URL, ALLOWED_ORIGINS, PYTHONUNBUFFERED
+- ✅ **Build Command custom**: `pip install -r requirements.txt --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/` (necessario per emergentintegrations)
+- ✅ **Fix path /app/backups → /tmp/backups**: cambiato `BACKUP_DIR` per essere scrivibile su Render. Ora usa env var `BACKUP_DIR` con default `/tmp/backups`.
+- ✅ **Health check**: `GET /api/health` → `{"status":"healthy","service":"backend"}` ✅
+
+**⚠️ NOTE OPERATIVE Pilot**:
+- Piano Free → backend **dorme dopo 15 min** di inattività. Primo accesso richiede 30-60s di "wake up". Se serve sempre attivo, upgrade a Starter $7/mese.
+- `JWT_SECRET_KEY`: salvato su Render dashboard (PRD non lo logga per sicurezza)
+
+**Prossime fasi P0 (in attesa di sessione utente)**:
+- 📋 **Fase 2/3 - Vercel (~30 min)**: deploy frontend statico (`vercel.json` già pronto). REACT_APP_BACKEND_URL = https://registrateam-backend.onrender.com
+- 📋 **Fase 3/3 - Aruba DNS (~30 min + propagazione)**: puntare `registrateam.it` su Vercel. Dopo: aggiornare `FRONTEND_URL` e `ALLOWED_ORIGINS` su Render con dominio finale.
+
 ## Problema Originale
 Applicazione completa per la gestione di società sportive dilettantistiche italiane. Focus su GDPR, ruoli, collegamento genitori-atleti, documenti PDF dinamici e sincronizzazione calendario gare federali.
 
