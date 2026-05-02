@@ -24066,10 +24066,15 @@ api_router.include_router(primary_admin_router)
 
 app.include_router(api_router)
 
+# CORS origins: in sviluppo consente tutto, in produzione limita a domini espliciti.
+# Imposta ALLOWED_ORIGINS nel .env come lista separata da virgole (es. "https://registrateam.it,https://www.registrateam.it").
+_allowed_origins_env = os.environ.get("ALLOWED_ORIGINS", "").strip()
+_cors_origins = [o.strip() for o in _allowed_origins_env.split(",") if o.strip()] if _allowed_origins_env else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

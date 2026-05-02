@@ -1,0 +1,38 @@
+# Render deployment config per il backend RegistraTEAM
+# Guida: https://render.com/docs/yaml-spec
+services:
+  - type: web
+    name: registrateam-backend
+    runtime: python
+    plan: free  # Cambia in 'starter' ($7/mese) per evitare sleep dopo 15 min di inattività
+    branch: main
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      # Segreti da impostare a mano nel Dashboard Render (NON committare!)
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true  # Render genera automaticamente un valore sicuro
+      - key: BREVO_API_KEY
+        sync: false
+      - key: EMERGENT_LLM_KEY
+        sync: false
+      - key: SENDER_EMAIL
+        value: info@registrateam.it
+      - key: SENDGRID_FROM_EMAIL
+        value: info@registrateam.it
+      - key: SENDER_NAME
+        value: RegistraTEAM
+      - key: FRONTEND_URL
+        value: https://registrateam.it
+      - key: WEB_APP_URL
+        value: https://registrateam.it
+      - key: ALLOWED_ORIGINS
+        value: https://registrateam.it,https://www.registrateam.it,https://registrateam.com,https://registrateam.net
