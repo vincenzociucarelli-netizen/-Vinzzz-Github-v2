@@ -16,6 +16,7 @@ from passlib.context import CryptContext
 import jwt
 import base64
 import io
+import json
 import csv
 import qrcode
 from bson import ObjectId
@@ -22235,12 +22236,112 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
 
 # ==================== CSV EXPORT ENDPOINTS ====================
 
+@api_router.get("/admin/backup/export")
+async def export_full_backup(current_user = Depends(get_current_user)):
+    """Esporta un backup completo della società in formato ZIP.
+
+    Contiene JSON sanificati di tutte le collezioni rilevanti (users senza
+    password_hash, athletes, teams, matches, attendance, certificates metadata
+    senza file binari, settings, audit_logs, notifications, ecc.)
+    Solo admin — scoped per society_id.
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può esportare il backup")
+
+    society_id = current_user.get("society_id")
+    society_filter = {"society_id": society_id} if society_id else {}
+
+    import zipfile as _zipfile
+    from json import JSONEncoder as _JSONEncoder
+
+    class _DateTimeEncoder(_JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            if hasattr(obj, "isoformat"):
+                return obj.isoformat()
+            return super().default(obj)
+
+    def _clean(docs: list, drop_fields: Optional[list] = None) -> list:
+        drop_fields = drop_fields or []
+        cleaned = []
+        for d in docs:
+            if not isinstance(d, dict):
+                continue
+            d = {k: v for k, v in d.items() if k != "_id" and k not in drop_fields}
+            cleaned.append(d)
+        return cleaned
+
+    # Raccogli tutte le collezioni rilevanti (best-effort: se una query fallisce non rompiamo)
+    async def _safe_to_list(coll_name: str, filt: dict, drop: Optional[list] = None) -> list:
+        try:
+            docs = await db[coll_name].find(filt).to_list(10000)
+            return _clean(docs, drop)
+        except Exception as e:
+            logging.warning(f"backup: error fetching {coll_name}: {e}")
+            return []
+
+    buf = io.BytesIO()
+    with _zipfile.ZipFile(buf, "w", _zipfile.ZIP_DEFLATED) as zf:
+        # README con meta
+        meta = {
+            "society_id": society_id,
+            "exported_by": current_user.get("email"),
+            "exported_by_name": current_user.get("full_name"),
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "note": (
+                "Backup completo della società. I file .json contengono tutti i dati strutturati. "
+                "I file binari (logo, foto, certificati PDF, pagamenti) sono esclusi per ridurre la "
+                "dimensione — se servono, vanno esportati separatamente dagli endpoint dedicati."
+            ),
+        }
+        zf.writestr("README.json", json.dumps(meta, ensure_ascii=False, indent=2, cls=_DateTimeEncoder))
+
+        # Society profile (da settings, scoped)
+        settings_doc = await db.settings.find_one({"type": "society", **society_filter})
+        if settings_doc:
+            # Rimuovo logo base64 (binario) dal JSON — pesa troppo
+            settings_clean = {k: v for k, v in settings_doc.items() if k not in ("_id", "logo", "sport_image", "stamp_signature")}
+            zf.writestr("society_profile.json", json.dumps(settings_clean, ensure_ascii=False, indent=2, cls=_DateTimeEncoder))
+
+        # Society record
+        if society_id:
+            soc = await db.societies.find_one({"id": society_id})
+            if soc:
+                soc_clean = {k: v for k, v in soc.items() if k != "_id"}
+                zf.writestr("society.json", json.dumps(soc_clean, ensure_ascii=False, indent=2, cls=_DateTimeEncoder))
+
+        # Tutte le altre collezioni
+        users = await _safe_to_list("users", society_filter, drop=["password_hash", "password_reset_token"])
+        zf.writestr("users.json", json.dumps(users, ensure_ascii=False, indent=2, cls=_DateTimeEncoder))
+
+        athletes = await _safe_to_list("athletes", society_filter, drop=["photo", "medical_certificate_file"])
+        zf.writestr("athletes.json", json.dumps(athletes, ensure_ascii=False, indent=2, cls=_DateTimeEncoder))
+
+        for coll in (
+            "teams", "matches", "attendance", "attendances", "medical_certificates",
+            "calendars", "events", "compensations", "notifications", "seasons",
+            "consents", "audit_logs", "gdpr_documents", "payments",
+            "stripe_payment_attempts", "parent_athlete_links",
+        ):
+            docs = await _safe_to_list(coll, society_filter)
+            if docs:
+                zf.writestr(f"{coll}.json", json.dumps(docs, ensure_ascii=False, indent=2, cls=_DateTimeEncoder))
+
+    buf.seek(0)
+    filename = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
 @api_router.get("/export-csv/athletes")
 async def export_athletes_csv(current_user = Depends(get_current_user)):
     """Export athletes list as CSV - Admin only"""
     if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può esportare dati")
-    
+        raise HTTPException(status_code=403, detail="Solo admin può esportare dati")    
     society_id = current_user.get("society_id")
     athletes = await db.athletes.find({"society_id": society_id}).to_list(1000)
     

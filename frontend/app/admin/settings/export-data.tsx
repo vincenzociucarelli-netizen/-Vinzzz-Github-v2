@@ -197,6 +197,57 @@ export default function ExportDataPage() {
 
       {/* Export Options */}
       <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
+        {/* BACKUP COMPLETO — card speciale in cima */}
+        <TouchableOpacity
+          style={[styles.exportCard, styles.backupCard]}
+          onPress={async () => {
+            setDownloading('backup-full');
+            try {
+              const token = await getToken();
+              if (Platform.OS === 'web') {
+                const baseUrl = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+                const res = await fetch(`${baseUrl}/api/admin/backup/export`, {
+                  headers: { 'Authorization': `Bearer ${token}` },
+                });
+                if (!res.ok) throw new Error('Backup failed');
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_${new Date().toISOString().split('T')[0]}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                showAlert('Backup completato', 'Archivio ZIP scaricato con successo! Conservalo in un luogo sicuro.');
+              } else {
+                showAlert('Backup su Mobile', 'Per scaricare il backup completo accedi all\'app da un browser web.');
+              }
+            } catch (e) {
+              showAlert('Errore', 'Impossibile scaricare il backup. Riprova.');
+            } finally {
+              setDownloading(null);
+            }
+          }}
+          disabled={downloading !== null}
+          data-testid="backup-full-btn"
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#fff3' }]}>
+            <Icon name="archive" size={28} color="#fff" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: '#fff' }]}>🗄️ Backup completo (ZIP)</Text>
+            <Text style={[styles.cardDescription, { color: '#fff', opacity: 0.9 }]}>
+              Scarica TUTTI i dati della società in un unico archivio ZIP (JSON). Consigliato prima di grosse operazioni o come assicurazione GDPR periodica.
+            </Text>
+          </View>
+          {downloading === 'backup-full' ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Icon name="download-outline" size={24} color="#fff" />
+          )}
+        </TouchableOpacity>
+
         {EXPORT_OPTIONS.map((option) => (
           <TouchableOpacity
             key={option.key}
@@ -262,6 +313,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     gap: 10,
+  },
+  backupCard: {
+    backgroundColor: '#1565C0',
+    borderLeftColor: '#0D47A1',
+    marginBottom: 18,
   },
   infoText: {
     flex: 1,

@@ -19,6 +19,14 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 02/05/2026 (notte) — Backup Completo Società (ZIP)
+- ✅ **Backend `GET /api/admin/backup/export`**: endpoint admin-only che raccoglie tutte le collezioni rilevanti (users senza password_hash, athletes, teams, matches, attendance, audit_logs, notifications, seasons, compensations, consents, gdpr_documents, payments, parent_athlete_links, ecc.) e le impacchetta in ZIP con JSON per ogni collezione + README.json + society.json + society_profile.json
+- ✅ **Scoped per society_id**: in single-tenant equivale a "tutto", in multi-tenant (futuro) sarà corretto
+- ✅ **Esclusi file binari pesanti** (logo, foto atleti base64, certificati PDF) per tenere ZIP leggero (~36MB solo dati strutturati)
+- ✅ **Frontend `/admin/settings/export-data`**: nuova card blu evidenziata "🗄️ Backup completo (ZIP)" in cima alle altre opzioni di export CSV; usa lo stesso meccanismo di download blob già esistente
+- ✅ **Verificato via curl**: response 200 con Content-Type application/zip, ZIP valido contenente README + society + users + athletes + teams + matches + audit_logs + payments
+- ✅ **Smoke regression** 17/17 passati
+
 ## Completato 02/05/2026 (notte) — Rollback SINGLE-TENANT
 **Decisione**: dopo aver verificato che il supporto multi-società richiede un audit completo di molti endpoint (athletes/teams/stats/notifications/etc) e non solo primary-admin + settings/society, l'utente ha optato per restare SINGLE-TENANT per il Pilot.
 
