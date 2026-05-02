@@ -1,5 +1,8 @@
 # RegistraTEAM - Product Requirements Document
 
+## Backlog miglioramenti — IDEE DA RICORDARE
+- 🔮 **Preview re-import calendario (richiesto 02/05/2026 sera)**: prima di confermare un re-import Excel, mostrare all'admin una tabella di anteprima con tutte le partite che cambieranno: data vecchia → data nuova, luogo vecchio → luogo nuovo, ecc. Solo dopo conferma esplicita procedere con l'import. Migliora la fiducia dell'utente prima di un'operazione che modifica molte gare. Stima: ~1-2 ore di lavoro (nuovo endpoint preview + nuovo modal frontend).
+
 ## Problema Originale
 Applicazione completa per la gestione di società sportive dilettantistiche italiane. Focus su GDPR, ruoli, collegamento genitori-atleti, documenti PDF dinamici e sincronizzazione calendario gare federali.
 
