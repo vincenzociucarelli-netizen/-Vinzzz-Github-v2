@@ -19,6 +19,13 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 02/05/2026 (pomeriggio) — GDPR/Legal setup Pilot
+- ✅ **Privacy Policy completa GDPR-compliant** (`/app/frontend/app/privacy-policy.tsx`): riscritta da zero in v2.0 con 14 sezioni conformi agli artt. 13-14 GDPR (Titolare/Responsabile, Categorie dati, Base giuridica, Finalità, Modalità, Conservazione, Diritti artt.15-22, Cookie, Minori, Data Breach, Contatti Garante). Referenti: Società come Titolare, RegistraTEAM come Responsabile ex art.28, sub-responsabili (Mongo Atlas, Render/Vercel, Brevo, tutti UE)
+- ✅ **CookieBanner** (`/app/frontend/src/components/CookieBanner.tsx`): banner fisso in basso per prima visita, 2 opzioni (Solo necessari / Accetta tutti), scelta persistita in localStorage con timestamp+versione. Mostrato solo su web. Link inline a Privacy + ToS
+- ✅ **Root layout**: CookieBanner inserito in `app/_layout.tsx` (compare su TUTTE le pagine alla prima visita web)
+- ✅ **Footer legale** nella pagina `/login`: sempre visibile, link "Termini di Utilizzo" + "Informativa Privacy" con styling discreto
+- ✅ **Smoke regression** 17/17 passati; bundle pubblicato, stringhe nuove verificate
+
 ## Completato 02/05/2026 (notte) — RESTORE Backup con OTP + Pre-Restore Auto
 **Operazione distruttiva blindata con guardie a 3 livelli**:
 

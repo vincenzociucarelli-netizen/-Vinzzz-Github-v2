@@ -5,6 +5,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { View, Platform } from 'react-native';
 import GlobalReadOnlyBanner from '../src/components/GlobalReadOnlyBanner';
+import CookieBanner from '../src/components/CookieBanner';
 
 // Keep splash screen visible while loading fonts
 SplashScreen.preventAutoHideAsync();
@@ -44,8 +45,8 @@ export default function RootLayout() {
   return (
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <GlobalReadOnlyBanner />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
+      <CookieBanner />
+      <Stack screenOptions={{ headerShown: false }}>        <Stack.Screen name="index" />
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
         <Stack.Screen name="register-society" />

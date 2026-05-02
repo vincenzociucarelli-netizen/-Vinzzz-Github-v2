@@ -278,6 +278,20 @@ export default function Login() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Footer legale — sempre visibile */}
+        <View style={styles.legalFooter}>
+          <Text style={styles.legalText}>
+            Accedendo accetti i nostri{' '}
+            <Text style={styles.legalLink} onPress={() => router.push('/terms-of-use')} data-testid="login-tos-link">
+              Termini di Utilizzo
+            </Text>
+            {' '}e la{' '}
+            <Text style={styles.legalLink} onPress={() => router.push('/privacy-policy')} data-testid="login-privacy-link">
+              Informativa Privacy
+            </Text>
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -439,5 +453,22 @@ const styles = StyleSheet.create({
   newSocietyEmph: {
     color: '#1565C0',
     fontWeight: '700',
+  },
+  legalFooter: {
+    marginTop: 22,
+    paddingTop: 16,
+    paddingBottom: 6,
+    alignItems: 'center',
+  },
+  legalText: {
+    color: '#888',
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+  legalLink: {
+    color: '#1565C0',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });
