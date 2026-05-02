@@ -69,6 +69,16 @@ export default function AdminMatches() {
   // Filter state
   const [filterMode, setFilterMode] = useState<'upcoming' | 'played' | 'all'>('upcoming');
 
+  // Carica nome squadra di casa salvato (per evitare di doverlo riscrivere ad ogni re-import)
+  useEffect(() => {
+    try {
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+        const saved = window.localStorage.getItem('lastHomeTeamName');
+        if (saved) setHomeTeamName(saved);
+      }
+    } catch {}
+  }, []);
+
   // Form state
   const [formData, setFormData] = useState({
     team_id: '',
@@ -533,14 +543,24 @@ export default function AdminMatches() {
       // Import matches
       const response = await api.post('/matches/import', { matches: validMatches });
       
+      // Salva il nome squadra di casa per i prossimi re-import (no più riscritte!)
+      try {
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('lastHomeTeamName', homeTeamName.trim());
+        }
+      } catch {}
+      
+      const updated = response.data.updated || 0;
+      const newCount = response.data.new || 0;
+      const isReimport = updated > 0;
+      
       Alert.alert(
-        'Import Completato',
-        `Importate ${response.data.imported} gare\n\n🏠 Casa: ${homeCount}\n✈️ Trasferta: ${awayCount}${response.data.errors?.length > 0 ? `\n\nErrori: ${response.data.errors.join('\n')}` : ''}`
+        isReimport ? '🔄 Calendario Aggiornato' : '✅ Import Completato',
+        `${isReimport ? `🔄 Aggiornate: ${updated} gare (date/orari/luogo)\n🆕 Nuove: ${newCount} gare` : `Importate ${response.data.imported} gare`}\n\n🏠 Casa: ${homeCount}\n✈️ Trasferta: ${awayCount}${response.data.errors?.length > 0 ? `\n\nErrori: ${response.data.errors.join('\n')}` : ''}`
       );
       
-      // Clear pending data and home team name
+      // Clear pending data (NON il nome casa, lo manteniamo per i prossimi import)
       setPendingImportData([]);
-      setHomeTeamName('');
       
       loadData();
     } catch (error: any) {
@@ -645,7 +665,7 @@ export default function AdminMatches() {
         <View style={styles.instructionContent}>
           <Ionicons name="information-circle" size={20} color="#007AFF" />
           <Text style={styles.instructionText}>
-            Importa da Excel: CampionatoNome, GaraNumero, GaraDataOra, SquadraCasaNome, SquadraOspiteNome...
+            <Text style={{ fontWeight: '700' }}>Importa o aggiorna calendario:</Text> ricarica lo stesso file Excel quando la federazione cambia date. Le gare con stesso numero verranno aggiornate, le nuove aggiunte.
           </Text>
         </View>
         <TouchableOpacity style={styles.templateBtn} onPress={downloadTemplate}>
@@ -973,6 +993,15 @@ export default function AdminMatches() {
                 Esempio: "Pallavolo Perugia", "Perugia", "PGS Perugia"
               </Text>
               
+              {homeTeamName.trim().length > 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 8, borderRadius: 6, marginTop: 6 }} data-testid="home-team-saved-hint">
+                  <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                  <Text style={{ marginLeft: 6, fontSize: 12, color: '#2E7D32', flex: 1 }}>
+                    Nome salvato dall'ultima importazione. Modifica solo se necessario.
+                  </Text>
+                </View>
+              )}
+              
               <TextInput
                 style={styles.homeTeamInput}
                 value={homeTeamName}
@@ -980,6 +1009,7 @@ export default function AdminMatches() {
                 placeholder="Nome squadra di casa..."
                 placeholderTextColor="#999"
                 autoFocus
+                data-testid="home-team-name-input"
               />
               
               <Text style={styles.homeTeamHint}>
@@ -992,7 +1022,6 @@ export default function AdminMatches() {
                   onPress={() => {
                     setHomeTeamModalVisible(false);
                     setPendingImportData([]);
-                    setHomeTeamName('');
                   }}
                 >
                   <Text style={styles.homeTeamCancelText}>Annulla</Text>

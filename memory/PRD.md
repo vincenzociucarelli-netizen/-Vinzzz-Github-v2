@@ -3,6 +3,19 @@
 ## Problema Originale
 Applicazione completa per la gestione di società sportive dilettantistiche italiane. Focus su GDPR, ruoli, collegamento genitori-atleti, documenti PDF dinamici e sincronizzazione calendario gare federali.
 
+## Completato 02/05/2026 (sera) — Re-import Excel calendario partite (P1)
+**Obiettivo**: permettere all'admin di ricaricare lo stesso file Excel federazione quando le date delle partite cambiano, senza duplicare le gare.
+
+- ✅ **Backend `POST /api/matches/import`**: response arricchito con conteggi separati `updated` (gare con stesso `match_number` rimpiazzate = re-import) e `new` (gare mai viste prima). Pre-calcolo dei `match_number` esistenti nel DB prima della cancellazione per distinguere i due casi
+- ✅ **Frontend `/admin/matches`**:
+  - Pre-popolazione automatica del nome "squadra di casa" da `localStorage` (chiave `lastHomeTeamName`) — non serve più riscrivere "Pallavolo Perugia" ad ogni re-import
+  - Salvataggio del nome dopo conferma di import riuscito
+  - Hint visivo verde nel modal quando il nome è pre-popolato ("Nome salvato dall'ultima importazione. Modifica solo se necessario.")
+  - Alert finale differenziato: "🔄 Calendario Aggiornato" (con `Aggiornate: X / Nuove: Y`) quando si rileva re-import, "✅ Import Completato" altrimenti
+  - Instruction card aggiornata: "Importa o aggiorna calendario: ricarica lo stesso file Excel quando la federazione cambia date. Le gare con stesso numero verranno aggiornate, le nuove aggiunte."
+- ✅ **Test backend via curl**: Test 1 (2 nuove) → `updated:0, new:2`. Test 2 (1 stessa con data nuova + 1 nuova) → `updated:1, new:1, deleted:1` ✅
+- ✅ **Build statica frontend rebuilt** (`expo export -p web`)
+
 ## Architettura
 - **Frontend**: React/Expo (build statiche web `npx expo export -p web` + `serve -s dist -l 3000`)
 - **Backend**: FastAPI (server.py monolitico >24k righe)

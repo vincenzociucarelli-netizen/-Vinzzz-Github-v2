@@ -4869,6 +4869,8 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
     matches_data = file_data.get("matches", [])
     imported_count = 0
     deleted_count = 0
+    updated_count = 0  # Match numbers che esistevano già (re-import = aggiornamento)
+    new_count = 0      # Match numbers nuovi (mai visti prima)
     errors = []
     
     # Collect all match_numbers from the import to decide what to delete/update
@@ -4876,6 +4878,17 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
     for row in matches_data:
         if row.get("match_number"):
             match_numbers_to_import.add(row["match_number"])
+    
+    # Pre-calcola quali match_number esistono già nel DB → quelli sono "aggiornamenti"
+    existing_match_numbers = set()
+    if match_numbers_to_import:
+        existing_cursor = db.matches.find(
+            {"match_number": {"$in": list(match_numbers_to_import)}},
+            {"match_number": 1, "_id": 0}
+        )
+        async for doc in existing_cursor:
+            if doc.get("match_number"):
+                existing_match_numbers.add(doc["match_number"])
     
     # If we have match_numbers, delete only those specific matches (upsert logic)
     # Otherwise, fall back to deleting all future matches for those teams
@@ -4954,6 +4967,11 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
             
             await db.matches.insert_one(match.dict())
             imported_count += 1
+            # Distingui aggiornamento (match_number esisteva già) vs nuova partita
+            if match.match_number and match.match_number in existing_match_numbers:
+                updated_count += 1
+            else:
+                new_count += 1
             logging.info(f"Match imported: {match.team_name} ({match.match_number}) vs {match.opponent} on {match.date}")
             
         except Exception as e:
@@ -4963,6 +4981,8 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
     return {
         "message": f"Sostituite {deleted_count} gare esistenti. Importate {imported_count} nuove gare.",
         "imported": imported_count,
+        "updated": updated_count,
+        "new": new_count,
         "deleted": deleted_count,
         "errors": errors
     }
