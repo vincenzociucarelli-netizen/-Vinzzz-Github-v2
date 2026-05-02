@@ -147,6 +147,24 @@ export default function SettingsIndex() {
           <Ionicons name="chevron-forward" size={24} color="#00BCD4" />
         </TouchableOpacity>
 
+        {/* Card Ripristino Backup (solo LR) */}
+        <TouchableOpacity
+          style={[styles.card, { borderColor: '#C62828', backgroundColor: '#FFEBEE' }]}
+          onPress={() => router.push('/admin/settings/restore-backup')}
+          data-testid="settings-restore-backup-btn"
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#C62828' }]}>
+            <Ionicons name="refresh-circle" size={32} color="#fff" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: '#C62828' }]}>Ripristino Backup</Text>
+            <Text style={styles.cardDescription}>
+              Ripristina i dati da un file ZIP (solo Legale Rappresentante)
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#C62828" />
+        </TouchableOpacity>
+
         {/* Card Pagamenti Stripe */}
         <TouchableOpacity 
           style={[styles.card, { borderColor: '#6772E5', backgroundColor: '#EEF2FF' }]}

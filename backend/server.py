@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Depends, status, Request, Body
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Depends, status, Request, Body
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from dotenv import load_dotenv
@@ -22332,6 +22332,315 @@ async def export_full_backup(current_user = Depends(get_current_user)):
     filename = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
     return StreamingResponse(
         iter([buf.getvalue()]),
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+# ============================================================
+# RESTORE: OTP + restore con wipe/merge + backup automatico
+# ------------------------------------------------------------
+# Operazione distruttiva. Solo LR può eseguirla. Richiede:
+#   1. POST /api/admin/backup/restore/request-otp  → email OTP al LR
+#   2. POST /api/admin/backup/restore (multipart)  → zip + password + otp + mode
+#
+# Prima di qualsiasi ripristino viene creato automaticamente un pre-restore
+# backup in /app/backups/ (salvaguardia contro errori umani).
+# L'utente corrente (LR che sta facendo il restore) NON viene mai toccato per
+# evitare lockout.
+# ============================================================
+import zipfile as _zipfile_mod
+
+BACKUP_DIR = "/app/backups"
+os.makedirs(BACKUP_DIR, exist_ok=True)
+
+# Collezioni gestite dal restore (stesso set del backup)
+RESTORE_COLLECTIONS = (
+    "users", "athletes", "teams", "matches", "attendance", "attendances",
+    "medical_certificates", "calendars", "events", "compensations",
+    "notifications", "seasons", "consents", "audit_logs", "gdpr_documents",
+    "payments", "stripe_payment_attempts", "parent_athlete_links",
+)
+
+
+async def _require_legal_representative(user: dict) -> None:
+    """Solo il Legale Rappresentante attivo (primary + declaration=legal_representative)
+    può usare il restore. Altrimenti HTTP 403."""
+    if user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    if not user.get("is_primary_admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Solo il Responsabile Admin con scettro può avviare un ripristino. Se sei il LR, assicurati di aver firmato la dichiarazione.",
+        )
+    if user.get("primary_admin_declaration") != "legal_representative":
+        raise HTTPException(
+            status_code=403,
+            detail="Solo il Legale Rappresentante firmato può eseguire il ripristino di un backup. Un Dirigente autorizzato non può.",
+        )
+
+
+@api_router.post("/admin/backup/restore/request-otp")
+async def request_restore_otp(current_user = Depends(get_current_user)):
+    """Step 1: genera OTP a 6 cifre, lo salva in users.restore_otp_* e lo invia per email al LR."""
+    await _require_legal_representative(current_user)
+
+    otp = "".join(_secrets.choice("0123456789") for _ in range(6))
+    expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {
+            "restore_otp": otp,
+            "restore_otp_expires": expires,
+            "restore_otp_requested_at": datetime.now(timezone.utc),
+        }}
+    )
+
+    # Invia email OTP
+    html = f"""
+    <!DOCTYPE html><html><body style="font-family:Arial,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px;">
+    <div style="background-color:#C62828;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0;">
+        <div style="font-size:40px;">⚠️</div>
+        <h2 style="margin:8px 0 0 0;color:white;">Codice di conferma RESTORE</h2>
+    </div>
+    <div style="background-color:#fafafa;padding:28px;border:1px solid #ddd;border-radius:0 0 8px 8px;">
+        <p>Ciao {current_user.get('full_name', '')},</p>
+        <p>Hai richiesto di <strong>ripristinare un backup</strong> della Società. Questa è un'operazione <strong style="color:#C62828;">distruttiva e irreversibile</strong>.</p>
+        <p>Inserisci il seguente codice per confermare:</p>
+        <div style="background-color:#C62828;color:white;font-size:32px;font-weight:bold;padding:18px;text-align:center;border-radius:8px;margin:20px 0;letter-spacing:6px;">{otp}</div>
+        <p style="font-size:13px;color:#666;">Il codice scade tra <strong>10 minuti</strong>.</p>
+        <p style="font-size:12px;color:#999;margin-top:24px;">Se NON hai richiesto questa operazione, cambia subito la tua password: qualcuno potrebbe aver compromesso il tuo account.</p>
+    </div>
+    </body></html>
+    """
+    try:
+        await send_transactional_email(
+            to_email=current_user["email"],
+            subject="⚠️ Codice di conferma RESTORE backup",
+            html_content=html,
+            to_name=current_user.get("full_name", ""),
+        )
+    except Exception as e:
+        logging.warning(f"restore OTP email failed: {e}")
+
+    return {"success": True, "message": "Codice inviato alla tua email", "expires_in_minutes": 10}
+
+
+@api_router.post("/admin/backup/restore")
+async def restore_backup(
+    backup_zip: UploadFile = File(...),
+    password: str = Form(...),
+    otp: str = Form(...),
+    mode: str = Form("wipe"),  # "wipe" o "merge"
+    current_user = Depends(get_current_user),
+):
+    """Step 2: esegue il restore.
+
+    Guardie:
+      - LR (primary + declaration=legal_representative)
+      - Password corrente dell'utente
+      - OTP ricevuto via email (valido 10 minuti)
+    Azioni:
+      - Crea pre-restore backup automatico in /app/backups/
+      - mode=wipe: cancella tutto (tranne l'utente corrente) e reimporta
+      - mode=merge: upsert per id, i record nel ZIP sovrascrivono gli esistenti
+      - L'utente corrente NON viene mai toccato (evita lockout)
+      - Audit log dell'operazione
+    """
+    await _require_legal_representative(current_user)
+    if mode not in ("wipe", "merge"):
+        raise HTTPException(status_code=400, detail="mode deve essere 'wipe' o 'merge'")
+
+    # Verifica password
+    if not verify_password(password, current_user.get("password_hash", "")):
+        raise HTTPException(status_code=403, detail="Password errata")
+
+    # Verifica OTP
+    fresh_user = await db.users.find_one({"id": current_user["id"]})
+    stored_otp = (fresh_user or {}).get("restore_otp")
+    stored_exp = (fresh_user or {}).get("restore_otp_expires")
+    if not stored_otp or stored_otp != otp.strip():
+        raise HTTPException(status_code=403, detail="Codice OTP non valido")
+    if isinstance(stored_exp, datetime) and stored_exp < datetime.now(timezone.utc):
+        raise HTTPException(status_code=403, detail="Codice OTP scaduto — richiedine uno nuovo")
+
+    # Leggi ZIP
+    try:
+        raw = await backup_zip.read()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Impossibile leggere il file ZIP")
+    if not raw or len(raw) < 100:
+        raise HTTPException(status_code=400, detail="File ZIP vuoto o non valido")
+
+    try:
+        zf = _zipfile_mod.ZipFile(io.BytesIO(raw))
+        names = zf.namelist()
+        if "users.json" not in names and "athletes.json" not in names:
+            raise HTTPException(status_code=400, detail="Lo ZIP non sembra un backup valido (manca users.json o athletes.json)")
+    except _zipfile_mod.BadZipFile:
+        raise HTTPException(status_code=400, detail="Il file caricato non è un ZIP valido")
+
+    society_id = current_user.get("society_id")
+    society_filter = {"society_id": society_id} if society_id else {}
+
+    # 1) PRE-RESTORE BACKUP automatico
+    pre_buf = io.BytesIO()
+    with _zipfile_mod.ZipFile(pre_buf, "w", _zipfile_mod.ZIP_DEFLATED) as out:
+        meta = {
+            "kind": "pre-restore-backup",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "triggered_by_user_id": current_user["id"],
+            "triggered_by_email": current_user["email"],
+            "restore_mode": mode,
+        }
+        out.writestr("README.json", json.dumps(meta, ensure_ascii=False, indent=2, default=str))
+        for coll in RESTORE_COLLECTIONS:
+            try:
+                docs = await db[coll].find(society_filter).to_list(10000)
+                cleaned = [{k: v for k, v in d.items() if k != "_id"} for d in docs if isinstance(d, dict)]
+                if cleaned:
+                    out.writestr(f"{coll}.json", json.dumps(cleaned, ensure_ascii=False, indent=2, default=str))
+            except Exception as e:
+                logging.warning(f"pre-restore: error dumping {coll}: {e}")
+    pre_buf.seek(0)
+    pre_filename = f"pre-restore-{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    pre_path = os.path.join(BACKUP_DIR, pre_filename)
+    with open(pre_path, "wb") as f:
+        f.write(pre_buf.getvalue())
+
+    # 2) Esegui il restore
+    counters = {"inserted": 0, "updated": 0, "skipped_current_user": 0, "collections": []}
+    current_user_id = current_user["id"]
+
+    for coll in RESTORE_COLLECTIONS:
+        fn = f"{coll}.json"
+        if fn not in names:
+            continue
+        try:
+            with zf.open(fn) as f:
+                docs_in = json.loads(f.read().decode("utf-8") or "[]")
+            if not isinstance(docs_in, list):
+                continue
+        except Exception as e:
+            logging.warning(f"restore: error reading {fn}: {e}")
+            continue
+
+        coll_counter = {"name": coll, "inserted": 0, "updated": 0, "deleted": 0}
+
+        if mode == "wipe":
+            # Elimina tutto tranne l'utente corrente
+            if coll == "users":
+                r = await db[coll].delete_many({**society_filter, "id": {"$ne": current_user_id}})
+            else:
+                r = await db[coll].delete_many(society_filter)
+            coll_counter["deleted"] = r.deleted_count
+
+        # Import dei documenti
+        for d in docs_in:
+            if not isinstance(d, dict):
+                continue
+            doc_id = d.get("id")
+            if not doc_id:
+                continue
+            # Mai toccare l'utente corrente
+            if coll == "users" and doc_id == current_user_id:
+                counters["skipped_current_user"] += 1
+                continue
+            # Assicura scoping
+            if society_id and "society_id" not in d:
+                d["society_id"] = society_id
+
+            if mode == "wipe":
+                d.pop("_id", None)
+                try:
+                    await db[coll].insert_one(d)
+                    coll_counter["inserted"] += 1
+                except Exception:
+                    # Se c'è un id duplicato (utente corrente), fai update
+                    d.pop("_id", None)
+                    r = await db[coll].update_one({"id": doc_id}, {"$set": d}, upsert=True)
+                    if r.matched_count:
+                        coll_counter["updated"] += 1
+                    else:
+                        coll_counter["inserted"] += 1
+            else:  # merge
+                d.pop("_id", None)
+                r = await db[coll].update_one({"id": doc_id}, {"$set": d}, upsert=True)
+                if r.matched_count:
+                    coll_counter["updated"] += 1
+                else:
+                    coll_counter["inserted"] += 1
+
+        counters["inserted"] += coll_counter["inserted"]
+        counters["updated"] += coll_counter["updated"]
+        counters["collections"].append(coll_counter)
+
+    # 3) Invalida OTP
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$unset": {"restore_otp": "", "restore_otp_expires": "", "restore_otp_requested_at": ""}}
+    )
+
+    # 4) Audit log
+    try:
+        await db.audit_logs.insert_one({
+            "id": str(uuid.uuid4()),
+            "action": "backup_restore",
+            "user_id": current_user["id"],
+            "user_email": current_user["email"],
+            "society_id": society_id,
+            "timestamp": datetime.now(timezone.utc),
+            "details": {
+                "mode": mode,
+                "counters": counters,
+                "pre_restore_backup": pre_filename,
+            },
+        })
+    except Exception as e:
+        logging.warning(f"restore audit log failed: {e}")
+
+    return {
+        "success": True,
+        "mode": mode,
+        "counters": counters,
+        "pre_restore_backup": pre_filename,
+        "message": f"Restore {mode} completato con successo. Backup pre-restore salvato come {pre_filename}.",
+    }
+
+
+@api_router.get("/admin/backup/pre-restore-list")
+async def list_pre_restore_backups(current_user = Depends(get_current_user)):
+    """Lista dei backup pre-restore salvati lato server."""
+    await _require_legal_representative(current_user)
+    items = []
+    try:
+        for fn in sorted(os.listdir(BACKUP_DIR), reverse=True):
+            if fn.startswith("pre-restore-") and fn.endswith(".zip"):
+                path = os.path.join(BACKUP_DIR, fn)
+                st = os.stat(path)
+                items.append({
+                    "filename": fn,
+                    "size_bytes": st.st_size,
+                    "created_at": datetime.fromtimestamp(st.st_mtime, tz=timezone.utc).isoformat(),
+                })
+    except Exception as e:
+        logging.warning(f"list backups error: {e}")
+    return {"backups": items}
+
+
+@api_router.get("/admin/backup/pre-restore/{filename}")
+async def download_pre_restore_backup(filename: str, current_user = Depends(get_current_user)):
+    """Scarica uno dei backup pre-restore salvati lato server."""
+    await _require_legal_representative(current_user)
+    if not filename.startswith("pre-restore-") or ".." in filename or "/" in filename:
+        raise HTTPException(status_code=400, detail="Nome file non valido")
+    path = os.path.join(BACKUP_DIR, filename)
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Backup non trovato")
+    with open(path, "rb") as f:
+        data = f.read()
+    return StreamingResponse(
+        iter([data]),
         media_type="application/zip",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )

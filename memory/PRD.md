@@ -19,6 +19,26 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 02/05/2026 (notte) — RESTORE Backup con OTP + Pre-Restore Auto
+**Operazione distruttiva blindata con guardie a 3 livelli**:
+
+- ✅ **Endpoint `POST /api/admin/backup/restore/request-otp`**: genera OTP 6 cifre (valido 10 min), lo invia via email Brevo al LR
+- ✅ **Endpoint `POST /api/admin/backup/restore`** (multipart): richiede ZIP + password + OTP + mode (wipe|merge)
+- ✅ **Guardie di sicurezza**:
+  - Solo LR (primary + `declaration=legal_representative`) — enforced server-side
+  - Password dell'utente verificata (bcrypt)
+  - OTP verificato + scadenza 10 minuti
+  - Utente corrente (che esegue) MAI toccato (evita lockout)
+  - Backup pre-restore automatico salvato in `/app/backups/pre-restore-YYYYMMDD_HHMMSS.zip`
+  - Audit log completo con counters
+- ✅ **Modalità**: wipe (cancella tutto tranne current user, reimporta) o merge (upsert per ID)
+- ✅ **Endpoint `GET /api/admin/backup/pre-restore-list`**: elenca backup pre-restore salvati
+- ✅ **Endpoint `GET /api/admin/backup/pre-restore/{filename}`**: scarica un backup pre-restore
+- ✅ **Frontend `/admin/settings/restore-backup`**: pagina dedicata 5-step (file/mode/password/OTP/conferma "RIPRISTINA"). Mostra blocco rosso se utente non è LR
+- ✅ **Card nel menu settings**: rossa "Ripristino Backup (solo LR)"
+- ✅ **Verificato via curl**: PPG bloccato 403 SOLA LETTURA, Vincenzo (primary senza firma LR) bloccato 403
+- ✅ **Smoke regression** 17/17 passati
+
 ## Completato 02/05/2026 (notte) — Backup Completo Società (ZIP)
 - ✅ **Backend `GET /api/admin/backup/export`**: endpoint admin-only che raccoglie tutte le collezioni rilevanti (users senza password_hash, athletes, teams, matches, attendance, audit_logs, notifications, seasons, compensations, consents, gdpr_documents, payments, parent_athlete_links, ecc.) e le impacchetta in ZIP con JSON per ogni collezione + README.json + society.json + society_profile.json
 - ✅ **Scoped per society_id**: in single-tenant equivale a "tutto", in multi-tenant (futuro) sarà corretto
