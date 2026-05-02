@@ -7,6 +7,10 @@ import {
   Switch,
   ActivityIndicator,
   Platform,
+  Modal,
+  TextInput,
+  Image,
+  ScrollView,
 } from 'react-native';
 import api from '../services/api';
 import { Ionicons } from './Icon';
@@ -52,6 +56,13 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [requestingSent, setRequestingSent] = useState(false);
+  
+  // Photo removal request modal state
+  const [removalModalVisible, setRemovalModalVisible] = useState(false);
+  const [removalNote, setRemovalNote] = useState('');
+  const [removalScreenshot, setRemovalScreenshot] = useState<string | null>(null);  // data URL
+  const [removalFilename, setRemovalFilename] = useState<string | null>(null);
+  const [removalSubmitting, setRemovalSubmitting] = useState(false);
 
   const fetchConsents = async () => {
     try {
@@ -120,18 +131,70 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
     : ['images_internal', 'images_promo'];
   const privacySigned = consents?.privacy_viewed?.value === true;
 
-  const handlePhotoRemovalRequest = async () => {
+  const handlePhotoRemovalRequest = () => {
+    // Apre il modal invece di inviare subito
+    setRemovalNote('');
+    setRemovalScreenshot(null);
+    setRemovalFilename(null);
+    setRemovalModalVisible(true);
+  };
+  
+  // File picker (solo web) per allegare uno screenshot
+  const handlePickScreenshot = () => {
+    if (Platform.OS !== 'web') {
+      window?.alert?.('Funzione disponibile solo via browser web.');
+      return;
+    }
     try {
-      await api.post('/notifications/photo-removal-request');
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/png,image/jpeg,image/gif,image/webp';
+      input.onchange = (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        // Validazione dimensione (max 1 MB)
+        if (file.size > 1024 * 1024) {
+          window.alert(`L'immagine è troppo grande (${(file.size/1024/1024).toFixed(2)} MB). Massimo 1 MB.`);
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const result = ev.target?.result as string;
+          if (result) {
+            setRemovalScreenshot(result);  // data URL completo
+            setRemovalFilename(file.name);
+          }
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    } catch (err) {
+      console.error('File picker error:', err);
+      window.alert('Errore selezione file');
+    }
+  };
+  
+  const submitPhotoRemovalRequest = async () => {
+    setRemovalSubmitting(true);
+    try {
+      const payload: any = {};
+      if (removalNote.trim()) payload.note = removalNote.trim();
+      if (removalScreenshot) {
+        payload.screenshot_data = removalScreenshot;
+        payload.screenshot_filename = removalFilename || 'screenshot.png';
+      }
+      await api.post('/notifications/photo-removal-request', payload);
       setRequestingSent(true);
+      setRemovalModalVisible(false);
       if (Platform.OS === 'web') {
-        window.alert('Richiesta inviata! L\'admin riceverà la tua richiesta di rimozione immagini.');
+        window.alert("Richiesta inviata! L'admin riceverà la tua richiesta di rimozione immagini.");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error sending photo removal request:', e);
-      if (Platform.OS === 'web') {
-        window.alert('Errore nell\'invio della richiesta');
-      }
+      const msg = e?.response?.data?.detail || "Errore nell'invio della richiesta";
+      if (Platform.OS === 'web') window.alert(msg);
+    } finally {
+      setRemovalSubmitting(false);
     }
   };
 
@@ -248,6 +311,100 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
           ))}
         </View>
       )}
+      
+      {/* Photo Removal Request Modal */}
+      <Modal visible={removalModalVisible} animationType="fade" transparent onRequestClose={() => setRemovalModalVisible(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard} data-testid="photo-removal-modal">
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Richiesta rimozione immagini</Text>
+              <TouchableOpacity onPress={() => setRemovalModalVisible(false)} disabled={removalSubmitting}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 480 }}>
+              <Text style={s.modalIntro}>
+                Aiuta l'admin a identificare velocemente l'immagine da rimuovere allegando uno screenshot
+                e/o una breve descrizione (es. data del post, sezione del sito web, social network).
+              </Text>
+              
+              <Text style={s.modalLabel}>Descrizione (opzionale)</Text>
+              <TextInput
+                style={s.modalTextarea}
+                placeholder="Es: Foto del 12/04/2026 sul post Instagram della società in cui appaio in primo piano..."
+                placeholderTextColor="#999"
+                value={removalNote}
+                onChangeText={setRemovalNote}
+                multiline
+                numberOfLines={4}
+                maxLength={1000}
+                data-testid="photo-removal-note-input"
+              />
+              <Text style={s.modalHint}>{removalNote.length}/1000 caratteri</Text>
+              
+              <Text style={s.modalLabel}>Screenshot (opzionale, max 1 MB)</Text>
+              {removalScreenshot ? (
+                <View style={s.screenshotPreviewBox}>
+                  <Image source={{ uri: removalScreenshot }} style={s.screenshotPreview} resizeMode="contain" />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                    <Text style={s.screenshotFilename} numberOfLines={1}>📎 {removalFilename}</Text>
+                    <TouchableOpacity
+                      onPress={() => { setRemovalScreenshot(null); setRemovalFilename(null); }}
+                      style={s.removeScreenshotBtn}
+                      data-testid="remove-screenshot-btn"
+                    >
+                      <Ionicons name="trash-outline" size={14} color="#D32F2F" />
+                      <Text style={s.removeScreenshotText}>Rimuovi</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={s.uploadBtn}
+                  onPress={handlePickScreenshot}
+                  data-testid="photo-removal-upload-btn"
+                >
+                  <Ionicons name="image-outline" size={18} color="#1976D2" />
+                  <Text style={s.uploadBtnText}>Allega screenshot</Text>
+                </TouchableOpacity>
+              )}
+              
+              <View style={s.modalNote}>
+                <Ionicons name="information-circle" size={14} color="#0277BD" />
+                <Text style={s.modalNoteText}>
+                  Puoi inviare la richiesta anche senza descrizione né screenshot.
+                </Text>
+              </View>
+            </ScrollView>
+            
+            <View style={s.modalActions}>
+              <TouchableOpacity
+                style={s.modalBtnCancel}
+                onPress={() => setRemovalModalVisible(false)}
+                disabled={removalSubmitting}
+                data-testid="photo-removal-cancel-btn"
+              >
+                <Text style={s.modalBtnCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.modalBtnConfirm, removalSubmitting && { opacity: 0.6 }]}
+                onPress={submitPhotoRemovalRequest}
+                disabled={removalSubmitting}
+                data-testid="photo-removal-submit-btn"
+              >
+                {removalSubmitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="send" size={16} color="#fff" />
+                    <Text style={s.modalBtnConfirmText}>Invia richiesta</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -375,5 +532,172 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#D32F2F',
+  },
+  // Photo removal modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    width: '100%',
+    maxWidth: 520,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    paddingBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#333',
+    flex: 1,
+  },
+  modalIntro: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 19,
+    marginBottom: 14,
+  },
+  modalLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  modalTextarea: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 13,
+    color: '#333',
+    minHeight: 90,
+    textAlignVertical: 'top',
+    backgroundColor: '#fafafa',
+  },
+  modalHint: {
+    fontSize: 11,
+    color: '#999',
+    textAlign: 'right',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  uploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BBDEFB',
+    borderStyle: 'dashed',
+  },
+  uploadBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1976D2',
+  },
+  screenshotPreviewBox: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 8,
+    backgroundColor: '#fafafa',
+  },
+  screenshotPreview: {
+    width: '100%',
+    height: 180,
+    borderRadius: 6,
+    backgroundColor: '#eee',
+  },
+  screenshotFilename: {
+    flex: 1,
+    fontSize: 12,
+    color: '#666',
+    marginRight: 8,
+  },
+  removeScreenshotBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: '#FFEBEE',
+  },
+  removeScreenshotText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#D32F2F',
+  },
+  modalNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: '#E1F5FE',
+    borderRadius: 6,
+  },
+  modalNoteText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#0277BD',
+    lineHeight: 15,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  modalBtnCancel: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  modalBtnCancelText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+  },
+  modalBtnConfirm: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+    backgroundColor: '#D32F2F',
+  },
+  modalBtnConfirmText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

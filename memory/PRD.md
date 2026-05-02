@@ -6,6 +6,28 @@
 ## Problema Originale
 Applicazione completa per la gestione di società sportive dilettantistiche italiane. Focus su GDPR, ruoli, collegamento genitori-atleti, documenti PDF dinamici e sincronizzazione calendario gare federali.
 
+## Completato 02/05/2026 (sera) — Upload screenshot per richiesta rimozione foto (P3)
+**Obiettivo**: GDPR-compliance migliorato + meno confusione per l'admin. Quando un genitore/staff richiede la rimozione delle proprie foto, può ora allegare descrizione testuale e/o screenshot della foto incriminata.
+
+- ✅ **Backend `POST /api/notifications/photo-removal-request`** (esteso): accetta payload opzionale `{note?, screenshot_data? (base64/data URL), screenshot_filename?}`. Salva in `data.note`, `data.screenshot_base64`, `data.screenshot_filename`, `data.has_screenshot=true`. Limite 1.4MB encoded (~1MB binario). Retro-compatibile (POST senza body funziona ancora).
+- ✅ **Backend `GET /api/admin/notifications/{id}/screenshot`**: nuovo endpoint admin-only che restituisce binario PNG/JPEG con content-type corretto, scoped a `society_id`. Cache-Control 5min privato.
+- ✅ **Frontend `ConsentManager.tsx`**: cliccare "Richiedi rimozione mie immagini" ora apre un **modal** con:
+  - Textarea descrizione (max 1000 char, contatore live)
+  - Pulsante "Allega screenshot" (web `input[type=file]` con accept image/*, validazione client-side max 1MB)
+  - Anteprima immagine (`<Image>` con resize contain) + pulsante rimuovi
+  - Pulsanti Annulla / Invia richiesta (con spinner)
+- ✅ **Frontend admin `notifications.tsx`**: nelle notifiche espanse di tipo `photo_removal_request`:
+  - Box giallo con la nota citata in corsivo
+  - Box azzurro con thumbnail screenshot (auto-fetch on expand via `responseType: 'blob'` + `URL.createObjectURL`)
+  - Click sull'immagine apre la versione full-size in nuova tab
+  - Hint quando non ci sono né nota né screenshot
+  - Icona dedicata (image-outline rossa) nella lista
+- ✅ **Test backend via curl/python (E2E)**:
+  - POST con nota+screenshot → `200, has_screenshot:true` ✅
+  - POST senza payload (compat) → `200, has_screenshot:false` ✅
+  - GET screenshot → ritorna PNG valido (magic bytes `89 50 4E 47`), content-type `image/png` ✅
+- ✅ **Build statica frontend rebuilt**
+
 ## Completato 02/05/2026 (sera) — Re-import Excel calendario partite (P1)
 **Obiettivo**: permettere all'admin di ricaricare lo stesso file Excel federazione quando le date delle partite cambiano, senza duplicare le gare.
 

@@ -69,6 +69,23 @@ export default function AdminNotifications() {
   // Certificate override state (athlete-specific) per notification id
   const [overrideReasonByNotif, setOverrideReasonByNotif] = useState<Record<string, string>>({});
   const [overrideLoadingByNotif, setOverrideLoadingByNotif] = useState<Record<string, boolean>>({});
+  // Screenshot blob URLs per notification (photo_removal_request)
+  const [screenshotUrls, setScreenshotUrls] = useState<Record<string, string>>({});
+  const [screenshotLoading, setScreenshotLoading] = useState<Record<string, boolean>>({});
+
+  const loadScreenshot = async (notificationId: string) => {
+    if (screenshotUrls[notificationId] || screenshotLoading[notificationId]) return;
+    setScreenshotLoading(prev => ({ ...prev, [notificationId]: true }));
+    try {
+      const res = await api.get(`/admin/notifications/${notificationId}/screenshot`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      setScreenshotUrls(prev => ({ ...prev, [notificationId]: url }));
+    } catch (e) {
+      console.error('Error loading screenshot:', e);
+    } finally {
+      setScreenshotLoading(prev => ({ ...prev, [notificationId]: false }));
+    }
+  };
 
   const loadNotifications = async () => {
     try {
@@ -94,6 +111,11 @@ export default function AdminNotifications() {
     // Mark as read when expanding for the first time
     if (!isRead) {
       markAsRead(notificationId);
+    }
+    // Auto-load screenshot for photo removal requests when expanding
+    const notif = notifications.find(n => n.id === notificationId);
+    if (notif && notif.type === 'photo_removal_request' && notif.data?.has_screenshot) {
+      loadScreenshot(notificationId);
     }
   };
 
@@ -183,6 +205,8 @@ export default function AdminNotifications() {
         return { name: 'close-circle', color: '#FF9500' };
       case 'expired_cert_scan':
         return { name: 'medkit', color: '#E53935' };
+      case 'photo_removal_request':
+        return { name: 'image-outline', color: '#D32F2F' };
       default:
         return { name: 'notifications', color: '#007AFF' };
     }
@@ -426,6 +450,57 @@ export default function AdminNotifications() {
                             <View style={styles.detailRow}>
                               <Ionicons name="create" size={12} color="#7B1FA2" />
                               <Text style={styles.detailText}>Aggiornato da: {notification.data.changed_by} ({notification.data.changed_by_role || ''})</Text>
+                            </View>
+                          )}
+
+                          {/* Photo removal request: nota + screenshot */}
+                          {notification.type === 'photo_removal_request' && (
+                            <View style={styles.photoRemovalBlock} data-testid={`photo-removal-block-${notification.id}`}>
+                              {notification.data?.note && (
+                                <View style={styles.photoRemovalNoteBox}>
+                                  <Text style={styles.photoRemovalNoteLabel}>Nota dell'utente:</Text>
+                                  <Text style={styles.photoRemovalNoteText}>"{notification.data.note}"</Text>
+                                </View>
+                              )}
+                              {notification.data?.has_screenshot && (
+                                <View style={styles.photoRemovalScreenshotBox}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                                    <Ionicons name="image" size={14} color="#1976D2" />
+                                    <Text style={styles.photoRemovalScreenshotLabel}>
+                                      Screenshot allegato {notification.data.screenshot_filename ? `(${notification.data.screenshot_filename})` : ''}
+                                    </Text>
+                                  </View>
+                                  {screenshotLoading[notification.id] && !screenshotUrls[notification.id] ? (
+                                    <ActivityIndicator size="small" color="#1976D2" style={{ marginVertical: 16 }} />
+                                  ) : screenshotUrls[notification.id] ? (
+                                    <>
+                                      {Platform.OS === 'web' ? (
+                                        // @ts-ignore - web-only img tag for full responsive zoom on click
+                                        <img
+                                          src={screenshotUrls[notification.id]}
+                                          alt={notification.data.screenshot_filename || 'screenshot'}
+                                          style={{ width: '100%', maxHeight: 400, objectFit: 'contain', borderRadius: 6, backgroundColor: '#eee', cursor: 'zoom-in' }}
+                                          onClick={() => window.open(screenshotUrls[notification.id], '_blank')}
+                                          data-testid={`screenshot-img-${notification.id}`}
+                                        />
+                                      ) : (
+                                        <Text>Screenshot disponibile (web only)</Text>
+                                      )}
+                                      <Text style={styles.photoRemovalHint}>Click per aprire a dimensione reale</Text>
+                                    </>
+                                  ) : (
+                                    <TouchableOpacity onPress={() => loadScreenshot(notification.id)} style={styles.loadScreenshotBtn}>
+                                      <Ionicons name="download-outline" size={14} color="#1976D2" />
+                                      <Text style={{ fontSize: 12, color: '#1976D2', fontWeight: '600' }}>Carica screenshot</Text>
+                                    </TouchableOpacity>
+                                  )}
+                                </View>
+                              )}
+                              {!notification.data?.note && !notification.data?.has_screenshot && (
+                                <Text style={styles.photoRemovalEmptyHint}>
+                                  L'utente non ha allegato nota né screenshot.
+                                </Text>
+                              )}
                             </View>
                           )}
 
@@ -902,5 +977,69 @@ const styles = StyleSheet.create({
     color: '#B71C1C',
     flex: 1,
     fontWeight: '500' as const,
+  },
+  // Photo removal request blocks
+  photoRemovalBlock: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#FFEBEE',
+    gap: 8,
+  },
+  photoRemovalNoteBox: {
+    backgroundColor: '#FFF8E1',
+    borderLeftWidth: 3,
+    borderLeftColor: '#F9A825',
+    padding: 10,
+    borderRadius: 6,
+  },
+  photoRemovalNoteLabel: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: '#E65100',
+    marginBottom: 4,
+    textTransform: 'uppercase' as const,
+  },
+  photoRemovalNoteText: {
+    fontSize: 13,
+    color: '#5D4037',
+    fontStyle: 'italic' as const,
+    lineHeight: 18,
+  },
+  photoRemovalScreenshotBox: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 6,
+    padding: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#1976D2',
+  },
+  photoRemovalScreenshotLabel: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#1976D2',
+    flex: 1,
+  },
+  photoRemovalHint: {
+    fontSize: 10,
+    color: '#666',
+    fontStyle: 'italic' as const,
+    textAlign: 'center' as const,
+    marginTop: 4,
+  },
+  photoRemovalEmptyHint: {
+    fontSize: 11,
+    color: '#999',
+    fontStyle: 'italic' as const,
+    textAlign: 'center' as const,
+    paddingVertical: 6,
+  },
+  loadScreenshotBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 6,
   },
 });

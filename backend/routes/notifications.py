@@ -6,6 +6,7 @@ Notifications routes.
 """
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -301,21 +302,94 @@ async def mark_all_user_notifications_read(current_user = Depends(get_current_us
 
 # ==================== PHOTO REMOVAL ====================
 
+class PhotoRemovalRequest(BaseModel):
+    note: Optional[str] = None  # Descrizione opzionale (es. "foto del 12 marzo nel post Facebook")
+    screenshot_data: Optional[str] = None  # Base64 dell'immagine (data URL o nudo base64)
+    screenshot_filename: Optional[str] = None  # es. "screenshot.png"
+
+
 @router.post("/notifications/photo-removal-request")
-async def request_photo_removal(current_user = Depends(get_current_user)):
-    """Parent/staff requests removal of their photos from society publications."""
+async def request_photo_removal(
+    payload: Optional[PhotoRemovalRequest] = None,
+    current_user = Depends(get_current_user),
+):
+    """Parent/staff requests removal of their photos. Optionally includes a note + screenshot."""
     user_name = f"{current_user.get('first_name', '')} {current_user.get('last_name', '')}".strip()
+    
+    # Costruisci data block con note + screenshot
+    data_block: dict = {}
+    note_text = ""
+    if payload:
+        if payload.note and payload.note.strip():
+            data_block["note"] = payload.note.strip()[:1000]  # max 1000 char
+            note_text = f"\n\nNota: {data_block['note']}"
+        if payload.screenshot_data:
+            # Estrai base64 puro (rimuovi prefisso data URL se presente)
+            raw_b64 = payload.screenshot_data
+            if raw_b64.startswith("data:"):
+                # data:image/png;base64,XXXX
+                comma = raw_b64.find(",")
+                if comma > 0:
+                    raw_b64 = raw_b64[comma + 1:]
+            # Validazione dimensione (~ max 1MB encoded → ~700KB binario)
+            if len(raw_b64) > 1_400_000:
+                raise HTTPException(status_code=400, detail="Screenshot troppo grande (max ~1MB). Comprimi l'immagine.")
+            data_block["screenshot_base64"] = raw_b64
+            data_block["screenshot_filename"] = (payload.screenshot_filename or "screenshot.png")[:120]
+            data_block["has_screenshot"] = True
     
     notification = {
         "id": str(uuid.uuid4()),
         "society_id": current_user.get("society_id"),
         "type": "photo_removal_request",
         "title": "Richiesta rimozione immagini",
-        "message": f"{user_name} ({current_user.get('email', '')}) ha richiesto la rimozione delle proprie immagini da tutte le pubblicazioni della società.",
+        "message": f"{user_name} ({current_user.get('email', '')}) ha richiesto la rimozione delle proprie immagini da tutte le pubblicazioni della società.{note_text}",
         "priority": "high",
         "read": False,
         "created_at": datetime.utcnow().isoformat(),
         "user_id": current_user["id"],
+        "data": data_block,
     }
     await db.admin_notifications.insert_one(notification)
-    return {"message": "Richiesta di rimozione immagini inviata all'amministratore"}
+    return {"message": "Richiesta di rimozione immagini inviata all'amministratore", "has_screenshot": bool(data_block.get("has_screenshot"))}
+
+
+@router.get("/admin/notifications/{notification_id}/screenshot")
+async def get_notification_screenshot(notification_id: str, current_user = Depends(get_current_user)):
+    """Download screenshot allegato a una notifica (es. richiesta rimozione foto). Solo admin."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può visualizzare gli screenshot")
+    
+    notif = await db.admin_notifications.find_one({"id": notification_id})
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notifica non trovata")
+    if notif.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Notifica non appartiene alla tua società")
+    
+    data = notif.get("data") or {}
+    b64 = data.get("screenshot_base64")
+    if not b64:
+        raise HTTPException(status_code=404, detail="Nessuno screenshot allegato")
+    
+    import base64 as _b64
+    try:
+        binary = _b64.b64decode(b64)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Screenshot corrotto")
+    
+    # Determina content-type da estensione filename
+    filename = data.get("screenshot_filename") or "screenshot.png"
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "png"
+    content_type = {
+        "png": "image/png",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "gif": "image/gif",
+        "webp": "image/webp",
+    }.get(ext, "image/png")
+    
+    from fastapi.responses import Response
+    return Response(content=binary, media_type=content_type, headers={
+        "Content-Disposition": f'inline; filename="{filename}"',
+        "Cache-Control": "private, max-age=300",
+    })
