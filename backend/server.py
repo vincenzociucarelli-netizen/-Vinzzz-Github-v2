@@ -22371,7 +22371,7 @@ async def export_full_backup(current_user = Depends(get_current_user)):
 # ============================================================
 import zipfile as _zipfile_mod
 
-BACKUP_DIR = "/app/backups"
+BACKUP_DIR = os.environ.get("BACKUP_DIR", "/tmp/backups")
 os.makedirs(BACKUP_DIR, exist_ok=True)
 
 # Collezioni gestite dal restore (stesso set del backup)
