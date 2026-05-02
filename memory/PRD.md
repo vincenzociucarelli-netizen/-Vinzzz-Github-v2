@@ -19,6 +19,16 @@ Applicazione completa per la gestione di società sportive dilettantistiche ital
 ## File Bloccati
 Vedi `/app/memory/LOCKED_FILES.md`
 
+## Completato 02/05/2026 (notte) — Rollback SINGLE-TENANT
+**Decisione**: dopo aver verificato che il supporto multi-società richiede un audit completo di molti endpoint (athletes/teams/stats/notifications/etc) e non solo primary-admin + settings/society, l'utente ha optato per restare SINGLE-TENANT per il Pilot.
+
+- ✅ **Società di test "Sirio Perugia Volley ASD" cancellata** dal DB (users + society + settings + notifications)
+- ✅ **Link "Sei una nuova società? Registrati qui →" nascosto** dalla pagina `/login`. La pagina `/register-society` resta accessibile via URL diretto per ripresa futura
+- ✅ **Codice multi-tenant mantenuto** in `routes/primary_admin.py` e `routes/settings.py`: non rompe nulla in single-tenant ed è già pronto per quando ripartiremo con il multi-tenant
+- ✅ **Backfill eseguito**: le settings legacy di PPG ora hanno il campo `society_id` popolato correttamente
+- ✅ **Smoke regression** 17/17 passati
+- 📋 **Multi-tenant roadmap** (quando pronto): audit di `/api/athletes`, `/api/teams`, `/api/users/*`, `/api/stats/*`, `/api/admin/notifications`, `/api/birthdays/today`, `/api/certificates/*`, filtro `society_id` dappertutto
+
 ## Completato 01/05/2026 (notte) — Multi-tenancy Scettro + Test E2E Promozione
 **Bug critico scoperto**: tutte le query del primary admin in `routes/primary_admin.py` erano globali (single-tenant). Questo significava che in un ambiente con più società, l'admin di una società poteva apparire come Responsabile Admin di un'altra società.
 

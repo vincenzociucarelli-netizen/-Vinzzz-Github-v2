@@ -231,17 +231,10 @@ export default function Login() {
               <Text style={styles.linkText}>Non hai un account? Registrati</Text>
             </TouchableOpacity>
 
-            <View style={styles.divider} />
-
-            <TouchableOpacity
-              style={styles.newSocietyBtn}
-              onPress={() => router.push('/register-society')}
-              data-testid="new-society-link"
-            >
-              <Text style={styles.newSocietyText}>
-                Sei una nuova società? <Text style={styles.newSocietyEmph}>Registrati qui →</Text>
-              </Text>
-            </TouchableOpacity>
+            {/* Link "Sei una nuova società? Registrati qui" nascosto: piattaforma in
+                modalità SINGLE-TENANT finché l'audit multi-tenancy degli endpoint
+                (atleti/squadre/certificati/stats/...) non sarà completato.
+                La pagina /register-society resta funzionante per test via URL diretto. */}
           </View>
         ) : (
           <View style={styles.form}>
