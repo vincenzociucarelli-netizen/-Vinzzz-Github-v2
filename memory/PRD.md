@@ -26,6 +26,23 @@
 7. Test login da `https://registrateam.vercel.app` con `vincenzo.ciucarelli@gmail.com` / `Test123`
 8. ⚠️ Primo login richiede 30-60s perché Render Free wake-up
 
+## 🎉 COMPLETATO 03/05/2026 (ore 18:30) — DEPLOY P0 FASE 3/3 DNS ARUBA ✅
+
+**`registrateam.it` e `www.registrateam.it` LIVE!** 🎉
+- ✅ Record A `@ → 76.76.21.21` (Vercel IP)
+- ✅ CNAME `www → cname.vercel-dns.com`
+- ✅ Record email Aruba intatti (mail, mx, SRV, TXT SPF) — posta funziona come prima
+- ✅ Vercel: domini aggiunti, SSL generato, HTTPS attivo
+- ✅ Test utente: https://registrateam.it e https://www.registrateam.it rispondono correttamente
+
+### ⚠️ DA FARE PRIMA DI INVIARE MESSAGGIO TESSERATI (5 min, prossima sessione)
+1. Render → Environment → modifica:
+   - `ALLOWED_ORIGINS` = `https://registrateam.it,https://www.registrateam.it,https://registrateam.vercel.app`
+   - `FRONTEND_URL` = `https://registrateam.it`
+2. Save Changes → wait ~3 min redeploy
+3. Test login da https://registrateam.it con `vincenzo.ciucarelli@gmail.com`
+4. Se OK → inviare messaggio tesserati + guida WhatsApp/Email HTML (già preparati con codice società `BUZHB0WT`)
+
 ## 🧹 Completato 03/05/2026 (ore 10:30) — Pulizia DB Produzione + UX Welcome
 - ✅ **Backup ZIP pre-cleanup** salvato (40 MB) in `/tmp/registrateam_backup_PRE_CLEANUP_20260503_082740.zip`
 - ✅ **Nomi admin corretti**: "VINZZZZ CIUCHETTI" → "Vincenzo Ciucarelli", "SSD A RL PALLAVOLO PERUGIA" → "Pallavolo Perugia SSD a RL"
