@@ -4,6 +4,7 @@
   "outputDirectory": "dist",
   "framework": null,
   "installCommand": "yarn install --frozen-lockfile",
+  "trailingSlash": false,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
