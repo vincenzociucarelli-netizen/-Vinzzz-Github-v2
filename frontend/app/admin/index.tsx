@@ -433,7 +433,7 @@ export default function AdminDashboard() {
         <InstitutionalBanner />
         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 16 }}>
           <Text style={[styles.welcomeText, { paddingHorizontal: 0, paddingTop: 0 }]}>
-            Benvenuto, {user?.full_name?.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+            Benvenuto, {(user?.first_name || user?.full_name?.split(' ')[0] || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
           </Text>
           <InstitutionalBadge size="md" />
         </View>

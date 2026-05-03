@@ -210,7 +210,7 @@ export default function DirigenteIndex() {
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Dashboard Dirigente</Text>
-          <Text style={styles.headerSubtitle}>Benvenuto, {user?.full_name}</Text>
+          <Text style={styles.headerSubtitle}>Benvenuto, {user?.first_name || user?.full_name?.split(' ')[0]}</Text>
         </View>
         <View style={styles.headerButtons}>
           {/* Switch to Admin button - only for admin users */}

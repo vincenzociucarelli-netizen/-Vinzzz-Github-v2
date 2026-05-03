@@ -60,7 +60,7 @@ export default function SelectRoleScreen() {
       <View style={styles.content}>
         <View style={styles.header}>
           <Ionicons name="person-circle" size={80} color="#007AFF" />
-          <Text style={styles.welcomeText}>Benvenuto, {user?.full_name}</Text>
+          <Text style={styles.welcomeText}>Benvenuto, {user?.first_name || user?.full_name?.split(' ')[0]}</Text>
           {(user as any)?.is_institutional_account && (
             <View style={styles.institutionalBadge} data-testid="institutional-badge">
               <Ionicons name="business" size={14} color="#C62828" />
