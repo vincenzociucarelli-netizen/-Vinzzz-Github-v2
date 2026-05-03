@@ -1,5 +1,27 @@
 # RegistraTEAM - Product Requirements Document
 
+## 🗺️ ROADMAP Multi-tenancy (definita 03/05/2026 sera)
+
+**Strategia di test concordata con Vincenzo:**
+- Vincenzo è Presidente sia di **Pallavolo Perugia** (PPG, attiva, dati reali) sia di **Sirio** (ASD nata dal settore giovanile della ex-Serie A femminile, ora ridotta, ideale per dati fittizi)
+- Test multi-tenancy interno usando entrambe queste società sotto il suo controllo → zero rischio GDPR esterno
+- Solo dopo che funziona PPG+Sirio, onboarding società amiche
+
+**Timeline:**
+- **Maggio 2026**: Pilot PPG only — raccolta feedback, fix bug minori, stabilizzazione
+- **Fine maggio / inizio giugno**: Sprint multi-tenancy:
+  - 🔴 Audit + fix endpoint backend per filtrare TUTTI per `society_id` (5-7 ore)
+  - 🟡 Riattivazione pagina `/register-society` con flusso onboarding (2-3 ore)
+  - 🧪 Test interno con 2 società fittizie prima di Sirio reale
+- **Giugno 2026**: Setup Sirio con dati fittizi (Vincenzo si registra come LR Sirio + crea atleti finti, squadre, partite)
+- **Mese di Giugno**: Test reale 2-società simultanee (PPG reale + Sirio fittizia)
+- **Luglio 2026**: Onboarding 2-3 società amiche pallavolo (provincia di Perugia)
+- **Settembre 2026**: Eventuale onboarding società baseball (richiede Sprint dedicato per disattivare FIPAV scraping/categorie volley)
+
+**Decisioni tecniche pendenti:**
+- Dashboard "super-admin" per Vincenzo (vedere tutte le società dall'alto)? → da decidere a giugno
+- Branding personalizzato per società (logo/nome in dashboard)? → P2, post-test multi-tenancy
+
 ## Backlog miglioramenti — IDEE DA RICORDARE
 - 🔮 **Preview re-import calendario (richiesto 02/05/2026 sera)**: prima di confermare un re-import Excel, mostrare all'admin una tabella di anteprima con tutte le partite che cambieranno: data vecchia → data nuova, luogo vecchio → luogo nuovo, ecc. Solo dopo conferma esplicita procedere con l'import. Migliora la fiducia dell'utente prima di un'operazione che modifica molte gare. Stima: ~1-2 ore di lavoro (nuovo endpoint preview + nuovo modal frontend).
 - 📧 **Migrazione Brevo a account dedicato RegistraTEAM (richiesto 02/05/2026 sera, post-Pilot)**: configurazione attuale = mittente "RegistraTEAM" <info@pallavoloperugia.it>, dominio DKIM `pallavoloperugia.it` (verificato), 300 email/gg condivise con la società. Per migrare: 1) Creare account Brevo nuovo con email `registrateam@gmail.com`, 2) Verificare dominio `registrateam.it` su Brevo (record DNS Aruba: SPF, DKIM, DMARC), 3) Configurare mittente `info@registrateam.it` o `noreply@registrateam.it` con nome "RegistraTEAM", 4) Caricare logo RegistraTEAM, 5) Generare nuova API key, 6) Aggiornare `BREVO_API_KEY` su Render + cambiare l'email mittente nel codice (cercare `info@pallavoloperugia.it` in `backend/`). Tempo: ~30-45 min. Richiede 1 piccolo cambio codice (email mittente) + redeploy.
