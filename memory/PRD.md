@@ -26,6 +26,31 @@
 7. Test login da `https://registrateam.vercel.app` con `vincenzo.ciucarelli@gmail.com` / `Test123`
 8. ⚠️ Primo login richiede 30-60s perché Render Free wake-up
 
+## 🎉 COMPLETATO 03/05/2026 (ore 10:00) — DEPLOY P0 PRODUZIONE LIVE! ✅✅✅
+
+**RegistraTEAM è ufficialmente in PRODUZIONE per Pallavolo Perugia SSD a RL!**
+
+- 🟢 **Frontend live**: https://registrateam.vercel.app
+- 🟢 **Backend live**: https://registrateam-backend.onrender.com
+- 🟢 **Database live**: MongoDB Atlas (DB `registrateam`, region EU)
+- 🟢 **Login E2E funzionante**, dashboard carica correttamente
+- 🟢 **70 utenti + 4331 documenti totali** migrati da `test_database` (sviluppo) a `registrateam` (Atlas) via mongodump/mongorestore
+  - 70 users, 34 athletes, 8 teams, 69 matches, 198 admin_notifications, 59 attendances, ecc.
+
+### 🔧 Fix tecnici risolti durante deploy
+1. **Variabile env nome sbagliato**: codice usa `EXPO_PUBLIC_BACKEND_URL` (Expo standard), non `REACT_APP_BACKEND_URL`. Fix: rinominata variabile su Vercel.
+2. **Vercel Hobby blocca commit di "emergent-agent-e1"**: workaround = commit manuale dal browser GitHub Web UI (autore = utente reale)
+3. **Branch sbagliata**: Vercel deployava da `28-04-2026` (no vercel.json) → cambiato Production Branch a `02-05-2026`
+4. **DB vuoto su Atlas**: migrato dump completo dal DB sviluppo locale via mongorestore con `--nsFrom`/`--nsTo`
+
+### ⚠️ Ricorda per il futuro
+- Per ogni nuova feature deployata, dopo `Save to Github` su Emergent → fare un commit manuale dal browser GitHub (es. modificare un punto in README.md) per triggerare deploy Vercel non bloccato
+- Render Free dorme dopo 15 min → primo login richiede ~30-60s wake-up
+- Email Brevo continuano a partire da `info@pallavoloperugia.it` con DKIM corretto (vedi backlog migrazione Brevo dedicato)
+
+### Resta da fare (opzionale)
+- 🌐 **Fase 3/3 - Aruba DNS** (~30 min + propagazione): puntare `registrateam.it` su Vercel per avere URL brandizzato
+
 ## In progress 03/05/2026 (ore 01:30-02:00) — Deploy Frontend Vercel (P0 - Fase 2/3) - 95% COMPLETATO
 **Stato**: a 2 click dal completamento. Pausa perché utente troppo stanco per evitare errori.
 
