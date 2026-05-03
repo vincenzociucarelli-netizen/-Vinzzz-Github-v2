@@ -26,6 +26,14 @@
 7. Test login da `https://registrateam.vercel.app` con `vincenzo.ciucarelli@gmail.com` / `Test123`
 8. ⚠️ Primo login richiede 30-60s perché Render Free wake-up
 
+## 🧹 Completato 03/05/2026 (ore 10:30) — Pulizia DB Produzione + UX Welcome
+- ✅ **Backup ZIP pre-cleanup** salvato (40 MB) in `/tmp/registrateam_backup_PRE_CLEANUP_20260503_082740.zip`
+- ✅ **Nomi admin corretti**: "VINZZZZ CIUCHETTI" → "Vincenzo Ciucarelli", "SSD A RL PALLAVOLO PERUGIA" → "Pallavolo Perugia SSD a RL"
+- ✅ **Cleanup DB**: cancellati 4178 documenti operativi fittizi (atleti, presenze, certificati, compensi, pagamenti, audit logs, notifiche, ecc.) + 68 utenti non-admin + 5 squadre vuote (senza partite)
+- ✅ **Mantenute**: 2 admin reali, 3 squadre con partite (Under 14, Under 16, MiniVolley), 69 partite reali federazione, configurazioni società/federation/threshold/preseason
+- ✅ **UX**: "Benvenuto, Vincenzo" (solo nome, no cognome) in admin/dirigente/select-role tramite `user.first_name || user.full_name?.split(' ')[0]`
+- ✅ Build statica + push GitHub force + commit manuale README → Vercel deploy A3pKbVZ7r LIVE
+
 ## 🎉 COMPLETATO 03/05/2026 (ore 10:00) — DEPLOY P0 PRODUZIONE LIVE! ✅✅✅
 
 **RegistraTEAM è ufficialmente in PRODUZIONE per Pallavolo Perugia SSD a RL!**
