@@ -4,6 +4,28 @@
 - 🔮 **Preview re-import calendario (richiesto 02/05/2026 sera)**: prima di confermare un re-import Excel, mostrare all'admin una tabella di anteprima con tutte le partite che cambieranno: data vecchia → data nuova, luogo vecchio → luogo nuovo, ecc. Solo dopo conferma esplicita procedere con l'import. Migliora la fiducia dell'utente prima di un'operazione che modifica molte gare. Stima: ~1-2 ore di lavoro (nuovo endpoint preview + nuovo modal frontend).
 - 📧 **Migrazione Brevo a account dedicato RegistraTEAM (richiesto 02/05/2026 sera, post-Pilot)**: configurazione attuale = mittente "RegistraTEAM" <info@pallavoloperugia.it>, dominio DKIM `pallavoloperugia.it` (verificato), 300 email/gg condivise con la società. Per migrare: 1) Creare account Brevo nuovo con email `registrateam@gmail.com`, 2) Verificare dominio `registrateam.it` su Brevo (record DNS Aruba: SPF, DKIM, DMARC), 3) Configurare mittente `info@registrateam.it` o `noreply@registrateam.it` con nome "RegistraTEAM", 4) Caricare logo RegistraTEAM, 5) Generare nuova API key, 6) Aggiornare `BREVO_API_KEY` su Render + cambiare l'email mittente nel codice (cercare `info@pallavoloperugia.it` in `backend/`). Tempo: ~30-45 min. Richiede 1 piccolo cambio codice (email mittente) + redeploy.
 
+## 🎉 Completato 03/05/2026 (ore 03:00) — Deploy Frontend Vercel (P0 - Fase 2/3) ✅
+**Frontend live su**: https://registrateam.vercel.app
+- ✅ Build VERA (2m18s) con branch corretto `02-05-2026`
+- ✅ Deploy autore `vincenzociucarelli-netizen` (non bloccato da Vercel Hobby)
+- ✅ Fix root cause Vercel Hobby: blocca commit di "emergent-agent-e1" → soluzione = commit fatto manualmente da GitHub Web UI dall'utente
+- ✅ Login page renderizzata correttamente, "Gestione Società" visibile
+- ⚠️ **Login fallisce con "Errore durante il login"** = CORS issue (backend Render non autorizza ancora `registrateam.vercel.app`)
+
+## ⚠️ BLOCCO DA RISOLVERE PER PRIMA COSA NELLA PROSSIMA SESSIONE (5 min)
+**Issue**: CORS rejection — il frontend Vercel chiama il backend Render ma viene bloccato.
+
+**Fix step-by-step (super rapido):**
+1. Login Render → progetto `registrateam-backend` → Environment
+2. Trovare variabile `ALLOWED_ORIGINS` → cliccare Edit
+3. Aggiungere `https://registrateam.vercel.app` all'inizio della lista (separato da virgola, niente spazi)
+   - Valore finale: `https://registrateam.vercel.app,https://registrateam.it,https://www.registrateam.it`
+4. Trovare variabile `FRONTEND_URL` → cliccare Edit  
+5. Cambiare valore in: `https://registrateam.vercel.app`
+6. Save Changes → Render redeploy automatico (~3-5 min)
+7. Test login da `https://registrateam.vercel.app` con `vincenzo.ciucarelli@gmail.com` / `Test123`
+8. ⚠️ Primo login richiede 30-60s perché Render Free wake-up
+
 ## In progress 03/05/2026 (ore 01:30-02:00) — Deploy Frontend Vercel (P0 - Fase 2/3) - 95% COMPLETATO
 **Stato**: a 2 click dal completamento. Pausa perché utente troppo stanco per evitare errori.
 
