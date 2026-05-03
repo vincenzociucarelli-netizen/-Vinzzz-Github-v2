@@ -4,6 +4,35 @@
 - 🔮 **Preview re-import calendario (richiesto 02/05/2026 sera)**: prima di confermare un re-import Excel, mostrare all'admin una tabella di anteprima con tutte le partite che cambieranno: data vecchia → data nuova, luogo vecchio → luogo nuovo, ecc. Solo dopo conferma esplicita procedere con l'import. Migliora la fiducia dell'utente prima di un'operazione che modifica molte gare. Stima: ~1-2 ore di lavoro (nuovo endpoint preview + nuovo modal frontend).
 - 📧 **Migrazione Brevo a account dedicato RegistraTEAM (richiesto 02/05/2026 sera, post-Pilot)**: configurazione attuale = mittente "RegistraTEAM" <info@pallavoloperugia.it>, dominio DKIM `pallavoloperugia.it` (verificato), 300 email/gg condivise con la società. Per migrare: 1) Creare account Brevo nuovo con email `registrateam@gmail.com`, 2) Verificare dominio `registrateam.it` su Brevo (record DNS Aruba: SPF, DKIM, DMARC), 3) Configurare mittente `info@registrateam.it` o `noreply@registrateam.it` con nome "RegistraTEAM", 4) Caricare logo RegistraTEAM, 5) Generare nuova API key, 6) Aggiornare `BREVO_API_KEY` su Render + cambiare l'email mittente nel codice (cercare `info@pallavoloperugia.it` in `backend/`). Tempo: ~30-45 min. Richiede 1 piccolo cambio codice (email mittente) + redeploy.
 
+## In progress 03/05/2026 (ore 01:30-01:50) — Deploy Frontend Vercel (P0 - Fase 2/3) - 95% COMPLETATO
+**Stato**: a 2 click dal completamento. Pausa perché utente troppo stanco per evitare errori.
+
+**Cosa è già fatto:**
+- ✅ Account Vercel creato (Hobby plan, email vincenzociucarelli-netizen GitHub)
+- ✅ GitHub repo `Vinzzz-Github` collegato
+- ✅ Progetto Vercel creato: nome `registrateam`, URL temporaneo `registrateam.vercel.app`
+- ✅ Root Directory: `frontend`
+- ✅ Application Preset: Other
+- ✅ Variabile env `REACT_APP_BACKEND_URL` = `https://registrateam-backend.onrender.com` (Production + Preview)
+- ✅ Production Branch corretto: `02-05-2026` (PRIMA era `28-04-2026` → causava 404)
+
+**Cosa rimane da fare (2 click):**
+1. Settings → Deployments → click sui 3 puntini ⋯ del deploy esistente (5dFRhQNbN, "Ready 5s")
+2. Click su "Redeploy" → togliere "Use existing Build Cache" → conferma
+3. Aspettare 2-4 min build (questa volta DEVE durare almeno 2 min, non 5s!)
+4. Verificare URL `registrateam.vercel.app` mostri l'app login RegistraTEAM (non più 404)
+
+**Diagnosi del 404 visto stasera:**
+- Vercel ha buildato dal branch `28-04-2026` invece di `02-05-2026`
+- Branch `28-04-2026` NON contiene `vercel.json` (creato il 02-05) → Vercel non sapeva come buildare Expo
+- Build durato solo 19ms (skip totale) → output vuoto → 404 NOT_FOUND
+- Fix: cambiato Production Branch da `28-04-2026` → `02-05-2026` ✅ già salvato
+
+**Dopo il deploy Vercel funzionante (prossima sessione):**
+- Aggiornare su Render le env: `FRONTEND_URL` = URL Vercel reale, `ALLOWED_ORIGINS` aggiungere URL Vercel
+- Test E2E: login con `vincenzo.ciucarelli@gmail.com` e `pallavoloperugia@gmail.com` da URL Vercel
+- Poi Fase 3: Aruba DNS
+
 ## Completato 03/05/2026 (ore 00:30-01:00) — Deploy Backend Produzione su Render (P0 - Fase 1/3)
 **Obiettivo**: portare backend RegistraTEAM in produzione su infrastruttura cloud reale (non più Emergent preview).
 
