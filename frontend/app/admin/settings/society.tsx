@@ -160,7 +160,7 @@ export default function SocietySettings() {
 
   const loadSettings = async () => {
     try {
-      const response = await api.get('/settings/society');
+      const response = await api.get('/settings/society?include_images=true');
       setSocietyName(response.data.name || '');
       setLogo(response.data.logo || null);
       setLogoSize(response.data.logo_size || 50);

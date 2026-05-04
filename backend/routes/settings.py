@@ -44,15 +44,77 @@ async def get_society_logo_image(request: Request):
     if not settings or not settings.get("logo"):
         raise HTTPException(status_code=404, detail="Logo non trovato")
     logo_bytes = base64.b64decode(settings["logo"])
-    return Response(content=logo_bytes, media_type="image/png")
+    return Response(content=logo_bytes, media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
+
+
+@router.get("/settings/society/sport-image.png")
+async def get_society_sport_image(request: Request):
+    """Serve society sport image as PNG image. Public endpoint with short cache."""
+    query = {"type": "society"}
+    auth_header = request.headers.get("authorization") or ""
+    if auth_header.lower().startswith("bearer "):
+        try:
+            import jwt as _jwt
+            from auth_utils import SECRET_KEY, ALGORITHM
+            token = auth_header.split(" ", 1)[1].strip()
+            payload = _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            uid = payload.get("user_id")
+            if uid:
+                u = await db.users.find_one({"id": uid}, {"_id": 0, "society_id": 1})
+                if u and u.get("society_id"):
+                    query["society_id"] = u["society_id"]
+        except Exception:
+            pass
+    settings = await db.settings.find_one(query, {"_id": 0, "sport_image": 1})
+    if not settings or not settings.get("sport_image"):
+        raise HTTPException(status_code=404, detail="Sport image non trovata")
+    img_bytes = base64.b64decode(settings["sport_image"])
+    return Response(content=img_bytes, media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
+
+
+@router.get("/settings/society/stamp-signature.png")
+async def get_society_stamp_signature(request: Request):
+    """Serve society stamp/signature as PNG image. Authenticated via optional token."""
+    query = {"type": "society"}
+    auth_header = request.headers.get("authorization") or ""
+    if auth_header.lower().startswith("bearer "):
+        try:
+            import jwt as _jwt
+            from auth_utils import SECRET_KEY, ALGORITHM
+            token = auth_header.split(" ", 1)[1].strip()
+            payload = _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            uid = payload.get("user_id")
+            if uid:
+                u = await db.users.find_one({"id": uid}, {"_id": 0, "society_id": 1})
+                if u and u.get("society_id"):
+                    query["society_id"] = u["society_id"]
+        except Exception:
+            pass
+    settings = await db.settings.find_one(query, {"_id": 0, "stamp_signature": 1})
+    if not settings or not settings.get("stamp_signature"):
+        raise HTTPException(status_code=404, detail="Timbro non trovato")
+    raw = settings["stamp_signature"]
+    # stamp_signature can sometimes include the data: URI prefix
+    if isinstance(raw, str) and raw.startswith("data:"):
+        raw = raw.split(",", 1)[1] if "," in raw else raw
+    img_bytes = base64.b64decode(raw)
+    return Response(content=img_bytes, media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
 
 
 @router.get("/settings/society")
-async def get_society_settings(request: Request):
+async def get_society_settings(request: Request, include_images: bool = False):
     """Get society settings scoped to the requester's society.
     Public endpoint (no auth required) for use in login/register pages, but if
     an auth token is present the settings of THAT user's society are returned
     (multi-tenant).
+
+    By default, heavy base64 fields (logo, sport_image, stamp_signature) are
+    EXCLUDED to keep the payload small (~4KB instead of ~700KB). Pass
+    ?include_images=true to include them (used by PDF generation and admin
+    edit pages). Dedicated endpoints serve images:
+    - /settings/society/logo.png
+    - /settings/society/sport-image.png
+    - /settings/society/stamp-signature.png
     """
     query = {"type": "society"}
     auth_header = request.headers.get("authorization") or ""
@@ -69,7 +131,11 @@ async def get_society_settings(request: Request):
                     query["society_id"] = u["society_id"]
         except Exception:
             pass
-    settings = await db.settings.find_one(query)
+    # Use projection to avoid fetching heavy base64 fields from MongoDB unless requested
+    if include_images:
+        settings = await db.settings.find_one(query, {"_id": 0})
+    else:
+        settings = await db.settings.find_one(query, {"_id": 0, "logo": 0, "sport_image": 0, "stamp_signature": 0})
     if not settings:
         return {
             "name": "Società Sportiva",

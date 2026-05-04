@@ -401,7 +401,7 @@ export default function AdminAthleteDetail() {
       
       // Load available roles and characteristics from settings
       try {
-        const settingsRes = await api.get('/settings/society');
+        const settingsRes = await api.get('/settings/society?include_images=true');
         setAvailableRoles(settingsRes.data.athlete_roles || []);
         setAvailableCharacteristics(settingsRes.data.athlete_characteristics || []);
         setSocietyData(settingsRes.data); // Save full society data for receipt

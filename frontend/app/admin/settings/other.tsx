@@ -81,7 +81,7 @@ export default function OtherSettings() {
   };
   const loadSettings = async () => {
     try {
-      const response = await api.get('/settings/society');
+      const response = await api.get('/settings/society?include_images=true');
       setAthleteRoles(response.data.athlete_roles || []);
       setAthleteCharacteristics(response.data.athlete_characteristics || []);
       setDirigenteQualifications(response.data.dirigente_qualifications || []);
