@@ -91,7 +91,12 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
 @router.get("/teams", response_model=List[Team])
 async def get_teams(current_user = Depends(get_current_user)):
     society_id = current_user.get("society_id")
-    teams = await db.teams.find({"society_id": society_id}).to_list(1000)
+    # Exclude heavy base64 image fields from the list response to keep it small.
+    # Dedicated endpoint /teams/{team_id}/photo.png serves the image when needed.
+    teams = await db.teams.find(
+        {"society_id": society_id},
+        {"team_photo": 0, "team_logo": 0},
+    ).to_list(1000)
     clean_mongo_docs(teams)
     return [Team(**team) for team in teams]
 
@@ -101,10 +106,15 @@ async def get_all_teams_athletes_count(current_user = Depends(get_current_user))
     """Get the count of athletes for all teams - OPTIMIZED with aggregation."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere queste statistiche")
-    pipeline = [{"$group": {"_id": "$team_id", "count": {"$sum": 1}}}]
+    society_id = current_user.get("society_id")
+    # Filter by society_id before grouping to avoid full-collection scan
+    pipeline = [
+        {"$match": {"society_id": society_id}},
+        {"$group": {"_id": "$team_id", "count": {"$sum": 1}}},
+    ]
     counts = await db.athletes.aggregate(pipeline).to_list(1000)
     result = {item["_id"]: item["count"] for item in counts if item["_id"]}
-    teams = await db.teams.find().to_list(1000)
+    teams = await db.teams.find({"society_id": society_id}, {"_id": 0, "id": 1}).to_list(1000)
     for team in teams:
         if team["id"] not in result:
             result[team["id"]] = 0

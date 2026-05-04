@@ -3172,8 +3172,23 @@ async def _record_minor_login_attempt(rate_key: str, success: bool):
     )
 
 @api_router.get("/auth/me")
-async def get_me(current_user = Depends(get_current_user)):
-    """Get full user profile"""
+async def get_me(request: Request, current_user = Depends(get_current_user)):
+    """Get full user profile.
+
+    By default heavy base64 image fields are EXCLUDED to keep payload small
+    (~1KB vs ~960KB). Pass ?include_images=true to include them (used by
+    profile/edit pages). Dedicated endpoints serve images (e.g.
+    /users/{id}/profile-photo.png).
+    """
+    include_images = request.query_params.get("include_images", "false").lower() == "true"
+    HEAVY_IMAGE_FIELDS = (
+        "profile_photo", "profile_photo_artistic",
+        "athlete_photo", "athlete_photo_artistic",
+        "doc_back_image", "doc_front_image",
+        "id_back", "id_front",
+        "document_back", "document_front",
+        "stamp_signature",
+    )
     # Minor role: return athlete data directly
     if current_user.get("role") == "minor":
         athlete = await db.athletes.find_one({"id": current_user["id"]})
@@ -3262,6 +3277,14 @@ async def get_me(current_user = Depends(get_current_user)):
             looks_like_society_name(user.get("full_name", ""))
             or await is_society_institutional_email(user.get("email", ""))
         )
+
+    # Strip heavy base64 image fields unless explicitly requested.
+    # These can weigh ~500KB+ each and are not needed for most navigation.
+    # Dedicated endpoints serve the images (cached by the browser).
+    if not include_images:
+        for _f in HEAVY_IMAGE_FIELDS:
+            if _f in user:
+                user[_f] = None
 
     return user
 
