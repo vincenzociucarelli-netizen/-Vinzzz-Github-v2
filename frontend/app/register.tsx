@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
@@ -43,6 +44,9 @@ export default function Register() {
   const [societyName, setSocietyName] = useState('');
   const [hasOpenedPrivacy, setHasOpenedPrivacy] = useState(false);
   const [hasOpenedTerms, setHasOpenedTerms] = useState(false);
+  // In-app modal to show Terms / Privacy without navigating away (which would
+  // lose the registration state and bounce the user back to /login).
+  const [docModal, setDocModal] = useState<null | 'terms' | 'privacy'>(null);
   const [codeFromUrl, setCodeFromUrl] = useState(false);
 
   // Auto-fill invite code from URL parameter (?code=XXXX)
@@ -372,12 +376,10 @@ export default function Register() {
 
   // Helper: open document and track
   const openDocument = (type: 'privacy' | 'terms') => {
-    const url = type === 'privacy' ? '/privacy-policy' : '/terms-of-use';
-    if (Platform.OS === 'web') {
-      window.open(url, '_blank');
-    } else {
-      Linking.openURL(url);
-    }
+    // Open in an in-app modal to preserve the registration state. Navigating
+    // to a new page (or new tab on mobile) would lose React state and bounce
+    // the user back to /login via the terms-of-use backBtn fallback.
+    setDocModal(type);
     if (type === 'privacy') { setHasOpenedPrivacy(true); setConsentPrivacyViewed(true); }
     if (type === 'terms') setHasOpenedTerms(true);
   };
@@ -720,8 +722,7 @@ export default function Register() {
         <TouchableOpacity
           style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 }}
           onPress={() => { 
-            const base = typeof window !== 'undefined' ? window.location.origin : '';
-            if (typeof window !== 'undefined') window.open(base + '/terms-of-use', '_blank');
+            setDocModal('terms');
             setHasOpenedTerms(true);
             if (hasOpenedPrivacy) setConsentPrivacyViewed(true);
           }}
@@ -736,8 +737,7 @@ export default function Register() {
         <TouchableOpacity
           style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 }}
           onPress={() => { 
-            const base = typeof window !== 'undefined' ? window.location.origin : '';
-            if (typeof window !== 'undefined') window.open(base + '/privacy-policy', '_blank');
+            setDocModal('privacy');
             setHasOpenedPrivacy(true);
             if (hasOpenedTerms) setConsentPrivacyViewed(true);
           }}
@@ -998,6 +998,44 @@ export default function Register() {
         {step === 'form' && renderForm()}
         {step === 'child-check' && renderChildCheck()}
       </ScrollView>
+      {/* In-app modal for Terms / Privacy: keeps registration state intact */}
+      <Modal
+        visible={docModal !== null}
+        animationType="slide"
+        onRequestClose={() => setDocModal(null)}
+        transparent={false}
+      >
+        <View style={{ flex: 1, backgroundColor: '#fff' }}>
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+            paddingHorizontal: 16, paddingVertical: 12,
+            paddingTop: Platform.OS === 'ios' ? 50 : 16,
+            backgroundColor: '#1565C0',
+          }}>
+            <TouchableOpacity onPress={() => setDocModal(null)} data-testid="close-doc-modal">
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '700' }}>
+              {docModal === 'terms' ? 'Termini di Utilizzo' : 'Informativa Privacy'}
+            </Text>
+            <View style={{ width: 28 }} />
+          </View>
+          {Platform.OS === 'web' ? (
+            // Web: embed the existing page via iframe (no duplicated content,
+            // no navigation, registration state preserved).
+            // eslint-disable-next-line react/no-unknown-property
+            (React.createElement('iframe', {
+              src: docModal === 'terms' ? '/terms-of-use' : '/privacy-policy',
+              style: { flex: 1, width: '100%', height: '100%', border: 'none' },
+              title: docModal === 'terms' ? 'Termini di Utilizzo' : 'Informativa Privacy',
+            }))
+          ) : (
+            <View style={{ flex: 1, padding: 20 }}>
+              <Text>Documento visualizzabile solo in versione web.</Text>
+            </View>
+          )}
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
