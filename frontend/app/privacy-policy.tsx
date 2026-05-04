@@ -16,7 +16,7 @@ export default function PrivacyPolicyPage() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => { if (router.canGoBack?.()) router.back(); else router.replace('/login'); }}
+          onPress={() => { if (router.canGoBack?.()) router.back(); else router.replace('/'); }}
           style={styles.backBtn}
           data-testid="privacy-back"
         >
