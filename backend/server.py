@@ -22092,9 +22092,11 @@ async def get_minor_access_status(athlete_id: str, current_user = Depends(get_cu
         "athlete_code": athlete.get("athlete_code"),
     }
 
-@api_router.get("/health")
+@api_router.api_route("/health", methods=["GET", "HEAD"])
 async def api_health():
-    """Health check endpoint for Kubernetes"""
+    """Health check endpoint for UptimeRobot/Kubernetes.
+    Supports both GET (verbose) and HEAD (used by UptimeRobot by default).
+    """
     return {"status": "healthy", "service": "backend"}
 
 # ==================== AUDIT LOGS ENDPOINT ====================
