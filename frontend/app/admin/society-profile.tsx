@@ -226,19 +226,37 @@ export default function SocietyProfile() {
     }
   };
 
+  // Helper: scarica blob in modo mobile-friendly
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const isMobile = typeof navigator !== 'undefined' &&
+      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      // Su mobile il download via <a download> spesso non attiva nulla:
+      // apriamo in una nuova tab, l'utente salverà il file manualmente.
+      const win = window.open(url, '_blank');
+      if (!win) {
+        showAlert('Popup bloccato', 'Il browser ha bloccato l\'apertura del file. Abilita i popup per registrateam.it e riprova.');
+      }
+      // Mantieni l'URL vivo abbastanza per il rendering nella nuova tab
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } else {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
   // Scarica Card JPG Dati Fiscali
   const handleDownloadFiscalCard = async () => {
     try {
       const res = await api.post('/society/card-fiscale', {}, { responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'image/jpeg' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Biglietto_${societyName?.replace(/\s+/g, '_') || 'Societa'}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `Biglietto_${societyName?.replace(/\s+/g, '_') || 'Societa'}.jpg`);
     } catch (e: any) {
       let msg = 'Errore nel download';
       if (e.response?.data instanceof Blob) {
@@ -253,14 +271,7 @@ export default function SocietyProfile() {
     try {
       const res = await api.get('/society/card-bancaria', { responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'image/jpeg' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Dati_Bancari_${societyName?.replace(/\s+/g, '_') || 'Societa'}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `Dati_Bancari_${societyName?.replace(/\s+/g, '_') || 'Societa'}.jpg`);
     } catch (e: any) {
       let msg = 'Errore nel download';
       if (e.response?.data instanceof Blob) {
