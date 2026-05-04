@@ -3054,7 +3054,23 @@ async def login(request: Request, credentials: UserLogin):
             await record_failed_login(client_ip)
         raise HTTPException(status_code=429, detail=rate_check["message"])
     
-    user = await db.users.find_one({"email": credentials.email.lower().strip()})
+    # Projection: fetch only fields needed for login validation + response.
+    # Avoids transferring heavy base64 image fields (~500KB) which we don't need here.
+    user = await db.users.find_one(
+        {"email": credentials.email.lower().strip()},
+        {
+            "_id": 0,
+            "id": 1,
+            "email": 1,
+            "full_name": 1,
+            "role": 1,
+            "status": 1,
+            "password_hash": 1,
+            "society_id": 1,
+            "athlete_id": 1,
+            "fiscal_code": 1,
+        },
+    )
     if not user or not verify_password(credentials.password, user["password_hash"]):
         # Record failed attempt
         await record_failed_login(client_ip)
@@ -3075,7 +3091,10 @@ async def login(request: Request, credentials: UserLogin):
     # Athletes with pending_privacy can still login but need to sign privacy
     athlete_status = None
     if user.get("athlete_id"):
-        athlete = await db.athletes.find_one({"id": user["athlete_id"]})
+        athlete = await db.athletes.find_one(
+            {"id": user["athlete_id"]},
+            {"_id": 0, "status": 1},
+        )
         if athlete:
             athlete_status = athlete.get("status")
     
@@ -3103,7 +3122,6 @@ async def login(request: Request, credentials: UserLogin):
             "full_name": user["full_name"],
             "status": user_status,
             "athlete_status": athlete_status,
-            "profile_photo": user.get("profile_photo"),
             "fiscal_code": user.get("fiscal_code"),
         }
     )
@@ -4158,10 +4176,13 @@ async def get_pending_users(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin può vedere gli utenti in attesa")
     
     society_id = current_user.get("society_id")
-    pending = await db.users.find({
-        "status": UserStatus.PENDING,
-        "society_id": society_id
-    }).to_list(1000)
+    pending = await db.users.find(
+        {"status": UserStatus.PENDING, "society_id": society_id},
+        {
+            "_id": 0, "id": 1, "email": 1, "full_name": 1, "role": 1,
+            "status": 1, "created_at": 1, "phone": 1,
+        },
+    ).to_list(1000)
     
     result = []
     for u in pending:
@@ -6996,17 +7017,36 @@ async def get_pending_athletes(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin può vedere gli atleti in attesa")
     
     society_id = current_user.get("society_id")
-    pending = await db.athletes.find({
-        "status": AthleteStatus.PENDING,
-        "society_id": society_id
-    }).to_list(1000)
+    # Projection: only the fields we actually return. This avoids transferring
+    # heavy base64 fields like athlete_photo / profile_photo.
+    ATHLETE_PROJ = {
+        "_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
+        "date_of_birth": 1, "fiscal_code": 1, "team_id": 1, "parent_id": 1,
+        "parents_detached": 1, "registration_date": 1, "status": 1,
+        "email": 1, "phone_athlete": 1,
+    }
+    pending = await db.athletes.find(
+        {"status": AthleteStatus.PENDING, "society_id": society_id},
+        ATHLETE_PROJ,
+    ).to_list(1000)
     
     # Batch fetch teams and users to avoid N+1 queries
-    teams_list = await db.teams.find({"society_id": society_id}).to_list(1000)
+    teams_list = await db.teams.find(
+        {"society_id": society_id},
+        {"_id": 0, "id": 1, "name": 1},
+    ).to_list(1000)
     teams_dict = {t["id"]: t for t in teams_list}
     
-    users_list = await db.users.find({"society_id": society_id}).to_list(1000)
-    users_dict = {u["id"]: u for u in users_list}
+    # Only fetch users that are actually referenced as parents (avoid loading
+    # the whole users collection with all their base64 photos).
+    parent_ids = [a.get("parent_id") for a in pending if a.get("parent_id")]
+    users_dict = {}
+    if parent_ids:
+        users_list = await db.users.find(
+            {"id": {"$in": list(set(parent_ids))}, "society_id": society_id},
+            {"_id": 0, "id": 1, "full_name": 1, "email": 1},
+        ).to_list(1000)
+        users_dict = {u["id"]: u for u in users_list}
     
     result = []
     for athlete in pending:
@@ -7154,13 +7194,40 @@ async def get_deletion_requests(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere le richieste di cancellazione")
     
-    requests = await db.athletes.find({"deletion_requested": True}).to_list(1000)
+    society_id = current_user.get("society_id")
+    # Projection + society filter. Avoids transferring base64 photos.
+    ATHLETE_PROJ = {
+        "_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
+        "team_id": 1, "parent_id": 1, "deletion_requested_at": 1,
+        "deletion_requested_by": 1, "deletion_requested_by_name": 1,
+    }
+    requests = await db.athletes.find(
+        {"deletion_requested": True, "society_id": society_id},
+        ATHLETE_PROJ,
+    ).to_list(1000)
     
-    # Batch fetch related data
-    teams_list = await db.teams.find().to_list(1000)
-    teams_dict = {t["id"]: t for t in teams_list}
-    users_list = await db.users.find().to_list(1000)
-    users_dict = {u["id"]: u for u in users_list}
+    # Collect only relevant team and user ids (no full collection scan)
+    team_ids = list({a.get("team_id") for a in requests if a.get("team_id")})
+    user_ids = set()
+    for a in requests:
+        if a.get("parent_id"): user_ids.add(a["parent_id"])
+        if a.get("deletion_requested_by"): user_ids.add(a["deletion_requested_by"])
+    
+    teams_dict = {}
+    if team_ids:
+        teams_list = await db.teams.find(
+            {"id": {"$in": team_ids}, "society_id": society_id},
+            {"_id": 0, "id": 1, "name": 1},
+        ).to_list(1000)
+        teams_dict = {t["id"]: t for t in teams_list}
+    
+    users_dict = {}
+    if user_ids:
+        users_list = await db.users.find(
+            {"id": {"$in": list(user_ids)}, "society_id": society_id},
+            {"_id": 0, "id": 1, "full_name": 1, "email": 1},
+        ).to_list(1000)
+        users_dict = {u["id"]: u for u in users_list}
     
     result = []
     for athlete in requests:
@@ -7186,7 +7253,16 @@ async def get_athletes_registered_today(current_user = Depends(get_current_user)
         raise HTTPException(status_code=403, detail="Solo admin")
     
     today = datetime.utcnow().date()
-    all_athletes = await db.athletes.find({}).to_list(5000)
+    society_id = current_user.get("society_id")
+    # Projection + society filter to avoid scanning base64 photos.
+    all_athletes = await db.athletes.find(
+        {"society_id": society_id},
+        {
+            "_id": 0, "id": 1, "full_name": 1, "is_minor": 1,
+            "parent_id": 1, "second_parent_id": 1, "team_id": 1,
+            "created_at": 1,
+        },
+    ).to_list(5000)
     
     today_athletes = []
     for a in all_athletes:
@@ -12107,8 +12183,12 @@ async def get_today_birthdays(current_user = Depends(get_current_user)):
     
     society_id = current_user.get("society_id")
     
+    # Projection: avoid transferring heavy base64 photos for this lightweight list.
+    ATHLETE_PROJ = {"_id": 0, "id": 1, "full_name": 1, "date_of_birth": 1}
+    USER_PROJ = {"_id": 0, "id": 1, "full_name": 1, "date_of_birth": 1, "role": 1}
+    
     # Check athletes - filter by society
-    athletes = await db.athletes.find({"society_id": society_id}).to_list(1000)
+    athletes = await db.athletes.find({"society_id": society_id}, ATHLETE_PROJ).to_list(1000)
     for athlete in athletes:
         dob = athlete.get("date_of_birth")
         if dob:
@@ -12127,11 +12207,12 @@ async def get_today_birthdays(current_user = Depends(get_current_user)):
                     "icon": "person"
                 })
     
-    # Check users (coaches and dirigenti)
+    # Check users (coaches and dirigenti) - filter by society
     users = await db.users.find({
+        "society_id": society_id,
         "role": {"$in": [UserRole.COACH, UserRole.VIEWER, UserRole.ADMIN]},
         "status": UserStatus.APPROVED
-    }).to_list(1000)
+    }, USER_PROJ).to_list(1000)
     
     for user in users:
         dob = user.get("date_of_birth")
