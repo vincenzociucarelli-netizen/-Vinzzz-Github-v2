@@ -54,7 +54,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         
         # Minor role: user_id is the athlete_id, no user document
         if role == "minor":
-            athlete = await db.athletes.find_one({"id": user_id})
+            athlete = await db.athletes.find_one(
+                {"id": user_id},
+                {"_id": 0, "id": 1, "full_name": 1, "status": 1, "society_id": 1},
+            )
             if not athlete:
                 raise HTTPException(status_code=401, detail="Atleta non trovato")
             return {
@@ -67,8 +70,22 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 "society_id": athlete.get("society_id"),
                 "athlete_id": user_id,
             }
-        
-        user = await db.users.find_one({"id": user_id})
+
+        # Projection: fetch only the fields we actually need to avoid transferring
+        # heavy base64 image fields (profile_photo, etc.) on EVERY request.
+        user = await db.users.find_one(
+            {"id": user_id},
+            {
+                "_id": 0,
+                "email": 1,
+                "full_name": 1,
+                "assigned_teams": 1,
+                "status": 1,
+                "society_id": 1,
+                "athlete_id": 1,
+                "coach_id": 1,
+            },
+        )
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
         

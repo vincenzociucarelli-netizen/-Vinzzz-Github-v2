@@ -1160,7 +1160,11 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         
         # Minor role: user_id is the athlete_id, no user document
         if role == "minor":
-            athlete = await db.athletes.find_one({"id": user_id})
+            # Projection: exclude heavy base64 fields and _id
+            athlete = await db.athletes.find_one(
+                {"id": user_id},
+                {"_id": 0, "id": 1, "full_name": 1, "status": 1, "society_id": 1},
+            )
             if not athlete:
                 raise HTTPException(status_code=401, detail="Atleta non trovato")
             return {
@@ -1173,8 +1177,23 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 "society_id": athlete.get("society_id"),
                 "athlete_id": user_id,
             }
-        
-        user = await db.users.find_one({"id": user_id})
+
+        # Projection: fetch only the fields we actually need.
+        # This avoids transferring heavy base64 image fields (profile_photo,
+        # profile_photo_artistic, etc.) on EVERY authenticated request.
+        user = await db.users.find_one(
+            {"id": user_id},
+            {
+                "_id": 0,
+                "email": 1,
+                "full_name": 1,
+                "assigned_teams": 1,
+                "status": 1,
+                "society_id": 1,
+                "athlete_id": 1,
+                "coach_id": 1,
+            },
+        )
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
         
@@ -3241,7 +3260,15 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
             "profile_photo": athlete.get("profile_photo"),
         }
     
-    user = await db.users.find_one({"id": current_user["id"]})
+    # Projection: avoid fetching heavy base64 image fields from MongoDB unless requested.
+    # This is critical for performance: without projection we'd download ~1MB per request.
+    if include_images:
+        user = await db.users.find_one({"id": current_user["id"]})
+    else:
+        user = await db.users.find_one(
+            {"id": current_user["id"]},
+            {f: 0 for f in HEAVY_IMAGE_FIELDS},
+        )
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
     
@@ -3252,19 +3279,29 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
     
     # For collaboratori/coaches, resolve team IDs to names
     if user.get("assigned_teams"):
-        teams = await db.teams.find({"id": {"$in": user["assigned_teams"]}}).to_list(100)
+        teams = await db.teams.find(
+            {"id": {"$in": user["assigned_teams"]}},
+            {"_id": 0, "name": 1},
+        ).to_list(100)
         team_names = [t.get("name", "Squadra") for t in teams]
         user["assigned_team_names"] = team_names
     
     # For athletes, also get data from athletes collection
     if user.get("role") == "athlete" and user.get("athlete_id"):
-        athlete = await db.athletes.find_one({"id": user["athlete_id"]})
+        athlete_proj = {"_id": 0, "trial_end_date": 1}
+        if include_images:
+            athlete_proj["athlete_photo"] = 1
+            athlete_proj["athlete_photo_artistic"] = 1
+        athlete = await db.athletes.find_one(
+            {"id": user["athlete_id"]},
+            athlete_proj,
+        )
         if athlete:
-            # Merge athlete photo fields into user response
-            if athlete.get("athlete_photo"):
-                user["athlete_photo"] = athlete["athlete_photo"]
-            if athlete.get("athlete_photo_artistic"):
-                user["athlete_photo_artistic"] = athlete["athlete_photo_artistic"]
+            if include_images:
+                if athlete.get("athlete_photo"):
+                    user["athlete_photo"] = athlete["athlete_photo"]
+                if athlete.get("athlete_photo_artistic"):
+                    user["athlete_photo_artistic"] = athlete["athlete_photo_artistic"]
             # Include trial_end_date for GDPR compliance flow
             if athlete.get("trial_end_date"):
                 trial_date = athlete["trial_end_date"]
