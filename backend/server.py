@@ -24620,6 +24620,63 @@ async def start_certificate_scheduler():
     _asyncio.create_task(certificate_block_scheduler())
     logger.info("Certificate block auto-reactivate scheduler started.")
 
+
+@app.on_event("startup")
+async def ensure_mongodb_indexes():
+    """Create MongoDB indexes at startup for performance.
+    Idempotent: create_index is a no-op if the index already exists.
+    Runs in background to avoid blocking startup.
+    """
+    import asyncio as _asyncio
+
+    async def _create_indexes():
+        try:
+            # users: lookups by id, email, society_id
+            await db.users.create_index("id")
+            await db.users.create_index("email")
+            await db.users.create_index("society_id")
+            await db.users.create_index([("society_id", 1), ("role", 1)])
+            # teams
+            await db.teams.create_index("id")
+            await db.teams.create_index("society_id")
+            # athletes: the hot collection
+            await db.athletes.create_index("id")
+            await db.athletes.create_index("society_id")
+            await db.athletes.create_index("team_id")
+            await db.athletes.create_index("user_id")
+            await db.athletes.create_index([("society_id", 1), ("team_id", 1)])
+            # matches
+            await db.matches.create_index("id")
+            await db.matches.create_index("society_id")
+            await db.matches.create_index("team_id")
+            await db.matches.create_index("match_number")
+            # settings
+            await db.settings.create_index([("type", 1), ("society_id", 1)])
+            # notifications
+            try:
+                await db.notifications.create_index("id")
+                await db.notifications.create_index("user_id")
+                await db.notifications.create_index("society_id")
+                await db.notifications.create_index([("user_id", 1), ("read", 1)])
+            except Exception:
+                pass
+            # attendance / presence
+            try:
+                await db.attendance.create_index([("society_id", 1), ("athlete_id", 1)])
+                await db.attendance.create_index([("society_id", 1), ("team_id", 1), ("date", -1)])
+            except Exception:
+                pass
+            # payments
+            try:
+                await db.payments.create_index([("society_id", 1), ("athlete_id", 1)])
+            except Exception:
+                pass
+            logger.info("MongoDB indexes ensured.")
+        except Exception as exc:
+            logger.warning(f"Could not create some indexes: {exc}")
+
+    _asyncio.create_task(_create_indexes())
+
 @app.on_event("startup")
 async def run_data_migrations():
     """One-time data fixes applied at startup."""
