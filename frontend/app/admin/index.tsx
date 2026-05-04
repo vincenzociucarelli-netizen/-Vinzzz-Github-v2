@@ -378,7 +378,7 @@ export default function AdminDashboard() {
       <View style={styles.header}>
         {/* Society Name Row */}
         <View style={styles.headerTopRow}>
-          {society.logo && (
+          {(society.has_logo || society.logo) && (
             <Image
               source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png` }}
               style={styles.headerLogo}
@@ -879,7 +879,7 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/society-profile')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E8F4FD' }]}>
-              {society.logo ? (
+              {(society.has_logo || society.logo) ? (
                 <Image 
                   source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png` }}
                   style={{ width: 40, height: 40, borderRadius: 8 }}
@@ -968,7 +968,7 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/athletes')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#F3E5F5' }]}>
-              {society.sport_image ? (
+              {(society.has_sport_image || society.sport_image) ? (
                 <Image 
                   source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/sport-image.png` }}
                   style={{ width: 40, height: 40, borderRadius: 8 }}

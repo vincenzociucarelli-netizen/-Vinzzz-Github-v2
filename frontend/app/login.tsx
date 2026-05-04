@@ -58,18 +58,22 @@ export default function Login() {
       if (response.data.name) {
         setSocietyName(response.data.name);
       }
-      // Logo is served via a dedicated lightweight endpoint (cached by browser)
-      // instead of base64 in /settings/society (which was ~450KB and slowed page).
-      try {
-        const head = await fetch(
-          `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png`,
-          { method: 'HEAD' }
-        );
-        if (head.ok) {
-          setSocietyLogo(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png`);
+      // Use the new has_logo flag (more reliable than HEAD probe).
+      if (response.data.has_logo) {
+        setSocietyLogo(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png`);
+      } else {
+        // Fallback for older backend deployments: probe via HEAD
+        try {
+          const head = await fetch(
+            `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png`,
+            { method: 'HEAD' }
+          );
+          if (head.ok) {
+            setSocietyLogo(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png`);
+          }
+        } catch {
+          // ignore: logo is optional
         }
-      } catch {
-        // ignore: logo is optional
       }
     } catch (error) {
       // Use default name if settings not found

@@ -135,7 +135,18 @@ async def get_society_settings(request: Request, include_images: bool = False):
     if include_images:
         settings = await db.settings.find_one(query, {"_id": 0})
     else:
+        # Lightweight: probe whether each image exists, but don't transfer it
         settings = await db.settings.find_one(query, {"_id": 0, "logo": 0, "sport_image": 0, "stamp_signature": 0})
+        # Add boolean flags so the frontend knows whether to render <Image> tags
+        # pointing at the dedicated /logo.png endpoints.
+        if settings:
+            existence_probe = await db.settings.find_one(
+                query,
+                {"_id": 0, "logo": 1, "sport_image": 1, "stamp_signature": 1},
+            ) or {}
+            settings["has_logo"] = bool(existence_probe.get("logo"))
+            settings["has_sport_image"] = bool(existence_probe.get("sport_image"))
+            settings["has_stamp_signature"] = bool(existence_probe.get("stamp_signature"))
     if not settings:
         return {
             "name": "Società Sportiva",
