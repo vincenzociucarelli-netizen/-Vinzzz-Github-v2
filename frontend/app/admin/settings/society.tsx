@@ -160,11 +160,10 @@ export default function SocietySettings() {
 
   const loadSettings = async () => {
     try {
-      const response = await api.get('/settings/society?include_images=true');
+      // Fast call WITHOUT base64 images (text-only, ~2KB).
+      const response = await api.get('/settings/society');
       setSocietyName(response.data.name || '');
-      setLogo(response.data.logo || null);
       setLogoSize(response.data.logo_size || 50);
-      setSportImage(response.data.sport_image || null);
       setRagioneSociale(response.data.ragione_sociale || '');
       setSportPraticato(response.data.sport_praticato || '');
       setAddress(response.data.address || '');
@@ -175,9 +174,15 @@ export default function SocietySettings() {
       setPhone(response.data.phone || '');
       setPhone2(response.data.phone2 || '');
       setPresidentName(response.data.president_name || '');
-      setStampSignature(response.data.stamp_signature || null);
       setSocietyEmail(response.data.email || '');
       setSocietyPec(response.data.pec || '');
+
+      // Lazy-load images AFTER main data renders, so the page appears
+      // instantly and images appear progressively.
+      const imgResponse = await api.get('/settings/society?include_images=true');
+      setLogo(imgResponse.data.logo || null);
+      setSportImage(imgResponse.data.sport_image || null);
+      setStampSignature(imgResponse.data.stamp_signature || null);
       setBlockExpiredCertificates(response.data.block_expired_certificates !== false);
       setOverrideAutoReactivateAt(response.data.override_auto_reactivate_at || null);
       setOverrideKeepDisabledSaved(Boolean(response.data.override_keep_disabled));

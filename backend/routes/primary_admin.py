@@ -67,7 +67,10 @@ async def is_society_institutional_email(user_email: str, society_id: Optional[s
     query = {"type": "society"}
     if society_id:
         query["society_id"] = society_id
-    settings = await db.settings.find_one(query) or {}
+    settings = await db.settings.find_one(
+        query,
+        {"_id": 0, "email": 1, "society_email": 1, "pec": 1, "society_pec": 1},
+    ) or {}
     society_email = (settings.get("email") or settings.get("society_email") or "").strip().lower()
     society_pec = (settings.get("pec") or settings.get("society_pec") or "").strip().lower()
     u = user_email.strip().lower()
@@ -153,7 +156,10 @@ async def _resolve_primary_admin_id(society_id: Optional[str] = None) -> Optiona
     base_q = {"role": "admin"}
     if society_id:
         base_q["society_id"] = society_id
-    user = await db.users.find_one({**base_q, "is_primary_admin": True})
+    user = await db.users.find_one(
+        {**base_q, "is_primary_admin": True},
+        {"_id": 0, "id": 1},
+    )
     if user:
         return user.get("id")
     # Fallback: oldest admin by created_at, BUT skip institutional accounts
@@ -161,7 +167,10 @@ async def _resolve_primary_admin_id(society_id: Optional[str] = None) -> Optiona
     settings_query = {"type": "society"}
     if society_id:
         settings_query["society_id"] = society_id
-    settings = await db.settings.find_one(settings_query) or {}
+    settings = await db.settings.find_one(
+        settings_query,
+        {"_id": 0, "email": 1, "society_email": 1, "pec": 1, "society_pec": 1},
+    ) or {}
     society_email = (settings.get("email") or settings.get("society_email") or "").strip().lower()
     society_pec = (settings.get("pec") or settings.get("society_pec") or "").strip().lower()
     async for a in db.users.find(

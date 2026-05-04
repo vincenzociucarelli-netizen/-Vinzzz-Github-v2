@@ -72,9 +72,9 @@ export default function SocietyProfile() {
 
   const loadProfile = async () => {
     try {
-      const response = await api.get('/settings/society?include_images=true');
+      // Fast call WITHOUT base64 images (~2KB, instant).
+      const response = await api.get('/settings/society');
       setSocietyName(response.data.name || '');
-      setLogo(response.data.logo || null);
       setLogoSize(response.data.logo_size || 50);
       setRagioneSociale(response.data.ragione_sociale || '');
       setSportPraticato(response.data.sport_praticato || '');
@@ -87,12 +87,18 @@ export default function SocietyProfile() {
       setCellulare(response.data.phone || '');
       setPhone2(response.data.phone2 || '');
       setPresidentName(response.data.president_name || '');
-      setStampSignature(response.data.stamp_signature || null);
       setSocietyEmail(response.data.email || '');
       setSocietyPec(response.data.pec || '');
       setIban(response.data.iban || '');
       setBankName(response.data.bank_name || '');
       setAffiliations(response.data.affiliations || []);
+      setLoading(false);
+      // Lazy-load images after main data renders (doesn't block the UI).
+      try {
+        const imgResponse = await api.get('/settings/society?include_images=true');
+        setLogo(imgResponse.data.logo || null);
+        setStampSignature(imgResponse.data.stamp_signature || null);
+      } catch (_imgErr) { /* images optional */ }
     } catch (error) {
       console.error('Errore caricamento profilo:', error);
     } finally {
