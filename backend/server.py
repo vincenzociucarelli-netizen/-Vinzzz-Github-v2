@@ -12,6 +12,29 @@ from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 from datetime import datetime, timedelta, timezone
+try:
+    from zoneinfo import ZoneInfo  # Python 3.9+
+    _IT_TZ = ZoneInfo("Europe/Rome")
+except Exception:
+    _IT_TZ = timezone(timedelta(hours=2))  # fallback: UTC+2 (daylight saving period)
+
+
+def now_it() -> datetime:
+    """Return the current datetime in the Italian timezone (Europe/Rome).
+    Handles CET/CEST (summer/winter) automatically via zoneinfo.
+    """
+    return datetime.now(_IT_TZ)
+
+
+def format_it(dt: datetime, fmt: str = "%d/%m/%Y %H:%M") -> str:
+    """Format a datetime in the Italian timezone.
+    Accepts naive (assumed UTC) or aware datetimes and converts to Europe/Rome.
+    """
+    if dt is None:
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_IT_TZ).strftime(fmt)
 from passlib.context import CryptContext
 import jwt
 import base64
@@ -13469,7 +13492,7 @@ Luogo e data: _________________, {now.strftime('%d/%m/%Y')}
             <ul>
             <li>Soglia: € {threshold_amount:,.2f}</li>
             <li>Totale compensi dichiarati: € {yearly_total:,.2f}</li>
-            <li>Data dichiarazione: {now.strftime('%d/%m/%Y %H:%M')}</li>
+            <li>Data dichiarazione: {format_it(now if now else datetime.now(timezone.utc), '%d/%m/%Y %H:%M')}</li>
             </ul>
             <p><em>Si prega di conservare questo documento per eventuali controlli fiscali.</em></p>
             <hr>
@@ -16097,7 +16120,7 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
     <p>Gentile {request.signer_name},</p>
     <p>In allegato trova il documento firmato digitalmente:</p>
     <p><strong>{request.document_title}</strong></p>
-    <p>Data firma: {datetime.now().strftime("%d/%m/%Y alle %H:%M")}</p>
+    <p>Data firma: {format_it(datetime.now(timezone.utc), "%d/%m/%Y alle %H:%M")}</p>
     <br>
     <p style="color: #666; font-size: 12px;">
     Questo documento è stato generato automaticamente. 
@@ -16270,7 +16293,8 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
             
             consent_data = document.get("consent_data", {})
             signed_at = document.get("signed_at", datetime.utcnow())
-            ts_str = signed_at.strftime("%Y-%m-%d %H:%M:%S") if isinstance(signed_at, datetime) else str(signed_at)
+            # Format in Italian timezone (Europe/Rome, handles CET/CEST)
+            ts_str = format_it(signed_at, "%Y-%m-%d %H:%M:%S") if isinstance(signed_at, datetime) else str(signed_at)
             
             if document.get("document_type") in ("gdpr_privacy_adult", "gdpr_adult", "privacy_consent"):
                 # Get metadata from document or generate defaults

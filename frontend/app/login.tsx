@@ -58,8 +58,18 @@ export default function Login() {
       if (response.data.name) {
         setSocietyName(response.data.name);
       }
-      if (response.data.logo) {
-        setSocietyLogo(response.data.logo);
+      // Logo is served via a dedicated lightweight endpoint (cached by browser)
+      // instead of base64 in /settings/society (which was ~450KB and slowed page).
+      try {
+        const head = await fetch(
+          `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png`,
+          { method: 'HEAD' }
+        );
+        if (head.ok) {
+          setSocietyLogo(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png`);
+        }
+      } catch {
+        // ignore: logo is optional
       }
     } catch (error) {
       // Use default name if settings not found
@@ -138,7 +148,7 @@ export default function Login() {
         {societyLogo && (
           <View style={styles.logoContainer}>
             <Image
-              source={{ uri: `data:image/jpeg;base64,${societyLogo}` }}
+              source={{ uri: societyLogo }}
               style={styles.logo}
               resizeMode="contain"
             />
