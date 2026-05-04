@@ -282,13 +282,23 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
 
     # Can crown: orphan delegate primary can crown another admin as legal_rep
     can_crown = orphan_delegate
-    # Admins that can be crowned (all other admins, excluding self)
+    # Admins that can be crowned (all other admins, excluding self AND
+    # institutional accounts: society-named or society-email/PEC accounts
+    # must NEVER be crowned as Legal Representative).
     crownable_admins = []
     if can_crown:
+        crown_query = {"role": "admin", "id": {"$ne": current_user["id"]}}
+        if society_id:
+            crown_query["society_id"] = society_id
         async for a in db.users.find(
-            {"role": "admin", "id": {"$ne": current_user["id"]}},
+            crown_query,
             {"_id": 0, "id": 1, "email": 1, "full_name": 1},
         ).sort("full_name", 1):
+            # Skip institutional accounts (society-name or society-email/PEC)
+            if looks_like_society_name(a.get("full_name", "")):
+                continue
+            if await is_society_institutional_email(a.get("email", ""), society_id):
+                continue
             crownable_admins.append(a)
 
     return {
