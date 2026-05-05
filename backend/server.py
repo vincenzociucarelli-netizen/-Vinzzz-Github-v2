@@ -8415,9 +8415,12 @@ async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_c
     if athlete.get("deletion_requested"):
         raise HTTPException(status_code=400, detail="Richiesta di cancellazione gia inviata")
     
-    # Mark athlete for deletion request
-    await db.athletes.update_one(
-        {"id": athlete_id},
+    # Atomic update: only succeeds if deletion_requested is NOT already True.
+    # This prevents race conditions under slow networks where the same user
+    # clicks twice before the first request has written to DB (which would
+    # otherwise create two admin notifications).
+    result = await db.athletes.update_one(
+        {"id": athlete_id, "$or": [{"deletion_requested": {"$ne": True}}, {"deletion_requested": {"$exists": False}}]},
         {"$set": {
             "deletion_requested": True,
             "deletion_requested_at": datetime.now(timezone.utc),
@@ -8425,6 +8428,8 @@ async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_c
             "deletion_requested_by_name": current_user.get("full_name", current_user.get("email", ""))
         }}
     )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=409, detail="Richiesta di cancellazione gia inviata")
     
     # Audit log
     athlete_name = f"{athlete.get('first_name', '')} {athlete.get('last_name', '')}"
@@ -8492,6 +8497,15 @@ async def approve_athlete_deletion(athlete_id: str, current_user = Depends(get_c
     
     has_obligations = bool(unpaid_payments) or bool(fiscal_docs) or bool(compensations)
     archived_data = {}
+    
+    # Fetch parent once (used both below and for audit logging later).
+    # Lightweight projection: no base64 photos (avoids ~500KB transfer).
+    parent = None
+    if parent_id:
+        parent = await db.users.find_one(
+            {"id": parent_id},
+            {"_id": 0, "id": 1, "full_name": 1, "email": 1},
+        )
     
     if has_obligations:
         # Archive minimum data for legal compliance before deleting rest
@@ -21173,6 +21187,24 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     )
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # Anti-duplicate guard: prevent the same user from signing the same trial
+    # document twice (this happened when the old 30s timeout caused users to
+    # click "Firma" twice, creating two entries in the archive for the same signature).
+    existing_trial_sign = await db.signed_documents.find_one(
+        {
+            "user_id": current_user["id"],
+            "related_entity_id": athlete_id,
+            "document_type": "trial_declaration",
+            "signed": True,
+        },
+        {"_id": 0, "id": 1},
+    )
+    if existing_trial_sign:
+        raise HTTPException(
+            status_code=409,
+            detail="Dichiarazione di Prova già firmata. Trovi la copia firmata nell'archivio documenti."
+        )
     
     is_minor = athlete.get("is_minor", False)
     
