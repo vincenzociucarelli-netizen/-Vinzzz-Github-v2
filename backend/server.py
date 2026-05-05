@@ -3150,11 +3150,23 @@ async def minor_login(request: Request, credentials: MinorLogin):
             )
     
     # Find athlete by nome_lite first, then fallback to athlete_code/qr_identifier
-    athlete = await db.athletes.find_one({"nome_lite": {"$regex": f"^{code}$", "$options": "i"}})
+    # Lightweight projection: only fields needed for auth + dashboard summary.
+    # Avoids loading the heavy athlete_photo / athlete_photo_artistic base64
+    # fields (~500KB) which caused 20+ second delays on the lite login page.
+    ATHLETE_LITE_PROJ = {
+        "_id": 0, "id": 1, "nome_lite": 1, "athlete_code": 1, "qr_identifier": 1,
+        "first_name": 1, "last_name": 1, "full_name": 1,
+        "minor_access_enabled": 1, "minor_pin_hash": 1, "society_id": 1,
+        "team_id": 1, "status": 1,
+    }
+    athlete = await db.athletes.find_one(
+        {"nome_lite": {"$regex": f"^{code}$", "$options": "i"}},
+        ATHLETE_LITE_PROJ,
+    )
     if not athlete:
-        athlete = await db.athletes.find_one({"athlete_code": code.upper()})
+        athlete = await db.athletes.find_one({"athlete_code": code.upper()}, ATHLETE_LITE_PROJ)
     if not athlete:
-        athlete = await db.athletes.find_one({"qr_identifier": code.upper()})
+        athlete = await db.athletes.find_one({"qr_identifier": code.upper()}, ATHLETE_LITE_PROJ)
     if not athlete:
         # Record failed attempt
         await _record_minor_login_attempt(rate_key, False)
@@ -5901,8 +5913,11 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
             "is_withdrawn": False,
             "withdrawn_date": None,
             "withdrawn_reason": None,
-            "status": AthleteStatus.TRIAL if is_minor else AthleteStatus.PENDING,
-            "trial_end_date": datetime.utcnow() + timedelta(days=7) if is_trial else datetime.utcnow(),
+            "status": ("pending_trial" if is_minor else AthleteStatus.PENDING),
+            # trial_end_date stays None until the FIRST QR scan (first training).
+            # See QR scan handler around line 11195 which converts pending_trial -> trial
+            # and only at that moment sets trial_start_date / trial_end_date.
+            "trial_end_date": None,
             "is_minor": is_minor,
             "team_id": athlete_data.team_id,
             "privacy_accepted": privacy_accepted,
@@ -5976,8 +5991,8 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
         team_id_2=athlete_data.team_id_2,
         qr_code=qr_code,
         qr_identifier=qr_id,
-        trial_end_date=datetime.utcnow() + timedelta(days=7) if is_trial else datetime.utcnow(),
-        status=AthleteStatus.TRIAL if is_minor else AthleteStatus.PENDING,  # Minors auto-approved to trial
+        trial_end_date=None,  # Set on first QR scan (see line ~11195)
+        status=("pending_trial" if is_minor else AthleteStatus.PENDING),  # Minors: trial starts at first QR scan
         privacy_accepted=privacy_accepted,
         privacy_accepted_date=datetime.utcnow() if privacy_accepted else None,
         consent_images_internal=consent_img_internal,
