@@ -13470,6 +13470,14 @@ async def get_coach_threshold_status(
         if projected_total > 15000 and threshold_15k_month == 0:
             threshold_15k_month = m
     
+    # Extend warning to also cover projected exceedance (not just next-receipt exceedance).
+    # This way the banner appears as soon as we know the contract will cross the threshold,
+    # even before any receipt has been signed.
+    if (not prior_already_exceeded_5k) and yearly_total <= 5000 and threshold_5k_month > 0 and not (declaration_5000 and declaration_5000.get("signed")):
+        needs_warning_5000 = True
+    if (not prior_already_exceeded_15k) and yearly_total <= 15000 and threshold_15k_month > 0 and not (declaration_15000 and declaration_15000.get("signed")):
+        needs_warning_15000 = True
+    
     return {
         "coach_id": coach_id,
         "coach_name": coach.get("full_name", ""),

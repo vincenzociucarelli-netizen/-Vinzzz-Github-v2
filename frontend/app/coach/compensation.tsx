@@ -596,11 +596,17 @@ export default function CoachCompensation() {
     
     const warnings = [];
     
-    // Calculate which month the threshold is actually crossed for each year
+    // Resolve threshold month name from backend projection (preferred) with fallback to local records
     const monthlyComp = profile?.monthly_compensation || 0;
     const priorComp = profile?.other_annual_compensation || 0;
     
-    const findThresholdMonth = (year: number, threshold: number) => {
+    const monthNameFromBackend = (status: ThresholdStatus | null, type: '5000' | '15000') => {
+      const m = status?.thresholds?.[type]?.threshold_month;
+      if (m && m >= 1 && m <= 12) return MONTH_NAMES[m] || '';
+      return '';
+    };
+    
+    const findThresholdMonthFallback = (year: number, threshold: number) => {
       const yearRecords = records.filter(r => r.year === year).sort((a: any, b: any) => a.month - b.month);
       const prior = (year === contractStartYear) ? priorComp : 0;
       let cumulative = prior;
@@ -614,13 +620,27 @@ export default function CoachCompensation() {
       return '';
     };
     
-    const thresholdMonth5k_y1 = findThresholdMonth(contractStartYear, 5000);
-    const thresholdMonth15k_y1 = findThresholdMonth(contractStartYear, 15000);
-    const thresholdMonth5k_y2 = findThresholdMonth(contractStartYear + 1, 5000);
-    const thresholdMonth15k_y2 = findThresholdMonth(contractStartYear + 1, 15000);
+    const thresholdMonth5k_y1 = monthNameFromBackend(thresholdStatus, '5000') || findThresholdMonthFallback(contractStartYear, 5000);
+    const thresholdMonth15k_y1 = monthNameFromBackend(thresholdStatus, '15000') || findThresholdMonthFallback(contractStartYear, 15000);
+    const thresholdMonth5k_y2 = monthNameFromBackend(thresholdStatus2026, '5000') || findThresholdMonthFallback(contractStartYear + 1, 5000);
+    const thresholdMonth15k_y2 = monthNameFromBackend(thresholdStatus2026, '15000') || findThresholdMonthFallback(contractStartYear + 1, 15000);
+    
+    // Year 1 projection: show banner whenever the projected annual total exceeds threshold,
+    // declaration not yet signed, and not already in "needs_declaration" state (which has its own banner).
+    const summaryY1 = getYearSummary(contractStartYear);
+    const willExceed5k_y1 = (summaryY1?.totalProjected || 0) > 5000;
+    const willExceed15k_y1 = (summaryY1?.totalProjected || 0) > 15000;
+    const showWarning5k_y1 = willExceed5k_y1
+      && !thresholdStatus.thresholds['5000'].declaration_signed
+      && !thresholdStatus.thresholds['5000'].needs_declaration
+      && !!thresholdMonth5k_y1;
+    const showWarning15k_y1 = willExceed15k_y1
+      && !thresholdStatus.thresholds['15000'].declaration_signed
+      && !thresholdStatus.thresholds['15000'].needs_declaration
+      && !!thresholdMonth15k_y1;
     
     // Warning for approaching €5.000
-    if (thresholdStatus.thresholds['5000'].needs_warning && !thresholdStatus.thresholds['5000'].declaration_signed) {
+    if (showWarning5k_y1) {
       warnings.push(
         <View key="warning-5000" style={styles.thresholdWarningBox5k}>
           <Text style={styles.thresholdWarningTitle5k}>⚠️ Anno {contractStartYear}: Soglia dei €5.000</Text>
@@ -633,7 +653,7 @@ export default function CoachCompensation() {
     }
     
     // Warning for approaching €15.000
-    if (thresholdStatus.thresholds['15000'].needs_warning && !thresholdStatus.thresholds['15000'].declaration_signed) {
+    if (showWarning15k_y1) {
       warnings.push(
         <View key="warning-15000" style={styles.thresholdWarningBox15k}>
           <Text style={styles.thresholdWarningTitle15k}>🚨 Anno {contractStartYear}: Soglia dei €15.000</Text>
@@ -722,6 +742,17 @@ export default function CoachCompensation() {
     // Add warnings for the second year (2026) if contract spans two years
     if (thresholdStatus2026 && contractEndYear && contractEndYear > contractStartYear) {
       const year2026 = contractEndYear;
+      const summaryY2 = getYearSummary(contractEndYear);
+      const willExceed5k_y2 = (summaryY2?.totalProjected || 0) > 5000;
+      const willExceed15k_y2 = (summaryY2?.totalProjected || 0) > 15000;
+      const showWarning5k_y2 = willExceed5k_y2
+        && !thresholdStatus2026.thresholds['5000'].declaration_signed
+        && !thresholdStatus2026.thresholds['5000'].needs_declaration
+        && !!thresholdMonth5k_y2;
+      const showWarning15k_y2 = willExceed15k_y2
+        && !thresholdStatus2026.thresholds['15000'].declaration_signed
+        && !thresholdStatus2026.thresholds['15000'].needs_declaration
+        && !!thresholdMonth15k_y2;
       
       // Show signed declarations for 2026 - LIGHT BLUE to distinguish from first year
       if (thresholdStatus2026.thresholds['5000'].declaration_signed) {
@@ -751,7 +782,7 @@ export default function CoachCompensation() {
       }
       
       // Warning for approaching €5.000 in 2026 (not yet signed)
-      if (thresholdStatus2026.thresholds['5000'].needs_warning && !thresholdStatus2026.thresholds['5000'].declaration_signed) {
+      if (showWarning5k_y2) {
         warnings.push(
           <View key="warning-5000-2026" style={styles.thresholdWarningBox5k}>
             <Text style={styles.thresholdWarningTitle5k}>⚠️ Anno {year2026}: Soglia dei €5.000</Text>
@@ -764,7 +795,7 @@ export default function CoachCompensation() {
       }
       
       // Warning for approaching €15.000 in 2026 (not yet signed)
-      if (thresholdStatus2026.thresholds['15000'].needs_warning && !thresholdStatus2026.thresholds['15000'].declaration_signed) {
+      if (showWarning15k_y2) {
         warnings.push(
           <View key="warning-15000-2026" style={styles.thresholdWarningBox15k}>
             <Text style={styles.thresholdWarningTitle15k}>🚨 Anno {year2026}: Soglia dei €15.000</Text>
