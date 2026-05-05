@@ -2677,16 +2677,24 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
     """
     
     email_sent = False
+    email_sent = False
+    email_error = None
     try:
         from email_service import send_transactional_email
-        await send_transactional_email(
+        result = await send_transactional_email(
             to_email=data.email.lower(),
             subject=subject,
             html_content=html_content,
             to_name=f"{data.first_name or ''} {data.last_name or ''}".strip() or None
         )
-        email_sent = True
+        # send_transactional_email returns {"success": True/False, "error": ..., "provider": ...}
+        # We must check the actual outcome instead of assuming success.
+        email_sent = bool(result and result.get("success"))
+        if not email_sent:
+            email_error = (result or {}).get("error") or "Errore sconosciuto"
+            logging.error(f"Brevo email failed for invite to {data.email}: {email_error}")
     except Exception as e:
+        email_error = str(e)
         logging.error(f"Failed to send invitation email: {e}")
     
     # Log audit
@@ -2699,11 +2707,18 @@ async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_
     )
     
     return {
-        "message": f"Invito inviato a {data.email}" if email_sent else f"Invito creato per {data.email} ma l'email non è stata inviata. Verifica la configurazione email.",
+        "message": (
+            f"Invito inviato a {data.email}"
+            if email_sent
+            else f"Invito creato per {data.email} ma l'email non è stata inviata. "
+                 f"Errore: {email_error or 'configurazione email non valida'}. "
+                 f"Puoi condividere manualmente il link di registrazione."
+        ),
         "invitation_id": invitation["id"],
         "token": token,
         "register_link": register_link,
-        "email_sent": email_sent
+        "email_sent": email_sent,
+        "email_error": email_error,
     }
 
 @api_router.get("/athletes/invite-info/{token}")
