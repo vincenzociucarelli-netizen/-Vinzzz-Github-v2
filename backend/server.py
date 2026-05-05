@@ -1688,7 +1688,28 @@ async def register(user_data: UserCreate, request: Request):
         user_dict["athlete_id"] = athlete_id
     if user_data.fiscal_code:
         user_dict["fiscal_code"] = user_data.fiscal_code.upper().strip()
-    
+
+    # Save additional anagraphic fields provided at registration (coach/dirigente/etc.)
+    if user_data.date_of_birth:
+        try:
+            user_dict["date_of_birth"] = datetime.fromisoformat(
+                user_data.date_of_birth.replace('Z', '+00:00')
+            )
+        except (ValueError, AttributeError):
+            pass  # Invalid date format, skip
+    if user_data.place_of_birth:
+        user_dict["place_of_birth"] = user_data.place_of_birth.strip()
+    if user_data.address:
+        user_dict["address"] = user_data.address.strip()
+    if user_data.city:
+        user_dict["city"] = user_data.city.strip()
+    if user_data.postal_code:
+        user_dict["postal_code"] = user_data.postal_code.strip()
+    if user_data.province:
+        user_dict["province"] = user_data.province.strip().upper()
+    if user_data.coach_license_number:
+        user_dict["coach_license_number"] = user_data.coach_license_number.strip()
+
     await db.users.insert_one(user_dict)
     
     # Save GDPR consents and legal acceptance from registration
