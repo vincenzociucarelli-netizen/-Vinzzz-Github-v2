@@ -21132,7 +21132,22 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     if not body.signature_base64 or len(body.signature_base64) < 100:
         raise HTTPException(status_code=400, detail="Firma non valida. Disegna la tua firma nel riquadro.")
     
-    athlete = await db.athletes.find_one({"id": athlete_id})
+    # Lightweight projection: avoid loading heavy base64 photos (~1.7MB total
+    # across athlete + signing user + settings) which caused 30s timeouts on
+    # the first sign attempt.
+    athlete = await db.athletes.find_one(
+        {"id": athlete_id},
+        {
+            "_id": 0,
+            "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
+            "fiscal_code": 1, "date_of_birth": 1, "place_of_birth": 1,
+            "is_minor": 1, "parent_id": 1, "second_parent_id": 1,
+            "user_id": 1, "society_id": 1, "team_id": 1,
+            "address": 1, "city": 1, "postal_code": 1, "province": 1,
+            "trial_start_date": 1, "trial_end_date": 1, "trial_signed": 1,
+            "status": 1,
+        },
+    )
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
@@ -21145,14 +21160,27 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
         if athlete.get("user_id") != current_user["id"]:
             raise HTTPException(status_code=403, detail="Non sei autorizzato")
     
-    # Usa i dati di chi sta firmando (current_user)
-    signing_parent = await db.users.find_one({"id": current_user["id"]})
+    # Usa i dati di chi sta firmando (current_user) - light projection (no photos)
+    signing_parent = await db.users.find_one(
+        {"id": current_user["id"]},
+        {
+            "_id": 0,
+            "id": 1, "email": 1, "full_name": 1, "first_name": 1, "last_name": 1,
+            "fiscal_code": 1, "date_of_birth": 1, "place_of_birth": 1,
+            "address": 1, "city": 1, "postal_code": 1, "province": 1,
+            "phone": 1, "role": 1, "society_id": 1,
+        },
+    )
     check_profiles_for_document(parent=signing_parent, athlete=athlete)
     
-    society = await db.societies.find_one({"id": athlete.get("society_id")})
+    society = await db.societies.find_one({"id": athlete.get("society_id")}, {"_id": 0, "name": 1, "ragione_sociale": 1})
     society_name = (society.get("ragione_sociale") or society.get("name") or "Societa Sportiva") if society else "Societa Sportiva"
     
-    society_settings = await db.settings.find_one({"type": "society"})
+    # Settings: only read the trial parameters (avoid loading logo/sport_image base64)
+    society_settings = await db.settings.find_one(
+        {"type": "society", "society_id": athlete.get("society_id")} if athlete.get("society_id") else {"type": "society"},
+        {"_id": 0, "trial_max_days": 1, "trial_max_sessions": 1},
+    )
     trial_max_days = (society_settings.get("trial_max_days", 7) if society_settings else 7)
     trial_max_sessions = (society_settings.get("trial_max_sessions", 3) if society_settings else 3)
     
