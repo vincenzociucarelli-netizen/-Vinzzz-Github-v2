@@ -1205,12 +1205,30 @@ Società sportiva: ${societyName}
                             headers: { 'Authorization': `Bearer ${token}` }
                           });
                           if (!response.ok) {
-                            Alert.alert('Errore', 'Impossibile aprire il documento');
+                            let errMsg = 'Impossibile aprire il documento';
+                            if (response.status === 401) {
+                              errMsg = 'Sessione scaduta. Effettua nuovamente il login.';
+                            } else {
+                              try {
+                                const errData = await response.json();
+                                if (errData?.detail) errMsg = errData.detail;
+                              } catch {}
+                            }
+                            Alert.alert('Errore', errMsg);
                             return;
                           }
                           const blob = await response.blob();
                           const url = window.URL.createObjectURL(blob);
-                          window.open(url, '_blank');
+                          const filename = `${doc.document_title || 'documento'}.pdf`.replace(/[^\w.\-]+/g, '_');
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = filename;
+                          a.target = '_blank';
+                          a.rel = 'noopener noreferrer';
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          setTimeout(() => window.URL.revokeObjectURL(url), 1500);
                         }
                       } catch (err) {
                         console.error('Download error:', err);
@@ -1518,12 +1536,30 @@ Società sportiva: ${societyName}
                             headers: { 'Authorization': `Bearer ${token}` }
                           });
                           if (!response.ok) {
-                            Alert.alert('Errore', 'Impossibile aprire il documento');
+                            let errMsg = 'Impossibile aprire il documento';
+                            if (response.status === 401) {
+                              errMsg = 'Sessione scaduta. Effettua nuovamente il login.';
+                            } else {
+                              try {
+                                const errData = await response.json();
+                                if (errData?.detail) errMsg = errData.detail;
+                              } catch {}
+                            }
+                            Alert.alert('Errore', errMsg);
                             return;
                           }
                           const blob = await response.blob();
                           const url = window.URL.createObjectURL(blob);
-                          window.open(url, '_blank');
+                          const filename = `${doc.document_title || 'documento'}.pdf`.replace(/[^\w.\-]+/g, '_');
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = filename;
+                          a.target = '_blank';
+                          a.rel = 'noopener noreferrer';
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          setTimeout(() => window.URL.revokeObjectURL(url), 1500);
                         }
                       } catch (err) {
                         console.error('Download error:', err);
