@@ -390,7 +390,7 @@ export default function AthletePayments() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/athlete'))}>
           <View style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>

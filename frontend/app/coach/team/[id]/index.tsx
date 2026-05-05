@@ -168,7 +168,7 @@ export default function CoachTeamAthletes() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
+          <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/coach'))} style={{ padding: 8 }}>
             <View style={styles.backButton}>
               <Ionicons name="chevron-back" size={24} color="#007AFF" />
             </View>
@@ -186,7 +186,7 @@ export default function CoachTeamAthletes() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/coach'))} style={{ padding: 8 }}>
           <View style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>

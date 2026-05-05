@@ -184,7 +184,7 @@ export default function TeamAthletes() {
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/dirigente'))}
         >
           <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>

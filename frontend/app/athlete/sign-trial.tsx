@@ -83,11 +83,11 @@ export default function SignTrialPage() {
     <View style={styles.container}>
       {/* Header - stile viola come il minore */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/athlete'))} style={{ padding: 8 }}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Firma Dichiarazione di Prova</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/athlete'))} style={{ padding: 8 }}>
           <Ionicons name="close" size={24} color="#fff" />
         </TouchableOpacity>
       </View>

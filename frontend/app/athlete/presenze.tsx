@@ -117,7 +117,7 @@ export default function AthletePresenze() {
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/athlete'))}
         >
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>

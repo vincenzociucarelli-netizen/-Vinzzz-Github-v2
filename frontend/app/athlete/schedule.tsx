@@ -126,7 +126,7 @@ export default function AthleteSchedule() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/athlete'))}>
           <View style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>
