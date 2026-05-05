@@ -7530,7 +7530,15 @@ async def update_athlete_technical_data(athlete_id: str, data: dict, current_use
 
 @api_router.patch("/athletes/{athlete_id}", response_model=Athlete)
 async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_user = Depends(get_current_user)):
-    athlete = await db.athletes.find_one({"id": athlete_id})
+    # Lightweight read: skip heavy base64 photo fields when checking permissions
+    # and reading existing values. Avoids a ~500KB transfer per PATCH (which on
+    # mobile + Render Free tier could time out at ~30s).
+    HEAVY_PHOTO_FIELDS = {
+        "_id": 0, "athlete_photo": 0, "athlete_photo_artistic": 0,
+        "id_back": 0, "id_front": 0, "doc_back_image": 0, "doc_front_image": 0,
+        "document_back": 0, "document_front": 0, "medical_certificate_file": 0,
+    }
+    athlete = await db.athletes.find_one({"id": athlete_id}, HEAVY_PHOTO_FIELDS)
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     

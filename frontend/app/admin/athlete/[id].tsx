@@ -2461,7 +2461,7 @@ export default function AdminAthleteDetail() {
                     onChangeText={(t) => setEditData({...editData, address: t})}
                   />
                   <View style={styles.row}>
-                    <View style={styles.flex1}>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.inputLabel}>CAP</Text>
                       <TextInput
                         style={styles.input}
@@ -2471,7 +2471,7 @@ export default function AdminAthleteDetail() {
                         maxLength={5}
                       />
                     </View>
-                    <View style={styles.flex2}>
+                    <View style={{ flex: 3 }}>
                       <Text style={styles.inputLabel}>Città</Text>
                       <TextInput
                         style={styles.input}
@@ -2480,19 +2480,17 @@ export default function AdminAthleteDetail() {
                         autoCapitalize="characters"
                       />
                     </View>
-                    <View style={styles.flex1}>
-                      <Text style={styles.inputLabel}>Prov. (2 lett.)</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={editData.province}
-                        onChangeText={(t) => setEditData({...editData, province: t.toUpperCase().slice(0, 2)})}
-                        maxLength={2}
-                        autoCapitalize="characters"
-                        placeholder="PG"
-                        placeholderTextColor="#999"
-                      />
-                    </View>
                   </View>
+                  <Text style={styles.inputLabel}>Provincia (2 lettere)</Text>
+                  <TextInput
+                    style={[styles.input, { maxWidth: 120 }]}
+                    value={editData.province}
+                    onChangeText={(t) => setEditData({...editData, province: t.toUpperCase().slice(0, 2)})}
+                    maxLength={2}
+                    autoCapitalize="characters"
+                    placeholder="PG"
+                    placeholderTextColor="#999"
+                  />
                 </>
               ) : (
                 <>
