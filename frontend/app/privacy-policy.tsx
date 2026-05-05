@@ -15,15 +15,7 @@ export default function PrivacyPolicyPage() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => { if (router.canGoBack?.()) router.back(); else router.replace('/'); }}
-          style={styles.backBtn}
-          data-testid="privacy-back"
-        >
-          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 8 }}>
-            <Ionicons name="chevron-back" size={24} color="#1565C0" />
-          </View>
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
         <Text style={styles.headerTitle}>Informativa sulla Privacy</Text>
         <View style={{ width: 40 }} />
       </View>

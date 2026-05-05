@@ -16664,6 +16664,24 @@ async def sign_gdpr_privacy_document(
     
     # Debug log
     logging.info(f"[GDPR Sign] signature_base64 received: {bool(request.signature_base64)}, length: {len(request.signature_base64) if request.signature_base64 else 0}")
+
+    # Anti-duplicate guard: prevent the same user from signing the same GDPR
+    # document twice (which would create two entries in the audit log and
+    # archive). For minor consent, the duplicate is checked per (parent, minor)
+    # pair so that two parents can each sign for the same child once.
+    dup_query = {
+        "user_id": current_user["id"],
+        "document_type": request.document_type,
+        "signed": True,
+    }
+    if request.document_type == "gdpr_minor" and request.minor_id:
+        dup_query["related_entity_id"] = request.minor_id
+    existing_signed = await db.signed_documents.find_one(dup_query, {"_id": 0, "id": 1, "signed_at": 1})
+    if existing_signed:
+        raise HTTPException(
+            status_code=409,
+            detail="Documento già firmato. Trovi la copia firmata nel tuo archivio documenti."
+        )
     
     # Generate PDF based on document type
     try:

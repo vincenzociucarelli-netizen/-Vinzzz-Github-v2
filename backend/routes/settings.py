@@ -18,7 +18,7 @@ from routes.primary_admin import is_primary_admin, has_valid_primary_declaration
 router = APIRouter()
 
 
-@router.get("/settings/society/logo.png")
+@router.api_route("/settings/society/logo.png", methods=["GET", "HEAD"])
 async def get_society_logo_image(request: Request):
     """Serve society logo as PNG image.
     Public endpoint for email embedding. If authenticated, serve the logo of
