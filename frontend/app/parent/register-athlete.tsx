@@ -459,7 +459,7 @@ export default function RegisterAthlete() {
           />
 
           <View style={styles.row}>
-            <View style={styles.flex1}>
+            <View style={styles.flexCap}>
               <Text style={styles.label}>CAP</Text>
               <TextInput
                 style={styles.input}
@@ -471,7 +471,7 @@ export default function RegisterAthlete() {
                 maxLength={5}
               />
             </View>
-            <View style={styles.flex2}>
+            <View style={styles.flexCity}>
               <Text style={styles.label}>Città</Text>
               <TextInput
                 style={styles.input}
@@ -482,7 +482,7 @@ export default function RegisterAthlete() {
                 autoCapitalize="characters"
               />
             </View>
-            <View style={styles.flex1}>
+            <View style={styles.flexProv}>
               <Text style={styles.label}>Prov.</Text>
               <TextInput
                 style={styles.input}
@@ -574,7 +574,12 @@ export default function RegisterAthlete() {
             autoCapitalize="none"
           />
 
-          <Text style={styles.sectionTitle}>Attestato di Versamento</Text>
+          <Text style={styles.sectionTitle}>Ricevuta per la Dichiarazione dei Redditi</Text>
+          <Text style={[styles.protectionNote, { marginBottom: 12 }]}>
+            Questi dati ci servono per emettere la ricevuta fiscale (chiamata
+            tecnicamente "Attestato di Versamento") da utilizzare nella tua
+            dichiarazione dei redditi per la detrazione delle spese sportive.
+          </Text>
 
           <Text style={styles.label}>Cognome Genitore</Text>
           <TextInput
@@ -877,13 +882,23 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   flex1: {
     flex: 1,
   },
   flex2: {
     flex: 2,
+  },
+  // Specific flex values for the CAP / Città / Prov. row
+  flexCap: {
+    flex: 1.2,
+  },
+  flexCity: {
+    flex: 2.5,
+  },
+  flexProv: {
+    flex: 0.9,
   },
   genderRow: {
     flexDirection: 'row',
@@ -938,21 +953,23 @@ const styles = StyleSheet.create({
   cfCalculateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   calculateCfBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#34C759',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
+    minWidth: 110,
     height: 48,
     borderRadius: 8,
-    gap: 6,
+    gap: 4,
+    flexShrink: 0,
   },
   calculateCfBtnText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   passwordResetNote: {
