@@ -67,19 +67,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Refactoring `server.py` (~25k righe) → spezzare in `routes/`
 - ~38 `db.settings.find_one()` ancora senza projections
 
-## 🎯 Priorità Prossima Sessione (07/05/2026)
-**L'utente ha specificato**: la presentazione di RegistraTEAM ai **genitori** deve essere PERFETTA. Quindi prima di altro, priorità assoluta:
-1. ✅ **Push fix banner verdi "superata nel mese di X"** (2 fix locali pendenti)
-2. 🔵 **Test completo flusso GENITORE + ATLETA MINORENNE**:
-   - Invito genitore via email
-   - Registrazione genitore (CF, data nascita, ecc. — verificare che ora si salvino)
-   - Linking atleta esistente (workflow manuale parent-athlete)
-   - Firma documenti GDPR per il minore
-   - Pagamento quote
-   - Upload certificato medico
-   - Visione calendario allenamenti del figlio
-3. 🟣 **Completare scanner QR coach** (presenze allenamenti/gare)
-4. 🟢 Bug "fix prima delle altre presentazioni" (Coach/Dirigente sono utenti obbligati, possono tollerare qualche bug)
+## 🎯 Priorità Prossima Sessione (06/05/2026 pomeriggio)
+**L'utente ha specificato**: la presentazione di RegistraTEAM ai **genitori** deve essere PERFETTA ("altrimenti pensano che sia un cesso e snobbano"). Priorità assoluta:
+
+1. 🔵 **Test E2E famiglia allargata: 3 GENITORI + 2 ATLETI MINORENNI**
+   - Scenari critici da coprire:
+     - **1 atleta — 2 genitori**: entrambi possono vedere il figlio dopo linking; **uno qualsiasi dei 2** può firmare i documenti GDPR (la firma di uno è valida per il minore)
+     - **1 genitore — 2 atleti**: vede entrambi i figli nella propria dashboard
+   - Step da testare:
+     - Invito genitore via email Brevo
+     - Registrazione genitore (CF, data nascita, indirizzo — verificare che il fix di registrazione anagrafica funzioni)
+     - Linking atleta esistente al genitore (workflow manuale parent-athlete)
+     - Firma documenti GDPR per il minore (uno qualsiasi dei 2 genitori basta)
+     - **Certificato medico SOLO DATE** (no upload file): genitore inserisce data emissione + data scadenza → admin convalida → sistema gestisce alert scadenza
+     - Pagamento quote
+     - Visione calendario allenamenti del/dei figlio/i
+
+2. 🟣 **Completare scanner QR coach** (presenze allenamenti/gare)
+
+3. 🟢 Bug "fix prima delle altre presentazioni" (Coach/Dirigente sono utenti obbligati, possono tollerare qualche bug)
 
 ## Architettura File Chiave
 ```
