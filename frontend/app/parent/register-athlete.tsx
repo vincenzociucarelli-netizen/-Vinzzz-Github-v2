@@ -603,18 +603,6 @@ export default function RegisterAthlete() {
             returnKeyType="next"
           />
 
-          <Text style={styles.label}>Codice Fiscale Genitore</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="es: RSSMRA80A01H501Z"
-            placeholderTextColor="#aaa"
-            value={taxPayerFiscalCode}
-            onChangeText={(text) => setTaxPayerFiscalCode(text.toUpperCase())}
-            autoCapitalize="characters"
-            maxLength={16}
-            returnKeyType="next"
-          />
-
           <Text style={styles.sectionTitle}>Protezione Dati Sensibili</Text>
           
           <Text style={styles.protectionNote}>
