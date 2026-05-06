@@ -1145,7 +1145,7 @@ export default function AdminCoachDetail() {
                 {/* Warning: approaching €5.000 - YEAR 1 */}
                 {thresholdStatus?.thresholds?.['5000']?.needs_warning && !thresholdStatus?.thresholds?.['5000']?.declaration_signed && (
                   <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 6 }}>⚠️ Anno {coach?.contract_start_year}: Soglia dei €5.000</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 6 }}>⚠️ Anno {((coach as any)?._derivedStartYear ?? coach?.contract_start_year)}: Soglia dei €5.000</Text>
                     <Text style={{ fontSize: 13, color: '#E65100', textAlign: 'center', lineHeight: 18 }}>
                       Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus?.thresholds?.['5000']?.threshold_month || 0]}</Text> supererà la soglia previdenziale di €5.000.
                     </Text>
@@ -1155,7 +1155,7 @@ export default function AdminCoachDetail() {
                 {/* Warning: approaching €15.000 - YEAR 1 */}
                 {thresholdStatus?.thresholds?.['15000']?.needs_warning && !thresholdStatus?.thresholds?.['15000']?.declaration_signed && (
                   <View style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#9C27B0', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 6 }}>🚨 Anno {coach?.contract_start_year}: Soglia dei €15.000</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 6 }}>🚨 Anno {((coach as any)?._derivedStartYear ?? coach?.contract_start_year)}: Soglia dei €15.000</Text>
                     <Text style={{ fontSize: 13, color: '#6A1B9A', textAlign: 'center', lineHeight: 18 }}>
                       Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus?.thresholds?.['15000']?.threshold_month || 0]}</Text> supererà la soglia fiscale di €15.000.
                     </Text>
@@ -1165,7 +1165,7 @@ export default function AdminCoachDetail() {
                 {/* Warning: approaching €5.000 - YEAR 2 */}
                 {thresholdStatus2?.thresholds?.['5000']?.needs_warning && !thresholdStatus2?.thresholds?.['5000']?.declaration_signed && (
                   <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 6 }}>⚠️ Anno {coach?.contract_end_year}: Soglia dei €5.000</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 6 }}>⚠️ Anno {((coach as any)?._derivedEndYear ?? coach?.contract_end_year)}: Soglia dei €5.000</Text>
                     <Text style={{ fontSize: 13, color: '#E65100', textAlign: 'center', lineHeight: 18 }}>
                       Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus2?.thresholds?.['5000']?.threshold_month || 0]}</Text> supererà la soglia previdenziale di €5.000.
                     </Text>
@@ -1175,7 +1175,7 @@ export default function AdminCoachDetail() {
                 {/* Warning: approaching €15.000 - YEAR 2 */}
                 {thresholdStatus2?.thresholds?.['15000']?.needs_warning && !thresholdStatus2?.thresholds?.['15000']?.declaration_signed && (
                   <View style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#9C27B0', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 6 }}>🚨 Anno {coach?.contract_end_year}: Soglia dei €15.000</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 6 }}>🚨 Anno {((coach as any)?._derivedEndYear ?? coach?.contract_end_year)}: Soglia dei €15.000</Text>
                     <Text style={{ fontSize: 13, color: '#6A1B9A', textAlign: 'center', lineHeight: 18 }}>
                       Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus2?.thresholds?.['15000']?.threshold_month || 0]}</Text> supererà la soglia fiscale di €15.000.
                     </Text>
@@ -1185,26 +1185,26 @@ export default function AdminCoachDetail() {
                 {/* Signed: declarations firmate - YEAR 1 */}
                 {thresholdStatus?.thresholds?.['5000']?.declaration_signed && (
                   <View style={{ backgroundColor: '#D4EDDA', borderWidth: 2, borderColor: '#28A745', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {coach?.contract_start_year}: Dichiarazione €5.000 firmata</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {((coach as any)?._derivedStartYear ?? coach?.contract_start_year)}: Dichiarazione €5.000 firmata</Text>
                     <Text style={{ fontSize: 13, color: '#155724', textAlign: 'center', fontStyle: 'italic' }}>Soglia previdenziale comunicata{((thresholdStatus?.thresholds?.['5000']?.threshold_month) && (thresholdStatus?.thresholds?.['5000']?.threshold_month) >= 1 && (thresholdStatus?.thresholds?.['5000']?.threshold_month) <= 12) ? ` (superata nel mese di ${['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus?.thresholds?.['5000']?.threshold_month]})` : ''}</Text>
                   </View>
                 )}
                 {thresholdStatus?.thresholds?.['15000']?.declaration_signed && (
                   <View style={{ backgroundColor: '#D4EDDA', borderWidth: 2, borderColor: '#28A745', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {coach?.contract_start_year}: Dichiarazione €15.000 firmata</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {((coach as any)?._derivedStartYear ?? coach?.contract_start_year)}: Dichiarazione €15.000 firmata</Text>
                     <Text style={{ fontSize: 13, color: '#155724', textAlign: 'center', fontStyle: 'italic' }}>Soglia fiscale comunicata{((thresholdStatus?.thresholds?.['15000']?.threshold_month) && (thresholdStatus?.thresholds?.['15000']?.threshold_month) >= 1 && (thresholdStatus?.thresholds?.['15000']?.threshold_month) <= 12) ? ` (superata nel mese di ${['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus?.thresholds?.['15000']?.threshold_month]})` : ''}</Text>
                   </View>
                 )}
                 {/* Signed: declarations firmate - YEAR 2 */}
                 {thresholdStatus2?.thresholds?.['5000']?.declaration_signed && (
                   <View style={{ backgroundColor: '#E3F2FD', borderWidth: 2, borderColor: '#2196F3', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0', textAlign: 'center', marginBottom: 6 }}>✅ Anno {coach?.contract_end_year}: Dichiarazione €5.000 firmata</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0', textAlign: 'center', marginBottom: 6 }}>✅ Anno {((coach as any)?._derivedEndYear ?? coach?.contract_end_year)}: Dichiarazione €5.000 firmata</Text>
                     <Text style={{ fontSize: 13, color: '#1565C0', textAlign: 'center', fontStyle: 'italic' }}>Soglia previdenziale comunicata{((thresholdStatus2?.thresholds?.['5000']?.threshold_month) && (thresholdStatus2?.thresholds?.['5000']?.threshold_month) >= 1 && (thresholdStatus2?.thresholds?.['5000']?.threshold_month) <= 12) ? ` (superata nel mese di ${['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus2?.thresholds?.['5000']?.threshold_month]})` : ''}</Text>
                   </View>
                 )}
                 {thresholdStatus2?.thresholds?.['15000']?.declaration_signed && (
                   <View style={{ backgroundColor: '#E3F2FD', borderWidth: 2, borderColor: '#2196F3', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0', textAlign: 'center', marginBottom: 6 }}>✅ Anno {coach?.contract_end_year}: Dichiarazione €15.000 firmata</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0', textAlign: 'center', marginBottom: 6 }}>✅ Anno {((coach as any)?._derivedEndYear ?? coach?.contract_end_year)}: Dichiarazione €15.000 firmata</Text>
                     <Text style={{ fontSize: 13, color: '#1565C0', textAlign: 'center', fontStyle: 'italic' }}>Soglia fiscale comunicata{((thresholdStatus2?.thresholds?.['15000']?.threshold_month) && (thresholdStatus2?.thresholds?.['15000']?.threshold_month) >= 1 && (thresholdStatus2?.thresholds?.['15000']?.threshold_month) <= 12) ? ` (superata nel mese di ${['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus2?.thresholds?.['15000']?.threshold_month]})` : ''}</Text>
                   </View>
                 )}
