@@ -713,26 +713,30 @@ export default function CoachCompensation() {
     
     // Show signed declarations
     if (thresholdStatus.thresholds['5000'].declaration_signed) {
+      const m1 = thresholdStatus.thresholds['5000'].threshold_month;
+      const monthLabel1 = (m1 && m1 >= 1 && m1 <= 12) ? MONTH_NAMES[m1] : '';
       warnings.push(
         <View key="signed-5000" style={styles.thresholdSignedBox}>
           <Text style={styles.thresholdSignedTitle}>
             ✅ Anno {contractStartYear}: Dichiarazione €5.000 firmata
           </Text>
           <Text style={styles.thresholdSignedBody}>
-            Soglia previdenziale comunicata
+            Soglia previdenziale comunicata{monthLabel1 ? ` (superata nel mese di ${monthLabel1})` : ''}
           </Text>
         </View>
       );
     }
     
     if (thresholdStatus.thresholds['15000'].declaration_signed) {
+      const m2 = thresholdStatus.thresholds['15000'].threshold_month;
+      const monthLabel2 = (m2 && m2 >= 1 && m2 <= 12) ? MONTH_NAMES[m2] : '';
       warnings.push(
         <View key="signed-15000" style={styles.thresholdSignedBox}>
           <Text style={styles.thresholdSignedTitle}>
             ✅ Anno {contractStartYear}: Dichiarazione €15.000 firmata
           </Text>
           <Text style={styles.thresholdSignedBody}>
-            Soglia fiscale comunicata
+            Soglia fiscale comunicata{monthLabel2 ? ` (superata nel mese di ${monthLabel2})` : ''}
           </Text>
         </View>
       );
@@ -756,26 +760,30 @@ export default function CoachCompensation() {
       
       // Show signed declarations for 2026 - LIGHT BLUE to distinguish from first year
       if (thresholdStatus2026.thresholds['5000'].declaration_signed) {
+        const m1y2 = thresholdStatus2026.thresholds['5000'].threshold_month;
+        const monthLabel1y2 = (m1y2 && m1y2 >= 1 && m1y2 <= 12) ? MONTH_NAMES[m1y2] : '';
         warnings.push(
           <View key="signed-5000-2026" style={[styles.thresholdSignedBox, { backgroundColor: '#E3F2FD', borderColor: '#2196F3' }]}>
             <Text style={[styles.thresholdSignedTitle, { color: '#1565C0' }]}>
               ✅ Anno {year2026}: Dichiarazione €5.000 firmata
             </Text>
             <Text style={[styles.thresholdSignedBody, { color: '#1565C0' }]}>
-              Soglia previdenziale comunicata
+              Soglia previdenziale comunicata{monthLabel1y2 ? ` (superata nel mese di ${monthLabel1y2})` : ''}
             </Text>
           </View>
         );
       }
       
       if (thresholdStatus2026.thresholds['15000'].declaration_signed) {
+        const m2y2 = thresholdStatus2026.thresholds['15000'].threshold_month;
+        const monthLabel2y2 = (m2y2 && m2y2 >= 1 && m2y2 <= 12) ? MONTH_NAMES[m2y2] : '';
         warnings.push(
           <View key="signed-15000-2026" style={[styles.thresholdSignedBox, { backgroundColor: '#E3F2FD', borderColor: '#2196F3' }]}>
             <Text style={[styles.thresholdSignedTitle, { color: '#1565C0' }]}>
               ✅ Anno {year2026}: Dichiarazione €15.000 firmata
             </Text>
             <Text style={[styles.thresholdSignedBody, { color: '#1565C0' }]}>
-              Soglia fiscale comunicata
+              Soglia fiscale comunicata{monthLabel2y2 ? ` (superata nel mese di ${monthLabel2y2})` : ''}
             </Text>
           </View>
         );

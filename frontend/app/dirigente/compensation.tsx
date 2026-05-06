@@ -605,7 +605,7 @@ export default function DirigenteCompensation() {
             ✅ Anno {contractStartYear}: Dichiarazione €5.000 firmata
           </Text>
           <Text style={styles.thresholdSignedBody}>
-            Soglia previdenziale comunicata
+            Soglia previdenziale comunicata{((thresholdStatus.thresholds['5000'].threshold_month) && (thresholdStatus.thresholds['5000'].threshold_month) >= 1 && (thresholdStatus.thresholds['5000'].threshold_month) <= 12) ? ` (superata nel mese di ${['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus.thresholds['5000'].threshold_month]})` : ''}
           </Text>
         </View>
       );
@@ -618,7 +618,7 @@ export default function DirigenteCompensation() {
             ✅ Anno {contractStartYear}: Dichiarazione €15.000 firmata
           </Text>
           <Text style={styles.thresholdSignedBody}>
-            Soglia fiscale comunicata
+            Soglia fiscale comunicata{((thresholdStatus.thresholds['15000'].threshold_month) && (thresholdStatus.thresholds['15000'].threshold_month) >= 1 && (thresholdStatus.thresholds['15000'].threshold_month) <= 12) ? ` (superata nel mese di ${['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus.thresholds['15000'].threshold_month]})` : ''}
           </Text>
         </View>
       );
@@ -636,7 +636,7 @@ export default function DirigenteCompensation() {
               ✅ Anno {year2026}: Dichiarazione €5.000 firmata
             </Text>
             <Text style={[styles.thresholdSignedBody, { color: '#1565C0' }]}>
-              Soglia previdenziale comunicata
+              Soglia previdenziale comunicata{((thresholdStatus2026.thresholds['5000'].threshold_month) && (thresholdStatus2026.thresholds['5000'].threshold_month) >= 1 && (thresholdStatus2026.thresholds['5000'].threshold_month) <= 12) ? ` (superata nel mese di ${['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus2026.thresholds['5000'].threshold_month]})` : ''}
             </Text>
           </View>
         );
@@ -649,7 +649,7 @@ export default function DirigenteCompensation() {
               ✅ Anno {year2026}: Dichiarazione €15.000 firmata
             </Text>
             <Text style={[styles.thresholdSignedBody, { color: '#1565C0' }]}>
-              Soglia fiscale comunicata
+              Soglia fiscale comunicata{((thresholdStatus2026.thresholds['15000'].threshold_month) && (thresholdStatus2026.thresholds['15000'].threshold_month) >= 1 && (thresholdStatus2026.thresholds['15000'].threshold_month) <= 12) ? ` (superata nel mese di ${['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus2026.thresholds['15000'].threshold_month]})` : ''}
             </Text>
           </View>
         );
