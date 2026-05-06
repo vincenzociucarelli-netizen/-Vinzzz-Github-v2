@@ -882,6 +882,9 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           <View style={styles.athletesList}>
             {athletes.map((athlete) => {
               // Determina stato e colori in base al trial
+              // pending_trial: atleta appena iscritto, ancora NON firmata autorizzazione prova
+              //               oppure firmata ma PRIMA scansione QR non ancora avvenuta
+              const isPendingTrial = athlete.status === 'pending_trial';
               const isWaitingTrial = athlete.status === 'trial' && !athlete.trial_start_date;
               const isInTrial = athlete.status === 'trial' && !!athlete.trial_start_date;
               const isActive = athlete.status === 'active';
@@ -889,27 +892,33 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
               
               const borderColor = isPending 
                 ? '#FFE082'
-                : isWaitingTrial
-                  ? '#9C27B0' // Viola
-                  : isInTrial
-                    ? '#FF9500' // Arancione
-                    : '#34C759'; // Verde
+                : isPendingTrial
+                  ? '#9C27B0' // Viola (stesso visual di WaitingTrial)
+                  : isWaitingTrial
+                    ? '#9C27B0' // Viola
+                    : isInTrial
+                      ? '#FF9500' // Arancione
+                      : '#34C759'; // Verde
               
               const iconColor = isPending 
                 ? '#FF9500' 
-                : isWaitingTrial
+                : isPendingTrial
                   ? '#9C27B0'
-                  : isInTrial
-                    ? '#FF9500'
-                    : '#34C759';
+                  : isWaitingTrial
+                    ? '#9C27B0'
+                    : isInTrial
+                      ? '#FF9500'
+                      : '#34C759';
               
               const statusText = isPending
                 ? 'In attesa di approvazione'
-                : isWaitingTrial
+                : isPendingTrial
                   ? 'In attesa di inizio prova'
-                  : isInTrial
-                    ? 'In prova'
-                    : 'Attivo';
+                  : isWaitingTrial
+                    ? 'In attesa di inizio prova'
+                    : isInTrial
+                      ? 'In prova'
+                      : 'Attivo';
               
               return (
               <TouchableOpacity

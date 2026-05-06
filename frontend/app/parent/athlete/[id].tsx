@@ -1543,7 +1543,7 @@ export default function AthleteDetail() {
                 fontWeight: '600',
                 fontSize: 12
               }} data-testid="athlete-status-badge">
-                {athlete.status === 'active' ? 'Attivo' : athlete.status === 'trial' ? (athlete.trial_start_date ? 'In Prova' : 'Attesa Prova') : athlete.status === 'deletion_requested' ? 'Cancellazione' : athlete.status === 'pending_certificate' ? 'Validazione Certificato' : athlete.status || ''}
+                {athlete.status === 'active' ? 'Attivo' : athlete.status === 'pending_trial' ? 'Attesa Prova' : athlete.status === 'trial' ? (athlete.trial_start_date ? 'In Prova' : 'Attesa Prova') : athlete.status === 'deletion_requested' ? 'Cancellazione' : athlete.status === 'pending_certificate' ? 'Validazione Certificato' : athlete.status || ''}
               </Text>
             </View>
           </View>

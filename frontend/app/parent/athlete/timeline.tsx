@@ -76,6 +76,7 @@ export default function AthleteTimeline() {
 
   const statusLabel: Record<string, string> = {
     active: 'Attivo',
+    pending_trial: 'Attesa Prova',
     trial: 'In Prova',
     inactive: 'Inattivo',
     deletion_requested: 'Cancellazione Richiesta',
@@ -83,6 +84,7 @@ export default function AthleteTimeline() {
 
   const statusColor: Record<string, string> = {
     active: '#34C759',
+    pending_trial: '#9C27B0',
     trial: '#FF9500',
     inactive: '#8E8E93',
     deletion_requested: '#FF3B30',
