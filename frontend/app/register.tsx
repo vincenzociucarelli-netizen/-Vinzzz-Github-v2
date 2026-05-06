@@ -150,19 +150,8 @@ export default function Register() {
       return;
     }
 
-    // Parents must provide their fiscal code (used to issue the
-    // tax-deductible "Attestato di Versamento" / payment statement).
-    if (role === 'parent') {
-      const cf = fiscalCode.trim().toUpperCase();
-      if (!cf) {
-        showAlert('Codice Fiscale richiesto', 'Inserisci il tuo Codice Fiscale: serve per emettere la ricevuta fiscale per la dichiarazione dei redditi.');
-        return;
-      }
-      if (cf.length !== 16) {
-        showAlert('Codice Fiscale non valido', 'Il Codice Fiscale deve essere di 16 caratteri.');
-        return;
-      }
-    }
+    // Parents' fiscal code is NOT requested at registration.
+    // It will be added later in their profile (for tax receipts).
 
     // Invite code required for ALL roles
     if (!inviteCode) {
@@ -636,27 +625,6 @@ export default function Register() {
         returnKeyType="next"
         onSubmitEditing={() => fiscalCodeRef.current?.focus()}
       />
-
-      <Text style={styles.inputLabel}>Codice Fiscale {role === 'parent' ? '*' : '(opzionale)'}</Text>
-      <TextInput
-        ref={fiscalCodeRef}
-        style={styles.input}
-        placeholder="es: RSSMRA80A01H501Z"
-        placeholderTextColor="#aaa"
-        value={fiscalCode}
-        onChangeText={(text) => setFiscalCode(text.toUpperCase())}
-        autoCapitalize="characters"
-        autoCorrect={false}
-        maxLength={16}
-        returnKeyType="next"
-        onSubmitEditing={() => phoneRef.current?.focus()}
-        data-testid="register-fiscal-code-input"
-      />
-      {role === 'parent' && (
-        <Text style={styles.helperText}>
-          Necessario per emettere la ricevuta fiscale ("Attestato di Versamento") detraibile in dichiarazione dei redditi.
-        </Text>
-      )}
 
       <Text style={styles.inputLabel}>Telefono * (per contatti urgenti)</Text>
       <TextInput
