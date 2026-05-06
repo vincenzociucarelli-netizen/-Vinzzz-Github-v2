@@ -248,6 +248,8 @@ export default function AdminCoachDetail() {
         // Save derived years on coach object for banner labels
         (coachRes.data as any)._derivedStartYear = startYear;
         (coachRes.data as any)._derivedEndYear = endYear;
+        // Update coach state so banners can read the derived years
+        setCoach((prev: any) => prev ? { ...prev, _derivedStartYear: startYear, _derivedEndYear: endYear } : prev);
         
         const ts1 = await api.get(`/coach/${id}/threshold-status/${startYear}`);
         setThresholdStatus(ts1.data);
