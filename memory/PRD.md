@@ -15,114 +15,115 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Uptime: UptimeRobot (HEAD /api/health)
 - Produzione: https://registrateam.it
 
+## Branch Git
+- **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico. Niente più merge manuali.
+- `main` obsoleto, non lo usiamo più.
+
 ## Credenziali
 - Admin: `vincenzo.ciucarelli@gmail.com`
 - Istituzionale: `pallavoloperugia@gmail.com`
 - Test coach: STINZI SIMONA (registrata il 06/05/2026)
 
-## Workflow Deploy
-1. `Save to GitHub` → branch `02-05-2026`
-2. Merge PR su `main` (via GitHub web)
-3. Vercel deploya **automaticamente** quando vede il merge da utente reale (non `emergent-agent-e1`)
-4. Render deploya da branch `02-05-2026` con delay 3-10 min (Free tier)
-5. Hard refresh `Ctrl+Shift+R` su registrateam.it
+## Stato Attuale (06/05/2026 — sera)
 
-## Stato Attuale (06/05/2026 — fine sessione)
+### ✅ Già live in produzione (PR #11, #12, #13, #14, #15)
+- Brevo email risolto (era SMTP key al posto di API key)
+- Performance backend (proiezioni MongoDB)
+- HEAD /api/health
+- Anti-duplicati GDPR + cancellazione atleta
+- Fix NameError approvazione cancellazione
+- UI login, Modal Termini/Privacy, layout athlete
+- Registrazione anagrafica completa (coach/dirigente)
+- Download PDF firmati (mobile + 401 + filename)
+- Banner soglie €5k/€15k in proiezione (coach + admin coach)
+- Pulsante back universale
+- Banner admin coach visibili in modalità lettura
+- Derivazione `_derivedStartYear` da date contratto
+- Banner verdi "firmata" con "(superata nel mese di X)" — coach + admin
 
-### ✅ Completato in produzione
-- 23 fix pushati e LIVE in produzione (PR #11 + PR #12):
-  - Brevo email integration **risolta** (era key SMTP al posto di key API → "Key not found")
-  - Performance backend (proiezioni MongoDB, ~30s → <1s)
-  - Indexes MongoDB
-  - HEAD /api/health per UptimeRobot
-  - Anti-duplicati GDPR + cancellazione atleta
-  - Fix NameError approvazione cancellazione
-  - UI: ricevuta "Dichiarazione dei Redditi", logo login, allineamenti
-  - Modal in-app per Termini/Privacy in registrazione (no più window.open)
-  - **Salvataggio campi anagrafici** in `POST /auth/register` (data nascita, luogo, indirizzo, città, CAP, provincia, n° tesserino) — bug critico per coach/dirigenti
-  - **Download PDF firmati** (coach/collaboratore/dirigente) — sostituito window.open con `<a download>` per bypassare popup blocker mobile + gestione 401 (sessione scaduta) + nome file pulito
-  - **Banner soglie €5k/€15k** in proiezione (frontend + backend `needs_warning`) — vista coach + admin
-  - **Pulsante back universale** in 21 file (canGoBack/replace fallback)
-  - **Banner soglie nella vista admin coach in modalità lettura** (era solo in editing)
-  - Derivazione automatica `contract_start_year`/`contract_end_year` da date in admin coach
-
-### ⏳ Pending push GitHub (2 fix)
-- **Banner verdi "firmata"** ora mostrano "(superata nel mese di X)" — applicato in 6 file × 4 banner = 24 punti
-- Eventuali altri micro-fix dalla prossima sessione
+### ⏳ Pending push GitHub (3 fix locali stasera 06/05 tarda sera)
+1. **CF rimosso dalla registrazione ADULTI** (`register.tsx`): coach/dirigente/collaboratore/atleta/genitore NON devono più inserire CF in registrazione. Lo aggiungeranno dopo nel profilo. Meno invasivo.
+2. **CF genitore tax_payer** (`register-athlete.tsx`, solo minorenni): MANTENUTO perché serve per Attestato di Versamento. Aggiunto `autoComplete="off"` + `autoCorrect={false}` + `textContentType="none"` per bloccare il browser autofill (che riempiva con nome utente Google troncato).
+3. **Status `pending_trial` riconosciuto nel frontend genitore** (3 file: `parent/index.tsx`, `parent/athlete/[id].tsx`, `parent/athlete/timeline.tsx`): ora gli atleti minorenni appena iscritti appaiono come "In attesa di inizio prova" 🟣 invece di "Attivo" 🟢.
 
 ### 🔴 Issue P0 attive
-1. **Simona ha profilo incompleto** in produzione (data nascita & co perse a causa del bug di registrazione). Soluzione: deve compilare manualmente da "Modifica Profilo".
-2. **Logo login con riquadro bianco** → l'utente deve caricare un PNG con sfondo trasparente in Impostazioni Società.
+1. Simona ha profilo incompleto in produzione (dati persi nel bug vecchio). Deve completare da "Modifica Profilo".
+2. Logo login con riquadro bianco → l'utente deve caricare un PNG trasparente.
 
 ### 🟡 Issue P1
-- **Multi-tenancy audit**: Audit di tutti i `db.find()` per garantire filtro `society_id`. Necessario prima di onboardare la seconda società ("Sirio").
-- **Riattivare /register-society** con flusso onboarding nuove società.
+- Multi-tenancy audit (filtro `society_id`) prima di onboardare Sirio.
+- Riattivare `/register-society` per nuove società.
 
 ### 🟢 P2/P3
-- Pulizia audit log (firma duplicata Luigi Bianchi 04/05)
-- Aggiornare CF Luigi Bianchi (fu vittima del bug registrazione)
+- Pulizia audit log (firma duplicata Luigi Bianchi)
+- Aggiornare CF Luigi Bianchi
 - Preview Excel re-import calendario
-- Stripe live mode (oggi è test mode)
-- Account Brevo dedicato `info@registrateam.it`
-- Refactoring `server.py` (~25k righe) → spezzare in `routes/`
-- ~38 `db.settings.find_one()` ancora senza projections
+- Stripe live mode
+- Account Brevo dedicato info@registrateam.it
+- Refactoring `server.py` (~25k righe)
+- ~38 `db.find_one()` senza projections
 
-## 🎯 Priorità Prossima Sessione (06/05/2026 pomeriggio)
-**L'utente ha specificato**: la presentazione di RegistraTEAM ai **genitori** deve essere PERFETTA ("altrimenti pensano che sia un cesso e snobbano"). Priorità assoluta:
+## Ciclo di vita ATLETA MINORE (requisito utente)
+```
+[ISCRIZIONE GENITORE]
+   ↓
+pending_trial  ← 🟣 "In attesa di inizio prova" (appena iscritto)
+   ↓ (genitore firma autorizzazione prova)
+pending_trial  ← ancora in attesa del 1° QR scan
+   ↓ (coach fa 1a scansione QR — parte timer 7gg/3allenamenti)
+trial          ← 🟠 "In prova"
+   ↓
+   ├─→ rinuncia → uscita
+   └─→ continua → firma consensi privacy GDPR → active ← 🟢 "Attivo"
+```
+**NOTA**: Anche con certificato medico inserito e convalidato da admin, l'atleta **resta in prova** finché il genitore non firma i consensi finali.
 
-1. 🔵 **Test E2E famiglia allargata: 3 GENITORI + 2 ATLETI MINORENNI**
-   - Scenari critici da coprire:
-     - **1 atleta — 2 genitori**: entrambi possono vedere il figlio dopo linking; **uno qualsiasi dei 2** può firmare i documenti GDPR (la firma di uno è valida per il minore)
-     - **1 genitore — 2 atleti**: vede entrambi i figli nella propria dashboard
-   - Step da testare:
-     - Invito genitore via email Brevo
-     - Registrazione genitore (CF, data nascita, indirizzo — verificare che il fix di registrazione anagrafica funzioni)
-     - Linking atleta esistente al genitore (workflow manuale parent-athlete)
-     - Firma documenti GDPR per il minore (uno qualsiasi dei 2 genitori basta)
-     - **Certificato medico SOLO DATE** (no upload file): genitore inserisce data emissione + data scadenza → admin convalida → sistema gestisce alert scadenza
-     - Pagamento quote
-     - Visione calendario allenamenti del/dei figlio/i
+## Regole Documenti/Firma GDPR
+- Documenti di un minore possono essere firmati da **UNO QUALSIASI** dei 2 genitori (non serve la firma di entrambi).
+- Certificato medico: **NO upload file**. Solo data emissione + data scadenza + convalida admin.
 
-2. 🟣 **Completare scanner QR coach** (presenze allenamenti/gare)
+## 🎯 Priorità Prossima Sessione (07/05/2026)
 
-3. 🟢 Bug "fix prima delle altre presentazioni" (Coach/Dirigente sono utenti obbligati, possono tollerare qualche bug)
+1. 🔵 **Save to GitHub** dei 3 fix pendenti di stasera (CF + autofill + pending_trial)
+
+2. 🔵 **Continuare test famiglia allargata**:
+   - **Setup già fatto**: Mario Rossi + Anna Verdi registrati (padre+madre), Giulia Rossi (atleta loro) + Marco Bianchi (atleta di Anna da precedente unione) caricati.
+   - **Prossimo step**: Admin invita **Luca Bianchi** (padre biologico di Marco) via email → Luca si registra → sistema chiede "Hai figli già caricati?" → Luca dice SÌ → seleziona Marco → sistema invia richiesta ad Anna (già registrata come altra genitrice di Marco) → Anna accetta → Luca vede Marco in dashboard (ma NON Giulia).
+
+3. 🔵 **Test scenari critici**:
+   - 1 atleta (Marco) → 2 genitori (Anna + Luca): entrambi possono vedere Marco; firmare documenti basta uno qualsiasi.
+   - 1 genitore (Anna) → 2 atleti (Giulia + Marco): vede entrambi in dashboard.
+   - Visione calendario, pagamenti quote, inserimento date certificato medico, autorizzazione prova.
+
+4. 🟣 Completare scanner QR coach (presenze).
 
 ## Architettura File Chiave
 ```
 /app
 ├── memory/PRD.md, test_credentials.md
 ├── backend/
-│   ├── server.py                 # ~25k righe (in attesa di refactoring)
-│   ├── email_service.py          # Brevo API HTTP v3
-│   ├── routes/
-│   │   ├── settings.py
-│   │   └── primary_admin.py
-│   └── render.yaml
+│   ├── server.py (~25k righe)
+│   ├── email_service.py (Brevo API HTTP v3)
+│   └── routes/
 ├── frontend/
 │   ├── app/
-│   │   ├── login.tsx, register.tsx
-│   │   ├── coach/profile.tsx, compensation.tsx, index.tsx
-│   │   ├── collaboratore/profile.tsx, compensation.tsx
-│   │   ├── dirigente/profile.tsx, compensation.tsx
-│   │   ├── athlete/, parent/
-│   │   └── admin/
-│   │       ├── coach/[id].tsx
-│   │       ├── collaboratore/[id].tsx
-│   │       ├── dirigente/[id].tsx
-│   │       └── athlete/[id]/
+│   │   ├── register.tsx, parent/register-athlete.tsx
+│   │   ├── login.tsx
+│   │   ├── coach/, collaboratore/, dirigente/, athlete/, parent/
+│   │   └── admin/coach/[id].tsx, admin/dirigente/[id].tsx, admin/collaboratore/[id].tsx
 │   └── src/components/
 ```
 
 ## API Endpoint Chiave
-- `POST /api/auth/register` — registrazione utente (FIXATO 06/05: salva tutti i campi anagrafici)
-- `GET /api/coach/{id}/threshold-status/{year}` — calcolo soglie €5k/€15k
-- `GET /api/coach/my-teams` — squadre assegnate
+- `POST /api/auth/register` — registra utente (ora salva tutti i campi anagrafici ma CF è opzionale da UI)
+- `POST /api/parent/register-athlete` — registra atleta minorenne (status iniziale `pending_trial`)
+- `GET /api/coach/{id}/threshold-status/{year}` — soglie €5k/€15k
 - `GET /api/documents/signed/{id}/pdf` — download PDF firmato
-- `POST /api/documents/sign` — firma documento GDPR
-- `GET /api/health` (GET + HEAD per UptimeRobot)
+- QR scan handler (riga ~11247 server.py) — converte `pending_trial` → `trial` al 1° scan
 
 ## Note Operative Critiche
-- **Vercel Hobby** blocca commit di `emergent-agent-e1`: serve un commit utente reale (es. modifica README.md aggiungendo uno spazio) per sbloccare deploy. **MA** se l'utente fa il merge della PR, il commit di merge è suo e Vercel deploya senza problemi.
-- **Render Free** ha webhook con delay 3-10 min. Per fix solo frontend non serve aspettarlo (Vercel basta).
-- **Brevo**: blocco IP DISATTIVATO sulle API perché Render non ha IP statici. Solo 1 chiave API attiva: `frW0fa` (RegistraTEAM Render v2).
-- **Mongo projections**: tutte le query pesanti escludono `athlete_photo`, `logo`, `signature_image`, `gdpr_signature_image_data`. Da estendere a ~38 query rimaste.
+- **Vercel Hobby**: commit di `emergent-agent-e1` vengono bloccati. Con il merge di un commit utente, sbloccano.
+- **Render Free**: webhook delay 3-10 min. Per fix solo frontend basta Vercel.
+- **Brevo**: blocco IP DISATTIVATO sulle API (Render non ha IP statici). 1 chiave attiva `frW0fa` (RegistraTEAM Render v2).
+- **Mongo**: tutte le query pesanti escludono `athlete_photo`, `logo`, `signature_image`, `gdpr_signature_image_data`.
+- **Autofill browser su CF genitore**: risolto con `autoComplete="off"` + `autoCorrect={false}` + `textContentType="none"`. Se riappare in futuro su altri campi, usa stessa combinazione.
