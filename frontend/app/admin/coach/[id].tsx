@@ -232,8 +232,23 @@ export default function AdminCoachDetail() {
 
       // Load threshold status for both contract years
       try {
-        const startYear = coachRes.data.contract_start_year || new Date().getFullYear();
-        const endYear = coachRes.data.contract_end_year || startYear;
+        // Derive contract years from dates if dedicated year fields are missing
+        let startYear: number | undefined = coachRes.data.contract_start_year;
+        if (!startYear && coachRes.data.contract_start_date) {
+          try { startYear = parseInt(String(coachRes.data.contract_start_date).split('-')[0]); } catch {}
+        }
+        if (!startYear) startYear = new Date().getFullYear();
+        
+        let endYear: number | undefined = coachRes.data.contract_end_year;
+        if (!endYear && coachRes.data.contract_end_date) {
+          try { endYear = parseInt(String(coachRes.data.contract_end_date).split('-')[0]); } catch {}
+        }
+        if (!endYear) endYear = startYear;
+        
+        // Save derived years on coach object for banner labels
+        (coachRes.data as any)._derivedStartYear = startYear;
+        (coachRes.data as any)._derivedEndYear = endYear;
+        
         const ts1 = await api.get(`/coach/${id}/threshold-status/${startYear}`);
         setThresholdStatus(ts1.data);
         if (endYear > startYear) {
@@ -1329,7 +1344,7 @@ export default function AdminCoachDetail() {
               {/* Warning: approaching €5.000 - YEAR 1 */}
               {thresholdStatus?.thresholds?.['5000']?.needs_warning && !thresholdStatus?.thresholds?.['5000']?.declaration_signed && (
                 <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 6 }}>⚠️ Anno {coach?.contract_start_year}: Soglia dei €5.000</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 6 }}>⚠️ Anno {((coach as any)?._derivedStartYear ?? coach?.contract_start_year)}: Soglia dei €5.000</Text>
                   <Text style={{ fontSize: 13, color: '#E65100', textAlign: 'center', lineHeight: 18 }}>
                     Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus?.thresholds?.['5000']?.threshold_month || 0]}</Text> supererà la soglia previdenziale di €5.000.
                   </Text>
@@ -1339,7 +1354,7 @@ export default function AdminCoachDetail() {
               {/* Warning: approaching €15.000 - YEAR 1 */}
               {thresholdStatus?.thresholds?.['15000']?.needs_warning && !thresholdStatus?.thresholds?.['15000']?.declaration_signed && (
                 <View style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#9C27B0', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 6 }}>🚨 Anno {coach?.contract_start_year}: Soglia dei €15.000</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 6 }}>🚨 Anno {((coach as any)?._derivedStartYear ?? coach?.contract_start_year)}: Soglia dei €15.000</Text>
                   <Text style={{ fontSize: 13, color: '#6A1B9A', textAlign: 'center', lineHeight: 18 }}>
                     Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus?.thresholds?.['15000']?.threshold_month || 0]}</Text> supererà la soglia fiscale di €15.000.
                   </Text>
@@ -1349,7 +1364,7 @@ export default function AdminCoachDetail() {
               {/* Warning: approaching €5.000 - YEAR 2 */}
               {thresholdStatus2?.thresholds?.['5000']?.needs_warning && !thresholdStatus2?.thresholds?.['5000']?.declaration_signed && (
                 <View style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 6 }}>⚠️ Anno {coach?.contract_end_year}: Soglia dei €5.000</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 6 }}>⚠️ Anno {((coach as any)?._derivedEndYear ?? coach?.contract_end_year)}: Soglia dei €5.000</Text>
                   <Text style={{ fontSize: 13, color: '#E65100', textAlign: 'center', lineHeight: 18 }}>
                     Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus2?.thresholds?.['5000']?.threshold_month || 0]}</Text> supererà la soglia previdenziale di €5.000.
                   </Text>
@@ -1359,7 +1374,7 @@ export default function AdminCoachDetail() {
               {/* Warning: approaching €15.000 - YEAR 2 */}
               {thresholdStatus2?.thresholds?.['15000']?.needs_warning && !thresholdStatus2?.thresholds?.['15000']?.declaration_signed && (
                 <View style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#9C27B0', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 6 }}>🚨 Anno {coach?.contract_end_year}: Soglia dei €15.000</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 6 }}>🚨 Anno {((coach as any)?._derivedEndYear ?? coach?.contract_end_year)}: Soglia dei €15.000</Text>
                   <Text style={{ fontSize: 13, color: '#6A1B9A', textAlign: 'center', lineHeight: 18 }}>
                     Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][thresholdStatus2?.thresholds?.['15000']?.threshold_month || 0]}</Text> supererà la soglia fiscale di €15.000.
                   </Text>
@@ -1369,25 +1384,25 @@ export default function AdminCoachDetail() {
               {/* Signed: declarations firmate - YEAR 1 */}
               {thresholdStatus?.thresholds?.['5000']?.declaration_signed && (
                 <View style={{ backgroundColor: '#D4EDDA', borderWidth: 2, borderColor: '#28A745', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {coach?.contract_start_year}: Dichiarazione €5.000 firmata</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {((coach as any)?._derivedStartYear ?? coach?.contract_start_year)}: Dichiarazione €5.000 firmata</Text>
                   <Text style={{ fontSize: 13, color: '#155724', textAlign: 'center', fontStyle: 'italic' }}>Soglia previdenziale comunicata</Text>
                 </View>
               )}
               {thresholdStatus?.thresholds?.['15000']?.declaration_signed && (
                 <View style={{ backgroundColor: '#D4EDDA', borderWidth: 2, borderColor: '#28A745', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {coach?.contract_start_year}: Dichiarazione €15.000 firmata</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {((coach as any)?._derivedStartYear ?? coach?.contract_start_year)}: Dichiarazione €15.000 firmata</Text>
                   <Text style={{ fontSize: 13, color: '#155724', textAlign: 'center', fontStyle: 'italic' }}>Soglia fiscale comunicata</Text>
                 </View>
               )}
               {thresholdStatus2?.thresholds?.['5000']?.declaration_signed && (
                 <View style={{ backgroundColor: '#D4EDDA', borderWidth: 2, borderColor: '#28A745', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {coach?.contract_end_year}: Dichiarazione €5.000 firmata</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {((coach as any)?._derivedEndYear ?? coach?.contract_end_year)}: Dichiarazione €5.000 firmata</Text>
                   <Text style={{ fontSize: 13, color: '#155724', textAlign: 'center', fontStyle: 'italic' }}>Soglia previdenziale comunicata</Text>
                 </View>
               )}
               {thresholdStatus2?.thresholds?.['15000']?.declaration_signed && (
                 <View style={{ backgroundColor: '#D4EDDA', borderWidth: 2, borderColor: '#28A745', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {coach?.contract_end_year}: Dichiarazione €15.000 firmata</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#155724', textAlign: 'center', marginBottom: 6 }}>✅ Anno {((coach as any)?._derivedEndYear ?? coach?.contract_end_year)}: Dichiarazione €15.000 firmata</Text>
                   <Text style={{ fontSize: 13, color: '#155724', textAlign: 'center', fontStyle: 'italic' }}>Soglia fiscale comunicata</Text>
                 </View>
               )}
