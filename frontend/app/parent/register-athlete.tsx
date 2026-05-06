@@ -611,6 +611,9 @@ export default function RegisterAthlete() {
             value={taxPayerFiscalCode}
             onChangeText={(text) => setTaxPayerFiscalCode(text.toUpperCase())}
             autoCapitalize="characters"
+            autoComplete="off"
+            autoCorrect={false}
+            textContentType="none"
             maxLength={16}
             returnKeyType="next"
           />
