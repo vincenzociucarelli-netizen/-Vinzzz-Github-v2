@@ -1533,13 +1533,13 @@ export default function AthleteDetail() {
               )}
             </View>
             <View style={{ 
-              backgroundColor: athlete.status === 'active' ? '#E8F5E9' : athlete.status === 'trial' ? (athlete.trial_start_date ? '#FFF3E0' : '#F3E5F5') : athlete.status === 'deletion_requested' ? '#FFEBEE' : athlete.status === 'pending_certificate' ? '#FFF3E0' : '#E3F2FD',
+              backgroundColor: athlete.status === 'active' ? '#E8F5E9' : athlete.status === 'pending_trial' ? '#F3E5F5' : athlete.status === 'trial' ? (athlete.trial_start_date ? '#FFF3E0' : '#F3E5F5') : athlete.status === 'deletion_requested' ? '#FFEBEE' : athlete.status === 'pending_certificate' ? '#FFF3E0' : '#E3F2FD',
               paddingHorizontal: 10, 
               paddingVertical: 5, 
               borderRadius: 12
             }}>
               <Text style={{ 
-                color: athlete.status === 'active' ? '#4CAF50' : athlete.status === 'trial' ? (athlete.trial_start_date ? '#FF9800' : '#7B1FA2') : athlete.status === 'deletion_requested' ? '#F44336' : athlete.status === 'pending_certificate' ? '#FF9800' : '#1976D2',
+                color: athlete.status === 'active' ? '#4CAF50' : athlete.status === 'pending_trial' ? '#7B1FA2' : athlete.status === 'trial' ? (athlete.trial_start_date ? '#FF9800' : '#7B1FA2') : athlete.status === 'deletion_requested' ? '#F44336' : athlete.status === 'pending_certificate' ? '#FF9800' : '#1976D2',
                 fontWeight: '600',
                 fontSize: 12
               }} data-testid="athlete-status-badge">
@@ -1893,7 +1893,7 @@ export default function AthleteDetail() {
           <Text style={styles.cardTitle}>Stato</Text>
           
           {/* In attesa d'inizio prova (VIOLA) */}
-          {athlete.status === 'trial' && !trialHasStarted && (
+          {(athlete.status === 'pending_trial' || (athlete.status === 'trial' && !trialHasStarted)) && (
             <>
               <View style={{ backgroundColor: '#F3E5F5', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#9C27B0', marginBottom: 12 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#7B1FA2', marginBottom: 4 }}>In attesa di inizio prova</Text>
