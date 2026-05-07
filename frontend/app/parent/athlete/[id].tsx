@@ -3033,7 +3033,7 @@ export default function AthleteDetail() {
         onRequestClose={() => setShowTrialSignModal(false)}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, maxHeight: '90%', overflow: 'hidden' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, maxHeight: '85%', overflow: 'hidden' }}>
             {/* Header */}
             <View style={{ backgroundColor: '#7B1FA2', paddingVertical: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Firma Dichiarazione di Prova</Text>
@@ -3042,7 +3042,7 @@ export default function AthleteDetail() {
               </TouchableOpacity>
             </View>
             
-            <ScrollView style={{ padding: 20 }} contentContainerStyle={{ paddingBottom: 20 }}>
+            <ScrollView style={{ padding: 20 }} contentContainerStyle={{ paddingBottom: 120 }}>
               {/* Info */}
               <View style={{ backgroundColor: '#F3E5F5', borderRadius: 10, padding: 14, marginBottom: 16 }}>
                 <Text style={{ fontSize: 13, color: '#6A1B9A', lineHeight: 20 }}>
