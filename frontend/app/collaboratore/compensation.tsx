@@ -619,11 +619,17 @@ export default function CollaboratoreCompensation() {
     
     const warnings = [];
     
-    // Calculate which month the threshold is actually crossed for each year
+    // Resolve threshold month from backend projection (preferred) with fallback to local records
     const monthlyComp = profile?.monthly_compensation || 0;
     const priorComp = profile?.other_annual_compensation || 0;
     
-    const findThresholdMonth = (year: number, threshold: number) => {
+    const monthNameFromBackend = (status: ThresholdStatus | null, type: '5000' | '15000') => {
+      const m = status?.thresholds?.[type]?.threshold_month;
+      if (m && m >= 1 && m <= 12) return MONTH_NAMES[m] || '';
+      return '';
+    };
+    
+    const findThresholdMonthFallback = (year: number, threshold: number) => {
       const yearRecords = records.filter(r => r.year === year).sort((a: any, b: any) => a.month - b.month);
       const prior = (year === contractStartYear) ? priorComp : 0;
       let cumulative = prior;
@@ -637,10 +643,10 @@ export default function CollaboratoreCompensation() {
       return '';
     };
     
-    const thresholdMonth5k_y1 = findThresholdMonth(contractStartYear, 5000);
-    const thresholdMonth15k_y1 = findThresholdMonth(contractStartYear, 15000);
-    const thresholdMonth5k_y2 = findThresholdMonth(contractStartYear + 1, 5000);
-    const thresholdMonth15k_y2 = findThresholdMonth(contractStartYear + 1, 15000);
+    const thresholdMonth5k_y1 = monthNameFromBackend(thresholdStatus, '5000') || findThresholdMonthFallback(contractStartYear, 5000);
+    const thresholdMonth15k_y1 = monthNameFromBackend(thresholdStatus, '15000') || findThresholdMonthFallback(contractStartYear, 15000);
+    const thresholdMonth5k_y2 = monthNameFromBackend(thresholdStatus2026, '5000') || findThresholdMonthFallback(contractStartYear + 1, 5000);
+    const thresholdMonth15k_y2 = monthNameFromBackend(thresholdStatus2026, '15000') || findThresholdMonthFallback(contractStartYear + 1, 15000);
     
     // ==================== FIRST YEAR (contractStartYear) WARNINGS ====================
     // Warning for approaching €5.000
