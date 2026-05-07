@@ -1877,7 +1877,7 @@ export default function AdminAthleteDetail() {
                             styles.roleOption,
                             editData.athlete_role === role && styles.roleOptionSelected
                           ]}
-                          onPress={() => setEditData({...editData, athlete_role: role})}
+                          onPress={() => setEditData({...editData, athlete_role: editData.athlete_role === role ? '' : role})}
                         >
                           <Text style={[
                             styles.roleOptionText,
