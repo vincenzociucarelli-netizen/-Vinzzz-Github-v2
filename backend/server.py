@@ -21234,7 +21234,10 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
         {
             "_id": 0,
             "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
-            "fiscal_code": 1, "date_of_birth": 1, "place_of_birth": 1,
+            "fiscal_code": 1, "date_of_birth": 1,
+            "place_of_birth": 1, "birth_place": 1,
+            "birth_province": 1, "province_of_birth": 1,
+            "country_of_birth": 1,
             "is_minor": 1, "parent_id": 1, "second_parent_id": 1,
             "user_id": 1, "society_id": 1, "team_id": 1,
             "address": 1, "city": 1, "postal_code": 1, "province": 1,
