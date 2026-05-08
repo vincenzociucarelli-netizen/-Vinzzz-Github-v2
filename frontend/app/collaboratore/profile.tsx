@@ -1198,41 +1198,36 @@ Società sportiva: ${societyName}
                     onClick={async (e) => {
                       e.preventDefault();
                       try {
-                        const token = await AsyncStorage.getItem('token');
-                        const downloadUrl = `${API_URL}/api/documents/signed/${doc.id}/pdf`;
-                        if (Platform.OS === 'web') {
-                          const response = await fetch(downloadUrl, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                          });
-                          if (!response.ok) {
-                            let errMsg = 'Impossibile aprire il documento';
-                            if (response.status === 401) {
-                              errMsg = 'Sessione scaduta. Effettua nuovamente il login.';
-                            } else {
-                              try {
-                                const errData = await response.json();
-                                if (errData?.detail) errMsg = errData.detail;
-                              } catch {}
-                            }
-                            Alert.alert('Errore', errMsg);
-                            return;
-                          }
-                          const blob = await response.blob();
-                          const url = window.URL.createObjectURL(blob);
-                          const filename = `${doc.document_title || 'documento'}.pdf`.replace(/[^\w.\-]+/g, '_');
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = filename;
-                          a.target = '_blank';
-                          a.rel = 'noopener noreferrer';
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                          setTimeout(() => window.URL.revokeObjectURL(url), 1500);
-                        }
-                      } catch (err) {
+                        const response = await api.get(`/documents/signed/${doc.id}/pdf`, {
+                          responseType: 'blob',
+                        });
+                        const blob = new Blob([response.data], { type: 'application/pdf' });
+                        const url = window.URL.createObjectURL(blob);
+                        const filename = `${doc.document_title || 'documento'}.pdf`.replace(/[^\w.\-]+/g, '_');
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        a.target = '_blank';
+                        a.rel = 'noopener noreferrer';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(() => window.URL.revokeObjectURL(url), 1500);
+                      } catch (err: any) {
                         console.error('Download error:', err);
-                        Alert.alert('Errore', 'Apertura non riuscita');
+                        let msg = 'Impossibile aprire il documento';
+                        if (err.response?.status === 401) {
+                          msg = 'Sessione scaduta. Effettua nuovamente il login.';
+                        } else if (err.response?.data instanceof Blob) {
+                          try { const text = await err.response.data.text(); const json = JSON.parse(text); msg = json.detail || msg; } catch {}
+                        } else if (err.response?.data?.detail) {
+                          msg = err.response.data.detail;
+                        }
+                        if (typeof window !== 'undefined' && window.alert) {
+                          window.alert(msg);
+                        } else {
+                          Alert.alert('Errore', msg);
+                        }
                       }
                     }}
                     style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none', listStyleType: 'none', display: 'flex' }}
@@ -1529,41 +1524,36 @@ Società sportiva: ${societyName}
                   <div
                     onClick={async () => {
                       try {
-                        const token = await AsyncStorage.getItem('token');
-                        const downloadUrl = `${API_URL}/api/documents/signed/${doc.id}/pdf`;
-                        if (Platform.OS === 'web') {
-                          const response = await fetch(downloadUrl, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                          });
-                          if (!response.ok) {
-                            let errMsg = 'Impossibile aprire il documento';
-                            if (response.status === 401) {
-                              errMsg = 'Sessione scaduta. Effettua nuovamente il login.';
-                            } else {
-                              try {
-                                const errData = await response.json();
-                                if (errData?.detail) errMsg = errData.detail;
-                              } catch {}
-                            }
-                            Alert.alert('Errore', errMsg);
-                            return;
-                          }
-                          const blob = await response.blob();
-                          const url = window.URL.createObjectURL(blob);
-                          const filename = `${doc.document_title || 'documento'}.pdf`.replace(/[^\w.\-]+/g, '_');
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = filename;
-                          a.target = '_blank';
-                          a.rel = 'noopener noreferrer';
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                          setTimeout(() => window.URL.revokeObjectURL(url), 1500);
-                        }
-                      } catch (err) {
+                        const response = await api.get(`/documents/signed/${doc.id}/pdf`, {
+                          responseType: 'blob',
+                        });
+                        const blob = new Blob([response.data], { type: 'application/pdf' });
+                        const url = window.URL.createObjectURL(blob);
+                        const filename = `${doc.document_title || 'documento'}.pdf`.replace(/[^\w.\-]+/g, '_');
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        a.target = '_blank';
+                        a.rel = 'noopener noreferrer';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(() => window.URL.revokeObjectURL(url), 1500);
+                      } catch (err: any) {
                         console.error('Download error:', err);
-                        Alert.alert('Errore', 'Apertura non riuscita');
+                        let msg = 'Impossibile aprire il documento';
+                        if (err.response?.status === 401) {
+                          msg = 'Sessione scaduta. Effettua nuovamente il login.';
+                        } else if (err.response?.data instanceof Blob) {
+                          try { const text = await err.response.data.text(); const json = JSON.parse(text); msg = json.detail || msg; } catch {}
+                        } else if (err.response?.data?.detail) {
+                          msg = err.response.data.detail;
+                        }
+                        if (typeof window !== 'undefined' && window.alert) {
+                          window.alert(msg);
+                        } else {
+                          Alert.alert('Errore', msg);
+                        }
                       }
                     }}
                     style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none', display: 'flex', cursor: 'pointer' }}
